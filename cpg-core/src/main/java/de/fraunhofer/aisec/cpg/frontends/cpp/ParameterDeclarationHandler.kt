@@ -39,6 +39,7 @@ import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.IASTArrayModifier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
 import org.eclipse.cdt.core.dom.ast.IASTPointerOperator
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDeclarator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTInitializerList
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
@@ -54,10 +55,14 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
             HandlerInterface { ctx: IASTParameterDeclaration ->
                 handleParameterDeclaration(ctx as CPPASTParameterDeclaration)
             }
+        map[CASTParameterDeclaration::class.java] =
+            HandlerInterface { ctx: IASTParameterDeclaration ->
+                handleParameterDeclaration(ctx as CASTParameterDeclaration)
+            }
     }
 
     private fun handleParameterDeclaration(
-        ctx: CPPASTParameterDeclaration
+        ctx: IASTParameterDeclaration
     ): ParamVariableDeclaration {
         // The logic of type adjustment computation was copied over from handleDeclarator, it is not
         // clear if it will be necessary but the usage of handleDeclarator had to be avoided because

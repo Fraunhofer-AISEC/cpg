@@ -40,17 +40,11 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
-import java.io.File
-import java.lang.reflect.Field
-import java.lang.reflect.Method
-import java.nio.file.Path
-import java.util.*
-import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.IASTAttributeOwner
 import org.eclipse.cdt.core.dom.ast.IASTNode
 import org.eclipse.cdt.core.dom.ast.IASTToken
 import org.eclipse.cdt.core.dom.ast.IASTTokenList
-import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
+import org.eclipse.cdt.core.dom.ast.gnu.c.GCCLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
 import org.eclipse.cdt.core.model.ILanguage
 import org.eclipse.cdt.core.parser.DefaultLogService
@@ -64,6 +58,12 @@ import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider
 import org.eclipse.core.runtime.CoreException
 import org.slf4j.LoggerFactory
+import java.io.File
+import java.lang.reflect.Field
+import java.lang.reflect.Method
+import java.nio.file.Path
+import java.util.*
+import java.util.stream.Collectors
 
 /**
  * The language frontend for translating CXX languages into the graph. It uses Eclipse CDT to parse
@@ -201,7 +201,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         return try {
             var bench = Benchmark(this.javaClass, "Parsing sourcefile")
             val translationUnit =
-                GPPLanguage.getDefault()
+                GCCLanguage.getDefault()
                     .getASTTranslationUnit(
                         content,
                         scannerInfo,
@@ -328,10 +328,11 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
      * @param node the node to process
      * @param owner the AST node which holds the attribute
      */
-    fun processAttributes(node: Node, owner: IASTAttributeOwner) {
+    fun processAttributes(node: Node, owner: IASTNode) {
         if (config.processAnnotations) {
-            // set attributes
-            node.addAnnotations(handleAttributes(owner))
+            if (owner is IASTAttributeOwner) { // set attributes
+                node.addAnnotations(handleAttributes(owner))
+            }
         }
     }
 

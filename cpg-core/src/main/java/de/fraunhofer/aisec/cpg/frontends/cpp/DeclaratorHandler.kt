@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
@@ -42,50 +40,37 @@ import java.util.*
 import java.util.function.Supplier
 import java.util.regex.Pattern
 import java.util.stream.Collectors
-import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier
-import org.eclipse.cdt.core.dom.ast.IASTDeclarator
-import org.eclipse.cdt.core.dom.ast.IASTNameOwner
-import org.eclipse.cdt.core.dom.ast.IASTNode
+import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class DeclaratorHandler(lang: CXXLanguageFrontend) :
-    Handler<Declaration?, IASTNameOwner, CXXLanguageFrontend?>(
-        Supplier { ProblemDeclaration() },
-        lang
-    ) {
+    CXXHandler<Declaration?, IASTNameOwner>(Supplier(::ProblemDeclaration), lang) {
 
-    init {
-        map[CPPASTDeclarator::class.java] = HandlerInterface {
-            handleDeclarator(it as CPPASTDeclarator)
-        }
-        map[CPPASTArrayDeclarator::class.java] = HandlerInterface {
-            handleDeclarator(it as CPPASTDeclarator)
-        }
-        map[CPPASTFieldDeclarator::class.java] = HandlerInterface {
-            handleFieldDeclarator(it as CPPASTDeclarator)
-        }
-        map[CPPASTFunctionDeclarator::class.java] = HandlerInterface {
-            handleFunctionDeclarator(it as CPPASTFunctionDeclarator)
-        }
-        map[CPPASTCompositeTypeSpecifier::class.java] = HandlerInterface {
-            handleCompositeTypeSpecifier(it as CPPASTCompositeTypeSpecifier)
-        }
-        map[CPPASTSimpleTypeTemplateParameter::class.java] = HandlerInterface {
-            handleTemplateTypeParameter(it as CPPASTSimpleTypeTemplateParameter)
+    override fun handleNode(node: IASTNameOwner): Declaration? {
+        return when (node) {
+            is CPPASTDeclarator -> handleDeclarator(node)
+            is CPPASTArrayDeclarator -> handleDeclarator(node)
+            is IASTFieldDeclarator -> handleFieldDeclarator(node)
+            is IASTStandardFunctionDeclarator -> handleFunctionDeclarator(node)
+            is CPPASTCompositeTypeSpecifier -> handleCompositeTypeSpecifier(node)
+            is CPPASTSimpleTypeTemplateParameter -> handleTemplateTypeParameter(node)
+            else -> {
+                return ProblemDeclaration("no handler found for ${node.javaClass.name}")
+            }
         }
     }
 
-    private fun handleDeclarator(ctx: CPPASTDeclarator): Declaration? {
+    private fun handleDeclarator(ctx: IASTDeclarator): Declaration? {
         // this is just a nested declarator, i.e. () wrapping the real declarator
         if (ctx.initializer == null && ctx.nestedDeclarator is CPPASTDeclarator) {
             return handle(ctx.nestedDeclarator)
         }
         val name = ctx.name.toString()
 
-        return if (lang.scopeManager.currentScope is RecordScope ||
-                name.contains(lang.namespaceDelimiter)
+        return if ((lang.scopeManager.currentScope is RecordScope ||
+                name.contains(lang.namespaceDelimiter)) && ctx is IASTFieldDeclarator
         ) {
             // forward it to handleFieldDeclarator
             this.handleFieldDeclarator(ctx)
@@ -107,7 +92,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleFieldDeclarator(ctx: CPPASTDeclarator): FieldDeclaration {
+    private fun handleFieldDeclarator(ctx: IASTFieldDeclarator): FieldDeclaration {
         val initializer = ctx.initializer?.let { lang.initializerHandler.handle(it) }
 
         val name = ctx.name.toString()
@@ -154,7 +139,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         } else NodeBuilder.newMethodDeclaration(name, null, false, recordDeclaration, lang, ctx)
     }
 
-    private fun handleFunctionDeclarator(ctx: CPPASTFunctionDeclarator): ValueDeclaration {
+    private fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration {
         // Programmers can wrap the function name in as many levels of parentheses as they like. CDT
         // treats these levels as separate declarators, so we need to get to the bottom for the
         // actual name...
@@ -282,8 +267,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // Check for varargs. Note the difference to Java: here, we don't have a named array
         // containing the varargs, but they are rather treated as kind of an invisible arg list that
-        // is
-        // appended to the original ones. For coherent graph behaviour, we introduce an implicit
+        // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
         // declaration that
         // wraps this list
         if (ctx.takesVarArgs()) {
@@ -320,10 +304,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         return declaration
     }
 
-    private fun handleFunctionPointer(
-        ctx: CPPASTFunctionDeclarator,
-        name: String
-    ): ValueDeclaration {
+    private fun handleFunctionPointer(ctx: IASTFunctionDeclarator, name: String): ValueDeclaration {
         val initializer =
             if (ctx.initializer == null) null else lang.initializerHandler.handle(ctx.initializer)
         // unfortunately we are not told whether this is a field or not, so we have to find it out
@@ -372,7 +353,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
          * but that is the way it is for now.
          */
         var parent = ctx.parent
-        while (parent != null && parent !is CPPASTSimpleDeclaration) {
+        while (parent != null && parent !is IASTSimpleDeclaration) {
             parent = parent.parent
         }
         if (parent != null) {

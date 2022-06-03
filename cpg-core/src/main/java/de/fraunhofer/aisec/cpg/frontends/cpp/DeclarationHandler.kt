@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.TypeManager
@@ -46,32 +44,23 @@ import java.util.function.Supplier
 import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTTranslationUnit
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class DeclarationHandler(lang: CXXLanguageFrontend) :
-    Handler<Declaration?, IASTDeclaration, CXXLanguageFrontend>(
-        Supplier { ProblemDeclaration() },
-        lang
-    ) {
+    CXXHandler<Declaration, IASTDeclaration>(Supplier(::ProblemDeclaration), lang) {
 
-    init {
-        map[CPPASTTemplateDeclaration::class.java] = HandlerInterface {
-            handleTemplateDeclaration(it as CPPASTTemplateDeclaration)
-        }
-        map[CPPASTSimpleDeclaration::class.java] = HandlerInterface {
-            handleSimpleDeclaration(it as CPPASTSimpleDeclaration)
-        }
-        map[CPPASTFunctionDefinition::class.java] = HandlerInterface {
-            handleFunctionDefinition(it as CPPASTFunctionDefinition)
-        }
-        map[CPPASTProblemDeclaration::class.java] = HandlerInterface {
-            handleProblem(it as CPPASTProblemDeclaration)
-        }
-        map[CPPASTNamespaceDefinition::class.java] = HandlerInterface {
-            handleNamespace(it as CPPASTNamespaceDefinition)
-        }
-        map[CPPASTUsingDirective::class.java] = HandlerInterface {
-            handleUsingDirective(it as CPPASTUsingDirective)
+    override fun handleNode(node: IASTDeclaration): Declaration {
+        return when (node) {
+            is CPPASTTemplateDeclaration -> handleTemplateDeclaration(node)
+            is CPPASTNamespaceDefinition -> handleNamespace(node)
+            is CPPASTUsingDirective -> handleUsingDirective(node)
+            is IASTSimpleDeclaration -> handleSimpleDeclaration(node)
+            is IASTFunctionDefinition -> handleFunctionDefinition(node)
+            is IASTProblemDeclaration -> handleProblem(node)
+            else -> {
+                return ProblemDeclaration("no handler found for ${node.javaClass.name}")
+            }
         }
     }
 
@@ -98,7 +87,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return declaration
     }
 
-    private fun handleProblem(ctx: CPPASTProblemDeclaration): Declaration {
+    private fun handleProblem(ctx: IASTProblemDeclaration): Declaration {
         val problem = NodeBuilder.newProblemDeclaration(ctx.problem.message)
 
         lang.scopeManager.addDeclaration(problem)
@@ -106,20 +95,23 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return problem
     }
 
-    private fun handleFunctionDefinition(ctx: CPPASTFunctionDefinition): FunctionDeclaration {
+    private fun handleFunctionDefinition(ctx: IASTFunctionDefinition): Declaration {
         // Todo: A problem with cpp functions is that we cannot know if they may throw an exception
-        // as
-        // throw(...) is not compiler enforced (Problem for TryStatement)
-        val functionDeclaration =
-            lang.declaratorHandler.handle(ctx.declarator) as FunctionDeclaration
+        //  as throw(...) is not compiler enforced (Problem for TryStatement)
+        val declarator = lang.declaratorHandler.handle(ctx.declarator)
+
+        if (declarator !is FunctionDeclaration) {
+            return ProblemDeclaration(
+                "declarator of function definition is not a function declarator"
+            )
+        }
         val typeString = ctx.declarator.getTypeString(ctx.declSpecifier)
-        functionDeclaration.setIsDefinition(true)
-        functionDeclaration.type = TypeParser.createFrom(typeString, true, lang)
+        declarator.setIsDefinition(true)
+        declarator.type = TypeParser.createFrom(typeString, true, lang)
 
         // associated record declaration if this is a method or constructor
         val recordDeclaration =
-            if (functionDeclaration is MethodDeclaration) functionDeclaration.recordDeclaration
-            else null
+            if (declarator is MethodDeclaration) declarator.recordDeclaration else null
         val outsideOfRecord =
             !(lang.scopeManager.currentScope is RecordScope ||
                 lang.scopeManager.currentScope is TemplateScope)
@@ -131,7 +123,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
             // update the definition
             var candidates: List<MethodDeclaration> =
-                if (functionDeclaration is ConstructorDeclaration) {
+                if (declarator is ConstructorDeclaration) {
                     recordDeclaration.constructors
                 } else {
                     recordDeclaration.methods
@@ -141,27 +133,27 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             candidates =
                 candidates
                     .stream()
-                    .filter { m: MethodDeclaration -> m.signature == functionDeclaration.signature }
+                    .filter { m: MethodDeclaration -> m.signature == declarator.signature }
                     .collect(Collectors.toList())
             if (candidates.isEmpty() && lang.scopeManager.currentScope !is TemplateScope) {
                 log.warn(
                     "Could not find declaration of method {} in record {}",
-                    functionDeclaration.name,
+                    declarator.name,
                     recordDeclaration.name
                 )
             } else if (candidates.size > 1) {
                 log.warn(
                     "Found more than one candidate to connect definition of method {} in record {} to its declaration. We will comply, but this is suspicious.",
-                    functionDeclaration.name,
+                    declarator.name,
                     recordDeclaration.name
                 )
             }
             for (candidate in candidates) {
-                candidate.definition = functionDeclaration
+                candidate.definition = declarator
             }
         }
-        lang.scopeManager.enterScope(functionDeclaration)
-        functionDeclaration.type = TypeParser.createFrom(typeString, true, lang)
+        lang.scopeManager.enterScope(declarator)
+        declarator.type = TypeParser.createFrom(typeString, true, lang)
         if (ctx.body != null) {
             val bodyStatement = lang.statementHandler.handle(ctx.body)
             if (bodyStatement is CompoundStatement) {
@@ -179,11 +171,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     returnStatement.isImplicit = true
                     bodyStatement.addStatement(returnStatement)
                 }
-                functionDeclaration.body = bodyStatement
+                declarator.body = bodyStatement
             }
         }
-        lang.processAttributes(functionDeclaration, ctx)
-        lang.scopeManager.leaveScope(functionDeclaration)
+        lang.processAttributes(declarator, ctx)
+        lang.scopeManager.leaveScope(declarator)
         if (recordDeclaration != null && outsideOfRecord) {
             lang.scopeManager.leaveScope(recordDeclaration)
         }
@@ -195,21 +187,21 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 .filter { obj: Declaration? -> FunctionDeclaration::class.java.isInstance(obj) }
                 .map { obj: Declaration? -> FunctionDeclaration::class.java.cast(obj) }
                 .filter { f: FunctionDeclaration ->
-                    !f.isDefinition && f.hasSameSignature(functionDeclaration)
+                    !f.isDefinition && f.hasSameSignature(declarator)
                 }
                 .collect(Collectors.toList())
         for (declaration in declarationCandidates) {
-            declaration.definition = functionDeclaration
-            for (i in functionDeclaration.parameters.indices) {
+            declaration.definition = declarator
+            for (i in declarator.parameters.indices) {
                 if (declaration.parameters[i].default != null) {
-                    functionDeclaration.parameters[i].default = declaration.parameters[i].default
+                    declarator.parameters[i].default = declaration.parameters[i].default
                 }
             }
         }
-        return functionDeclaration
+        return declarator
     }
 
-    private fun isTypedef(ctx: CPPASTSimpleDeclaration): Boolean {
+    private fun isTypedef(ctx: IASTSimpleDeclaration): Boolean {
         return if (ctx.rawSignature.contains("typedef")) {
             if (ctx.declSpecifier is CPPASTCompositeTypeSpecifier) {
                 // we need to make a difference between structs that have typedefs and structs that
@@ -298,7 +290,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     if (templateParameter.declarator.initializer != null) {
                         val defaultExpression =
                             lang.initializerHandler.handle(templateParameter.declarator.initializer)
-                        nonTypeTemplateParamDeclaration!!.default = defaultExpression
+                        nonTypeTemplateParamDeclaration.default = defaultExpression
                         nonTypeTemplateParamDeclaration.addPrevDFG(defaultExpression!!)
                         defaultExpression.addNextDFG(nonTypeTemplateParamDeclaration)
                     }
@@ -367,7 +359,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleSimpleDeclaration(ctx: CPPASTSimpleDeclaration): Declaration {
+    private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {
         if (isTypedef(ctx)) {
             TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
         }
@@ -440,8 +432,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleEnum(
-        ctx: CPPASTSimpleDeclaration,
-        declSpecifier: CPPASTEnumerationSpecifier
+        ctx: IASTSimpleDeclaration,
+        declSpecifier: IASTEnumerationSpecifier
     ): EnumDeclaration {
         val entries = mutableListOf<EnumConstantDeclaration>()
         val enum =
@@ -499,7 +491,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun handleTemplateUsage(
         typeSpecifier: CPPASTNamedTypeSpecifier,
-        ctx: CPPASTSimpleDeclaration,
+        ctx: IASTSimpleDeclaration,
         sequence: DeclarationSequence
     ) {
         val templateId = typeSpecifier.name as CPPASTTemplateId
@@ -567,8 +559,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // There might have been errors in the previous translation unit and in any case
         // we need to reset the scope manager scope to global, to avoid spilling scope errors into
-        // other
-        // translation units
+        // other translation units
         lang.scopeManager.resetToGlobal(node)
         lang.currentTU = node
         val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()

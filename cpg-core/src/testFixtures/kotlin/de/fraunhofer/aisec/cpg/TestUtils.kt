@@ -211,6 +211,7 @@ object TestUtils {
             if (db.isNotEmpty()) {
                 it.useCompilationDatabase(db)
                 it.sourceLocations(db.sourceFiles)
+                configModifier?.accept(it)
             }
             configModifier?.accept(it)
         }
