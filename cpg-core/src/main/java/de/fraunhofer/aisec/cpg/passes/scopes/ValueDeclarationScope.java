@@ -32,9 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
-import java.util.ArrayList;
-import java.util.List;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,8 @@ public class ValueDeclarationScope extends Scope {
 
   @NonNull private List<ValueDeclaration> valueDeclarations = new ArrayList<>();
 
-  @NonNull private List<TypedefDeclaration> typedefs = new ArrayList<>();
+  /** A map of typedefs keyed by their alias. */
+  @NonNull private final Map<Type, TypedefDeclaration> typedefs = new HashMap<>();
 
   public ValueDeclarationScope(Node node) {
     this.astNode = node;
@@ -63,16 +65,12 @@ public class ValueDeclarationScope extends Scope {
     this.valueDeclarations = valueDeclarations;
   }
 
-  public List<TypedefDeclaration> getTypedefs() {
+  public @NotNull Map<Type, TypedefDeclaration> getTypedefs() {
     return typedefs;
   }
 
-  public void setTypedefs(List<TypedefDeclaration> typedefs) {
-    this.typedefs = typedefs;
-  }
-
   public void addTypedef(TypedefDeclaration typedef) {
-    this.typedefs.add(typedef);
+    this.typedefs.put(typedef.getAlias(), typedef);
   }
 
   public void addDeclaration(@NonNull Declaration declaration, boolean addToAST) {

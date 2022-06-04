@@ -156,7 +156,7 @@ class ScopeManager {
                     existing.structureDeclarations.addAll(entry.value.structureDeclarations)
 
                     // copy over the typedefs as well just to be sure
-                    existing.typedefs.addAll(entry.value.typedefs)
+                    existing.typedefs.putAll(entry.value.typedefs)
 
                     // also update the AST node of the existing scope to the "latest" we have seen
                     existing.astNode = entry.value.astNode
@@ -585,17 +585,24 @@ class ScopeManager {
         }
     }
 
-    private fun getCurrentTypedefs(scope: Scope?): Collection<TypedefDeclaration> {
+    private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
         val typedefs = mutableMapOf<Type, TypedefDeclaration>()
 
-        var current = scope
+        val path = mutableListOf<ValueDeclarationScope>()
+        var current = searchScope
 
+        // We need to build a path from the current scope to the top most one
         while (current != null) {
-            if (scope is ValueDeclarationScope) {
-                scope.typedefs.forEach { typedefs.putIfAbsent(it.alias, it) }
+            if (current is ValueDeclarationScope) {
+                path += current
             }
-
             current = current.parent
+        }
+
+        // And then follow the path in reverse. This ensures us that a local definition
+        // overwrites / shadows one that was there on a higher scope.
+        for (scope in path) {
+            typedefs.putAll(scope.typedefs)
         }
 
         return typedefs.values
