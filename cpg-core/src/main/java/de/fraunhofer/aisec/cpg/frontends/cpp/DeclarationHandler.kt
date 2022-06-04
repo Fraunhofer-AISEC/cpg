@@ -44,6 +44,7 @@ import java.util.function.Supplier
 import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTDeclarator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
@@ -205,8 +206,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return if (ctx.rawSignature.contains("typedef")) {
             if (ctx.declSpecifier is CPPASTCompositeTypeSpecifier) {
                 // we need to make a difference between structs that have typedefs and structs that
-                // are
-                // typedefs themselves
+                // are typedefs themselves
                 ctx.declSpecifier.toString() == "struct" &&
                     ctx.rawSignature.trim().startsWith("typedef")
             } else {
