@@ -694,12 +694,15 @@ public class TypeManager {
    *
    * @param frontend
    * @param rawCode
+   * @deprecated Handling typedefs in the type manager is not a good idea because this is highly
+   *     language frontend specific, it should be dealth with in the language frontend
    */
+  @Deprecated
   public void handleTypedef(LanguageFrontend frontend, String rawCode) {
     String cleaned = rawCode.replaceAll("(typedef|;)", "").strip();
     if (cleaned.startsWith("struct")) {
       handleStructTypedef(frontend, rawCode, cleaned);
-    } else if (Util.containsOnOuterLevel(cleaned, ',')) {
+    } else if (Util.containsOnOuterLevel(cleaned, ',') && !cleaned.contains("enum")) {
       handleMultipleAliases(frontend, rawCode, cleaned);
     } else {
       List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \t\r\n");

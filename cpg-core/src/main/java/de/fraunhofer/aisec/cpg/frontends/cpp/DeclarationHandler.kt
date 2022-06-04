@@ -361,7 +361,28 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {
         if (isTypedef(ctx)) {
-            TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
+            // This is a major workaround until we completely re-write the typedef handling. The
+            // current typedef system
+            // has problems with enums, so we need to deal with them differently. Actually, in the
+            // long run, probably the language
+            // frontend should deal with the creation of typedef declarations
+            if (ctx.declSpecifier is IASTEnumerationSpecifier) {
+                val target =
+                    TypeParser.createFrom(
+                        (ctx.declSpecifier as IASTEnumerationSpecifier).name.toString(),
+                        false
+                    )
+
+                TypeManager.getInstance()
+                    .handleSingleAlias(
+                        lang,
+                        ctx.rawSignature,
+                        target,
+                        ctx.declarators[0].name.toString()
+                    )
+            } else {
+                TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
+            }
         }
         val sequence = DeclarationSequence()
 
