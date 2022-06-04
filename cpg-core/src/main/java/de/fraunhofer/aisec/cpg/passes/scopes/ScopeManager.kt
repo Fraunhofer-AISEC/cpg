@@ -601,7 +601,7 @@ class ScopeManager {
 
         // And then follow the path in reverse. This ensures us that a local definition
         // overwrites / shadows one that was there on a higher scope.
-        for (scope in path) {
+        for (scope in path.reversed()) {
             typedefs.putAll(scope.typedefs)
         }
 

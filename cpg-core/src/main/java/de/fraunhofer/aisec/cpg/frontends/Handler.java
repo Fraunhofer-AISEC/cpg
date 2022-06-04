@@ -93,8 +93,6 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
 
     Class<?> toHandle = ctx.getClass();
     HandlerInterface<S, T> handler = map.get(toHandle);
-
-    // Check super classes
     while (handler == null) {
       toHandle = toHandle.getSuperclass();
       handler = map.get(toHandle);
@@ -114,17 +112,6 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
         break;
       }
     }
-
-    if (handler == null) {
-      // Check interfaces
-      for (var ifc : ctx.getClass().getInterfaces()) {
-        handler = map.get(ifc);
-        if (handler != null) {
-          break;
-        }
-      }
-    }
-
     if (handler != null) {
       S s = handler.handle(ctx);
 
