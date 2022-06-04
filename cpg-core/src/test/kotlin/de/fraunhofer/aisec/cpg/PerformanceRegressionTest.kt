@@ -63,9 +63,9 @@ class PerformanceRegressionTest {
         val tmp = kotlin.io.path.createTempFile("c_range", ".c")
         tmp.writeText(string)
 
-        // this should not exceed 10-15 seconds (it takes about 2800ms on a good machine, about
-        // 8000ms on GitHub)
-        assertTimeout(Duration.of(15, ChronoUnit.SECONDS)) {
+        // this should not exceed 20 seconds (it takes about 2800ms on a good machine, about
+        // 10-20s on GitHub, depending on the slowness of the runner)
+        assertTimeout(Duration.of(20, ChronoUnit.SECONDS)) {
             val tu = analyzeAndGetFirstTU(listOf(tmp.toFile()), tmp.parent, true)
             assertNotNull(tu)
         }
