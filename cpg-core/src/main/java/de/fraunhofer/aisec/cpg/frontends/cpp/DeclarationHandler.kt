@@ -59,7 +59,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             is CPPASTNamespaceDefinition -> handleNamespace(node)
             is CPPASTUsingDirective -> handleUsingDirective(node)
             else -> {
-                return ProblemDeclaration("no handler found for ${node.javaClass.name}")
+                return handleNotSupported(node, node.javaClass.name)
             }
         }
     }

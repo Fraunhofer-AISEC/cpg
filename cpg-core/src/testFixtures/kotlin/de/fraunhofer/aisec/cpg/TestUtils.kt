@@ -205,12 +205,12 @@ object TestUtils {
         jsonCompilationDatabase: File,
         usePasses: Boolean,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
-    ): List<TranslationUnitDeclaration> {
-        return analyze(listOf(), jsonCompilationDatabase.parentFile.toPath(), usePasses) {
+    ): TranslationResult {
+        return analyzeWithResult(listOf(), jsonCompilationDatabase.parentFile.toPath(), usePasses) {
             val db = CompilationDatabase.fromFile(jsonCompilationDatabase)
             if (db.isNotEmpty()) {
                 it.useCompilationDatabase(db)
-                it.sourceLocations(db.sourceFiles)
+                it.softwareComponents(db.components)
                 configModifier?.accept(it)
             }
             configModifier?.accept(it)

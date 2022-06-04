@@ -44,6 +44,7 @@ import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.internal.core.dom.parser.CStringValue
 import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding
 import org.eclipse.cdt.internal.core.dom.parser.ProblemType
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTDesignatedInitializer
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.TypeOfDependentExpression
 
@@ -67,17 +68,18 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is IASTFieldReference -> handleFieldReference(node)
             is IASTFunctionCallExpression -> handleFunctionCallExpression(node)
             is IASTCastExpression -> handleCastExpression(node)
-            is CPPASTSimpleTypeConstructorExpression -> handleSimpleTypeConstructorExpression(node)
-            is CPPASTNewExpression -> handleNewExpression(node)
             is IASTInitializerList -> handleInitializerList(node)
-            is CPPASTDesignatedInitializer -> handleDesignatedInitializer(node)
             is IASTExpressionList -> handleExpressionList(node)
-            is CPPASTDeleteExpression -> handleDeleteExpression(node)
             is IASTArraySubscriptExpression -> handleArraySubscriptExpression(node)
             is IASTTypeIdExpression -> handleTypeIdExpression(node)
+            is CPPASTSimpleTypeConstructorExpression -> handleSimpleTypeConstructorExpression(node)
+            is CPPASTNewExpression -> handleNewExpression(node)
+            is CPPASTDesignatedInitializer -> handleCXXDesignatedInitializer(node)
+            is CASTDesignatedInitializer -> handleCDesignatedInitializer(node)
+            is CPPASTDeleteExpression -> handleDeleteExpression(node)
             is CPPASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
             else -> {
-                return ProblemExpression("no handler found for ${node.javaClass.name}")
+                return handleNotSupported(node, node.javaClass.name)
             }
         }
     }
@@ -695,8 +697,61 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return expression
     }
 
-    private fun handleDesignatedInitializer(
+    private fun handleCXXDesignatedInitializer(
         ctx: CPPASTDesignatedInitializer
+    ): DesignatedInitializerExpression {
+        val rhs = handle(ctx.operand)
+        val lhs = ArrayList<Expression>()
+        if (ctx.designators.isEmpty()) {
+            Util.errorWithFileLocation(lang, ctx, log, "no designator found")
+        } else {
+            for (des in ctx.designators) {
+                var oneLhs: Expression? = null
+                when (des) {
+                    is CPPASTArrayDesignator -> {
+                        oneLhs = handle(des.subscriptExpression)
+                    }
+                    is CPPASTFieldDesignator -> {
+                        oneLhs =
+                            NodeBuilder.newDeclaredReferenceExpression(
+                                des.name.toString(),
+                                UnknownType.getUnknownType(),
+                                des.getRawSignature()
+                            )
+                    }
+                    is CPPASTArrayRangeDesignator -> {
+                        oneLhs =
+                            NodeBuilder.newArrayRangeExpression(
+                                handle(des.rangeFloor),
+                                handle(des.rangeCeiling),
+                                des.getRawSignature()
+                            )
+                    }
+                    else -> {
+                        Util.errorWithFileLocation(
+                            lang,
+                            ctx,
+                            log,
+                            "Unknown designated lhs {}",
+                            des.javaClass.toGenericString()
+                        )
+                    }
+                }
+                if (oneLhs != null) {
+                    lhs.add(oneLhs)
+                }
+            }
+        }
+
+        val die = NodeBuilder.newDesignatedInitializerExpression(ctx.rawSignature)
+        die.lhs = lhs
+        die.rhs = rhs
+
+        return die
+    }
+
+    private fun handleCDesignatedInitializer(
+        ctx: CASTDesignatedInitializer
     ): DesignatedInitializerExpression {
         val rhs = handle(ctx.operand)
         val lhs = ArrayList<Expression>()

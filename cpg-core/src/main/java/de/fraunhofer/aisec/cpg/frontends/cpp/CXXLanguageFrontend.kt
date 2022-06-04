@@ -86,7 +86,6 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
              */
             private fun getContentUncached(path: String): InternalFileContent? {
                 if (!getInclusionExists(path)) {
-                    LOGGER.debug("Include file not found: {}", path)
                     return null
                 }
 
@@ -200,7 +199,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;
         return try {
-            var bench = Benchmark(this.javaClass, "Parsing sourcefile")
+            var bench = Benchmark(this.javaClass, "Parsing sourcefile ${file.name}")
 
             // Set parser language, based on file extension
             val language =

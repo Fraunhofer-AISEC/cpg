@@ -46,8 +46,8 @@ class CXXCompilationDatabaseTest {
             )
         for (path in ccs) {
             val cc = File(path)
-            val tus = TestUtils.analyzeWithCompilationDatabase(cc, true)
-            val tu = tus.stream().findFirst().orElseThrow()
+            val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
+            val tu = result.translationUnits.firstOrNull()
             assertNotNull(tu)
 
             val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
@@ -95,8 +95,8 @@ class CXXCompilationDatabaseTest {
     @Test
     fun testCompilationDatabaseSimple() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_simple.json")
-        val tus = TestUtils.analyzeWithCompilationDatabase(cc, true)
-        val tu = tus.stream().findFirst().orElseThrow()
+        val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
+        val tu = result.translationUnits.firstOrNull()
         assertNotNull(tu)
         assertNotNull(tu)
 
@@ -113,7 +113,8 @@ class CXXCompilationDatabaseTest {
     @Test
     fun testCompilationDatabaseMultiTUs() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_multi_tus.json")
-        val tus = TestUtils.analyzeWithCompilationDatabase(cc, true)
+        val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
+        val tus = result.translationUnits
         assertEquals(tus.size, 2)
 
         val ref = mapOf("main_tu_1.c" to 1, "main_tu_2.c" to 2)

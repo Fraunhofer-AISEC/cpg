@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ProblemNode
+import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 
@@ -63,4 +65,21 @@ abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CX
     }
 
     abstract fun handleNode(node: T): S
+
+    protected fun handleNotSupported(node: T, name: String): S {
+        Util.errorWithFileLocation(
+            lang,
+            node,
+            log,
+            "Parsing of type {} is not supported (yet)",
+            name
+        )
+
+        val cpgNode = this.configConstructor.get()
+        if (cpgNode is ProblemNode) {
+            cpgNode.problem = "Parsing of type $name is not supported (yet)"
+        }
+
+        return cpgNode
+    }
 }

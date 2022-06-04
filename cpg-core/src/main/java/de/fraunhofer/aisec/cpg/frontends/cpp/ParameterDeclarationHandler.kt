@@ -43,12 +43,12 @@ import org.eclipse.cdt.internal.core.model.ASTStringUtil
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Declaration?, IASTParameterDeclaration>(Supplier(::ProblemDeclaration), lang) {
 
-    override fun handleNode(node: IASTParameterDeclaration): Declaration {
+    override fun handleNode(node: IASTParameterDeclaration): Declaration? {
         return when (node) {
             is CPPASTParameterDeclaration -> handleParameterDeclaration(node)
             is CASTParameterDeclaration -> handleParameterDeclaration(node)
             else -> {
-                return ProblemDeclaration("no handler found for ${node.javaClass.name}")
+                return handleNotSupported(node, node.javaClass.name)
             }
         }
     }

@@ -70,7 +70,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             is CPPASTTryBlockStatement -> handleTryBlockStatement(node)
             is CPPASTCatchHandler -> handleCatchHandler(node)
             else -> {
-                return ProblemExpression("no handler found for ${node.javaClass.name}")
+                return handleNotSupported(node, node.javaClass.name)
             }
         }
     }

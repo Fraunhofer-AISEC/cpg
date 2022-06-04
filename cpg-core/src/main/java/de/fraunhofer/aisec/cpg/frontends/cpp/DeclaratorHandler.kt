@@ -57,7 +57,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             is CPPASTArrayDeclarator -> handleDeclarator(node)
             is CPPASTSimpleTypeTemplateParameter -> handleTemplateTypeParameter(node)
             else -> {
-                return ProblemDeclaration("no handler found for ${node.javaClass.name}")
+                return handleNotSupported(node, node.javaClass.name)
             }
         }
     }

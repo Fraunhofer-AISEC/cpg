@@ -37,7 +37,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTConstructorInitializer
 class InitializerHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Expression?, IASTInitializer>(Supplier(::ProblemExpression), lang) {
 
-    override fun handleNode(node: IASTInitializer): Expression {
+    override fun handleNode(node: IASTInitializer): Expression? {
         return when (node) {
             is IASTEqualsInitializer -> handleEqualsInitializer(node)
             // TODO: Initializer List is handled in ExpressionsHandler that actually handles
@@ -46,7 +46,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
             is IASTInitializerList -> lang.expressionHandler.handle(node) as Expression
             is CPPASTConstructorInitializer -> handleConstructorInitializer(node)
             else -> {
-                return ProblemExpression("no handler found for ${node.javaClass.name}")
+                return handleNotSupported(node, node.javaClass.name)
             }
         }
     }
