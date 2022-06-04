@@ -43,6 +43,7 @@ import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier
+import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class DeclaratorHandler(lang: CXXLanguageFrontend) :
@@ -75,13 +76,16 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // forward it to handleFieldDeclarator
             this.handleFieldDeclarator(ctx)
         } else {
+            // Only C++ has constructors and thus implicit (constructor) initialization calls
+            val implicitInitializerAllowed = lang.dialect is GPPLanguage
+
             // type will be filled out later
             val declaration =
                 NodeBuilder.newVariableDeclaration(
                     ctx.name.toString(),
                     UnknownType.getUnknownType(),
                     ctx.rawSignature,
-                    true
+                    implicitInitializerAllowed
                 )
             val init = ctx.initializer
             if (init != null) {

@@ -607,6 +607,7 @@ public class TypeManager {
   }
 
   public boolean isSupertypeOf(Type superType, Type subType) {
+
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
       return false;
     }
@@ -695,7 +696,7 @@ public class TypeManager {
    * @param frontend
    * @param rawCode
    * @deprecated Handling typedefs in the type manager is not a good idea because this is highly
-   *     language frontend specific, it should be dealth with in the language frontend
+   *     language frontend specific, it should be dealt with in the language frontend
    */
   @Deprecated
   public void handleTypedef(LanguageFrontend frontend, String rawCode) {

@@ -29,9 +29,11 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
+import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithResult
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -1268,5 +1270,30 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(s)
 
         assertEquals(myStruct, (s.type as? ObjectType)?.recordDeclaration)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testTypedef() {
+        val file = File("src/test/resources/c/typedef_in_header/main.c")
+        val result = analyzeWithResult(listOf(file), file.parentFile.toPath(), true)
+
+        val typedefs = TypeManager.getInstance().frontend?.scopeManager?.currentTypedefs
+        assertNotNull(typedefs)
+        assertTrue(typedefs.isNotEmpty())
+
+        val tu = result.translationUnits.firstOrNull()
+        assertNotNull(tu)
+
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        val call = main.bodyOrNull<CallExpression>()
+        assertNotNull(call)
+        assertTrue(call.invokes.isNotEmpty())
+
+        val func = call.invokes.firstOrNull()
+        assertNotNull(func)
+        assertFalse(func.isInferred)
     }
 }

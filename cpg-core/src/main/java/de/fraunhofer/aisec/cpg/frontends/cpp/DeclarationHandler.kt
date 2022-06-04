@@ -360,30 +360,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {
-        if (isTypedef(ctx)) {
-            // This is a major workaround until we completely re-write the typedef handling. The
-            // current typedef system
-            // has problems with enums, so we need to deal with them differently. Actually, in the
-            // long run, probably the language
-            // frontend should deal with the creation of typedef declarations
-            if (ctx.declSpecifier is IASTEnumerationSpecifier) {
-                val target =
-                    TypeParser.createFrom(
-                        (ctx.declSpecifier as IASTEnumerationSpecifier).name.toString(),
-                        false
-                    )
-
-                TypeManager.getInstance()
-                    .handleSingleAlias(
-                        lang,
-                        ctx.rawSignature,
-                        target,
-                        ctx.declarators[0].name.toString()
-                    )
-            } else {
-                TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
-            }
-        }
+        val primaryDeclaration: Declaration?
         val sequence = DeclarationSequence()
 
         // check, whether the declaration specifier also contains declarations, i.e. class
@@ -391,30 +368,39 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declSpecifier = ctx.declSpecifier
         when (declSpecifier) {
             is IASTCompositeTypeSpecifier -> {
-                val declaration =
+                primaryDeclaration =
                     lang.declaratorHandler.handle(ctx.declSpecifier as IASTCompositeTypeSpecifier)
 
-                // handle typedef
-                if (declaration!!.name.isEmpty() && ctx.rawSignature.trim().startsWith("typedef")) {
-                    // CDT didn't find out the name due to this thing being a typedef. We need to
-                    // fix this
-                    val endOfDeclaration = ctx.rawSignature.lastIndexOf('}')
-                    if (endOfDeclaration + 1 < ctx.rawSignature.length) {
-                        val parts =
-                            Util.splitLeavingParenthesisContents(
-                                ctx.rawSignature.substring(endOfDeclaration + 1),
-                                ","
-                            )
-                        val name =
-                            parts
-                                .stream()
-                                .filter { p: String -> !p.contains("*") && !p.contains("[") }
-                                .findFirst()
-                        name.ifPresent { s: String -> declaration.name = s.replace(";", "") }
+                if (primaryDeclaration != null) {
+                    // handle typedef
+                    if (primaryDeclaration.name.isEmpty() &&
+                            ctx.rawSignature.trim().startsWith("typedef")
+                    ) {
+                        // CDT didn't find out the name due to this thing being a typedef. We need
+                        // to fix this
+                        // TODO: This is actually not correct, since the struct itself is unnamed,
+                        // only
+                        //  the typedef has a name
+                        val endOfDeclaration = ctx.rawSignature.lastIndexOf('}')
+                        if (endOfDeclaration + 1 < ctx.rawSignature.length) {
+                            val parts =
+                                Util.splitLeavingParenthesisContents(
+                                    ctx.rawSignature.substring(endOfDeclaration + 1),
+                                    ","
+                                )
+                            val name =
+                                parts
+                                    .stream()
+                                    .filter { p: String -> !p.contains("*") && !p.contains("[") }
+                                    .findFirst()
+                            name.ifPresent { s: String ->
+                                primaryDeclaration.name = s.replace(";", "")
+                            }
+                        }
                     }
+                    lang.processAttributes(primaryDeclaration, ctx)
+                    sequence.addDeclaration(primaryDeclaration)
                 }
-                lang.processAttributes(declaration, ctx)
-                sequence.addDeclaration(declaration)
             }
             is IASTElaboratedTypeSpecifier -> {
                 // In the future, we might want to have declaration chains, but for now, there is
@@ -422,13 +408,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
             is IASTEnumerationSpecifier -> {
                 // Handle it as an enum
-                val declaration = handleEnum(ctx, declSpecifier)
+                primaryDeclaration = handleEnum(ctx, declSpecifier)
 
-                sequence.addDeclaration(declaration)
-                lang.scopeManager.addDeclaration(declaration)
+                sequence.addDeclaration(primaryDeclaration)
+                lang.scopeManager.addDeclaration(primaryDeclaration)
 
                 // process attributes
-                lang.processAttributes(declaration, ctx)
+                lang.processAttributes(primaryDeclaration, ctx)
             }
         }
 
@@ -441,14 +427,26 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // make sure, the type manager knows about this type before parsing the declarator
                 val result = TypeParser.createFrom(typeString, true, lang)
 
-                val declaration = lang.declaratorHandler.handle(declarator) as? ValueDeclaration
+                // Instead of a variable declaration, this is a typedef, so we handle it
+                // like this
+                if (isTypedef(ctx)) {
+                    TypeManager.getInstance()
+                        .handleSingleAlias(
+                            lang,
+                            lang.getCodeFromRawNode(ctx),
+                            result,
+                            declarator.name.toString()
+                        )
+                } else {
+                    val declaration = lang.declaratorHandler.handle(declarator) as? ValueDeclaration
 
-                if (declaration != null) {
-                    declaration.type = result
+                    if (declaration != null) {
+                        declaration.type = result
 
-                    // process attributes
-                    lang.processAttributes(declaration, ctx)
-                    sequence.addDeclaration(declaration)
+                        // process attributes
+                        lang.processAttributes(declaration, ctx)
+                        sequence.addDeclaration(declaration)
+                    }
                 }
             }
         }

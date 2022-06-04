@@ -52,6 +52,7 @@ import org.eclipse.cdt.core.dom.ast.IASTToken
 import org.eclipse.cdt.core.dom.ast.IASTTokenList
 import org.eclipse.cdt.core.dom.ast.gnu.c.GCCLanguage
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
+import org.eclipse.cdt.core.dom.parser.AbstractCLikeLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
 import org.eclipse.cdt.core.model.ILanguage
 import org.eclipse.cdt.core.parser.DefaultLogService
@@ -72,6 +73,8 @@ import org.slf4j.LoggerFactory
  */
 class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::"), HasDefaultArguments, HasTemplates {
+
+    var dialect: AbstractCLikeLanguage? = null
 
     /**
      * Implements an [IncludeFileContentProvider] which features an inclusion/exclusion list for
@@ -202,7 +205,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             var bench = Benchmark(this.javaClass, "Parsing sourcefile ${file.name}")
 
             // Set parser language, based on file extension
-            val language =
+            this.dialect =
                 if (file.extension == "c") {
                     GCCLanguage.getDefault()
                 } else {
@@ -210,7 +213,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 }
 
             val translationUnit =
-                language.getASTTranslationUnit(
+                this.dialect?.getASTTranslationUnit(
                     content,
                     scannerInfo,
                     includeFileContentProvider,
