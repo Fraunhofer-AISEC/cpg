@@ -3,7 +3,8 @@ jdk:
 before_install:
   - mkdir -p ~/go
   - wget -q https://go.dev/dl/go1.18.3.linux-amd64.tar.gz && tar -C ~/go -xzf go1.18.3.linux-amd64.tar.gz
+  - ls -l ~/go
 install:
-  - export PATH="$PATH:$HOME/go"
+  - export PATH="$PATH:$HOME/go/bin"
   - go version
   #- ./gradlew build -xtest -Pgroup=com.github.Fraunhofer-AISEC -PnodeDownload=true -PskipGoBuild publishToMavenLocal
