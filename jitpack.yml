@@ -1,4 +1,7 @@
 jdk:
   - openjdk11
+before_install:
+  wget https://go.dev/dl/go1.18.3.linux-amd64.tar.gz && tar -C /usr/local -xzf gogo1.18.3.linux-amd64.tar.gz
+  go version
 install:
   - ./gradlew build -xtest -Pgroup=com.github.Fraunhofer-AISEC -PnodeDownload=true -PskipGoBuild publishToMavenLocal
