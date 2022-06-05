@@ -2,7 +2,7 @@ jdk:
   - openjdk11
 before_install:
   - mkdir -p ~/go
-  - wget -q https://go.dev/dl/go1.18.3.linux-amd64.tar.gz && tar -C ~/go -xzf go1.18.3.linux-amd64.tar.gz
+  - wget -q https://go.dev/dl/go1.18.3.linux-amd64.tar.gz && tar -C ~ -xzf go1.18.3.linux-amd64.tar.gz
   - ls -l ~/go
 install:
   - export PATH="$PATH:$HOME/go/bin"
