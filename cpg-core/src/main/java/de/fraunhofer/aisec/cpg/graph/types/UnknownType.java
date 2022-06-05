@@ -73,7 +73,9 @@ public class UnknownType extends Type {
     return this;
   }
 
-  /** @return Same UnknownType, */
+  /**
+   * @return Same UnknownType,
+   */
   @Override
   public Type dereference() {
     return this;

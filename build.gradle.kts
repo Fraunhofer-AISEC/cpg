@@ -226,7 +226,7 @@ subprojects {
                         include("build/generated-src/**")
                     }
             )
-            googleJavaFormat("1.11.0")
+            googleJavaFormat("1.15.0")
             licenseHeader(headerWithStars).yearSeparator(" - ")
         }
         kotlin {
