@@ -44,7 +44,6 @@ import java.util.function.Supplier
 import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTDeclarator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
@@ -360,8 +359,14 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {
-        val primaryDeclaration: Declaration?
+        var primaryDeclaration: Declaration? = null
         val sequence = DeclarationSequence()
+        val useLegacyTypedef = ctx.declarators.any { it is IASTFunctionDeclarator }
+        var useNameOfDeclarator = false
+
+        if (useLegacyTypedef) {
+            TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
+        }
 
         // check, whether the declaration specifier also contains declarations, i.e. class
         // definitions
@@ -376,6 +381,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     if (primaryDeclaration.name.isEmpty() &&
                             ctx.rawSignature.trim().startsWith("typedef")
                     ) {
+                        // This is a special case, which is a common idiom in C, to typedef a
+                        // unnamed struct into a name. For example `typedef struct { int a; } S`. In
+                        // this case
+                        // the record declaration actually has no name and only the typedef'd name
+                        // is called S. However, to make things a little bit easier we
+                        // also transfer the name to the record declaration.
                         // CDT didn't find out the name due to this thing being a typedef. We need
                         // to fix this
                         // TODO: This is actually not correct, since the struct itself is unnamed,
@@ -394,7 +405,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                                     .filter { p: String -> !p.contains("*") && !p.contains("[") }
                                     .findFirst()
                             name.ifPresent { s: String ->
-                                primaryDeclaration.name = s.replace(";", "")
+                                primaryDeclaration?.name = s.replace(";", "")
+                                // We need to inform the later steps that we want to take the name
+                                // of this declaration
+                                // as the basis for the result type of the typedef
+                                useNameOfDeclarator = true
                             }
                         }
                     }
@@ -422,14 +437,24 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             handleTemplateUsage(declSpecifier, ctx, sequence)
         } else {
             for (declarator in ctx.declarators) {
-                val typeString = declarator.getTypeString(ctx.declSpecifier)
+                // If a previous step informed us that we should take the name of the primary
+                // declaration,
+                // we do so here. This most likely is the case of a typedef struct.
+                val name: String? =
+                    if (useNameOfDeclarator) {
+                        primaryDeclaration?.name
+                    } else {
+                        null
+                    }
+
+                val typeString = declarator.getTypeString(ctx.declSpecifier, name)
 
                 // make sure, the type manager knows about this type before parsing the declarator
                 val result = TypeParser.createFrom(typeString, true, lang)
 
                 // Instead of a variable declaration, this is a typedef, so we handle it
                 // like this
-                if (isTypedef(ctx)) {
+                if (isTypedef(ctx) && !useLegacyTypedef) {
                     TypeManager.getInstance()
                         .handleSingleAlias(
                             lang,
@@ -664,9 +689,20 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
          * @param declSpecifier the declaration specifier
          * @return the type string
          */
-        fun IASTDeclarator.getTypeString(declSpecifier: IASTDeclSpecifier): String {
+        fun IASTDeclarator.getTypeString(
+            declSpecifier: IASTDeclSpecifier,
+            nameOverride: String? = null
+        ): String {
             // use the declaration specifier as basis
             var typeString = ASTStringUtil.getSignatureString(declSpecifier, null)
+
+            // There is a special case in which the name is actually defined by the declarator and
+            // not by the declSpecifier. One such example is the typedef of an unnamed struct and is
+            // quite
+            // common in the C world.
+            if (nameOverride != null) {
+                typeString += " $nameOverride"
+            }
 
             // append names, pointer operators and array modifiers and such
             for (node in this.children) {
