@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
 import java.util.function.Consumer
@@ -361,10 +360,14 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {
         var primaryDeclaration: Declaration? = null
         val sequence = DeclarationSequence()
-        val useLegacyTypedef = ctx.declarators.any { it is IASTFunctionDeclarator }
+
+        // Use the legacy typedef handling for function pointers and templates
+        val useLegacyTypedef =
+            ctx.declarators.any { it is IASTFunctionDeclarator } ||
+                ctx.declSpecifier is CPPASTNamedTypeSpecifier
         var useNameOfDeclarator = false
 
-        if (useLegacyTypedef) {
+        if (isTypedef(ctx) && useLegacyTypedef) {
             TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
         }
 
@@ -382,35 +385,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             ctx.rawSignature.trim().startsWith("typedef")
                     ) {
                         // This is a special case, which is a common idiom in C, to typedef a
-                        // unnamed struct into a name. For example `typedef struct { int a; } S`. In
-                        // this case
-                        // the record declaration actually has no name and only the typedef'd name
-                        // is called S. However, to make things a little bit easier we
-                        // also transfer the name to the record declaration.
-                        // CDT didn't find out the name due to this thing being a typedef. We need
-                        // to fix this
-                        // TODO: This is actually not correct, since the struct itself is unnamed,
-                        // only
-                        //  the typedef has a name
-                        val endOfDeclaration = ctx.rawSignature.lastIndexOf('}')
-                        if (endOfDeclaration + 1 < ctx.rawSignature.length) {
-                            val parts =
-                                Util.splitLeavingParenthesisContents(
-                                    ctx.rawSignature.substring(endOfDeclaration + 1),
-                                    ","
-                                )
-                            val name =
-                                parts
-                                    .stream()
-                                    .filter { p: String -> !p.contains("*") && !p.contains("[") }
-                                    .findFirst()
-                            name.ifPresent { s: String ->
-                                primaryDeclaration?.name = s.replace(";", "")
-                                // We need to inform the later steps that we want to take the name
-                                // of this declaration
-                                // as the basis for the result type of the typedef
-                                useNameOfDeclarator = true
-                            }
+                        // unnamed struct into a type. For example `typedef struct { int a; } S`. In
+                        // this case the record declaration actually has no name and only the
+                        // typedef'd name is called S. However, to make things a little bit easier
+                        // we also transfer the name to the record declaration.
+                        ctx.declarators.firstOrNull()?.name?.toString()?.let {
+                            primaryDeclaration?.name = it
+                            // We need to inform the later steps that we want to take the name
+                            // of this declaration as the basis for the result type of the typedef
+                            useNameOfDeclarator = true
                         }
                     }
                     lang.processAttributes(primaryDeclaration, ctx)
