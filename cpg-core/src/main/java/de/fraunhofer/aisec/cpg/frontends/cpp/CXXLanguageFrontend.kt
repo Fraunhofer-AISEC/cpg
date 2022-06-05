@@ -148,9 +148,13 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 for (includeLocation in includeLocations) {
                     // try to resolve path relatively
                     val includeFile = Path.of(path)
-                    val relative = includeLocation.relativize(includeFile)
-                    if (list.contains(relative.toString())) {
-                        return true
+                    try {
+                        val relative = includeLocation.relativize(includeFile)
+                        if (list.contains(relative.toString())) {
+                            return true
+                        }
+                    } catch(e: IllegalArgumentException) {
+                        continue
                     }
                 }
                 return false
