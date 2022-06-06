@@ -101,7 +101,7 @@ dependencies {
     api("org.neo4j:neo4j-ogm-core:3.2.27")
 
     api("org.slf4j:jul-to-slf4j:1.7.36")
-    api("org.slf4j:slf4j-api:1.7.32")
+    api("org.slf4j:slf4j-api:1.7.36")
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.2")
 
     api("com.github.javaparser:javaparser-symbol-solver-core:3.24.2")
@@ -127,7 +127,7 @@ dependencies {
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.1")
+    testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.2")
     testFixturesImplementation("org.jetbrains.kotlin:kotlin-test")
     testFixturesImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
