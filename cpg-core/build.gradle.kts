@@ -98,7 +98,7 @@ if (project.hasProperty("experimentalTypeScript")) {
 dependencies {
     api("org.apache.commons:commons-lang3:3.12.0")
 
-    api("org.neo4j:neo4j-ogm-core:3.2.27")
+    api("org.neo4j:neo4j-ogm-core:3.2.35")
 
     api("org.slf4j:jul-to-slf4j:1.7.36")
     api("org.slf4j:slf4j-api:1.7.36")
