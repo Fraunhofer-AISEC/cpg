@@ -153,7 +153,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                         if (list.contains(relative.toString())) {
                             return true
                         }
-                    } catch(e: IllegalArgumentException) {
+                    } catch (e: IllegalArgumentException) {
                         continue
                     }
                 }
