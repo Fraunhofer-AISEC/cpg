@@ -182,7 +182,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     val parameterDeclarationHandler = ParameterDeclarationHandler(this)
     val statementHandler = StatementHandler(this)
 
-    private val comments = HashMap<Int, String>()
+    private val comments = HashMap<Pair<String, Int>, String>()
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
@@ -236,13 +236,16 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             if (config.debugParser) {
                 explore(translationUnit, 0)
             }
+
             for (c in translationUnit.comments) {
                 if (c.fileLocation == null) {
                     LOGGER.warn("Found comment with null location in {}", translationUnit.filePath)
                     continue
                 }
-                comments[c.fileLocation.startingLineNumber] = c.rawSignature
+                comments[Pair(c.fileLocation.fileName, c.fileLocation.startingLineNumber)] =
+                    c.rawSignature
             }
+
             val translationUnitDeclaration =
                 declarationHandler.handleTranslationUnit(translationUnit)
             bench.stop()
@@ -430,9 +433,15 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     override fun <S, T> setComment(s: S, ctx: T) {
         if (ctx is ASTNode && s is Node) {
             val cpgNode = s as Node
-            if (comments.containsKey(cpgNode.location?.region?.endLine)
-            ) { // only exact match for now
-                cpgNode.comment = comments[cpgNode.location?.region?.endLine]
+            val location = cpgNode.location ?: return
+
+            // No location, no comment
+
+            val loc: Pair<String, Int> =
+                Pair(location.artifactLocation.uri.path, location.region.endLine)
+            comments[loc]?.let {
+                // only exact match for now}
+                cpgNode.comment = it
             }
             // TODO: handle orphanComments? i.e. comments which do not correspond to one line
             // todo: what to do with comments which are in a line which contains multiple

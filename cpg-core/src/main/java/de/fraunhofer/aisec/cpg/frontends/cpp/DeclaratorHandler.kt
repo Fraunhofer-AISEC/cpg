@@ -143,18 +143,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         } else NodeBuilder.newMethodDeclaration(name, null, false, recordDeclaration, lang, ctx)
     }
 
-    private fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration {
+    fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration {
         // Programmers can wrap the function name in as many levels of parentheses as they like. CDT
         // treats these levels as separate declarators, so we need to get to the bottom for the
         // actual name...
-        var nameDecl: IASTDeclarator = ctx
-        var hasPointer = false
-        while (nameDecl.nestedDeclarator != null) {
-            nameDecl = nameDecl.nestedDeclarator
-            if (nameDecl.pointerOperators.isNotEmpty()) {
-                hasPointer = true
-            }
-        }
+        val (nameDecl: IASTDeclarator, hasPointer) = ctx.realName()
         var name = nameDecl.name.toString()
 
         // Attention! This might actually be a function pointer (requires at least one level of
@@ -451,4 +444,20 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             lang.declarationHandler.handle(member)
         }
     }
+}
+
+/**
+ * This function returns the real name (declarator) of this [IASTFunctionDeclarator]. The name
+ * itself can be wrapped in many layers of nested declarators, e.g., if the name is wrapped in ().
+ */
+fun IASTFunctionDeclarator.realName(): Pair<IASTDeclarator, Boolean> {
+    var nameDecl: IASTDeclarator = this
+    var hasPointer = false
+    while (nameDecl.nestedDeclarator != null) {
+        nameDecl = nameDecl.nestedDeclarator
+        if (nameDecl.pointerOperators.isNotEmpty()) {
+            hasPointer = true
+        }
+    }
+    return Pair(nameDecl, hasPointer)
 }

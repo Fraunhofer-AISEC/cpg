@@ -361,9 +361,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         var primaryDeclaration: Declaration? = null
         val sequence = DeclarationSequence()
 
-        // Use the legacy typedef handling for function pointers and templates
+        // Use the legacy typedef handling for function pointers (in multiple aliases) and templates
         val useLegacyTypedef =
-            ctx.declarators.any { it is IASTFunctionDeclarator } ||
+            (ctx.declarators.size > 1 && ctx.declarators.any { it is IASTFunctionDeclarator }) ||
                 ctx.declSpecifier is CPPASTNamedTypeSpecifier
         var useNameOfDeclarator = false
 
@@ -438,13 +438,28 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // Instead of a variable declaration, this is a typedef, so we handle it
                 // like this
                 if (isTypedef(ctx) && !useLegacyTypedef) {
-                    TypeManager.getInstance()
-                        .handleSingleAlias(
-                            lang,
-                            lang.getCodeFromRawNode(ctx),
-                            result,
-                            declarator.name.toString()
-                        )
+                    // Handle function pointer types slightly differently
+                    if (declarator is IASTFunctionDeclarator) {
+                        val code = lang.getCodeFromRawNode(ctx) ?: ""
+                        val typedefIdx = code.indexOf("typedef ")
+                        val fpType =
+                            TypeParser.createFrom(
+                                code.substring(typedefIdx + 8).replace("\n", ""),
+                                false,
+                                lang
+                            )
+                        val (nameDecl: IASTDeclarator, _) = declarator.realName()
+                        TypeManager.getInstance()
+                            .handleSingleAlias(lang, code, fpType, nameDecl.name.toString())
+                    } else {
+                        TypeManager.getInstance()
+                            .handleSingleAlias(
+                                lang,
+                                lang.getCodeFromRawNode(ctx),
+                                result,
+                                declarator.name.toString()
+                            )
+                    }
                 } else {
                     val declaration = lang.declaratorHandler.handle(declarator) as? ValueDeclaration
 
