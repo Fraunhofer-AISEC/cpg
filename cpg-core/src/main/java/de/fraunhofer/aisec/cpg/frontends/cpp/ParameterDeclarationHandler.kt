@@ -29,17 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
-import java.util.stream.Collectors
 import kotlin.reflect.typeOf
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDeclarator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
-import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Declaration?, IASTParameterDeclaration>(Supplier(::ProblemDeclaration), lang) {
@@ -57,61 +51,16 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleParameterDeclaration(
         ctx: IASTParameterDeclaration
     ): ParamVariableDeclaration {
-        // The logic of type adjustment computation was copied over from handleDeclarator, it is not
-        // clear if it will be necessary but the usage of handleDeclarator had to be avoided because
-        // of side effects
-        var typeAdjustment =
-            mutableListOf(*ctx.declarator.pointerOperators)
-                .stream()
-                .map { obj: IASTPointerOperator -> obj.rawSignature }
-                .collect(Collectors.joining())
-        if (ctx.declarator is CPPASTArrayDeclarator &&
-                ctx.declarator.initializer is IASTInitializerList
-        ) {
-            // narrow down array type to size of initializer list expression
-            typeAdjustment +=
-                ("[" + (ctx.declarator.initializer as IASTInitializerList).initializers.size + "]")
-        } else if (ctx.declarator is IASTArrayDeclarator &&
-                ctx.declarator.initializer is Literal<*> &&
-                (ctx.declarator.initializer as Literal<*>).value is String
-        ) {
-            // narrow down array type to length of string literal
-            typeAdjustment +=
-                ("[" +
-                    (((ctx.declarator.initializer as Literal<*>).value as String).length + 1) +
-                    "]")
-        } else if (ctx.declarator is IASTArrayDeclarator) {
-            typeAdjustment +=
-                mutableListOf(*(ctx.declarator as IASTArrayDeclarator).arrayModifiers)
-                    .stream()
-                    .map { obj: IASTArrayModifier -> obj.rawSignature }
-                    .collect(Collectors.joining())
-        }
+        // Parse the type
+        val type = typeOf(ctx.declarator, ctx.declSpecifier)
+
         val paramVariableDeclaration =
             NodeBuilder.newMethodParameterIn(
                 ctx.declarator.name.toString(),
-                UnknownType.getUnknownType(),
+                type,
                 false,
                 ctx.rawSignature
             )
-        if (typeAdjustment.isNotEmpty()) {
-            paramVariableDeclaration.type =
-                TypeParser.createFrom(
-                    ASTStringUtil.getSignatureString(ctx.declSpecifier, null) + typeAdjustment,
-                    true,
-                    lang
-                )
-        } else {
-            paramVariableDeclaration.type =
-                TypeParser.createFrom(
-                    ASTStringUtil.getSignatureString(ctx.declSpecifier, null),
-                    true,
-                    lang
-                )
-        }
-
-        // Try the new system
-        var type = typeOf(ctx.declarator, ctx.declSpecifier)
 
         // Add default values
         if (ctx.declarator.initializer != null) {
@@ -124,6 +73,7 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
             paramVariableDeclaration.default =
                 lang.initializerHandler.handle(ctx.declarator.initializer)
         }
+
         return paramVariableDeclaration
     }
 }

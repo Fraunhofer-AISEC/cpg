@@ -32,19 +32,16 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
+import java.util.function.Consumer
+import java.util.function.Supplier
+import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
-import java.util.function.Consumer
-import java.util.function.Supplier
-import java.util.stream.Collectors
 
 class DeclarationHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Declaration, IASTDeclaration>(Supplier(::ProblemDeclaration), lang) {
@@ -104,9 +101,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 "declarator of function definition is not a function declarator"
             )
         }
+
+        // Retrieve the type. This is the function (pointer) type. For now, we only set the
+        // returnType to the type property of the function. However, this might change with
+        // https://github.com/Fraunhofer-AISEC/cpg/issues/824.
+        val type = typeOf(ctx.declarator, ctx.declSpecifier)
+        declarator.type = (type as? FunctionPointerType)?.returnType ?: UnknownType.getUnknownType()
+
+        // TODO: For comparison here, remove
         val typeString = ctx.declarator.getTypeString(ctx.declSpecifier)
         declarator.setIsDefinition(true)
-        declarator.type = TypeParser.createFrom(typeString, true, lang)
 
         // associated record declaration if this is a method or constructor
         val recordDeclaration =

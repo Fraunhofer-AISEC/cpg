@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.*
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
@@ -62,10 +63,18 @@ fun typeOf(declarator: IASTDeclarator, specifier: IASTDeclSpecifier): Type {
         for (mod in declarator.arrayModifiers) {
             type = type.reference(PointerType.PointerOrigin.ARRAY)
         }
+    } else if (declarator is IASTStandardFunctionDeclarator) {
+        // Loop through the parameters
+        val paramTypes = declarator.parameters.map { typeOf(it.declarator, it.declSpecifier) }
+
+        // We need to construct a function (pointer) type here. The existing type
+        // so far is the return value. We then add the parameters
+        type = FunctionPointerType(type.qualifier, type.storage, paramTypes, type)
     }
 
     // Lastly, look at the declarator, to see whether, we need to wrap the type into a pointer or
     // similar
+    // TODO: before or after the code block before?
     for (op in declarator.pointerOperators) {
         type =
             when (op) {
@@ -82,5 +91,6 @@ fun typeOf(declarator: IASTDeclarator, specifier: IASTDeclSpecifier): Type {
             }
     }
 
-    return type
+    // Make sure, the type manager knows about this type
+    return TypeManager.getInstance().registerType(type)
 }

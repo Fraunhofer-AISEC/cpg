@@ -282,7 +282,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             lang.scopeManager.leaveScope(recordDeclaration)
         }
 
-        // We recognize a ambiguity here, but cannot solve it at the moment
+        // We recognize an ambiguity here, but cannot solve it at the moment
         if (name != "" &&
                 ctx.parent is CPPASTDeclarator &&
                 declaration.body == null &&

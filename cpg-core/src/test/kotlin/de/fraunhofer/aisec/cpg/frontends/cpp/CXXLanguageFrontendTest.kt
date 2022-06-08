@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -239,11 +240,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testFunctionDeclaration() {
-        val file = File("src/test/resources/functiondecl.cpp")
+        val file = File("src/test/resources/cxx/functiondecl.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
 
         // should be seven function nodes
-        assertEquals(7, declaration.declarations.size)
+        assertEquals(8, declaration.declarations.size)
 
         var method = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
         assertEquals("function0(int)void", method!!.signature)
@@ -290,6 +291,18 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(method)
         assertEquals(0, method.parameters.size)
         assertEquals("function5()void", method.signature)
+
+        method = declaration.getDeclarationAs(7, FunctionDeclaration::class.java)
+        assertNotNull(method)
+        assertEquals(1, method.parameters.size)
+
+        val param = method.parameters.firstOrNull()
+        assertNotNull(param)
+
+        val fpType = param.type as? FunctionPointerType
+        assertNotNull(fpType)
+        assertEquals(1, fpType.parameters.size)
+        assertEquals("void", fpType.returnType.name)
     }
 
     @Test
