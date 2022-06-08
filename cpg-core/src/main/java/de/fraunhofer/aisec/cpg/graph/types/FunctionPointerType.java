@@ -123,7 +123,7 @@ public class FunctionPointerType extends Type {
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), getParameters(), returnType);
+    return Objects.hash(super.hashCode(), parameters, returnType);
   }
 
   @NotNull

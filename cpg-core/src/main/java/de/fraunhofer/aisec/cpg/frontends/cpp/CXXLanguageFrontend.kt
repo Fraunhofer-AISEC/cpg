@@ -59,6 +59,7 @@ import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.ASTTranslationUnit
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
+import org.eclipse.cdt.internal.core.model.ASTStringUtil
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider
@@ -447,44 +448,54 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         }
     }
 
+    /**
+     * Returns the [Type] that is represented by the [declarator] and [specifier]. This tries to
+     * resolve as much information about the type on its own using by analyzing the AST of the
+     * supplied declarator and specifier. Finally, [TypeParser.createFrom] is invoked on the
+     * inner-most type, but all other type adjustments, such as creating a [PointerType] is done
+     * within this method.
+     */
     fun typeOf(declarator: IASTDeclarator, specifier: IASTDeclSpecifier): Type {
-        // TODO: in general, we should parse the qualifiers, such as const here, instead of in the
-        //  TypeParser
+        // Retrieve the "name" of this type, including qualifiers.
+        // TODO: In the future, we should parse the qualifiers, such as const here, instead of in
+        //  the TypeParser
+        var name = ASTStringUtil.getSignatureString(specifier, null)
+
         var type =
             when (specifier) {
                 is IASTSimpleDeclSpecifier -> {
                     // A primitive type
-                    TypeParser.createFrom(specifier.rawSignature, false)
+                    TypeParser.createFrom(name, false)
                 }
                 is IASTNamedTypeSpecifier -> {
-                    val name = specifier.name
-                    val nameString: String =
-                        if (name is CPPASTQualifiedName) {
+                    val nameDecl = specifier.name
+                    name =
+                        if (nameDecl is CPPASTQualifiedName) {
                             // For some reason the legacy type system does not keep the language
                             // specific namespace delimiters, and for backwards compatibility, we
-                            // are
-                            // keeping this behaviour (for now).
-                            specifier.rawSignature.replace("::", ".")
+                            // are keeping this behaviour (for now).
+                            name.replace("::", ".")
                         } else {
-                            specifier.rawSignature
+                            name
                         }
 
-                    TypeParser.createFrom(nameString, true, this)
+                    TypeParser.createFrom(name, true, this)
                 }
                 is IASTCompositeTypeSpecifier -> {
                     // A class. This actually also declares the class. At the moment, we handle this
-                    // in
-                    // handleSimpleDeclaration, but we might want to move it here
-                    TypeParser.createFrom(specifier.rawSignature, true, this)
+                    // in handleSimpleDeclaration, but we might want to move it here
+                    TypeParser.createFrom(name, true, this)
                 }
                 is IASTElaboratedTypeSpecifier -> {
                     // A class or struct
-                    TypeParser.createFrom(specifier.rawSignature, true, this)
+                    TypeParser.createFrom(name, true, this)
                 }
                 else -> {
                     UnknownType.getUnknownType()
                 }
             }
+
+        type = TypeManager.getInstance().registerType(type)
 
         type = this.adjustType(declarator, type)
         return type
@@ -546,8 +557,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         // Lastly, there might be further nested declarators that adjust the type further.
         // However, if the type is already a function pointer type, we can ignore it. In the future,
         // this will probably actually make the difference between a function type and a function
-        // pointer
-        // type.
+        // pointer type.
         if (declarator.nestedDeclarator != null && type !is FunctionPointerType) {
             type = adjustType(declarator.nestedDeclarator, type)
         }

@@ -352,7 +352,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), body, getParameters());
+    return super.hashCode();
   }
 
   public FunctionDeclaration getDefinition() {
