@@ -36,7 +36,7 @@ fun typeOf(declarator: IASTDeclarator, specifier: IASTDeclSpecifier): Type {
         when (specifier) {
             is IASTSimpleDeclSpecifier -> {
                 // A primitive type
-                TypeParser.createFrom(specifier.toString(), false)
+                TypeParser.createFrom(specifier.rawSignature, false)
             }
             is IASTNamedTypeSpecifier -> {
                 val name = specifier.name
