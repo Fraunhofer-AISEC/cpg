@@ -52,7 +52,7 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         ctx: IASTParameterDeclaration
     ): ParamVariableDeclaration {
         // Parse the type
-        val type = typeOf(ctx.declarator, ctx.declSpecifier)
+        val type = lang.typeOf(ctx.declarator, ctx.declSpecifier)
 
         val paramVariableDeclaration =
             NodeBuilder.newMethodParameterIn(

@@ -31,7 +31,7 @@ import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
 
-fun typeOf(declarator: IASTDeclarator, specifier: IASTDeclSpecifier): Type {
+fun CXXLanguageFrontend.typeOf(declarator: IASTDeclarator, specifier: IASTDeclSpecifier): Type {
     var type =
         when (specifier) {
             is IASTSimpleDeclSpecifier -> {
@@ -51,7 +51,7 @@ fun typeOf(declarator: IASTDeclarator, specifier: IASTDeclSpecifier): Type {
                         name.toString()
                     }
 
-                TypeParser.createFrom(nameString, true)
+                TypeParser.createFrom(nameString, true, this)
             }
             else -> {
                 UnknownType.getUnknownType()

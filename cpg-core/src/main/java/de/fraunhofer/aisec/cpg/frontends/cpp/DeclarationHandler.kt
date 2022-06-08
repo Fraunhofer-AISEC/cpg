@@ -105,7 +105,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // Retrieve the type. This is the function (pointer) type. For now, we only set the
         // returnType to the type property of the function. However, this might change with
         // https://github.com/Fraunhofer-AISEC/cpg/issues/824.
-        val type = typeOf(ctx.declarator, ctx.declSpecifier)
+        val type = lang.typeOf(ctx.declarator, ctx.declSpecifier)
         declarator.type = (type as? FunctionPointerType)?.returnType ?: UnknownType.getUnknownType()
 
         // TODO: For comparison here, remove
@@ -439,7 +439,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // make sure, the type manager knows about this type before parsing the declarator
                 val result = TypeParser.createFrom(typeString, true, lang)
 
-                val type = typeOf(declarator, declSpecifier)
+                val type = lang.typeOf(declarator, declSpecifier)
 
                 // Instead of a variable declaration, this is a typedef, so we handle it
                 // like this
@@ -697,8 +697,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             declSpecifier: IASTDeclSpecifier,
             nameOverride: String? = null
         ): String {
-            val type = typeOf(this, declSpecifier)
-
             // use the declaration specifier as basis
             var typeString = ASTStringUtil.getSignatureString(declSpecifier, null)
 
