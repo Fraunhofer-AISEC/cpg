@@ -38,13 +38,13 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
-import java.util.function.Consumer
-import java.util.function.Supplier
-import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
+import java.util.function.Consumer
+import java.util.function.Supplier
+import java.util.stream.Collectors
 
 class DeclarationHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Declaration, IASTDeclaration>(Supplier(::ProblemDeclaration), lang) {
@@ -435,6 +435,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // make sure, the type manager knows about this type before parsing the declarator
                 val result = TypeParser.createFrom(typeString, true, lang)
 
+                val type = typeOf(declarator, declSpecifier)
+
                 // Instead of a variable declaration, this is a typedef, so we handle it
                 // like this
                 if (isTypedef(ctx) && !useLegacyTypedef) {
@@ -691,6 +693,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             declSpecifier: IASTDeclSpecifier,
             nameOverride: String? = null
         ): String {
+            val type = typeOf(this, declSpecifier)
+
             // use the declaration specifier as basis
             var typeString = ASTStringUtil.getSignatureString(declSpecifier, null)
 

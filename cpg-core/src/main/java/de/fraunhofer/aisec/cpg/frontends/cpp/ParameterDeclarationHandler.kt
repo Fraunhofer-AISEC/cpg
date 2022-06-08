@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
 import java.util.stream.Collectors
+import kotlin.reflect.typeOf
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDeclarator
@@ -58,8 +59,7 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
     ): ParamVariableDeclaration {
         // The logic of type adjustment computation was copied over from handleDeclarator, it is not
         // clear if it will be necessary but the usage of handleDeclarator had to be avoided because
-        // of
-        // side effects
+        // of side effects
         var typeAdjustment =
             mutableListOf(*ctx.declarator.pointerOperators)
                 .stream()
@@ -109,6 +109,9 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
                     lang
                 )
         }
+
+        // Try the new system
+        var type = typeOf(ctx.declarator, ctx.declSpecifier)
 
         // Add default values
         if (ctx.declarator.initializer != null) {
