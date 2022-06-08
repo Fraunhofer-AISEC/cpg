@@ -45,6 +45,7 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,6 +93,10 @@ public class SubgraphWalker {
   /**
    * Retrieves a list of AST children of the specified node by iterating all fields that are
    * annotated with the {@link SubGraph} annotation and its value "AST".
+   *
+   * <p>Please note, that you SHOULD NOT call this directly in a recursive function, since the AST
+   * might have loops and you will probably run into a {@link StackOverflowError}. Therefore, use of
+   * {@link Node#accept} with the {@link Strategy#AST_FORWARD(Node)} is encouraged.
    *
    * @param node the start node
    * @return a list of children from the node's AST
@@ -207,12 +212,17 @@ public class SubgraphWalker {
   }
 
   public static void refreshType(Node node) {
-    for (Node child : getAstChildren(node)) {
-      refreshType(child);
-    }
-    if (node instanceof HasType) {
-      ((HasType) node).refreshType();
-    }
+    // Using a visitor to avoid loops in the AST
+    node.accept(
+        Strategy::AST_FORWARD,
+        new IVisitor<>() {
+          @Override
+          public void visit(@NotNull Node child) {
+            if (child instanceof HasType) {
+              ((HasType) child).refreshType();
+            }
+          }
+        });
   }
 
   public static void activateTypes(Node node) {

@@ -82,7 +82,9 @@ public class PointerType extends Type implements SecondOrderType {
     return new PointerType(this, origin);
   }
 
-  /** @return dereferencing a PointerType yields the type the pointer was pointing towards */
+  /**
+   * @return dereferencing a PointerType yields the type the pointer was pointing towards
+   */
   @Override
   public Type dereference() {
     return elementType;

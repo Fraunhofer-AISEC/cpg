@@ -31,8 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Transitively {@link RecordDeclaration} nodes with their supertypes' records.
@@ -96,14 +99,19 @@ public class TypeHierarchyResolver extends Pass {
   }
 
   protected void findRecordsAndEnums(Node node) {
-    if (node instanceof RecordDeclaration) {
-      recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
-    } else if (node instanceof EnumDeclaration) {
-      enums.add((EnumDeclaration) node);
-    }
-    for (var child : SubgraphWalker.getAstChildren(node)) {
-      findRecordsAndEnums(child);
-    }
+    // Using a visitor to avoid loops in the AST
+    node.accept(
+        Strategy::AST_FORWARD,
+        new IVisitor<>() {
+          @Override
+          public void visit(@NotNull Node child) {
+            if (child instanceof RecordDeclaration) {
+              recordMap.putIfAbsent(child.getName(), (RecordDeclaration) child);
+            } else if (child instanceof EnumDeclaration) {
+              enums.add((EnumDeclaration) child);
+            }
+          }
+        });
   }
 
   protected List<MethodDeclaration> getAllMethodsFromSupertypes(
