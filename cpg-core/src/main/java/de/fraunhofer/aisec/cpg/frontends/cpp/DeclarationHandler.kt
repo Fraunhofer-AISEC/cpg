@@ -434,16 +434,17 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         null
                     }
 
-                val typeString = declarator.getTypeString(ctx.declSpecifier, name)
-
-                // make sure, the type manager knows about this type before parsing the declarator
-                val result = TypeParser.createFrom(typeString, true, lang)
-
                 val type = lang.typeOf(declarator, declSpecifier)
 
                 // Instead of a variable declaration, this is a typedef, so we handle it
                 // like this
                 if (isTypedef(ctx) && !useLegacyTypedef) {
+                    // TODO: also use new system
+                    val typeString = declarator.getTypeString(ctx.declSpecifier, name)
+                    // make sure, the type manager knows about this type before parsing the
+                    // declarator
+                    val result = TypeParser.createFrom(typeString, true, lang)
+
                     // Handle function pointer types slightly differently
                     if (declarator is IASTFunctionDeclarator) {
                         val code = lang.getCodeFromRawNode(ctx) ?: ""
@@ -470,7 +471,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     val declaration = lang.declaratorHandler.handle(declarator) as? ValueDeclaration
 
                     if (declaration != null) {
-                        declaration.type = result
+                        // Only return type for functions. See
+                        // https://github.com/Fraunhofer-AISEC/cpg/issues/824
+                        if (declaration is FunctionDeclaration) {
+                            declaration.type =
+                                (type as? FunctionPointerType)?.returnType
+                                    ?: UnknownType.getUnknownType()
+                        } else {
+                            declaration.type = type
+                        }
 
                         // process attributes
                         lang.processAttributes(declaration, ctx)

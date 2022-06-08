@@ -32,6 +32,8 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
 
 fun CXXLanguageFrontend.typeOf(declarator: IASTDeclarator, specifier: IASTDeclSpecifier): Type {
+    // TODO: in general, we should parse the qualifiers, such as const here, instead of in the
+    // TypeParser
     var type =
         when (specifier) {
             is IASTSimpleDeclSpecifier -> {
@@ -44,19 +46,51 @@ fun CXXLanguageFrontend.typeOf(declarator: IASTDeclarator, specifier: IASTDeclSp
                     if (name is CPPASTQualifiedName) {
                         // For some reason the legacy type system does not keep the language
                         // specific namespace delimiters, and for backwards compatibility, we are
-                        // keeping
-                        // this behaviour (for now).
-                        name.qualifier.joinToString(".") + "." + name.lastName
+                        // keeping this behaviour (for now).
+                        specifier.rawSignature.replace("::", ".")
                     } else {
-                        name.toString()
+                        specifier.rawSignature
                     }
 
                 TypeParser.createFrom(nameString, true, this)
+            }
+            is IASTCompositeTypeSpecifier -> {
+                // A class. This actually also declares the class. At the moment, we handle this in
+                // handleSimpleDeclaration, but we might want to move it here
+                TypeParser.createFrom(specifier.rawSignature, true, this)
+            }
+            is IASTElaboratedTypeSpecifier -> {
+                // A class or struct
+                TypeParser.createFrom(specifier.rawSignature, true, this)
             }
             else -> {
                 UnknownType.getUnknownType()
             }
         }
+
+    type = this.adjustType(declarator, type)
+    return type
+}
+
+fun CXXLanguageFrontend.adjustType(declarator: IASTDeclarator, incoming: Type): Type {
+    var type = incoming
+
+    // First, look at the declarator's pointer operator, to see whether, we need to wrap the type
+    // into a pointer or similar
+    for (op in declarator.pointerOperators) {
+        type =
+            when (op) {
+                is IASTPointer -> {
+                    type.reference(PointerType.PointerOrigin.POINTER)
+                }
+                is ICPPASTReferenceOperator -> {
+                    ReferenceType(type.storage, type.qualifier, type)
+                }
+                else -> {
+                    type
+                }
+            }
+    }
 
     // Check, if we are an array type
     if (declarator is IASTArrayDeclarator) {
@@ -72,23 +106,9 @@ fun CXXLanguageFrontend.typeOf(declarator: IASTDeclarator, specifier: IASTDeclSp
         type = FunctionPointerType(type.qualifier, type.storage, paramTypes, type)
     }
 
-    // Lastly, look at the declarator, to see whether, we need to wrap the type into a pointer or
-    // similar
-    // TODO: before or after the code block before?
-    for (op in declarator.pointerOperators) {
-        type =
-            when (op) {
-                is IASTPointer -> {
-                    type.reference(PointerType.PointerOrigin.POINTER)
-                }
-                is ICPPASTReferenceOperator -> {
-                    ReferenceType(type.storage, type.qualifier, type)
-                }
-                else -> {
-                    println(op)
-                    type
-                }
-            }
+    // Lastly, there might be further nested declarators that adjust the type further
+    if (declarator.nestedDeclarator != null) {
+        type = adjustType(declarator.nestedDeclarator, type)
     }
 
     // Make sure, the type manager knows about this type
