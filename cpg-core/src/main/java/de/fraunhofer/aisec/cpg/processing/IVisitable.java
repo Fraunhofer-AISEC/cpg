@@ -40,8 +40,7 @@ public interface IVisitable<V extends IVisitable> {
    * @param visitor Instance of the visitor to call.
    */
   default void accept(IStrategy<V> strategy, IVisitor<V> visitor) {
-    if (!visitor.getVisited().contains(this)) {
-      visitor.getVisited().add((V) this);
+    if (visitor.getVisited().add((V) this)) {
       visitor.visit((V) this);
       @NonNull Iterator<V> it = strategy.getIterator((V) this);
       while (it.hasNext()) {

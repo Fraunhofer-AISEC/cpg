@@ -27,14 +27,14 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import java.io.File
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
+import kotlin.test.*
 
 internal class SubgraphWalkerTest : BaseTest() {
     @Test
@@ -54,5 +54,20 @@ internal class SubgraphWalkerTest : BaseTest() {
 
         // should contain 4 AST nodes, 1 field (+1 this field), 1 method, 1 constructor
         assertEquals(4, ast.size)
+    }
+
+    @Test
+    fun testLoopDetection() {
+        // Let's create an intentional loop
+        val tu = TranslationUnitDeclaration()
+        val name = NamespaceDeclaration()
+        val func = FunctionDeclaration()
+        name.addDeclaration(tu)
+        name.addDeclaration(func)
+        tu.addDeclaration(name)
+
+        val flat = SubgraphWalker.flattenAST(tu)
+
+        assertEquals(listOf<Node>(tu, name, func), flat)
     }
 }

@@ -231,13 +231,13 @@ private constructor(
                                 "Activating types for ${it.name}",
                                 true
                             )
-                        SubgraphWalker.activateTypes(it, scopeManager)
+                        SubgraphWalker.activateTypes(it)
                         bench.addMeasurement()
                     }
                 }
                 result.translationUnits.forEach {
                     val bench = Benchmark(this.javaClass, "Activating types for ${it.name}", true)
-                    SubgraphWalker.activateTypes(it, scopeManager)
+                    SubgraphWalker.activateTypes(it)
                     bench.addMeasurement()
                 }
             }

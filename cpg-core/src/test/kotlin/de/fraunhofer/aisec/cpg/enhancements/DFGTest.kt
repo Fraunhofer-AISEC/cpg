@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.helpers.NodeComparator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.nio.file.Path
 import kotlin.test.*
@@ -416,7 +415,6 @@ internal class DFGTest {
             SubgraphWalker.flattenAST(looping)
                 .filter { n: Node -> n is CallExpression && n.name == "println" }
                 .toMutableList()
-        calls.sortWith(NodeComparator())
         val dfgNodesA0 =
             flattenDFGGraph(
                 getSubnodeOfTypeWithName(calls[0], DeclaredReferenceExpression::class.java, "a"),
