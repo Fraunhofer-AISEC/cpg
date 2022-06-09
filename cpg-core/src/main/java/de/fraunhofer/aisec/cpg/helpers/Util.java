@@ -287,7 +287,7 @@ public class Util {
           openingParentheses.push(i);
           break;
         case ')':
-          int matching = openingParentheses.pop();
+          int matching = openingParentheses.pollFirst();
           if (matching == 0 && i == original.length() - 1) {
             result[matching] = result[i] = marker;
           } else if (matching > 0 && result[matching - 1] == '(' && result[i + 1] == ')') {
