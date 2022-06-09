@@ -515,7 +515,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    fun handleTranslationUnit(translationUnit: CPPASTTranslationUnit): TranslationUnitDeclaration {
+    fun handleTranslationUnit(translationUnit: IASTTranslationUnit): TranslationUnitDeclaration {
         val node =
             NodeBuilder.newTranslationUnitDeclaration(
                 translationUnit.filePath,

@@ -56,7 +56,9 @@ public class ReferenceType extends Type implements SecondOrderType {
     this.reference = reference;
   }
 
-  /** @return Referencing a ReferenceType results in a PointerType to the original ReferenceType */
+  /**
+   * @return Referencing a ReferenceType results in a PointerType to the original ReferenceType
+   */
   @Override
   public Type reference(PointerType.PointerOrigin pointerOrigin) {
     return new PointerType(this, pointerOrigin);
