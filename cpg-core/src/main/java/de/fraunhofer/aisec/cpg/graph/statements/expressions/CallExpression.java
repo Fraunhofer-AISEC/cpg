@@ -305,6 +305,11 @@ public class CallExpression extends Expression
     }
 
     for (int i = this.templateParameters.size(); i < orderedInitializationSignature.size(); i++) {
+      var signature = orderedInitializationSignature.get(i);
+      if (signature == null) {
+        continue;
+      }
+
       PropertyEdge<Node> propertyEdge =
           new PropertyEdge<>(this, orderedInitializationSignature.get(i));
       propertyEdge.addProperty(Properties.INDEX, this.templateParameters.size());
