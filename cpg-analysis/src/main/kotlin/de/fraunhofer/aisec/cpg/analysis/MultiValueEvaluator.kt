@@ -241,7 +241,9 @@ class MultiValueEvaluator : ValueEvaluator() {
 
         var loopVar =
             evaluateInternal(loop.initializerStatement.declarations.first(), depth) as? Number
+
         if (loopVar == null) return listOf()
+
         val cond = loop.condition as BinaryOperator
         val result = mutableListOf<Any?>()
         var lhs =
