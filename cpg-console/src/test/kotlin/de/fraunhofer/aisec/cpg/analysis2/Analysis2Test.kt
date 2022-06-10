@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.followPrevDFG
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -195,6 +196,33 @@ class Analysis2Test {
                                 .initializer as
                                 ArrayCreationExpression)
                             .dimensions[0]
+                    ) && min(it.subscriptExpression) >= 0
+            }
+        assertFalse(ok)
+        println(fails)
+    }
+
+    @Test
+    fun testOutOfBoundsQuery3() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/array3.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerPass(EdgeCachePass())
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val (ok, fails) =
+            result.all<ArraySubscriptionExpression> {
+                max(it.subscriptExpression) <
+                    min(
+                        ((it.arrayExpression as DeclaredReferenceExpression).refersTo as
+                                VariableDeclaration)
+                            .followPrevDFG { node -> node is ArrayCreationExpression }
+                            .map { it2 -> (it2 as ArrayCreationExpression).dimensions[0] }
                     ) && min(it.subscriptExpression) >= 0
             }
         assertFalse(ok)

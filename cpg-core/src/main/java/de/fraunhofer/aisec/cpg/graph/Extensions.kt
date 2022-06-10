@@ -136,6 +136,28 @@ class StatementNotFound : Exception()
 
 class DeclarationNotFound(message: String) : Exception(message)
 
+fun Node.followPrevDFG(predicate: (Node) -> Boolean): List<Node> {
+    val result = mutableListOf<Node>()
+    val alreadySeen = mutableListOf<Node>()
+    val worklist = mutableListOf<Node>()
+    worklist.add(this)
+
+    while (worklist.isNotEmpty()) {
+        val currentNode = worklist.removeFirst()
+        alreadySeen.add(currentNode)
+        for (prev in currentNode.prevDFG) {
+            if (predicate(prev)) {
+                result.add(prev)
+            }
+            if (!alreadySeen.contains(prev)) {
+                worklist.add(prev)
+            }
+        }
+    }
+
+    return result
+}
+
 fun Node.followPrevEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
     val path = mutableListOf<PropertyEdge<*>>()
 

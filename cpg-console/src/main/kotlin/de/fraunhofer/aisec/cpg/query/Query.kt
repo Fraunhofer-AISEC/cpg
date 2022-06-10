@@ -95,6 +95,46 @@ fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
 }
 
 /**
+ * Retrieves the minimal value of the nodes in the list.
+ *
+ * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
+ */
+fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
+    var result = Long.MAX_VALUE
+    if (n == null) return result
+
+    for (node in n) {
+        val evalRes = eval.evaluate(node)
+        if (evalRes is Number && evalRes.toLong() < result) {
+            result = evalRes.toLong()
+        } else if (evalRes is ConcreteNumberSet && evalRes.min() < result) {
+            result = evalRes.min()
+        }
+    }
+    return result
+}
+
+/**
+ * Retrieves the maximal value of the nodes in the list.
+ *
+ * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
+ */
+fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
+    var result = Long.MIN_VALUE
+    if (n == null) return result
+
+    for (node in n) {
+        val evalRes = eval.evaluate(node)
+        if (evalRes is Number && evalRes.toLong() > result) {
+            result = evalRes.toLong()
+        } else if (evalRes is ConcreteNumberSet && evalRes.max() > result) {
+            result = evalRes.max()
+        }
+    }
+    return result
+}
+
+/**
  * Retrieves the minimal value of the node.
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
