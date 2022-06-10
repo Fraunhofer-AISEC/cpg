@@ -224,9 +224,10 @@ class TypeScriptLanguageFrontend(
 
     fun processAnnotations(node: Node, astNode: TypeScriptNode) {
         // filter for decorators
-        astNode.children?.filter { it.type == "Decorator" }?.map { handleDecorator(it) }?.let {
-            node.addAnnotations(it)
-        }
+        astNode.children
+            ?.filter { it.type == "Decorator" }
+            ?.map { handleDecorator(it) }
+            ?.let { node.addAnnotations(it) }
     }
 
     private fun handleDecorator(node: TypeScriptNode): Annotation {

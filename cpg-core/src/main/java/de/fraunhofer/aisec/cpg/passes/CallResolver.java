@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration;
+
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.HasTemplates;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
@@ -240,6 +242,12 @@ public class CallResolver extends Pass {
   }
 
   protected void resolve(@NonNull Node node, RecordDeclaration curClass) {
+    // Note, that curClass is MAJORLY broken because it does not deal with method declarations
+    // and its surrounding record scope correctly. It also completely unnecessary because
+    // we can just retrieve the current record from the ScopeManager. To be backwards compatibly,
+    // we just override curClass here and do not change the rest of the functions (yet).
+    var record = lang.getScopeManager().getCurrentRecord();
+
     if (node instanceof TranslationUnitDeclaration) {
       this.currentTU = (TranslationUnitDeclaration) node;
     } else if (node instanceof ExplicitConstructorInvocation) {
@@ -249,15 +257,15 @@ public class CallResolver extends Pass {
       // We might have call expressions inside our arguments, so in order to correctly resolve
       // this call's signature, we need to make sure any call expression arguments are fully
       // resolved
-      resolveArguments(constructExpression, curClass);
+      resolveArguments(constructExpression, record);
       resolveConstructExpression((ConstructExpression) node);
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
       // We might have call expressions inside our arguments, so in order to correctly resolve
       // this call's signature, we need to make sure any call expression arguments are fully
       // resolved
-      resolveArguments(call, curClass);
-      handleCallExpression(curClass, call);
+      resolveArguments(call, record);
+      handleCallExpression(record, call);
     }
   }
 
@@ -274,11 +282,10 @@ public class CallResolver extends Pass {
       if (member instanceof HasType
           && ((HasType) member).getType() instanceof FunctionPointerType) {
         handleFunctionPointerCall(call, member);
-        return;
       } else {
         handleMethodCall(curClass, call);
-        return;
       }
+      return;
     }
 
     if (call.instantiatesTemplate() && lang instanceof HasTemplates) {
@@ -726,15 +733,23 @@ public class CallResolver extends Pass {
     List<Type> templateCallSignature = new ArrayList<>();
     for (ParamVariableDeclaration argument : function.getParameters()) {
       if (argument.getType() instanceof ParameterizedType) {
-        templateCallSignature.add(
-            ((TypeExpression)
-                    initializationSignature.get(
-                        parameterizedTypeResolution.get(argument.getType())))
-                .getType());
+        Type type = UnknownType.getUnknownType();
+
+        var typeParamDeclaration = parameterizedTypeResolution.get(argument.getType());
+
+        if (typeParamDeclaration != null) {
+          Node node = initializationSignature.get(typeParamDeclaration);
+          if (node instanceof TypeExpression) {
+            type = ((TypeExpression) node).getType();
+          }
+        }
+
+        templateCallSignature.add(type);
       } else {
         templateCallSignature.add(argument.getType());
       }
     }
+
     return templateCallSignature;
   }
 
@@ -1099,7 +1114,7 @@ public class CallResolver extends Pass {
     // Find function targets
     if (invocationCandidates.isEmpty() && lang != null) {
       if (lang instanceof CXXLanguageFrontend) {
-        invocationCandidates = handleCXXMethodCall(curClass, call);
+        invocationCandidates = handleCXXMethodCall(curClass, possibleContainingTypes, call);
 
       } else {
         invocationCandidates = lang.getScopeManager().resolveFunction(call);
@@ -1132,7 +1147,7 @@ public class CallResolver extends Pass {
    *     resolution techniques
    */
   protected List<FunctionDeclaration> handleCXXMethodCall(
-      RecordDeclaration curClass, CallExpression call) {
+      RecordDeclaration curClass, Set<Type> possibleContainingTypes, CallExpression call) {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not handle method CXX calls: language frontend is null");
@@ -1140,10 +1155,17 @@ public class CallResolver extends Pass {
       return Collections.emptyList();
     }
 
-    List<FunctionDeclaration> invocationCandidates =
-        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(f -> f.hasSignature(call.getSignature()))
-            .collect(Collectors.toList());
+    List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
+
+    var records =
+        possibleContainingTypes.stream()
+            .map(t -> recordMap.get(t.getRoot().getTypeName()))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+    for (var record : records) {
+      invocationCandidates.addAll(getInvocationCandidatesFromRecord(record, call.getName(), call));
+    }
 
     if (invocationCandidates.isEmpty()) {
       // Check for usage of default args
@@ -1162,6 +1184,17 @@ public class CallResolver extends Pass {
       // Check for usage of implicit cast
       invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
     }
+
+    // Make sure, that our invocation candidates for member call expressions are really METHODS,
+    // otherwise this will lead to
+    // false positives. This is a hotfix until we rework the call resolver completely.
+    if (call instanceof MemberCallExpression) {
+      invocationCandidates =
+          invocationCandidates.stream()
+              .filter(func -> func instanceof MethodDeclaration)
+              .collect(Collectors.toList());
+    }
+
     return invocationCandidates;
   }
 
@@ -1178,7 +1211,18 @@ public class CallResolver extends Pass {
       CallExpression call) {
     if (invocationCandidates.isEmpty()) {
       possibleContainingTypes.stream()
-          .map(t -> recordMap.get(t.getRoot().getTypeName()))
+          .map(
+              t -> {
+                var record = recordMap.get(t.getRoot().getTypeName());
+
+                if (record == null
+                    && lang != null
+                    && lang.getConfig().getInferenceConfiguration().getInferRecords()) {
+                  record = inferRecordDeclaration(t);
+                }
+
+                return record;
+              })
           .filter(Objects::nonNull)
           .map(
               r ->
@@ -1186,6 +1230,43 @@ public class CallResolver extends Pass {
                       r, call.getName(), call.getCode(), false, call.getSignature()))
           .forEach(invocationCandidates::add);
     }
+  }
+
+  /**
+   * Infers a record declaration.
+   *
+   * <p>TODO: Merge this with the (almost) same function in the VariableUsageResolver.
+   *
+   * @param type the object type representing a record that we want to infer.
+   * @return the inferred record declaration.
+   */
+  protected RecordDeclaration inferRecordDeclaration(Type type) {
+    if (type instanceof ObjectType) {
+      log.debug(
+          "Encountered an unknown record type {} during a call. We are going to infer that record",
+          type.getTypeName());
+
+      // The kind is most likely a class, since this is a member call. However, in some languages
+      // this might be still a struct (like Go), so we might need to fine-tune this later.
+      var declaration = newRecordDeclaration(type.getTypeName(), "class", "");
+      declaration.setInferred(true);
+
+      // update the type
+      ((ObjectType) type).setRecordDeclaration(declaration);
+
+      // update the record map
+      recordMap.put(type.getRoot().getTypeName(), declaration);
+
+      // add this record declaration to the current TU (this bypasses the scope manager)
+      lang.getCurrentTU().addDeclaration(declaration);
+
+      return declaration;
+    } else {
+      log.error(
+          "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?");
+    }
+
+    return null;
   }
 
   /**

@@ -45,13 +45,17 @@ public class IncompleteType extends Type {
     super(type);
   }
 
-  /** @return PointerType to a IncompleteType, e.g. void* */
+  /**
+   * @return PointerType to a IncompleteType, e.g. void*
+   */
   @Override
   public Type reference(PointerType.PointerOrigin pointerOrigin) {
     return new PointerType(this, pointerOrigin);
   }
 
-  /** @return dereferencing void results in void therefore the same type is returned */
+  /**
+   * @return dereferencing void results in void therefore the same type is returned
+   */
   @Override
   public Type dereference() {
     return this;

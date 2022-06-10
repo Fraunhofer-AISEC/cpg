@@ -30,7 +30,9 @@ def parse_code(code, filename, frontend):
         converter = PythonASTToCPG(filename, frontend, code)
         converter.execute()
 
-        return converter.tud
+        tud = converter.tud
+
+        return tud
     except Exception as e:
         frontend.log.error("Buidling the CPG failed with exception: %s" % (e))
         raise e

@@ -6,11 +6,8 @@ updates:
       interval: "daily"
     labels:
       - "dependencies"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]
   - package-ecosystem: "gomod"
-    directory: "/cpg-core/src/main/golang"
+    directory: "/cpg-language-go/src/main/golang"
     schedule:
       interval: "daily"
     labels:
