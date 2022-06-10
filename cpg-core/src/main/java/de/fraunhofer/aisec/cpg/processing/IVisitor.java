@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.processing;
 
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.HashSet;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Reflective visitor that visits the most specific implementation of visit() methods.
@@ -36,20 +36,18 @@ import java.util.HashSet;
  * @param <V> V must implement {@code IVisitable}.
  */
 public abstract class IVisitor<V extends IVisitable> {
-  private final Collection<V> visited = new HashSet<>();
+  private final IdentitySet<V> visited = new IdentitySet<>();
 
-  public Collection<V> getVisited() {
+  public IdentitySet<V> getVisited() {
     return visited;
   }
 
-  public void visit(V t) {
+  public void visit(@NotNull V t) {
     try {
       Method mostSpecificVisit = this.getClass().getMethod("visit", t.getClass());
 
-      if (mostSpecificVisit != null) {
-        mostSpecificVisit.setAccessible(true);
-        mostSpecificVisit.invoke(this, t);
-      }
+      mostSpecificVisit.setAccessible(true);
+      mostSpecificVisit.invoke(this, t);
     } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
       // Nothing to do here
     }

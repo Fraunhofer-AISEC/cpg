@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -53,9 +53,12 @@ import org.eclipse.cdt.core.dom.ast.IASTTokenList
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
 import org.eclipse.cdt.core.model.ILanguage
-import org.eclipse.cdt.core.parser.*
+import org.eclipse.cdt.core.parser.DefaultLogService
+import org.eclipse.cdt.core.parser.FileContent
+import org.eclipse.cdt.core.parser.IncludeFileContentProvider
+import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit
+import org.eclipse.cdt.internal.core.dom.parser.ASTTranslationUnit
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider
@@ -196,7 +199,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;
         return try {
-            var bench = TimeBenchmark(this.javaClass, "Parsing sourcefile")
+            var bench = Benchmark(this.javaClass, "Parsing sourcefile")
             val translationUnit =
                 GPPLanguage.getDefault()
                     .getASTTranslationUnit(
@@ -206,12 +209,15 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                         null,
                         opts,
                         log
-                    ) as
-                    CPPASTTranslationUnit
+                    ) as ASTTranslationUnit
             val length = translationUnit.length
-            LOGGER.info("Parsed {} bytes corresponding roughly to {} LoC", length, length / 50)
-            bench.addMeasurement()
-            bench = TimeBenchmark(this.javaClass, "Transform to CPG")
+            LOGGER.info(
+                "Parsed {} bytes in ${file.name} corresponding roughly to {} LoC",
+                length,
+                length / 50
+            )
+            bench.stop()
+            bench = Benchmark(this.javaClass, "Transforming ${file.name} to CPG")
             if (config.debugParser) {
                 explore(translationUnit, 0)
             }
@@ -224,7 +230,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             }
             val translationUnitDeclaration =
                 declarationHandler.handleTranslationUnit(translationUnit)
-            bench.addMeasurement()
+            bench.stop()
             translationUnitDeclaration
         } catch (ex: CoreException) {
             throw TranslationException(ex)

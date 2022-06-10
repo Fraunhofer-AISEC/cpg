@@ -284,7 +284,9 @@ public abstract class Type extends Node {
     }
   }
 
-  /** @return Creates an exact copy of the current type (chain) */
+  /**
+   * @return Creates an exact copy of the current type (chain)
+   */
   public abstract Type duplicate();
 
   public String getTypeName() {

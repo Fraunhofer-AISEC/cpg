@@ -140,15 +140,13 @@ class SimpleDFAOrderEvaluationTest {
         val nodesToOp = mutableMapOf<Node, String>()
         // We model the calls to start() for the then and the else branch
         val thenBranch =
-            ((functionOk.body as CompoundStatement).statements[2] as? IfStatement)
-                ?.thenStatement as?
-                CompoundStatement
+            ((functionOk.body as CompoundStatement).statements[2] as? IfStatement)?.thenStatement
+                as? CompoundStatement
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = "start()"
         val elseBranch =
-            ((functionOk.body as CompoundStatement).statements[2] as? IfStatement)
-                ?.elseStatement as?
-                CompoundStatement
+            ((functionOk.body as CompoundStatement).statements[2] as? IfStatement)?.elseStatement
+                as? CompoundStatement
         assertNotNull(elseBranch)
         nodesToOp[elseBranch.statements[0]] = "start()"
 
@@ -218,9 +216,8 @@ class SimpleDFAOrderEvaluationTest {
 
         val nodesToOp = mutableMapOf<Node, String>()
         val thenBranch =
-            ((functionOk.body as CompoundStatement).statements[1] as? IfStatement)
-                ?.thenStatement as?
-                CompoundStatement
+            ((functionOk.body as CompoundStatement).statements[1] as? IfStatement)?.thenStatement
+                as? CompoundStatement
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = "start()"
         nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "finish()"
@@ -244,9 +241,8 @@ class SimpleDFAOrderEvaluationTest {
 
         val nodesToOp = mutableMapOf<Node, String>()
         val thenBranch =
-            ((functionOk.body as CompoundStatement).statements[1] as? IfStatement)
-                ?.thenStatement as?
-                CompoundStatement
+            ((functionOk.body as CompoundStatement).statements[1] as? IfStatement)?.thenStatement
+                as? CompoundStatement
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = "start()"
         nodesToOp[thenBranch.statements[1]] = "finish()"

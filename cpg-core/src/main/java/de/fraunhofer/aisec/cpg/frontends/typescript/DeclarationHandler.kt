@@ -184,15 +184,17 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         this.lang.scopeManager.enterScope(func)
 
         // gather parameters
-        node.children?.filter { it.type == "Parameter" }?.forEach {
-            val param = this.lang.declarationHandler.handleNode(it)
+        node.children
+            ?.filter { it.type == "Parameter" }
+            ?.forEach {
+                val param = this.lang.declarationHandler.handleNode(it)
 
-            if (func is MethodDeclaration) {
-                this.lang.processAnnotations(param, it)
+                if (func is MethodDeclaration) {
+                    this.lang.processAnnotations(param, it)
+                }
+
+                this.lang.scopeManager.addDeclaration(param)
             }
-
-            this.lang.scopeManager.addDeclaration(param)
-        }
 
         // parse body, if it exists
         node.firstChild("Block")?.let { func.body = this.lang.statementHandler.handle(it) }

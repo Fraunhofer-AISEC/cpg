@@ -287,7 +287,7 @@ public class Util {
           openingParentheses.push(i);
           break;
         case ')':
-          int matching = openingParentheses.pop();
+          int matching = openingParentheses.pollFirst();
           if (matching == 0 && i == original.length() - 1) {
             result[matching] = result[i] = marker;
           } else if (matching > 0 && result[matching - 1] == '(' && result[i + 1] == ')') {
@@ -300,12 +300,17 @@ public class Util {
 
   public static boolean containsOnOuterLevel(String input, char marker) {
     int openParentheses = 0;
+    int openTemplate = 0;
     for (char c : input.toCharArray()) {
       if (c == '(') {
         openParentheses++;
       } else if (c == ')') {
         openParentheses--;
-      } else if (c == marker && openParentheses == 0) {
+      } else if (c == '<') {
+        openTemplate++;
+      } else if (c == '>') {
+        openTemplate--;
+      } else if (c == marker && openParentheses == 0 && openTemplate == 0) {
         return true;
       }
     }

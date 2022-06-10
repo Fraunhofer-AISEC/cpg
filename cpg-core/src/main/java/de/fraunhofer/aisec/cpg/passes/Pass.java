@@ -50,7 +50,9 @@ public abstract class Pass implements Consumer<TranslationResult> {
 
   @JsonIgnore @Nullable protected LanguageFrontend lang;
 
-  /** @return May be null */
+  /**
+   * @return May be null
+   */
   @Nullable
   public LanguageFrontend getLang() {
     return lang;

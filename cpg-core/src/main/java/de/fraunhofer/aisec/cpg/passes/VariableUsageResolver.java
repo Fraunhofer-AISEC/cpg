@@ -95,12 +95,9 @@ public class VariableUsageResolver extends Pass {
       walker.iterate(currTu);
     }
 
-    Map<Type, List<Type>> currSuperTypes =
-        recordMap.values().stream()
-            .collect(
-                Collectors.toMap(
-                    r -> TypeParser.createFrom(r.getName(), true),
-                    RecordDeclaration::getSuperTypes));
+    var currSuperTypes =
+        recordMap.entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getSuperTypes()));
     superTypesMap.putAll(currSuperTypes);
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
