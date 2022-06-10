@@ -41,7 +41,6 @@ import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
-import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
 class DeclarationHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Declaration, IASTDeclaration>(Supplier(::ProblemDeclaration), lang) {
@@ -107,9 +106,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // https://github.com/Fraunhofer-AISEC/cpg/issues/824.
         val type = lang.typeOf(ctx.declarator, ctx.declSpecifier)
         declarator.type = (type as? FunctionPointerType)?.returnType ?: UnknownType.getUnknownType()
-
-        // TODO: For comparison here, remove
-        val typeString = ctx.declarator.getTypeString(ctx.declSpecifier)
         declarator.setIsDefinition(true)
 
         // associated record declaration if this is a method or constructor
@@ -156,7 +152,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         }
         lang.scopeManager.enterScope(declarator)
-        declarator.type = TypeParser.createFrom(typeString, true, lang)
+
         if (ctx.body != null) {
             val bodyStatement = lang.statementHandler.handle(ctx.body)
             if (bodyStatement is CompoundStatement) {
@@ -439,31 +435,18 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // Instead of a variable declaration, this is a typedef, so we handle it
                 // like this
                 if (isTypedef(ctx) && !useLegacyTypedef) {
-                    // TODO: also use new system
-                    val typeString = declarator.getTypeString(ctx.declSpecifier, name)
-                    // make sure, the type manager knows about this type before parsing the
-                    // declarator
-                    val result = TypeParser.createFrom(typeString, true, lang)
-
                     // Handle function pointer types slightly differently
                     if (declarator is IASTFunctionDeclarator) {
                         val code = lang.getCodeFromRawNode(ctx) ?: ""
-                        val typedefIdx = code.indexOf("typedef ")
-                        val fpType =
-                            TypeParser.createFrom(
-                                code.substring(typedefIdx + 8).replace("\n", ""),
-                                false,
-                                lang
-                            )
                         val (nameDecl: IASTDeclarator, _) = declarator.realName()
                         TypeManager.getInstance()
-                            .handleSingleAlias(lang, code, fpType, nameDecl.name.toString())
+                            .handleSingleAlias(lang, code, type, nameDecl.name.toString())
                     } else {
                         TypeManager.getInstance()
                             .handleSingleAlias(
                                 lang,
                                 lang.getCodeFromRawNode(ctx),
-                                result,
+                                type,
                                 declarator.name.toString()
                             )
                     }
@@ -691,40 +674,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 }
             }
         }
+
         return node
-    }
-
-    companion object {
-        /**
-         * Returns a raw type string (that can be parsed by the [TypeParser] out of a cpp declarator
-         * and associated declaration specifiers.
-         *
-         * @param declSpecifier the declaration specifier
-         * @return the type string
-         */
-        fun IASTDeclarator.getTypeString(
-            declSpecifier: IASTDeclSpecifier,
-            nameOverride: String? = null
-        ): String {
-            // use the declaration specifier as basis
-            var typeString = ASTStringUtil.getSignatureString(declSpecifier, null)
-
-            // There is a special case in which the name is actually defined by the declarator and
-            // not by the declSpecifier. One such example is the typedef of an unnamed struct and is
-            // quite
-            // common in the C world.
-            if (nameOverride != null) {
-                typeString += " $nameOverride"
-            }
-
-            // append names, pointer operators and array modifiers and such
-            for (node in this.children) {
-                if (node is IASTPointerOperator || node is IASTArrayModifier) {
-                    typeString += node.rawSignature
-                }
-            }
-
-            return typeString
-        }
     }
 }
