@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.analysis.ConcreteNumberSet
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
+import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
@@ -90,8 +90,8 @@ fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
     if (evalRes is Number) {
         return evalRes.toLong()
     }
-    // TODO: Extend this when we have other evaluators.
-    return (evalRes as? ConcreteNumberSet)?.min() ?: -1
+    // Extend this when we have other evaluators.
+    return (evalRes as? NumberSet)?.min() ?: -1
 }
 
 /**
@@ -107,9 +107,10 @@ fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
         val evalRes = eval.evaluate(node)
         if (evalRes is Number && evalRes.toLong() < result) {
             result = evalRes.toLong()
-        } else if (evalRes is ConcreteNumberSet && evalRes.min() < result) {
+        } else if (evalRes is NumberSet && evalRes.min() < result) {
             result = evalRes.min()
         }
+        // Extend this when we have other evaluators.
     }
     return result
 }
@@ -127,9 +128,10 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
         val evalRes = eval.evaluate(node)
         if (evalRes is Number && evalRes.toLong() > result) {
             result = evalRes.toLong()
-        } else if (evalRes is ConcreteNumberSet && evalRes.max() > result) {
+        } else if (evalRes is NumberSet && evalRes.max() > result) {
             result = evalRes.max()
         }
+        // Extend this when we have other evaluators.
     }
     return result
 }
@@ -144,8 +146,8 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
     if (evalRes is Number) {
         return evalRes.toLong()
     }
-    // TODO: Extend this when we have other evaluators.
-    return (evalRes as? ConcreteNumberSet)?.max() ?: -1
+    // Extend this when we have other evaluators.
+    return (evalRes as? NumberSet)?.max() ?: -1
 }
 
 /**

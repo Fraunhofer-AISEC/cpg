@@ -261,8 +261,8 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
   public boolean isAssignment() {
     // TODO(oxisto): We need to discuss, if the other operators are also assignments and if we
     // really want them
-    return this.operatorCode.equals(
-        "==") /*||this.operatorCode.equals("+=") ||this.operatorCode.equals("-=")
-              ||this.operatorCode.equals("/=")  ||this.operatorCode.equals("*=")*/;
+    return this.operatorCode.equals("=")
+    /*||this.operatorCode.equals("+=") ||this.operatorCode.equals("-=")
+    ||this.operatorCode.equals("/=")  ||this.operatorCode.equals("*=")*/ ;
   }
 }
