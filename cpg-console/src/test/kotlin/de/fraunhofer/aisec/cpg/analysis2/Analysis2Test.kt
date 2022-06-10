@@ -163,10 +163,9 @@ class Analysis2Test {
             result.all<ArraySubscriptionExpression> {
                 max(it.subscriptExpression) <
                     min(
-                        (((it.arrayExpression as DeclaredReferenceExpression).refersTo as
-                                    VariableDeclaration)
-                                .initializer as
-                                ArrayCreationExpression)
+                        (((it.arrayExpression as DeclaredReferenceExpression).refersTo
+                                    as VariableDeclaration)
+                                .initializer as ArrayCreationExpression)
                             .dimensions[0]
                     ) && min(it.subscriptExpression) >= 0
             }
@@ -191,10 +190,9 @@ class Analysis2Test {
             result.all<ArraySubscriptionExpression> {
                 max(it.subscriptExpression) <
                     min(
-                        (((it.arrayExpression as DeclaredReferenceExpression).refersTo as
-                                    VariableDeclaration)
-                                .initializer as
-                                ArrayCreationExpression)
+                        (((it.arrayExpression as DeclaredReferenceExpression).refersTo
+                                    as VariableDeclaration)
+                                .initializer as ArrayCreationExpression)
                             .dimensions[0]
                     ) && min(it.subscriptExpression) >= 0
             }
@@ -219,8 +217,8 @@ class Analysis2Test {
             result.all<ArraySubscriptionExpression> {
                 max(it.subscriptExpression) <
                     min(
-                        ((it.arrayExpression as DeclaredReferenceExpression).refersTo as
-                                VariableDeclaration)
+                        ((it.arrayExpression as DeclaredReferenceExpression).refersTo
+                                as VariableDeclaration)
                             .followPrevDFG { node -> node is ArrayCreationExpression }
                             .map { it2 -> (it2 as ArrayCreationExpression).dimensions[0] }
                     ) && min(it.subscriptExpression) >= 0
@@ -247,10 +245,9 @@ class Analysis2Test {
                 val max_sub = max(it.subscriptExpression)
                 val min_dim =
                     min(
-                        (((it.arrayExpression as DeclaredReferenceExpression).refersTo as
-                                    VariableDeclaration)
-                                .initializer as
-                                ArrayCreationExpression)
+                        (((it.arrayExpression as DeclaredReferenceExpression).refersTo
+                                    as VariableDeclaration)
+                                .initializer as ArrayCreationExpression)
                             .dimensions[0]
                     )
                 val min_sub = min(it.subscriptExpression)

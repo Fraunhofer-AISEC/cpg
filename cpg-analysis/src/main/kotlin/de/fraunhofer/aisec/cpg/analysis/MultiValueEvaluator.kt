@@ -235,8 +235,8 @@ class MultiValueEvaluator : ValueEvaluator() {
         depth: Int
     ): List<Any?> {
         val loop =
-            expr.prevDFG.firstOrNull { e -> e.astParent is ForStatement }?.astParent as?
-                ForStatement
+            expr.prevDFG.firstOrNull { e -> e.astParent is ForStatement }?.astParent
+                as? ForStatement
         if (loop == null || loop.condition !is BinaryOperator) return listOf()
 
         var loopVar =
@@ -298,8 +298,8 @@ class MultiValueEvaluator : ValueEvaluator() {
                                 loopOp.input
                             },
                             loopOp
-                        ) as?
-                            Number
+                        )
+                            as? Number
                     }
                     else -> {
                         null
