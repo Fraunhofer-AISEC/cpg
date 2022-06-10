@@ -391,12 +391,12 @@ public class TypeManager {
   private Optional<Type> rewrapType(
       Type type,
       int depth,
-      PointerType.PointerOrigin pointerOrigin,
+      PointerType.PointerOrigin[] pointerOrigins,
       boolean reference,
       ReferenceType referenceType) {
     if (depth > 0) {
-      for (int i = 0; i < depth; i++) {
-        type = type.reference(pointerOrigin);
+      for (int i = depth - 1; i >= 0; i--) {
+        type = type.reference(pointerOrigins[i]);
       }
     }
     if (reference) {
@@ -411,10 +411,10 @@ public class TypeManager {
     // iterations over "types". Reduce number of iterations.
     Set<Type> original = new HashSet<>(types);
     Set<Type> unwrappedTypes = new HashSet<>();
+    PointerType.PointerOrigin[] pointerOrigins = new PointerType.PointerOrigin[0];
     int depth = 0;
     int counter = 0;
     boolean reference = false;
-    PointerType.PointerOrigin pointerOrigin = null;
     ReferenceType referenceType = null;
 
     Type t1 = types.stream().findAny().orElse(null);
@@ -443,12 +443,22 @@ public class TypeManager {
           return Collections.emptySet();
         }
         unwrappedTypes.add(t.getRoot());
-        pointerOrigin = ((PointerType) t).getPointerOrigin();
+
+        pointerOrigins = new PointerType.PointerOrigin[depth];
+        var containedType = t2;
+        int i = 0;
+        pointerOrigins[i] = ((PointerType) containedType).getPointerOrigin();
+        while (containedType instanceof PointerType) {
+          containedType = ((PointerType) containedType).getElementType();
+          if (containedType instanceof PointerType) {
+            pointerOrigins[++i] = ((PointerType) containedType).getPointerOrigin();
+          }
+        }
       }
     }
 
     wrapState.setDepth(depth);
-    wrapState.setPointerOrigin(pointerOrigin);
+    wrapState.setPointerOrigin(pointerOrigins);
     wrapState.setReference(reference);
     wrapState.setReferenceType(referenceType);
 
@@ -479,7 +489,7 @@ public class TypeManager {
       return rewrapType(
           types.iterator().next(),
           wrapState.getDepth(),
-          wrapState.getPointerOrigin(),
+          wrapState.getPointerOrigins(),
           wrapState.isReference(),
           wrapState.getReferenceType());
     }
@@ -551,7 +561,7 @@ public class TypeManager {
     return rewrapType(
         finalType,
         wrapState.getDepth(),
-        wrapState.getPointerOrigin(),
+        wrapState.getPointerOrigins(),
         wrapState.isReference(),
         wrapState.getReferenceType());
   }

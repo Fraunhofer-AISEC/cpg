@@ -32,10 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
 import java.util.function.Consumer
@@ -44,7 +41,6 @@ import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
-import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
 class DeclarationHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Declaration, IASTDeclaration>(Supplier(::ProblemDeclaration), lang) {
@@ -104,9 +100,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 "declarator of function definition is not a function declarator"
             )
         }
-        val typeString = ctx.declarator.getTypeString(ctx.declSpecifier)
+
+        // Retrieve the type. This is the function (pointer) type. For now, we only set the
+        // returnType to the type property of the function. However, this might change with
+        // https://github.com/Fraunhofer-AISEC/cpg/issues/824.
+        val type = lang.typeOf(ctx.declarator, ctx.declSpecifier)
+        declarator.type = (type as? FunctionPointerType)?.returnType ?: UnknownType.getUnknownType()
         declarator.setIsDefinition(true)
-        declarator.type = TypeParser.createFrom(typeString, true, lang)
 
         // associated record declaration if this is a method or constructor
         val recordDeclaration =
@@ -152,7 +152,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         }
         lang.scopeManager.enterScope(declarator)
-        declarator.type = TypeParser.createFrom(typeString, true, lang)
+
         if (ctx.body != null) {
             val bodyStatement = lang.statementHandler.handle(ctx.body)
             if (bodyStatement is CompoundStatement) {
@@ -430,10 +430,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         null
                     }
 
-                val typeString = declarator.getTypeString(ctx.declSpecifier, name)
-
-                // make sure, the type manager knows about this type before parsing the declarator
-                val result = TypeParser.createFrom(typeString, true, lang)
+                val type = lang.typeOf(declarator, declSpecifier)
 
                 // Instead of a variable declaration, this is a typedef, so we handle it
                 // like this
@@ -441,22 +438,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     // Handle function pointer types slightly differently
                     if (declarator is IASTFunctionDeclarator) {
                         val code = lang.getCodeFromRawNode(ctx) ?: ""
-                        val typedefIdx = code.indexOf("typedef ")
-                        val fpType =
-                            TypeParser.createFrom(
-                                code.substring(typedefIdx + 8).replace("\n", ""),
-                                false,
-                                lang
-                            )
                         val (nameDecl: IASTDeclarator, _) = declarator.realName()
                         TypeManager.getInstance()
-                            .handleSingleAlias(lang, code, fpType, nameDecl.name.toString())
+                            .handleSingleAlias(lang, code, type, nameDecl.name.toString())
                     } else {
                         TypeManager.getInstance()
                             .handleSingleAlias(
                                 lang,
                                 lang.getCodeFromRawNode(ctx),
-                                result,
+                                type,
                                 declarator.name.toString()
                             )
                     }
@@ -464,7 +454,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     val declaration = lang.declaratorHandler.handle(declarator) as? ValueDeclaration
 
                     if (declaration != null) {
-                        declaration.type = result
+                        // Only return type for functions. See
+                        // https://github.com/Fraunhofer-AISEC/cpg/issues/824
+                        if (declaration is FunctionDeclaration) {
+                            declaration.type =
+                                (type as? FunctionPointerType)?.returnType
+                                    ?: UnknownType.getUnknownType()
+                        } else {
+                            declaration.type = type
+                        }
 
                         // process attributes
                         lang.processAttributes(declaration, ctx)
@@ -676,40 +674,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 }
             }
         }
+
         return node
-    }
-
-    companion object {
-        /**
-         * Returns a raw type string (that can be parsed by the [TypeParser] out of a cpp declarator
-         * and associated declaration specifiers.
-         *
-         * @param declSpecifier the declaration specifier
-         * @return the type string
-         */
-        fun IASTDeclarator.getTypeString(
-            declSpecifier: IASTDeclSpecifier,
-            nameOverride: String? = null
-        ): String {
-            // use the declaration specifier as basis
-            var typeString = ASTStringUtil.getSignatureString(declSpecifier, null)
-
-            // There is a special case in which the name is actually defined by the declarator and
-            // not by the declSpecifier. One such example is the typedef of an unnamed struct and is
-            // quite
-            // common in the C world.
-            if (nameOverride != null) {
-                typeString += " $nameOverride"
-            }
-
-            // append names, pointer operators and array modifiers and such
-            for (node in this.children) {
-                if (node is IASTPointerOperator || node is IASTArrayModifier) {
-                    typeString += node.rawSignature
-                }
-            }
-
-            return typeString
-        }
     }
 }
