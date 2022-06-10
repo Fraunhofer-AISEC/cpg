@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.followPrevDFG
+import de.fraunhofer.aisec.cpg.graph.followPrevDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -219,7 +219,7 @@ class Analysis2Test {
                     min(
                         ((it.arrayExpression as DeclaredReferenceExpression).refersTo
                                 as VariableDeclaration)
-                            .followPrevDFG { node -> node is ArrayCreationExpression }
+                            .followPrevDFGEdgesUntilHit { node -> node is ArrayCreationExpression }
                             .map { it2 -> (it2 as ArrayCreationExpression).dimensions[0] }
                     ) && min(it.subscriptExpression) >= 0
             }

@@ -136,7 +136,7 @@ class StatementNotFound : Exception()
 
 class DeclarationNotFound(message: String) : Exception(message)
 
-fun Node.followPrevDFG(predicate: (Node) -> Boolean): List<Node> {
+fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): List<Node> {
     val result = mutableListOf<Node>()
     val alreadySeen = mutableListOf<Node>()
     val worklist = mutableListOf<Node>()
