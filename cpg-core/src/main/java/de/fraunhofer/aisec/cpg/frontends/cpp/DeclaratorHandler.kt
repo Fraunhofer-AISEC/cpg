@@ -46,6 +46,13 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier.ICPPASTBas
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
+/**
+ * Takes care of translating a
+ * [declarator](https://en.cppreference.com/w/cpp/language/declarations#Declarators) into a
+ * [Declaration].
+ *
+ * See [DeclarationHandler] for a detailed explanation, why this is split into a dedicated handler.
+ */
 class DeclaratorHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Declaration?, IASTNameOwner>(Supplier(::ProblemDeclaration), lang) {
 

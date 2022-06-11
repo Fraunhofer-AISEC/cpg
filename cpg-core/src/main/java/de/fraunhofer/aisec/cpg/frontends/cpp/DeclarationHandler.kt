@@ -42,6 +42,23 @@ import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
+/**
+ * This class is a [CXXHandler] which takes care of translating C/C++
+ * [declarations](https://en.cppreference.com/w/cpp/language/declarations) into [Declaration] nodes.
+ * It heavily relies on its sibling handler, the [DeclaratorHandler].
+ *
+ * In the C/C++ language, the meaning of a declaration depends on two major factors: First, a list
+ * of so called declaration
+ * [specifiers](https://en.cppreference.com/w/cpp/language/declarations#Specifiers), which specify
+ * the type of declaration. Prominent examples include `class` or `enum`. Second, a list of
+ * [declarators](https://en.cppreference.com/w/cpp/language/declarations#Declarators), which
+ * describe the actual "content" of the declaration, such as its name or parameters (in case of a
+ * function).
+ *
+ * Since the logic behind a declarator is quite complex, this logic is extracted into its own
+ * handler. In fact, in most cases the [DeclaratorHandler] actually creates the CPG [Declaration]
+ * and the [DeclarationHandler] modifies the declaration depending on the declaration specifiers.
+ */
 class DeclarationHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Declaration, IASTDeclaration>(Supplier(::ProblemDeclaration), lang) {
 
@@ -363,8 +380,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Use the legacy typedef handling for function pointers (in multiple aliases) and templates
         val useLegacyTypedef =
-            (ctx.declarators.size > 1 && ctx.declarators.any { it is IASTFunctionDeclarator }) ||
-                ctx.declSpecifier is CPPASTNamedTypeSpecifier
+            (ctx.declarators.size > 1 && ctx.declarators.any { it is IASTFunctionDeclarator })
         var useNameOfDeclarator = false
 
         if (isTypedef(ctx) && useLegacyTypedef) {
@@ -416,40 +432,30 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        if (declSpecifier is CPPASTNamedTypeSpecifier && declSpecifier.name is CPPASTTemplateId) {
+        if (!isTypedef(ctx) &&
+                declSpecifier is CPPASTNamedTypeSpecifier &&
+                declSpecifier.name is CPPASTTemplateId
+        ) {
             handleTemplateUsage(declSpecifier, ctx, sequence)
         } else {
             for (declarator in ctx.declarators) {
                 // If a previous step informed us that we should take the name of the primary
-                // declaration,
-                // we do so here. This most likely is the case of a typedef struct.
-                val name: String? =
-                    if (useNameOfDeclarator) {
-                        primaryDeclaration?.name
+                // declaration, we do so here. This most likely is the case of a typedef struct.
+                val declSpecifierToUse =
+                    if (useNameOfDeclarator && declSpecifier is IASTCompositeTypeSpecifier) {
+                        val copy = declSpecifier.copy()
+                        copy.name = CPPASTName(primaryDeclaration?.name?.toCharArray())
+                        copy
                     } else {
-                        null
+                        declSpecifier
                     }
 
-                val type = lang.typeOf(declarator, declSpecifier)
+                val type = lang.typeOf(declarator, declSpecifierToUse)
 
                 // Instead of a variable declaration, this is a typedef, so we handle it
                 // like this
                 if (isTypedef(ctx) && !useLegacyTypedef) {
-                    // Handle function pointer types slightly differently
-                    if (declarator is IASTFunctionDeclarator) {
-                        val code = lang.getCodeFromRawNode(ctx) ?: ""
-                        val (nameDecl: IASTDeclarator, _) = declarator.realName()
-                        TypeManager.getInstance()
-                            .handleSingleAlias(lang, code, type, nameDecl.name.toString())
-                    } else {
-                        TypeManager.getInstance()
-                            .handleSingleAlias(
-                                lang,
-                                lang.getCodeFromRawNode(ctx),
-                                type,
-                                declarator.name.toString()
-                            )
-                    }
+                    handleTypedef(declarator, ctx, type)
                 } else {
                     val declaration = lang.declaratorHandler.handle(declarator) as? ValueDeclaration
 
@@ -473,6 +479,23 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
 
         return simplifySequence(sequence)
+    }
+
+    private fun handleTypedef(declarator: IASTDeclarator, ctx: IASTSimpleDeclaration, type: Type) {
+        // Handle function pointer types slightly differently
+        if (declarator is IASTFunctionDeclarator) {
+            val code = lang.getCodeFromRawNode(ctx) ?: ""
+            val (nameDecl: IASTDeclarator, _) = declarator.realName()
+            TypeManager.getInstance().handleSingleAlias(lang, code, type, nameDecl.name.toString())
+        } else {
+            TypeManager.getInstance()
+                .handleSingleAlias(
+                    lang,
+                    lang.getCodeFromRawNode(ctx),
+                    type,
+                    declarator.name.toString()
+                )
+        }
     }
 
     private fun handleEnum(
