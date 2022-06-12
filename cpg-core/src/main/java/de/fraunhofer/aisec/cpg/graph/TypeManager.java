@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
@@ -766,7 +767,8 @@ public class TypeManager {
     }
   }
 
-  public void handleSingleAlias(
+  @NonNull
+  public Declaration handleSingleAlias(
       LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
     String cleanedPart = Util.removeRedundantParentheses(aliasString);
     Type currTarget = getTargetType(target, cleanedPart);
@@ -787,10 +789,11 @@ public class TypeManager {
         log.warn("No frontend available. Be aware that typedef resolving cannot currently be done");
         noFrontendWarningIssued = true;
       }
-      return;
+      return typedef;
     }
 
     frontend.getScopeManager().addTypedef(typedef);
+    return typedef;
   }
 
   public Type resolvePossibleTypedef(Type alias) {

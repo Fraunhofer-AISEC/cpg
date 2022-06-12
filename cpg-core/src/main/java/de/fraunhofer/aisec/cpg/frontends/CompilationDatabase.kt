@@ -147,7 +147,7 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
         private fun parseIncludeDirectories(command: List<String>): Pair<List<String>?, String> {
             var component = "application" // Default to the default component name
 
-            //     ['clang', 'main.c', '-o', 'main.c.o'],
+            // ['clang', 'main.c', '-o', 'main.c.o'],
             if (command.isEmpty()) {
                 return Pair(null, component)
             }
@@ -156,29 +156,34 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
             var i = 0
             while (i < command.size) {
                 val word = command[i]
-                if (word.startsWith("-I")) {
-                    if (word.length == 2) {
+                when {
+                    word.startsWith("-I") -> {
+                        if (word.length == 2) {
+                            if (i + 1 != command.size) {
+                                // path is located at the next index
+                                includeFilesDirectories.add(command[++i])
+                            }
+                        } else {
+                            includeFilesDirectories.add(
+                                word.substring(2)
+                            ) // adds the directory excluding the -I field
+                        }
+                    }
+                    word == "-isystem" -> {
                         if (i + 1 != command.size) {
-                            // path is located at the next index
                             includeFilesDirectories.add(command[++i])
                         }
-                    } else {
-                        includeFilesDirectories.add(
-                            word.substring(2)
-                        ) // adds the directory excluding the -I field
                     }
-                } else if (word == "-isystem") {
-                    if (i + 1 != command.size) {
-                        includeFilesDirectories.add(command[++i])
+                    word == "-isysroot" -> {
+                        // Append usr/include to sysroot
+                        if (i + 1 != command.size) {
+                            includeFilesDirectories.add(command[++i] + "/usr/include")
+                        }
                     }
-                } else if (word == "-isysroot") {
-                    // Append usr/include to sysroot
-                    if (i + 1 != command.size) {
-                        includeFilesDirectories.add(command[++i] + "/usr/include")
-                    }
-                } else if (word == "-o") {
-                    if (i + 1 != command.size) {
-                        parseOutput(command[++i])?.let { component = it }
+                    word == "-o" -> {
+                        if (i + 1 != command.size) {
+                            parseOutput(command[++i])?.let { component = it }
+                        }
                     }
                 }
                 i++
@@ -236,7 +241,7 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
          * - lib/CMakeFiles/awesome.dir/file.c.o which should result in "libawesome"
          */
         private fun parseOutput(output: String): String? {
-            var isLibrary: Boolean = false
+            var isLibrary = false
 
             // We need to have CMakeFiles in there, otherwise this will not work
             val cmakeIdx = output.indexOf("CMakeFiles/")

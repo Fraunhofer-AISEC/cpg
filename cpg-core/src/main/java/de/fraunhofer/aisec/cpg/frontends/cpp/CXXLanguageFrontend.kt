@@ -346,10 +346,8 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
      * @param owner the AST node which holds the attribute
      */
     fun processAttributes(node: Node, owner: IASTNode) {
-        if (config.processAnnotations) {
-            if (owner is IASTAttributeOwner) { // set attributes
-                node.addAnnotations(handleAttributes(owner))
-            }
+        if (config.processAnnotations && owner is IASTAttributeOwner) { // set attributes
+            node.addAnnotations(handleAttributes(owner))
         }
     }
 

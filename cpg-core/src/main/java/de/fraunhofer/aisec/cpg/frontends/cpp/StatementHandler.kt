@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -287,9 +286,6 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): DeclarationStatement? {
         return if (ctx.declaration is IASTASMDeclaration) {
             NodeBuilder.newASMDeclarationStatement(ctx.rawSignature)
-        } else if (ctx.rawSignature.contains("typedef")) {
-            TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
-            null
         } else {
             val declarationStatement = NodeBuilder.newDeclarationStatement(ctx.rawSignature)
             val declaration = lang.declarationHandler.handle(ctx.declaration)

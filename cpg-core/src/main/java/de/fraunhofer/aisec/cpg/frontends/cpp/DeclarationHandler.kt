@@ -378,14 +378,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         var primaryDeclaration: Declaration? = null
         val sequence = DeclarationSequence()
 
-        // Use the legacy typedef handling for function pointers (in multiple aliases) and templates
-        val useLegacyTypedef = false
         // (ctx.declarators.size > 1 && ctx.declarators.any { it is IASTFunctionDeclarator })
         var useNameOfDeclarator = false
-
-        if (isTypedef(ctx) && useLegacyTypedef) {
-            TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
-        }
 
         // check, whether the declaration specifier also contains declarations, i.e. class
         // definitions
@@ -454,8 +448,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 // Instead of a variable declaration, this is a typedef, so we handle it
                 // like this
-                if (isTypedef(ctx) && !useLegacyTypedef) {
-                    handleTypedef(declarator, ctx, type)
+                if (isTypedef(ctx)) {
+                    val declaration = handleTypedef(declarator, ctx, type)
+
+                    sequence.addDeclaration(declaration)
                 } else {
                     val declaration = lang.declaratorHandler.handle(declarator) as? ValueDeclaration
 
@@ -481,21 +477,32 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return simplifySequence(sequence)
     }
 
-    private fun handleTypedef(declarator: IASTDeclarator, ctx: IASTSimpleDeclaration, type: Type) {
+    private fun handleTypedef(
+        declarator: IASTDeclarator,
+        ctx: IASTSimpleDeclaration,
+        type: Type
+    ): Declaration {
         // Handle function pointer types slightly differently
-        if (declarator is IASTFunctionDeclarator) {
-            val code = lang.getCodeFromRawNode(ctx) ?: ""
-            val (nameDecl: IASTDeclarator, _) = declarator.realName()
-            TypeManager.getInstance().handleSingleAlias(lang, code, type, nameDecl.name.toString())
-        } else {
-            TypeManager.getInstance()
-                .handleSingleAlias(
-                    lang,
-                    lang.getCodeFromRawNode(ctx),
-                    type,
-                    declarator.name.toString()
-                )
-        }
+        val declaration =
+            if (declarator is IASTFunctionDeclarator) {
+                val code = lang.getCodeFromRawNode(ctx) ?: ""
+                val (nameDecl: IASTDeclarator, _) = declarator.realName()
+                TypeManager.getInstance()
+                    .handleSingleAlias(lang, code, type, nameDecl.name.toString())
+            } else {
+                TypeManager.getInstance()
+                    .handleSingleAlias(
+                        lang,
+                        lang.getCodeFromRawNode(ctx),
+                        type,
+                        declarator.name.toString()
+                    )
+            }
+
+        // Add the declaration to the current scope
+        lang.scopeManager.addDeclaration(declaration)
+
+        return declaration
     }
 
     private fun handleEnum(

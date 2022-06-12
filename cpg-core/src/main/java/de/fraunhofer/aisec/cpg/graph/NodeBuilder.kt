@@ -131,7 +131,7 @@ object NodeBuilder {
     @JvmOverloads
     fun newTypedefDeclaration(
         targetType: Type?,
-        alias: Type?,
+        alias: Type,
         code: String? = null,
         lang: LanguageFrontend? = null,
         rawNode: Any? = null
@@ -139,6 +139,7 @@ object NodeBuilder {
         val node = TypedefDeclaration()
         node.type = targetType
         node.alias = alias
+        node.name = alias.typeName
         node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
