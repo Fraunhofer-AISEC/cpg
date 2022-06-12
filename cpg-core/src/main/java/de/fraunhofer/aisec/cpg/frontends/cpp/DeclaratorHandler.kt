@@ -346,26 +346,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 )
         }
 
-        /*
-         * Now it gets tricky, because we are looking for the parent declaration to get the full
-         * raw signature. However it could be that the declarator is wrapped in nested declarators,
-         * so we need to loop.
-         *
-         * Comment from @oxisto: I think it would still be better to parse the type in the handleSimpleDeclaration
-         * and going downwards into the decl-specifiers and declarator and see whether we can re-construct them in
-         * the correct order for the function type rather than going upwards from the declarator and use the raw string,
-         * but that is the way it is for now.
-         */
-        var parent = ctx.parent
-        while (parent != null && parent !is IASTSimpleDeclaration) {
-            parent = parent.parent
-        }
-        if (parent != null) {
-            result.type = TypeParser.createFrom(parent.rawSignature, true, lang)
-            result.refreshType()
-        } else {
-            log.warn("Could not find suitable parent ast node for function pointer node: {}", this)
-        }
         result.location = lang.getLocationFromRawNode(ctx)
         lang.scopeManager.addDeclaration(result)
         return result

@@ -63,6 +63,13 @@ internal class TypedefTest : BaseTest() {
         // function pointer
         val uintfp1 = findByUniqueName(variables, "uintfp1")
         val uintfp2 = findByUniqueName(variables, "uintfp2")
+
+        val fpType = uintfp1.type as? FunctionPointerType
+        assertNotNull(fpType)
+
+        val returnType = fpType.returnType as? ObjectType
+        assertNotNull(returnType)
+        assertEquals(ObjectType.Modifier.UNSIGNED, returnType.modifier)
         assertEquals(uintfp1.type, uintfp2.type)
 
         val frontend = TypeManager.getInstance().frontend

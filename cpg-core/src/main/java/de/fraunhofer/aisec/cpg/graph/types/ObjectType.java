@@ -167,6 +167,10 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
     }
   }
 
+  public Modifier getModifier() {
+    return modifier;
+  }
+
   @Override
   public boolean isSimilar(Type t) {
     return t instanceof ObjectType

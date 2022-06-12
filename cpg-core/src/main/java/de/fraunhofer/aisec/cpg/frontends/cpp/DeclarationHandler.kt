@@ -379,8 +379,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val sequence = DeclarationSequence()
 
         // Use the legacy typedef handling for function pointers (in multiple aliases) and templates
-        val useLegacyTypedef =
-            (ctx.declarators.size > 1 && ctx.declarators.any { it is IASTFunctionDeclarator })
+        val useLegacyTypedef = false
+        // (ctx.declarators.size > 1 && ctx.declarators.any { it is IASTFunctionDeclarator })
         var useNameOfDeclarator = false
 
         if (isTypedef(ctx) && useLegacyTypedef) {
