@@ -701,72 +701,15 @@ public class TypeManager {
   }
 
   /**
-   * Handles type defs. It is necessary to specify which language frontend this belongs to, because
-   * in a parallel run, the {@link TypeManager} does not have access to the "current" one.
+   * Creates a typedef / type alias in the form of a {@link TypedefDeclaration} to the scope manager
+   * and returns it.
    *
-   * @param frontend
-   * @param rawCode
-   * @deprecated Handling typedefs in the type manager is not a good idea because this is highly
-   *     language frontend specific, it should be dealt with in the language frontend
+   * @param frontend the language frontend
+   * @param rawCode the raw code
+   * @param target the target type
+   * @param aliasString the alias / name of the typedef
+   * @return the typedef declaration
    */
-  @Deprecated
-  public void handleTypedef(LanguageFrontend frontend, String rawCode) {
-    String cleaned = rawCode.replaceAll("(typedef|;)", "").strip();
-    if (cleaned.startsWith("struct")) {
-      handleStructTypedef(frontend, rawCode, cleaned);
-    } else if (Util.containsOnOuterLevel(cleaned, ',') && !cleaned.contains("enum")) {
-      handleMultipleAliases(frontend, rawCode, cleaned);
-    } else {
-      List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \t\r\n");
-      if (parts.size() < 2) {
-        log.error("Typedef contains no whitespace to split on: {}", rawCode);
-        return;
-      }
-      // typedefs can be wildly mixed around, but the last item is always the alias to be defined
-      Type target =
-          TypeParser.createFrom(
-              Util.removeRedundantParentheses(String.join(" ", parts.subList(0, parts.size() - 1))),
-              true);
-      handleSingleAlias(frontend, rawCode, target, parts.get(parts.size() - 1));
-    }
-  }
-
-  private void handleMultipleAliases(LanguageFrontend frontend, String rawCode, String cleaned) {
-    List<String> parts = Util.splitLeavingParenthesisContents(cleaned, ",");
-    String[] splitFirst = parts.get(0).split("\\s+");
-    if (splitFirst.length < 2) {
-      log.error("Cannot find out target type for {}", rawCode);
-      return;
-    }
-    Type target = TypeParser.createFrom(splitFirst[0], true);
-    parts.set(0, parts.get(0).substring(splitFirst[0].length()).strip());
-    for (String part : parts) {
-      handleSingleAlias(frontend, rawCode, target, part);
-    }
-  }
-
-  private void handleStructTypedef(LanguageFrontend frontend, String rawCode, String cleaned) {
-    int endOfStruct = cleaned.lastIndexOf('}');
-    if (endOfStruct + 1 < cleaned.length()) {
-      List<String> parts =
-          Util.splitLeavingParenthesisContents(cleaned.substring(endOfStruct + 1), ",");
-      Optional<String> name =
-          parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
-      if (name.isPresent()) {
-        Type target = TypeParser.createIgnoringAlias(name.get());
-        for (String part : parts) {
-          if (!part.equals(name.get())) {
-            handleSingleAlias(frontend, rawCode, target, part);
-          }
-        }
-      } else {
-        log.error("Could not identify struct name: {}", rawCode);
-      }
-    } else {
-      log.error("No alias found for struct typedef: {}", rawCode);
-    }
-  }
-
   @NonNull
   public Declaration handleSingleAlias(
       LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
