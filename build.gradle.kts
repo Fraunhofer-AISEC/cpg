@@ -33,9 +33,9 @@ plugins {
     signing
     `maven-publish`
 
-    id("org.sonarqube") version "3.3"
-    id("com.diffplug.spotless") version "6.6.1"
-    kotlin("jvm") version "1.6.20" apply false
+    id("org.sonarqube") version "3.4.0.2513"
+    id("com.diffplug.spotless") version "6.7.2"
+    kotlin("jvm") version "1.7.0" apply false
 }
 
 allprojects {
@@ -226,7 +226,7 @@ subprojects {
                         include("build/generated-src/**")
                     }
             )
-            googleJavaFormat("1.11.0")
+            googleJavaFormat("1.15.0")
             licenseHeader(headerWithStars).yearSeparator(" - ")
         }
         kotlin {

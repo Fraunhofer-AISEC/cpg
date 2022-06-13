@@ -229,7 +229,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         lang.scopeManager.leaveScope(record)
 
         // add it to the global scope
-        lang.scopeManager.globalScope?.addDeclaration(record)
+        lang.scopeManager.globalScope?.addDeclaration(record, true)
 
         return record
     }

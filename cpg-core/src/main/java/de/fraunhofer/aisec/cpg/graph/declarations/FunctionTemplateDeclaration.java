@@ -82,7 +82,10 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
     FunctionTemplateDeclaration that = (FunctionTemplateDeclaration) o;
-    return realization.equals(that.realization) && parameters.equals(that.parameters);
+    return Objects.equals(getRealization(), that.getRealization())
+        && PropertyEdge.Companion.propertyEqualsList(realization, that.realization)
+        && Objects.equals(getParameters(), that.getParameters())
+        && PropertyEdge.Companion.propertyEqualsList(parameters, that.parameters);
   }
 
   // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the

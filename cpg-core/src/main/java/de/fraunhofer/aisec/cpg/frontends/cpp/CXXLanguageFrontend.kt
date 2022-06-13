@@ -34,8 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -46,16 +45,21 @@ import java.lang.reflect.Method
 import java.nio.file.Path
 import java.util.*
 import java.util.stream.Collectors
-import org.eclipse.cdt.core.dom.ast.IASTAttributeOwner
-import org.eclipse.cdt.core.dom.ast.IASTNode
-import org.eclipse.cdt.core.dom.ast.IASTToken
-import org.eclipse.cdt.core.dom.ast.IASTTokenList
+import org.eclipse.cdt.core.dom.ast.*
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
+import org.eclipse.cdt.core.dom.ast.gnu.c.GCCLanguage
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
+import org.eclipse.cdt.core.dom.parser.AbstractCLikeLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
 import org.eclipse.cdt.core.model.ILanguage
-import org.eclipse.cdt.core.parser.*
+import org.eclipse.cdt.core.parser.DefaultLogService
+import org.eclipse.cdt.core.parser.FileContent
+import org.eclipse.cdt.core.parser.IncludeFileContentProvider
+import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit
+import org.eclipse.cdt.internal.core.dom.parser.ASTTranslationUnit
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
+import org.eclipse.cdt.internal.core.model.ASTStringUtil
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider
@@ -68,6 +72,8 @@ import org.slf4j.LoggerFactory
  */
 class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::"), HasDefaultArguments, HasTemplates {
+
+    var dialect: AbstractCLikeLanguage? = null
 
     /**
      * Implements an [IncludeFileContentProvider] which features an inclusion/exclusion list for
@@ -82,7 +88,6 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
              */
             private fun getContentUncached(path: String): InternalFileContent? {
                 if (!getInclusionExists(path)) {
-                    LOGGER.debug("Include file not found: {}", path)
                     return null
                 }
 
@@ -142,9 +147,13 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 for (includeLocation in includeLocations) {
                     // try to resolve path relatively
                     val includeFile = Path.of(path)
-                    val relative = includeLocation.relativize(includeFile)
-                    if (list.contains(relative.toString())) {
-                        return true
+                    try {
+                        val relative = includeLocation.relativize(includeFile)
+                        if (list.contains(relative.toString())) {
+                            return true
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        continue
                     }
                 }
                 return false
@@ -172,7 +181,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     val parameterDeclarationHandler = ParameterDeclarationHandler(this)
     val statementHandler = StatementHandler(this)
 
-    private val comments = HashMap<Int, String>()
+    private val comments = HashMap<Pair<String, Int>, String>()
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
@@ -196,34 +205,49 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;
         return try {
-            var bench = Benchmark(this.javaClass, "Parsing sourcefile")
+            var bench = Benchmark(this.javaClass, "Parsing sourcefile ${file.name}")
+
+            // Set parser language, based on file extension
+            this.dialect =
+                if (file.extension == "c") {
+                    GCCLanguage.getDefault()
+                } else {
+                    GPPLanguage.getDefault()
+                }
+
             val translationUnit =
-                GPPLanguage.getDefault()
-                    .getASTTranslationUnit(
-                        content,
-                        scannerInfo,
-                        includeFileContentProvider,
-                        null,
-                        opts,
-                        log
-                    ) as CPPASTTranslationUnit
+                this.dialect?.getASTTranslationUnit(
+                    content,
+                    scannerInfo,
+                    includeFileContentProvider,
+                    null,
+                    opts,
+                    log
+                ) as ASTTranslationUnit
             val length = translationUnit.length
-            LOGGER.info("Parsed {} bytes corresponding roughly to {} LoC", length, length / 50)
-            bench.addMeasurement()
-            bench = Benchmark(this.javaClass, "Transform to CPG")
+            LOGGER.info(
+                "Parsed {} bytes in ${file.name} corresponding roughly to {} LoC",
+                length,
+                length / 50
+            )
+            bench.stop()
+            bench = Benchmark(this.javaClass, "Transforming ${file.name} to CPG")
             if (config.debugParser) {
                 explore(translationUnit, 0)
             }
+
             for (c in translationUnit.comments) {
                 if (c.fileLocation == null) {
                     LOGGER.warn("Found comment with null location in {}", translationUnit.filePath)
                     continue
                 }
-                comments[c.fileLocation.startingLineNumber] = c.rawSignature
+                comments[Pair(c.fileLocation.fileName, c.fileLocation.startingLineNumber)] =
+                    c.rawSignature
             }
+
             val translationUnitDeclaration =
                 declarationHandler.handleTranslationUnit(translationUnit)
-            bench.addMeasurement()
+            bench.stop()
             translationUnitDeclaration
         } catch (ex: CoreException) {
             throw TranslationException(ex)
@@ -321,9 +345,8 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
      * @param node the node to process
      * @param owner the AST node which holds the attribute
      */
-    fun processAttributes(node: Node, owner: IASTAttributeOwner) {
-        if (config.processAnnotations) {
-            // set attributes
+    fun processAttributes(node: Node, owner: IASTNode) {
+        if (config.processAnnotations && owner is IASTAttributeOwner) { // set attributes
             node.addAnnotations(handleAttributes(owner))
         }
     }
@@ -407,14 +430,138 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     override fun <S, T> setComment(s: S, ctx: T) {
         if (ctx is ASTNode && s is Node) {
             val cpgNode = s as Node
-            if (comments.containsKey(cpgNode.location?.region?.endLine)
-            ) { // only exact match for now
-                cpgNode.comment = comments[cpgNode.location?.region?.endLine]
+            val location = cpgNode.location ?: return
+
+            // No location, no comment
+
+            val loc: Pair<String, Int> =
+                Pair(location.artifactLocation.uri.path, location.region.endLine)
+            comments[loc]?.let {
+                // only exact match for now}
+                cpgNode.comment = it
             }
             // TODO: handle orphanComments? i.e. comments which do not correspond to one line
             // todo: what to do with comments which are in a line which contains multiple
             // statements?
         }
+    }
+
+    /**
+     * Returns the [Type] that is represented by the [declarator] and [specifier]. This tries to
+     * resolve as much information about the type on its own using by analyzing the AST of the
+     * supplied declarator and specifier. Finally, [TypeParser.createFrom] is invoked on the
+     * inner-most type, but all other type adjustments, such as creating a [PointerType] is done
+     * within this method.
+     */
+    fun typeOf(declarator: IASTDeclarator, specifier: IASTDeclSpecifier): Type {
+        // Retrieve the "name" of this type, including qualifiers.
+        // TODO: In the future, we should parse the qualifiers, such as const here, instead of in
+        //  the TypeParser
+        var name = ASTStringUtil.getSignatureString(specifier, null)
+
+        var type =
+            when (specifier) {
+                is IASTSimpleDeclSpecifier -> {
+                    // A primitive type
+                    TypeParser.createFrom(name, false)
+                }
+                is IASTNamedTypeSpecifier -> {
+                    val nameDecl = specifier.name
+                    name =
+                        if (nameDecl is CPPASTQualifiedName) {
+                            // For some reason the legacy type system does not keep the language
+                            // specific namespace delimiters, and for backwards compatibility, we
+                            // are keeping this behaviour (for now).
+                            name.replace("::", ".")
+                        } else {
+                            name
+                        }
+
+                    TypeParser.createFrom(name, true, this)
+                }
+                is IASTCompositeTypeSpecifier -> {
+                    // A class. This actually also declares the class. At the moment, we handle this
+                    // in handleSimpleDeclaration, but we might want to move it here
+                    TypeParser.createFrom(name, true, this)
+                }
+                is IASTElaboratedTypeSpecifier -> {
+                    // A class or struct
+                    TypeParser.createFrom(name, true, this)
+                }
+                else -> {
+                    UnknownType.getUnknownType()
+                }
+            }
+
+        type = TypeManager.getInstance().registerType(type)
+
+        type = this.adjustType(declarator, type)
+        return type
+    }
+
+    private fun adjustType(declarator: IASTDeclarator, incoming: Type): Type {
+        var type = incoming
+
+        // First, look at the declarator's pointer operator, to see whether, we need to wrap the
+        // type into a pointer or similar
+        for (op in declarator.pointerOperators) {
+            type =
+                when (op) {
+                    is IASTPointer -> {
+                        type.reference(PointerType.PointerOrigin.POINTER)
+                    }
+                    is ICPPASTReferenceOperator -> {
+                        ReferenceType(type.storage, type.qualifier, type)
+                    }
+                    else -> {
+                        type
+                    }
+                }
+        }
+
+        // Check, if we are an array type
+        if (declarator is IASTArrayDeclarator) {
+            for (mod in declarator.arrayModifiers) {
+                type = type.reference(PointerType.PointerOrigin.ARRAY)
+            }
+        } else if (declarator is IASTStandardFunctionDeclarator) {
+            // Loop through the parameters
+            var paramTypes = declarator.parameters.map { typeOf(it.declarator, it.declSpecifier) }
+
+            var i = 0
+            // Filter out void
+            paramTypes =
+                paramTypes.filter {
+                    if (it is IncompleteType) {
+                        i++
+                        return@filter false
+                    }
+
+                    return@filter true
+                }
+
+            if (i > 1) {
+                // TODO: We should actually report this as a "problem" somehow
+                LOGGER.error(
+                    "Type $type contains more than one void parameter. This is not allowed"
+                )
+            }
+
+            // We need to construct a function (pointer) type here. The existing type
+            // so far is the return value. We then add the parameters
+            type = FunctionPointerType(type.qualifier, type.storage, paramTypes, type)
+        }
+
+        // Lastly, there might be further nested declarators that adjust the type further.
+        // However, if the type is already a function pointer type, we can ignore it. In the future,
+        // this will probably actually make the difference between a function type and a function
+        // pointer type.
+        if (declarator.nestedDeclarator != null && type !is FunctionPointerType) {
+            type = adjustType(declarator.nestedDeclarator, type)
+        }
+
+        // Make sure, the type manager knows about this type
+        return TypeManager.getInstance().registerType(type)
     }
 
     companion object {

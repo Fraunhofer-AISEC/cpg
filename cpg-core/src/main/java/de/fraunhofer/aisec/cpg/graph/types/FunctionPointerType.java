@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -125,11 +126,12 @@ public class FunctionPointerType extends Type {
     return Objects.hash(super.hashCode(), parameters, returnType);
   }
 
+  @NotNull
   @Override
   public String toString() {
     return "FunctionPointerType{"
         + "parameters="
-        + parameters
+        + getParameters()
         + ", returnType="
         + returnType
         + ", typeName='"

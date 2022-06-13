@@ -29,16 +29,17 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
+import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithResult
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.bodyOrNull
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.helpers.NodeComparator
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -56,7 +57,6 @@ import kotlin.collections.MutableMap
 import kotlin.collections.set
 import kotlin.test.*
 import kotlin.test.Test
-import org.slf4j.LoggerFactory
 
 internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
@@ -110,14 +110,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         var parameter = catchClauses[0].parameter
         assertNotNull(parameter)
         assertEquals("e", parameter.name)
-        assertEquals(TypeParser.createFrom("const std::exception&", true), parameter.type)
+        assertEquals("std.exception&", parameter.type.typeName)
+        assertTrue(parameter.type.qualifier.isConst)
 
         // anonymous variable (this is not 100% handled correctly but will do for now)
         parameter = catchClauses[1].parameter
         assertNotNull(parameter)
         // this is currently our 'unnamed' parameter
         assertEquals("", parameter.name)
-        assertEquals(TypeParser.createFrom("const std::exception&", true), parameter.type)
+        assertEquals("std.exception&", parameter.type.typeName)
+        assertTrue(parameter.type.qualifier.isConst)
 
         // catch all
         parameter = catchClauses[2].parameter
@@ -207,10 +209,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testArrays() {
-        val file = File("src/test/resources/arrays.cpp")
+        val file = File("src/test/resources/cxx/arrays.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val main = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
-        val statement = main!!.body as CompoundStatement
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        val statement = main.body as CompoundStatement
 
         // first statement is the variable declaration
         val x =
@@ -219,7 +223,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(x)
         assertEquals(TypeParser.createFrom("int[]", true), x.type)
 
-        // initializer is a initializer list expression
+        // initializer is an initializer list expression
         val ile = x.initializer as? InitializerListExpression
         assertNotNull(ile)
 
@@ -232,16 +236,32 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(ase)
         assertEquals(x, (ase.arrayExpression as DeclaredReferenceExpression).refersTo)
         assertEquals(0, (ase.subscriptExpression as Literal<*>).value)
+
+        // third statement declares a pointer to an array
+        val a =
+            (statement.statements[2] as? DeclarationStatement)?.singleDeclaration
+                as? VariableDeclaration
+        assertNotNull(a)
+
+        val type = a.type
+        assertTrue(type is PointerType && type.pointerOrigin == PointerType.PointerOrigin.POINTER)
+
+        val elementType = (a.type as? PointerType)?.elementType
+        assertNotNull(elementType)
+        assertTrue(
+            elementType is PointerType &&
+                elementType.pointerOrigin == PointerType.PointerOrigin.ARRAY
+        )
     }
 
     @Test
     @Throws(Exception::class)
     fun testFunctionDeclaration() {
-        val file = File("src/test/resources/functiondecl.cpp")
+        val file = File("src/test/resources/cxx/functiondecl.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
 
         // should be seven function nodes
-        assertEquals(7, declaration.declarations.size)
+        assertEquals(8, declaration.declarations.size)
 
         var method = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
         assertEquals("function0(int)void", method!!.signature)
@@ -288,6 +308,18 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(method)
         assertEquals(0, method.parameters.size)
         assertEquals("function5()void", method.signature)
+
+        method = declaration.getDeclarationAs(7, FunctionDeclaration::class.java)
+        assertNotNull(method)
+        assertEquals(1, method.parameters.size)
+
+        val param = method.parameters.firstOrNull()
+        assertNotNull(param)
+
+        val fpType = param.type as? FunctionPointerType
+        assertNotNull(fpType)
+        assertEquals(1, fpType.parameters.size)
+        assertEquals("void", fpType.returnType.name)
     }
 
     @Test
@@ -371,7 +403,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/cfg/switch.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val graphNodes = SubgraphWalker.flattenAST(declaration)
-        graphNodes.sortWith(NodeComparator())
+
         assertTrue(graphNodes.size != 0)
 
         val switchStatements = Util.filterCast(graphNodes, SwitchStatement::class.java)
@@ -395,14 +427,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testDeclarationStatement() {
-        val file = File("src/test/resources/declstmt.cpp")
+        val file = File("src/test/resources/cxx/declstmt.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val function = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
         val statements = function?.statements
         assertNotNull(statements)
         statements.forEach(
             Consumer { node: Statement ->
-                LOGGER.debug("{}", node)
+                log.debug("{}", node)
                 assertTrue(
                     node is DeclarationStatement ||
                         statements.indexOf(node) == statements.size - 1 && node is ReturnStatement
@@ -890,7 +922,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         for (d in body.statements) {
             if (expected.containsKey(d.code)) {
-                assertEquals(expected[d.code], d.location!!.region, d.code)
+                assertEquals(expected[d.code], d.location?.region, d.code)
                 expected.remove(d.code)
             }
         }
@@ -900,7 +932,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testDesignatedInitializer() {
-        val file = File("src/test/resources/components/designatedInitializer.c")
+        val file = File("src/test/resources/components/designatedInitializer.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
 
         // should be four method nodes
@@ -1231,7 +1263,67 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotEquals(classTThis, classSThis)
     }
 
-    companion object {
-        private val LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest::class.java)
+    @Test
+    @Throws(Exception::class)
+    fun testEnum() {
+        val file = File("src/test/resources/c/enum.c")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        // TU should only contains two AST declarations (EnumDeclaration and FunctionDeclaration),
+        // but NOT any EnumConstantDeclarations
+        assertEquals(2, tu.declarations.size)
+
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(main)
+
+        val returnStmt = main.bodyOrNull<ReturnStatement>()
+        assertNotNull(returnStmt)
+        assertNotNull((returnStmt.returnValue as? DeclaredReferenceExpression)?.refersTo)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testStruct() {
+        val file = File("src/test/resources/c/struct.c")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        val myStruct = tu.byNameOrNull<RecordDeclaration>("MyStruct")
+        assertNotNull(myStruct)
+
+        val field = myStruct.byNameOrNull<FieldDeclaration>("field")
+        assertNotNull(field)
+
+        val s = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration as? VariableDeclaration
+        assertNotNull(s)
+
+        assertEquals(myStruct, (s.type as? ObjectType)?.recordDeclaration)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testTypedef() {
+        val file = File("src/test/resources/c/typedef_in_header/main.c")
+        val result = analyzeWithResult(listOf(file), file.parentFile.toPath(), true)
+
+        val typedefs = TypeManager.getInstance().frontend?.scopeManager?.currentTypedefs
+        assertNotNull(typedefs)
+        assertTrue(typedefs.isNotEmpty())
+
+        val tu = result.translationUnits.firstOrNull()
+        assertNotNull(tu)
+
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        val call = main.bodyOrNull<CallExpression>()
+        assertNotNull(call)
+        assertTrue(call.invokes.isNotEmpty())
+
+        val func = call.invokes.firstOrNull()
+        assertNotNull(func)
+        assertFalse(func.isInferred)
     }
 }
