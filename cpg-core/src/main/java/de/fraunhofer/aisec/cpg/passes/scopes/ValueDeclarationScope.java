@@ -32,9 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
-import java.util.ArrayList;
-import java.util.List;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,8 @@ public class ValueDeclarationScope extends Scope {
 
   @NonNull private List<ValueDeclaration> valueDeclarations = new ArrayList<>();
 
-  @NonNull private List<TypedefDeclaration> typedefs = new ArrayList<>();
+  /** A map of typedefs keyed by their alias. */
+  @NonNull private final Map<Type, TypedefDeclaration> typedefs = new HashMap<>();
 
   public ValueDeclarationScope(Node node) {
     this.astNode = node;
@@ -63,21 +65,17 @@ public class ValueDeclarationScope extends Scope {
     this.valueDeclarations = valueDeclarations;
   }
 
-  public List<TypedefDeclaration> getTypedefs() {
+  public @NotNull Map<Type, TypedefDeclaration> getTypedefs() {
     return typedefs;
   }
 
-  public void setTypedefs(List<TypedefDeclaration> typedefs) {
-    this.typedefs = typedefs;
-  }
-
   public void addTypedef(TypedefDeclaration typedef) {
-    this.typedefs.add(typedef);
+    this.typedefs.put(typedef.getAlias(), typedef);
   }
 
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NonNull Declaration declaration, boolean addToAST) {
     if (declaration instanceof ValueDeclaration) {
-      addValueDeclaration((ValueDeclaration) declaration);
+      addValueDeclaration((ValueDeclaration) declaration, addToAST);
     } else {
       errorWithFileLocation(
           declaration, log, "A non ValueDeclaration can not be added to a DeclarationScope");
@@ -89,18 +87,21 @@ public class ValueDeclarationScope extends Scope {
    * the outer
    *
    * @param valueDeclaration the {@link ValueDeclaration}
+   * @param addToAST whether to also add the declaration to the AST of its holder.
    */
-  void addValueDeclaration(ValueDeclaration valueDeclaration) {
+  void addValueDeclaration(ValueDeclaration valueDeclaration, boolean addToAST) {
     this.valueDeclarations.add(valueDeclaration);
 
-    if (astNode instanceof DeclarationHolder) {
-      var holder = (DeclarationHolder) astNode;
-      holder.addDeclaration(valueDeclaration);
-    } else {
-      errorWithFileLocation(
-          valueDeclaration,
-          log,
-          "Trying to add a value declaration to a scope which does not have a declaration holder AST node");
+    if (addToAST) {
+      if (astNode instanceof DeclarationHolder) {
+        var holder = (DeclarationHolder) astNode;
+        holder.addDeclaration(valueDeclaration);
+      } else {
+        errorWithFileLocation(
+            valueDeclaration,
+            log,
+            "Trying to add a value declaration to a scope which does not have a declaration holder AST node");
+      }
     }
     /*
      There are nodes where we do not set the declaration when storing them in the scope,

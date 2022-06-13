@@ -23,6 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations;
+package de.fraunhofer.aisec.cpg.graph.declarations
 
-public class EnumConstantDeclaration extends ValueDeclaration {}
+import de.fraunhofer.aisec.cpg.graph.HasInitializer
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+
+/**
+ * Represents a constant within an [EnumDeclaration]. Depending on the language, this might have an
+ * explicit initializer value.
+ */
+class EnumConstantDeclaration : ValueDeclaration(), HasInitializer {
+
+    override var initializer: Expression? = null
+}

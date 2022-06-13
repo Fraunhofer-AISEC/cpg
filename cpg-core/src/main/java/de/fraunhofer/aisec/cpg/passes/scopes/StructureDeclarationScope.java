@@ -62,9 +62,9 @@ public class StructureDeclarationScope extends ValueDeclarationScope {
   }
 
   @Override
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NonNull Declaration declaration, boolean addToAST) {
     if (declaration instanceof ValueDeclaration) {
-      addValueDeclaration((ValueDeclaration) declaration);
+      addValueDeclaration((ValueDeclaration) declaration, addToAST);
     } else {
       addStructureDeclaration(declaration);
     }
