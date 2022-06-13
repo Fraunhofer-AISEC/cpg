@@ -434,10 +434,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 }
 
 /**
- * This function returns the real name (declarator) of this [IASTFunctionDeclarator]. The name
- * itself can be wrapped in many layers of nested declarators, e.g., if the name is wrapped in ().
+ * This function returns the real name (declarator) of this [IASTDeclarator]. The name itself can be
+ * wrapped in many layers of nested declarators, e.g., if the name is wrapped in ().
  */
-fun IASTFunctionDeclarator.realName(): Pair<IASTDeclarator, Boolean> {
+fun IASTDeclarator.realName(): Pair<IASTDeclarator, Boolean> {
     var nameDecl: IASTDeclarator = this
     var hasPointer = false
     while (nameDecl.nestedDeclarator != null) {
