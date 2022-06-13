@@ -526,7 +526,7 @@ internal class FunctionTemplateTest : BaseTest() {
     fun testFunctionTemplateInMethod() {
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateMethod.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateMethod.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -542,8 +542,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, recordDeclaration.templates.size)
         assertTrue(recordDeclaration.templates.contains(templateDeclaration))
         val methodDeclaration =
-            findByUniquePredicate<MethodDeclaration>(flattenListIsInstance(result)) {
-                m: MethodDeclaration ->
+            findByUniquePredicate(flattenListIsInstance(result)) { m: MethodDeclaration ->
                 !m.isImplicit && m.name == "fixed_multiply"
             }
         assertEquals(1, templateDeclaration.realization.size)

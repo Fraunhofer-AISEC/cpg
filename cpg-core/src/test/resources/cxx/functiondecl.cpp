@@ -23,3 +23,6 @@ void function4(int a = SOME_MACRO(1));
 
 // void parameter without name
 void function5(void);
+
+// function with function pointer
+void function6(void (*callback)(int));

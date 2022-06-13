@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.TypeManager
@@ -40,85 +39,49 @@ import java.math.BigInteger
 import java.util.*
 import java.util.function.Supplier
 import java.util.stream.Collectors
-import kotlin.collections.ArrayList
 import kotlin.math.max
 import org.eclipse.cdt.core.dom.ast.*
-import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExpression
 import org.eclipse.cdt.internal.core.dom.parser.CStringValue
 import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding
 import org.eclipse.cdt.internal.core.dom.parser.ProblemType
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTDesignatedInitializer
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.TypeOfDependentExpression
 
+/**
+ *
+ * Note: CDT expresses hierarchies in Interfaces to allow to have multi-inheritance in java. Because
+ * some Expressions have sub elements of type IASTInitializerClause and in the hierarchy
+ * IASTExpression extends IASTInitializerClause. The later is the appropriate Interface type for the
+ * handler.
+ */
 class ExpressionHandler(lang: CXXLanguageFrontend) :
-    Handler<Expression?, IASTInitializerClause, CXXLanguageFrontend>(
-        Supplier { ProblemExpression() },
-        lang
-    ) {
+    CXXHandler<Expression, IASTInitializerClause>(Supplier(::ProblemExpression), lang) {
 
-    /*
-    Note: CDT expresses hierarchies in Interfaces to allow to have multi-inheritance in java. Because some Expressions
-    have sub elements of type IASTInitializerClause and in the hierarchy IASTExpression extends IASTInitializerClause.
-    The later is the appropriate Interface type for the handler.
-    */
-    init {
-        map[CPPASTLiteralExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleLiteralExpression(ctx as CPPASTLiteralExpression)
-        }
-        map[CPPASTBinaryExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleBinaryExpression(ctx as CPPASTBinaryExpression)
-        }
-        map[CPPASTUnaryExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleUnaryExpression(ctx as CPPASTUnaryExpression)
-        }
-        map[CPPASTConditionalExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleConditionalExpression(ctx as CPPASTConditionalExpression)
+    override fun handleNode(node: IASTInitializerClause): Expression {
+        return when (node) {
+            is IASTLiteralExpression -> handleLiteralExpression(node)
+            is IASTBinaryExpression -> handleBinaryExpression(node)
+            is IASTUnaryExpression -> handleUnaryExpression(node)
+            is IASTConditionalExpression -> handleConditionalExpression(node)
+            is IASTIdExpression -> handleIdExpression(node)
+            is IASTFieldReference -> handleFieldReference(node)
+            is IASTFunctionCallExpression -> handleFunctionCallExpression(node)
+            is IASTCastExpression -> handleCastExpression(node)
+            is IASTInitializerList -> handleInitializerList(node)
+            is IASTExpressionList -> handleExpressionList(node)
+            is IASTArraySubscriptExpression -> handleArraySubscriptExpression(node)
+            is IASTTypeIdExpression -> handleTypeIdExpression(node)
+            is CPPASTSimpleTypeConstructorExpression -> handleSimpleTypeConstructorExpression(node)
+            is CPPASTNewExpression -> handleNewExpression(node)
+            is CPPASTDesignatedInitializer -> handleCXXDesignatedInitializer(node)
+            is CASTDesignatedInitializer -> handleCDesignatedInitializer(node)
+            is CPPASTDeleteExpression -> handleDeleteExpression(node)
+            is CPPASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
+            else -> {
+                return handleNotSupported(node, node.javaClass.name)
             }
-        map[CPPASTIdExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleIdExpression(ctx as CPPASTIdExpression)
         }
-        map[CPPASTFieldReference::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleFieldReference(ctx as CPPASTFieldReference)
-        }
-        map[CPPASTFunctionCallExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleFunctionCallExpression(ctx as CPPASTFunctionCallExpression)
-            }
-        map[CPPASTCastExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleCastExpression(ctx as CPPASTCastExpression)
-        }
-        map[CPPASTSimpleTypeConstructorExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleSimpleTypeConstructorExpression(ctx as CPPASTSimpleTypeConstructorExpression)
-            }
-        map[CPPASTNewExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleNewExpression(ctx as CPPASTNewExpression)
-        }
-        map[CPPASTInitializerList::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleInitializerList(ctx as CPPASTInitializerList)
-        }
-        map[CPPASTDesignatedInitializer::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleDesignatedInitializer(ctx as CPPASTDesignatedInitializer)
-            }
-        map[CPPASTExpressionList::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleExpressionList(ctx as CPPASTExpressionList)
-        }
-        map[CPPASTDeleteExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleDeleteExpression(ctx as CPPASTDeleteExpression)
-        }
-        map[CPPASTArraySubscriptExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleArraySubscriptExpression(ctx as CPPASTArraySubscriptExpression)
-            }
-        map[CPPASTTypeIdExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
-            handleTypeIdExpression(ctx as CPPASTTypeIdExpression)
-        }
-        map[CPPASTCompoundStatementExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleCompoundStatementExpression(ctx as CPPASTCompoundStatementExpression)
-            }
     }
 
     /**
@@ -128,7 +91,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
      * @param expression the ast expression
      * @return a CDT type
      */
-    private fun expressionTypeProxy(expression: ICPPASTExpression): IType {
+    private fun expressionTypeProxy(expression: IASTExpression): IType {
         var expressionType = ProblemType.UNKNOWN_FOR_EXPRESSION
         try {
             expressionType = expression.expressionType
@@ -153,7 +116,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return cse
     }
 
-    private fun handleTypeIdExpression(ctx: CPPASTTypeIdExpression): TypeIdExpression {
+    private fun handleTypeIdExpression(ctx: IASTTypeIdExpression): TypeIdExpression {
         // Eclipse CDT seems to support the following operators
         // 0 sizeof
         // 1 typeid
@@ -190,7 +153,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return NodeBuilder.newTypeIdExpression(operatorCode, type, referencedType, ctx.rawSignature)
     }
 
-    private fun handleArraySubscriptExpression(ctx: CPPASTArraySubscriptExpression): Expression {
+    private fun handleArraySubscriptExpression(ctx: IASTArraySubscriptExpression): Expression {
         val arraySubsExpression = NodeBuilder.newArraySubscriptionExpression(ctx.rawSignature)
         arraySubsExpression.arrayExpression = handle(ctx.arrayExpression)
         arraySubsExpression.subscriptExpression = handle(ctx.argument)
@@ -219,7 +182,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         } else {
             // Resolve possible templates
             var templateParameters: List<Node?> = emptyList<Node>()
-            val declSpecifier = ctx.typeId.declSpecifier as? CPPASTNamedTypeSpecifier
+            val declSpecifier = ctx.typeId.declSpecifier as? IASTNamedTypeSpecifier
             if (declSpecifier?.name is CPPASTTemplateId) {
                 templateParameters = getTemplateArguments(declSpecifier.name as CPPASTTemplateId)
                 assert(t.root is ObjectType)
@@ -278,10 +241,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun getTemplateArguments(template: CPPASTTemplateId): List<Node?> {
         val templateArguments: MutableList<Node?> = ArrayList()
         for (argument in template.templateArguments) {
-            if (argument is CPPASTTypeId) {
+            if (argument is IASTTypeId) {
                 val type = TypeParser.createFrom(argument.declSpecifier.toString(), true)
                 templateArguments.add(NodeBuilder.newTypeExpression(type.name, type))
-            } else if (argument is CPPASTLiteralExpression) {
+            } else if (argument is IASTLiteralExpression) {
                 templateArguments.add(
                     lang.expressionHandler.handle(argument as IASTInitializerClause)
                 )
@@ -290,9 +253,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return templateArguments
     }
 
-    private fun handleConditionalExpression(
-        ctx: CPPASTConditionalExpression
-    ): ConditionalExpression {
+    private fun handleConditionalExpression(ctx: IASTConditionalExpression): ConditionalExpression {
         val condition = handle(ctx.logicalConditionExpression)
         return NodeBuilder.newConditionalExpression(
             condition,
@@ -312,7 +273,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return deleteExpression
     }
 
-    private fun handleCastExpression(ctx: CPPASTCastExpression): Expression {
+    private fun handleCastExpression(ctx: IASTCastExpression): Expression {
         val castExpression = NodeBuilder.newCastExpression(ctx.rawSignature)
         castExpression.expression = handle(ctx.operand)
         castExpression.setCastOperator(ctx.operator)
@@ -330,7 +291,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // fall back to fTypeId
                 TypeParser.createFrom(ctx.typeId.declSpecifier.toString(), true, lang)
                 // TODO: try to actually resolve the type (similar to NewExpression) using
-                // ((CPPASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding()
+                // ((IASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding()
             } else {
                 TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang)
             }
@@ -367,7 +328,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return castExpression
     }
 
-    private fun handleFieldReference(ctx: CPPASTFieldReference): Expression {
+    private fun handleFieldReference(ctx: IASTFieldReference): Expression {
         var base = handle(ctx.fieldOwner)
         // Replace Literal this with a reference pointing to this
         if (base is Literal<*> && base.value == "this") {
@@ -391,7 +352,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         )
     }
 
-    private fun handleUnaryExpression(ctx: CPPASTUnaryExpression): Expression? {
+    private fun handleUnaryExpression(ctx: IASTUnaryExpression): Expression {
         var input: Expression? = null
         if (ctx.operand != null) { // can be null e.g. for "throw;"
             input = handle(ctx.operand)
@@ -412,8 +373,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             IASTUnaryExpression.op_bracketedPrimary -> {
                 if (lang.config.inferenceConfiguration.guessCastExpressions) {
                     // this can either be just a meaningless bracket or it can be a cast expression
-                    if (ctx.operand is CPPASTIdExpression) {
-                        val typeName = (ctx.operand as CPPASTIdExpression).name.toString()
+                    if (ctx.operand is IASTIdExpression) {
+                        val typeName = (ctx.operand as IASTIdExpression).name.toString()
                         if (TypeManager.getInstance().typeExists(typeName)) {
                             val cast =
                                 NodeBuilder.newCastExpression(lang.getCodeFromRawNode<Any>(ctx))
@@ -426,7 +387,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 }
 
                 // otherwise, ignore this kind of expression and return the input directly
-                return input
+                return input as Expression
             }
             IASTUnaryExpression.op_throw -> operatorCode = "throw"
             IASTUnaryExpression.op_typeid -> operatorCode = "typeid"
@@ -449,7 +410,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return unaryOperator
     }
 
-    private fun handleFunctionCallExpression(ctx: CPPASTFunctionCallExpression): Expression {
+    private fun handleFunctionCallExpression(ctx: IASTFunctionCallExpression): Expression {
         val reference = handle(ctx.functionNameExpression)
         val callExpression: CallExpression
         if (reference is MemberExpression) {
@@ -474,17 +435,17 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     reference.operatorCode,
                     ctx.rawSignature
                 )
-            if ((ctx.functionNameExpression as? CPPASTFieldReference)?.fieldName is CPPASTTemplateId
+            if ((ctx.functionNameExpression as? IASTFieldReference)?.fieldName is CPPASTTemplateId
             ) {
                 // Make necessary adjustments if we are handling a function template
                 val name =
-                    ((ctx.functionNameExpression as CPPASTFieldReference).fieldName
+                    ((ctx.functionNameExpression as IASTFieldReference).fieldName
                             as CPPASTTemplateId)
                         .templateName.toString()
                 callExpression.name = name
                 callExpression.addExplicitTemplateParameters(
                     getTemplateArguments(
-                        (ctx.functionNameExpression as CPPASTFieldReference).fieldName
+                        (ctx.functionNameExpression as IASTFieldReference).fieldName
                             as CPPASTTemplateId
                     )
                 )
@@ -505,16 +466,16 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // Classic C-style function pointer call -> let's extract the target
             callExpression =
                 NodeBuilder.newCallExpression(reference.input.name, "", reference.code, false)
-        } else if (ctx.functionNameExpression is CPPASTIdExpression &&
-                (ctx.functionNameExpression as CPPASTIdExpression).name is CPPASTTemplateId
+        } else if (ctx.functionNameExpression is IASTIdExpression &&
+                (ctx.functionNameExpression as IASTIdExpression).name is CPPASTTemplateId
         ) {
             val name =
-                ((ctx.functionNameExpression as CPPASTIdExpression).name as CPPASTTemplateId)
+                ((ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId)
                     .templateName.toString()
             callExpression = NodeBuilder.newCallExpression(name, name, ctx.rawSignature, true)
             callExpression.addExplicitTemplateParameters(
                 getTemplateArguments(
-                    (ctx.functionNameExpression as CPPASTIdExpression).name as CPPASTTemplateId
+                    (ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId
                 )
             )
         } else if (reference is CastExpression) {
@@ -555,7 +516,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return callExpression
     }
 
-    private fun handleIdExpression(ctx: CPPASTIdExpression): DeclaredReferenceExpression {
+    private fun handleIdExpression(ctx: IASTIdExpression): DeclaredReferenceExpression {
         val declaredReferenceExpression =
             NodeBuilder.newDeclaredReferenceExpression(
                 ctx.name.toString(),
@@ -598,7 +559,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         type?.let { declaredReferenceExpression.type = it }
     }
 
-    private fun handleExpressionList(exprList: CPPASTExpressionList): ExpressionList {
+    private fun handleExpressionList(exprList: IASTExpressionList): ExpressionList {
         val expressionList = NodeBuilder.newExpressionList(exprList.rawSignature)
         for (expr in exprList.expressions) {
             expressionList.addExpression(handle(expr))
@@ -606,7 +567,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return expressionList
     }
 
-    private fun handleBinaryExpression(ctx: CPPASTBinaryExpression): BinaryOperator {
+    private fun handleBinaryExpression(ctx: IASTBinaryExpression): BinaryOperator {
         var operatorCode = ""
         when (ctx.operator) {
             IASTBinaryExpression.op_multiply -> operatorCode = "*"
@@ -673,16 +634,23 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return binaryOperator
     }
 
-    private fun handleLiteralExpression(ctx: CPPASTLiteralExpression): Literal<*> {
+    private fun handleLiteralExpression(ctx: IASTLiteralExpression): Literal<*> {
         val type = expressionTypeProxy(ctx)
-        val value = ctx.evaluation.value
+        // TODO: parse C literal
+        val value =
+            if (ctx is CPPASTLiteralExpression) {
+                ctx.evaluation.value
+            } else {
+                CPPASTLiteralExpression(ctx.kind, ctx.value).evaluation.value
+            }
+
         val generatedType = TypeParser.createFrom(type.toString(), true, lang)
         if (value.numberValue() == null // e.g. for 0x1p-52
             && value !is CStringValue
         ) {
             return NodeBuilder.newLiteral(value.toString(), generatedType, ctx.rawSignature)
         }
-        if (type is CPPBasicType && type.kind == IBasicType.Kind.eInt) {
+        if (type is IBasicType && type.kind == IBasicType.Kind.eInt) {
             return handleIntegerLiteral(ctx)
         } else if (type.isSameType(CPPBasicType.BOOLEAN)) {
             return NodeBuilder.newLiteral(
@@ -714,7 +682,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return NodeBuilder.newLiteral(value.toString(), generatedType, ctx.rawSignature)
     }
 
-    private fun handleInitializerList(ctx: CPPASTInitializerList): InitializerListExpression {
+    private fun handleInitializerList(ctx: IASTInitializerList): InitializerListExpression {
         val expression = NodeBuilder.newInitializerListExpression(ctx.rawSignature)
 
         for (clause in ctx.clauses) {
@@ -729,7 +697,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return expression
     }
 
-    private fun handleDesignatedInitializer(
+    private fun handleCXXDesignatedInitializer(
         ctx: CPPASTDesignatedInitializer
     ): DesignatedInitializerExpression {
         val rhs = handle(ctx.operand)
@@ -782,7 +750,60 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return die
     }
 
-    private fun handleIntegerLiteral(ctx: CPPASTLiteralExpression): Literal<*> {
+    private fun handleCDesignatedInitializer(
+        ctx: CASTDesignatedInitializer
+    ): DesignatedInitializerExpression {
+        val rhs = handle(ctx.operand)
+        val lhs = ArrayList<Expression>()
+        if (ctx.designators.isEmpty()) {
+            Util.errorWithFileLocation(lang, ctx, log, "no designator found")
+        } else {
+            for (des in ctx.designators) {
+                var oneLhs: Expression? = null
+                when (des) {
+                    is CPPASTArrayDesignator -> {
+                        oneLhs = handle(des.subscriptExpression)
+                    }
+                    is CPPASTFieldDesignator -> {
+                        oneLhs =
+                            NodeBuilder.newDeclaredReferenceExpression(
+                                des.name.toString(),
+                                UnknownType.getUnknownType(),
+                                des.getRawSignature()
+                            )
+                    }
+                    is CPPASTArrayRangeDesignator -> {
+                        oneLhs =
+                            NodeBuilder.newArrayRangeExpression(
+                                handle(des.rangeFloor),
+                                handle(des.rangeCeiling),
+                                des.getRawSignature()
+                            )
+                    }
+                    else -> {
+                        Util.errorWithFileLocation(
+                            lang,
+                            ctx,
+                            log,
+                            "Unknown designated lhs {}",
+                            des.javaClass.toGenericString()
+                        )
+                    }
+                }
+                if (oneLhs != null) {
+                    lhs.add(oneLhs)
+                }
+            }
+        }
+
+        val die = NodeBuilder.newDesignatedInitializerExpression(ctx.rawSignature)
+        die.lhs = lhs
+        die.rhs = rhs
+
+        return die
+    }
+
+    private fun handleIntegerLiteral(ctx: IASTLiteralExpression): Literal<*> {
         val value = String(ctx.value).lowercase(Locale.getDefault())
         val bigValue: BigInteger
         val suffix = value.suffix
@@ -888,3 +909,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             return suffix
         }
 }
+
+private val IASTUnaryExpression.isPostfixOperator: Boolean
+    get() {
+        return this.operator == IASTUnaryExpression.op_postFixDecr ||
+            this.operator == IASTUnaryExpression.op_postFixIncr
+    }
