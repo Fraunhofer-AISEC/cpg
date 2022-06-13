@@ -70,39 +70,60 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
     }
 
+    /**
+     * This is sort of a catch-all function, if none of the previous specialized declarators match.
+     * It can be one of three things:
+     * - a wrapper around a nested declarator, in which case we delegate the handling to the nested
+     * one,
+     * - a field declaration, if this declaration occurs within a class or has a qualified name, or
+     * - a variable declaration in all the other cases.
+     */
     private fun handleDeclarator(ctx: IASTDeclarator): Declaration? {
-        // this is just a nested declarator, i.e. () wrapping the real declarator
+        // This is just a nested declarator, i.e. () wrapping the real declarator
         if (ctx.initializer == null && ctx.nestedDeclarator is IASTDeclarator) {
             return handle(ctx.nestedDeclarator)
         }
+
         val name = ctx.name.toString()
 
+        // Check, if the name is qualified or if we are within a record scope
         return if ((lang.scopeManager.currentScope is RecordScope ||
                 name.contains(lang.namespaceDelimiter))
         ) {
-            // forward it to handleFieldDeclarator
+            // If yes, treat this like a field declaration
             this.handleFieldDeclarator(ctx)
         } else {
-            // Only C++ has constructors and thus implicit (constructor) initialization calls
+            // If not, this is a normal variable declaration. First, we need to check if this
+            // declaration allows to have an implicit constructor initializer. Only C++ has
+            // constructors and thus implicit (constructor) initialization calls
             val implicitInitializerAllowed = lang.dialect is GPPLanguage
 
-            // type will be filled out later
             val declaration =
                 NodeBuilder.newVariableDeclaration(
                     ctx.name.toString(),
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(), // Type will be filled out later by
+                    // handleSimpleDeclaration
                     ctx.rawSignature,
                     implicitInitializerAllowed
                 )
+
+            // Parse the initializer, if we have one
             val init = ctx.initializer
             if (init != null) {
                 declaration.initializer = lang.initializerHandler.handle(init)
             }
+
+            // Add this declaration to the current scope
             lang.scopeManager.addDeclaration(declaration)
+
             declaration
         }
     }
 
+    /**
+     * Translates (data members)[https://en.cppreference.com/w/cpp/language/data_members] of a C++
+     * class or C/C++ struct into a [FieldDeclaration].
+     */
     private fun handleFieldDeclarator(ctx: IASTDeclarator): FieldDeclaration {
         val initializer = ctx.initializer?.let { lang.initializerHandler.handle(it) }
 

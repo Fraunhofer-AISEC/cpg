@@ -227,9 +227,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         for (candidate in declarationCandidates) {
             candidate.definition = declaration
+            // Do some additional magic with default parameters, which I do not really understand
             for (i in declaration.parameters.indices) {
-                if (declaration.parameters[i].default != null) {
-                    declaration.parameters[i].default = declaration.parameters[i].default
+                if (candidate.parameters[i].default != null) {
+                    declaration.parameters[i].default = candidate.parameters[i].default
                 }
             }
         }
@@ -247,8 +248,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             return if (this.rawSignature.contains("typedef")) {
                 if (this.declSpecifier is CPPASTCompositeTypeSpecifier) {
                     // we need to make a difference between structs that have typedefs and structs
-                    // that
-                    // are typedefs themselves
+                    // that are typedefs themselves
                     this.declSpecifier.toString() == "struct" &&
                         this.rawSignature.trim().startsWith("typedef")
                 } else {
