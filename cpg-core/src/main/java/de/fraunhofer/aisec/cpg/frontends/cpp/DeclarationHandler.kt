@@ -75,6 +75,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a C++ (using
+     * directive)[https://en.cppreference.com/w/cpp/language/namespace#Using-directives] into a
+     * [UsingDirective]. However, currently, no actual adjustment of available names / scopes is
+     * done yet.
+     */
     private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
         return NodeBuilder.newUsingDirective(using.rawSignature, using.qualifiedName.toString())
     }

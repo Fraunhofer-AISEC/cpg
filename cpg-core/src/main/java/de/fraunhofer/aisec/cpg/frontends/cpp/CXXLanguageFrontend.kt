@@ -67,12 +67,20 @@ import org.eclipse.core.runtime.CoreException
 import org.slf4j.LoggerFactory
 
 /**
- * The language frontend for translating CXX languages into the graph. It uses Eclipse CDT to parse
- * the actual source code into an AST.
+ * The language frontend for translating C/C++ languages into the graph. It uses Eclipse CDT to
+ * parse the actual source code into an AST.
+ *
+ * Based on the file ending (.c or .cpp) different dialects of Eclipse CDT are used ([GCCLanguage]
+ * ad [GPPLanguage]). This enables us (to some degree) to deal with the finer difference between C
+ * and C++ code.
  */
 class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::"), HasDefaultArguments, HasTemplates {
 
+    /**
+     * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
+     * C++.
+     */
     var dialect: AbstractCLikeLanguage? = null
 
     /**
@@ -106,7 +114,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 }
                 LOGGER.debug("Loading include file {}", path)
                 val content = FileContent.createForExternalFileLocation(path)
-                return content as InternalFileContent
+                return content as? InternalFileContent
             }
 
             private fun hasIncludeWhitelist(): Boolean {
@@ -237,10 +245,15 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             }
 
             for (c in translationUnit.comments) {
+                if (c.rawSignature.isEmpty()) {
+                    continue
+                }
+
                 if (c.fileLocation == null) {
                     LOGGER.warn("Found comment with null location in {}", translationUnit.filePath)
                     continue
                 }
+
                 comments[Pair(c.fileLocation.fileName, c.fileLocation.startingLineNumber)] =
                     c.rawSignature
             }
@@ -340,7 +353,8 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     }
 
     /**
-     * Processes C++ attributes into [Annotation] nodes.
+     * Processes C++ [attributes](https://en.cppreference.com/w/cpp/language/attributes) into
+     * [Annotation] nodes.
      *
      * @param node the node to process
      * @param owner the AST node which holds the attribute
@@ -499,6 +513,11 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         return type
     }
 
+    /**
+     * This is a little helper function, primarily used by [typeOf]. It's primary purpose is to
+     * "adjust" the [incoming] type based on the the [declarator]. This is needed because the type
+     * information in C/C++ are split into a declarator and declaration specifiers.
+     */
     private fun adjustType(declarator: IASTDeclarator, incoming: Type): Type {
         var type = incoming
 
