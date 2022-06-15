@@ -649,7 +649,7 @@ object NodeBuilder {
         fqn: String,
         kind: String,
         code: String? = null,
-        createThis: Boolean = true,
+        createThis: Boolean = false,
         lang: LanguageFrontend? = null,
         rawNode: Any? = null
     ): RecordDeclaration {

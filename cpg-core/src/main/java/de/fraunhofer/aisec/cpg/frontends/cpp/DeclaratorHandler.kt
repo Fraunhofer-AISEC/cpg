@@ -429,7 +429,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString(),
                 kind,
                 ctx.rawSignature,
-                true,
+                false,
                 lang
             )
 
@@ -458,6 +458,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     recordDeclaration.name,
                     recordDeclaration
                 )
+
+            createMethodReceiver(constructorDeclaration)
 
             // set this as implicit
             constructorDeclaration.isImplicit = true

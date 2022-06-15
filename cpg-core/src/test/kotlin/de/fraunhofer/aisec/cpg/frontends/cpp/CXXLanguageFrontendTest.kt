@@ -682,13 +682,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testRecordDeclaration() {
-        val file = File("src/test/resources/recordstmt.cpp")
+        val file = File("src/test/resources/cxx/recordstmt.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val recordDeclaration = declaration.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(recordDeclaration)
         assertEquals("SomeClass", recordDeclaration.name)
         assertEquals("class", recordDeclaration.kind)
-        assertEquals(3, recordDeclaration.fields.size)
+        assertEquals(2, recordDeclaration.fields.size)
 
         val field = recordDeclaration.getField("field")
         assertNotNull(field)
@@ -1010,7 +1010,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     fun testLocalVariables() {
         val file = File("src/test/resources/variables/local_variables.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val function = declaration.getDeclarationAs(2, FunctionDeclaration::class.java)
+
+        val function =
+            declaration.byNameOrNull<FunctionDeclaration>("testExpressionInExpressionList")
         assertEquals("testExpressionInExpressionList()int", function!!.signature)
 
         val locals = function.body.locals
@@ -1021,10 +1023,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(localNames.contains("t"))
         // ... and nothing else
         assertEquals(3, localNames.size)
-
-        val clazz = declaration.getDeclarationAs(0, RecordDeclaration::class.java)
-        assertEquals("this", clazz!!.fields[0].name)
-        assertEquals(1, clazz.fields.size)
     }
 
     @Test

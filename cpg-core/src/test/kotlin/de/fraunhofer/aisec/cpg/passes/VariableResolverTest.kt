@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.nio.file.Path
-import java.util.stream.Collectors
 import kotlin.test.*
 
 internal class VariableResolverTest : BaseTest() {
@@ -87,38 +86,5 @@ internal class VariableResolverTest : BaseTest() {
         returnValue = returnStatement.returnValue as DeclaredReferenceExpression
         assertNotEquals(field, returnValue.refersTo)
         assertEquals(local, returnValue.refersTo)
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun testLocalVarsCpp() {
-        val tu = analyze("cpp", topLevel, true).firstOrNull()
-        assertNotNull(tu)
-
-        val function = tu.getDeclarationAs(2, FunctionDeclaration::class.java)
-        assertEquals("testExpressionInExpressionList()int", function!!.signature)
-
-        val locals = function.body.locals
-
-        // Expecting x, foo, t
-        val localNames =
-            locals.stream().map { l: VariableDeclaration -> l.name }.collect(Collectors.toSet())
-        assertTrue(localNames.contains("x"))
-        assertTrue(localNames.contains("foo"))
-        assertTrue(localNames.contains("t"))
-        // ... and nothing else
-        assertEquals(3, localNames.size)
-
-        // Class "Test" has only one (virtual) field "this"
-        val clazz = tu.getDeclarationAs(0, RecordDeclaration::class.java)
-        for (f in clazz!!.fields) {
-            if (f == null) {
-                println("NULL")
-                continue
-            }
-            println(f.name + " " + f.initializer)
-        }
-        // FIXME Fails. Actually has "this", "a" and "foo"
-        assertEquals(1, clazz.fields.size)
     }
 }

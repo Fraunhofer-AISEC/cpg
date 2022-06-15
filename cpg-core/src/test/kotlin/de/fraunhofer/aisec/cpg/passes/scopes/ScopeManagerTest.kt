@@ -37,8 +37,13 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import java.io.File
 import kotlin.test.*
+<<<<<<< HEAD
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+=======
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+>>>>>>> 0efe0c1a (Fixing templates)
 
 internal class ScopeManagerTest : BaseTest() {
     private lateinit var config: TranslationConfiguration
@@ -63,7 +68,7 @@ internal class ScopeManagerTest : BaseTest() {
     fun testReplaceNode() {
         val scopeManager = ScopeManager()
         val frontend = CXXLanguageFrontend(config, scopeManager)
-        val tu = frontend.parse(File("src/test/resources/recordstmt.cpp"))
+        val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
         val methods =
             flattenListIsInstance<MethodDeclaration>(tu.declarations).filter {
                 it !is ConstructorDeclaration

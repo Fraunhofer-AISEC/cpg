@@ -62,8 +62,6 @@ internal class VariableResolverCppTest : BaseTest() {
     private var innerClass: RecordDeclaration? = null
     private var innerVarName: FieldDeclaration? = null
     private var innerStaticVarName: FieldDeclaration? = null
-    private var innerImpThis: FieldDeclaration? = null
-    private val innerImpOuter: FieldDeclaration? = null
     private var main: FunctionDeclaration? = null
     private var outerFunction1: MethodDeclaration? = null
     private var forStatements: List<ForStatement>? = null
@@ -133,13 +131,6 @@ internal class VariableResolverCppTest : BaseTest() {
                 .fields
                 .stream()
                 .filter { n: FieldDeclaration -> n.name == "staticVarName" }
-                .findFirst()
-                .get()
-        innerImpThis =
-            innerClass!!
-                .fields
-                .stream()
-                .filter { n: FieldDeclaration -> n.name == "this" }
                 .findFirst()
                 .get()
         main = getOfTypeWithName(nodes, FunctionDeclaration::class.java, "main")

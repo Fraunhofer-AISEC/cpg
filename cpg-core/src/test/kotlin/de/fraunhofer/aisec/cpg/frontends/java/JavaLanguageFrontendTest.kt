@@ -263,18 +263,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         assertNotNull(declaration)
+
         val namespaceDeclaration = declaration.getDeclarationAs(0, NamespaceDeclaration::class.java)
 
         val recordDeclaration =
             namespaceDeclaration?.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(recordDeclaration)
 
-        val fields =
-            recordDeclaration.fields
-                .stream()
-                .map(FieldDeclaration::name)
-                .collect(Collectors.toList())
-        assertTrue(fields.contains("this"))
+        val fields = recordDeclaration.fields.map(FieldDeclaration::name)
         assertTrue(fields.contains("field"))
 
         val method = recordDeclaration.methods[0]
