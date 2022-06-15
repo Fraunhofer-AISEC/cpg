@@ -45,10 +45,7 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.ProblemNode;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
@@ -112,14 +109,16 @@ public class DeclarationHandler
           com.github.javaparser.ast.body.ConstructorDeclaration constructorDecl) {
     ResolvedConstructorDeclaration resolvedConstructor = constructorDecl.resolve();
 
+    var record = lang.getScopeManager().getCurrentRecord();
     de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration declaration =
         newConstructorDeclaration(
-            resolvedConstructor.getName(),
-            constructorDecl.toString(),
-            lang.getScopeManager().getCurrentRecord());
+            resolvedConstructor.getName(), constructorDecl.toString(), record);
     lang.getScopeManager().addDeclaration(declaration);
 
     lang.getScopeManager().enterScope(declaration);
+
+    createMethodReceiver(record, declaration);
+
     declaration.addThrowTypes(
         constructorDecl.getThrownExceptions().stream()
             .map(type -> TypeParser.createFrom(type.asString(), true))
@@ -171,19 +170,9 @@ public class DeclarationHandler
         newMethodDeclaration(
             resolvedMethod.getName(), methodDecl.toString(), methodDecl.isStatic(), record);
 
-    // create the receiver
-    var receiver =
-        newVariableDeclaration(
-            "this",
-            record != null
-                ? TypeParser.createFrom(record.getName(), false)
-                : UnknownType.getUnknownType(),
-            "this",
-            false);
-
-    functionDeclaration.setReceiver(receiver);
-
     lang.getScopeManager().enterScope(functionDeclaration);
+
+    createMethodReceiver(record, functionDeclaration);
 
     functionDeclaration.addThrowTypes(
         methodDecl.getThrownExceptions().stream()
@@ -237,6 +226,23 @@ public class DeclarationHandler
     return functionDeclaration;
   }
 
+  private void createMethodReceiver(
+      RecordDeclaration record, MethodDeclaration functionDeclaration) {
+    // create the receiver
+    var receiver =
+        newVariableDeclaration(
+            "this",
+            record != null
+                ? TypeParser.createFrom(record.getName(), false)
+                : UnknownType.getUnknownType(),
+            "this",
+            false);
+
+    functionDeclaration.setReceiver(receiver);
+
+    lang.getScopeManager().addDeclaration(receiver);
+  }
+
   public RecordDeclaration handleClassOrInterfaceDeclaration(
       ClassOrInterfaceDeclaration classInterDecl) {
     // TODO: support other kinds, such as interfaces
@@ -286,7 +292,6 @@ public class DeclarationHandler
     recordDeclaration.setImportStatements(partitioned.get(false));
 
     lang.getScopeManager().enterScope(recordDeclaration);
-    lang.getScopeManager().addDeclaration(recordDeclaration.getThis());
 
     // TODO: 'this' identifier for multiple instances?
     for (BodyDeclaration<?> decl : classInterDecl.getMembers()) {

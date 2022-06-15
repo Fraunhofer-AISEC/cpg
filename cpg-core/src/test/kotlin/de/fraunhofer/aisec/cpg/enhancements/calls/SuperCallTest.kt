@@ -104,10 +104,10 @@ internal class SuperCallTest : BaseTest() {
         refs = flattenIsInstance(getSuperField)
         val superFieldRef = findByUniquePredicate(refs) { "super.field" == it.code }
         assertTrue(fieldRef.base is DeclaredReferenceExpression)
-        assertRefersTo(fieldRef.base, subClass.`this`)
+        assertRefersTo(fieldRef.base, getField.receiver)
         assertEquals(field, fieldRef.refersTo)
         assertTrue(superFieldRef.base is DeclaredReferenceExpression)
-        assertRefersTo(superFieldRef.base, superClass.`this`)
+        assertRefersTo(superFieldRef.base, getSuperField.receiver)
         assertEquals(superField, superFieldRef.refersTo)
     }
 

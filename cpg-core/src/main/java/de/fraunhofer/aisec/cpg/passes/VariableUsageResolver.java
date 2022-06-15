@@ -275,8 +275,20 @@ public class VariableUsageResolver extends Pass {
                   curClass.getName());
               base.setType(TypeParser.createFrom(Object.class.getName(), true));
             } else {
-              baseTarget = superRecord.getThis();
-              base.setRefersTo(baseTarget);
+              // We need to connect this super reference to the receiver of this method
+              var func = lang.getScopeManager().getCurrentFunction();
+              if (func instanceof MethodDeclaration) {
+                baseTarget = ((MethodDeclaration) func).getReceiver();
+              }
+
+              if (baseTarget != null) {
+                base.setRefersTo(baseTarget);
+                // Explicitly set the type of the call's base to the super type
+                base.setType(superType);
+                // And set the possible subtypes, to ensure, that really only our super type is in
+                // there
+                base.updatePossibleSubtypes(new HashSet<>(Collections.singletonList(superType)));
+              }
             }
           } else {
             // no explicit super type -> java.lang.Object

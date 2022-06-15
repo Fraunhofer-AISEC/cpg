@@ -447,8 +447,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         lang.scopeManager.enterScope(recordDeclaration)
 
-        lang.scopeManager.addDeclaration(recordDeclaration.getThis())
-
         processMembers(ctx)
 
         if (recordDeclaration.constructors.isEmpty()) {

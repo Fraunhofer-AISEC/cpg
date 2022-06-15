@@ -576,11 +576,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(op)
 
         val lhs = op.lhs as? MemberExpression
-        val superThisField =
-            (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? FieldDeclaration?
-        assertNotNull(superThisField)
-        assertEquals("this", superThisField.name)
-        assertEquals(TypeParser.createFrom("my.Animal", false), superThisField.type)
+        val receiver =
+            (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration?
+        assertNotNull(receiver)
+        assertEquals("this", receiver.name)
+        assertEquals(TypeParser.createFrom("my.Animal", false), receiver.type)
     }
 
     @Test
