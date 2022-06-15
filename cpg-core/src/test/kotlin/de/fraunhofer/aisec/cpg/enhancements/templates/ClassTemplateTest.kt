@@ -429,11 +429,11 @@ internal class ClassTemplateTest : BaseTest() {
         val paramA = findByUniqueName(flattenListIsInstance<ParamVariableDeclaration>(result), "A")
         val paramB = findByUniqueName(flattenListIsInstance<ParamVariableDeclaration>(result), "B")
         val constructExpression =
-            findByUniquePredicate<ConstructExpression>(flattenListIsInstance(result)) {
-                it.code == "()"
+            findByUniquePredicate(flattenListIsInstance(result)) { c: ConstructExpression ->
+                c.code == "()"
             }
         val literal1 =
-            findByUniquePredicate<Literal<*>>(flattenListIsInstance(result)) { it.value == 1 }
+            findByUniquePredicate(flattenListIsInstance(result)) { l: Literal<*> -> l.value == 1 }
         assertEquals(4, template.parameters.size)
         assertEquals(paramA, template.parameters[2])
         assertEquals(literal1, paramA.default)

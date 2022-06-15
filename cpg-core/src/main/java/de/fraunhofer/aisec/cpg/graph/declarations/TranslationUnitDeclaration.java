@@ -25,20 +25,24 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
-import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
-
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import java.util.*;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 /** The top most declaration, representing a translation unit, for example a file. */
 public class TranslationUnitDeclaration extends Declaration
