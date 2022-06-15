@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.getOfTypeWithName
 import de.fraunhofer.aisec.cpg.TestUtils.getSubnodeOfTypeWithName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -128,7 +129,7 @@ internal class VariableResolverJavaTest : BaseTest() {
     fun testVarNameOverImpThisInnerClass() {
         VRUtil.assertUsageOfMemberAndBase(
             callParamMap["func1_inner_imp_this_varName"],
-            innerImpThis,
+            function1Receiver,
             innerVarName
         )
     }
@@ -167,7 +168,7 @@ internal class VariableResolverJavaTest : BaseTest() {
     fun testInnerVarnameOverExplicitThis() {
         VRUtil.assertUsageOfMemberAndBase(
             callParamMap["func2_inner_this_varName"],
-            innerImpThis,
+            function2Receiver,
             innerVarName
         )
     }
@@ -205,7 +206,8 @@ internal class VariableResolverJavaTest : BaseTest() {
         private var innerClass: RecordDeclaration? = null
         private var innerVarName: FieldDeclaration? = null
         private var innerStaticVarName: FieldDeclaration? = null
-        private var innerImpThis: FieldDeclaration? = null
+        private var function1Receiver: VariableDeclaration? = null
+        private var function2Receiver: VariableDeclaration? = null
         private var innerImpOuter: FieldDeclaration? = null
         private var main: MethodDeclaration? = null
         private var outerFunction1: MethodDeclaration? = null
@@ -309,8 +311,8 @@ internal class VariableResolverJavaTest : BaseTest() {
                     .get()
             innerStaticVarName =
                 getSubnodeOfTypeWithName(innerClass, FieldDeclaration::class.java, "staticVarName")
-            innerImpThis =
-                getSubnodeOfTypeWithName(innerClass, FieldDeclaration::class.java, "this")
+            function1Receiver = innerClass!!.byNameOrNull<MethodDeclaration>("function1")?.receiver
+            function2Receiver = innerClass!!.byNameOrNull<MethodDeclaration>("function2")?.receiver
             innerImpOuter =
                 getSubnodeOfTypeWithName(
                     innerClass,
