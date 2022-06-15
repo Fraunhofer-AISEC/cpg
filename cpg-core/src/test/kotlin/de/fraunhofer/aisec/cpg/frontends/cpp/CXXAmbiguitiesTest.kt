@@ -99,11 +99,11 @@ class CXXAmbiguitiesTest {
         // First two Statements are CallExpressions
         val s1 = mainFunc.getBodyStatementAs(1, CallExpression::class.java)
         assertNotNull(s1)
-        assertEquals(s1.invokes.iterator().next(), fooFunc)
+        assertEquals(fooFunc, s1.invokes.iterator().next())
 
         val s2 = mainFunc.getBodyStatementAs(2, CallExpression::class.java)
         assertNotNull(s2)
-        assertEquals(s2.invokes.iterator().next(), fooFunc)
+        assertEquals(fooFunc, s2.invokes.iterator().next())
 
         // Last two Statements are CastExpressions
         val s3 = mainFunc.getBodyStatementAs(3, CastExpression::class.java)
