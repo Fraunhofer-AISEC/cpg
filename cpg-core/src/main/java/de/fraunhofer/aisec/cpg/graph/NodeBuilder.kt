@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import org.slf4j.LoggerFactory
 
@@ -200,14 +201,14 @@ object NodeBuilder {
     @JvmOverloads
     fun newDeclaredReferenceExpression(
         name: String?,
-        typeFullName: Type?,
+        type: Type? = UnknownType.getUnknownType(),
         code: String? = null,
         lang: LanguageFrontend? = null,
         rawNode: Any? = null
     ): DeclaredReferenceExpression {
         val node = DeclaredReferenceExpression()
         node.name = name!!
-        node.type = typeFullName
+        node.type = type
         node.setCodeAndRegion(lang, rawNode, code)
 
         log(node)

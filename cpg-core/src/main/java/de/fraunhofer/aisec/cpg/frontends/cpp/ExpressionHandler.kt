@@ -329,21 +329,23 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return castExpression
     }
 
-    private fun handleFieldReference(ctx: IASTFieldReference): Expression {
+    /**
+     * Translates a C/C++
+     * [member access](https://en.cppreference.com/w/cpp/language/operator_member_access) into a
+     * [MemberExpression].
+     */
+    private fun handleFieldReference(ctx: IASTFieldReference): MemberExpression {
         var base = handle(ctx.fieldOwner)
-        // Replace Literal this with a reference pointing to this
+
+        // Replace Literal this with a reference pointing to the receiver, which also called an
+        // implicit object parameter in C++ (see
+        // https://en.cppreference.com/w/cpp/language/overload_resolution#Implicit_object_parameter). It is sufficient to have the refers, it will be connected by the resolver later.
         if (base is Literal<*> && base.value == "this") {
             val location = base.location
-            val recordDeclaration = lang.scopeManager.currentRecord
-            base =
-                NodeBuilder.newDeclaredReferenceExpression(
-                    "this",
-                    if (recordDeclaration != null) recordDeclaration.getThis().type
-                    else UnknownType.getUnknownType(),
-                    base.code
-                )
+            base = NodeBuilder.newDeclaredReferenceExpression("this", base.type, base.code)
             base.location = location
         }
+
         return NodeBuilder.newMemberExpression(
             base,
             UnknownType.getUnknownType(),

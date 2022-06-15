@@ -47,13 +47,14 @@ open class MethodDeclaration : FunctionDeclaration() {
      * some languages, it is `self` (e.g. in Rust or Python) or can be freely named (e.g. in
      * Golang). It can be empty, i.e., for pure function declarations as part of an interface.
      *
-     * Hints for language frontend developers: The receiver must be created and added to the scope
-     * of the [MethodDeclaration] by a language frontend when the method is translated. If the name
-     * of the receiver, e.g., `this`, is used anywhere in the method body, a
-     * [DeclaredReferenceExpression] must be created by the language frontend, and its
-     * [DeclaredReferenceExpression.refersTo] property must point to this [receiver]. The latter is
-     * done automatically by the [VariableUsageResolver], which treats it like any other regular
-     * variable.
+     * Hints for language frontend developers: When a method is translated, the receiver must be
+     * created (usually in the form of a [VariableDeclaration] and added to the scope of the
+     * [MethodDeclaration] by a language frontend. Furthermore, it must be manually set to the
+     * [receiver] property of the method, since the scope manager cannot do this. If the name of the
+     * receiver, e.g., `this`, is used anywhere in the method body, a [DeclaredReferenceExpression]
+     * must be created by the language frontend, and its [DeclaredReferenceExpression.refersTo]
+     * property must point to this [receiver]. The latter is done automatically by the
+     * [VariableUsageResolver], which treats it like any other regular variable.
      *
      * Some languages (for example Python) denote the first argument in a method declaration as the
      * receiver (e.g., in `def foo(self, arg1)`, `self` is the receiver). In this case, extra care

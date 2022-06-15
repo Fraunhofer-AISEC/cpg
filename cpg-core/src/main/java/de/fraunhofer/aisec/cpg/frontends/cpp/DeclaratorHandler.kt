@@ -29,8 +29,10 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -100,7 +102,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             val implicitInitializerAllowed = lang.dialect is GPPLanguage
 
             val declaration =
-                NodeBuilder.newVariableDeclaration(
+                newVariableDeclaration(
                     ctx.name.toString(),
                     UnknownType.getUnknownType(), // Type will be filled out later by
                     // handleSimpleDeclaration
@@ -166,13 +168,16 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         lang: LanguageFrontend,
         ctx: IASTNode,
     ): MethodDeclaration {
-        // check, if its a constructor
-        return if (name == recordDeclaration?.name) {
-            NodeBuilder.newConstructorDeclaration(name, null, recordDeclaration, lang, ctx)
-        } else NodeBuilder.newMethodDeclaration(name, null, false, recordDeclaration, lang, ctx)
+        // Check, if it's a constructor
+        val method =
+            if (name == recordDeclaration?.name) {
+                NodeBuilder.newConstructorDeclaration(name, null, recordDeclaration, lang, ctx)
+            } else NodeBuilder.newMethodDeclaration(name, null, false, recordDeclaration, lang, ctx)
+
+        return method
     }
 
-    fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration {
+    private fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration {
         // Programmers can wrap the function name in as many levels of parentheses as they like. CDT
         // treats these levels as separate declarators, so we need to get to the bottom for the
         // actual name...
@@ -196,7 +201,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // If this is a method, this is its record declaration
         var recordDeclaration: RecordDeclaration? = null
 
-        // remember, if this is a method declaration outside of the record
+        // remember, if this is a method declaration outside the record
         val outsideOfRecord =
             !(lang.scopeManager.currentRecord != null ||
                 lang.scopeManager.currentScope is TemplateScope)
@@ -222,7 +227,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
 
         // If we know our record declaration, but are outside the actual record, we
-        // need to temporary enter the record scope. This way, we can do a little trick
+        // need to temporarily enter the record scope. This way, we can do a little trick
         // and (manually) add the declaration to the AST element of the current scope
         // (probably the global scope), but associate it to the record scope. Otherwise, we
         // will get a lot of false-positives such as A::foo, when we look for the function foo.
@@ -252,6 +257,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // Enter the scope of the function itself
         lang.scopeManager.enterScope(declaration)
+
+        // Create the method receiver (if this is a method)
+        if (declaration is MethodDeclaration) {
+            createMethodReceiver(declaration)
+        }
+
         var i = 0
         for (param in ctx.parameters) {
             val arg = lang.parameterDeclarationHandler.handle(param)
@@ -331,6 +342,41 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         return declaration
     }
 
+    /**
+     * This function takes cares of creating a receiver and setting it to the supplied
+     * [MethodDeclaration]. In C++ this is called the
+     * [implicit object parameter](https://en.cppreference.com/w/cpp/language/overload_resolution#Implicit_object_parameter)
+     * .
+     */
+    private fun createMethodReceiver(declaration: MethodDeclaration) {
+        val recordDeclaration = declaration.recordDeclaration
+
+        // Create a pointer to the class type (if we know it)
+        val type =
+            if (recordDeclaration != null) {
+                recordDeclaration.toType().reference(PointerType.PointerOrigin.POINTER)
+            } else {
+                UnknownType.getUnknownType()
+            }
+
+        // Create the receiver.
+        val thisDeclaration =
+            newVariableDeclaration(
+                "this",
+                type = type,
+                lang = lang,
+                implicitInitializerAllowed = false
+            )
+        // Yes, this is implicit
+        thisDeclaration.isImplicit = true
+
+        // Add it to the scope of the method
+        lang.scopeManager.addDeclaration(thisDeclaration)
+
+        // We need to manually set the receiver, since the scope manager cannot figure this out
+        declaration.receiver = thisDeclaration
+    }
+
     private fun handleFunctionPointer(ctx: IASTFunctionDeclarator, name: String): ValueDeclaration {
         val initializer =
             if (ctx.initializer == null) null else lang.initializerHandler.handle(ctx.initializer)
@@ -341,12 +387,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration == null) {
             // variable
             result =
-                NodeBuilder.newVariableDeclaration(
-                    name,
-                    UnknownType.getUnknownType(),
-                    ctx.rawSignature,
-                    true
-                )
+                newVariableDeclaration(name, UnknownType.getUnknownType(), ctx.rawSignature, true)
             result.initializer = initializer
         } else {
             // field

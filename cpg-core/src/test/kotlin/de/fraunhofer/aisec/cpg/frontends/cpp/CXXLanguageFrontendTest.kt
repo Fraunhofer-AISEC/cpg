@@ -50,13 +50,8 @@ import java.nio.file.Path
 import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Collectors
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.List
-import kotlin.collections.MutableMap
 import kotlin.collections.set
 import kotlin.test.*
-import kotlin.test.Test
 
 internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
@@ -1217,50 +1212,43 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testCppThisField() {
+    fun testCppThis() {
         val file = File("src/test/resources/cpp-this-field.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val main =
-            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
-        val classT = tu.getDeclarationsByName("T", RecordDeclaration::class.java).iterator().next()
+        val classT = tu.byNameOrNull<RecordDeclaration>("T")
         assertNotNull(classT)
 
-        val classTFoo = classT.methods.iterator().next()
+        val classTFoo = classT.methods.firstOrNull()
         assertNotNull(classTFoo)
 
-        val classTThis = classT.getThis()
-        assertNotNull(classTThis)
-
-        val classTReturn = classTFoo.getBodyStatementAs(0, ReturnStatement::class.java)
+        val classTReturn = classTFoo.bodyOrNull<ReturnStatement>()
         assertNotNull(classTReturn)
 
-        val classTReturnMember = classTReturn.returnValue as MemberExpression
+        val classTReturnMember = classTReturn.returnValue as? MemberExpression
         assertNotNull(classTReturnMember)
 
-        val classTThisExpression = classTReturnMember.base as DeclaredReferenceExpression
-        assertEquals(classTThisExpression.refersTo, classTThis)
+        val classTThisExpression = classTReturnMember.base as? DeclaredReferenceExpression
+        assertEquals(classTThisExpression?.refersTo, classTFoo.receiver)
 
-        val classS = tu.getDeclarationsByName("S", RecordDeclaration::class.java).iterator().next()
+        val classS = tu.byNameOrNull<RecordDeclaration>("S")
         assertNotNull(classS)
 
-        val classSFoo = classS.methods.iterator().next()
+        val classSFoo = classS.methods.firstOrNull()
         assertNotNull(classSFoo)
 
-        val classSThis = classS.getThis()
-        assertNotNull(classSThis)
-
-        val classSReturn = classSFoo.getBodyStatementAs(0, ReturnStatement::class.java)
+        val classSReturn = classSFoo.bodyOrNull<ReturnStatement>()
         assertNotNull(classSReturn)
 
-        val classSReturnMember = classSReturn.returnValue as MemberExpression
+        val classSReturnMember = classSReturn.returnValue as? MemberExpression
         assertNotNull(classSReturnMember)
 
-        val classSThisExpression = classSReturnMember.base as DeclaredReferenceExpression
-        assertEquals(classSThisExpression.refersTo, classSThis)
+        val classSThisExpression = classSReturnMember.base as? DeclaredReferenceExpression
+        assertEquals(classSThisExpression?.refersTo, classSFoo.receiver)
         assertNotEquals(classTFoo, classSFoo)
-        assertNotEquals(classTThis, classSThis)
+        assertNotEquals(classTFoo.receiver, classSFoo.receiver)
     }
 
     @Test
