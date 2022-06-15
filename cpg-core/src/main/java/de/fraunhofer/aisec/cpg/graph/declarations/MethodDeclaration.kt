@@ -45,15 +45,23 @@ open class MethodDeclaration : FunctionDeclaration() {
     /**
      * The receiver variable of this method. In most cases, this variable is called `this`, but in
      * some languages, it is `self` (e.g. in Rust or Python) or can be freely named (e.g. in
-     * Golang). It can be empty, i.e., for pure function declarations as part as an interface.
+     * Golang). It can be empty, i.e., for pure function declarations as part of an interface.
      *
      * Hints for language frontend developers: The receiver must be created and added to the scope
      * of the [MethodDeclaration] by a language frontend when the method is translated. If the name
      * of the receiver, e.g., `this`, is used anywhere in the method body, a
-     * [DeclaredReferenceExpression] must be created by the language frontend and it's
+     * [DeclaredReferenceExpression] must be created by the language frontend, and its
      * [DeclaredReferenceExpression.refersTo] property must point to this [receiver]. The latter is
      * done automatically by the [VariableUsageResolver], which treats it like any other regular
      * variable.
+     *
+     * Some languages (for example Python) denote the first argument in a method declaration as the
+     * receiver (e.g., in `def foo(self, arg1)`, `self` is the receiver). In this case, extra care
+     * needs to be taken that for the first argument of the method, a [VariableDeclaration] is
+     * created and stored in [receiver]. All other arguments must then be processed normally
+     * (usually into a [ParamVariableDeclaration]). This is also important because from the
+     * "outside" the method only has the remaining arguments, when called (e.g.,
+     * `object.foo("myarg1")`).
      *
      * There is one special case that concerns the Java language: In Java, there also exists a
      * `super` keyword, which can be used to explicitly access methods or fields of the (single)
@@ -63,5 +71,5 @@ open class MethodDeclaration : FunctionDeclaration() {
      * declaration do not share the same name. The [CallResolver] will recognize this and treat the
      * scoping aspect of the super-call accordingly.
      */
-    @SubGraph("AST") var receiver: VariableDeclaration? = null
+    @field:SubGraph("AST") var receiver: VariableDeclaration? = null
 }
