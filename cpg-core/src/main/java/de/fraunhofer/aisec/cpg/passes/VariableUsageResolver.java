@@ -366,13 +366,7 @@ public class VariableUsageResolver extends Pass {
       if (reference.isStaticAccess()) {
         return recordDeclaration;
       } else {
-        // check if we have this type as a class in our graph. If so, we can refer to its "this"
-        // field
-        if (recordDeclaration.getThis() != null) {
-          return recordDeclaration.getThis();
-        } else {
-          return recordDeclaration;
-        }
+        return recordDeclaration;
       }
     } else {
       return null;

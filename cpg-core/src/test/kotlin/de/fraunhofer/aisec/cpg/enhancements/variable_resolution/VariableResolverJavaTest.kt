@@ -76,7 +76,7 @@ internal class VariableResolverJavaTest : BaseTest() {
     fun testImplicitThisVarNameAfterLoops() {
         VRUtil.assertUsageOfMemberAndBase(
             callParamMap["func1_imp_this_varName"],
-            outerImpThis,
+            outerClass,
             outerVarName
         )
     }
@@ -138,7 +138,8 @@ internal class VariableResolverJavaTest : BaseTest() {
     fun testVarNameInOuterFromInnerClass() {
         VRUtil.assertUsageOfMemberAndBase(
             callParamMap["func1_outer_this_varName"],
-            outerImpThis,
+            outerClass, // this should actually be somehow a receiver from the outer class, but we
+            // cannot model this, so we use the record declaration
             outerVarName
         )
     }
@@ -202,7 +203,6 @@ internal class VariableResolverJavaTest : BaseTest() {
         private var outerClass: RecordDeclaration? = null
         private var outerVarName: FieldDeclaration? = null
         private var outerStaticVarName: FieldDeclaration? = null
-        private var outerImpThis: FieldDeclaration? = null
         private var innerClass: RecordDeclaration? = null
         private var innerVarName: FieldDeclaration? = null
         private var innerStaticVarName: FieldDeclaration? = null
@@ -285,13 +285,6 @@ internal class VariableResolverJavaTest : BaseTest() {
                     .fields
                     .stream()
                     .filter { n: FieldDeclaration -> n.name == "staticVarName" }
-                    .findFirst()
-                    .get()
-            outerImpThis =
-                outerClass!!
-                    .fields
-                    .stream()
-                    .filter { n: FieldDeclaration -> n.name == "this" }
                     .findFirst()
                     .get()
 

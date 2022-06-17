@@ -529,9 +529,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(func)
         assertNotNull(func.receiver)
 
-        // make sure, that the type system correctly cleans up these duplicate types
-        assertSame(record.getThis()?.type, func.receiver?.type)
-
         val nodes = SubgraphWalker.flattenAST(record)
         val request =
             nodes

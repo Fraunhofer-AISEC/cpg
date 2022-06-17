@@ -141,14 +141,6 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
     this.fields = PropertyEdge.transformIntoOutgoingPropertyEdgeList(fields, this);
   }
 
-  public FieldDeclaration getThis() {
-    return fields.stream()
-        .map(PropertyEdge::getEnd)
-        .filter(f -> f.getName().equals("this"))
-        .findFirst()
-        .orElse(null);
-  }
-
   public List<MethodDeclaration> getMethods() {
     return unwrap(this.methods);
   }
