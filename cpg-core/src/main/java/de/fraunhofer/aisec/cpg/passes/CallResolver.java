@@ -224,7 +224,7 @@ public class CallResolver extends Pass {
       // Explicitly set the type of the call's base to the super type
       call.getBase().setType(superType);
       // And set the possible subtypes, to ensure, that really only our super type is in there
-      call.getBase().updatePossibleSubtypes(new HashSet<>(Collections.singletonList(superType)));
+      call.getBase().updatePossibleSubtypes(Collections.singletonList(superType));
       handleMethodCall(target, call);
     }
   }

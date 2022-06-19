@@ -287,7 +287,7 @@ public class VariableUsageResolver extends Pass {
                 base.setType(superType);
                 // And set the possible subtypes, to ensure, that really only our super type is in
                 // there
-                base.updatePossibleSubtypes(new HashSet<>(Collections.singletonList(superType)));
+                base.updatePossibleSubtypes(Collections.singletonList(superType));
               }
             }
           } else {
