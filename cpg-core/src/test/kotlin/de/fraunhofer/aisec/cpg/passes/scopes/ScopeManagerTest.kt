@@ -37,9 +37,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import java.io.File
 import kotlin.test.*
+import kotlin.test.Test
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 
 internal class ScopeManagerTest : BaseTest() {
     private lateinit var config: TranslationConfiguration

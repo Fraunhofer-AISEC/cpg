@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
+import kotlin.test.Test
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 
 class FSMTest {
     private val simpleStringRepresentation =
