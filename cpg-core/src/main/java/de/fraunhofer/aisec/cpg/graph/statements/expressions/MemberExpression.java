@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents access to a field of a {@link RecordDeclaration}, such as <code>obj.property</code>.
@@ -39,15 +39,15 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class MemberExpression extends DeclaredReferenceExpression implements HasBase {
 
   @SubGraph("AST")
-  @NonNull
+  @NotNull
   private Expression base;
 
-  @NonNull
+  @NotNull
   public Expression getBase() {
     return base;
   }
 
-  public void setBase(@NonNull Expression base) {
+  public void setBase(@NotNull Expression base) {
     this.base = base;
   }
 

@@ -39,8 +39,8 @@ import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import org.apache.commons.lang3.StringUtils;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +74,7 @@ public abstract class LanguageFrontend {
   // Todo Moving this to scope manager and add listeners and processedMappings to specified scopes.
 
   public LanguageFrontend(
-      @NonNull TranslationConfiguration config,
+      @NotNull TranslationConfiguration config,
       ScopeManager scopeManager,
       String namespaceDelimiter) {
     this.config = config;
@@ -152,12 +152,12 @@ public abstract class LanguageFrontend {
     return units;
   }
 
-  @NonNull
+  @NotNull
   public ScopeManager getScopeManager() {
     return scopeManager;
   }
 
-  public void setScopeManager(@NonNull ScopeManager scopeManager) {
+  public void setScopeManager(@NotNull ScopeManager scopeManager) {
     this.scopeManager = scopeManager;
     this.scopeManager.setLang(this);
   }
@@ -193,7 +193,7 @@ public abstract class LanguageFrontend {
   @Nullable
   public abstract <T> PhysicalLocation getLocationFromRawNode(T astNode);
 
-  public <N, S> void setCodeAndRegion(@NonNull N cpgNode, @Nullable S astNode) {
+  public <N, S> void setCodeAndRegion(@NotNull N cpgNode, @Nullable S astNode) {
     if (cpgNode instanceof Node && astNode != null) {
       if (config.codeInNodes) {
         // only set code, if its not already set or empty

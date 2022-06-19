@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -57,7 +56,7 @@ public class DeclarationSequence extends Declaration implements DeclarationHolde
     return Collections.unmodifiableList(target);
   }
 
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NotNull Declaration declaration) {
     if (declaration instanceof DeclarationSequence) {
       for (Declaration declarationChild : ((DeclarationSequence) declaration).getChildren()) {
         addIfNotContains(this.children, declarationChild);

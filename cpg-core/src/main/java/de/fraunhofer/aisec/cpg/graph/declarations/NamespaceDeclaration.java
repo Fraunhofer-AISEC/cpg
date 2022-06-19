@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -63,7 +62,7 @@ public class NamespaceDeclaration extends Declaration
 
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
-  @NonNull
+  @NotNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 
   public List<FieldDeclaration> getFields() {
@@ -96,9 +95,9 @@ public class NamespaceDeclaration extends Declaration
    * @param <T> the type of the declaration
    * @return a {@code Set} containing the declarations, if any.
    */
-  @NonNull
+  @NotNull
   public <T extends Declaration> Set<T> getDeclarationsByName(
-      @NonNull String name, @NonNull Class<T> clazz) {
+      @NotNull String name, @NotNull Class<T> clazz) {
     return getDeclarations().stream()
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
@@ -111,12 +110,12 @@ public class NamespaceDeclaration extends Declaration
   }
 
   @Override
-  public @NonNull List<PropertyEdge<Statement>> getStatementEdges() {
+  public @NotNull List<PropertyEdge<Statement>> getStatementEdges() {
     return this.statements;
   }
 
   @Override
-  public void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements) {
+  public void setStatementEdges(@NotNull List<PropertyEdge<Statement>> statements) {
     this.statements = statements;
   }
 
@@ -138,7 +137,7 @@ public class NamespaceDeclaration extends Declaration
   }
 
   @Override
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NotNull Declaration declaration) {
     addIfNotContains(this.declarations, declaration);
   }
 }

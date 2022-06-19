@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.statements;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.Objects;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /** Represents an assert statement */
 public class AssertStatement extends Statement {
@@ -56,7 +56,7 @@ public class AssertStatement extends Statement {
     return message;
   }
 
-  public void setMessage(@NonNull Statement message) {
+  public void setMessage(@NotNull Statement message) {
     this.message = message;
   }
 

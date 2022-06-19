@@ -127,6 +127,7 @@ dependencies {
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.jetbrains:annotations:23.0.0")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")

@@ -33,8 +33,8 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -261,7 +261,7 @@ public class TypeParser {
    * @return true if function pointer structure is found in typeString, false if not
    */
   @Nullable
-  private static Matcher getFunctionPtrMatcher(@NonNull List<String> type) {
+  private static Matcher getFunctionPtrMatcher(@NotNull List<String> type) {
 
     StringBuilder typeStringBuilder = new StringBuilder();
     for (String typePart : type) {
@@ -299,8 +299,8 @@ public class TypeParser {
    * @param type typeString
    * @return typeString without spaces in the generic Expression
    */
-  @NonNull
-  private static String fixGenerics(@NonNull String type) {
+  @NotNull
+  private static String fixGenerics(@NotNull String type) {
     if (type.contains("<") && type.contains(">") && getLanguage() == TypeManager.Language.CXX) {
       String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
 
@@ -363,7 +363,7 @@ public class TypeParser {
   }
 
   private static void processBlockUntilLastSplit(
-      @NonNull String type, int lastSplit, int newPosition, @NonNull List<String> typeBlocks) {
+      @NotNull String type, int lastSplit, int newPosition, @NotNull List<String> typeBlocks) {
     String substr = type.substring(lastSplit, newPosition);
     if (substr.length() != 0) {
       typeBlocks.add(substr);
@@ -376,8 +376,8 @@ public class TypeParser {
    * @param type string with the entire type definition
    * @return list of strings in which every piece of type information is one element of the list
    */
-  @NonNull
-  public static List<String> separate(@NonNull String type) {
+  @NotNull
+  public static List<String> separate(@NotNull String type) {
 
     // Remove :: CPP operator, use . instead
     type = type.replace("::", ".");
@@ -528,7 +528,7 @@ public class TypeParser {
    * @return modified finalType performing the resolution of the bracket expressions
    */
   private static Type resolveBracketExpression(
-      @NonNull Type finalType, @NonNull List<String> bracketExpressions) {
+      @NotNull Type finalType, @NotNull List<String> bracketExpressions) {
     for (String bracketExpression : bracketExpressions) {
       List<String> splitExpression =
           separate(bracketExpression.substring(1, bracketExpression.length() - 1));
@@ -546,7 +546,7 @@ public class TypeParser {
    * @param type provided typeString
    * @return typeString without access modifier
    */
-  private static String removeAccessModifier(@NonNull String type) {
+  private static String removeAccessModifier(@NotNull String type) {
     return type.replaceAll("public|private|protected", "").trim();
   }
 
@@ -556,7 +556,7 @@ public class TypeParser {
    * @param type provided typeString
    * @return typeString which uses . instead of the substring :: if CPP is the current language
    */
-  private static String replaceScopeResolutionOperator(@NonNull String type) {
+  private static String replaceScopeResolutionOperator(@NotNull String type) {
     return (getLanguage() == TypeManager.Language.CXX) ? type.replace("::", ".").trim() : type;
   }
 
@@ -567,7 +567,7 @@ public class TypeParser {
    * @param stringList
    * @return
    */
-  private static boolean isPrimitiveType(@NonNull List<String> stringList) {
+  private static boolean isPrimitiveType(@NotNull List<String> stringList) {
     for (String s : stringList) {
       if (PRIMITIVES.contains(s)) {
         return true;
@@ -583,8 +583,8 @@ public class TypeParser {
    * @param typeBlocks
    * @return separated words of compound types are joined into one string
    */
-  @NonNull
-  private static List<String> joinPrimitive(@NonNull List<String> typeBlocks) {
+  @NotNull
+  private static List<String> joinPrimitive(@NotNull List<String> typeBlocks) {
     List<String> joinedTypeBlocks = new ArrayList<>();
     StringBuilder primitiveType = new StringBuilder();
     boolean foundPrimitive = false;
@@ -620,8 +620,8 @@ public class TypeParser {
    * @param newRoot root the chain is swapped with
    * @return oldchain but root replaced with newRoot
    */
-  @NonNull
-  public static Type reWrapType(@NonNull Type oldChain, @NonNull Type newRoot) {
+  @NotNull
+  public static Type reWrapType(@NotNull Type oldChain, @NotNull Type newRoot) {
     if (oldChain.isFirstOrderType()) {
       newRoot.setTypeOrigin(oldChain.getTypeOrigin());
     }
@@ -656,16 +656,16 @@ public class TypeParser {
    * @param string the string representation of the type
    * @return the type
    */
-  @NonNull
-  public static Type createIgnoringAlias(@NonNull String string) {
+  @NotNull
+  public static Type createIgnoringAlias(@NotNull String string) {
     return createFrom(string, false);
   }
 
-  @NonNull
+  @NotNull
   private static Type postTypeParsing(
-      @NonNull List<String> subPart,
-      @NonNull Type finalType,
-      @NonNull List<String> bracketExpressions) {
+      @NotNull List<String> subPart,
+      @NotNull Type finalType,
+      @NotNull List<String> bracketExpressions) {
     for (String part : subPart) {
       if (part.equals("*")) {
         // Creates a Pointer to the finalType
@@ -751,8 +751,8 @@ public class TypeParser {
    * @param resolveAlias should replace with original type in typedefs
    * @return new type representing the type string
    */
-  @NonNull
-  private static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
+  @NotNull
+  private static Type createFromUnsafe(@NotNull String type, boolean resolveAlias) {
     // Check if Problems during Parsing
     if (!checkValidTypeString(type)) {
       return UnknownType.getUnknownType();
@@ -868,7 +868,7 @@ public class TypeParser {
     return finalType;
   }
 
-  public static Type createFrom(@NonNull String type, boolean resolveAlias, LanguageFrontend lang) {
+  public static Type createFrom(@NotNull String type, boolean resolveAlias, LanguageFrontend lang) {
     Type templateType = searchForTemplateTypes(type, lang);
     if (templateType != null) {
       return templateType;
@@ -885,7 +885,7 @@ public class TypeParser {
     return createdType;
   }
 
-  private static Type searchForTemplateTypes(@NonNull String type, LanguageFrontend lang) {
+  private static Type searchForTemplateTypes(@NotNull String type, LanguageFrontend lang) {
     return TypeManager.getInstance()
         .searchTemplateScopeForDefinedParameterizedTypes(
             lang.getScopeManager().getCurrentScope(), type);
@@ -900,8 +900,8 @@ public class TypeParser {
    * @return new type representing the type string. If an exception occurs during the parsing,
    *     UnknownType is returned
    */
-  @NonNull
-  public static Type createFrom(@NonNull String type, boolean resolveAlias) {
+  @NotNull
+  public static Type createFrom(@NotNull String type, boolean resolveAlias) {
     try {
       return createFromUnsafe(type, resolveAlias);
     } catch (Exception e) {

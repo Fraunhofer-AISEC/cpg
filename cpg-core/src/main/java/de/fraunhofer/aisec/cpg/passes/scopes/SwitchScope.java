@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
 import java.util.ArrayList;
 import java.util.List;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 public class SwitchScope extends ValueDeclarationScope implements Breakable {
 
-  @NonNull private final List<BreakStatement> breaks = new ArrayList<>();
+  @NotNull private final List<BreakStatement> breaks = new ArrayList<>();
 
   public SwitchScope(SwitchStatement switchStatement) {
     super(switchStatement);
