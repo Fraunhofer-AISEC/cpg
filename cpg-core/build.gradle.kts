@@ -132,8 +132,8 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.2")
-    testFixturesImplementation("org.jetbrains.kotlin:kotlin-test")
-    testFixturesImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testFixturesApi("org.jetbrains.kotlin:kotlin-test")
+    testFixturesApi("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
     testFixturesApi("org.mockito:mockito-core:4.6.1")
     

@@ -41,8 +41,8 @@ import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.stream.Collectors
 import kotlin.test.Test
-import kotlin.test.TestInstance
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class VariableResolverJavaTest : BaseTest() {

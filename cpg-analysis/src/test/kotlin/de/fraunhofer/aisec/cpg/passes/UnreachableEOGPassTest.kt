@@ -37,11 +37,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import java.nio.file.Path
 import kotlin.test.Test
-import kotlin.test.TestInstance
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UnreachableEOGPassTest {
