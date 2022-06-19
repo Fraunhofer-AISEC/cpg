@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import java.io.File
 import java.nio.file.Paths
 import kotlin.test.Test
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Tag
 
 @Tag("integration")

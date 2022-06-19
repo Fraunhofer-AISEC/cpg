@@ -50,7 +50,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.stream.Collectors
 import kotlin.test.*
-import org.junit.jupiter.api.Assertions
 
 internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
@@ -675,7 +674,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val analyzer = builder().config(config).build()
         val result = analyzer.analyze().get()
         for (node in result.translationUnits) {
-            Assertions.assertNotNull(node)
+            assertNotNull(node)
         }
     }
 }

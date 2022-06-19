@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.enhancements.variable_resolution
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Assertions
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 /**
  * Utility-class to bundle functionality for the both test classes [VariableResolverCppTest] and
@@ -63,13 +65,13 @@ object VRUtil {
      * - The node that is expected to be used.
      */
     fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
-        Assertions.assertNotNull(usingNode)
+        assertNotNull(usingNode)
         if (usingNode !is DeclaredReferenceExpression && !ENFORCE_REFERENCES) {
-            Assertions.assertSame(usedNode, usingNode)
+            assertSame(usedNode, usingNode)
         } else {
-            Assertions.assertTrue(usingNode is DeclaredReferenceExpression)
+            assertTrue(usingNode is DeclaredReferenceExpression)
             val reference = usingNode as DeclaredReferenceExpression?
-            Assertions.assertEquals(reference!!.refersTo, usedNode)
+            assertEquals(reference!!.refersTo, usedNode)
         }
     }
 
@@ -87,14 +89,14 @@ object VRUtil {
      * - THe expected member that is used
      */
     fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Node?) {
-        Assertions.assertNotNull(usingNode)
+        assertNotNull(usingNode)
         if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
             // Assumtion here is that the target of the member portion of the expression and not the
             // base
             // is resolved
             assertUsageOf(usingNode, usedMember)
         } else {
-            Assertions.assertTrue(usingNode is MemberExpression)
+            assertTrue(usingNode is MemberExpression)
             val memberExpression = usingNode as MemberExpression?
             assertNotNull(memberExpression)
 
