@@ -64,8 +64,7 @@ public class TypeResolver extends Pass {
       return;
     }
     Type finalElement = element;
-    Type newElement =
-            state.stream().filter(t -> t.equals(finalElement)).findAny().orElse(null);
+    Type newElement = state.stream().filter(t -> t.equals(finalElement)).findAny().orElse(null);
 
     if (newElement != null) {
       ((SecondOrderType) type).setElementType(newElement);
