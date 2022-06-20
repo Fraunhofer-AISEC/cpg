@@ -138,8 +138,7 @@ internal class VariableResolverJavaTest : BaseTest() {
     fun testVarNameInOuterFromInnerClass() {
         VRUtil.assertUsageOfMemberAndBase(
             callParamMap["func1_outer_this_varName"],
-            outerClass, // this should actually be somehow a receiver from the outer class, but we
-            // cannot model this, so we use the record declaration
+            implicitOuterThis,
             outerVarName
         )
     }
@@ -206,6 +205,7 @@ internal class VariableResolverJavaTest : BaseTest() {
         private var innerClass: RecordDeclaration? = null
         private var innerVarName: FieldDeclaration? = null
         private var innerStaticVarName: FieldDeclaration? = null
+        private var implicitOuterThis: FieldDeclaration? = null
         private var function1Receiver: VariableDeclaration? = null
         private var function2Receiver: VariableDeclaration? = null
         private var innerImpOuter: FieldDeclaration? = null
@@ -295,6 +295,10 @@ internal class VariableResolverJavaTest : BaseTest() {
                     RecordDeclaration::class.java,
                     "variables_extended.ScopeVariables.InnerClass"
                 )
+            implicitOuterThis =
+                innerClass?.fields?.firstOrNull { n: FieldDeclaration ->
+                    n.name == "ScopeVariables.this"
+                }
             innerVarName =
                 innerClass!!
                     .fields
