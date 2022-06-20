@@ -43,6 +43,7 @@ import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ProblemNode;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -333,6 +334,29 @@ public class DeclarationHandler
     lang.processAnnotations(recordDeclaration, classInterDecl);
 
     lang.getScopeManager().leaveScope(recordDeclaration);
+
+    // We need special handling if this is a so called "inner class". In this case we need to store
+    // a "this" reference to the outer class, so methods can use a "qualified this"
+    // (OuterClass.this.someFunction()). This is the same as the java compiler does. The reference
+    // is stored as an implicit field.
+    if (lang.getScopeManager().getCurrentScope() instanceof RecordScope) {
+      var scope = (RecordScope) lang.getScopeManager().getCurrentScope();
+
+      var field =
+          NodeBuilder.newFieldDeclaration(
+              scope.getSimpleName() + ".this",
+              TypeParser.createFrom(scope.getScopedName(), false),
+              null,
+              null,
+              null,
+              false);
+      field.setImplicit(true);
+
+      lang.getScopeManager().enterScope(recordDeclaration);
+      lang.getScopeManager().addDeclaration(field);
+      lang.getScopeManager().leaveScope(recordDeclaration);
+    }
+
     return recordDeclaration;
   }
 

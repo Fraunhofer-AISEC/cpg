@@ -361,19 +361,7 @@ public class VariableUsageResolver extends Pass {
       return enumMap.get(reference.getType());
     }
 
-    if (recordMap.containsKey(reference.getType())) {
-      RecordDeclaration recordDeclaration = recordMap.get(reference.getType());
-      if (reference.isStaticAccess()) {
-        return recordDeclaration;
-      } else {
-        // This is most likely a "qualified this" in Java, referring to the "next" this of an outer
-        // class in an inner class. We cannot model
-        // this with our receiver logic, so for now, we just return the record.
-        return recordDeclaration;
-      }
-    } else {
-      return null;
-    }
+    return recordMap.getOrDefault(reference.getType(), null);
   }
 
   @Nullable
