@@ -68,8 +68,14 @@ open class DFAOrderEvaluator(
      * its operator is considered by the DFA and its base is subject to analysis. This means that
      * the order is broken at [node].
      */
-    open fun actionMissingTransitionForNode(node: Node, fsm: DFA) {
-        log.error("There was a failure in the order of statements at node: ${node.id}")
+    open fun actionMissingTransitionForNode(node: Node, fsm: DFA, interproceduralFlow: Boolean) {
+        if (interproceduralFlow) {
+            log.error(
+                "There was a failure in the order of statements at node: ${node.id} but there was an interprocedural flow"
+            )
+        } else {
+            log.error("There was a failure in the order of statements at node: ${node.id}")
+        }
         log.error(
             fsm.executionTrace
                 .fold("") { r, t -> "$r${t.first}${t.third} (node id: ${t.second.id})\n" }
@@ -114,6 +120,7 @@ open class DFAOrderEvaluator(
         val wrongBases = mutableSetOf<String>()
 
         var isValidOrder = true
+        var interproceduralFlow = false
 
         val worklist = mutableListOf(startNode) // Keeps the nodes which have to be processed.
         while (worklist.isNotEmpty()) {
@@ -160,11 +167,27 @@ open class DFAOrderEvaluator(
                         if (!allOk) {
                             actionMissingTransitionForNode(
                                 node,
-                                baseToFSM.computeIfAbsent(baseAndOp.first) { dfa.clone() }
+                                baseToFSM.computeIfAbsent(baseAndOp.first) { dfa.clone() },
+                                interproceduralFlow
                             )
                             wrongBases.add(baseAndOp.first)
                             isValidOrder = false
+                        } else {
+                            // Reset the flag interproceduralFlow to false because the effects of
+                            // the previous flow should
+                            // not affect the subsequent calls. We just had a successful transition
+                            // in the DFA.
+                            interproceduralFlow = false
                         }
+                    }
+                } else if (node is CallExpression) {
+                    // This is a call to another method which is not relevant.
+                    // We might miss some interprocedural flows here.
+                    // We set the flag interproceduralFlow to keep track of this issue.
+                    // If we run into actionMissingTransitionForNode() for the next relevant node,
+                    // it could be due to missing the effects of this method call.
+                    if (callUsesBase(node)) {
+                        interproceduralFlow = true
                     }
                 }
 
@@ -187,6 +210,16 @@ open class DFAOrderEvaluator(
         }
 
         return isValidOrder
+    }
+
+    /**
+     * Checks if the call expression [node] has a considered base as an argument. If so, this base
+     * could be used inside the function called and we might miss transitions in the DFA.
+     */
+    private fun callUsesBase(node: CallExpression): Boolean {
+        return node.arguments.any { arg ->
+            consideredBases.contains((arg as? DeclaredReferenceExpression)?.refersTo?.id)
+        } || consideredBases.contains((node.base as? DeclaredReferenceExpression)?.refersTo?.id)
     }
 
     /**
