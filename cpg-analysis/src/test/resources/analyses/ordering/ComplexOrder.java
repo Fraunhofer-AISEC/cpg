@@ -154,6 +154,36 @@ public class ComplexOrder {
         } while(URandomKt.nextUInt() > 5);
         p6.reset();
     }
+
+    void minimalInterprocUnclear() {
+        Botan2 p1 = new Botan2(1);
+        p1.create();
+        foo(p1);
+        p1.start();
+        p1.finish();
+    }
+
+    void minimalInterprocFail() {
+        Botan2 p1 = new Botan2(1);
+        p1.create();
+        if (URandomKt.nextUInt() > 5) {
+            foo(p1);
+        }
+        p1.start();
+        p1.finish();
+    }
+
+    void minimalInterprocFail2() {
+        Botan2 p1 = new Botan2(1);
+        p1.create();
+        foo("String");
+        p1.start();
+        p1.finish();
+    }
+
+    void foo(Botan2 p1) {
+        p1.init();
+    }
 }
 
 public class Botan2 {

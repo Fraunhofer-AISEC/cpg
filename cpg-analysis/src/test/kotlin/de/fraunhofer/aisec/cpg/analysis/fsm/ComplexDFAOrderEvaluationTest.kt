@@ -39,13 +39,12 @@ import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.IdentifierPass
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import java.nio.file.Path
-import kotlin.test.BeforeTest
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ComplexDFAOrderEvaluationTest {
@@ -455,5 +454,155 @@ class ComplexDFAOrderEvaluationTest {
         val everythingOk = orderEvaluator.evaluateOrder(dfa, p6Decl)
 
         assertTrue(everythingOk, "Expected correct order")
+    }
+
+    @Test
+    fun testSuccessMinimalInterprocUnclearFSM() {
+        val functionOk =
+            tu.byNameOrNull<RecordDeclaration>("ComplexOrder")
+                ?.byNameOrNull<FunctionDeclaration>("minimalInterprocUnclear")
+        assertNotNull(functionOk)
+
+        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        assertNotNull(p1Decl)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+
+        val nodesToOp = mutableMapOf<Node, String>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "start()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = "finish()"
+
+        val afterInterprocNodes = mutableListOf<Node>()
+        val withoutInterprocNodes = mutableListOf<Node>()
+        val orderEvaluator =
+            DummyDFAOrderEvaluator(
+                consideredDecl,
+                nodesToOp,
+                mutableMapOf(),
+                afterInterprocNodes,
+                withoutInterprocNodes
+            )
+        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+
+        assertFalse(everythingOk, "Expected incorrect order")
+        assertContains(
+            afterInterprocNodes,
+            (functionOk.body as CompoundStatement).statements[3],
+            "Expected start() node in list of unknown nodes"
+        )
+        assertTrue(withoutInterprocNodes.isEmpty(), "No node should be clearly violating the rule")
+    }
+
+    @Test
+    fun testSuccessMinimalInterprocFailFSM() {
+        val functionOk =
+            tu.byNameOrNull<RecordDeclaration>("ComplexOrder")
+                ?.byNameOrNull<FunctionDeclaration>("minimalInterprocFail")
+        assertNotNull(functionOk)
+
+        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        assertNotNull(p1Decl)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+
+        val nodesToOp = mutableMapOf<Node, String>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "start()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = "finish()"
+
+        val afterInterprocNodes = mutableListOf<Node>()
+        val withoutInterprocNodes = mutableListOf<Node>()
+        val orderEvaluator =
+            DummyDFAOrderEvaluator(
+                consideredDecl,
+                nodesToOp,
+                mutableMapOf(),
+                afterInterprocNodes,
+                withoutInterprocNodes
+            )
+        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+
+        assertFalse(everythingOk, "Expected incorrect order")
+        assertContains(
+            afterInterprocNodes,
+            (functionOk.body as CompoundStatement).statements[3],
+            "Expected start() node in list of unknown nodes"
+        )
+        assertContains(
+            withoutInterprocNodes,
+            (functionOk.body as CompoundStatement).statements[3],
+            "Expected start() node in list of unknown nodes"
+        )
+    }
+
+    @Test
+    fun testSuccessMinimalInterprocFail2FSM() {
+        val functionOk =
+            tu.byNameOrNull<RecordDeclaration>("ComplexOrder")
+                ?.byNameOrNull<FunctionDeclaration>("minimalInterprocFail2")
+        assertNotNull(functionOk)
+
+        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        assertNotNull(p1Decl)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+
+        val nodesToOp = mutableMapOf<Node, String>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "start()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = "finish()"
+
+        val afterInterprocNodes = mutableListOf<Node>()
+        val withoutInterprocNodes = mutableListOf<Node>()
+        val orderEvaluator =
+            DummyDFAOrderEvaluator(
+                consideredDecl,
+                nodesToOp,
+                mutableMapOf(),
+                afterInterprocNodes,
+                withoutInterprocNodes
+            )
+        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+
+        assertFalse(everythingOk, "Expected incorrect order")
+        assertTrue(afterInterprocNodes.isEmpty(), "All nodes clearly violate the rule")
+        assertContains(
+            withoutInterprocNodes,
+            (functionOk.body as CompoundStatement).statements[3],
+            "Expected start() node in list of unknown nodes"
+        )
+    }
+
+    class DummyDFAOrderEvaluator(
+        referencedVertices: Set<Long>,
+        nodesToOp: Map<Node, String>,
+        thisPositionOfNode: Map<Node, Int>,
+        val afterInterprocNodes: MutableList<Node>,
+        val withoutInterprocNodes: MutableList<Node>
+    ) : DFAOrderEvaluator(referencedVertices, nodesToOp, thisPositionOfNode) {
+        private val log: Logger = LoggerFactory.getLogger(DummyDFAOrderEvaluator::class.java)
+
+        override fun actionMissingTransitionForNode(
+            node: Node,
+            fsm: DFA,
+            interproceduralFlow: Boolean
+        ) {
+            if (interproceduralFlow) {
+                afterInterprocNodes.add(node)
+            } else {
+                withoutInterprocNodes.add(node)
+            }
+            log.error(
+                "There was a failure in the order of statements at node: ${node.id} interproceduralFlow = $interproceduralFlow"
+            )
+        }
+
+        override fun actionNonAcceptingTermination(
+            base: String,
+            fsm: DFA,
+            interproceduralFlow: Boolean
+        ) {
+            log.error(
+                "The DFA did not terminate in an accepted state. interproceduralFlow = $interproceduralFlow"
+            )
+        }
     }
 }
