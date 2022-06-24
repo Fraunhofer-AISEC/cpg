@@ -571,6 +571,10 @@ class ComplexDFAOrderEvaluationTest {
         )
     }
 
+    /**
+     * Class to test if the logic separating between edges which fail because of interprocedural
+     * flows works. Collects the respective nodes and they can be used by the tests later.
+     */
     class DummyDFAOrderEvaluator(
         referencedVertices: Set<Long>,
         nodesToOp: Map<Node, String>,
