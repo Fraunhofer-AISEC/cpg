@@ -84,13 +84,27 @@ open class DFAOrderEvaluator(
     }
 
     /**
-     * Contains the functionality which is executed if the DFA did not terminate in an accepting
+     * Contains the functionality which is executed if the DFA **did not** terminate in an accepting
      * state for the given [base]. This means that not all required statements have been executed
      * for [base] so far. The [fsm] holds the execution trace found by the analysis.
      */
     open fun actionNonAcceptingTermination(base: String, fsm: DFA, interproceduralFlow: Boolean) {
         log.error("Base $base did not terminate in an accepting state")
         log.error(
+            fsm.executionTrace.fold("") { r, t ->
+                "$r${t.first}${t.third} (node id: ${t.second.id})\n"
+            }
+        )
+    }
+
+    /**
+     * Contains the functionality which is executed if the DFA terminated in an accepting state for
+     * the given [base]. This means that all required statements have been executed for [base] so
+     * far. The [fsm] holds the execution trace found by the analysis.
+     */
+    open fun actionAcceptingTermination(base: String, fsm: DFA, interproceduralFlow: Boolean) {
+        log.debug("Base $base terminated in an accepting state")
+        log.debug(
             fsm.executionTrace.fold("") { r, t ->
                 "$r${t.first}${t.third} (node id: ${t.second.id})\n"
             }
@@ -206,6 +220,8 @@ open class DFAOrderEvaluator(
             if (!e.value.isAccepted()) {
                 actionNonAcceptingTermination(e.key, e.value, interproceduralFlows[e.key] == true)
                 isValidOrder = false
+            } else {
+                actionAcceptingTermination(e.key, e.value, interproceduralFlows[e.key] == true)
             }
         }
 
