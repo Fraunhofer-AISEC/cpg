@@ -70,8 +70,8 @@ object VRUtil {
             assertSame(usedNode, usingNode)
         } else {
             assertTrue(usingNode is DeclaredReferenceExpression)
-            val reference = usingNode as DeclaredReferenceExpression?
-            assertEquals(reference!!.refersTo, usedNode)
+            val reference = usingNode as? DeclaredReferenceExpression
+            assertEquals(reference?.refersTo, usedNode)
         }
     }
 
