@@ -103,7 +103,7 @@ public class TypeManager {
           "ppc_fp128");
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
-  @NotNull private static TypeManager INSTANCE = new TypeManager();
+  @NotNull private static TypeManager instance = new TypeManager();
   private static boolean typeSystemActive = true;
 
   public enum Language {
@@ -156,7 +156,7 @@ public class TypeManager {
   private boolean noFrontendWarningIssued = false;
 
   public static void reset() {
-    INSTANCE = new TypeManager();
+    instance = new TypeManager();
   }
 
   /**
@@ -323,7 +323,7 @@ public class TypeManager {
   private TypeManager() {}
 
   public static TypeManager getInstance() {
-    return INSTANCE;
+    return instance;
   }
 
   public static boolean isTypeSystemActive() {
