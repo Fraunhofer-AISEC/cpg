@@ -30,7 +30,7 @@ plugins {
     `java-test-fixtures`
     signing
 
-    id("com.github.node-gradle.node") version "3.3.0"
+    id("com.github.node-gradle.node") version "3.4.0"
 }
 
 publishing {
