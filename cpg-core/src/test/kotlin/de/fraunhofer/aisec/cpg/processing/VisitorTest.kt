@@ -111,7 +111,7 @@ class VisitorTest : BaseTest() {
                 }
             }
         )
-        assertEquals(36, nodeList.size)
+        assertEquals(35, nodeList.size)
     }
 
     /** Visits only ReturnStatement nodes. */

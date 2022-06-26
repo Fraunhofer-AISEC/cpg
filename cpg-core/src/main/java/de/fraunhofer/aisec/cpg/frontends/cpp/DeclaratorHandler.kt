@@ -429,7 +429,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString(),
                 kind,
                 ctx.rawSignature,
-                false,
                 lang
             )
 
