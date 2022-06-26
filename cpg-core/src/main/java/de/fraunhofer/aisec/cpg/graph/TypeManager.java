@@ -714,7 +714,7 @@ public class TypeManager {
    * @return the typedef declaration
    */
   @NonNull
-  public Declaration handleSingleAlias(
+  public Declaration createTypeAlias(
       LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
     String cleanedPart = Util.removeRedundantParentheses(aliasString);
     Type currTarget = getTargetType(target, cleanedPart);

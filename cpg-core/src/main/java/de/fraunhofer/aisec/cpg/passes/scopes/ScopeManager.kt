@@ -569,7 +569,7 @@ class ScopeManager {
      * Soley used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
      * [ValueDeclarationScope].
      */
-    fun addTypedef(typedef: TypedefDeclaration?) {
+    fun addTypedef(typedef: TypedefDeclaration) {
         val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
         if (scope == null) {
             LOGGER.error("Cannot add typedef. Not in declaration scope.")
@@ -579,9 +579,9 @@ class ScopeManager {
         scope.addTypedef(typedef)
 
         if (scope.astNode == null) {
-            lang!!.currentTU.addTypedef(typedef!!)
+            lang!!.currentTU.addTypedef(typedef)
         } else {
-            scope.astNode.addTypedef(typedef!!)
+            scope.astNode.addTypedef(typedef)
         }
     }
 

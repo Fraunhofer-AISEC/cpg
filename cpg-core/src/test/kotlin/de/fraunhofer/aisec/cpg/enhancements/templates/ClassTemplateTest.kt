@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.nio.file.Path
 import kotlin.test.*
-import org.junit.jupiter.api.Test
 
 internal class ClassTemplateTest : BaseTest() {
     private val topLevel = Path.of("src", "test", "resources", "templates", "classtemplates")
@@ -159,8 +158,7 @@ internal class ClassTemplateTest : BaseTest() {
         val pairConstructorDeclaration =
             findByUniqueName(flattenListIsInstance<ConstructorDeclaration>(result), "Pair")
         val constructExpression =
-            findByUniquePredicate(flattenListIsInstance<ConstructExpression>(result)) {
-                c: ConstructExpression ->
+            findByUniquePredicate(flattenListIsInstance(result)) { c: ConstructExpression ->
                 c.code == "()"
             }
         val point1 = findByUniqueName(flattenListIsInstance<VariableDeclaration>(result), "point1")
