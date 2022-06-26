@@ -36,7 +36,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -76,7 +75,6 @@ public class DeclarationStatement extends Statement {
   }
 
   @NotNull
-  @NonNull
   public List<Declaration> getDeclarations() {
     return unwrap(this.declarations, true);
   }
@@ -89,14 +87,13 @@ public class DeclarationStatement extends Statement {
     this.declarations = PropertyEdge.transformIntoOutgoingPropertyEdgeList(declarations, this);
   }
 
-  public void addToPropertyEdgeDeclaration(@NonNull Declaration declaration) {
+  public void addToPropertyEdgeDeclaration(@NotNull Declaration declaration) {
     PropertyEdge<Declaration> propertyEdge = new PropertyEdge<>(this, declaration);
     propertyEdge.addProperty(Properties.INDEX, this.declarations.size());
     this.declarations.add(propertyEdge);
   }
 
   @NotNull
-  @NonNull
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)

@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.TestUtils
 import java.io.File
 import kotlin.io.path.Path
+import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Test
 
 class BenchmarkTest {
 

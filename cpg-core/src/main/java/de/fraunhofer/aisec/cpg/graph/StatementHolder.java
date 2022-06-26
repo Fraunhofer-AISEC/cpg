@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import java.util.List;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * This interface denotes an AST-Node that can contain code. This code is stored as statements. This
@@ -47,27 +47,27 @@ public interface StatementHolder {
    *
    * @return List of property Edge statements
    */
-  @NonNull
+  @NotNull
   List<PropertyEdge<Statement>> getStatementEdges();
 
-  void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements);
+  void setStatementEdges(@NotNull List<PropertyEdge<Statement>> statements);
 
   /**
    * Returns the list of contained statements.
    *
    * @return contained statements
    */
-  @NonNull
+  @NotNull
   default List<Statement> getStatements() {
     return PropertyEdge.unwrap(getStatementEdges(), true);
   }
 
-  @NonNull
+  @NotNull
   default List<PropertyEdge<Statement>> getStatementsPropertyEdge() {
     return getStatementEdges();
   }
 
-  default void setStatements(@NonNull List<Statement> statements) {
+  default void setStatements(@NotNull List<Statement> statements) {
     setStatementEdges(PropertyEdge.transformIntoOutgoingPropertyEdgeList(statements, (Node) this));
   }
 

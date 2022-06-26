@@ -39,10 +39,10 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import java.nio.file.Path
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import org.junit.jupiter.api.Test
 
 @ExperimentalPython
 class PythonFrontendTest : BaseTest() {

@@ -42,7 +42,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,9 +77,7 @@ public class VariableUsageResolver extends Pass {
   @Override
   public void cleanup() {
     this.superTypesMap.clear();
-    if (this.recordMap != null) {
-      this.recordMap.clear();
-    }
+    this.recordMap.clear();
     this.enumMap.clear();
   }
 
@@ -369,8 +367,13 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
+  @Nullable
   protected ValueDeclaration resolveMember(
       Type containingClass, DeclaredReferenceExpression reference) {
+    if (lang == null) {
+      return null;
+    }
+
     if (lang instanceof JavaLanguageFrontend
         && reference.getName().matches("(?<class>.+\\.)?super")) {
       // if we have a "super" on the member side, this is a member call. We need to resolve this
@@ -497,7 +500,12 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
+  @Nullable
   protected RecordDeclaration inferRecordDeclaration(Type type) {
+    if (lang == null) {
+      return null;
+    }
+
     if (type instanceof ObjectType) {
       log.debug(
           "Encountered an unknown record type {} during a field access. We are going to infer that record",

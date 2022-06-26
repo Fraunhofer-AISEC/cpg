@@ -43,8 +43,8 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +79,7 @@ public class CallResolver extends Pass {
   }
 
   @Override
-  public void accept(@NonNull TranslationResult translationResult) {
+  public void accept(@NotNull TranslationResult translationResult) {
     walker = new ScopedWalker(lang);
     walker.registerHandler((currClass, parent, currNode) -> walker.collectDeclarations(currNode));
     walker.registerHandler(this::findRecords);
@@ -105,7 +105,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  protected void findRecords(@NonNull Node node, RecordDeclaration curClass) {
+  protected void findRecords(@NotNull Node node, RecordDeclaration curClass) {
     if (node instanceof RecordDeclaration) {
       recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
     }
@@ -117,21 +117,21 @@ public class CallResolver extends Pass {
    * @param node
    * @param curClass
    */
-  protected void findTemplates(@NonNull Node node, RecordDeclaration curClass) {
+  protected void findTemplates(@NotNull Node node, RecordDeclaration curClass) {
     if (node instanceof TemplateDeclaration) {
       templateList.add((TemplateDeclaration) node);
     }
   }
 
   protected void registerMethods(
-      RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
+      RecordDeclaration currentClass, Node parent, @NotNull Node currentNode) {
     if (currentNode instanceof MethodDeclaration && currentClass != null) {
       containingType.put(
           (FunctionDeclaration) currentNode, TypeParser.createFrom(currentClass.getName(), true));
     }
   }
 
-  protected void fixInitializers(@NonNull Node node, RecordDeclaration curClass) {
+  protected void fixInitializers(@NotNull Node node, RecordDeclaration curClass) {
     if (node instanceof VariableDeclaration) {
       VariableDeclaration declaration = ((VariableDeclaration) node);
       // check if we have the corresponding class for this type
@@ -241,7 +241,7 @@ public class CallResolver extends Pass {
     return null;
   }
 
-  protected void resolve(@NonNull Node node, RecordDeclaration curClass) {
+  protected void resolve(@NotNull Node node, RecordDeclaration curClass) {
     // Note, that curClass is MAJORLY broken because it does not deal with method declarations
     // and its surrounding record scope correctly. It also completely unnecessary because
     // we can just retrieve the current record from the ScopeManager. To be backwards compatibly,
@@ -527,7 +527,7 @@ public class CallResolver extends Pass {
    */
   protected boolean handleTemplateFunctionCalls(
       @Nullable RecordDeclaration curClass,
-      @NonNull CallExpression templateCall,
+      @NotNull CallExpression templateCall,
       boolean applyInference) {
     if (lang == null) {
       Util.errorWithFileLocation(
@@ -1562,9 +1562,9 @@ public class CallResolver extends Pass {
   }
 
   protected void generateInferredStaticallyImportedMethods(
-      @NonNull CallExpression call,
-      @NonNull String name,
-      @NonNull List<FunctionDeclaration> invokes,
+      @NotNull CallExpression call,
+      @NotNull String name,
+      @NotNull List<FunctionDeclaration> invokes,
       RecordDeclaration curClass) {
     // We had an import for this method name, just not the correct signature. Let's just add
     // an inferred node to any class that might be affected
@@ -1654,7 +1654,7 @@ public class CallResolver extends Pass {
     return inferred;
   }
 
-  @NonNull
+  @NotNull
   protected FunctionDeclaration createInferredFunctionDeclaration(
       RecordDeclaration containingRecord,
       String name,
@@ -1705,7 +1705,7 @@ public class CallResolver extends Pass {
   }
 
   protected ConstructorDeclaration createInferredConstructor(
-      @NonNull RecordDeclaration containingRecord, List<Type> signature) {
+      @NotNull RecordDeclaration containingRecord, List<Type> signature) {
     ConstructorDeclaration inferred =
         NodeBuilder.newConstructorDeclaration(containingRecord.getName(), "", containingRecord);
     inferred.setInferred(true);
@@ -1940,7 +1940,7 @@ public class CallResolver extends Pass {
    *     is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
    *     matches the ConstructExpression.
    */
-  @NonNull
+  @NotNull
   protected ConstructorDeclaration getConstructorDeclaration(
       ConstructExpression constructExpression, RecordDeclaration recordDeclaration) {
     List<Type> signature = constructExpression.getSignature();
@@ -1967,7 +1967,7 @@ public class CallResolver extends Pass {
     return constructorCandidate;
   }
 
-  @NonNull
+  @NotNull
   protected ConstructorDeclaration getConstructorDeclarationForExplicitInvocation(
       List<Type> signature, RecordDeclaration recordDeclaration) {
     return recordDeclaration.getConstructors().stream()

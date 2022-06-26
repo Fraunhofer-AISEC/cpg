@@ -44,9 +44,9 @@ import java.io.File
 import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.stream.Collectors
-import org.junit.jupiter.api.Assertions
+import kotlin.test.Test
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -237,7 +237,7 @@ internal class VariableResolverCppTest : BaseTest() {
     @Test
     fun testVarNameOfFirstLoopAccessed() {
         val asReference = getCallWithReference("func1_first_loop_varName")
-        Assertions.assertNotNull(asReference)
+        assertNotNull(asReference)
         val vDeclaration =
             getSubnodeOfTypeWithName(forStatements!![0], VariableDeclaration::class.java, "varName")
         VRUtil.assertUsageOf(callParamMap["func1_first_loop_varName"], vDeclaration)

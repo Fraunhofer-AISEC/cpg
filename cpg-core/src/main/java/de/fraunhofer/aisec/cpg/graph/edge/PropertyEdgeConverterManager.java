@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Since Neo4J uses the PropertyEdgeConverter (as it implements the CompositeAttributeConverter
@@ -41,7 +41,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  */
 public class PropertyEdgeConverterManager {
 
-  @NonNull
+  @NotNull
   private static final PropertyEdgeConverterManager INSTANCE = new PropertyEdgeConverterManager();
 
   private PropertyEdgeConverterManager() {

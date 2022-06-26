@@ -27,13 +27,13 @@ package de.fraunhofer.aisec.cpg.sarif;
 
 import java.net.URI;
 import java.util.Objects;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /** A SARIF compatible location referring to a location, i.e. file and region within the file. */
 public class PhysicalLocation {
 
-  @NonNull
+  @NotNull
   public static String locationLink(@Nullable PhysicalLocation location) {
     if (location != null) {
       return location.getArtifactLocation().getUri().getPath()
@@ -48,13 +48,13 @@ public class PhysicalLocation {
 
   public static class ArtifactLocation {
 
-    @NonNull private final URI uri;
+    @NotNull private final URI uri;
 
-    public ArtifactLocation(@NonNull URI uri) {
+    public ArtifactLocation(@NotNull URI uri) {
       this.uri = uri;
     }
 
-    @NonNull
+    @NotNull
     public URI getUri() {
       return this.uri;
     }
@@ -78,25 +78,25 @@ public class PhysicalLocation {
     }
   }
 
-  @NonNull private final ArtifactLocation artifactLocation;
+  @NotNull private final ArtifactLocation artifactLocation;
 
-  @NonNull private Region region;
+  @NotNull private Region region;
 
-  public PhysicalLocation(URI uri, @NonNull Region region) {
+  public PhysicalLocation(URI uri, @NotNull Region region) {
     this.artifactLocation = new ArtifactLocation(uri);
     this.region = region;
   }
 
-  public void setRegion(@NonNull Region region) {
+  public void setRegion(@NotNull Region region) {
     this.region = region;
   }
 
-  @NonNull
+  @NotNull
   public Region getRegion() {
     return this.region;
   }
 
-  @NonNull
+  @NotNull
   public ArtifactLocation getArtifactLocation() {
     return this.artifactLocation;
   }

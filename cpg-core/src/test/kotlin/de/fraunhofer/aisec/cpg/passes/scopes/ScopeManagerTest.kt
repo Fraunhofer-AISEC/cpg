@@ -37,14 +37,13 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import java.io.File
 import kotlin.test.*
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 
 internal class ScopeManagerTest : BaseTest() {
     private lateinit var config: TranslationConfiguration
 
-    @BeforeEach
+    @BeforeTest
     fun setUp() {
         config = TranslationConfiguration.builder().defaultPasses().build()
     }
@@ -84,7 +83,7 @@ internal class ScopeManagerTest : BaseTest() {
         // which later gets 'upgraded' to a constructor declaration.
         constructors.forEach {
             val scope = scopeManager.lookupScope(it)
-            Assertions.assertSame(it, scope!!.getAstNode())
+            assertSame(it, scope!!.getAstNode())
         }
     }
 
