@@ -370,8 +370,8 @@ public class VariableUsageResolver extends Pass {
   @Nullable
   protected ValueDeclaration resolveMember(
       Type containingClass, DeclaredReferenceExpression reference) {
-    if(lang == null) {
-      return  null;
+    if (lang == null) {
+      return null;
     }
 
     if (lang instanceof JavaLanguageFrontend
@@ -380,7 +380,6 @@ public class VariableUsageResolver extends Pass {
       // in the call resolver instead
       return null;
     }
-
 
     String simpleName = Util.getSimpleName(lang.getNamespaceDelimiter(), reference.getName());
     Optional<FieldDeclaration> member = Optional.empty();
@@ -503,8 +502,8 @@ public class VariableUsageResolver extends Pass {
 
   @Nullable
   protected RecordDeclaration inferRecordDeclaration(Type type) {
-    if(lang == null) {
-      return  null;
+    if (lang == null) {
+      return null;
     }
 
     if (type instanceof ObjectType) {
