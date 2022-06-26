@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A {@link CallExpression} that targets a static function of a different {@link RecordDeclaration},
@@ -41,7 +41,7 @@ public class StaticCallExpression extends CallExpression {
   }
 
   @Override
-  public void setName(@NonNull String name) {
+  public void setName(@NotNull String name) {
     super.setName(name);
     updateFqn();
   }

@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.processing;
 
 import java.util.Iterator;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * An object that can be visited by a visitor.
@@ -42,7 +42,7 @@ public interface IVisitable<V extends IVisitable> {
   default void accept(IStrategy<V> strategy, IVisitor<V> visitor) {
     if (visitor.getVisited().add((V) this)) {
       visitor.visit((V) this);
-      @NonNull Iterator<V> it = strategy.getIterator((V) this);
+      @NotNull Iterator<V> it = strategy.getIterator((V) this);
       while (it.hasNext()) {
         it.next().accept(strategy, visitor);
       }

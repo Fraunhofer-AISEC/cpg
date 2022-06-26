@@ -221,7 +221,7 @@ object TestUtils {
     fun disableTypeManagerCleanup() {
         val spy = Mockito.spy(TypeManager.getInstance())
         Mockito.doNothing().`when`(spy).cleanup()
-        FieldUtils.writeStaticField(TypeManager::class.java, "INSTANCE", spy, true)
+        FieldUtils.writeStaticField(TypeManager::class.java, "instance", spy, true)
     }
 
     /**

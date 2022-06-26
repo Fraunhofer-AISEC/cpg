@@ -75,12 +75,7 @@ dependencies {
 
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.2")
 
-    // JUnit
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
-    testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])
-    testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
+    testImplementation(testFixtures(project(":cpg-core")))
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime")

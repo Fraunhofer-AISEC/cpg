@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -87,7 +86,7 @@ public abstract class Statement extends Node implements DeclarationHolder {
   }
 
   @Override
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NotNull Declaration declaration) {
     if (declaration instanceof VariableDeclaration) {
       addIfNotContains(this.locals, (VariableDeclaration) declaration);
     }

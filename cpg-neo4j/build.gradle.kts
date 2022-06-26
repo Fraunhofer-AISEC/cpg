@@ -83,9 +83,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     // JUnit
-    testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
-    testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])
-    testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
+    testImplementation(testFixtures(project(":cpg-core")))
 
     // Command line interface support
     api("info.picocli:picocli:4.6.3")

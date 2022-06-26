@@ -43,8 +43,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -163,7 +163,7 @@ public class TranslationConfiguration {
    */
   public final boolean matchCommentsToNodes;
 
-  @NonNull private final List<Pass> passes;
+  @NotNull private final List<Pass> passes;
 
   /** This sub configuration object holds all information about inference and smart-guessing. */
   final InferenceConfiguration inferenceConfiguration;
@@ -434,20 +434,20 @@ public class TranslationConfiguration {
      * @param pass
      * @return
      */
-    public Builder registerPass(@NonNull Pass pass) {
+    public Builder registerPass(@NotNull Pass pass) {
       this.passes.add(pass);
       return this;
     }
 
     /** Registers an additional {@link de.fraunhofer.aisec.cpg.frontends.LanguageFrontend}. */
     public Builder registerLanguage(
-        @NonNull Class<? extends LanguageFrontend> frontend, List<String> fileTypes) {
+        @NotNull Class<? extends LanguageFrontend> frontend, List<String> fileTypes) {
       this.frontends.put(frontend, fileTypes);
       return this;
     }
 
     /** Unregisters a registered {@link de.fraunhofer.aisec.cpg.frontends.LanguageFrontend}. */
-    public Builder unregisterLanguage(@NonNull Class<? extends LanguageFrontend> frontend) {
+    public Builder unregisterLanguage(@NotNull Class<? extends LanguageFrontend> frontend) {
       this.frontends.remove(frontend);
       return this;
     }

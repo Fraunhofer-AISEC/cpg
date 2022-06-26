@@ -45,9 +45,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,7 +103,7 @@ public class TypeManager {
           "ppc_fp128");
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
-  @NonNull private static TypeManager INSTANCE = new TypeManager();
+  @NotNull private static TypeManager instance = new TypeManager();
   private static boolean typeSystemActive = true;
 
   public enum Language {
@@ -117,11 +116,11 @@ public class TypeManager {
     UNKNOWN
   }
 
-  @NonNull
+  @NotNull
   private final Map<HasType, List<Type>> typeCache =
       Collections.synchronizedMap(new IdentityHashMap<>());
 
-  @NonNull
+  @NotNull
   private Map<String, RecordDeclaration> typeToRecord =
       Collections.synchronizedMap(new HashMap<>());
 
@@ -130,15 +129,15 @@ public class TypeManager {
    * to the ParameterizedType to be able to resolve the Type of the fields, since ParameterizedTypes
    * are unique to the RecordDeclaration and are not merged.
    */
-  @NonNull
+  @NotNull
   private final Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters =
       Collections.synchronizedMap(new HashMap<>());
 
-  @NonNull
+  @NotNull
   private final Map<TemplateDeclaration, List<ParameterizedType>> templateToTypeParameters =
       Collections.synchronizedMap(new HashMap<>());
 
-  @NonNull
+  @NotNull
   private final Map<Type, List<Type>> typeState =
       Collections.synchronizedMap(new HashMap<>()); // Stores all the unique types ObjectType as
   // Key and
@@ -157,7 +156,7 @@ public class TypeManager {
   private boolean noFrontendWarningIssued = false;
 
   public static void reset() {
-    INSTANCE = new TypeManager();
+    instance = new TypeManager();
   }
 
   /**
@@ -217,7 +216,7 @@ public class TypeManager {
    * @return List containing all ParameterizedTypes the templateDeclaration defines. If the
    *     templateDeclaration is not registered, an empty list is returned.
    */
-  @NonNull
+  @NotNull
   public List<ParameterizedType> getAllParameterizedType(TemplateDeclaration templateDeclaration) {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
       return this.templateToTypeParameters.get(templateDeclaration);
@@ -294,7 +293,7 @@ public class TypeManager {
     }
   }
 
-  @NonNull
+  @NotNull
   public Map<Type, List<Type>> getTypeState() {
     return typeState;
   }
@@ -324,7 +323,7 @@ public class TypeManager {
   private TypeManager() {}
 
   public static TypeManager getInstance() {
-    return INSTANCE;
+    return instance;
   }
 
   public static boolean isTypeSystemActive() {
@@ -349,7 +348,7 @@ public class TypeManager {
     }
   }
 
-  public void setLanguageFrontend(@NonNull LanguageFrontend frontend) {
+  public void setLanguageFrontend(@NotNull LanguageFrontend frontend) {
     this.frontend = frontend;
   }
 
@@ -473,8 +472,8 @@ public class TypeManager {
     }
   }
 
-  @NonNull
-  public Optional<Type> getCommonType(@NonNull Collection<Type> types) {
+  @NotNull
+  public Optional<Type> getCommonType(@NotNull Collection<Type> types) {
     // TODO: Documentation needed.
     boolean sameType =
         types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
@@ -587,7 +586,7 @@ public class TypeManager {
     return ancestors;
   }
 
-  @NonNull
+  @NotNull
   public Language getLanguage() {
     if (frontend instanceof JavaLanguageFrontend) {
       return Language.JAVA;
@@ -713,7 +712,7 @@ public class TypeManager {
    * @param aliasString the alias / name of the typedef
    * @return the typedef declaration
    */
-  @NonNull
+  @NotNull
   public Declaration createTypeAlias(
       LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
     String cleanedPart = Util.removeRedundantParentheses(aliasString);

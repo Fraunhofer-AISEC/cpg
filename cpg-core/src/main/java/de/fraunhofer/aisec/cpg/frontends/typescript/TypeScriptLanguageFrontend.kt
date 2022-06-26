@@ -46,7 +46,6 @@ import java.io.FileReader
 import java.io.LineNumberReader
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import org.checkerframework.checker.nullness.qual.NonNull
 
 /**
  * This language frontend adds experimental support for TypeScript. It is definitely not feature
@@ -60,10 +59,8 @@ import org.checkerframework.checker.nullness.qual.NonNull
  * also has built-in support for React dialects TSX and JSX.
  */
 @ExperimentalTypeScript
-class TypeScriptLanguageFrontend(
-    config: @NonNull TranslationConfiguration,
-    scopeManager: ScopeManager?
-) : LanguageFrontend(config, scopeManager, ".") {
+class TypeScriptLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
+    LanguageFrontend(config, scopeManager, ".") {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
@@ -138,9 +135,9 @@ class TypeScriptLanguageFrontend(
 
                 val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
 
-                // We only want the acutal comment text and therefore take the value we captured in
+                // We only want the actual comment text and therefore take the value we captured in
                 // the first, or second group.
-                // Only as a last resoort we take the entire match, although this should never ocure
+                // Only as a last resort we take the entire match, although this should never occurs
                 comment = groups[1]?.value ?: (groups[2]?.value ?: it.value)
 
                 comment = comment.trim()
@@ -170,17 +167,14 @@ class TypeScriptLanguageFrontend(
             var position = astNode.location.pos
 
             // Correcting node positions as we have noticed that the parser computes wrong
-            // positions, it is apparent when
-            // a files starts with a comment
+            // positions, it is apparent when a file starts with a comment
             astNode.code?.let {
                 val code = it
                 currentFileContent?.let { position = it.indexOf(code, position) }
             }
 
             // From here on the invariant 'astNode.location.end - position != astNode.code!!.length'
-            // should hold, only exceptions
-            // are mispositioned empty ast elements
-
+            // should hold, only exceptions are mispositioned empty ast elements
             val region =
                 getRegionFromStartEnd(File(astNode.location.file), position, astNode.location.end)
             return PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
@@ -193,11 +187,9 @@ class TypeScriptLanguageFrontend(
         val lineNumberReader: LineNumberReader = LineNumberReader(FileReader(file))
 
         // Start and end position given by the parser are sometimes including spaces in front of the
-        // code ans
-        // loc.end - loc.pos > code.length. This is cause by the parser and results in unexpected
-        // but correct regions
-        // if the start and end positions are assumed to be correct.
-
+        // code and loc.end - loc.pos > code.length. This is cause by the parser and results in
+        // unexpected
+        // but correct regions if the start and end positions are assumed to be correct.
         lineNumberReader.skip(start.toLong())
         val startLine = lineNumberReader.lineNumber + 1
         lineNumberReader.skip((end - start).toLong())

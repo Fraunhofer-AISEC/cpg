@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.nio.file.Path
-import java.util.List
 import java.util.function.Predicate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -199,7 +198,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // Check invocation target with specialized function alongside template with same name
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation1.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation1.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -226,7 +225,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // exists
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation2.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation2.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -277,7 +276,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // Check if a TemplateCallExpression without template parameters performs autodeduction
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation3.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation3.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -322,7 +321,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // test invocation target when no autodeduction is possible, but defaults are provided
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation4.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation4.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -370,7 +369,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // test invocation target when no autodeduction is possible, but defaults are partially used
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation5.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation5.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -421,7 +420,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // test invocation target when template parameter produces a cast in an argument
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation6.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation6.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -475,7 +474,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // test invocation target when signature does not match but implicitcast can be applied
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation7.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation7.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -593,7 +592,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // test invocation target when template parameter produces a cast in an argument
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation8.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation8.cpp").toFile()),
                 topLevel,
                 true
             )

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.processing.strategy;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /** Strategies (iterators) for traversing graphs to be used by visitors. */
 public class Strategy {
@@ -43,8 +43,8 @@ public class Strategy {
    * @param x
    * @return
    */
-  @NonNull
-  public static Iterator<Node> NO_STRATEGY(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> NO_STRATEGY(@NotNull Node x) {
     return Collections.emptyIterator();
   }
 
@@ -54,8 +54,8 @@ public class Strategy {
    * @param x Current node in EOG.
    * @return Iterator over successors.
    */
-  @NonNull
-  public static Iterator<Node> EOG_FORWARD(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> EOG_FORWARD(@NotNull Node x) {
     return x.getNextEOG().iterator();
   }
 
@@ -65,8 +65,8 @@ public class Strategy {
    * @param x Current node in EOG.
    * @return Iterator over successors.
    */
-  @NonNull
-  public static Iterator<Node> EOG_BACKWARD(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> EOG_BACKWARD(@NotNull Node x) {
     return x.getPrevEOG().iterator();
   }
 
@@ -76,8 +76,8 @@ public class Strategy {
    * @param x Current node in DFG.
    * @return Iterator over successors.
    */
-  @NonNull
-  public static Iterator<Node> DFG_FORWARD(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> DFG_FORWARD(@NotNull Node x) {
     return x.getNextDFG().iterator();
   }
 
@@ -87,8 +87,8 @@ public class Strategy {
    * @param x Current node in DFG.
    * @return Iterator over successors.
    */
-  @NonNull
-  public static Iterator<Node> DFG_BACKWARD(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> DFG_BACKWARD(@NotNull Node x) {
     return x.getPrevDFG().iterator();
   }
 
@@ -98,8 +98,8 @@ public class Strategy {
    * @param x
    * @return
    */
-  @NonNull
-  public static Iterator<Node> AST_FORWARD(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> AST_FORWARD(@NotNull Node x) {
     return SubgraphWalker.getAstChildren(x).iterator();
   }
 }

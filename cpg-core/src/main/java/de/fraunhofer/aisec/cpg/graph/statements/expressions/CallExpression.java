@@ -40,9 +40,8 @@ import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -89,7 +88,7 @@ public class CallExpression extends Expression
     }
   }
 
-  @NonNull
+  @NotNull
   public List<Expression> getArguments() {
     List<Expression> targets = new ArrayList<>();
     for (PropertyEdge<Expression> propertyEdge : this.arguments) {
@@ -102,7 +101,7 @@ public class CallExpression extends Expression
     this.arguments.get(index).setEnd(argument);
   }
 
-  @NonNull
+  @NotNull
   public List<PropertyEdge<Expression>> getArgumentsPropertyEdge() {
     return this.arguments;
   }
@@ -126,7 +125,7 @@ public class CallExpression extends Expression
     this.arguments = PropertyEdge.transformIntoOutgoingPropertyEdgeList(arguments, this);
   }
 
-  @NonNull
+  @NotNull
   public List<FunctionDeclaration> getInvokes() {
     List<FunctionDeclaration> targets = new ArrayList<>();
     for (PropertyEdge<FunctionDeclaration> propertyEdge : this.invokes) {

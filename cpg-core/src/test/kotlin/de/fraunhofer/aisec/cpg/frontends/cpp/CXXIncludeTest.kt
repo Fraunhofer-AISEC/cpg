@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import kotlin.test.*
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 
 internal class CXXIncludeTest : BaseTest() {
     @Test
