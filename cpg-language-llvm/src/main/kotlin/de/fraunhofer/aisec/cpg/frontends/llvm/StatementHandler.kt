@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArraySubscriptionExpression
@@ -1330,12 +1331,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * therefore adds dummy statements to the end of basic blocks where a certain variable is
      * declared and initialized. The original phi instruction is not added to the CPG.
      */
-    fun handlePhi(instr: LLVMValueRef, tu: TranslationUnitDeclaration) {
+    fun handlePhi(instr: LLVMValueRef, tu: TranslationUnitDeclaration, flatAST: MutableList<Node>) {
         val labelMap = mutableMapOf<LabelStatement, Expression>()
         val numOps = LLVMGetNumOperands(instr)
         var i = 0
         var bbsFunction: LLVMValueRef? = null
-        val flatAST = SubgraphWalker.flattenAST(tu)
         while (i < numOps) {
             val valI = lang.getOperandValueAtIndex(instr, i)
             val incomingBB = LLVMGetIncomingBlock(instr, i)
@@ -1363,6 +1363,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val key = labelMap.keys.elementAt(0)
             val basicBlock = key.subStatement as? CompoundStatement
             val decl = declarationOrNot(labelMap[key]!!, instr)
+            flatAST.addAll(SubgraphWalker.flattenAST(decl))
             val mutableStatements = basicBlock?.statements?.toMutableList()
             mutableStatements?.add(basicBlock.statements.size - 1, decl)
             if (mutableStatements != null) {
@@ -1391,6 +1392,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val code = lang.getCodeFromRawNode(instr)
         val declaration = newVariableDeclaration(varName, type, code, false)
         declaration.updateType(type)
+        flatAST.add(declaration)
         // add the declaration to the current scope
         lang.scopeManager.addDeclaration(declaration)
         // add it to our bindings cache
@@ -1411,6 +1413,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             assignment.lhs.unregisterTypeListener(assignment)
             assignment.unregisterTypeListener(assignment.lhs as DeclaredReferenceExpression)
             (assignment.lhs as DeclaredReferenceExpression).refersTo = declaration
+            flatAST.add(assignment)
 
             val basicBlock = l.subStatement as? CompoundStatement
             val mutableStatements = basicBlock?.statements?.toMutableList()

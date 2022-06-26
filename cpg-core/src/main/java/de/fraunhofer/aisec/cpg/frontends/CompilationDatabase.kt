@@ -47,7 +47,7 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
     /** A cached list of include paths for each source file specified in the compilation database */
     private val includePaths = mutableMapOf<File, List<String>>()
     /** A cached list of symbols for each source file specified in the compilation database */
-    private val symbols = mutableMapOf<File, Map<String, String>>()
+    private val symbols = mutableMapOf<File, MutableMap<String, String>>()
 
     /**
      * A cached list of components and their files. Can be used to supply
@@ -79,6 +79,15 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
         val output: String?
     )
 
+    /**
+     * This represents a parsed [CompilationDatabaseEntry] with all necessary information extracted.
+     */
+    data class ParsedCompilationDatabaseEntry(
+        val includes: MutableList<String> = mutableListOf(),
+        var component: String = "application", // Default to the default component name
+        var arch: String? = null
+    )
+
     companion object {
         @JvmStatic
         /** This function returns a [CompilationDatabase] from the specified file. */
@@ -91,13 +100,13 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
                 val fileNameInTheObject = entry.file
                 var srcFile = File(fileNameInTheObject)
 
-                val (includes: List<String>?, component: String) =
+                val parsedEntry =
                     if (entry.arguments != null) {
-                        parseIncludeDirectories(entry.arguments)
+                        parseCommandLineArgs(entry.arguments)
                     } else if (entry.command != null) {
-                        parseIncludeDirectories(splitCommand(entry.command))
+                        parseCommandLineArgs(splitCommand(entry.command))
                     } else {
-                        Pair(null, "application")
+                        ParsedCompilationDatabaseEntry()
                     }
                 val basedir = entry.directory
                 if (!srcFile.isAbsolute) {
@@ -107,20 +116,26 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
                         }
                     }
                 }
-                if (includes != null) {
-                    if (srcFile.exists()) {
-                        db.includePaths[srcFile] = includes
-                    }
+
+                if (srcFile.exists()) {
+                    db.includePaths[srcFile] = parsedEntry.includes
                 }
+
                 db.symbols[srcFile] =
                     (if (entry.arguments != null) {
                         parseSymbols(entry.arguments)
                     } else if (entry.command != null) {
                         parseSymbols(splitCommand(entry.command))
                     } else {
-                        mapOf()
+                        mutableMapOf()
                     })
-                db.components.getOrPut(component) { mutableListOf() } += srcFile
+                db.components.getOrPut(parsedEntry.component) { mutableListOf() } += srcFile
+
+                // Add arch as symbol
+                if (parsedEntry.arch != null) {
+                    val map = db.symbols[srcFile]
+                    map?.put("__${parsedEntry.arch}__", "")
+                }
             }
 
             return db
@@ -144,15 +159,14 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
          * is: ['clang', '-Iinc', '-I', 'include', '-isystem', 'sysroot', 'main.c', '-o',
          * 'main.c.o'] This method returns the include-paths in the above command.
          */
-        private fun parseIncludeDirectories(command: List<String>): Pair<List<String>?, String> {
-            var component = "application" // Default to the default component name
+        private fun parseCommandLineArgs(command: List<String>): ParsedCompilationDatabaseEntry {
+            val entry = ParsedCompilationDatabaseEntry()
 
             // ['clang', 'main.c', '-o', 'main.c.o'],
             if (command.isEmpty()) {
-                return Pair(null, component)
+                return entry
             }
 
-            val includeFilesDirectories: MutableList<String> = LinkedList()
             var i = 0
             while (i < command.size) {
                 val word = command[i]
@@ -161,35 +175,40 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
                         if (word.length == 2) {
                             if (i + 1 != command.size) {
                                 // path is located at the next index
-                                includeFilesDirectories.add(command[++i])
+                                entry.includes.add(command[++i])
                             }
                         } else {
-                            includeFilesDirectories.add(
+                            entry.includes.add(
                                 word.substring(2)
                             ) // adds the directory excluding the -I field
                         }
                     }
                     word == "-isystem" -> {
                         if (i + 1 != command.size) {
-                            includeFilesDirectories.add(command[++i])
+                            entry.includes.add(command[++i])
                         }
                     }
                     word == "-isysroot" -> {
                         // Append usr/include to sysroot
                         if (i + 1 != command.size) {
-                            includeFilesDirectories.add(command[++i] + "/usr/include")
+                            entry.includes.add(command[++i] + "/usr/include")
                         }
                     }
                     word == "-o" -> {
                         if (i + 1 != command.size) {
-                            parseOutput(command[++i])?.let { component = it }
+                            parseOutput(command[++i])?.let { entry.component = it }
+                        }
+                    }
+                    word == "-arch" -> {
+                        if (i + 1 != command.size) {
+                            entry.arch = command[++i]
                         }
                     }
                 }
                 i++
             }
 
-            return Pair(includeFilesDirectories, component)
+            return entry
         }
 
         /** Split the symbol into key and value. Value is optional. */
@@ -206,9 +225,9 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
          * ['clang', '-DVERSION=1', '-D', 'DEBUG' 'main.c', '-o', 'main.c.o'] This method returns
          * the symbols as Map in the above command.
          */
-        private fun parseSymbols(command: List<String>): Map<String, String> {
+        private fun parseSymbols(command: List<String>): MutableMap<String, String> {
             if (command.isEmpty()) {
-                return mapOf()
+                return mutableMapOf()
             }
             val symbols: LinkedHashMap<String, String> = LinkedHashMap()
             var i = 0
