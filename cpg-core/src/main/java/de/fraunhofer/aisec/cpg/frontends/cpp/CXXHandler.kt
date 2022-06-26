@@ -66,6 +66,10 @@ abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CX
 
     abstract fun handleNode(node: T): S
 
+    /**
+     * This function should be called by classes that derive from [CXXHandler] to denote, that the
+     * supplied node (type) is not supported.
+     */
     protected fun handleNotSupported(node: T, name: String): S {
         Util.errorWithFileLocation(
             lang,
