@@ -139,8 +139,8 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("bar", callExpression.name)
         assertEquals(bar, callExpression.invokes.iterator().next())
 
-        val edge = callExpression.argumentsPropertyEdge[1]
-
+        val edge = callExpression.argumentEdges[1]
+        assertNotNull(edge)
         assertEquals("s2", edge.getProperty(Properties.NAME))
 
         val s = bar.parameters.first()
@@ -498,7 +498,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("Foo.bar", fooMemCall.fqn)
         assertEquals(1, fooMemCall.invokes.size)
         assertEquals(bar, fooMemCall.invokes[0])
-        assertEquals("self", fooMemCall.base.name)
+        assertEquals("self", fooMemCall.base?.name)
     }
 
     @Test

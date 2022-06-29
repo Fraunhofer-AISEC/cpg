@@ -371,7 +371,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         // 4th statement is not yet parsed correctly
         val memberCallExpression = statements[4] as MemberCallExpression
-        assertEquals("test", memberCallExpression.base.name)
+        assertEquals("test", memberCallExpression.base?.name)
         assertEquals("c_str", memberCallExpression.name)
     }
 

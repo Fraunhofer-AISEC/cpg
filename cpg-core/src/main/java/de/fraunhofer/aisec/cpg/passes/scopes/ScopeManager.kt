@@ -656,11 +656,13 @@ class ScopeManager {
     ): List<FunctionDeclaration> {
         var s = scope
 
+        val fqn = call.fqn
+
         // First, we need to check, whether we have some kind of scoping.
-        if (lang != null && call.fqn != null && call.fqn.contains(lang!!.namespaceDelimiter)) {
+        if (lang != null && fqn != null && fqn.contains(lang!!.namespaceDelimiter)) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = call.fqn.substring(0, call.fqn.lastIndexOf(lang!!.namespaceDelimiter))
+            val scopeName = fqn.substring(0, fqn.lastIndexOf(lang!!.namespaceDelimiter))
 
             // TODO: proper scope selection
 

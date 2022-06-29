@@ -31,6 +31,9 @@ import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.ParameterizedType
 import java.util.*
+import kotlin.reflect.KMutableProperty1
+import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 import org.neo4j.ogm.annotation.*
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.LoggerFactory
@@ -293,6 +296,24 @@ open class PropertyEdge<T : Node> : Persistable {
                 return true
             }
             return false
+        }
+    }
+}
+
+class PropertyEdgeDelegate<T : Node, S : Node>(
+    val edge: KProperty1<S, List<PropertyEdge<T>>>,
+    val outgoing: Boolean = true
+) {
+    operator fun getValue(thisRef: S, property: KProperty<*>): List<T> {
+        return PropertyEdge.unwrap(edge.get(thisRef), outgoing)
+    }
+
+    operator fun setValue(thisRef: S, property: KProperty<*>, value: List<T>) {
+        if (edge is KMutableProperty1) {
+            edge.setter.call(
+                thisRef,
+                PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, thisRef as Node)
+            )
         }
     }
 }
