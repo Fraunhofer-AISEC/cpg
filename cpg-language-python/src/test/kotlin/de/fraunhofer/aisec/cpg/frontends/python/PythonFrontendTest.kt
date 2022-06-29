@@ -139,7 +139,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("bar", callExpression.name)
         assertEquals(bar, callExpression.invokes.iterator().next())
 
-        val edge = callExpression.argumentEdges[1]
+        val edge = callExpression.argumentsEdges[1]
         assertNotNull(edge)
         assertEquals("s2", edge.getProperty(Properties.NAME))
 

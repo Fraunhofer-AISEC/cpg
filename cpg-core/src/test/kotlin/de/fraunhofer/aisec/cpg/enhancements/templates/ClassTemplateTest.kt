@@ -246,7 +246,7 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(literal3Implicit, templateParameters[2])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(2)
                 ?.getProperty(Properties.INSTANTIATION)
         )
@@ -268,14 +268,14 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals("int", constructExpression.templateParameters[0].name)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(0)
                 ?.getProperty(Properties.INSTANTIATION)
         )
         assertEquals("int", constructExpression.templateParameters[1].name)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(1)
                 ?.getProperty(Properties.INSTANTIATION)
         )
@@ -382,28 +382,28 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals("int", constructExpression.templateParameters[0].name)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(0)
                 ?.getProperty(Properties.INSTANTIATION)
         )
         assertEquals("int", constructExpression.templateParameters[1].name)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(1)
                 ?.getProperty(Properties.INSTANTIATION)
         )
         assertEquals(literal2Implicit, constructExpression.templateParameters[2])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(2)
                 ?.getProperty(Properties.INSTANTIATION)
         )
         assertEquals(literal2Implicit, constructExpression.templateParameters[3])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.DEFAULT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(3)
                 ?.getProperty(Properties.INSTANTIATION)
         )
@@ -448,46 +448,46 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals("int", (constructExpression.templateParameters[0] as TypeExpression).type.name)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(0)
                 ?.getProperty(Properties.INSTANTIATION)
         )
         assertEquals(
             0,
-            constructExpression.templateParametersEdge?.get(0)?.getProperty(Properties.INDEX)
+            constructExpression.templateParametersEdges?.get(0)?.getProperty(Properties.INDEX)
         )
         assertEquals("int", (constructExpression.templateParameters[1] as TypeExpression).type.name)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.DEFAULT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(1)
                 ?.getProperty(Properties.INSTANTIATION)
         )
         assertEquals(
             1,
-            constructExpression.templateParametersEdge?.get(1)?.getProperty(Properties.INDEX)
+            constructExpression.templateParametersEdges?.get(1)?.getProperty(Properties.INDEX)
         )
         assertEquals(literal1, constructExpression.templateParameters[2])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.DEFAULT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(2)
                 ?.getProperty(Properties.INSTANTIATION)
         )
         assertEquals(
             2,
-            constructExpression.templateParametersEdge?.get(2)?.getProperty(Properties.INDEX)
+            constructExpression.templateParametersEdges?.get(2)?.getProperty(Properties.INDEX)
         )
         assertEquals(literal1, constructExpression.templateParameters[3])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.DEFAULT,
-            constructExpression.templateParametersEdge
+            constructExpression.templateParametersEdges
                 ?.get(3)
                 ?.getProperty(Properties.INSTANTIATION)
         )
         assertEquals(
             3,
-            constructExpression.templateParametersEdge?.get(3)?.getProperty(Properties.INDEX)
+            constructExpression.templateParametersEdges?.get(3)?.getProperty(Properties.INDEX)
         )
 
         // Test Type

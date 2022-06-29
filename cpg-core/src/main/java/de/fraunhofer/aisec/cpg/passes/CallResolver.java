@@ -588,7 +588,7 @@ public class CallResolver extends Pass {
       templateCall.setTemplateInstantiation(functionTemplateDeclaration);
       templateCall.setInvokes(functionTemplateDeclaration.getRealization());
 
-      var edges = templateCall.getTemplateParametersEdge();
+      var edges = templateCall.getTemplateParametersEdges();
 
       if (edges != null) {
         // Set instantiation propertyEdges
@@ -1078,11 +1078,11 @@ public class CallResolver extends Pass {
        resolve the call. Otherwise, there won't be an inferred template, we will do an inferred
        FunctionDeclaration instead.
       */
-      call.setTemplateParametersEdge(new ArrayList<>());
+      call.setTemplateParametersEdges(new ArrayList<>());
       if (handleTemplateFunctionCalls(curClass, call, false)) {
         return;
       } else {
-        call.setTemplateParametersEdge(null);
+        call.setTemplateParametersEdges(null);
       }
     }
 
@@ -1181,7 +1181,7 @@ public class CallResolver extends Pass {
       if (handleTemplateFunctionCalls(curClass, call, false)) {
         return call.getInvokes();
       } else {
-        call.setTemplateParametersEdge(null);
+        call.setTemplateParametersEdges(null);
       }
     }
 
