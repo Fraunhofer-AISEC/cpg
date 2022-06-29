@@ -134,7 +134,7 @@ jobs:
           name: test
           path: "**/build/reports/tests"
       - name: Publish
-        if: startsWith(github.ref, 'refs/tags/v') && (!contains(github.ref, 'beta') || !contains(github.ref, 'alpha'))
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         run: |
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
           ./gradlew --no-daemon -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION -PexperimentalTypeScript signMavenPublication build publish javadoc
@@ -144,14 +144,14 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       - name: Publish JavaDoc
-        if: startsWith(github.ref, 'refs/tags/v') && (!contains(github.ref, 'beta') || !contains(github.ref, 'alpha'))
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         uses: JamesIves/github-pages-deploy-action@releases/v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
           FOLDER: cpg-core/build/docs/javadoc
       - name: "Create Release"
-        if: startsWith(github.ref, 'refs/tags/v') && (!contains(github.ref, 'beta') || !contains(github.ref, 'alpha'))
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         id: create_release
         uses: actions/create-release@latest
         env:
