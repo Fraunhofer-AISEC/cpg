@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
     tags:
       - v*.**
   pull_request:
@@ -34,7 +34,8 @@ jobs:
         with:
           distribution: "zulu"
           java-version: "15"
-      - run: |
+      - name: Build
+        run: |
           cd cpg-language-go/src/main/golang
           ./build.sh
       - name: Archive cpgo library (amd64)
@@ -83,7 +84,7 @@ jobs:
           if [[ $VERSION != v* ]]
           then
             export VERSION=""
-            echo "Building version-less (master or feature branch)"
+            echo "Building version-less (main or feature branch)"
           else
             # make version more Java-friendly by dropping the 'v'
             export VERSION=${VERSION:1:${#VERSION}}
