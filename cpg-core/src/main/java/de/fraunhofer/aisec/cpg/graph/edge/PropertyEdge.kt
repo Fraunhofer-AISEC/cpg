@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.edge
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.ParameterizedType
@@ -38,6 +40,18 @@ import org.neo4j.ogm.annotation.*
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.LoggerFactory
 
+/**
+ * This class represents an edge between two [Node] objects in a Neo4J graph. It can be used to
+ * store additional information that relate to the relationship between the two nodes that belong to
+ * neither of the two nodes directly.
+ *
+ * An example would be the name (in this case `a`) of an argument between a [CallExpression] (`foo`)
+ * and its argument (a [Literal] of `2`) in languages that support keyword arguments, such as
+ * Python:
+ * ```python
+ * foo("bar", a = 2)
+ * ```
+ */
 @RelationshipEntity
 open class PropertyEdge<T : Node> : Persistable {
     /** Required field for object graph mapping. It contains the node id. */
@@ -300,6 +314,29 @@ open class PropertyEdge<T : Node> : Persistable {
     }
 }
 
+/**
+ * This class can be used to implement
+ * [delegated properties](https://kotlinlang.org/docs/delegated-properties.html) in [Node] classes.
+ * The most common use case is to have a property that is a list of [PropertyEdge] objects (for
+ * persistence) and a second (delegated) property that allows easy access just to the connected
+ * nodes of the individual edges for in-memory access.
+ *
+ * For example:
+ * ```kotlin
+ *
+ * class MyNode {
+ *   @Relationship(value = "EXPRESSIONS", direction = "OUTGOING")
+ *   @field:SubGraph("AST")
+ *   var expressionsEdges = mutableListOf<PropertyEdge<Expression>>()
+ *   var expressions by PropertyEdgeDelegate(MyNode::expressionsEdges)
+ * }
+ * ```
+ *
+ * This class is intentionally marked with [Transient], so that the delegated properties are not
+ * transferred to the Neo4J OGM. Only the property that contains the property edges should be
+ * persisted in the graph database.
+ */
+@Transient
 class PropertyEdgeDelegate<T : Node, S : Node>(
     val edge: KProperty1<S, List<PropertyEdge<T>>>,
     val outgoing: Boolean = true

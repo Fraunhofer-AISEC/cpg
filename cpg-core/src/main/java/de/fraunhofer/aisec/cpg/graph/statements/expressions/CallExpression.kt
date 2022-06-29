@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import java.util.*
-import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -126,9 +125,11 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
         argumentsEdges.add(edge)
     }
 
+    /** Returns the function signature as list of types of the call arguments. */
     val signature: List<Type>
-        get() =
-            arguments.stream().map { obj: Expression -> obj.getType() }.collect(Collectors.toList())
+        get() = argumentsEdges.map { it.end.type }
+
+    /** Specifies, whether this call has any template arguments. */
     var template = false
 
     /** If the CallExpression instantiates a template, the call can provide template parameters. */
@@ -253,7 +254,6 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
         }
 
         for (i in templateParametersEdges!!.size until orderedInitializationSignature.size) {
-            val signature = orderedInitializationSignature[i] ?: continue
             val propertyEdge = PropertyEdge(this, orderedInitializationSignature[i])
             propertyEdge.addProperty(Properties.INDEX, templateParametersEdges!!.size)
             propertyEdge.addProperty(
