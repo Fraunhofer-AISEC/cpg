@@ -72,6 +72,7 @@ dependencies {
     api(project(":cpg-language-llvm"))
     api(project(":cpg-language-python"))
     api(project(":cpg-language-go"))
+    api(project(":cpg-language-typescript"))
 
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.2")
 
