@@ -45,7 +45,7 @@ import org.junit.jupiter.api.Tag
 
 @Tag("experimentalTypeScript")
 @ExperimentalTypeScript
-class TypescriptLanguageFrontendTest {
+class TypeScriptLanguageFrontendTest {
 
     @Test
     fun testFunction() {
