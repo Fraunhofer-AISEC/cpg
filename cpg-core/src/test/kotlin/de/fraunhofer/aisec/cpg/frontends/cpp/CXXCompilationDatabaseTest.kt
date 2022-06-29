@@ -72,15 +72,15 @@ class CXXCompilationDatabaseTest {
 
             val s1 = mainFunc.getBodyStatementAs(1, CallExpression::class.java)
             assertNotNull(s1)
-            assertEquals(s1.invokes.iterator().next(), func1)
+            assertEquals(func1, s1.invokes.iterator().next())
 
             val s2 = mainFunc.getBodyStatementAs(2, CallExpression::class.java)
             assertNotNull(s2)
-            assertEquals(s2.invokes.iterator().next(), func2)
+            assertEquals(func2, s2.invokes.iterator().next())
 
             val s3 = mainFunc.getBodyStatementAs(3, CallExpression::class.java)
             assertNotNull(s3)
-            assertEquals(s3.invokes.iterator().next(), sysFunc)
+            assertEquals(sysFunc, s3.invokes.iterator().next())
 
             val s4 = mainFunc.getBodyStatementAs(4, Literal::class.java)
             assertNotNull(s4)

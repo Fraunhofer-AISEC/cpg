@@ -76,22 +76,16 @@ internal class FunctionTemplateTest : BaseTest() {
     ) {
         assertEquals(2, callFloat3.templateParameters!!.size)
         assertEquals(floatType, (callFloat3.templateParameters!![0] as TypeExpression).type)
-        assertEquals(
-            0,
-            callFloat3.templateParametersPropertyEdge!![0].getProperty(Properties.INDEX)
-        )
+        assertEquals(0, callFloat3.templateParametersEdges!![0].getProperty(Properties.INDEX))
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateParametersPropertyEdge!![0].getProperty(Properties.INSTANTIATION)
+            callFloat3.templateParametersEdges!![0].getProperty(Properties.INSTANTIATION)
         )
         assertEquals(int3, callFloat3.templateParameters!![1])
-        assertEquals(
-            1,
-            callFloat3.templateParametersPropertyEdge!![1].getProperty(Properties.INDEX)
-        )
+        assertEquals(1, callFloat3.templateParametersEdges!![1].getProperty(Properties.INDEX))
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateParametersPropertyEdge!![1].getProperty(Properties.INSTANTIATION)
+            callFloat3.templateParametersEdges!![1].getProperty(Properties.INSTANTIATION)
         )
     }
 
@@ -556,33 +550,23 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, callExpression.invokes.size)
         assertEquals(methodDeclaration, callExpression.invokes[0])
         assertEquals(templateDeclaration, callExpression.templateInstantiation)
-        assertEquals(2, callExpression.templateParameters!!.size)
-        assertEquals("int", callExpression.templateParameters!![0].name)
+        assertEquals(2, callExpression.templateParameters.size)
+        assertEquals("int", callExpression.templateParameters[0].name)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callExpression.templateParametersPropertyEdge
-                ?.get(0)
-                ?.getProperty(Properties.INSTANTIATION)
+            callExpression.templateParametersEdges?.get(0)?.getProperty(Properties.INSTANTIATION)
         )
-        assertEquals(
-            0,
-            callExpression.templateParametersPropertyEdge!![0].getProperty(Properties.INDEX)
-        )
+        assertEquals(0, callExpression.templateParametersEdges!![0].getProperty(Properties.INDEX))
         val int5: Literal<Int> =
             findByUniquePredicate(
                 flattenListIsInstance(result),
                 Predicate { l: Literal<*> -> l.value == 5 }
             )
         assertEquals(int5, callExpression.templateParameters!![1])
-        assertEquals(
-            1,
-            callExpression.templateParametersPropertyEdge!![1].getProperty(Properties.INDEX)
-        )
+        assertEquals(1, callExpression.templateParametersEdges!![1].getProperty(Properties.INDEX))
         assertEquals(
             TemplateDeclaration.TemplateInitialization.DEFAULT,
-            callExpression.templateParametersPropertyEdge!!
-                .get(1)
-                .getProperty(Properties.INSTANTIATION)
+            callExpression.templateParametersEdges!!.get(1).getProperty(Properties.INSTANTIATION)
         )
     }
 

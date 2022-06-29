@@ -175,10 +175,10 @@ public class CallResolver extends Pass {
     if (templateParams != null) {
       for (Node node : templateParams) {
         if (node instanceof TypeExpression) {
-          constructExpression.addExplicitTemplateParameter(
+          constructExpression.addTemplateParameter(
               NodeBuilder.duplicateTypeExpression((TypeExpression) node, true));
         } else if (node instanceof Literal<?>) {
-          constructExpression.addExplicitTemplateParameter(
+          constructExpression.addTemplateParameter(
               NodeBuilder.duplicateLiteral((Literal<?>) node, true));
         }
       }
@@ -360,7 +360,7 @@ public class CallResolver extends Pass {
 
   /**
    * Check if we are handling an implicit template parameter, if so set instantiationSignature,
-   * instantiationType and orderedInitializationSignature maps accordningly
+   * instantiationType and orderedInitializationSignature maps accordingly
    *
    * @param functionTemplateDeclaration functionTemplate we have identified
    * @param index position of the templateParameter we are currently handling
@@ -582,17 +582,22 @@ public class CallResolver extends Pass {
 
     if (applyInference) {
       // If we want to use an inferred functionTemplateDeclaration, this needs to be provided.
-      // Otherwise we could not resolve to a template and no modifications are made
+      // Otherwise, we could not resolve to a template and no modifications are made
       FunctionTemplateDeclaration functionTemplateDeclaration =
           createInferredFunctionTemplate(curClass, templateCall);
       templateCall.setTemplateInstantiation(functionTemplateDeclaration);
       templateCall.setInvokes(functionTemplateDeclaration.getRealization());
-      // Set instantiation propertyEdges
-      for (PropertyEdge<Node> instantiationParameter :
-          templateCall.getTemplateParametersPropertyEdge()) {
-        instantiationParameter.addProperty(
-            Properties.INSTANTIATION, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+
+      var edges = templateCall.getTemplateParametersEdges();
+
+      if (edges != null) {
+        // Set instantiation propertyEdges
+        for (PropertyEdge<Node> instantiationParameter : edges) {
+          instantiationParameter.addProperty(
+              Properties.INSTANTIATION, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+        }
       }
+
       return true;
     }
     return false;
@@ -1070,14 +1075,14 @@ public class CallResolver extends Pass {
     if (invocationCandidates.isEmpty()) {
       /*
        Check if the call can be resolved to a function template instantiation. If it can be resolver, we
-       resolve the call. Otherwise there won't be an inferred template, we will do an inferred
+       resolve the call. Otherwise, there won't be an inferred template, we will do an inferred
        FunctionDeclaration instead.
       */
-      call.setTemplateParameters(new ArrayList<>());
+      call.setTemplateParametersEdges(new ArrayList<>());
       if (handleTemplateFunctionCalls(curClass, call, false)) {
         return;
       } else {
-        call.setTemplateParameters(null);
+        call.setTemplateParametersEdges(null);
       }
     }
 
@@ -1176,7 +1181,7 @@ public class CallResolver extends Pass {
       if (handleTemplateFunctionCalls(curClass, call, false)) {
         return call.getInvokes();
       } else {
-        call.setTemplateParameters(null);
+        call.setTemplateParametersEdges(null);
       }
     }
 
@@ -1295,7 +1300,6 @@ public class CallResolver extends Pass {
     for (TemplateDeclaration template : templateList) {
       if (template instanceof ClassTemplateDeclaration
           && ((ClassTemplateDeclaration) template).getRealization().contains(recordDeclaration)
-          && constructExpression.getTemplateParameters() != null
           && constructExpression.getTemplateParameters().size()
               <= template.getParameters().size()) {
         int defaultDifference =

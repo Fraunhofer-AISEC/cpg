@@ -70,7 +70,7 @@ object NodeBuilder {
         node.name = name!!
         node.setCodeAndRegion(lang, rawNode, code)
         node.fqn = fqn
-        node.setTemplate(template)
+        node.template = template
         log(node)
         return node
     }
@@ -385,7 +385,7 @@ object NodeBuilder {
     ): CallExpression {
         val node = MemberCallExpression()
         node.name = name!!
-        node.setBase(base)
+        node.base = base
         node.member = member
         node.operatorCode = operatorCode
         node.setCodeAndRegion(lang, rawNode, code)

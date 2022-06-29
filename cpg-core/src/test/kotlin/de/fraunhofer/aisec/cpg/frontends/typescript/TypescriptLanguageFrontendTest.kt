@@ -187,7 +187,7 @@ class TypescriptLanguageFrontendTest {
         assertNotNull(preventDefault)
 
         assertEquals("preventDefault", preventDefault.name)
-        assertEquals("event", preventDefault.base.name)
+        assertEquals("event", preventDefault.base?.name)
 
         val apiUrl =
             function.getBodyStatementAs(1, DeclarationStatement::class.java)?.singleDeclaration
