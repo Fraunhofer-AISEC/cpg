@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
     tags:
       - v*.**
   pull_request:
@@ -34,6 +34,7 @@ jobs:
         with:
           distribution: "zulu"
           java-version: "15"
+          cache: 'gradle'
       - run: |
           cd cpg-language-go/src/main/golang
           ./build.sh
@@ -83,7 +84,7 @@ jobs:
           if [[ $VERSION != v* ]]
           then
             export VERSION=""
-            echo "Building version-less (master or feature branch)"
+            echo "Building version-less (main or feature branch)"
           else
             # make version more Java-friendly by dropping the 'v'
             export VERSION=${VERSION:1:${#VERSION}}
