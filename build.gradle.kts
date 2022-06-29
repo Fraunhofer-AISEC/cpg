@@ -157,11 +157,7 @@ subprojects {
 
     tasks.withType<KotlinCompile> {
         kotlinOptions {
-            // Note: this is not recommended, but this is the only way to deal with the fact,
-            // that the kotlin interactive shell is built with 1.8 and we need to build our
-            // inline functions in 1.8 bytecode, otherwise we cannot use the fluid API in
-            // the cpg-console.
-            jvmTarget = "1.8"
+            jvmTarget = "11"
             freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn")
         }
     }
