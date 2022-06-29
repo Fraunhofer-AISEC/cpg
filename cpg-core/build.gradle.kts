@@ -23,14 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-import com.github.gradle.node.yarn.task.YarnTask
-
 plugins {
     `java-library`
     `java-test-fixtures`
     signing
-
-    id("com.github.node-gradle.node") version "3.4.0"
 }
 
 publishing {
@@ -53,46 +49,8 @@ tasks.named<Test>("test") {
         if (!project.hasProperty("experimental")) {
             excludeTags("experimental")
         }
-
-        if (!project.hasProperty("experimentalTypeScript")) {
-            excludeTags("experimentalTypeScript")
-        }
     }
     maxHeapSize = "4048m"
-}
-
-node {
-    download.set(findProperty("nodeDownload")?.toString()?.toBoolean() ?: false)
-    version.set("16.4.2")
-}
-
-val yarnInstall by tasks.registering(YarnTask::class) {
-    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir("src/main/nodejs/node_modules")
-    outputs.cacheIf { true }
-
-    workingDir.set(file("src/main/nodejs"))
-    yarnCommand.set(listOf("install", "--ignore-optional"))
-}
-
-val yarnBuild by tasks.registering(YarnTask::class) {
-    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir("build/resources/main/nodejs")
-    outputs.cacheIf { true }
-
-    workingDir.set(file("src/main/nodejs"))
-    yarnCommand.set(listOf("bundle"))
-
-    dependsOn(yarnInstall)
-}
-
-if (project.hasProperty("experimentalTypeScript")) {
-    tasks.processResources {
-        dependsOn(yarnBuild)
-    }
 }
 
 dependencies {
