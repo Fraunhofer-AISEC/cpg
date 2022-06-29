@@ -175,10 +175,10 @@ public class CallResolver extends Pass {
     if (templateParams != null) {
       for (Node node : templateParams) {
         if (node instanceof TypeExpression) {
-          constructExpression.addExplicitTemplateParameter(
+          constructExpression.addTemplateParameter(
               NodeBuilder.duplicateTypeExpression((TypeExpression) node, true));
         } else if (node instanceof Literal<?>) {
-          constructExpression.addExplicitTemplateParameter(
+          constructExpression.addTemplateParameter(
               NodeBuilder.duplicateLiteral((Literal<?>) node, true));
         }
       }

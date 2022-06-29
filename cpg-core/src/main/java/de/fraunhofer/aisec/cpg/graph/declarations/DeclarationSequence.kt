@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -38,7 +37,7 @@ import org.neo4j.ogm.annotation.Relationship
  * the translation unit. It should NOT end up in the final graph.
  */
 class DeclarationSequence : Declaration(), DeclarationHolder {
-    @Relationship(value = "CHILDREN", direction = "OUTGOING")
+    @Relationship(value = "CHILDREN", direction = Relationship.OUTGOING)
     val childrenPropertyEdge: MutableList<PropertyEdge<Declaration>> = mutableListOf()
 
     val children: List<Declaration> by
