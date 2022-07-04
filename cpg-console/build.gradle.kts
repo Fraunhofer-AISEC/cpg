@@ -66,7 +66,7 @@ dependencies {
     api(project(":cpg-analysis"))
     api(project(":cpg-neo4j"))
 
-    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.2")
+    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.18.0")
 
     testImplementation(testFixtures(project(":cpg-core")))
 
