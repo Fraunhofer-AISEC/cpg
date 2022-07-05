@@ -74,7 +74,7 @@ dependencies {
     api(project(":cpg-language-go"))
     api(project(":cpg-language-typescript"))
 
-    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.2")
+    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.18.0")
 
     // neo4j
     api("org.neo4j", "neo4j-ogm-core", versions["neo4j-ogm"])
