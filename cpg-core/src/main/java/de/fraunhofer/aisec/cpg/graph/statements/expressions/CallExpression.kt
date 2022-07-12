@@ -209,7 +209,8 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
         }
 
         for (edge in templateParametersEdges!!) {
-            if (edge.getProperty(Properties.INSTANTIATION) != null &&
+            if (
+                edge.getProperty(Properties.INSTANTIATION) != null &&
                     (edge.getProperty(Properties.INSTANTIATION) ==
                         TemplateInitialization.UNKNOWN) &&
                     initializationType.containsKey(edge.end)

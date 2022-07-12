@@ -424,7 +424,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 if (primaryDeclaration != null) {
                     // handle typedef
-                    if (primaryDeclaration.name.isEmpty() &&
+                    if (
+                        primaryDeclaration.name.isEmpty() &&
                             ctx.rawSignature.trim().startsWith("typedef")
                     ) {
                         // This is a special case, which is a common idiom in C, to typedef a
@@ -459,7 +460,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        if (!ctx.isTypedef &&
+        if (
+            !ctx.isTypedef &&
                 declSpecifier is CPPASTNamedTypeSpecifier &&
                 declSpecifier.name is CPPASTTemplateId
         ) {
