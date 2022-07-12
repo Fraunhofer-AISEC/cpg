@@ -87,7 +87,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         val name = ctx.name.toString()
 
         // Check, if the name is qualified or if we are within a record scope
-        return if ((lang.scopeManager.currentScope is RecordScope ||
+        return if (
+            (lang.scopeManager.currentScope is RecordScope ||
                 name.contains(lang.namespaceDelimiter))
         ) {
             // If yes, treat this like a field declaration
@@ -311,7 +312,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
 
         // We recognize an ambiguity here, but cannot solve it at the moment
-        if (name != "" &&
+        if (
+            name != "" &&
                 ctx.parent is CPPASTDeclarator &&
                 declaration.body == null &&
                 lang.scopeManager.currentFunction != null

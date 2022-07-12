@@ -483,7 +483,8 @@ class PythonFrontendTest : BaseTest() {
         // self.somevar = i
         val someVarDeclaration =
             ((bar.body as? CompoundStatement)?.statements?.get(0) as? DeclarationStatement)
-                ?.declarations?.first() as? FieldDeclaration
+                ?.declarations
+                ?.first() as? FieldDeclaration
         assertNotNull(someVarDeclaration)
         assertEquals("somevar", someVarDeclaration.name)
         assertEquals(i, (someVarDeclaration.initializer as? DeclaredReferenceExpression)?.refersTo)

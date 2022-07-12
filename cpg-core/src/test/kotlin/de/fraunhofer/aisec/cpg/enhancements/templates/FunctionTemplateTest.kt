@@ -608,7 +608,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertTrue(
             callInt2.templateParameters
                 ?.get(1)
-                ?.nextDFG?.contains(templateDeclaration.parameters[1]) == true
+                ?.nextDFG
+                ?.contains(templateDeclaration.parameters[1]) == true
         )
 
         // Check inferred for second fixed_division call
@@ -638,7 +639,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertTrue(
             callDouble3.templateParameters
                 ?.get(1)
-                ?.nextDFG?.contains(templateDeclaration.parameters[1]) == true
+                ?.nextDFG
+                ?.contains(templateDeclaration.parameters[1]) == true
         )
 
         // Check return values

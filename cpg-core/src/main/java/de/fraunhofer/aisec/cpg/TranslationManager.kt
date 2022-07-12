@@ -169,7 +169,8 @@ private constructor(
                             .map { it.toFile() }
                             .collect(Collectors.toList())
                     } else {
-                        if (useParallelFrontends &&
+                        if (
+                            useParallelFrontends &&
                                 Util.getExtension(file).frontendClass?.simpleName ==
                                     "GoLanguageFrontend"
                         ) {

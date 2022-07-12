@@ -106,7 +106,8 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 }
 
                 // check, if the white-list exists at all
-                if (hasIncludeWhitelist() && // and ignore the file if it is not on the whitelist
+                if (
+                    hasIncludeWhitelist() && // and ignore the file if it is not on the whitelist
                     !absoluteOrRelativePathIsInList(path, config.includeWhitelist)
                 ) {
                     LOGGER.debug("Include file {} not on the whitelist. Ignoring.", path)
