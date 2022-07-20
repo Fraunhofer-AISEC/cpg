@@ -63,7 +63,7 @@ internal class ScopeManagerTest : BaseTest() {
     fun testReplaceNode() {
         val scopeManager = ScopeManager()
         val frontend = CXXLanguageFrontend(config, scopeManager)
-        val tu = frontend.parse(File("src/test/resources/recordstmt.cpp"))
+        val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
         val methods =
             flattenListIsInstance<MethodDeclaration>(tu.declarations).filter {
                 it !is ConstructorDeclaration

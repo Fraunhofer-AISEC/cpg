@@ -263,18 +263,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         assertNotNull(declaration)
+
         val namespaceDeclaration = declaration.getDeclarationAs(0, NamespaceDeclaration::class.java)
 
         val recordDeclaration =
             namespaceDeclaration?.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(recordDeclaration)
 
-        val fields =
-            recordDeclaration.fields
-                .stream()
-                .map(FieldDeclaration::name)
-                .collect(Collectors.toList())
-        assertTrue(fields.contains("this"))
+        val fields = recordDeclaration.fields.map(FieldDeclaration::name)
         assertTrue(fields.contains("field"))
 
         val method = recordDeclaration.methods[0]
@@ -533,9 +529,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(func)
         assertNotNull(func.receiver)
 
-        // make sure, that the type system correctly cleans up these duplicate types
-        assertSame(record.getThis()?.type, func.receiver?.type)
-
         val nodes = SubgraphWalker.flattenAST(record)
         val request =
             nodes
@@ -580,11 +573,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(op)
 
         val lhs = op.lhs as? MemberExpression
-        val superThisField =
-            (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? FieldDeclaration?
-        assertNotNull(superThisField)
-        assertEquals("this", superThisField.name)
-        assertEquals(TypeParser.createFrom("my.Animal", false), superThisField.type)
+        val receiver =
+            (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration?
+        assertNotNull(receiver)
+        assertEquals("this", receiver.name)
+        assertEquals(TypeParser.createFrom("my.Animal", false), receiver.type)
     }
 
     @Test

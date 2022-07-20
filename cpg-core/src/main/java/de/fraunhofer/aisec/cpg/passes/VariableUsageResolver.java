@@ -275,8 +275,20 @@ public class VariableUsageResolver extends Pass {
                   curClass.getName());
               base.setType(TypeParser.createFrom(Object.class.getName(), true));
             } else {
-              baseTarget = superRecord.getThis();
-              base.setRefersTo(baseTarget);
+              // We need to connect this super reference to the receiver of this method
+              var func = lang.getScopeManager().getCurrentFunction();
+              if (func instanceof MethodDeclaration) {
+                baseTarget = ((MethodDeclaration) func).getReceiver();
+              }
+
+              if (baseTarget != null) {
+                base.setRefersTo(baseTarget);
+                // Explicitly set the type of the call's base to the super type
+                base.setType(superType);
+                // And set the possible subtypes, to ensure, that really only our super type is in
+                // there
+                base.updatePossibleSubtypes(Collections.singletonList(superType));
+              }
             }
           } else {
             // no explicit super type -> java.lang.Object
@@ -349,22 +361,7 @@ public class VariableUsageResolver extends Pass {
       return enumMap.get(reference.getType());
     }
 
-    if (recordMap.containsKey(reference.getType())) {
-      RecordDeclaration recordDeclaration = recordMap.get(reference.getType());
-      if (reference.isStaticAccess()) {
-        return recordDeclaration;
-      } else {
-        // check if we have this type as a class in our graph. If so, we can refer to its "this"
-        // field
-        if (recordDeclaration.getThis() != null) {
-          return recordDeclaration.getThis();
-        } else {
-          return recordDeclaration;
-        }
-      }
-    } else {
-      return null;
-    }
+    return recordMap.getOrDefault(reference.getType(), null);
   }
 
   @Nullable

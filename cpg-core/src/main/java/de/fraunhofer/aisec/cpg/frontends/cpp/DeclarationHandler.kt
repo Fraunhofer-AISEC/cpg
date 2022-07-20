@@ -289,7 +289,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             templateDeclaration.name = templateDeclaration.getRealizationDeclarations()[0].name
         } else
             (innerDeclaration as? RecordDeclaration)?.let {
-                fixTypeOfInnerDeclaration(templateDeclaration, it)
+                addParameterizedTypesToRecord(templateDeclaration, it)
             }
 
         addRealizationToScope(templateDeclaration)
@@ -362,32 +362,30 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * Fixed the Types created by the innerDeclaration with the ParameterizedTypes of the
-     * TemplateDeclaration
+     * Adjusts the type created in a [RecordDeclaration] to include the parametrized types of the
+     * [templateDeclaration]. This is necessary because templates are being parsed after all record
+     * types (e.g. used in receivers) are created.
      *
-     * @param templateDeclaration
-     * @param innerDeclaration If RecordDeclaration
+     * @param templateDeclaration the template
+     * @param innerDeclaration the record
      */
-    private fun fixTypeOfInnerDeclaration(
+    private fun addParameterizedTypesToRecord(
         templateDeclaration: TemplateDeclaration,
-        innerDeclaration: Declaration
+        innerDeclaration: RecordDeclaration
     ) {
-        var type: Type
-        type =
-            if ((innerDeclaration as RecordDeclaration).getThis() == null) {
-                TypeParser.createFrom(innerDeclaration.name, true)
-            } else {
-                innerDeclaration.getThis().type
-            }
         val parameterizedTypes =
             TypeManager.getInstance().getAllParameterizedType(templateDeclaration)
-        // Add ParameterizedTypes to type
-        addParameterizedTypesToType(type, parameterizedTypes)
 
-        // Add ParameterizedTypes to ConstructorDeclaration Type
-        for (constructorDeclaration in innerDeclaration.constructors) {
-            type = constructorDeclaration.type
-            addParameterizedTypesToType(type, parameterizedTypes)
+        // Loop through all the methods and adjust their receiver types
+        for (method in (innerDeclaration as? RecordDeclaration)?.methods ?: listOf()) {
+            // Add ParameterizedTypes to type
+            method.receiver?.let { addParameterizedTypesToType(it.type, parameterizedTypes) }
+        }
+
+        // Add parameterizedTypes to ConstructorDeclaration type and adjust their receiver types
+        for (constructor in innerDeclaration.constructors) {
+            constructor.receiver?.let { addParameterizedTypesToType(it.type, parameterizedTypes) }
+            addParameterizedTypesToType(constructor.type, parameterizedTypes)
         }
     }
 
@@ -405,6 +403,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             for (parameterizedType in parameterizedTypes) {
                 type.addGeneric(parameterizedType)
             }
+        } else if (type is PointerType) {
+            addParameterizedTypesToType(type.elementType, parameterizedTypes)
         }
     }
 

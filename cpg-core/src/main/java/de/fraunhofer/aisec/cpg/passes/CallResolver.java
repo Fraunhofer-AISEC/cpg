@@ -193,9 +193,17 @@ public class CallResolver extends Pass {
    * @param call The call to be resolved
    */
   protected void handleSuperCall(RecordDeclaration curClass, CallExpression call) {
+    // We need to connect this super reference to the receiver of this method
+    var func = lang.getScopeManager().getCurrentFunction();
+    if (func instanceof MethodDeclaration) {
+      ((DeclaredReferenceExpression) call.getBase())
+          .setRefersTo(((MethodDeclaration) func).getReceiver());
+    }
+
     RecordDeclaration target = null;
     if (call.getBase().getName().equals("super")) {
-      // direct superclass, either defined explicitly or java.lang.Object by default
+
+      // Direct superclass, either defined explicitly or java.lang.Object by default
       if (!curClass.getSuperClasses().isEmpty()) {
         target = recordMap.get(curClass.getSuperClasses().get(0).getRoot().getTypeName());
       } else {
@@ -210,8 +218,13 @@ public class CallResolver extends Pass {
       // interface that is implemented
       target = handleSpecificSupertype(curClass, call);
     }
+
     if (target != null) {
-      ((DeclaredReferenceExpression) call.getBase()).setRefersTo(target.getThis());
+      var superType = target.toType();
+      // Explicitly set the type of the call's base to the super type
+      call.getBase().setType(superType);
+      // And set the possible subtypes, to ensure, that really only our super type is in there
+      call.getBase().updatePossibleSubtypes(Collections.singletonList(superType));
       handleMethodCall(target, call);
     }
   }
@@ -1722,11 +1735,9 @@ public class CallResolver extends Pass {
     Set<Type> possibleTypes = new HashSet<>();
     if (node instanceof MemberCallExpression) {
       MemberCallExpression memberCall = (MemberCallExpression) node;
-      if (memberCall.getBase() instanceof HasType) {
-        HasType base = memberCall.getBase();
-        possibleTypes.add(base.getType());
-        possibleTypes.addAll(base.getPossibleSubTypes());
-      }
+      HasType base = memberCall.getBase();
+      possibleTypes.add(base.getType());
+      possibleTypes.addAll(base.getPossibleSubTypes());
     } else if (node instanceof StaticCallExpression) {
       StaticCallExpression staticCall = (StaticCallExpression) node;
       if (staticCall.getTargetRecord() != null) {

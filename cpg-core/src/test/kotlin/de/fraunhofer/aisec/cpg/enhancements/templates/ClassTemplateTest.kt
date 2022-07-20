@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -59,29 +59,31 @@ internal class ClassTemplateTest : BaseTest() {
 
     private fun testClassTemplateFields(
         pair: RecordDeclaration,
-        thisField: FieldDeclaration?,
         first: FieldDeclaration?,
         second: FieldDeclaration?
     ) {
-        assertTrue(pair.fields.contains(thisField))
         assertTrue(pair.fields.contains(first))
         assertTrue(pair.fields.contains(second))
     }
 
     private fun testClassTemplatesTypes(
         pair: RecordDeclaration?,
-        thisField: FieldDeclaration,
+        receiver: VariableDeclaration,
         type1: TypeParamDeclaration,
         type2: TypeParamDeclaration
     ): ObjectType {
-        assertEquals("Pair", thisField.type.name)
-        assertTrue(thisField.type is ObjectType)
-        val pairType = thisField.type as ObjectType
+        assertEquals("Pair*", receiver.type.name)
+        assertTrue(receiver.type is PointerType)
+
+        val pairType = (receiver.type as PointerType).elementType as? ObjectType
+        assertNotNull(pairType)
+
         assertEquals("Type1", type1.type.name)
         assertEquals("Type2", type2.type.name)
         assertEquals(type1.type, pairType.generics[0])
         assertEquals(type2.type, pairType.generics[1])
         assertEquals(pair, pairType.recordDeclaration)
+
         return pairType
     }
 
@@ -135,8 +137,6 @@ internal class ClassTemplateTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testClassTemplateStructure() {
-        TypeManager.reset()
-
         val result =
             analyze(listOf(Path.of(topLevel.toString(), "pair.cpp").toFile()), topLevel, true)
         val classTemplateDeclarations = flattenListIsInstance<ClassTemplateDeclaration>(result)
@@ -152,7 +152,9 @@ internal class ClassTemplateTest : BaseTest() {
             findByUniqueName(flattenListIsInstance<TypeParamDeclaration>(result), "class Type2")
         val first = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "first")
         val second = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "second")
-        val thisField = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "this")
+        val receiver = pair.byNameOrNull<MethodDeclaration>("Pair")?.receiver
+        assertNotNull(receiver)
+
         val pairConstructorDeclaration =
             findByUniqueName(flattenListIsInstance<ConstructorDeclaration>(result), "Pair")
         val constructExpression =
@@ -165,10 +167,10 @@ internal class ClassTemplateTest : BaseTest() {
         testTemplateStructure(template, pair, type1, type2)
 
         // Test Fields
-        testClassTemplateFields(pair, thisField, first, second)
+        testClassTemplateFields(pair, first, second)
 
         // Test Types
-        val pairType = testClassTemplatesTypes(pair, thisField, type1, type2)
+        val pairType = testClassTemplatesTypes(pair, receiver, type1, type2)
 
         // Test Constructor
         testClassTemplateConstructor(pair, pairType, pairConstructorDeclaration)
@@ -188,8 +190,6 @@ internal class ClassTemplateTest : BaseTest() {
     @Throws(Exception::class)
     fun testClassTemplateWithValueParameter() {
         // Test pair2.cpp: Add Value Parameter to Template Instantiation
-        TypeManager.reset()
-
         val result =
             analyze(listOf(Path.of(topLevel.toString(), "pair2.cpp").toFile()), topLevel, true)
         val classTemplateDeclarations = flattenListIsInstance<ClassTemplateDeclaration>(result)
@@ -201,7 +201,9 @@ internal class ClassTemplateTest : BaseTest() {
         val pair = findByUniqueName(flattenListIsInstance<RecordDeclaration>(result), "Pair")
         val paramN = findByUniqueName(flattenListIsInstance<ParamVariableDeclaration>(result), "N")
         val n = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "n")
-        val thisField = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "this")
+        val receiver = pair.byNameOrNull<ConstructorDeclaration>("Pair")?.receiver
+        assertNotNull(receiver)
+
         val pairConstructorDeclaration =
             findByUniqueName(flattenListIsInstance<ConstructorDeclaration>(result), "Pair")
         val constructExpression =
@@ -223,7 +225,8 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(paramN, (n.initializer as? DeclaredReferenceExpression)?.refersTo)
 
         // Test Type
-        val type = thisField.type as ObjectType
+        val type = ((receiver.type as? PointerType)?.elementType as? ObjectType)
+        assertNotNull(type)
         assertEquals(pairConstructorDeclaration.type, type)
         assertEquals(pair, type.recordDeclaration)
         assertEquals(2, type.generics.size)
@@ -292,8 +295,6 @@ internal class ClassTemplateTest : BaseTest() {
     @Throws(Exception::class)
     fun testStructTemplateWithSameDefaultType() {
         // Test pair3.cpp: Template a struct instead of a class and use a Type1 as default of Type2
-        TypeManager.reset()
-
         val result =
             analyze(listOf(Path.of(topLevel.toString(), "pair3.cpp").toFile()), topLevel, true)
         val template =
@@ -335,9 +336,9 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(2, pairType.generics.size)
         assertEquals(type1ParameterizedType, pairType.generics[0])
         assertEquals(type2ParameterizedType, pairType.generics[1])
-        assertEquals(3, pair.fields.size) // cpp has implicit `this` field
-        assertEquals(first, pair.fields[1])
-        assertEquals(second, pair.fields[2])
+        assertEquals(2, pair.fields.size)
+        assertEquals(first, pair.fields[0])
+        assertEquals(second, pair.fields[1])
         assertEquals(type1ParameterizedType, first.type)
         assertEquals(type2ParameterizedType, second.type)
         testStructTemplateWithSameDefaultTypeInvocation(
@@ -353,8 +354,6 @@ internal class ClassTemplateTest : BaseTest() {
     @Throws(Exception::class)
     fun testTemplateOverrindingDefaults() {
         // Test pair3-1.cpp: Override defaults of template
-        TypeManager.reset()
-
         val result =
             analyze(listOf(Path.of(topLevel.toString(), "pair3-1.cpp").toFile()), topLevel, true)
         val template =
@@ -419,8 +418,6 @@ internal class ClassTemplateTest : BaseTest() {
     @Throws(Exception::class)
     fun testTemplateRecursiveDefaults() {
         // Test pair3-2.cpp: Use recursive template parameters using defaults
-        TypeManager.reset()
-
         val result =
             analyze(listOf(Path.of(topLevel.toString(), "pair3-2.cpp").toFile()), topLevel, true)
         val template =
@@ -432,11 +429,11 @@ internal class ClassTemplateTest : BaseTest() {
         val paramA = findByUniqueName(flattenListIsInstance<ParamVariableDeclaration>(result), "A")
         val paramB = findByUniqueName(flattenListIsInstance<ParamVariableDeclaration>(result), "B")
         val constructExpression =
-            findByUniquePredicate<ConstructExpression>(flattenListIsInstance(result)) {
-                it.code == "()"
+            findByUniquePredicate(flattenListIsInstance(result)) { c: ConstructExpression ->
+                c.code == "()"
             }
         val literal1 =
-            findByUniquePredicate<Literal<*>>(flattenListIsInstance(result)) { it.value == 1 }
+            findByUniquePredicate(flattenListIsInstance(result)) { l: Literal<*> -> l.value == 1 }
         assertEquals(4, template.parameters.size)
         assertEquals(paramA, template.parameters[2])
         assertEquals(literal1, paramA.default)
@@ -501,8 +498,6 @@ internal class ClassTemplateTest : BaseTest() {
     @Throws(Exception::class)
     fun testReferenceInTemplates() {
         // Test array.cpp: checks usage of referencetype of parameterized type (T[])
-        TypeManager.reset()
-
         val result =
             analyze(listOf(Path.of(topLevel.toString(), "array.cpp").toFile()), topLevel, true)
         val template =
@@ -516,17 +511,19 @@ internal class ClassTemplateTest : BaseTest() {
             findByUniqueName(flattenListIsInstance<TypeParamDeclaration>(result), "typename T")
         val literal10 =
             findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 10 }
-        val thisField = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "this")
         val mArray = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "m_Array")
         assertEquals(2, template.parameters.size)
         assertEquals(paramT, template.parameters[0])
         assertEquals(paramN, template.parameters[1])
         assertEquals(literal10, paramN.default)
-        assertEquals(2, array.fields.size)
-        assertEquals(thisField, array.fields[0])
-        assertEquals(mArray, array.fields[1])
+        assertEquals(1, array.fields.size)
+        assertEquals(mArray, array.fields[0])
 
-        val arrayType = thisField.type as ObjectType
+        val receiver = array.byNameOrNull<MethodDeclaration>("GetSize")?.receiver
+        assertNotNull(receiver)
+
+        val arrayType = ((receiver.type as? PointerType)?.elementType) as? ObjectType
+        assertNotNull(arrayType)
         assertEquals(1, arrayType.generics.size)
         assertEquals("T", arrayType.generics[0].name)
 
@@ -556,8 +553,6 @@ internal class ClassTemplateTest : BaseTest() {
     @Throws(Exception::class)
     fun testTemplateInstantiationWithNew() {
         // Test array2.cpp: Test template usage with new keyword
-        TypeManager.reset()
-
         val result =
             analyze(listOf(Path.of(topLevel.toString(), "array2.cpp").toFile()), topLevel, true)
         val template =
