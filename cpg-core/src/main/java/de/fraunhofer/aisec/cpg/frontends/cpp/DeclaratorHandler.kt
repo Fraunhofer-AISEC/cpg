@@ -27,8 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTypeParamDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
@@ -136,7 +142,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             if (name.contains(lang.namespaceDelimiter)) {
                 val rr = name.split(lang.namespaceDelimiter).toTypedArray()
                 val fieldName = rr[rr.size - 1]
-                NodeBuilder.newFieldDeclaration(
+                newFieldDeclaration(
                     fieldName,
                     UnknownType.getUnknownType(),
                     emptyList(),
@@ -146,7 +152,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     true
                 )
             } else {
-                NodeBuilder.newFieldDeclaration(
+                newFieldDeclaration(
                     name,
                     UnknownType.getUnknownType(),
                     emptyList(),
@@ -171,8 +177,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Check, if it's a constructor
         val method =
             if (name == recordDeclaration?.name) {
-                NodeBuilder.newConstructorDeclaration(name, null, recordDeclaration, lang, ctx)
-            } else NodeBuilder.newMethodDeclaration(name, null, false, recordDeclaration, lang, ctx)
+                newConstructorDeclaration(name, null, recordDeclaration, lang, ctx)
+            } else {
+                newMethodDeclaration(name, null, false, recordDeclaration, lang, ctx)
+            }
 
         return method
     }
@@ -222,8 +230,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             declaration = createMethodOrConstructor(name, recordDeclaration, lang, ctx.parent)
         } else {
             // a plain old function, outside any record scope
-            declaration =
-                NodeBuilder.newFunctionDeclaration(name, ctx.rawSignature, lang, ctx.parent)
+            declaration = newFunctionDeclaration(name, ctx.rawSignature, lang, ctx.parent)
         }
 
         // If we know our record declaration, but are outside the actual record, we
@@ -305,11 +312,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Check for varargs. Note the difference to Java: here, we don't have a named array
         // containing the varargs, but they are rather treated as kind of an invisible arg list that
         // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
-        // declaration that
-        // wraps this list
+        // declaration that wraps this list
         if (ctx.takesVarArgs()) {
-            val varargs =
-                NodeBuilder.newMethodParameterIn("va_args", UnknownType.getUnknownType(), true, "")
+            val varargs = newMethodParameterIn("va_args", UnknownType.getUnknownType(), true, "")
             varargs.isImplicit = true
             varargs.argumentIndex = i
             lang.scopeManager.addDeclaration(varargs)
@@ -330,7 +335,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 lang.scopeManager.currentFunction != null
         ) {
             val problem =
-                NodeBuilder.newProblemDeclaration(
+                newProblemDeclaration(
                     "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently."
                 )
 
@@ -399,7 +404,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 fieldName = matcher.group("name").trim()
             }
             result =
-                NodeBuilder.newFieldDeclaration(
+                newFieldDeclaration(
                     fieldName,
                     UnknownType.getUnknownType(),
                     emptyList(),
@@ -450,7 +455,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         if (recordDeclaration.constructors.isEmpty()) {
             val constructorDeclaration =
-                NodeBuilder.newConstructorDeclaration(
+                newConstructorDeclaration(
                     recordDeclaration.name,
                     recordDeclaration.name,
                     recordDeclaration
@@ -481,7 +486,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun handleTemplateTypeParameter(
         ctx: CPPASTSimpleTypeTemplateParameter
     ): TypeParamDeclaration {
-        return NodeBuilder.newTypeParamDeclaration(ctx.rawSignature, ctx.rawSignature)
+        return newTypeParamDeclaration(ctx.rawSignature, ctx.rawSignature)
     }
 
     private fun processMembers(ctx: IASTCompositeTypeSpecifier) {
