@@ -35,9 +35,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.IdentifierPass
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
+import de.fraunhofer.aisec.cpg.passes.followNextEOG
 import java.nio.file.Path
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
@@ -533,6 +536,43 @@ class ComplexDFAOrderEvaluationTest {
     }
 
     @Test
+    fun testSuccessMinimalInterprocUnclearReturnFSM() {
+        val functionOk =
+            tu.byNameOrNull<RecordDeclaration>("ComplexOrder")
+                ?.byNameOrNull<FunctionDeclaration>("minimalInterprocUnclearReturn")
+        assertNotNull(functionOk)
+
+        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        assertNotNull(p1Decl)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+
+        val nodesToOp = mutableMapOf<Node, String>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "init()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "start()"
+
+        val possibleInterprocFailures = mutableListOf<Node>()
+        val withoutInterprocNodes = mutableListOf<Node>()
+        val orderEvaluator =
+            DummyDFAOrderEvaluator(
+                consideredDecl,
+                nodesToOp,
+                mutableMapOf(),
+                possibleInterprocFailures,
+                withoutInterprocNodes
+            )
+        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+
+        assertFalse(everythingOk, "Expected incorrect order")
+        assertContains(
+            possibleInterprocFailures,
+            (functionOk.body as CompoundStatement).statements[3],
+            "Expected start() node in list of unknown nodes"
+        )
+        assertTrue(withoutInterprocNodes.isEmpty(), "No node should be clearly violating the rule")
+    }
+
+    @Test
     fun testSuccessMinimalInterprocFailFSM() {
         val functionOk =
             tu.byNameOrNull<RecordDeclaration>("ComplexOrder")
@@ -618,7 +658,7 @@ class ComplexDFAOrderEvaluationTest {
         referencedVertices: Set<Long>,
         nodesToOp: Map<Node, String>,
         thisPositionOfNode: Map<Node, Int>,
-        val afterInterprocNodes: MutableList<Node>,
+        val possibleInterprocFailures: MutableList<Node>,
         val withoutInterprocNodes: MutableList<Node>
     ) : DFAOrderEvaluator(referencedVertices, nodesToOp, thisPositionOfNode) {
         private val log: Logger = LoggerFactory.getLogger(DummyDFAOrderEvaluator::class.java)
@@ -629,7 +669,7 @@ class ComplexDFAOrderEvaluationTest {
             interproceduralFlow: Boolean
         ) {
             if (interproceduralFlow) {
-                afterInterprocNodes.add(node)
+                possibleInterprocFailures.add(node)
             } else {
                 withoutInterprocNodes.add(node)
             }
@@ -643,9 +683,29 @@ class ComplexDFAOrderEvaluationTest {
             fsm: DFA,
             interproceduralFlow: Boolean
         ) {
-            log.error(
-                "The DFA did not terminate in an accepted state. interproceduralFlow = $interproceduralFlow"
-            )
+            val lastNode = fsm.executionTrace[fsm.executionTrace.size - 1].second as CallExpression
+            var baseOfLastNode = getBaseOfNode(lastNode)
+            if (baseOfLastNode is DeclaredReferenceExpression) {
+                baseOfLastNode = baseOfLastNode.refersTo
+            }
+            val returnStatements =
+                lastNode.followNextEOG { edge ->
+                    edge.end is ReturnStatement &&
+                        ((edge.end as ReturnStatement).returnValue as? DeclaredReferenceExpression)
+                            ?.refersTo == baseOfLastNode
+                }
+            if (returnStatements?.isNotEmpty() == true) {
+                // There was a return statement returning the respective variable. The flow of
+                // execution could continue in the callee, so we mark this as unsure problem.
+                log.error(
+                    "The DFA did not terminate in an accepted state but the variable could be returned"
+                )
+                possibleInterprocFailures.add(lastNode)
+            } else {
+                log.error(
+                    "The DFA did not terminate in an accepted state. interproceduralFlow = $interproceduralFlow"
+                )
+            }
         }
     }
 }

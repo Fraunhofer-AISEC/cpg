@@ -252,6 +252,29 @@ open class DFAOrderEvaluator(
     }
 
     /**
+     * Returns the "base" node belonging to [node], on which the DFA is based on. Ideally, this is a
+     * variable declaration in the end.
+     */
+    fun getBaseOfNode(node: CallExpression): Node? {
+        val base =
+            when {
+                node is MemberCallExpression -> node.base
+                node is ConstructExpression -> node.astParent?.getSuitableDFGTarget()
+                node.thisPosition != null ->
+                    node.getBaseOfCallExpressionUsingArgument(node.thisPosition!!)
+                else -> {
+                    val dfgTarget = node.getSuitableDFGTarget()
+                    if (dfgTarget != null && dfgTarget is ConstructExpression) {
+                        dfgTarget.getSuitableDFGTarget()
+                    } else {
+                        dfgTarget
+                    }
+                }
+            }
+        return base
+    }
+
+    /**
      * Returns a [Pair] holding the "base" and the "operator" of the function/method call happening
      * in [node]. The operator is retrieved from the map [nodeToRelevantMethod] and is probably the
      * name of the function called. If the call is neither a [MemberCallExpression] nor a
@@ -274,21 +297,7 @@ open class DFAOrderEvaluator(
     ): Pair<String, String>? {
         // The "base" node, on which the DFA is based on. Ideally, this is a variable declaration in
         // the end.
-        var base =
-            when {
-                node is MemberCallExpression -> node.base
-                node is ConstructExpression -> node.astParent?.getSuitableDFGTarget()
-                node.thisPosition != null ->
-                    node.getBaseOfCallExpressionUsingArgument(node.thisPosition!!)
-                else -> {
-                    val dfgTarget = node.getSuitableDFGTarget()
-                    if (dfgTarget != null && dfgTarget is ConstructExpression) {
-                        dfgTarget.getSuitableDFGTarget()
-                    } else {
-                        dfgTarget
-                    }
-                }
-            }
+        var base = getBaseOfNode(node)
 
         if (base is DeclaredReferenceExpression && base.refersTo != null) {
             base = base.refersTo

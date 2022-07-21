@@ -198,6 +198,14 @@ public class ComplexOrder {
         p1.create();
         minimalInterprocUnclear2(p1);
     }
+
+    void minimalInterprocUnclearReturn() {
+        Botan2 p1 = new Botan2(1);
+        p1.create();
+        p1.init();
+        p1.start();
+        return p1;
+    }
 }
 
 public class Botan2 {
