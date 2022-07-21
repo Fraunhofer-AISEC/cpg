@@ -39,10 +39,10 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import java.nio.file.Path
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import org.junit.jupiter.api.Test
 
 @ExperimentalPython
 class PythonFrontendTest : BaseTest() {
@@ -139,8 +139,8 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("bar", callExpression.name)
         assertEquals(bar, callExpression.invokes.iterator().next())
 
-        val edge = callExpression.argumentsPropertyEdge[1]
-
+        val edge = callExpression.argumentsEdges[1]
+        assertNotNull(edge)
         assertEquals("s2", edge.getProperty(Properties.NAME))
 
         val s = bar.parameters.first()
@@ -483,7 +483,8 @@ class PythonFrontendTest : BaseTest() {
         // self.somevar = i
         val someVarDeclaration =
             ((bar.body as? CompoundStatement)?.statements?.get(0) as? DeclarationStatement)
-                ?.declarations?.first() as? FieldDeclaration
+                ?.declarations
+                ?.first() as? FieldDeclaration
         assertNotNull(someVarDeclaration)
         assertEquals("somevar", someVarDeclaration.name)
         assertEquals(i, (someVarDeclaration.initializer as? DeclaredReferenceExpression)?.refersTo)
@@ -498,7 +499,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("Foo.bar", fooMemCall.fqn)
         assertEquals(1, fooMemCall.invokes.size)
         assertEquals(bar, fooMemCall.invokes[0])
-        assertEquals("self", fooMemCall.base.name)
+        assertEquals("self", fooMemCall.base?.name)
     }
 
     @Test

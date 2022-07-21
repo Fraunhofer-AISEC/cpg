@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.getSubnodeOfTypeWithName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
@@ -44,9 +45,9 @@ import java.io.File
 import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.stream.Collectors
-import org.junit.jupiter.api.Assertions
+import kotlin.test.Test
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -57,12 +58,10 @@ internal class VariableResolverCppTest : BaseTest() {
     private var outerClass: RecordDeclaration? = null
     private var outerVarName: FieldDeclaration? = null
     private var outerStaticVarName: FieldDeclaration? = null
-    private var outerImpThis: FieldDeclaration? = null
+    private var function2Receiver: VariableDeclaration? = null
     private var innerClass: RecordDeclaration? = null
     private var innerVarName: FieldDeclaration? = null
     private var innerStaticVarName: FieldDeclaration? = null
-    private var innerImpThis: FieldDeclaration? = null
-    private val innerImpOuter: FieldDeclaration? = null
     private var main: FunctionDeclaration? = null
     private var outerFunction1: MethodDeclaration? = null
     private var forStatements: List<ForStatement>? = null
@@ -77,7 +76,7 @@ internal class VariableResolverCppTest : BaseTest() {
     @Throws(ExecutionException::class, InterruptedException::class)
     fun initTests() {
         val topLevelPath = "src/test/resources/variables_extended/cpp/"
-        val fileNames = Arrays.asList("scope_variables.cpp", "external_class.cpp")
+        val fileNames = listOf("scope_variables.cpp", "external_class.cpp")
         val fileLocations =
             fileNames
                 .stream()
@@ -112,27 +111,9 @@ internal class VariableResolverCppTest : BaseTest() {
         externStaticVarName =
             getSubnodeOfTypeWithName(externalClass, FieldDeclaration::class.java, "staticVarName")
         outerClass = getOfTypeWithName(nodes, RecordDeclaration::class.java, "ScopeVariables")
-        outerVarName =
-            outerClass!!
-                .fields
-                .stream()
-                .filter { n: FieldDeclaration -> n.name == "varName" }
-                .findFirst()
-                .get()
-        outerStaticVarName =
-            outerClass!!
-                .fields
-                .stream()
-                .filter { n: FieldDeclaration -> n.name == "staticVarName" }
-                .findFirst()
-                .get()
-        outerImpThis =
-            outerClass!!
-                .fields
-                .stream()
-                .filter { n: FieldDeclaration -> n.name == "this" }
-                .findFirst()
-                .get()
+        outerVarName = outerClass!!.byNameOrNull<FieldDeclaration>("varName")
+        outerStaticVarName = outerClass!!.byNameOrNull<FieldDeclaration>("staticVarName")
+        function2Receiver = outerClass!!.byNameOrNull<MethodDeclaration>("function2")?.receiver
         val classes = Util.filterCast(nodes, RecordDeclaration::class.java)
 
         // Inner class and its fields
@@ -150,13 +131,6 @@ internal class VariableResolverCppTest : BaseTest() {
                 .fields
                 .stream()
                 .filter { n: FieldDeclaration -> n.name == "staticVarName" }
-                .findFirst()
-                .get()
-        innerImpThis =
-            innerClass!!
-                .fields
-                .stream()
-                .filter { n: FieldDeclaration -> n.name == "this" }
                 .findFirst()
                 .get()
         main = getOfTypeWithName(nodes, FunctionDeclaration::class.java, "main")
@@ -214,7 +188,7 @@ internal class VariableResolverCppTest : BaseTest() {
         }
     }
 
-    fun getCallWithReference(literal: String): DeclaredReferenceExpression? {
+    private fun getCallWithReference(literal: String): DeclaredReferenceExpression? {
         val exp = callParamMap[literal]
         return if (exp is DeclaredReferenceExpression) exp else null
     }
@@ -237,7 +211,7 @@ internal class VariableResolverCppTest : BaseTest() {
     @Test
     fun testVarNameOfFirstLoopAccessed() {
         val asReference = getCallWithReference("func1_first_loop_varName")
-        Assertions.assertNotNull(asReference)
+        assertNotNull(asReference)
         val vDeclaration =
             getSubnodeOfTypeWithName(forStatements!![0], VariableDeclaration::class.java, "varName")
         VRUtil.assertUsageOf(callParamMap["func1_first_loop_varName"], vDeclaration)
@@ -277,7 +251,7 @@ internal class VariableResolverCppTest : BaseTest() {
     fun testMemberVarNameOverExplicitThis() {
         VRUtil.assertUsageOfMemberAndBase(
             callParamMap["func2_this_varName"],
-            outerImpThis,
+            function2Receiver,
             outerVarName
         )
     }

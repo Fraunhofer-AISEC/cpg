@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -58,7 +57,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
 
             // Forward to CallExpression. This will also take care of DFG edges.
             if (value != null) {
-                setInvokes(listOf(value as FunctionDeclaration))
+                invokes = listOf(value as FunctionDeclaration)
             }
         }
 
@@ -101,10 +100,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
             return false
         }
 
-        return super.equals(other) &&
-            constructor == other.constructor &&
-            arguments == other.arguments &&
-            PropertyEdge.propertyEqualsList(argumentsPropertyEdge, other.argumentsPropertyEdge)
+        return super.equals(other) && constructor == other.constructor
     }
 
     override fun hashCode(): Int {

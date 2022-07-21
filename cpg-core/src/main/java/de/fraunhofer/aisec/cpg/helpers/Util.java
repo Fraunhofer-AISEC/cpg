@@ -57,7 +57,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 public class Util {
@@ -192,7 +192,7 @@ public class Util {
     return t -> seen.add(by.apply(t));
   }
 
-  public static String getExtension(@NonNull File file) {
+  public static String getExtension(@NotNull File file) {
     int pos = file.getName().lastIndexOf('.');
     if (pos > 0) {
       return file.getName().substring(pos).toLowerCase();
@@ -202,26 +202,26 @@ public class Util {
   }
 
   public static <S> void warnWithFileLocation(
-      @NonNull LanguageFrontend lang, S astNode, Logger log, String format, Object... arguments) {
+      @NotNull LanguageFrontend lang, S astNode, Logger log, String format, Object... arguments) {
     log.warn(
         String.format("%s: %s", locationLink(lang.getLocationFromRawNode(astNode)), format),
         arguments);
   }
 
   public static <S> void errorWithFileLocation(
-      @NonNull LanguageFrontend lang, S astNode, Logger log, String format, Object... arguments) {
+      @NotNull LanguageFrontend lang, S astNode, Logger log, String format, Object... arguments) {
     log.error(
         String.format("%s: %s", locationLink(lang.getLocationFromRawNode(astNode)), format),
         arguments);
   }
 
   public static void warnWithFileLocation(
-      @NonNull Node node, Logger log, String format, Object... arguments) {
+      @NotNull Node node, Logger log, String format, Object... arguments) {
     log.warn(String.format("%s: %s", locationLink(node.getLocation()), format), arguments);
   }
 
   public static void errorWithFileLocation(
-      @NonNull Node node, Logger log, String format, Object... arguments) {
+      @NotNull Node node, Logger log, String format, Object... arguments) {
     log.error(String.format("%s: %s", locationLink(node.getLocation()), format), arguments);
   }
 
@@ -379,7 +379,7 @@ public class Util {
     return params;
   }
 
-  private static String generateParamName(int i, @NonNull Type targetType) {
+  private static String generateParamName(int i, @NotNull Type targetType) {
     Deque<String> hierarchy = new ArrayDeque<>();
     Type currLevel = targetType;
     while (currLevel != null) {

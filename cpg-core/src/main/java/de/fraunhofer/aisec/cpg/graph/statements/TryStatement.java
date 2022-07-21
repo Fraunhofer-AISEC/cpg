@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class TryStatement extends Statement {
@@ -50,7 +50,7 @@ public class TryStatement extends Statement {
   @SubGraph("AST")
   private List<PropertyEdge<CatchClause>> catchClauses = new ArrayList<>();
 
-  @NonNull
+  @NotNull
   public List<Statement> getResources() {
     return unwrap(this.resources);
   }
@@ -86,7 +86,7 @@ public class TryStatement extends Statement {
     this.finallyBlock = finallyBlock;
   }
 
-  @NonNull
+  @NotNull
   public List<CatchClause> getCatchClauses() {
     return unwrap(this.catchClauses);
   }

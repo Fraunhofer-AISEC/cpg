@@ -52,8 +52,8 @@ internal class SubgraphWalkerTest : BaseTest() {
         val ast = recordDeclaration.astChildren
         assertFalse(ast.isEmpty())
 
-        // should contain 4 AST nodes, 1 field (+1 this field), 1 method, 1 constructor
-        assertEquals(4, ast.size)
+        // should contain 3 AST nodes, 1 field, 1 method, 1 constructor
+        assertEquals(3, ast.size)
     }
 
     @Test

@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 public interface HasType {
   Type getType();
@@ -78,7 +78,7 @@ public interface HasType {
    * @param possibleSubTypes the set of possible sub types
    * @param root A list of already seen nodes which is used for detecting loops.
    */
-  void setPossibleSubTypes(List<Type> possibleSubTypes, @NonNull List<HasType> root);
+  void setPossibleSubTypes(List<Type> possibleSubTypes, @NotNull List<HasType> root);
 
   void registerTypeListener(TypeListener listener);
 

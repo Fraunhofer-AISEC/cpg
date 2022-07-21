@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.processing;
 
 import java.util.Iterator;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * The strategy determines the order in which nodes in the structure are traversed.
@@ -37,6 +37,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * @param <V>
  */
 public interface IStrategy<V> {
-  @NonNull
+  @NotNull
   Iterator<V> getIterator(V v);
 }

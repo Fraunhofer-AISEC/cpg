@@ -26,13 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.setCodeAndRegion
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import org.slf4j.LoggerFactory
 
@@ -70,7 +68,7 @@ object NodeBuilder {
         node.name = name!!
         node.setCodeAndRegion(lang, rawNode, code)
         node.fqn = fqn
-        node.setTemplate(template)
+        node.template = template
         log(node)
         return node
     }
@@ -200,14 +198,14 @@ object NodeBuilder {
     @JvmOverloads
     fun newDeclaredReferenceExpression(
         name: String?,
-        typeFullName: Type?,
+        type: Type? = UnknownType.getUnknownType(),
         code: String? = null,
         lang: LanguageFrontend? = null,
         rawNode: Any? = null
     ): DeclaredReferenceExpression {
         val node = DeclaredReferenceExpression()
         node.name = name!!
-        node.type = typeFullName
+        node.type = type
         node.setCodeAndRegion(lang, rawNode, code)
 
         log(node)
@@ -385,7 +383,7 @@ object NodeBuilder {
     ): CallExpression {
         val node = MemberCallExpression()
         node.name = name!!
-        node.setBase(base)
+        node.base = base
         node.member = member
         node.operatorCode = operatorCode
         node.setCodeAndRegion(lang, rawNode, code)
@@ -648,7 +646,6 @@ object NodeBuilder {
         fqn: String,
         kind: String,
         code: String? = null,
-        createThis: Boolean = true,
         lang: LanguageFrontend? = null,
         rawNode: Any? = null
     ): RecordDeclaration {
@@ -660,21 +657,6 @@ object NodeBuilder {
 
         if (code != null) {
             node.code = code
-        }
-
-        // In cpp, structs are also classes
-        if ((kind == "class" || (lang is CXXLanguageFrontend && kind == "struct")) && createThis) {
-            val thisDeclaration =
-                newFieldDeclaration(
-                    "this",
-                    TypeParser.createFrom(fqn, true),
-                    listOf(),
-                    "this",
-                    null,
-                    null,
-                    true
-                )
-            node.addField(thisDeclaration)
         }
 
         log(node)

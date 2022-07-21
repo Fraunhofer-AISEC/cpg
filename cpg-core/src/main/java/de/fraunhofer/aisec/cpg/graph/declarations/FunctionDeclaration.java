@@ -40,9 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the declaration or definition of a function. */
@@ -384,7 +383,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   @Override
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NotNull Declaration declaration) {
     if (declaration instanceof ParamVariableDeclaration) {
       addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
     }

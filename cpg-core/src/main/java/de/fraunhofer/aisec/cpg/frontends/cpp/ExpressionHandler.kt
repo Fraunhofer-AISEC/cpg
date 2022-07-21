@@ -215,7 +215,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             // we also need to "forward" our template parameters (if we have any) to the construct
             // expression since the construct expression will do the actual template instantiation
-            if (newExpression.templateParameters != null &&
+            if (
+                newExpression.templateParameters != null &&
                     newExpression.templateParameters.isNotEmpty()
             ) {
                 CallResolver.addImplicitTemplateParametersToCall(
@@ -232,22 +233,22 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * Gets all arguments a template was instantiated with. Note, that the arguments can either be
-     * Expressions referring to a value ot TypeExpressions referring to a type.
+     * Retrieves all arguments a template was instantiated with. Note, that the arguments can either
+     * be Expressions referring to a value ot TypeExpressions referring to a type.
      *
      * @param template
      * @return List of Nodes containing the all the arguments the template was instantiated with.
      */
-    private fun getTemplateArguments(template: CPPASTTemplateId): List<Node?> {
-        val templateArguments: MutableList<Node?> = ArrayList()
+    private fun getTemplateArguments(template: CPPASTTemplateId): List<Node> {
+        val templateArguments: MutableList<Node> = ArrayList()
         for (argument in template.templateArguments) {
             if (argument is IASTTypeId) {
                 val type = TypeParser.createFrom(argument.declSpecifier.toString(), true)
                 templateArguments.add(NodeBuilder.newTypeExpression(type.name, type))
             } else if (argument is IASTLiteralExpression) {
-                templateArguments.add(
-                    lang.expressionHandler.handle(argument as IASTInitializerClause)
-                )
+                lang.expressionHandler.handle(argument as IASTInitializerClause)?.let {
+                    templateArguments.add(it)
+                }
             }
         }
         return templateArguments
@@ -328,21 +329,23 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return castExpression
     }
 
-    private fun handleFieldReference(ctx: IASTFieldReference): Expression {
+    /**
+     * Translates a C/C++
+     * [member access](https://en.cppreference.com/w/cpp/language/operator_member_access) into a
+     * [MemberExpression].
+     */
+    private fun handleFieldReference(ctx: IASTFieldReference): MemberExpression {
         var base = handle(ctx.fieldOwner)
-        // Replace Literal this with a reference pointing to this
+
+        // Replace Literal this with a reference pointing to the receiver, which also called an
+        // implicit object parameter in C++ (see
+        // https://en.cppreference.com/w/cpp/language/overload_resolution#Implicit_object_parameter). It is sufficient to have the refers, it will be connected by the resolver later.
         if (base is Literal<*> && base.value == "this") {
             val location = base.location
-            val recordDeclaration = lang.scopeManager.currentRecord
-            base =
-                NodeBuilder.newDeclaredReferenceExpression(
-                    "this",
-                    if (recordDeclaration != null) recordDeclaration.getThis().type
-                    else UnknownType.getUnknownType(),
-                    base.code
-                )
+            base = NodeBuilder.newDeclaredReferenceExpression("this", base.type, base.code)
             base.location = location
         }
+
         return NodeBuilder.newMemberExpression(
             base,
             UnknownType.getUnknownType(),
@@ -435,20 +438,21 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     reference.operatorCode,
                     ctx.rawSignature
                 )
-            if ((ctx.functionNameExpression as? IASTFieldReference)?.fieldName is CPPASTTemplateId
+            if (
+                (ctx.functionNameExpression as? IASTFieldReference)?.fieldName is CPPASTTemplateId
             ) {
                 // Make necessary adjustments if we are handling a function template
                 val name =
                     ((ctx.functionNameExpression as IASTFieldReference).fieldName
                             as CPPASTTemplateId)
-                        .templateName.toString()
+                        .templateName
+                        .toString()
                 callExpression.name = name
-                callExpression.addExplicitTemplateParameters(
-                    getTemplateArguments(
+                getTemplateArguments(
                         (ctx.functionNameExpression as IASTFieldReference).fieldName
                             as CPPASTTemplateId
                     )
-                )
+                    .forEach { callExpression.addTemplateParameter(it) }
             }
         } else if (reference is BinaryOperator && reference.operatorCode == ".") {
             // We have a dot operator that was not classified as a member expression. This happens
@@ -466,18 +470,19 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // Classic C-style function pointer call -> let's extract the target
             callExpression =
                 NodeBuilder.newCallExpression(reference.input.name, "", reference.code, false)
-        } else if (ctx.functionNameExpression is IASTIdExpression &&
+        } else if (
+            ctx.functionNameExpression is IASTIdExpression &&
                 (ctx.functionNameExpression as IASTIdExpression).name is CPPASTTemplateId
         ) {
             val name =
                 ((ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId)
-                    .templateName.toString()
+                    .templateName
+                    .toString()
             callExpression = NodeBuilder.newCallExpression(name, name, ctx.rawSignature, true)
-            callExpression.addExplicitTemplateParameters(
-                getTemplateArguments(
+            getTemplateArguments(
                     (ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId
                 )
-            )
+                .forEach { callExpression.addTemplateParameter(it) }
         } else if (reference is CastExpression) {
             // this really is a cast expression in disguise
             return reference
@@ -645,7 +650,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
 
         val generatedType = TypeParser.createFrom(type.toString(), true, lang)
-        if (value.numberValue() == null // e.g. for 0x1p-52
+        if (
+            value.numberValue() == null // e.g. for 0x1p-52
             && value !is CStringValue
         ) {
             return NodeBuilder.newLiteral(value.toString(), generatedType, ctx.rawSignature)
@@ -896,7 +902,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             for (i in 1..3) {
                 val digit = this.substring(max(0, this.length - i))
                 suffix =
-                    if (digit.chars().allMatch { character: Int ->
+                    if (
+                        digit.chars().allMatch { character: Int ->
                             character == 'u'.code || character == 'l'.code
                         }
                     ) {

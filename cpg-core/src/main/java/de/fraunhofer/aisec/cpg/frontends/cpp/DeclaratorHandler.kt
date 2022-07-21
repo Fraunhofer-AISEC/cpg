@@ -27,10 +27,18 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTypeParamDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -70,39 +78,61 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
     }
 
+    /**
+     * This is sort of a catch-all function, if none of the previous specialized declarators match.
+     * It can be one of three things:
+     * - a wrapper around a nested declarator, in which case we delegate the handling to the nested
+     * one,
+     * - a field declaration, if this declaration occurs within a class or has a qualified name, or
+     * - a variable declaration in all the other cases.
+     */
     private fun handleDeclarator(ctx: IASTDeclarator): Declaration? {
-        // this is just a nested declarator, i.e. () wrapping the real declarator
+        // This is just a nested declarator, i.e. () wrapping the real declarator
         if (ctx.initializer == null && ctx.nestedDeclarator is IASTDeclarator) {
             return handle(ctx.nestedDeclarator)
         }
+
         val name = ctx.name.toString()
 
-        return if ((lang.scopeManager.currentScope is RecordScope ||
+        // Check, if the name is qualified or if we are within a record scope
+        return if (
+            (lang.scopeManager.currentScope is RecordScope ||
                 name.contains(lang.namespaceDelimiter))
         ) {
-            // forward it to handleFieldDeclarator
+            // If yes, treat this like a field declaration
             this.handleFieldDeclarator(ctx)
         } else {
-            // Only C++ has constructors and thus implicit (constructor) initialization calls
+            // If not, this is a normal variable declaration. First, we need to check if this
+            // declaration allows to have an implicit constructor initializer. Only C++ has
+            // constructors and thus implicit (constructor) initialization calls
             val implicitInitializerAllowed = lang.dialect is GPPLanguage
 
-            // type will be filled out later
             val declaration =
-                NodeBuilder.newVariableDeclaration(
+                newVariableDeclaration(
                     ctx.name.toString(),
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(), // Type will be filled out later by
+                    // handleSimpleDeclaration
                     ctx.rawSignature,
                     implicitInitializerAllowed
                 )
+
+            // Parse the initializer, if we have one
             val init = ctx.initializer
             if (init != null) {
                 declaration.initializer = lang.initializerHandler.handle(init)
             }
+
+            // Add this declaration to the current scope
             lang.scopeManager.addDeclaration(declaration)
+
             declaration
         }
     }
 
+    /**
+     * Translates (data members)[https://en.cppreference.com/w/cpp/language/data_members] of a C++
+     * class or C/C++ struct into a [FieldDeclaration].
+     */
     private fun handleFieldDeclarator(ctx: IASTDeclarator): FieldDeclaration {
         val initializer = ctx.initializer?.let { lang.initializerHandler.handle(it) }
 
@@ -112,7 +142,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             if (name.contains(lang.namespaceDelimiter)) {
                 val rr = name.split(lang.namespaceDelimiter).toTypedArray()
                 val fieldName = rr[rr.size - 1]
-                NodeBuilder.newFieldDeclaration(
+                newFieldDeclaration(
                     fieldName,
                     UnknownType.getUnknownType(),
                     emptyList(),
@@ -122,7 +152,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     true
                 )
             } else {
-                NodeBuilder.newFieldDeclaration(
+                newFieldDeclaration(
                     name,
                     UnknownType.getUnknownType(),
                     emptyList(),
@@ -144,13 +174,18 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         lang: LanguageFrontend,
         ctx: IASTNode,
     ): MethodDeclaration {
-        // check, if its a constructor
-        return if (name == recordDeclaration?.name) {
-            NodeBuilder.newConstructorDeclaration(name, null, recordDeclaration, lang, ctx)
-        } else NodeBuilder.newMethodDeclaration(name, null, false, recordDeclaration, lang, ctx)
+        // Check, if it's a constructor
+        val method =
+            if (name == recordDeclaration?.name) {
+                newConstructorDeclaration(name, null, recordDeclaration, lang, ctx)
+            } else {
+                newMethodDeclaration(name, null, false, recordDeclaration, lang, ctx)
+            }
+
+        return method
     }
 
-    fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration {
+    private fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration {
         // Programmers can wrap the function name in as many levels of parentheses as they like. CDT
         // treats these levels as separate declarators, so we need to get to the bottom for the
         // actual name...
@@ -174,7 +209,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // If this is a method, this is its record declaration
         var recordDeclaration: RecordDeclaration? = null
 
-        // remember, if this is a method declaration outside of the record
+        // remember, if this is a method declaration outside the record
         val outsideOfRecord =
             !(lang.scopeManager.currentRecord != null ||
                 lang.scopeManager.currentScope is TemplateScope)
@@ -195,12 +230,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             declaration = createMethodOrConstructor(name, recordDeclaration, lang, ctx.parent)
         } else {
             // a plain old function, outside any record scope
-            declaration =
-                NodeBuilder.newFunctionDeclaration(name, ctx.rawSignature, lang, ctx.parent)
+            declaration = newFunctionDeclaration(name, ctx.rawSignature, lang, ctx.parent)
         }
 
         // If we know our record declaration, but are outside the actual record, we
-        // need to temporary enter the record scope. This way, we can do a little trick
+        // need to temporarily enter the record scope. This way, we can do a little trick
         // and (manually) add the declaration to the AST element of the current scope
         // (probably the global scope), but associate it to the record scope. Otherwise, we
         // will get a lot of false-positives such as A::foo, when we look for the function foo.
@@ -230,6 +264,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // Enter the scope of the function itself
         lang.scopeManager.enterScope(declaration)
+
+        // Create the method receiver (if this is a method)
+        if (declaration is MethodDeclaration) {
+            createMethodReceiver(declaration)
+        }
+
         var i = 0
         for (param in ctx.parameters) {
             val arg = lang.parameterDeclarationHandler.handle(param)
@@ -272,11 +312,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Check for varargs. Note the difference to Java: here, we don't have a named array
         // containing the varargs, but they are rather treated as kind of an invisible arg list that
         // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
-        // declaration that
-        // wraps this list
+        // declaration that wraps this list
         if (ctx.takesVarArgs()) {
-            val varargs =
-                NodeBuilder.newMethodParameterIn("va_args", UnknownType.getUnknownType(), true, "")
+            val varargs = newMethodParameterIn("va_args", UnknownType.getUnknownType(), true, "")
             varargs.isImplicit = true
             varargs.argumentIndex = i
             lang.scopeManager.addDeclaration(varargs)
@@ -290,13 +328,14 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
 
         // We recognize an ambiguity here, but cannot solve it at the moment
-        if (name != "" &&
+        if (
+            name != "" &&
                 ctx.parent is CPPASTDeclarator &&
                 declaration.body == null &&
                 lang.scopeManager.currentFunction != null
         ) {
             val problem =
-                NodeBuilder.newProblemDeclaration(
+                newProblemDeclaration(
                     "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently."
                 )
 
@@ -306,6 +345,41 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
 
         return declaration
+    }
+
+    /**
+     * This function takes cares of creating a receiver and setting it to the supplied
+     * [MethodDeclaration]. In C++ this is called the
+     * [implicit object parameter](https://en.cppreference.com/w/cpp/language/overload_resolution#Implicit_object_parameter)
+     * .
+     */
+    private fun createMethodReceiver(declaration: MethodDeclaration) {
+        val recordDeclaration = declaration.recordDeclaration
+
+        // Create a pointer to the class type (if we know it)
+        val type =
+            if (recordDeclaration != null) {
+                recordDeclaration.toType().reference(PointerType.PointerOrigin.POINTER)
+            } else {
+                UnknownType.getUnknownType()
+            }
+
+        // Create the receiver.
+        val thisDeclaration =
+            newVariableDeclaration(
+                "this",
+                type = type,
+                lang = lang,
+                implicitInitializerAllowed = false
+            )
+        // Yes, this is implicit
+        thisDeclaration.isImplicit = true
+
+        // Add it to the scope of the method
+        lang.scopeManager.addDeclaration(thisDeclaration)
+
+        // We need to manually set the receiver, since the scope manager cannot figure this out
+        declaration.receiver = thisDeclaration
     }
 
     private fun handleFunctionPointer(ctx: IASTFunctionDeclarator, name: String): ValueDeclaration {
@@ -318,12 +392,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration == null) {
             // variable
             result =
-                NodeBuilder.newVariableDeclaration(
-                    name,
-                    UnknownType.getUnknownType(),
-                    ctx.rawSignature,
-                    true
-                )
+                newVariableDeclaration(name, UnknownType.getUnknownType(), ctx.rawSignature, true)
             result.initializer = initializer
         } else {
             // field
@@ -335,7 +404,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 fieldName = matcher.group("name").trim()
             }
             result =
-                NodeBuilder.newFieldDeclaration(
+                newFieldDeclaration(
                     fieldName,
                     UnknownType.getUnknownType(),
                     emptyList(),
@@ -365,7 +434,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString(),
                 kind,
                 ctx.rawSignature,
-                true,
                 lang
             )
 
@@ -383,17 +451,17 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         lang.scopeManager.enterScope(recordDeclaration)
 
-        lang.scopeManager.addDeclaration(recordDeclaration.getThis())
-
         processMembers(ctx)
 
         if (recordDeclaration.constructors.isEmpty()) {
             val constructorDeclaration =
-                NodeBuilder.newConstructorDeclaration(
+                newConstructorDeclaration(
                     recordDeclaration.name,
                     recordDeclaration.name,
                     recordDeclaration
                 )
+
+            createMethodReceiver(constructorDeclaration)
 
             // set this as implicit
             constructorDeclaration.isImplicit = true
@@ -418,7 +486,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun handleTemplateTypeParameter(
         ctx: CPPASTSimpleTypeTemplateParameter
     ): TypeParamDeclaration {
-        return NodeBuilder.newTypeParamDeclaration(ctx.rawSignature, ctx.rawSignature)
+        return newTypeParamDeclaration(ctx.rawSignature, ctx.rawSignature)
     }
 
     private fun processMembers(ctx: IASTCompositeTypeSpecifier) {
@@ -434,10 +502,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 }
 
 /**
- * This function returns the real name (declarator) of this [IASTFunctionDeclarator]. The name
- * itself can be wrapped in many layers of nested declarators, e.g., if the name is wrapped in ().
+ * This function returns the real name (declarator) of this [IASTDeclarator]. The name itself can be
+ * wrapped in many layers of nested declarators, e.g., if the name is wrapped in ().
  */
-fun IASTFunctionDeclarator.realName(): Pair<IASTDeclarator, Boolean> {
+fun IASTDeclarator.realName(): Pair<IASTDeclarator, Boolean> {
     var nameDecl: IASTDeclarator = this
     var hasPointer = false
     while (nameDecl.nestedDeclarator != null) {

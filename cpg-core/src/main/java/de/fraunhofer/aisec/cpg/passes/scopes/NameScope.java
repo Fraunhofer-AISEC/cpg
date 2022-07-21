@@ -26,13 +26,18 @@
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
+import java.util.regex.Pattern;
 
 public class NameScope extends StructureDeclarationScope {
 
   private String namePrefix;
+  private String delimiter = ".";
 
   public NameScope(Node node, String currentPrefix, String delimiter) {
     super(node);
+
+    this.delimiter = delimiter;
+
     if (currentPrefix == null || !currentPrefix.isEmpty()) {
       String nodeName = node.getName();
       // If the name already contains some form of prefix we have to remove it.
@@ -53,5 +58,16 @@ public class NameScope extends StructureDeclarationScope {
 
   public void setNamePrefix(String namePrefix) {
     this.namePrefix = namePrefix;
+  }
+
+  public String getSimpleName() {
+    // Split scoped named by delimiter
+    var names = this.scopedName.split(Pattern.quote(delimiter));
+
+    if (names.length > 0) {
+      return names[names.length - 1];
+    } else {
+      return null;
+    }
   }
 }

@@ -43,9 +43,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -172,7 +171,7 @@ public class SubgraphWalker {
     return identitySet.toSortedList();
   }
 
-  private static void flattenASTInternal(@NonNull Set<Node> identitySet, @NonNull Node n) {
+  private static void flattenASTInternal(@NotNull Set<Node> identitySet, @NotNull Node n) {
     // Add the node itself and abort if its already there, to detect possible loops
     if (!identitySet.add(n)) {
       return;

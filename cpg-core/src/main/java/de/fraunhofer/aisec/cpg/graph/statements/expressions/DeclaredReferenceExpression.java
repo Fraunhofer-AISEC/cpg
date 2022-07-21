@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**

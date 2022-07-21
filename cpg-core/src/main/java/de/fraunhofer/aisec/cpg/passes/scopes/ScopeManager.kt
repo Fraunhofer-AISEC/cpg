@@ -569,7 +569,7 @@ class ScopeManager {
      * Soley used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
      * [ValueDeclarationScope].
      */
-    fun addTypedef(typedef: TypedefDeclaration?) {
+    fun addTypedef(typedef: TypedefDeclaration) {
         val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
         if (scope == null) {
             LOGGER.error("Cannot add typedef. Not in declaration scope.")
@@ -579,9 +579,9 @@ class ScopeManager {
         scope.addTypedef(typedef)
 
         if (scope.astNode == null) {
-            lang!!.currentTU.addTypedef(typedef!!)
+            lang!!.currentTU.addTypedef(typedef)
         } else {
-            scope.astNode.addTypedef(typedef!!)
+            scope.astNode.addTypedef(typedef)
         }
     }
 
@@ -656,11 +656,13 @@ class ScopeManager {
     ): List<FunctionDeclaration> {
         var s = scope
 
+        val fqn = call.fqn
+
         // First, we need to check, whether we have some kind of scoping.
-        if (lang != null && call.fqn != null && call.fqn.contains(lang!!.namespaceDelimiter)) {
+        if (lang != null && fqn != null && fqn.contains(lang!!.namespaceDelimiter)) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = call.fqn.substring(0, call.fqn.lastIndexOf(lang!!.namespaceDelimiter))
+            val scopeName = fqn.substring(0, fqn.lastIndexOf(lang!!.namespaceDelimiter))
 
             // TODO: proper scope selection
 

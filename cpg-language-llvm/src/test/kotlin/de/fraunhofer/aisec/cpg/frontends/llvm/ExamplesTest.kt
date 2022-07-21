@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import java.nio.file.Path
+import kotlin.test.Test
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
 
 @Tag("llvm-examples")
 class ExamplesTest {

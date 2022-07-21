@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
 import java.util.function.Consumer
 import java.util.function.Supplier
-import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
@@ -76,20 +75,31 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a C++ (using
+     * directive)[https://en.cppreference.com/w/cpp/language/namespace#Using-directives] into a
+     * [UsingDirective]. However, currently, no actual adjustment of available names / scopes is
+     * done yet.
+     */
     private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
         return NodeBuilder.newUsingDirective(using.rawSignature, using.qualifiedName.toString())
     }
 
-    private fun handleNamespace(ctx: CPPASTNamespaceDefinition): Declaration {
+    /**
+     * Translates a C++ [namespace](https://en.cppreference.com/w/cpp/language/namespace#Namespaces)
+     * into a [NamespaceDeclaration].
+     */
+    private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
+        // Build a FQN out of the current scope prefix
         val fqn = lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString()
         val declaration = NodeBuilder.newNamespaceDeclaration(fqn, lang.getCodeFromRawNode(ctx))
 
         lang.scopeManager.addDeclaration(declaration)
 
-        // enter the namespace scope
+        // Enter the namespace scope
         lang.scopeManager.enterScope(declaration)
 
-        // finally, handle all namespace declarations
+        // Finally, handle all declarations within that namespace
         for (child in ctx.declarations) {
             handle(child)
         }
@@ -107,12 +117,19 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return problem
     }
 
+    /**
+     * Translates a C/C++ (function)[https://en.cppreference.com/w/cpp/language/functions]
+     * definition into a [FunctionDeclaration]. A definition, in contrast to a declaration also has
+     * a function body. Function declarations are most likely handled by [handleSimpleDeclaration].
+     * However, in both cases, the majority of the function is described by a declarator, which gets
+     * parsed by [DeclaratorHandler.handleFunctionDeclarator].
+     */
     private fun handleFunctionDefinition(ctx: IASTFunctionDefinition): Declaration {
         // TODO: A problem with cpp functions is that we cannot know if they may throw an exception
         //  as throw(...) is not compiler enforced (Problem for TryStatement)
-        val declarator = lang.declaratorHandler.handle(ctx.declarator)
+        val declaration = lang.declaratorHandler.handle(ctx.declarator)
 
-        if (declarator !is FunctionDeclaration) {
+        if (declaration !is FunctionDeclaration) {
             return ProblemDeclaration(
                 "declarator of function definition is not a function declarator"
             )
@@ -122,15 +139,22 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // returnType to the type property of the function. However, this might change with
         // https://github.com/Fraunhofer-AISEC/cpg/issues/824.
         val type = lang.typeOf(ctx.declarator, ctx.declSpecifier)
-        declarator.type = (type as? FunctionPointerType)?.returnType ?: UnknownType.getUnknownType()
-        declarator.setIsDefinition(true)
+        declaration.type =
+            (type as? FunctionPointerType)?.returnType ?: UnknownType.getUnknownType()
+        declaration.setIsDefinition(true)
 
-        // associated record declaration if this is a method or constructor
+        // Store the reference to a record declaration, if we managed to find one. This is most
+        // likely the case, if the function is defined within the class itself.
         val recordDeclaration =
-            if (declarator is MethodDeclaration) declarator.recordDeclaration else null
+            if (declaration is MethodDeclaration) declaration.recordDeclaration else null
+
+        // We want to determine, whether we are currently outside of a record. In this case, our
+        // function
+        // is either really a function or a method definition external to a class.
         val outsideOfRecord =
             !(lang.scopeManager.currentScope is RecordScope ||
                 lang.scopeManager.currentScope is TemplateScope)
+
         if (recordDeclaration != null) {
             if (outsideOfRecord) {
                 // everything inside the method is within the scope of its record
@@ -139,38 +163,40 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
             // update the definition
             var candidates: List<MethodDeclaration> =
-                if (declarator is ConstructorDeclaration) {
+                if (declaration is ConstructorDeclaration) {
                     recordDeclaration.constructors
                 } else {
                     recordDeclaration.methods
                 }
 
             // look for the method or constructor
-            candidates =
-                candidates
-                    .stream()
-                    .filter { m: MethodDeclaration -> m.signature == declarator.signature }
-                    .collect(Collectors.toList())
+            candidates = candidates.filter { it.signature == declaration.signature }
             if (candidates.isEmpty() && lang.scopeManager.currentScope !is TemplateScope) {
                 log.warn(
                     "Could not find declaration of method {} in record {}",
-                    declarator.name,
+                    declaration.name,
                     recordDeclaration.name
                 )
             } else if (candidates.size > 1) {
                 log.warn(
                     "Found more than one candidate to connect definition of method {} in record {} to its declaration. We will comply, but this is suspicious.",
-                    declarator.name,
+                    declaration.name,
                     recordDeclaration.name
                 )
             }
             for (candidate in candidates) {
-                candidate.definition = declarator
+                candidate.definition = declaration
             }
         }
-        lang.scopeManager.enterScope(declarator)
 
+        // Enter the scope of our function
+        lang.scopeManager.enterScope(declaration)
+
+        // Since this is a definition, the body should always be there, but we need to make sure in
+        // case of parsing errors.
         if (ctx.body != null) {
+            // Let the statement handler take care of the function body. The outcome should (always)
+            // be a compound statement, holding all other statements.
             val bodyStatement = lang.statementHandler.handle(ctx.body)
             if (bodyStatement is CompoundStatement) {
                 val statements = bodyStatement.statementEdges
@@ -187,52 +213,60 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     returnStatement.isImplicit = true
                     bodyStatement.addStatement(returnStatement)
                 }
-                declarator.body = bodyStatement
+                declaration.body = bodyStatement
             }
         }
-        lang.processAttributes(declarator, ctx)
-        lang.scopeManager.leaveScope(declarator)
+
+        lang.processAttributes(declaration, ctx)
+
+        lang.scopeManager.leaveScope(declaration)
         if (recordDeclaration != null && outsideOfRecord) {
             lang.scopeManager.leaveScope(recordDeclaration)
         }
 
-        // Check for declarations of the same function
+        // Check for declarations of the same function within the same translation unit to connect
+        // definitions and declarations.
+        // TODO: Extract this into a pass
         val declarationCandidates =
-            lang.currentTU.declarations
-                .stream()
-                .filter { obj: Declaration? -> FunctionDeclaration::class.java.isInstance(obj) }
-                .map { obj: Declaration? -> FunctionDeclaration::class.java.cast(obj) }
-                .filter { f: FunctionDeclaration ->
-                    !f.isDefinition && f.hasSameSignature(declarator)
-                }
-                .collect(Collectors.toList())
-        for (declaration in declarationCandidates) {
-            declaration.definition = declarator
-            for (i in declarator.parameters.indices) {
-                if (declaration.parameters[i].default != null) {
-                    declarator.parameters[i].default = declaration.parameters[i].default
+            lang.currentTU.declarations.filterIsInstance(FunctionDeclaration::class.java).filter {
+                !it.isDefinition && it.hasSameSignature(declaration)
+            }
+        for (candidate in declarationCandidates) {
+            candidate.definition = declaration
+            // Do some additional magic with default parameters, which I do not really understand
+            for (i in declaration.parameters.indices) {
+                if (candidate.parameters[i].default != null) {
+                    declaration.parameters[i].default = candidate.parameters[i].default
                 }
             }
         }
-        return declarator
+
+        return declaration
     }
 
-    private fun isTypedef(ctx: IASTSimpleDeclaration): Boolean {
-        return if (ctx.rawSignature.contains("typedef")) {
-            if (ctx.declSpecifier is CPPASTCompositeTypeSpecifier) {
-                // we need to make a difference between structs that have typedefs and structs that
-                // are typedefs themselves
-                ctx.declSpecifier.toString() == "struct" &&
-                    ctx.rawSignature.trim().startsWith("typedef")
+    /**
+     * A virtual property on a [IASTSimpleDeclaration] that determines whether this is a typedef or
+     * not. For some reason it seems that Eclipse CDT has no other means of differentiating a
+     * typedef declaration from a regular one, except looking at the raw code
+     */
+    val IASTSimpleDeclaration.isTypedef: Boolean
+        get() {
+            return if (this.rawSignature.contains("typedef")) {
+                if (this.declSpecifier is CPPASTCompositeTypeSpecifier) {
+                    // we need to make a difference between structs that have typedefs and structs
+                    // that are typedefs themselves
+                    this.declSpecifier.toString() == "struct" &&
+                        this.rawSignature.trim().startsWith("typedef")
+                } else {
+
+                    true
+                }
             } else {
-                true
+                false
             }
-        } else {
-            false
         }
-    }
 
-    private fun handleTemplateDeclaration(ctx: CPPASTTemplateDeclaration): Declaration {
+    private fun handleTemplateDeclaration(ctx: CPPASTTemplateDeclaration): TemplateDeclaration {
         val name = ctx.rawSignature.split("{").toTypedArray()[0].replace('\n', ' ').trim()
 
         val templateDeclaration: TemplateDeclaration =
@@ -255,7 +289,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             templateDeclaration.name = templateDeclaration.getRealizationDeclarations()[0].name
         } else
             (innerDeclaration as? RecordDeclaration)?.let {
-                fixTypeOfInnerDeclaration(templateDeclaration, it)
+                addParameterizedTypesToRecord(templateDeclaration, it)
             }
 
         addRealizationToScope(templateDeclaration)
@@ -328,32 +362,30 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * Fixed the Types created by the innerDeclaration with the ParameterizedTypes of the
-     * TemplateDeclaration
+     * Adjusts the type created in a [RecordDeclaration] to include the parametrized types of the
+     * [templateDeclaration]. This is necessary because templates are being parsed after all record
+     * types (e.g. used in receivers) are created.
      *
-     * @param templateDeclaration
-     * @param innerDeclaration If RecordDeclaration
+     * @param templateDeclaration the template
+     * @param innerDeclaration the record
      */
-    private fun fixTypeOfInnerDeclaration(
+    private fun addParameterizedTypesToRecord(
         templateDeclaration: TemplateDeclaration,
-        innerDeclaration: Declaration
+        innerDeclaration: RecordDeclaration
     ) {
-        var type: Type
-        type =
-            if ((innerDeclaration as RecordDeclaration).getThis() == null) {
-                TypeParser.createFrom(innerDeclaration.name, true)
-            } else {
-                innerDeclaration.getThis().type
-            }
         val parameterizedTypes =
             TypeManager.getInstance().getAllParameterizedType(templateDeclaration)
-        // Add ParameterizedTypes to type
-        addParameterizedTypesToType(type, parameterizedTypes)
 
-        // Add ParameterizedTypes to ConstructorDeclaration Type
-        for (constructorDeclaration in innerDeclaration.constructors) {
-            type = constructorDeclaration.type
-            addParameterizedTypesToType(type, parameterizedTypes)
+        // Loop through all the methods and adjust their receiver types
+        for (method in (innerDeclaration as? RecordDeclaration)?.methods ?: listOf()) {
+            // Add ParameterizedTypes to type
+            method.receiver?.let { addParameterizedTypesToType(it.type, parameterizedTypes) }
+        }
+
+        // Add parameterizedTypes to ConstructorDeclaration type and adjust their receiver types
+        for (constructor in innerDeclaration.constructors) {
+            constructor.receiver?.let { addParameterizedTypesToType(it.type, parameterizedTypes) }
+            addParameterizedTypesToType(constructor.type, parameterizedTypes)
         }
     }
 
@@ -371,6 +403,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             for (parameterizedType in parameterizedTypes) {
                 type.addGeneric(parameterizedType)
             }
+        } else if (type is PointerType) {
+            addParameterizedTypesToType(type.elementType, parameterizedTypes)
         }
     }
 
@@ -378,7 +412,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         var primaryDeclaration: Declaration? = null
         val sequence = DeclarationSequence()
 
-        // (ctx.declarators.size > 1 && ctx.declarators.any { it is IASTFunctionDeclarator })
         var useNameOfDeclarator = false
 
         // check, whether the declaration specifier also contains declarations, i.e. class
@@ -391,7 +424,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 if (primaryDeclaration != null) {
                     // handle typedef
-                    if (primaryDeclaration.name.isEmpty() &&
+                    if (
+                        primaryDeclaration.name.isEmpty() &&
                             ctx.rawSignature.trim().startsWith("typedef")
                     ) {
                         // This is a special case, which is a common idiom in C, to typedef a
@@ -426,7 +460,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        if (!isTypedef(ctx) &&
+        if (
+            !ctx.isTypedef &&
                 declSpecifier is CPPASTNamedTypeSpecifier &&
                 declSpecifier.name is CPPASTTemplateId
         ) {
@@ -448,7 +483,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 // Instead of a variable declaration, this is a typedef, so we handle it
                 // like this
-                if (isTypedef(ctx)) {
+                if (ctx.isTypedef) {
                     val declaration = handleTypedef(declarator, ctx, type)
 
                     sequence.addDeclaration(declaration)
@@ -482,22 +517,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         ctx: IASTSimpleDeclaration,
         type: Type
     ): Declaration {
-        // Handle function pointer types slightly differently
+        val (nameDecl: IASTDeclarator, _) = declarator.realName()
+
         val declaration =
-            if (declarator is IASTFunctionDeclarator) {
-                val code = lang.getCodeFromRawNode(ctx) ?: ""
-                val (nameDecl: IASTDeclarator, _) = declarator.realName()
-                TypeManager.getInstance()
-                    .handleSingleAlias(lang, code, type, nameDecl.name.toString())
-            } else {
-                TypeManager.getInstance()
-                    .handleSingleAlias(
-                        lang,
-                        lang.getCodeFromRawNode(ctx),
-                        type,
-                        declarator.name.toString()
-                    )
-            }
+            TypeManager.getInstance()
+                .createTypeAlias(lang, lang.getCodeFromRawNode(ctx), type, nameDecl.name.toString())
 
         // Add the declaration to the current scope
         lang.scopeManager.addDeclaration(declaration)

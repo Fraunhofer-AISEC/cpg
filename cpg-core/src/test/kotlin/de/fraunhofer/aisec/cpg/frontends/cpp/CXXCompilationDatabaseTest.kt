@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.io.File
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Test
 
 class CXXCompilationDatabaseTest {
     @Test
@@ -72,15 +72,15 @@ class CXXCompilationDatabaseTest {
 
             val s1 = mainFunc.getBodyStatementAs(1, CallExpression::class.java)
             assertNotNull(s1)
-            assertEquals(s1.invokes.iterator().next(), func1)
+            assertEquals(func1, s1.invokes.iterator().next())
 
             val s2 = mainFunc.getBodyStatementAs(2, CallExpression::class.java)
             assertNotNull(s2)
-            assertEquals(s2.invokes.iterator().next(), func2)
+            assertEquals(func2, s2.invokes.iterator().next())
 
             val s3 = mainFunc.getBodyStatementAs(3, CallExpression::class.java)
             assertNotNull(s3)
-            assertEquals(s3.invokes.iterator().next(), sysFunc)
+            assertEquals(sysFunc, s3.invokes.iterator().next())
 
             val s4 = mainFunc.getBodyStatementAs(4, Literal::class.java)
             assertNotNull(s4)
@@ -127,11 +127,20 @@ class CXXCompilationDatabaseTest {
 
             val s0 = mainFunc.getBodyStatementAs(0, Literal::class.java)
             assertNotNull(s0)
-            assertEquals(s0.value, value)
+            assertEquals(value, s0.value)
 
             val s1 = mainFunc.getBodyStatementAs(1, Literal::class.java)
             assertNotNull(s1)
-            assertEquals(s1.value, value)
+            assertEquals(value, s1.value)
         }
+    }
+
+    @Test
+    fun testCompilationDatabaseArch() {
+        val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_arch.json")
+        val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
+
+        val main = result.translationUnits.firstOrNull()?.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
     }
 }

@@ -42,7 +42,8 @@ abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CX
         // If we do not want to load includes into the CPG and the current fileLocation was included
         if (!lang.config.loadIncludes && ctx is ASTNode) {
             val astNode = ctx as ASTNode
-            if (astNode.fileLocation != null &&
+            if (
+                astNode.fileLocation != null &&
                     astNode.fileLocation.contextInclusionStatement != null
             ) {
                 log.debug("Skip parsing include file" + astNode.containingFilename)
@@ -66,6 +67,10 @@ abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CX
 
     abstract fun handleNode(node: T): S
 
+    /**
+     * This function should be called by classes that derive from [CXXHandler] to denote, that the
+     * supplied node (type) is not supported.
+     */
     protected fun handleNotSupported(node: T, name: String): S {
         Util.errorWithFileLocation(
             lang,

@@ -34,8 +34,8 @@ plugins {
     `maven-publish`
 
     id("org.sonarqube") version "3.4.0.2513"
-    id("com.diffplug.spotless") version "6.7.2"
-    kotlin("jvm") version "1.7.0" apply false
+    id("com.diffplug.spotless") version "6.8.0"
+    kotlin("jvm") version "1.7.10" apply false
 }
 
 allprojects {
@@ -157,11 +157,7 @@ subprojects {
 
     tasks.withType<KotlinCompile> {
         kotlinOptions {
-            // Note: this is not recommended, but this is the only way to deal with the fact,
-            // that the kotlin interactive shell is built with 1.8 and we need to build our
-            // inline functions in 1.8 bytecode, otherwise we cannot use the fluid API in
-            // the cpg-console.
-            jvmTarget = "1.8"
+            jvmTarget = "11"
             freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn")
         }
     }
