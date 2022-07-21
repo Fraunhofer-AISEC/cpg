@@ -232,8 +232,8 @@ class AnalysisTest {
         val query =
             forall(
                 "n: CallExpression",
-                ((field("n.invokes.name") `==` const("memcpy")) implies
-                    (sizeof(field("n.arguments[0]")) ge sizeof(field("n.arguments[1]")))),
+                ((field("n.invokesRelationship.name") `==` const("memcpy")) implies
+                    (sizeof(field("n.argumentsEdges[0]")) ge sizeof(field("n.argumentsEdges[1]")))),
                 result
             )
 
@@ -257,8 +257,8 @@ class AnalysisTest {
         val query =
             forall(
                 "n: CallExpression",
-                ((field("n.invokes.name") eq const("memcpy")) implies
-                    (sizeof(field("n.arguments[0]")) ge sizeof(field("n.arguments[1]")))),
+                ((field("n.invokesRelationship.name") eq const("memcpy")) implies
+                    (sizeof(field("n.argumentsEdges")) ge sizeof(field("n.argumentsEdges[1]")))),
                 result
             )
 
