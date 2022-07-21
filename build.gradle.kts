@@ -33,6 +33,7 @@ plugins {
     signing
     `maven-publish`
 
+    id("org.jetbrains.dokka") version "1.7.10"
     id("org.sonarqube") version "3.4.0.2513"
     id("com.diffplug.spotless") version "6.8.0"
     kotlin("jvm") version "1.7.10" apply false
@@ -40,21 +41,6 @@ plugins {
 
 allprojects {
     group = "de.fraunhofer.aisec"
-}
-
-tasks.named("sonarqube") {
-    subprojects.forEach {
-        dependsOn(it.tasks.withType<JacocoReport>())
-    }
-}
-
-subprojects {
-    apply(plugin = "java")
-    apply(plugin = "jacoco")
-    apply(plugin = "org.jetbrains.kotlin.jvm")
-    apply(plugin = "com.diffplug.spotless")
-    apply(plugin = "maven-publish")
-    apply(plugin = "signing")
 
     repositories {
         mavenCentral()
@@ -69,6 +55,22 @@ subprojects {
             }
         }
     }
+}
+
+tasks.named("sonarqube") {
+    subprojects.forEach {
+        dependsOn(it.tasks.withType<JacocoReport>())
+    }
+}
+
+subprojects {
+    apply(plugin = "java")
+    apply(plugin = "jacoco")
+    apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "org.jetbrains.dokka")
+    apply(plugin = "com.diffplug.spotless")
+    apply(plugin = "maven-publish")
+    apply(plugin = "signing")
 
     publishing {
         publications {
@@ -240,4 +242,8 @@ subprojects {
             licenseHeader(headerWithStars, "package").yearSeparator(" - ")
         }
     }
+}
+
+tasks.dokkaHtmlMultiModule.configure {
+    outputDirectory.set(buildDir.resolve("dokkaCustomMultiModuleOutput"))
 }
