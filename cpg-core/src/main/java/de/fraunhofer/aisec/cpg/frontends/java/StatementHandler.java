@@ -45,11 +45,9 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -612,7 +610,7 @@ public class StatementHandler
     CatchClause cClause = NodeBuilder.newCatchClause(catchCls.toString());
     lang.getScopeManager().enterScope(cClause);
 
-    HashSet<Type> possibleTypes = new HashSet<>();
+    List<Type> possibleTypes = new ArrayList<>();
     Type concreteType;
     if (catchCls.getParameter().getType() instanceof UnionType) {
       for (ReferenceType t : ((UnionType) catchCls.getParameter().getType()).getElements()) {

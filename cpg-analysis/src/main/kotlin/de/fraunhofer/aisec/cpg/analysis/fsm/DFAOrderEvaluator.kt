@@ -140,7 +140,8 @@ open class DFAOrderEvaluator(
                 if (node is CallExpression && nodeToRelevantMethod.contains(node)) {
                     val baseAndOp = getBaseAndOpOfNode(node, eogPath)
 
-                    if (baseAndOp != null &&
+                    if (
+                        baseAndOp != null &&
                             (!stopOnWrongBase ||
                                 wrongBases.none { wb ->
                                     wb.endsWith(baseAndOp.first.split("|")[1]) &&

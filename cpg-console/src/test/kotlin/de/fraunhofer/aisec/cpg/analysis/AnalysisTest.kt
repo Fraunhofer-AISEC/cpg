@@ -36,10 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import java.io.File
-import kotlin.test.assertFalse
+import kotlin.test.Test
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
-import org.junit.jupiter.api.Test
 
 class AnalysisTest {
     @Test

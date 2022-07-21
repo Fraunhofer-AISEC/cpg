@@ -450,7 +450,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
   }
 
   private DeclaredReferenceExpression handleThisExpression(Expression expr) {
-    // TODO: use a separate ThisExpression (issue #8)
     ThisExpr thisExpr = expr.asThisExpr();
     ResolvedTypeDeclaration resolvedValueDeclaration = thisExpr.resolve();
 
@@ -465,7 +464,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
   private DeclaredReferenceExpression handleSuperExpression(Expression expr) {
     // The actual type is hard to determine at this point, as we may not have full information
-    // about the inheritance structure. Thus we delay the resolving to the variable resolving
+    // about the inheritance structure. Thus, we delay the resolving to the variable resolving
     // process
     DeclaredReferenceExpression superExpression =
         NodeBuilder.newDeclaredReferenceExpression(

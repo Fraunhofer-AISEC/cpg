@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
     tags:
       - v*.**
   pull_request:
@@ -34,7 +34,8 @@ jobs:
         with:
           distribution: "zulu"
           java-version: "15"
-      - run: |
+      - name: Build
+        run: |
           cd cpg-language-go/src/main/golang
           ./build.sh
       - name: Archive cpgo library (amd64)
@@ -83,7 +84,7 @@ jobs:
           if [[ $VERSION != v* ]]
           then
             export VERSION=""
-            echo "Building version-less (master or feature branch)"
+            echo "Building version-less (main or feature branch)"
           else
             # make version more Java-friendly by dropping the 'v'
             export VERSION=${VERSION:1:${#VERSION}}
@@ -133,24 +134,24 @@ jobs:
           name: test
           path: "**/build/reports/tests"
       - name: Publish
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta')
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         run: |
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew --no-daemon -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION -PexperimentalTypeScript signMavenPublication build publish javadoc
+          ./gradlew --no-daemon -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION -PexperimentalTypeScript signMavenPublication build publish dokkaHtmlMultiModule
         env:
           VERSION: ${{ steps.determine_version.outputs.version }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       - name: Publish JavaDoc
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta')
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         uses: JamesIves/github-pages-deploy-action@releases/v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
-          FOLDER: cpg-core/build/docs/javadoc
+          FOLDER: build/dokkaCustomMultiModuleOutput
       - name: "Create Release"
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta')
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         id: create_release
         uses: actions/create-release@latest
         env:

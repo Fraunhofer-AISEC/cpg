@@ -37,15 +37,15 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.nio.file.Path
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
 
 @Tag("experimentalTypeScript")
 @ExperimentalTypeScript
-class TypescriptLanguageFrontendTest {
+class TypeScriptLanguageFrontendTest {
 
     @Test
     fun testFunction() {
@@ -187,7 +187,7 @@ class TypescriptLanguageFrontendTest {
         assertNotNull(preventDefault)
 
         assertEquals("preventDefault", preventDefault.name)
-        assertEquals("event", preventDefault.base.name)
+        assertEquals("event", preventDefault.base?.name)
 
         val apiUrl =
             function.getBodyStatementAs(1, DeclarationStatement::class.java)?.singleDeclaration

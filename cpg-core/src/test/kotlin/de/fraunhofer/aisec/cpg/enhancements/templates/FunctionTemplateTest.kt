@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.nio.file.Path
-import java.util.List
 import java.util.function.Predicate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -77,22 +76,16 @@ internal class FunctionTemplateTest : BaseTest() {
     ) {
         assertEquals(2, callFloat3.templateParameters!!.size)
         assertEquals(floatType, (callFloat3.templateParameters!![0] as TypeExpression).type)
-        assertEquals(
-            0,
-            callFloat3.templateParametersPropertyEdge!![0].getProperty(Properties.INDEX)
-        )
+        assertEquals(0, callFloat3.templateParametersEdges!![0].getProperty(Properties.INDEX))
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateParametersPropertyEdge!![0].getProperty(Properties.INSTANTIATION)
+            callFloat3.templateParametersEdges!![0].getProperty(Properties.INSTANTIATION)
         )
         assertEquals(int3, callFloat3.templateParameters!![1])
-        assertEquals(
-            1,
-            callFloat3.templateParametersPropertyEdge!![1].getProperty(Properties.INDEX)
-        )
+        assertEquals(1, callFloat3.templateParametersEdges!![1].getProperty(Properties.INDEX))
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateParametersPropertyEdge!![1].getProperty(Properties.INSTANTIATION)
+            callFloat3.templateParametersEdges!![1].getProperty(Properties.INSTANTIATION)
         )
     }
 
@@ -199,7 +192,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // Check invocation target with specialized function alongside template with same name
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation1.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation1.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -226,7 +219,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // exists
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation2.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation2.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -277,7 +270,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // Check if a TemplateCallExpression without template parameters performs autodeduction
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation3.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation3.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -322,7 +315,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // test invocation target when no autodeduction is possible, but defaults are provided
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation4.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation4.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -370,7 +363,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // test invocation target when no autodeduction is possible, but defaults are partially used
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation5.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation5.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -421,7 +414,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // test invocation target when template parameter produces a cast in an argument
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation6.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation6.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -475,7 +468,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // test invocation target when signature does not match but implicitcast can be applied
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation7.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation7.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -526,7 +519,7 @@ internal class FunctionTemplateTest : BaseTest() {
     fun testFunctionTemplateInMethod() {
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateMethod.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateMethod.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -542,8 +535,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, recordDeclaration.templates.size)
         assertTrue(recordDeclaration.templates.contains(templateDeclaration))
         val methodDeclaration =
-            findByUniquePredicate<MethodDeclaration>(flattenListIsInstance(result)) {
-                m: MethodDeclaration ->
+            findByUniquePredicate(flattenListIsInstance(result)) { m: MethodDeclaration ->
                 !m.isImplicit && m.name == "fixed_multiply"
             }
         assertEquals(1, templateDeclaration.realization.size)
@@ -558,33 +550,23 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, callExpression.invokes.size)
         assertEquals(methodDeclaration, callExpression.invokes[0])
         assertEquals(templateDeclaration, callExpression.templateInstantiation)
-        assertEquals(2, callExpression.templateParameters!!.size)
-        assertEquals("int", callExpression.templateParameters!![0].name)
+        assertEquals(2, callExpression.templateParameters.size)
+        assertEquals("int", callExpression.templateParameters[0].name)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callExpression.templateParametersPropertyEdge
-                ?.get(0)
-                ?.getProperty(Properties.INSTANTIATION)
+            callExpression.templateParametersEdges?.get(0)?.getProperty(Properties.INSTANTIATION)
         )
-        assertEquals(
-            0,
-            callExpression.templateParametersPropertyEdge!![0].getProperty(Properties.INDEX)
-        )
+        assertEquals(0, callExpression.templateParametersEdges!![0].getProperty(Properties.INDEX))
         val int5: Literal<Int> =
             findByUniquePredicate(
                 flattenListIsInstance(result),
                 Predicate { l: Literal<*> -> l.value == 5 }
             )
         assertEquals(int5, callExpression.templateParameters!![1])
-        assertEquals(
-            1,
-            callExpression.templateParametersPropertyEdge!![1].getProperty(Properties.INDEX)
-        )
+        assertEquals(1, callExpression.templateParametersEdges!![1].getProperty(Properties.INDEX))
         assertEquals(
             TemplateDeclaration.TemplateInitialization.DEFAULT,
-            callExpression.templateParametersPropertyEdge!!
-                .get(1)
-                .getProperty(Properties.INSTANTIATION)
+            callExpression.templateParametersEdges!!.get(1).getProperty(Properties.INSTANTIATION)
         )
     }
 
@@ -594,7 +576,7 @@ internal class FunctionTemplateTest : BaseTest() {
         // test invocation target when template parameter produces a cast in an argument
         val result =
             analyze(
-                List.of(Path.of(topLevel.toString(), "functionTemplateInvocation8.cpp").toFile()),
+                listOf(Path.of(topLevel.toString(), "functionTemplateInvocation8.cpp").toFile()),
                 topLevel,
                 true
             )
@@ -626,7 +608,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertTrue(
             callInt2.templateParameters
                 ?.get(1)
-                ?.nextDFG?.contains(templateDeclaration.parameters[1]) == true
+                ?.nextDFG
+                ?.contains(templateDeclaration.parameters[1]) == true
         )
 
         // Check inferred for second fixed_division call
@@ -656,7 +639,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertTrue(
             callDouble3.templateParameters
                 ?.get(1)
-                ?.nextDFG?.contains(templateDeclaration.parameters[1]) == true
+                ?.nextDFG
+                ?.contains(templateDeclaration.parameters[1]) == true
         )
 
         // Check return values

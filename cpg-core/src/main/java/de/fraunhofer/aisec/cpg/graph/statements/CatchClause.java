@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.statements;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import java.util.Objects;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class CatchClause extends Statement {
 
@@ -45,7 +45,7 @@ public class CatchClause extends Statement {
     return parameter;
   }
 
-  public void setParameter(@NonNull VariableDeclaration parameter) {
+  public void setParameter(@NotNull VariableDeclaration parameter) {
     this.parameter = parameter;
   }
 

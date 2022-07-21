@@ -43,12 +43,10 @@ import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ProblemNode;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
@@ -112,14 +110,16 @@ public class DeclarationHandler
           com.github.javaparser.ast.body.ConstructorDeclaration constructorDecl) {
     ResolvedConstructorDeclaration resolvedConstructor = constructorDecl.resolve();
 
+    var record = lang.getScopeManager().getCurrentRecord();
     de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration declaration =
         newConstructorDeclaration(
-            resolvedConstructor.getName(),
-            constructorDecl.toString(),
-            lang.getScopeManager().getCurrentRecord());
+            resolvedConstructor.getName(), constructorDecl.toString(), record);
     lang.getScopeManager().addDeclaration(declaration);
 
     lang.getScopeManager().enterScope(declaration);
+
+    createMethodReceiver(record, declaration);
+
     declaration.addThrowTypes(
         constructorDecl.getThrownExceptions().stream()
             .map(type -> TypeParser.createFrom(type.asString(), true))
@@ -171,19 +171,9 @@ public class DeclarationHandler
         newMethodDeclaration(
             resolvedMethod.getName(), methodDecl.toString(), methodDecl.isStatic(), record);
 
-    // create the receiver
-    var receiver =
-        newVariableDeclaration(
-            "this",
-            record != null
-                ? TypeParser.createFrom(record.getName(), false)
-                : UnknownType.getUnknownType(),
-            "this",
-            false);
-
-    functionDeclaration.setReceiver(receiver);
-
     lang.getScopeManager().enterScope(functionDeclaration);
+
+    createMethodReceiver(record, functionDeclaration);
 
     functionDeclaration.addThrowTypes(
         methodDecl.getThrownExceptions().stream()
@@ -237,6 +227,23 @@ public class DeclarationHandler
     return functionDeclaration;
   }
 
+  private void createMethodReceiver(
+      RecordDeclaration record, MethodDeclaration functionDeclaration) {
+    // create the receiver
+    var receiver =
+        newVariableDeclaration(
+            "this",
+            record != null
+                ? TypeParser.createFrom(record.getName(), false)
+                : UnknownType.getUnknownType(),
+            "this",
+            false);
+
+    functionDeclaration.setReceiver(receiver);
+
+    lang.getScopeManager().addDeclaration(receiver);
+  }
+
   public RecordDeclaration handleClassOrInterfaceDeclaration(
       ClassOrInterfaceDeclaration classInterDecl) {
     // TODO: support other kinds, such as interfaces
@@ -250,7 +257,7 @@ public class DeclarationHandler
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
-        newRecordDeclaration(fqn, "class", null, true, lang, classInterDecl);
+        newRecordDeclaration(fqn, "class", null, lang, classInterDecl);
     recordDeclaration.setSuperClasses(
         classInterDecl.getExtendedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)
@@ -286,7 +293,6 @@ public class DeclarationHandler
     recordDeclaration.setImportStatements(partitioned.get(false));
 
     lang.getScopeManager().enterScope(recordDeclaration);
-    lang.getScopeManager().addDeclaration(recordDeclaration.getThis());
 
     // TODO: 'this' identifier for multiple instances?
     for (BodyDeclaration<?> decl : classInterDecl.getMembers()) {
@@ -328,6 +334,29 @@ public class DeclarationHandler
     lang.processAnnotations(recordDeclaration, classInterDecl);
 
     lang.getScopeManager().leaveScope(recordDeclaration);
+
+    // We need special handling if this is a so called "inner class". In this case we need to store
+    // a "this" reference to the outer class, so methods can use a "qualified this"
+    // (OuterClass.this.someFunction()). This is the same as the java compiler does. The reference
+    // is stored as an implicit field.
+    if (lang.getScopeManager().getCurrentScope() instanceof RecordScope) {
+      var scope = (RecordScope) lang.getScopeManager().getCurrentScope();
+
+      var field =
+          NodeBuilder.newFieldDeclaration(
+              scope.getSimpleName() + ".this",
+              TypeParser.createFrom(scope.getScopedName(), false),
+              null,
+              null,
+              null,
+              false);
+      field.setImplicit(true);
+
+      lang.getScopeManager().enterScope(recordDeclaration);
+      lang.getScopeManager().addDeclaration(field);
+      lang.getScopeManager().leaveScope(recordDeclaration);
+    }
+
     return recordDeclaration;
   }
 

@@ -30,7 +30,7 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Node representing a declaration of a FunctionTemplate */
@@ -67,7 +67,7 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
   }
 
   @Override
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NotNull Declaration declaration) {
     if (declaration instanceof TypeParamDeclaration
         || declaration instanceof ParamVariableDeclaration) {
       addIfNotContains(this.parameters, declaration);

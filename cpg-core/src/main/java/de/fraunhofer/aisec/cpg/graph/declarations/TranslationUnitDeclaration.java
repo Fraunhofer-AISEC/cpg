@@ -33,12 +33,14 @@ import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** The top most declaration, representing a translation unit, for example a file. */
@@ -48,24 +50,24 @@ public class TranslationUnitDeclaration extends Declaration
   /** A list of declarations within this unit. */
   @Relationship(value = "DECLARATIONS", direction = "OUTGOING")
   @SubGraph("AST")
-  @NonNull
+  @NotNull
   private final List<PropertyEdge<Declaration>> declarations = new ArrayList<>();
 
   /** A list of includes within this unit. */
   @Relationship(value = "INCLUDES", direction = "OUTGOING")
   @SubGraph("AST")
-  @NonNull
+  @NotNull
   private final List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
   @Relationship(value = "NAMESPACES", direction = "OUTGOING")
   @SubGraph("AST")
-  @NonNull
+  @NotNull
   private final List<PropertyEdge<Declaration>> namespaces = new ArrayList<>();
 
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
-  @NonNull
+  @NotNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 
   /**
@@ -97,9 +99,9 @@ public class TranslationUnitDeclaration extends Declaration
    * @param <T> the type of the declaration
    * @return a {@code Set} containing the declarations, if any.
    */
-  @NonNull
+  @NotNull
   public <T extends Declaration> Set<T> getDeclarationsByName(
-      @NonNull String name, @NonNull Class<T> clazz) {
+      @NotNull String name, @NotNull Class<T> clazz) {
     return this.declarations.stream()
         .map(PropertyEdge::getEnd)
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
@@ -109,7 +111,7 @@ public class TranslationUnitDeclaration extends Declaration
   }
 
   @Nullable
-  public IncludeDeclaration getIncludeByName(@NonNull String name) {
+  public IncludeDeclaration getIncludeByName(@NotNull String name) {
     return this.includes.stream()
         .map(PropertyEdge::getEnd)
         .filter(declaration -> Objects.equals(declaration.getName(), name))
@@ -118,37 +120,36 @@ public class TranslationUnitDeclaration extends Declaration
   }
 
   @NotNull
-  @NonNull
   public List<Declaration> getDeclarations() {
     return unwrap(this.declarations);
   }
 
-  @NonNull
+  @NotNull
   public List<PropertyEdge<Declaration>> getDeclarationsPropertyEdge() {
     return this.declarations;
   }
 
-  @NonNull
+  @NotNull
   public List<IncludeDeclaration> getIncludes() {
     return unwrap(this.includes);
   }
 
-  @NonNull
+  @NotNull
   public List<PropertyEdge<IncludeDeclaration>> getIncludesPropertyEdge() {
     return this.includes;
   }
 
-  @NonNull
+  @NotNull
   public List<Declaration> getNamespaces() {
     return unwrap(this.namespaces);
   }
 
-  @NonNull
+  @NotNull
   public List<PropertyEdge<Declaration>> getNamespacesPropertyEdge() {
     return this.namespaces;
   }
 
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NotNull Declaration declaration) {
     if (declaration instanceof IncludeDeclaration) {
       addIfNotContains(includes, (IncludeDeclaration) declaration);
     } else if (declaration instanceof NamespaceDeclaration) {
@@ -159,12 +160,12 @@ public class TranslationUnitDeclaration extends Declaration
   }
 
   @Override
-  public @NonNull List<PropertyEdge<Statement>> getStatementEdges() {
+  public @NotNull List<PropertyEdge<Statement>> getStatementEdges() {
     return this.statements;
   }
 
   @Override
-  public void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements) {
+  public void setStatementEdges(@NotNull List<PropertyEdge<Statement>> statements) {
     this.statements = statements;
   }
 

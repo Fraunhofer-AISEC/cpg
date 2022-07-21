@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.nio.file.Path
-import java.util.stream.Collectors
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -104,10 +103,10 @@ internal class SuperCallTest : BaseTest() {
         refs = flattenIsInstance(getSuperField)
         val superFieldRef = findByUniquePredicate(refs) { "super.field" == it.code }
         assertTrue(fieldRef.base is DeclaredReferenceExpression)
-        assertRefersTo(fieldRef.base, subClass.`this`)
+        assertRefersTo(fieldRef.base, getField.receiver)
         assertEquals(field, fieldRef.refersTo)
         assertTrue(superFieldRef.base is DeclaredReferenceExpression)
-        assertRefersTo(superFieldRef.base, superClass.`this`)
+        assertRefersTo(superFieldRef.base, getSuperField.receiver)
         assertEquals(superField, superFieldRef.refersTo)
     }
 
@@ -133,24 +132,15 @@ internal class SuperCallTest : BaseTest() {
         val result = analyze("java", topLevel, true)
         val records = flattenListIsInstance<RecordDeclaration>(result)
         val superClass = findByUniqueName(records, "SuperClass")
-        assertEquals(2, superClass.fields.size)
-        assertEquals(
-            mutableSetOf("this", "field"),
-            superClass.fields.stream().map(Node::name).collect(Collectors.toSet())
-        )
+        assertEquals(1, superClass.fields.size)
+        assertEquals(listOf("field"), superClass.fields.map(Node::name))
 
         val subClass = findByUniqueName(records, "SubClass")
-        assertEquals(2, subClass.fields.size)
-        assertEquals(
-            mutableSetOf("this", "field"),
-            subClass.fields.stream().map(Node::name).collect(Collectors.toSet())
-        )
+        assertEquals(1, subClass.fields.size)
+        assertEquals(listOf("field"), subClass.fields.map(Node::name))
 
         val inner = findByUniqueName(records, "SubClass.Inner")
         assertEquals(1, inner.fields.size)
-        assertEquals(
-            mutableSetOf("this"),
-            inner.fields.stream().map(Node::name).collect(Collectors.toSet())
-        )
+        assertEquals(listOf("SubClass.this"), inner.fields.map(Node::name))
     }
 }

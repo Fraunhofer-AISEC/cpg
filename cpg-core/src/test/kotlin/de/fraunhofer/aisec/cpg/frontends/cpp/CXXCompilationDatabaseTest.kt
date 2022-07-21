@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.io.File
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Test
 
 class CXXCompilationDatabaseTest {
     @Test
@@ -46,8 +46,8 @@ class CXXCompilationDatabaseTest {
             )
         for (path in ccs) {
             val cc = File(path)
-            val tus = TestUtils.analyzeWithCompilationDatabase(cc, true)
-            val tu = tus.stream().findFirst().orElseThrow()
+            val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
+            val tu = result.translationUnits.firstOrNull()
             assertNotNull(tu)
 
             val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
@@ -72,15 +72,15 @@ class CXXCompilationDatabaseTest {
 
             val s1 = mainFunc.getBodyStatementAs(1, CallExpression::class.java)
             assertNotNull(s1)
-            assertEquals(s1.invokes.iterator().next(), func1)
+            assertEquals(func1, s1.invokes.iterator().next())
 
             val s2 = mainFunc.getBodyStatementAs(2, CallExpression::class.java)
             assertNotNull(s2)
-            assertEquals(s2.invokes.iterator().next(), func2)
+            assertEquals(func2, s2.invokes.iterator().next())
 
             val s3 = mainFunc.getBodyStatementAs(3, CallExpression::class.java)
             assertNotNull(s3)
-            assertEquals(s3.invokes.iterator().next(), sysFunc)
+            assertEquals(sysFunc, s3.invokes.iterator().next())
 
             val s4 = mainFunc.getBodyStatementAs(4, Literal::class.java)
             assertNotNull(s4)
@@ -95,8 +95,8 @@ class CXXCompilationDatabaseTest {
     @Test
     fun testCompilationDatabaseSimple() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_simple.json")
-        val tus = TestUtils.analyzeWithCompilationDatabase(cc, true)
-        val tu = tus.stream().findFirst().orElseThrow()
+        val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
+        val tu = result.translationUnits.firstOrNull()
         assertNotNull(tu)
         assertNotNull(tu)
 
@@ -105,6 +105,7 @@ class CXXCompilationDatabaseTest {
 
         val s0 = mainFunc.getBodyStatementAs(0, ReturnStatement::class.java)
         assertNotNull(s0)
+
         val retVal = s0.returnValue as Literal<*>
         assertEquals(retVal.value, 1)
     }
@@ -112,7 +113,8 @@ class CXXCompilationDatabaseTest {
     @Test
     fun testCompilationDatabaseMultiTUs() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_multi_tus.json")
-        val tus = TestUtils.analyzeWithCompilationDatabase(cc, true)
+        val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
+        val tus = result.translationUnits
         assertEquals(tus.size, 2)
 
         val ref = mapOf("main_tu_1.c" to 1, "main_tu_2.c" to 2)
@@ -125,11 +127,20 @@ class CXXCompilationDatabaseTest {
 
             val s0 = mainFunc.getBodyStatementAs(0, Literal::class.java)
             assertNotNull(s0)
-            assertEquals(s0.value, value)
+            assertEquals(value, s0.value)
 
             val s1 = mainFunc.getBodyStatementAs(1, Literal::class.java)
             assertNotNull(s1)
-            assertEquals(s1.value, value)
+            assertEquals(value, s1.value)
         }
+    }
+
+    @Test
+    fun testCompilationDatabaseArch() {
+        val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_arch.json")
+        val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
+
+        val main = result.translationUnits.firstOrNull()?.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
     }
 }

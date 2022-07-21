@@ -1,16 +1,19 @@
-*     @konradweiss @oxisto
+*                       @konradweiss @oxisto
 
-*.go  @oxisto
-cpg-language-go @oxisto
+*.go                    @oxisto
+cpg-language-go         @oxisto
 
-*.py  @maximiliankaul
-cpg-language-python @maximiliankaul
+*.ts                    @oxisto
+cpg-language-typescript @oxisto
 
-*.ll @KuechA
-cpg-language-llvm @KuechA
-cpg-analysis @KuechA
+*.py                    @maximiliankaul
+cpg-language-python     @maximiliankaul
 
-cpg-neo4j @peckto
+*.ll                    @KuechA
+cpg-language-llvm       @KuechA
+cpg-analysis            @KuechA
 
-build.gradle.kts @oxisto
-.github @oxisto
+cpg-neo4j               @peckto
+
+build.gradle.kts        @oxisto
+.github                 @oxisto

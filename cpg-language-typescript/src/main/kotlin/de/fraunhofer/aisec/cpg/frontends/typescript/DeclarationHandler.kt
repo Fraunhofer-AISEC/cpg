@@ -91,8 +91,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 } else {
                     "class"
                 },
-                this.lang.getCodeFromRawNode(node),
-                false
+                this.lang.getCodeFromRawNode(node)
             )
 
         this.lang.scopeManager.enterScope(record)

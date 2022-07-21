@@ -46,11 +46,13 @@ public class TypeResolver extends Pass {
   protected void processSecondOrderTypes(Type type) {
     Type root = type.getRoot();
 
-    if (typeState.get(root).contains(type)) {
+    var state = typeState.computeIfAbsent(root, (param) -> new ArrayList<>());
+
+    if (state.contains(type)) {
       return;
     }
 
-    typeState.get(root).add(type);
+    state.add(type);
     Type element = null;
 
     if (type instanceof SecondOrderType) {
@@ -62,8 +64,7 @@ public class TypeResolver extends Pass {
       return;
     }
     Type finalElement = element;
-    Type newElement =
-        typeState.get(root).stream().filter(t -> t.equals(finalElement)).findAny().orElse(null);
+    Type newElement = state.stream().filter(t -> t.equals(finalElement)).findAny().orElse(null);
 
     if (newElement != null) {
       ((SecondOrderType) type).setElementType(newElement);
@@ -217,8 +218,8 @@ public class TypeResolver extends Pass {
     }
   }
 
-  protected Set<Type> ensureUniqueSubTypes(Set<Type> subTypes) {
-    Set<Type> uniqueTypes = new HashSet<>();
+  protected List<Type> ensureUniqueSubTypes(Collection<Type> subTypes) {
+    List<Type> uniqueTypes = new ArrayList<>();
     for (Type subType : subTypes) {
       Collection<Type> trackedTypes;
       if (subType.isFirstOrderType()) {
@@ -230,7 +231,9 @@ public class TypeResolver extends Pass {
 
       for (Type t : trackedTypes) {
         if (t.equals(subType)) {
-          uniqueTypes.add(t);
+          if (!uniqueTypes.contains(t)) {
+            uniqueTypes.add(t);
+          }
           break;
         }
       }

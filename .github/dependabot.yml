@@ -17,7 +17,7 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
   - package-ecosystem: "npm"
-    directory: "/cpg-core/src/main/nodejs"
+    directory: "/cpg-language-typescript/src/main/nodejs"
     schedule:
       interval: "daily"
     labels:

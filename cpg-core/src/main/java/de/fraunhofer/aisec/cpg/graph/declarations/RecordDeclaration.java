@@ -40,9 +40,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.Transient;
 
@@ -74,7 +73,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
 
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
-  @NonNull
+  @NotNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 
   @Transient private List<Type> superClasses = new ArrayList<>();
@@ -97,7 +96,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
    * @param name the FQN
    */
   @Override
-  public void setName(@NonNull String name) {
+  public void setName(@NotNull String name) {
     // special case for record declarations! Constructor names need to match
     super.setName(name);
     for (PropertyEdge<ConstructorDeclaration> constructorEdge : constructors) {
@@ -140,14 +139,6 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
 
   public void setFields(List<FieldDeclaration> fields) {
     this.fields = PropertyEdge.transformIntoOutgoingPropertyEdgeList(fields, this);
-  }
-
-  public FieldDeclaration getThis() {
-    return fields.stream()
-        .map(PropertyEdge::getEnd)
-        .filter(f -> f.getName().equals("this"))
-        .findFirst()
-        .orElse(null);
   }
 
   public List<MethodDeclaration> getMethods() {
@@ -315,12 +306,12 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   }
 
   @Override
-  public @NonNull List<PropertyEdge<Statement>> getStatementEdges() {
+  public @NotNull List<PropertyEdge<Statement>> getStatementEdges() {
     return this.statements;
   }
 
   @Override
-  public void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements) {
+  public void setStatementEdges(@NotNull List<PropertyEdge<Statement>> statements) {
     this.statements = statements;
   }
 
@@ -368,7 +359,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   }
 
   @Override
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NotNull Declaration declaration) {
     if (declaration instanceof ConstructorDeclaration) {
       addIfNotContains(this.constructors, (ConstructorDeclaration) declaration);
     } else if (declaration instanceof MethodDeclaration) {

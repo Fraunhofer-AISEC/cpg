@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.Collection;
 import java.util.List;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 public interface DeclarationHolder {
 
@@ -41,7 +41,7 @@ public interface DeclarationHolder {
    *
    * @param declaration the declaration
    */
-  void addDeclaration(@NonNull Declaration declaration);
+  void addDeclaration(@NotNull Declaration declaration);
 
   default <N extends Declaration> void addIfNotContains(Collection<N> collection, N declaration) {
     if (!collection.contains(declaration)) {
@@ -85,6 +85,6 @@ public interface DeclarationHolder {
     }
   }
 
-  @NonNull
+  @NotNull
   List<Declaration> getDeclarations();
 }

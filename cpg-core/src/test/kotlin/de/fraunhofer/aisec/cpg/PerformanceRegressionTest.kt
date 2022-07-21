@@ -40,8 +40,8 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import kotlin.io.path.writeText
+import kotlin.test.Test
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertTimeout
 
 class PerformanceRegressionTest {

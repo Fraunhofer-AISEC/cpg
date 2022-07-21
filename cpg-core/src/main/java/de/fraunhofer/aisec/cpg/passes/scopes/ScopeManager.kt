@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -155,7 +156,7 @@ class ScopeManager {
                     existing.structureDeclarations.addAll(entry.value.structureDeclarations)
 
                     // copy over the typedefs as well just to be sure
-                    existing.typedefs.addAll(entry.value.typedefs)
+                    existing.typedefs.putAll(entry.value.typedefs)
 
                     // also update the AST node of the existing scope to the "latest" we have seen
                     existing.astNode = entry.value.astNode
@@ -372,25 +373,34 @@ class ScopeManager {
      * that is associated with the current scope through [ValueDeclarationScope.addValueDeclaration]
      * and [StructureDeclarationScope.addStructureDeclaration].
      *
-     * @param declaration
+     * Setting [Scope.astNode] to false is useful, if you want to make sure a certain declaration is
+     * visible within a scope, but is not directly part of the scope's AST. An example is the way
+     * C/C++ handles unscoped enum constants. They are visible in the enclosing scope, e.g., a
+     * translation unit, but they are added to the AST of their enum declaration, not the
+     * translation unit. The enum declaration is then added to the translation unit.
+     *
+     * @param declaration the declaration to add
+     * @param addToAST specifies, whether the declaration also gets added to the [Scope.astNode] of
+     * the current scope (if it implements [DeclarationHolder]). Defaults to true.
      */
-    fun addDeclaration(declaration: Declaration?) {
+    @JvmOverloads
+    fun addDeclaration(declaration: Declaration?, addToAST: Boolean = true) {
         when (declaration) {
             is ProblemDeclaration,
             is IncludeDeclaration -> {
                 // directly add problems and includes to the global scope
-                this.globalScope?.addDeclaration(declaration)
+                this.globalScope?.addDeclaration(declaration, addToAST)
             }
             is ValueDeclaration -> {
                 val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
-                scope?.addValueDeclaration(declaration)
+                scope?.addValueDeclaration(declaration, addToAST)
             }
             is RecordDeclaration,
             is NamespaceDeclaration,
             is EnumDeclaration,
             is TemplateDeclaration -> {
                 val scope = this.firstScopeIsInstanceOrNull<StructureDeclarationScope>()
-                scope?.addDeclaration(declaration)
+                scope?.addDeclaration(declaration, addToAST)
             }
         }
     }
@@ -559,7 +569,7 @@ class ScopeManager {
      * Soley used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
      * [ValueDeclarationScope].
      */
-    fun addTypedef(typedef: TypedefDeclaration?) {
+    fun addTypedef(typedef: TypedefDeclaration) {
         val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
         if (scope == null) {
             LOGGER.error("Cannot add typedef. Not in declaration scope.")
@@ -569,23 +579,30 @@ class ScopeManager {
         scope.addTypedef(typedef)
 
         if (scope.astNode == null) {
-            lang!!.currentTU.addTypedef(typedef!!)
+            lang!!.currentTU.addTypedef(typedef)
         } else {
-            scope.astNode.addTypedef(typedef!!)
+            scope.astNode.addTypedef(typedef)
         }
     }
 
-    private fun getCurrentTypedefs(scope: Scope?): Collection<TypedefDeclaration> {
+    private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
         val typedefs = mutableMapOf<Type, TypedefDeclaration>()
 
-        var current = scope
+        val path = mutableListOf<ValueDeclarationScope>()
+        var current = searchScope
 
+        // We need to build a path from the current scope to the top most one
         while (current != null) {
-            if (scope is ValueDeclarationScope) {
-                scope.typedefs.forEach { typedefs.putIfAbsent(it.alias, it) }
+            if (current is ValueDeclarationScope) {
+                path += current
             }
-
             current = current.parent
+        }
+
+        // And then follow the path in reverse. This ensures us that a local definition
+        // overwrites / shadows one that was there on a higher scope.
+        for (scope in path.reversed()) {
+            typedefs.putAll(scope.typedefs)
         }
 
         return typedefs.values
@@ -639,11 +656,13 @@ class ScopeManager {
     ): List<FunctionDeclaration> {
         var s = scope
 
+        val fqn = call.fqn
+
         // First, we need to check, whether we have some kind of scoping.
-        if (lang != null && call.fqn != null && call.fqn.contains(lang!!.namespaceDelimiter)) {
+        if (lang != null && fqn != null && fqn.contains(lang!!.namespaceDelimiter)) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = call.fqn.substring(0, call.fqn.lastIndexOf(lang!!.namespaceDelimiter))
+            val scopeName = fqn.substring(0, fqn.lastIndexOf(lang!!.namespaceDelimiter))
 
             // TODO: proper scope selection
 

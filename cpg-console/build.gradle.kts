@@ -51,10 +51,6 @@ tasks.withType<Test> {
     }
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8" // important, since ki is 1.8 and otherwise inlining wont work
-}
-
 tasks.withType<JavaCompile> {
     sourceCompatibility = "11"
     targetCompatibility = "11"
@@ -68,24 +64,16 @@ dependencies {
     // CPG
     api(project(":cpg-core"))
     api(project(":cpg-analysis"))
-    api(project(":cpg-language-llvm"))
-    api(project(":cpg-language-python"))
-    api(project(":cpg-language-go"))
     api(project(":cpg-neo4j"))
 
-    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.2")
+    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.18.0")
 
-    // JUnit
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
-    testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])
-    testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
+    testImplementation(testFixtures(project(":cpg-core")))
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation("org.jline:jline:3.21.0")
 
-    implementation("org.jetbrains.kotlinx:ki-shell:0.4.5")
+    implementation("org.jetbrains.kotlinx:ki-shell:0.5.2")
 }

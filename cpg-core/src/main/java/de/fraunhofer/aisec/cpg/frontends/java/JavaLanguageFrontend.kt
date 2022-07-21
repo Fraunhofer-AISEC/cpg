@@ -299,7 +299,8 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
     }
 
     fun recoverTypeFromUnsolvedException(ex: Throwable): String? {
-        if (ex is UnsolvedSymbolException || ex.cause != null && ex.cause is UnsolvedSymbolException
+        if (
+            ex is UnsolvedSymbolException || ex.cause != null && ex.cause is UnsolvedSymbolException
         ) {
             val qualifier: String =
                 if (ex is UnsolvedSymbolException) {

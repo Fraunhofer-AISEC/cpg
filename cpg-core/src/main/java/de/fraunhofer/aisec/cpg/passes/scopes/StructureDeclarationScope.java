@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
 import java.util.ArrayList;
 import java.util.List;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 public class StructureDeclarationScope extends ValueDeclarationScope {
 
@@ -39,17 +39,17 @@ public class StructureDeclarationScope extends ValueDeclarationScope {
     return structureDeclarations;
   }
 
-  public void setStructureDeclarations(@NonNull List<Declaration> structureDeclarations) {
+  public void setStructureDeclarations(@NotNull List<Declaration> structureDeclarations) {
     this.structureDeclarations = structureDeclarations;
   }
 
-  @NonNull private List<Declaration> structureDeclarations = new ArrayList<>();
+  @NotNull private List<Declaration> structureDeclarations = new ArrayList<>();
 
   public StructureDeclarationScope(Node node) {
     super(node);
   }
 
-  private void addStructureDeclaration(@NonNull Declaration declaration) {
+  private void addStructureDeclaration(@NotNull Declaration declaration) {
     structureDeclarations.add(declaration);
 
     if (astNode instanceof DeclarationHolder) {
@@ -62,9 +62,9 @@ public class StructureDeclarationScope extends ValueDeclarationScope {
   }
 
   @Override
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NotNull Declaration declaration, boolean addToAST) {
     if (declaration instanceof ValueDeclaration) {
-      addValueDeclaration((ValueDeclaration) declaration);
+      addValueDeclaration((ValueDeclaration) declaration, addToAST);
     } else {
       addStructureDeclaration(declaration);
     }

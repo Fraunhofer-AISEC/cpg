@@ -66,12 +66,14 @@ public class TypedefDeclaration extends Declaration {
       return false;
     }
     TypedefDeclaration that = (TypedefDeclaration) o;
-    return Objects.equals(type, that.type) && Objects.equals(alias, that.alias);
+    return super.equals(that)
+        && Objects.equals(type, that.type)
+        && Objects.equals(alias, that.alias);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(type, alias);
+    return Objects.hash(super.hashCode(), type, alias);
   }
 
   @Override

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
@@ -44,9 +44,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,11 +56,11 @@ public class TypeManager {
   private static Class<?> llvmClass = null;
   private static Class<?> pythonClass = null;
   private static Class<?> goClass = null;
+  private static Class<?> typescriptClass = null;
 
   static {
     try {
       llvmClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
-
     } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
       log.info("LLVM frontend not loaded.");
     }
@@ -77,6 +76,12 @@ public class TypeManager {
       log.info("Go frontend not loaded.");
     } catch (LinkageError ex) {
       log.error("Go frontend was found, but could not be loaded", ex);
+    }
+    try {
+      typescriptClass =
+          Class.forName("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend");
+    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
+      log.info("TypeScript frontend not loaded.");
     }
   }
 
@@ -103,7 +108,7 @@ public class TypeManager {
           "ppc_fp128");
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
-  @NonNull private static TypeManager INSTANCE = new TypeManager();
+  @NotNull private static TypeManager instance = new TypeManager();
   private static boolean typeSystemActive = true;
 
   public enum Language {
@@ -116,11 +121,11 @@ public class TypeManager {
     UNKNOWN
   }
 
-  @NonNull
-  private final Map<HasType, Set<Type>> typeCache =
+  @NotNull
+  private final Map<HasType, List<Type>> typeCache =
       Collections.synchronizedMap(new IdentityHashMap<>());
 
-  @NonNull
+  @NotNull
   private Map<String, RecordDeclaration> typeToRecord =
       Collections.synchronizedMap(new HashMap<>());
 
@@ -129,15 +134,15 @@ public class TypeManager {
    * to the ParameterizedType to be able to resolve the Type of the fields, since ParameterizedTypes
    * are unique to the RecordDeclaration and are not merged.
    */
-  @NonNull
+  @NotNull
   private final Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters =
       Collections.synchronizedMap(new HashMap<>());
 
-  @NonNull
+  @NotNull
   private final Map<TemplateDeclaration, List<ParameterizedType>> templateToTypeParameters =
       Collections.synchronizedMap(new HashMap<>());
 
-  @NonNull
+  @NotNull
   private final Map<Type, List<Type>> typeState =
       Collections.synchronizedMap(new HashMap<>()); // Stores all the unique types ObjectType as
   // Key and
@@ -156,7 +161,7 @@ public class TypeManager {
   private boolean noFrontendWarningIssued = false;
 
   public static void reset() {
-    INSTANCE = new TypeManager();
+    instance = new TypeManager();
   }
 
   /**
@@ -216,7 +221,7 @@ public class TypeManager {
    * @return List containing all ParameterizedTypes the templateDeclaration defines. If the
    *     templateDeclaration is not registered, an empty list is returned.
    */
-  @NonNull
+  @NotNull
   public List<ParameterizedType> getAllParameterizedType(TemplateDeclaration templateDeclaration) {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
       return this.templateToTypeParameters.get(templateDeclaration);
@@ -293,7 +298,7 @@ public class TypeManager {
     }
   }
 
-  @NonNull
+  @NotNull
   public Map<Type, List<Type>> getTypeState() {
     return typeState;
   }
@@ -323,7 +328,7 @@ public class TypeManager {
   private TypeManager() {}
 
   public static TypeManager getInstance() {
-    return INSTANCE;
+    return instance;
   }
 
   public static boolean isTypeSystemActive() {
@@ -335,17 +340,20 @@ public class TypeManager {
   }
 
   @NotNull
-  public Map<HasType, Set<Type>> getTypeCache() {
+  public Map<HasType, List<Type>> getTypeCache() {
     return typeCache;
   }
 
   public synchronized void cacheType(HasType node, Type type) {
     if (!isUnknown(type)) {
-      typeCache.computeIfAbsent(node, n -> new HashSet<>()).add(type);
+      List<Type> types = typeCache.computeIfAbsent(node, n -> new ArrayList<>());
+      if (!types.contains(type)) {
+        types.add(type);
+      }
     }
   }
 
-  public void setLanguageFrontend(@NonNull LanguageFrontend frontend) {
+  public void setLanguageFrontend(@NotNull LanguageFrontend frontend) {
     this.frontend = frontend;
   }
 
@@ -391,12 +399,12 @@ public class TypeManager {
   private Optional<Type> rewrapType(
       Type type,
       int depth,
-      PointerType.PointerOrigin pointerOrigin,
+      PointerType.PointerOrigin[] pointerOrigins,
       boolean reference,
       ReferenceType referenceType) {
     if (depth > 0) {
-      for (int i = 0; i < depth; i++) {
-        type = type.reference(pointerOrigin);
+      for (int i = depth - 1; i >= 0; i--) {
+        type = type.reference(pointerOrigins[i]);
       }
     }
     if (reference) {
@@ -411,10 +419,10 @@ public class TypeManager {
     // iterations over "types". Reduce number of iterations.
     Set<Type> original = new HashSet<>(types);
     Set<Type> unwrappedTypes = new HashSet<>();
+    PointerType.PointerOrigin[] pointerOrigins = new PointerType.PointerOrigin[0];
     int depth = 0;
     int counter = 0;
     boolean reference = false;
-    PointerType.PointerOrigin pointerOrigin = null;
     ReferenceType referenceType = null;
 
     Type t1 = types.stream().findAny().orElse(null);
@@ -443,12 +451,22 @@ public class TypeManager {
           return Collections.emptySet();
         }
         unwrappedTypes.add(t.getRoot());
-        pointerOrigin = ((PointerType) t).getPointerOrigin();
+
+        pointerOrigins = new PointerType.PointerOrigin[depth];
+        var containedType = t2;
+        int i = 0;
+        pointerOrigins[i] = ((PointerType) containedType).getPointerOrigin();
+        while (containedType instanceof PointerType) {
+          containedType = ((PointerType) containedType).getElementType();
+          if (containedType instanceof PointerType) {
+            pointerOrigins[++i] = ((PointerType) containedType).getPointerOrigin();
+          }
+        }
       }
     }
 
     wrapState.setDepth(depth);
-    wrapState.setPointerOrigin(pointerOrigin);
+    wrapState.setPointerOrigin(pointerOrigins);
     wrapState.setReference(reference);
     wrapState.setReferenceType(referenceType);
 
@@ -459,8 +477,8 @@ public class TypeManager {
     }
   }
 
-  @NonNull
-  public Optional<Type> getCommonType(@NonNull Collection<Type> types) {
+  @NotNull
+  public Optional<Type> getCommonType(@NotNull Collection<Type> types) {
     // TODO: Documentation needed.
     boolean sameType =
         types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
@@ -479,7 +497,7 @@ public class TypeManager {
       return rewrapType(
           types.iterator().next(),
           wrapState.getDepth(),
-          wrapState.getPointerOrigin(),
+          wrapState.getPointerOrigins(),
           wrapState.isReference(),
           wrapState.getReferenceType());
     }
@@ -551,7 +569,7 @@ public class TypeManager {
     return rewrapType(
         finalType,
         wrapState.getDepth(),
-        wrapState.getPointerOrigin(),
+        wrapState.getPointerOrigins(),
         wrapState.isReference(),
         wrapState.getReferenceType());
   }
@@ -573,7 +591,7 @@ public class TypeManager {
     return ancestors;
   }
 
-  @NonNull
+  @NotNull
   public Language getLanguage() {
     if (frontend instanceof JavaLanguageFrontend) {
       return Language.JAVA;
@@ -587,7 +605,9 @@ public class TypeManager {
         && pythonClass != null
         && pythonClass.isAssignableFrom(frontend.getClass())) {
       return Language.PYTHON;
-    } else if (frontend instanceof TypeScriptLanguageFrontend) {
+    } else if (frontend != null
+        && typescriptClass != null
+        && typescriptClass.isAssignableFrom(frontend.getClass())) {
       return Language.TYPESCRIPT;
     } else if (frontend != null
         && llvmClass != null
@@ -607,6 +627,7 @@ public class TypeManager {
   }
 
   public boolean isSupertypeOf(Type superType, Type subType) {
+
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
       return false;
     }
@@ -689,70 +710,17 @@ public class TypeManager {
   }
 
   /**
-   * Handles type defs. It is necessary to specify which language frontend this belongs to, because
-   * in a parallel run, the {@link TypeManager} does not have access to the "current" one.
+   * Creates a typedef / type alias in the form of a {@link TypedefDeclaration} to the scope manager
+   * and returns it.
    *
-   * @param frontend
-   * @param rawCode
+   * @param frontend the language frontend
+   * @param rawCode the raw code
+   * @param target the target type
+   * @param aliasString the alias / name of the typedef
+   * @return the typedef declaration
    */
-  public void handleTypedef(LanguageFrontend frontend, String rawCode) {
-    String cleaned = rawCode.replaceAll("(typedef|;)", "").strip();
-    if (cleaned.startsWith("struct")) {
-      handleStructTypedef(frontend, rawCode, cleaned);
-    } else if (Util.containsOnOuterLevel(cleaned, ',')) {
-      handleMultipleAliases(frontend, rawCode, cleaned);
-    } else {
-      List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \t\r\n");
-      if (parts.size() < 2) {
-        log.error("Typedef contains no whitespace to split on: {}", rawCode);
-        return;
-      }
-      // typedefs can be wildly mixed around, but the last item is always the alias to be defined
-      Type target =
-          TypeParser.createFrom(
-              Util.removeRedundantParentheses(String.join(" ", parts.subList(0, parts.size() - 1))),
-              true);
-      handleSingleAlias(frontend, rawCode, target, parts.get(parts.size() - 1));
-    }
-  }
-
-  private void handleMultipleAliases(LanguageFrontend frontend, String rawCode, String cleaned) {
-    List<String> parts = Util.splitLeavingParenthesisContents(cleaned, ",");
-    String[] splitFirst = parts.get(0).split("\\s+");
-    if (splitFirst.length < 2) {
-      log.error("Cannot find out target type for {}", rawCode);
-      return;
-    }
-    Type target = TypeParser.createFrom(splitFirst[0], true);
-    parts.set(0, parts.get(0).substring(splitFirst[0].length()).strip());
-    for (String part : parts) {
-      handleSingleAlias(frontend, rawCode, target, part);
-    }
-  }
-
-  private void handleStructTypedef(LanguageFrontend frontend, String rawCode, String cleaned) {
-    int endOfStruct = cleaned.lastIndexOf('}');
-    if (endOfStruct + 1 < cleaned.length()) {
-      List<String> parts =
-          Util.splitLeavingParenthesisContents(cleaned.substring(endOfStruct + 1), ",");
-      Optional<String> name =
-          parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
-      if (name.isPresent()) {
-        Type target = TypeParser.createIgnoringAlias(name.get());
-        for (String part : parts) {
-          if (!part.equals(name.get())) {
-            handleSingleAlias(frontend, rawCode, target, part);
-          }
-        }
-      } else {
-        log.error("Could not identify struct name: {}", rawCode);
-      }
-    } else {
-      log.error("No alias found for struct typedef: {}", rawCode);
-    }
-  }
-
-  public void handleSingleAlias(
+  @NotNull
+  public Declaration createTypeAlias(
       LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
     String cleanedPart = Util.removeRedundantParentheses(aliasString);
     Type currTarget = getTargetType(target, cleanedPart);
@@ -773,10 +741,11 @@ public class TypeManager {
         log.warn("No frontend available. Be aware that typedef resolving cannot currently be done");
         noFrontendWarningIssued = true;
       }
-      return;
+      return typedef;
     }
 
     frontend.getScopeManager().addTypedef(typedef);
+    return typedef;
   }
 
   public Type resolvePossibleTypedef(Type alias) {

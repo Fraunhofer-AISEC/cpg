@@ -60,7 +60,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   /** Specifies, whether this a pre fix operation. */
   private boolean prefix;
 
-  @Transient private final Set<TypeListener> checked = new HashSet<>();
+  @Transient private final List<TypeListener> checked = new ArrayList<>();
 
   public Expression getInput() {
     return input;
@@ -151,7 +151,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, Collection<HasType> root, Type oldType) {
+  public void typeChanged(HasType src, List<HasType> root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
@@ -192,16 +192,15 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(
-      HasType src, Collection<HasType> root, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
     if (src instanceof TypeListener && getsDataFromInput((TypeListener) src)) {
       return;
     }
-    Set<Type> currSubTypes = new HashSet<>(getPossibleSubTypes());
-    Set<Type> newSubTypes = src.getPossibleSubTypes();
+    List<Type> currSubTypes = new ArrayList<>(getPossibleSubTypes());
+    List<Type> newSubTypes = src.getPossibleSubTypes();
     currSubTypes.addAll(newSubTypes);
 
     if (operatorCode.equals("*")) {
@@ -209,13 +208,13 @@ public class UnaryOperator extends Expression implements TypeListener {
           currSubTypes.stream()
               .filter(Util.distinctBy(Type::getTypeName))
               .map(Type::dereference)
-              .collect(Collectors.toSet());
+              .collect(Collectors.toList());
     } else if (operatorCode.equals("&")) {
       currSubTypes =
           currSubTypes.stream()
               .filter(Util.distinctBy(Type::getTypeName))
               .map(t -> t.reference(PointerType.PointerOrigin.POINTER))
-              .collect(Collectors.toSet());
+              .collect(Collectors.toList());
     }
 
     getPossibleSubTypes().clear();

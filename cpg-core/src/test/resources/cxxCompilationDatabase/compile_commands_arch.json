@@ -1,0 +1,7 @@
+[
+  {
+    "command": "/usr/bin/clang -arch arm64 -c main_arm64.c -o main_arm64",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "src/test/resources/cxxCompilationDatabase/main_arm64.c"
+  }
+]

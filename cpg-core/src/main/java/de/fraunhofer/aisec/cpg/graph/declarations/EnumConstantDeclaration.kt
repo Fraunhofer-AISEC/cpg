@@ -23,20 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations;
+package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.HasInitializer
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 /**
- * Represents a single declaration or definition, i.e. of a variable ({@link VariableDeclaration})
- * or function ({@link FunctionDeclaration}).
- *
- * <p>Note: We do NOT (currently) distinguish between the definition and the declaration of a
- * function. This means, that if a function is first declared and later defined with a function
- * body, we will currently have two {@link FunctionDeclaration} nodes. This is very similar to the
- * behaviour of clang, however clang does establish a connection between those nodes, we currently
- * do not.
+ * Represents a constant within an [EnumDeclaration]. Depending on the language, this might have an
+ * explicit initializer value.
  */
-// TODO: expressionRefersToDeclaration definition and declaration nodes and introduce a field if its
-// declaration only
-public abstract class Declaration extends Node {}
+class EnumConstantDeclaration : ValueDeclaration(), HasInitializer {
+
+    override var initializer: Expression? = null
+}

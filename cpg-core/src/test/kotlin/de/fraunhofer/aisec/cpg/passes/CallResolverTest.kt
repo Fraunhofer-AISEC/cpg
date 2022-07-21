@@ -319,7 +319,8 @@ class CallResolverTest : BaseTest() {
         assertTrue(displayDeclaration.nextEOG.contains(displayDeclaration.defaultParameters[0]))
         assertTrue(
             displayDeclaration.defaultParameters[0]
-                .nextEOG.contains(displayDeclaration.defaultParameters[1])
+                .nextEOG
+                .contains(displayDeclaration.defaultParameters[1])
         )
         for (node in displayDeclaration.nextEOG) {
             assertTrue(

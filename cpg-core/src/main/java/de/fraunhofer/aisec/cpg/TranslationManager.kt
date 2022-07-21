@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -170,7 +169,8 @@ private constructor(
                             .map { it.toFile() }
                             .collect(Collectors.toList())
                     } else {
-                        if (useParallelFrontends &&
+                        if (
+                            useParallelFrontends &&
                                 Util.getExtension(file).frontendClass?.simpleName ==
                                     "GoLanguageFrontend"
                         ) {
@@ -226,19 +226,10 @@ private constructor(
                 result.components.forEach { s ->
                     s.translationUnits.forEach {
                         val bench =
-                            MeasurementHolder(
-                                this.javaClass,
-                                "Activating types for ${it.name}",
-                                true
-                            )
+                            Benchmark(this.javaClass, "Activating types for ${it.name}", true)
                         SubgraphWalker.activateTypes(it)
-                        bench.addMeasurement()
+                        bench.stop()
                     }
-                }
-                result.translationUnits.forEach {
-                    val bench = Benchmark(this.javaClass, "Activating types for ${it.name}", true)
-                    SubgraphWalker.activateTypes(it)
-                    bench.addMeasurement()
                 }
             }
         }

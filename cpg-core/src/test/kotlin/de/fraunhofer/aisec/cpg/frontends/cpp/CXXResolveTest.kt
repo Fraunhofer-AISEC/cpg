@@ -55,7 +55,7 @@ class CXXResolveTest {
         val aFoo = main.bodyOrNull<MemberCallExpression>(0)
         assertNotNull(aFoo)
         assertEquals("foo", aFoo.name)
-        assertEquals("a", aFoo.base.name)
+        assertEquals("a", aFoo.base?.name)
         // a.foo should connect to A::foo
         assertEquals(
             "A",
@@ -65,7 +65,7 @@ class CXXResolveTest {
         val bFoo = main.bodyOrNull<MemberCallExpression>(1)
         assertNotNull(bFoo)
         assertEquals("foo", bFoo.name)
-        assertEquals("b", bFoo.base.name)
+        assertEquals("b", bFoo.base?.name)
         // b.foo should connect to B::foo
         assertEquals(
             "B",

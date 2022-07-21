@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.nio.file.Path
 import kotlin.test.*
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 
 class LLVMIRLanguageFrontendTest {
     @Test
@@ -1000,7 +1000,8 @@ class LLVMIRLanguageFrontendTest {
 
         val tryStatement =
             (funcF.bodyOrNull<LabelStatement>(0)?.subStatement as? CompoundStatement)
-                ?.statements?.firstOrNull { s -> s is TryStatement } as? TryStatement
+                ?.statements
+                ?.firstOrNull { s -> s is TryStatement } as? TryStatement
         assertNotNull(tryStatement)
         assertEquals(2, tryStatement.tryBlock.statements.size)
         assertEquals(
