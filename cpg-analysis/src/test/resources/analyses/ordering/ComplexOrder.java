@@ -175,14 +175,28 @@ public class ComplexOrder {
 
     void minimalInterprocFail2() {
         Botan2 p1 = new Botan2(1);
+        Botan2 p2 = new Botan2(2);
         p1.create();
-        foo("String");
+        p2.create();
+        foo(p2);
         p1.start();
         p1.finish();
     }
 
     void foo(Botan2 p1) {
         p1.init();
+    }
+
+    void minimalInterprocUnclearArgument(Botan2 p1) {
+        p1.init();
+        p1.start();
+        p1.finish();
+    }
+
+    void bar() {
+        Botan2 p1 = new Botan2(1);
+        p1.create();
+        minimalInterprocUnclear2(p1);
     }
 }
 

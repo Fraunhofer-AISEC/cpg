@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -159,7 +160,7 @@ open class DFAOrderEvaluator(
                 // Check if the current node is of interest for the DFA.
                 // This is the case if the map nodesToOp contains the node.
                 if (node is CallExpression && nodeToRelevantMethod.contains(node)) {
-                    val baseAndOp = getBaseAndOpOfNode(node, eogPath)
+                    val baseAndOp = getBaseAndOpOfNode(node, eogPath, interproceduralFlows)
 
                     if (
                         baseAndOp != null &&
@@ -239,7 +240,8 @@ open class DFAOrderEvaluator(
                 .map { arg -> (arg as? DeclaredReferenceExpression)?.refersTo }
                 .filter { arg -> arg != null && consideredBases.contains(arg.id) }
                 .toMutableList()
-        if (node.base is DeclaredReferenceExpression &&
+        if (
+            node.base is DeclaredReferenceExpression &&
                 consideredBases.contains((node.base as DeclaredReferenceExpression).refersTo?.id)
         ) {
             allUsedBases.add((node.base as DeclaredReferenceExpression).refersTo)
@@ -261,8 +263,15 @@ open class DFAOrderEvaluator(
      *
      * If the base cannot be retrieved, or if the [node] is not considered by the analysis (i.e., no
      * entry for [node] exists in the map [consideredBases]), the method returns `null`.
+     *
+     * The [interproceduralFlows] map is updated if the base is an argument of the function under
+     * analysis.
      */
-    private fun getBaseAndOpOfNode(node: CallExpression, eogPath: String): Pair<String, String>? {
+    private fun getBaseAndOpOfNode(
+        node: CallExpression,
+        eogPath: String,
+        interproceduralFlows: MutableMap<String, Boolean>
+    ): Pair<String, String>? {
         // The "base" node, on which the DFA is based on. Ideally, this is a variable declaration in
         // the end.
         var base =
@@ -289,6 +298,10 @@ open class DFAOrderEvaluator(
             // We add the path as prefix to the base in order to differentiate between
             // the different paths of execution which both can use the same base.
             val prefixedBase = "$eogPath|${base.name}.${base.id}"
+            if (base is ParamVariableDeclaration) {
+                // The base was the parameter of the function? We have an inter-procedural flow!
+                interproceduralFlows[prefixedBase] = true
+            }
             return Pair(prefixedBase, nodeToRelevantMethod[node]!!)
         }
 

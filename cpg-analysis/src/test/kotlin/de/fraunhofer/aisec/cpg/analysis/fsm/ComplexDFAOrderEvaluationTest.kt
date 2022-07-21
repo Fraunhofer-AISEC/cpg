@@ -39,13 +39,11 @@ import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.IdentifierPass
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import java.nio.file.Path
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ComplexDFAOrderEvaluationTest {
@@ -495,6 +493,46 @@ class ComplexDFAOrderEvaluationTest {
     }
 
     @Test
+    fun testSuccessMinimalInterprocUnclearArgumentFSM() {
+        val functionOk =
+            tu.byNameOrNull<RecordDeclaration>("ComplexOrder")
+                ?.byNameOrNull<FunctionDeclaration>("minimalInterprocUnclearArgument")
+        assertNotNull(functionOk)
+
+        val p1Decl = functionOk.parameters[0]
+        assertNotNull(p1Decl)
+        val consideredDecl = mutableSetOf(p1Decl.id!!)
+
+        val nodesToOp = mutableMapOf<Node, String>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[0]] = "init()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "finish()"
+
+        val afterInterprocNodes = mutableListOf<Node>()
+        val withoutInterprocNodes = mutableListOf<Node>()
+        val orderEvaluator =
+            DummyDFAOrderEvaluator(
+                consideredDecl,
+                nodesToOp,
+                mutableMapOf(),
+                afterInterprocNodes,
+                withoutInterprocNodes
+            )
+        // We cannot use p1Decl as start of the analysis because it has no nextEOG edges. Instead,
+        // we want to start with the first instruction of the function.
+        val everythingOk =
+            orderEvaluator.evaluateOrder(dfa, (functionOk.body as CompoundStatement).statements[0])
+
+        assertFalse(everythingOk, "Expected incorrect order")
+        assertContains(
+            afterInterprocNodes,
+            (functionOk.body as CompoundStatement).statements[0],
+            "Expected init() node in list of unknown nodes"
+        )
+        assertTrue(withoutInterprocNodes.isEmpty(), "No node should be clearly violating the rule")
+    }
+
+    @Test
     fun testSuccessMinimalInterprocFailFSM() {
         val functionOk =
             tu.byNameOrNull<RecordDeclaration>("ComplexOrder")
@@ -547,9 +585,9 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
 
         val nodesToOp = mutableMapOf<Node, String>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "start()"
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = "finish()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "create()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = "start()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[6]] = "finish()"
 
         val afterInterprocNodes = mutableListOf<Node>()
         val withoutInterprocNodes = mutableListOf<Node>()
@@ -567,7 +605,7 @@ class ComplexDFAOrderEvaluationTest {
         assertTrue(afterInterprocNodes.isEmpty(), "All nodes clearly violate the rule")
         assertContains(
             withoutInterprocNodes,
-            (functionOk.body as CompoundStatement).statements[3],
+            (functionOk.body as CompoundStatement).statements[5],
             "Expected start() node in list of unknown nodes"
         )
     }
