@@ -134,7 +134,8 @@ class MultiValueEvaluator : ValueEvaluator() {
                     if (thenResult is List<*>) result.addAll(thenResult) else result.add(thenResult)
                 }
                 result
-            } else if (lhs is List<*> && rhs is List<*> && lhs.firstOrNull() == rhs.firstOrNull() ||
+            } else if (
+                lhs is List<*> && rhs is List<*> && lhs.firstOrNull() == rhs.firstOrNull() ||
                     lhs is List<*> && lhs.firstOrNull() == rhs ||
                     rhs is List<*> && rhs.firstOrNull() == lhs ||
                     lhs == rhs
@@ -196,7 +197,8 @@ class MultiValueEvaluator : ValueEvaluator() {
         // We are only interested in expressions
         val expressions = prevDFG.filterIsInstance<Expression>()
 
-        if (expressions.size == 2 &&
+        if (
+            expressions.size == 2 &&
                 expressions.all { e ->
                     (e.astParent?.astParent as? ForStatement)?.initializerStatement == e ||
                         (e.astParent as? ForStatement)?.iterationStatement == e
@@ -271,7 +273,8 @@ class MultiValueEvaluator : ValueEvaluator() {
                 when (loopOp) {
                     is BinaryOperator -> {
                         val opLhs =
-                            if ((loopOp.lhs as? DeclaredReferenceExpression)?.refersTo ==
+                            if (
+                                (loopOp.lhs as? DeclaredReferenceExpression)?.refersTo ==
                                     expr.refersTo
                             ) {
                                 loopVar
@@ -279,7 +282,8 @@ class MultiValueEvaluator : ValueEvaluator() {
                                 loopOp.lhs
                             }
                         val opRhs =
-                            if ((loopOp.rhs as? DeclaredReferenceExpression)?.refersTo ==
+                            if (
+                                (loopOp.rhs as? DeclaredReferenceExpression)?.refersTo ==
                                     expr.refersTo
                             ) {
                                 loopVar
@@ -290,7 +294,8 @@ class MultiValueEvaluator : ValueEvaluator() {
                     }
                     is UnaryOperator -> {
                         computeUnaryOpEffect(
-                            if ((loopOp.input as? DeclaredReferenceExpression)?.refersTo ==
+                            if (
+                                (loopOp.input as? DeclaredReferenceExpression)?.refersTo ==
                                     expr.refersTo
                             ) {
                                 loopVar!!
