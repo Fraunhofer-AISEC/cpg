@@ -209,7 +209,9 @@ open class DFAOrderEvaluator(
 
                 // Retrieve the nodes which have to be processed later and add them at the
                 // end of the worklist.
-                worklist.addAll(getNextNodes(node, eogPath, baseToFSM, seenStates))
+                worklist.addAll(
+                    getNextNodes(node, eogPath, baseToFSM, seenStates, interproceduralFlows)
+                )
             }
             // The current node has been analyzed with all its eogPaths.
             // Remove from map, if we visit it in another iteration
@@ -386,7 +388,8 @@ open class DFAOrderEvaluator(
         node: Node,
         eogPath: String,
         baseToFSM: MutableMap<String, DFA>,
-        seenStates: MutableSet<String>
+        seenStates: MutableSet<String>,
+        interproceduralFlows: MutableMap<String, Boolean>
     ): List<Node> {
         val outNodes = mutableListOf<Node>()
         if (eliminateUnreachableCode) {
@@ -444,14 +447,16 @@ open class DFAOrderEvaluator(
                 } else {
                     val newEOGPath = "$eogPath$i"
                     // Clone the FSM for each of the paths in the baseToFSM map.
+                    // Also, copy the value in interproceduralFlows
                     newBases.forEach { (k: String, v: DFA) ->
                         baseToFSM[newEOGPath + k] = v.clone()
+                        interproceduralFlows[newEOGPath + k] =
+                            interproceduralFlows.computeIfAbsent(eogPath) { false }
                     }
                     // Update the eog-path directly in the map of paths for the respective node.
                     outNodes[i].addEogPath(newEOGPath)
                 }
             }
-            // TODO: We also have to update the interproceduralFlows map here
         }
         return outNodes
     }
