@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
@@ -240,6 +241,7 @@ class AnalysisTest {
         assertFalse(query.evaluate() as Boolean)
     }
 
+    @OptIn(ExperimentalGraph::class)
     @Test
     fun testMemcpyTooLargeQuery2() {
         val config =
@@ -262,6 +264,10 @@ class AnalysisTest {
                 result
             )
 
+        result.forall2 { n: CallExpression ->
+            (field(n.invokes[0].name) eq const("memcpy")) implies
+                (sizeof(field(n.arguments[0])) ge sizeof(field(n.arguments[1])))
+        }
         assertFalse(query.evaluate() as Boolean)
         println(query.paths)
     }

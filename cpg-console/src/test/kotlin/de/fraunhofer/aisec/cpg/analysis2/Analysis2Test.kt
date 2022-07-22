@@ -57,13 +57,15 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val (ok, fails) =
+        val queryTreeResult =
             result.all<CallExpression>({ it.name == "memcpy" }) {
-                sizeof(it.arguments[0]) > sizeof(it.arguments[1])
+                sizeof(it.arguments[0]) gt sizeof(it.arguments[1])
             }
 
-        assertFalse(ok)
-        println(fails)
+        assertFalse(queryTreeResult.value)
+        println(queryTreeResult.printNicely())
+
+        // result.calls.name("memcpy").all { n -> sizeof(n.arguments[0]) >= sizeof(n.arguments[1]) }
     }
 
     @Test
@@ -78,12 +80,12 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val (ok, _) =
+        val queryTreeResult =
             result.all<CallExpression>({ it.name == "memcpy" }) {
-                it.arguments[0].size > it.arguments[1].size
+                it.arguments[0].size gt it.arguments[1].size
             }
 
-        assertFalse(ok)
+        assertFalse(queryTreeResult.value)
     }
 
     @Test
@@ -98,18 +100,18 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val (ok, fails) =
+        val queryTreeResult =
             result.all<CallExpression>({ it.name == "free" }) { outer ->
                 val path =
                     outer.followNextEOG {
                         (it.end as? DeclaredReferenceExpression)?.refersTo ==
                             (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
                     }
-                return@all path?.isEmpty() == true
+                return@all const(path?.isEmpty()) eq const(true)
             }
 
-        assertFalse(ok)
-        println(fails)
+        assertFalse(queryTreeResult.value)
+        println(queryTreeResult.printNicely())
     }
 
     @Test
@@ -124,10 +126,12 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val (ok, _) =
-            result.all<CallExpression>({ it.name == "memcpy" }) { it.arguments[2].intValue == 11 }
+        val queryTreeResult =
+            result.all<CallExpression>({ it.name == "memcpy" }) {
+                it.arguments[2].intValue!! eq const(11)
+            }
 
-        assertTrue(ok)
+        assertTrue(queryTreeResult.value)
     }
 
     @Test
@@ -142,9 +146,10 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val (ok, _) = result.all<Assignment> { it.value() < const(5) }
+        val queryTreeResult =
+            result.all<Assignment> { it.value.invoke() as QueryTree<Number> lt const(5) }
 
-        assertTrue(ok)
+        assertTrue(queryTreeResult.value)
     }
 
     @Test
@@ -159,18 +164,18 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val (ok, fails) =
+        val queryTreeResult =
             result.all<ArraySubscriptionExpression> {
-                max(it.subscriptExpression) <
+                (max(it.subscriptExpression) lt
                     min(
                         (((it.arrayExpression as DeclaredReferenceExpression).refersTo
                                     as VariableDeclaration)
                                 .initializer as ArrayCreationExpression)
                             .dimensions[0]
-                    ) && min(it.subscriptExpression) >= 0
+                    )) and (min(it.subscriptExpression) ge const(0))
             }
-        assertFalse(ok)
-        println(fails)
+        assertFalse(queryTreeResult.value)
+        println(queryTreeResult.printNicely())
     }
 
     @Test
@@ -186,18 +191,18 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val (ok, fails) =
+        val queryTreeResult =
             result.all<ArraySubscriptionExpression> {
-                max(it.subscriptExpression) <
+                (max(it.subscriptExpression) lt
                     min(
                         (((it.arrayExpression as DeclaredReferenceExpression).refersTo
                                     as VariableDeclaration)
                                 .initializer as ArrayCreationExpression)
                             .dimensions[0]
-                    ) && min(it.subscriptExpression) >= 0
+                    )) and (min(it.subscriptExpression) ge const(0))
             }
-        assertFalse(ok)
-        println(fails)
+        assertFalse(queryTreeResult.value)
+        println(queryTreeResult.printNicely())
     }
 
     @Test
@@ -213,18 +218,18 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val (ok, fails) =
+        val queryTreeResult =
             result.all<ArraySubscriptionExpression> {
-                max(it.subscriptExpression) <
+                (max(it.subscriptExpression) lt
                     min(
                         ((it.arrayExpression as DeclaredReferenceExpression).refersTo
                                 as VariableDeclaration)
                             .followPrevDFGEdgesUntilHit { node -> node is ArrayCreationExpression }
                             .map { it2 -> (it2 as ArrayCreationExpression).dimensions[0] }
-                    ) && min(it.subscriptExpression) >= 0
+                    )) and (min(it.subscriptExpression) ge const(0))
             }
-        assertFalse(ok)
-        println(fails)
+        assertFalse(queryTreeResult.value)
+        println(queryTreeResult)
     }
 
     @Test
@@ -240,7 +245,7 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val (ok, fails) =
+        val queryTreeResult =
             result.all<ArraySubscriptionExpression> {
                 val max_sub = max(it.subscriptExpression)
                 val min_dim =
@@ -251,9 +256,9 @@ class Analysis2Test {
                             .dimensions[0]
                     )
                 val min_sub = min(it.subscriptExpression)
-                return@all max_sub < min_dim && min_sub >= 0
+                return@all (max_sub lt min_dim) and (min_sub ge const(0))
             }
-        assertTrue(ok)
-        println(fails)
+        assertTrue(queryTreeResult.value)
+        println(queryTreeResult)
     }
 }

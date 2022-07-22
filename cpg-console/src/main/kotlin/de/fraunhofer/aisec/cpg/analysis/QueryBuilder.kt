@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
 
 class QueryBuilder {
@@ -242,6 +243,12 @@ fun field(str: String): QueryEvaluation.FieldAccessExpr {
     return res
 }
 
+fun field(node: Node): QueryEvaluation.FieldAccessExpr {
+    // TODO!!
+    val res = QueryEvaluation.FieldAccessExpr()
+    return res
+}
+
 fun forall(
     str: String,
     inner: QueryEvaluation.QueryExpression,
@@ -252,6 +259,18 @@ fun forall(
     res.quantifier = QueryEvaluation.Quantifier.FORALL
     res.str = str
     res.inner = inner
+    return res
+}
+
+inline fun <reified T> TranslationResult.forall2(
+    noinline mustSatisfy: (T) -> Unit
+): QueryEvaluation.QuantifierExpr {
+    val res = QueryEvaluation.QuantifierExpr()
+    res.result = this
+    res.quantifier = QueryEvaluation.Quantifier.FORALL
+    res.str = T::class.simpleName
+    // res.inner = inner
+    // TODO!!
     return res
 }
 

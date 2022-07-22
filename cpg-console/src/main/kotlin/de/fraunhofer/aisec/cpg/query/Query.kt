@@ -30,17 +30,15 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
-import de.fraunhofer.aisec.cpg.graph.evaluate
-import de.fraunhofer.aisec.cpg.graph.graph
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 @ExperimentalGraph
 inline fun <reified T> TranslationResult.all(
     noinline sel: ((T) -> Boolean)? = null,
-    noinline mustSatisfy: (T) -> Boolean
-): Pair<Boolean, List<Node>> {
+    noinline mustSatisfy: (T) -> QueryTree<Boolean>
+): QueryTree<Boolean> {
     var nodes = this.graph.nodes.filterIsInstance<T>()
 
     // filter the nodes according to the selector
@@ -48,16 +46,15 @@ inline fun <reified T> TranslationResult.all(
         nodes = nodes.filter(sel)
     }
 
-    val failed = nodes.filterNot(mustSatisfy)
-
-    return Pair(failed.isEmpty(), failed as List<Node>)
+    val queryChildren = nodes.map(mustSatisfy)
+    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList())
 }
 
 @ExperimentalGraph
 inline fun <reified T> Node.all(
     noinline sel: ((T) -> Boolean)? = null,
-    noinline mustSatisfy: (T) -> Boolean
-): Pair<Boolean, List<Node>> {
+    noinline mustSatisfy: (T) -> QueryTree<Boolean>
+): QueryTree<Boolean> {
     val children = this.astChildren
 
     var nodes = children.filterIsInstance<T>()
@@ -67,17 +64,36 @@ inline fun <reified T> Node.all(
         nodes = nodes.filter(sel)
     }
 
-    val failed = nodes.filterNot(mustSatisfy)
-
-    return Pair(failed.isEmpty(), failed as List<Node>)
+    val queryChildren = nodes.map(mustSatisfy)
+    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList())
 }
 
 /** Evaluates the size of a node. The implementation is very very basic! */
-fun sizeof(n: Node?): Int {
+fun sizeof(n: Node?): QueryTree<Number> {
     val eval = SizeEvaluator()
     // TODO(oxisto): This cast could potentially go wrong, but if its not an int, its not really a
     // size
-    return eval.evaluate(n) as? Int ?: -1
+    return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(QueryTree(n)))
+}
+
+/*
+forall (n: CallExpression): n.invokes.name == "memcpy" => |sizeof(n.arguments[0])| < |sizeof(n.arguments[1])|
+
+            False
+       --------------------
+    5 < 3 (=> False)
+ ----------------------------------------------------------------
+ sizeof( var1 ) (=> 5)  <  sizeof( var2 ) (=> 3)
+ ------------------------------------------------
+ n.arguments[0] (=> var1)     n.arguments[1] (=> var2)
+ */
+
+@OptIn(ExperimentalGraph::class)
+val TranslationResult.calls: List<CallExpression>
+    get() = this.graph.nodes.filterIsInstance<CallExpression>()
+
+fun List<CallExpression>.name(name: String): List<CallExpression> {
+    return this.filter { n -> n.invokes.any { it.name == name } }
 }
 
 /**
@@ -85,13 +101,13 @@ fun sizeof(n: Node?): Int {
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
+fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     val evalRes = eval.evaluate(n)
     if (evalRes is Number) {
-        return evalRes.toLong()
+        return QueryTree(evalRes, mutableListOf(QueryTree(n)))
     }
     // Extend this when we have other evaluators.
-    return (evalRes as? NumberSet)?.min() ?: -1
+    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(QueryTree(n)))
 }
 
 /**
@@ -99,9 +115,9 @@ fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
+fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     var result = Long.MAX_VALUE
-    if (n == null) return result
+    if (n == null) return QueryTree(result, mutableListOf(QueryTree(null)))
 
     for (node in n) {
         val evalRes = eval.evaluate(node)
@@ -112,7 +128,7 @@ fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
         }
         // Extend this when we have other evaluators.
     }
-    return result
+    return QueryTree(result, mutableListOf(QueryTree(n)))
 }
 
 /**
@@ -120,9 +136,9 @@ fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
+fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     var result = Long.MIN_VALUE
-    if (n == null) return result
+    if (n == null) return QueryTree(result, mutableListOf(QueryTree(null)))
 
     for (node in n) {
         val evalRes = eval.evaluate(node)
@@ -133,7 +149,7 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
         }
         // Extend this when we have other evaluators.
     }
-    return result
+    return QueryTree(result, mutableListOf(QueryTree(n)))
 }
 
 /**
@@ -141,75 +157,41 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
+fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     val evalRes = eval.evaluate(n)
     if (evalRes is Number) {
-        return evalRes.toLong()
+        return QueryTree(evalRes, mutableListOf(QueryTree(n)))
     }
     // Extend this when we have other evaluators.
-    return (evalRes as? NumberSet)?.max() ?: -1
+    return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(QueryTree(n)))
 }
 
-/**
- * This is a small wrapper to create a [QueryResult] containing a constant value, so that it can be
- * used to in comparison with other [QueryResult] objects.
- */
-fun const(n: Int): QueryResult {
-    return QueryResult(n)
+operator fun Expression?.invoke(): QueryTree<Any?> {
+    return QueryTree(this?.evaluate(), mutableListOf(QueryTree(this)))
 }
 
-operator fun Expression?.invoke(): QueryResult {
-    return QueryResult(this?.evaluate())
-}
-
-class QueryResult(val inner: Any? = null) {
-    operator fun compareTo(o: QueryResult): Int {
-        return if (this.inner is Int && o.inner is Int) {
-            // for now assume that its also an int (which is not always the case of course)
-            this.inner - o.inner
-        } else {
-            -1
-        }
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (other is QueryResult) {
-            return this.inner?.equals(other.inner) ?: false
-        }
-
-        return super.equals(other)
-    }
-
-    override fun toString(): String {
-        return inner.toString()
-    }
-
-    override fun hashCode(): Int {
-        return inner?.hashCode() ?: 0
-    }
-}
-
-val Expression.size: QueryResult
+val Expression.size: QueryTree<Number>
     get() {
-        return QueryResult(sizeof(this))
+        return sizeof(this)
     }
 
-val Expression.min: QueryResult
+val Expression.min: QueryTree<Number>
     get() {
-        return QueryResult(min(this))
+        return min(this)
     }
 
-val Expression.max: QueryResult
+val Expression.max: QueryTree<Number>
     get() {
-        return QueryResult(max(this))
+        return max(this)
     }
 
-val Expression.value: QueryResult
+val Expression.value: QueryTree<Any?>
     get() {
-        return QueryResult(evaluate())
+        return QueryTree(evaluate(), mutableListOf(QueryTree(this)))
     }
 
-val Expression.intValue: Int?
+val Expression.intValue: QueryTree<Number>?
     get() {
-        return evaluate() as? Int
+        val evalRes = evaluate() as? Int ?: return null
+        return QueryTree(evalRes, mutableListOf(QueryTree(this)))
     }
