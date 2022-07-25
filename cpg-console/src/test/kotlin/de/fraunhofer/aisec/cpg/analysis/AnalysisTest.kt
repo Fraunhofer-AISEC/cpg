@@ -264,10 +264,6 @@ class AnalysisTest {
                 result
             )
 
-        result.forall2 { n: CallExpression ->
-            (field(n.invokes[0].name) eq const("memcpy")) implies
-                (sizeof(field(n.arguments[0])) ge sizeof(field(n.arguments[1])))
-        }
         assertFalse(query.evaluate() as Boolean)
         println(query.paths)
     }

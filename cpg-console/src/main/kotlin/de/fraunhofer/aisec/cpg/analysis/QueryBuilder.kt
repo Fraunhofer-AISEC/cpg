@@ -262,18 +262,6 @@ fun forall(
     return res
 }
 
-inline fun <reified T> TranslationResult.forall2(
-    noinline mustSatisfy: (T) -> Unit
-): QueryEvaluation.QuantifierExpr {
-    val res = QueryEvaluation.QuantifierExpr()
-    res.result = this
-    res.quantifier = QueryEvaluation.Quantifier.FORALL
-    res.str = T::class.simpleName
-    // res.inner = inner
-    // TODO!!
-    return res
-}
-
 // <const | fieldAccess | not | and | or | eq | ne | gt | lt | ge | le | implies | is | in | forall
 // | exists>
 //      and | or | eq | ne | gt | lt | ge | le | implies | is | in
