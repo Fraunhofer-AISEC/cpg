@@ -107,7 +107,7 @@ class Analysis2Test {
                         (it.end as? DeclaredReferenceExpression)?.refersTo ==
                             (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
                     }
-                return@all const(path?.isEmpty()) eq const(true)
+                return@all const(path?.isEmpty()) eq true
             }
 
         assertFalse(queryTreeResult.value)
@@ -127,9 +127,7 @@ class Analysis2Test {
         val result = analyzer.analyze().get()
 
         val queryTreeResult =
-            result.all<CallExpression>({ it.name == "memcpy" }) {
-                it.arguments[2].intValue!! eq const(11)
-            }
+            result.all<CallExpression>({ it.name == "memcpy" }) { it.arguments[2].intValue!! eq 11 }
 
         assertTrue(queryTreeResult.value)
     }
@@ -146,8 +144,7 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val queryTreeResult =
-            result.all<Assignment> { it.value.invoke() as QueryTree<Number> lt const(5) }
+        val queryTreeResult = result.all<Assignment> { it.value.invoke() as QueryTree<Number> lt 5 }
 
         assertTrue(queryTreeResult.value)
     }
@@ -172,7 +169,7 @@ class Analysis2Test {
                                     as VariableDeclaration)
                                 .initializer as ArrayCreationExpression)
                             .dimensions[0]
-                    )) and (min(it.subscriptExpression) ge const(0))
+                    )) and (min(it.subscriptExpression) ge 0)
             }
         assertFalse(queryTreeResult.value)
         println(queryTreeResult.printNicely())
@@ -199,7 +196,7 @@ class Analysis2Test {
                                     as VariableDeclaration)
                                 .initializer as ArrayCreationExpression)
                             .dimensions[0]
-                    )) and (min(it.subscriptExpression) ge const(0))
+                    )) and (min(it.subscriptExpression) ge 0)
             }
         assertFalse(queryTreeResult.value)
         println(queryTreeResult.printNicely())
@@ -226,7 +223,7 @@ class Analysis2Test {
                                 as VariableDeclaration)
                             .followPrevDFGEdgesUntilHit { node -> node is ArrayCreationExpression }
                             .map { it2 -> (it2 as ArrayCreationExpression).dimensions[0] }
-                    )) and (min(it.subscriptExpression) ge const(0))
+                    )) and (min(it.subscriptExpression) ge 0)
             }
         assertFalse(queryTreeResult.value)
         println(queryTreeResult)
@@ -256,7 +253,7 @@ class Analysis2Test {
                             .dimensions[0]
                     )
                 val min_sub = min(it.subscriptExpression)
-                return@all (max_sub lt min_dim) and (min_sub ge const(0))
+                return@all (max_sub lt min_dim) and (min_sub ge 0)
             }
         assertTrue(queryTreeResult.value)
         println(queryTreeResult)

@@ -45,12 +45,42 @@ open class QueryTree<T>(
 
     infix fun eq(other: QueryTree<T>): QueryTree<Boolean> {
         val result = this.value == other.value
-        return QueryTree(result, mutableListOf(this, other), "$this == $other")
+        return QueryTree(result, mutableListOf(this, other), "${this.value} == ${other.value}")
     }
 
-    infix fun neq(other: QueryTree<T>): QueryTree<Boolean> {
+    infix fun eq(other: T): QueryTree<Boolean> {
+        val result = this.value == other
+        return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} == $value")
+    }
+
+    infix fun ne(other: QueryTree<T>): QueryTree<Boolean> {
         val result = this.value != other.value
-        return QueryTree(result, mutableListOf(this, other), "$this == $other")
+        return QueryTree(result, mutableListOf(this, other), "${this.value} != ${other.value}")
+    }
+
+    infix fun ne(other: T): QueryTree<Boolean> {
+        val result = this.value != other
+        return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} != $value")
+    }
+
+    infix fun IN(other: QueryTree<Collection<*>>): QueryTree<Boolean> {
+        val result = other.value.contains(this.value)
+        return QueryTree(result, mutableListOf(this, other), "${this.value} in ${other.value}")
+    }
+
+    infix fun IN(other: Collection<*>): QueryTree<Boolean> {
+        val result = other.contains(this.value)
+        return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} in $other")
+    }
+
+    infix fun IS(other: QueryTree<Class<*>>): QueryTree<Boolean> {
+        val result = other.value.isInstance(this.value)
+        return QueryTree(result, mutableListOf(this, other), "${this.value} is ${other.value}")
+    }
+
+    infix fun IS(other: Class<*>): QueryTree<Boolean> {
+        val result = other.isInstance(this.value)
+        return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} is $other")
     }
 
     override fun hashCode(): Int {
@@ -98,9 +128,19 @@ infix fun QueryTree<Boolean>.implies(other: QueryTree<Boolean>): QueryTree<Boole
     )
 }
 
+fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
+    val result = !arg.value
+    return QueryTree(result, mutableListOf(arg), "! ${arg.value}")
+}
+
 infix fun QueryTree<Number>.gt(other: QueryTree<Number>): QueryTree<Boolean> {
     val result = this.value.compareTo(other.value) > 0
     return QueryTree(result, mutableListOf(this, other), "${this.value} > ${other.value}")
+}
+
+infix fun QueryTree<Number>.gt(other: Number): QueryTree<Boolean> {
+    val result = this.value.compareTo(other) > 0
+    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} > $other")
 }
 
 infix fun QueryTree<Number>.ge(other: QueryTree<Number>): QueryTree<Boolean> {
@@ -108,14 +148,29 @@ infix fun QueryTree<Number>.ge(other: QueryTree<Number>): QueryTree<Boolean> {
     return QueryTree(result, mutableListOf(this, other), "${this.value} >= ${other.value}")
 }
 
+infix fun QueryTree<Number>.ge(other: Number): QueryTree<Boolean> {
+    val result = this.value.compareTo(other) >= 0
+    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} >= $other")
+}
+
 infix fun QueryTree<Number>.lt(other: QueryTree<Number>): QueryTree<Boolean> {
     val result = this.value.compareTo(other.value) < 0
     return QueryTree(result, mutableListOf(this, other), "${this.value} < ${other.value}")
 }
 
+infix fun QueryTree<Number>.lt(other: Number): QueryTree<Boolean> {
+    val result = this.value.compareTo(other) < 0
+    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} < $other")
+}
+
 infix fun QueryTree<Number>.le(other: QueryTree<Number>): QueryTree<Boolean> {
     val result = this.value.compareTo(other.value) <= 0
     return QueryTree(result, mutableListOf(this, other), "${this.value} <= ${other.value}")
+}
+
+infix fun QueryTree<Number>.le(other: Number): QueryTree<Boolean> {
+    val result = this.value.compareTo(other) <= 0
+    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} <= $other")
 }
 
 /**
