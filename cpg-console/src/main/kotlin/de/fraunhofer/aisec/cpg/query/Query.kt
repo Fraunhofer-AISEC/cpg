@@ -33,6 +33,15 @@ import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
+/**
+ * Evaluates if the conditions specified in [mustSatisfy] hold for all nodes in the graph.
+ *
+ * The optional argument [sel] can be used to filter nodes for which the condition has to be
+ * fulfilled. This filter should be rather simple in most cases since its evaluation is not part of
+ * the resulting reasoning chain.
+ *
+ * This method can be used similar to the logical implication to test "sel => mustSatisfy".
+ */
 @ExperimentalGraph
 inline fun <reified T> TranslationResult.all(
     noinline sel: ((T) -> Boolean)? = null,
@@ -49,6 +58,15 @@ inline fun <reified T> TranslationResult.all(
     return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList())
 }
 
+/**
+ * Evaluates if the conditions specified in [mustSatisfy] hold for all nodes in the graph.
+ *
+ * The optional argument [sel] can be used to filter nodes for which the condition has to be
+ * fulfilled. This filter should be rather simple in most cases since its evaluation is not part of
+ * the resulting reasoning chain.
+ *
+ * This method can be used similar to the logical implication to test "sel => mustSatisfy".
+ */
 @ExperimentalGraph
 inline fun <reified T> Node.all(
     noinline sel: ((T) -> Boolean)? = null,
@@ -67,11 +85,59 @@ inline fun <reified T> Node.all(
     return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList())
 }
 
-/** Evaluates the size of a node. The implementation is very very basic! */
-fun sizeof(n: Node?): QueryTree<Number> {
-    val eval = SizeEvaluator()
-    // TODO(oxisto): This cast could potentially go wrong, but if its not an int, its not really a
-    // size
+/**
+ * Evaluates if the conditions specified in [mustSatisfy] hold for at least one node in the graph.
+ *
+ * The optional argument [sel] can be used to filter nodes which are considered during the
+ * evaluation. This filter should be rather simple in most cases since its evaluation is not part of
+ * the resulting reasoning chain.
+ */
+@ExperimentalGraph
+inline fun <reified T> TranslationResult.exists(
+    noinline sel: ((T) -> Boolean)? = null,
+    noinline mustSatisfy: (T) -> QueryTree<Boolean>
+): QueryTree<Boolean> {
+    var nodes = this.graph.nodes.filterIsInstance<T>()
+
+    // filter the nodes according to the selector
+    if (sel != null) {
+        nodes = nodes.filter(sel)
+    }
+
+    val queryChildren = nodes.map(mustSatisfy)
+    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList())
+}
+
+/**
+ * Evaluates if the conditions specified in [mustSatisfy] hold for at least one node in the graph.
+ *
+ * The optional argument [sel] can be used to filter nodes which are considered during the
+ * evaluation. This filter should be rather simple in most cases since its evaluation is not part of
+ * the resulting reasoning chain.
+ */
+@ExperimentalGraph
+inline fun <reified T> Node.exists(
+    noinline sel: ((T) -> Boolean)? = null,
+    noinline mustSatisfy: (T) -> QueryTree<Boolean>
+): QueryTree<Boolean> {
+    var nodes = this.astChildren.filterIsInstance<T>()
+
+    // filter the nodes according to the selector
+    if (sel != null) {
+        nodes = nodes.filter(sel)
+    }
+
+    val queryChildren = nodes.map(mustSatisfy)
+    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList())
+}
+
+/**
+ * Evaluates the size of a node. The implementation is very, very basic!
+ *
+ * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
+ */
+fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Number> {
+    // The cast could potentially go wrong, but if its not an int, its not really a size
     return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(QueryTree(n)))
 }
 
@@ -132,7 +198,7 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
 }
 
 /**
- * Retrieves the minimal value of the node.
+ * Retrieves the maximal value of the node.
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
@@ -145,30 +211,43 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
     return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(QueryTree(n)))
 }
 
+/** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
 operator fun Expression?.invoke(): QueryTree<Any?> {
     return QueryTree(this?.evaluate(), mutableListOf(QueryTree(this)))
 }
 
+/** The size of this expression. It uses the default argument for `eval` of [size] */
 val Expression.size: QueryTree<Number>
     get() {
         return sizeof(this)
     }
 
+/**
+ * The minimal integer value of this expression. It uses the default argument for `eval` of [min]
+ */
 val Expression.min: QueryTree<Number>
     get() {
         return min(this)
     }
 
+/**
+ * The maximal integer value of this expression. It uses the default argument for `eval` of [max]
+ */
 val Expression.max: QueryTree<Number>
     get() {
         return max(this)
     }
 
+/** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
 val Expression.value: QueryTree<Any?>
     get() {
         return QueryTree(evaluate(), mutableListOf(QueryTree(this)))
     }
 
+/**
+ * Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. The
+ * result is interpreted as an integer.
+ */
 val Expression.intValue: QueryTree<Number>?
     get() {
         val evalRes = evaluate() as? Int ?: return null

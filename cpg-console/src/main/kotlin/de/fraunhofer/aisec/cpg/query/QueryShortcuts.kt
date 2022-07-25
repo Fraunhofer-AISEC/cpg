@@ -31,10 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.graph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 
+/** Returns all [CallExpression]s in this graph. */
 @OptIn(ExperimentalGraph::class)
 val TranslationResult.calls: List<CallExpression>
     get() = this.graph.nodes.filterIsInstance<CallExpression>()
 
+/** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 @OptIn(ExperimentalGraph::class)
 fun TranslationResult.callByName(name: String): List<CallExpression> {
     return this.graph.nodes.filter { node ->
@@ -42,10 +44,17 @@ fun TranslationResult.callByName(name: String): List<CallExpression> {
     } as List<CallExpression>
 }
 
+/**
+ * Filters a list of [CallExpression]s for expressions which call a method with the given [name].
+ */
 fun List<CallExpression>.name(name: String): List<CallExpression> {
     return this.filter { n -> n.invokes.any { it.name == name } }
 }
 
+/**
+ * Returns the expression specifying the dimension (i.e., size) of the array during its
+ * initialization.
+ */
 val ArraySubscriptionExpression.size: Expression
     get() =
         (((this.arrayExpression as DeclaredReferenceExpression).refersTo as VariableDeclaration)
