@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis2
+package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
@@ -44,7 +44,7 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 @ExperimentalGraph
-class Analysis2Test {
+class QueryTest {
     @Test
     fun testMemcpyTooLargeQuery2() {
         val config =
