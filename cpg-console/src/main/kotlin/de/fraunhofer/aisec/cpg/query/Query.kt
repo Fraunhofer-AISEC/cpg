@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 @ExperimentalGraph
@@ -74,26 +73,6 @@ fun sizeof(n: Node?): QueryTree<Number> {
     // TODO(oxisto): This cast could potentially go wrong, but if its not an int, its not really a
     // size
     return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(QueryTree(n)))
-}
-
-/*
-forall (n: CallExpression): n.invokes.name == "memcpy" => |sizeof(n.arguments[0])| < |sizeof(n.arguments[1])|
-
-            False
-       --------------------
-    5 < 3 (=> False)
- ----------------------------------------------------------------
- sizeof( var1 ) (=> 5)  <  sizeof( var2 ) (=> 3)
- ------------------------------------------------
- n.arguments[0] (=> var1)     n.arguments[1] (=> var2)
- */
-
-@OptIn(ExperimentalGraph::class)
-val TranslationResult.calls: List<CallExpression>
-    get() = this.graph.nodes.filterIsInstance<CallExpression>()
-
-fun List<CallExpression>.name(name: String): List<CallExpression> {
-    return this.filter { n -> n.invokes.any { it.name == name } }
 }
 
 /**

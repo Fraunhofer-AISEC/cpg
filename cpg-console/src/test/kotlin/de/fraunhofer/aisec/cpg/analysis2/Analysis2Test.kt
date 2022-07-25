@@ -163,13 +163,7 @@ class Analysis2Test {
 
         val queryTreeResult =
             result.all<ArraySubscriptionExpression> {
-                (max(it.subscriptExpression) lt
-                    min(
-                        (((it.arrayExpression as DeclaredReferenceExpression).refersTo
-                                    as VariableDeclaration)
-                                .initializer as ArrayCreationExpression)
-                            .dimensions[0]
-                    )) and (min(it.subscriptExpression) ge 0)
+                (max(it.subscriptExpression) lt min(it.size)) and (min(it.subscriptExpression) ge 0)
             }
         assertFalse(queryTreeResult.value)
         println(queryTreeResult.printNicely())
@@ -190,13 +184,7 @@ class Analysis2Test {
 
         val queryTreeResult =
             result.all<ArraySubscriptionExpression> {
-                (max(it.subscriptExpression) lt
-                    min(
-                        (((it.arrayExpression as DeclaredReferenceExpression).refersTo
-                                    as VariableDeclaration)
-                                .initializer as ArrayCreationExpression)
-                            .dimensions[0]
-                    )) and (min(it.subscriptExpression) ge 0)
+                (max(it.subscriptExpression) lt min(it.size)) and (min(it.subscriptExpression) ge 0)
             }
         assertFalse(queryTreeResult.value)
         println(queryTreeResult.printNicely())
@@ -245,13 +233,7 @@ class Analysis2Test {
         val queryTreeResult =
             result.all<ArraySubscriptionExpression> {
                 val max_sub = max(it.subscriptExpression)
-                val min_dim =
-                    min(
-                        (((it.arrayExpression as DeclaredReferenceExpression).refersTo
-                                    as VariableDeclaration)
-                                .initializer as ArrayCreationExpression)
-                            .dimensions[0]
-                    )
+                val min_dim = min(it.size)
                 val min_sub = min(it.subscriptExpression)
                 return@all (max_sub lt min_dim) and (min_sub ge 0)
             }
