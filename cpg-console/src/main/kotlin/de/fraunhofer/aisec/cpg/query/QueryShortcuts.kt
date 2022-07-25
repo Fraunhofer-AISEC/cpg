@@ -47,7 +47,7 @@ fun TranslationResult.callByName(name: String): List<CallExpression> {
 /**
  * Filters a list of [CallExpression]s for expressions which call a method with the given [name].
  */
-fun List<CallExpression>.name(name: String): List<CallExpression> {
+fun List<CallExpression>.filterByName(name: String): List<CallExpression> {
     return this.filter { n -> n.invokes.any { it.name == name } }
 }
 

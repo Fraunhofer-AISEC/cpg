@@ -158,6 +158,82 @@ fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): List<Node> {
     return result
 }
 
+/**
+ * Returns a list of nodes which are data flow paths between the starting node [this] and the end
+ * node fulfilling [predicate]. Paths which do not end at such a node are not included in the
+ * result. Hence, if the return value is a non-empty list, a data flow from [this] to such a node is
+ * **possible but not mandatory**.
+ */
+fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Node>> {
+    // Looks complicated but at least it's not recursive...
+    // result: List of paths (between from and to)
+    val result = mutableListOf<List<Node>>()
+    // The list of paths where we're not done yet.
+    val worklist = mutableListOf<List<Node>>()
+    worklist.add(listOf(this)) // We start only with the "from" node (=this)
+
+    while (worklist.isNotEmpty()) {
+        val currentPath = worklist.removeFirst()
+        // The last node of the path is where we continue. We get all of its outgoing DFG edges and
+        // follow them
+        for (next in currentPath.last().nextDFG) {
+            // Copy the path for each outgoing DFG edge and add the next node
+            val nextPath = mutableListOf<Node>()
+            nextPath.addAll(currentPath)
+            nextPath.add(next)
+            if (predicate(next)) {
+                // We ended up in the node "to", so we're done. Add the path to the results.
+                result.add(nextPath)
+            }
+            // The next node is new in the current path (i.e., there's no loop), so we add the path
+            // with the next step to the worklist.
+            if (!currentPath.contains(next)) {
+                worklist.add(nextPath)
+            }
+        }
+    }
+
+    return result
+}
+
+/**
+ * Returns a list of nodes which are evaluation paths between the starting node [this] and the end
+ * node fulfilling [predicate]. Paths which do not end at such a node are not included in the
+ * result. Hence, if the return value is a non-empty list, a path from [this] to such a node is
+ * **possible but not mandatory**.
+ */
+fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Node>> {
+    // Looks complicated but at least it's not recursive...
+    // result: List of paths (between from and to)
+    val result = mutableListOf<List<Node>>()
+    // The list of paths where we're not done yet.
+    val worklist = mutableListOf<List<Node>>()
+    worklist.add(listOf(this)) // We start only with the "from" node (=this)
+
+    while (worklist.isNotEmpty()) {
+        val currentPath = worklist.removeFirst()
+        // The last node of the path is where we continue. We get all of its outgoing DFG edges and
+        // follow them
+        for (next in currentPath.last().nextEOG) {
+            // Copy the path for each outgoing DFG edge and add the next node
+            val nextPath = mutableListOf<Node>()
+            nextPath.addAll(currentPath)
+            nextPath.add(next)
+            if (predicate(next)) {
+                // We ended up in the node "to", so we're done. Add the path to the results.
+                result.add(nextPath)
+            }
+            // The next node is new in the current path (i.e., there's no loop), so we add the path
+            // with the next step to the worklist.
+            if (!currentPath.contains(next)) {
+                worklist.add(nextPath)
+            }
+        }
+    }
+
+    return result
+}
+
 fun Node.followPrevEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
     val path = mutableListOf<PropertyEdge<*>>()
 

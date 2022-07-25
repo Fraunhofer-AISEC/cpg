@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExp
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import de.fraunhofer.aisec.cpg.passes.followNextEOG
 import de.fraunhofer.aisec.cpg.query.*
 import java.io.File
 import kotlin.test.assertFalse
@@ -102,12 +101,12 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name == "free" }) { outer ->
-                val path =
-                    outer.followNextEOG {
-                        (it.end as? DeclaredReferenceExpression)?.refersTo ==
+                not(
+                    executionPath(outer) {
+                        (it as? DeclaredReferenceExpression)?.refersTo ==
                             (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
                     }
-                return@all const(path?.isEmpty()) eq true
+                )
             }
 
         assertFalse(queryTreeResult.value)
