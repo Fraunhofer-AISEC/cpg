@@ -105,7 +105,7 @@ inline fun <reified T> TranslationResult.exists(
     }
 
     val queryChildren = nodes.map(mustSatisfy)
-    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList())
+    return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList())
 }
 
 /**
@@ -128,7 +128,7 @@ inline fun <reified T> Node.exists(
     }
 
     val queryChildren = nodes.map(mustSatisfy)
-    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList())
+    return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList())
 }
 
 /**
