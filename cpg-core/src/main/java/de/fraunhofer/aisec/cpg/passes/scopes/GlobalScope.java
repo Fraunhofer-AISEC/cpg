@@ -46,7 +46,7 @@ public class GlobalScope extends StructureDeclarationScope {
     for (GlobalScope other : others) {
       this.getStructureDeclarations().addAll(other.getStructureDeclarations());
       this.getValueDeclarations().addAll(other.getValueDeclarations());
-      this.getTypedefs().addAll(other.getTypedefs());
+      this.getTypedefs().putAll(other.getTypedefs());
       // TODO what to do with astNode?
       for (Scope child : other.getChildren()) {
         child.setParent(this);

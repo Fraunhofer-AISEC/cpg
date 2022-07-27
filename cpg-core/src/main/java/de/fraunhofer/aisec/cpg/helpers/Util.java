@@ -57,7 +57,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 public class Util {
@@ -192,7 +192,7 @@ public class Util {
     return t -> seen.add(by.apply(t));
   }
 
-  public static String getExtension(@NonNull File file) {
+  public static String getExtension(@NotNull File file) {
     int pos = file.getName().lastIndexOf('.');
     if (pos > 0) {
       return file.getName().substring(pos).toLowerCase();
@@ -202,26 +202,26 @@ public class Util {
   }
 
   public static <S> void warnWithFileLocation(
-      @NonNull LanguageFrontend lang, S astNode, Logger log, String format, Object... arguments) {
+      @NotNull LanguageFrontend lang, S astNode, Logger log, String format, Object... arguments) {
     log.warn(
         String.format("%s: %s", locationLink(lang.getLocationFromRawNode(astNode)), format),
         arguments);
   }
 
   public static <S> void errorWithFileLocation(
-      @NonNull LanguageFrontend lang, S astNode, Logger log, String format, Object... arguments) {
+      @NotNull LanguageFrontend lang, S astNode, Logger log, String format, Object... arguments) {
     log.error(
         String.format("%s: %s", locationLink(lang.getLocationFromRawNode(astNode)), format),
         arguments);
   }
 
   public static void warnWithFileLocation(
-      @NonNull Node node, Logger log, String format, Object... arguments) {
+      @NotNull Node node, Logger log, String format, Object... arguments) {
     log.warn(String.format("%s: %s", locationLink(node.getLocation()), format), arguments);
   }
 
   public static void errorWithFileLocation(
-      @NonNull Node node, Logger log, String format, Object... arguments) {
+      @NotNull Node node, Logger log, String format, Object... arguments) {
     log.error(String.format("%s: %s", locationLink(node.getLocation()), format), arguments);
   }
 
@@ -287,7 +287,7 @@ public class Util {
           openingParentheses.push(i);
           break;
         case ')':
-          int matching = openingParentheses.pop();
+          int matching = openingParentheses.pollFirst();
           if (matching == 0 && i == original.length() - 1) {
             result[matching] = result[i] = marker;
           } else if (matching > 0 && result[matching - 1] == '(' && result[i + 1] == ')') {
@@ -300,12 +300,17 @@ public class Util {
 
   public static boolean containsOnOuterLevel(String input, char marker) {
     int openParentheses = 0;
+    int openTemplate = 0;
     for (char c : input.toCharArray()) {
       if (c == '(') {
         openParentheses++;
       } else if (c == ')') {
         openParentheses--;
-      } else if (c == marker && openParentheses == 0) {
+      } else if (c == '<') {
+        openTemplate++;
+      } else if (c == '>') {
+        openTemplate--;
+      } else if (c == marker && openParentheses == 0 && openTemplate == 0) {
         return true;
       }
     }
@@ -374,7 +379,7 @@ public class Util {
     return params;
   }
 
-  private static String generateParamName(int i, @NonNull Type targetType) {
+  private static String generateParamName(int i, @NotNull Type targetType) {
     Deque<String> hierarchy = new ArrayDeque<>();
     Type currLevel = targetType;
     while (currLevel != null) {

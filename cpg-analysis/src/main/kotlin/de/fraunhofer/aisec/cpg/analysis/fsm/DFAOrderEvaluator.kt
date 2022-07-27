@@ -140,7 +140,8 @@ open class DFAOrderEvaluator(
                 if (node is CallExpression && nodeToRelevantMethod.contains(node)) {
                     val baseAndOp = getBaseAndOpOfNode(node, eogPath)
 
-                    if (baseAndOp != null &&
+                    if (
+                        baseAndOp != null &&
                             (!stopOnWrongBase ||
                                 wrongBases.none { wb ->
                                     wb.endsWith(baseAndOp.first.split("|")[1]) &&
@@ -380,8 +381,7 @@ open class DFAOrderEvaluator(
      */
     private fun getStateSnapshot(nodeId: Long, baseToFSM: Map<String, DFA>): String {
         val grouped =
-            baseToFSM
-                .entries
+            baseToFSM.entries
                 .groupBy { e -> e.key.split("|")[1] }
                 .map { x ->
                     "${x.key}(${x.value.map({ y -> y.value.currentState!! }).toSet().joinToString(",")})"

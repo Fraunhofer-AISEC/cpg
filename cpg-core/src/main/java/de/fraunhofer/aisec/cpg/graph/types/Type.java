@@ -28,9 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.types;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 
@@ -43,14 +42,14 @@ public abstract class Type extends Node {
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
 
   @Relationship(value = "SUPER_TYPE", direction = "OUTGOING")
-  @NonNull
+  @NotNull
   protected Set<Type> superTypes = new HashSet<>();
 
   /**
    * auto, extern, static, register: consider "auto" as modifier or auto to automatically infer the
    * value.
    */
-  @NonNull protected Storage storage = Storage.AUTO;
+  @NotNull protected Storage storage = Storage.AUTO;
 
   protected boolean primitive = false;
 
@@ -96,7 +95,7 @@ public abstract class Type extends Node {
    *
    * @return
    */
-  @NonNull
+  @NotNull
   public Set<Type> getSuperTypes() {
     return superTypes;
   }
@@ -113,12 +112,12 @@ public abstract class Type extends Node {
     REGISTER
   }
 
-  @NonNull
+  @NotNull
   public Storage getStorage() {
     return storage;
   }
 
-  public void setStorage(@NonNull Storage storage) {
+  public void setStorage(@NotNull Storage storage) {
     this.storage = storage;
   }
 
@@ -284,7 +283,9 @@ public abstract class Type extends Node {
     }
   }
 
-  /** @return Creates an exact copy of the current type (chain) */
+  /**
+   * @return Creates an exact copy of the current type (chain)
+   */
   public abstract Type duplicate();
 
   public String getTypeName() {

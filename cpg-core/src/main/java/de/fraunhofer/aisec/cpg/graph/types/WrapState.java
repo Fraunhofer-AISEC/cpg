@@ -30,13 +30,13 @@ public class WrapState {
 
   int depth;
   boolean reference;
-  PointerType.PointerOrigin pointerOrigin;
+  PointerType.PointerOrigin[] pointerOrigins;
   ReferenceType referenceType;
 
   public WrapState() {
     this.depth = 0;
     this.reference = false;
-    this.pointerOrigin = PointerType.PointerOrigin.ARRAY;
+    this.pointerOrigins = new PointerType.PointerOrigin[] {PointerType.PointerOrigin.ARRAY};
     this.referenceType = null;
   }
 
@@ -56,12 +56,12 @@ public class WrapState {
     this.reference = reference;
   }
 
-  public PointerType.PointerOrigin getPointerOrigin() {
-    return pointerOrigin;
+  public PointerType.PointerOrigin[] getPointerOrigins() {
+    return pointerOrigins;
   }
 
-  public void setPointerOrigin(PointerType.PointerOrigin pointerOrigin) {
-    this.pointerOrigin = pointerOrigin;
+  public void setPointerOrigin(PointerType.PointerOrigin[] pointerOrigin) {
+    this.pointerOrigins = pointerOrigin;
   }
 
   public ReferenceType getReferenceType() {

@@ -63,8 +63,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleValue(value: LLVMValueRef): Expression {
         return when (val kind = LLVMGetValueKind(value)) {
             LLVMConstantExprValueKind -> handleConstantExprValueKind(value)
-            LLVMConstantArrayValueKind, LLVMConstantStructValueKind ->
-                handleConstantStructValue(value)
+            LLVMConstantArrayValueKind,
+            LLVMConstantStructValueKind -> handleConstantStructValue(value)
             LLVMConstantDataArrayValueKind,
             LLVMConstantVectorValueKind,
             LLVMConstantDataVectorValueKind -> handleConstantDataArrayValue(value)
@@ -97,7 +97,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     lang.getCodeFromRawNode(value)
                 )
             }
-            LLVMMetadataAsValueValueKind, LLVMInlineAsmValueKind -> {
+            LLVMMetadataAsValueValueKind,
+            LLVMInlineAsmValueKind -> {
                 // TODO
                 return NodeBuilder.newProblemExpression(
                     "Metadata or ASM value kind not supported yet",
@@ -241,14 +242,16 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 LLVMIntToPtr,
                 LLVMBitCast,
                 LLVMAddrSpaceCast -> handleCastInstruction(value)
-                LLVMAdd, LLVMFAdd ->
+                LLVMAdd,
+                LLVMFAdd ->
                     lang.statementHandler.handleBinaryOperator(value, "+", false) as? Expression
                         ?: NodeBuilder.newProblemExpression(
                             "Wrong type of constant binary operation +",
                             ProblemNode.ProblemType.TRANSLATION,
                             lang.getCodeFromRawNode(value)
                         )
-                LLVMSub, LLVMFSub ->
+                LLVMSub,
+                LLVMFSub ->
                     lang.statementHandler.handleBinaryOperator(value, "-", false) as? Expression
                         ?: NodeBuilder.newProblemExpression(
                             "Wrong type of constant binary operation -",

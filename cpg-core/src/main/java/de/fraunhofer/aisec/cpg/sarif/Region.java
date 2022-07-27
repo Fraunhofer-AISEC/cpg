@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.sarif;
 
 import java.util.Objects;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /** Code source location, in a SASP/SARIF-compliant "Region" format. */
 public class Region implements Comparable<Region> {
@@ -109,7 +109,7 @@ public class Region implements Comparable<Region> {
   }
 
   @Override
-  public int compareTo(@NonNull Region region) {
+  public int compareTo(@NotNull Region region) {
     int comparisonValue;
     if ((comparisonValue = Integer.compare(this.getStartLine(), region.getStartLine())) != 0)
       return comparisonValue;

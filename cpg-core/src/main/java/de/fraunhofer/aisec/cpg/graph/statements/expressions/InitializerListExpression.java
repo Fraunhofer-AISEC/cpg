@@ -62,6 +62,9 @@ public class InitializerListExpression extends Expression implements TypeListene
     var edge = new PropertyEdge<>(this, initializer);
     edge.addProperty(Properties.INDEX, this.initializers.size());
 
+    initializer.registerTypeListener(this);
+    this.addPrevDFG(initializer);
+
     this.initializers.add(edge);
   }
 

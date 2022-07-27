@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -76,7 +76,7 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
     }
   }
 
-  @NonNull
+  @NotNull
   public List<Expression> getDimensions() {
     return unwrap(this.dimensions);
   }
@@ -85,7 +85,7 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
     addIfNotContains(this.dimensions, expression);
   }
 
-  @NonNull
+  @NotNull
   public List<PropertyEdge<Expression>> getDimensionsPropertyEdge() {
     return this.dimensions;
   }
@@ -105,8 +105,8 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
     ArrayCreationExpression that = (ArrayCreationExpression) o;
     return super.equals(that)
         && Objects.equals(initializer, that.initializer)
-        && Objects.equals(dimensions, that.dimensions)
-        && Objects.equals(this.getDimensions(), that.getDimensions());
+        && Objects.equals(this.getDimensions(), that.getDimensions())
+        && PropertyEdge.propertyEqualsList(dimensions, that.dimensions);
   }
 
   @Override

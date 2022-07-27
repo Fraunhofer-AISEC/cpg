@@ -121,7 +121,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMIndirectBr -> {
                 return handleIndirectbrStatement(instr)
             }
-            LLVMCall, LLVMInvoke -> {
+            LLVMCall,
+            LLVMInvoke -> {
                 return handleFunctionCall(instr)
             }
             LLVMUnreachable -> {
@@ -146,7 +147,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMStore -> {
                 return handleStore(instr)
             }
-            LLVMExtractValue, LLVMGetElementPtr -> {
+            LLVMExtractValue,
+            LLVMGetElementPtr -> {
                 return declarationOrNot(lang.expressionHandler.handleGetElementPtr(instr), instr)
             }
             LLVMICmp -> {
@@ -162,7 +164,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMSelect -> {
                 return declarationOrNot(lang.expressionHandler.handleSelect(instr), instr)
             }
-            LLVMUserOp1, LLVMUserOp2 -> {
+            LLVMUserOp1,
+            LLVMUserOp2 -> {
                 log.info(
                     "userop instruction is not a real instruction. Replacing it with empty statement"
                 )
@@ -444,25 +447,30 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     /** Handles all kinds of instructions which are an arithmetic or logical binary instruction. */
     private fun handleBinaryInstruction(instr: LLVMValueRef): Statement {
         when (instr.opCode) {
-            LLVMAdd, LLVMFAdd -> {
+            LLVMAdd,
+            LLVMFAdd -> {
                 return handleBinaryOperator(instr, "+", false)
             }
-            LLVMSub, LLVMFSub -> {
+            LLVMSub,
+            LLVMFSub -> {
                 return handleBinaryOperator(instr, "-", false)
             }
-            LLVMMul, LLVMFMul -> {
+            LLVMMul,
+            LLVMFMul -> {
                 return handleBinaryOperator(instr, "*", false)
             }
             LLVMUDiv -> {
                 return handleBinaryOperator(instr, "/", true)
             }
-            LLVMSDiv, LLVMFDiv -> {
+            LLVMSDiv,
+            LLVMFDiv -> {
                 return handleBinaryOperator(instr, "/", false)
             }
             LLVMURem -> {
                 return handleBinaryOperator(instr, "%", true)
             }
-            LLVMSRem, LLVMFRem -> {
+            LLVMSRem,
+            LLVMFRem -> {
                 return handleBinaryOperator(instr, "%", false)
             }
             LLVMShl -> {
@@ -876,13 +884,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMAtomicRMWBinOpXchg -> {
                 exchOp.rhs = value
             }
-            LLVMAtomicRMWBinOpFAdd, LLVMAtomicRMWBinOpAdd -> {
+            LLVMAtomicRMWBinOpFAdd,
+            LLVMAtomicRMWBinOpAdd -> {
                 val binaryOperator = newBinaryOperator("+", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
-            LLVMAtomicRMWBinOpFSub, LLVMAtomicRMWBinOpSub -> {
+            LLVMAtomicRMWBinOpFSub,
+            LLVMAtomicRMWBinOpSub -> {
                 val binaryOperator = newBinaryOperator("-", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
@@ -914,7 +924,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
-            LLVMAtomicRMWBinOpMax, LLVMAtomicRMWBinOpMin -> {
+            LLVMAtomicRMWBinOpMax,
+            LLVMAtomicRMWBinOpMin -> {
                 val operatorCode =
                     if (operation == LLVMAtomicRMWBinOpMin) {
                         "<"
@@ -927,7 +938,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val conditional = newConditionalExpression(condition, ptrDeref, value, ty)
                 exchOp.rhs = conditional
             }
-            LLVMAtomicRMWBinOpUMax, LLVMAtomicRMWBinOpUMin -> {
+            LLVMAtomicRMWBinOpUMax,
+            LLVMAtomicRMWBinOpUMin -> {
                 val operatorCode =
                     if (operation == LLVMAtomicRMWBinOpUMin) {
                         "<"

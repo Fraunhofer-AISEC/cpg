@@ -33,28 +33,14 @@ plugins {
     signing
     `maven-publish`
 
-    id("org.sonarqube") version "3.3"
-    id("com.diffplug.spotless") version "6.5.0"
-    kotlin("jvm") version "1.6.20" apply false
+    id("org.jetbrains.dokka") version "1.7.10"
+    id("org.sonarqube") version "3.4.0.2513"
+    id("com.diffplug.spotless") version "6.8.0"
+    kotlin("jvm") version "1.7.10" apply false
 }
 
 allprojects {
     group = "de.fraunhofer.aisec"
-}
-
-tasks.named("sonarqube") {
-    subprojects.forEach {
-        dependsOn(it.tasks.withType<JacocoReport>())
-    }
-}
-
-subprojects {
-    apply(plugin = "java")
-    apply(plugin = "jacoco")
-    apply(plugin = "org.jetbrains.kotlin.jvm")
-    apply(plugin = "com.diffplug.spotless")
-    apply(plugin = "maven-publish")
-    apply(plugin = "signing")
 
     repositories {
         mavenCentral()
@@ -69,6 +55,22 @@ subprojects {
             }
         }
     }
+}
+
+tasks.named("sonarqube") {
+    subprojects.forEach {
+        dependsOn(it.tasks.withType<JacocoReport>())
+    }
+}
+
+subprojects {
+    apply(plugin = "java")
+    apply(plugin = "jacoco")
+    apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "org.jetbrains.dokka")
+    apply(plugin = "com.diffplug.spotless")
+    apply(plugin = "maven-publish")
+    apply(plugin = "signing")
 
     publishing {
         publications {
@@ -165,11 +167,7 @@ subprojects {
 
     tasks.withType<KotlinCompile> {
         kotlinOptions {
-            // Note: this is not recommended, but this is the only way to deal with the fact,
-            // that the kotlin interactive shell is built with 1.8 and we need to build our
-            // inline functions in 1.8 bytecode, otherwise we cannot use the fluid API in
-            // the cpg-console.
-            jvmTarget = "1.8"
+            jvmTarget = "11"
             freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn")
         }
     }
@@ -234,7 +232,7 @@ subprojects {
                         include("build/generated-src/**")
                     }
             )
-            googleJavaFormat("1.11.0")
+            googleJavaFormat("1.15.0")
             licenseHeader(headerWithStars).yearSeparator(" - ")
         }
         kotlin {
@@ -252,4 +250,8 @@ subprojects {
             licenseHeader(headerWithStars, "package").yearSeparator(" - ")
         }
     }
+}
+
+tasks.dokkaHtmlMultiModule.configure {
+    outputDirectory.set(buildDir.resolve("dokkaCustomMultiModuleOutput"))
 }

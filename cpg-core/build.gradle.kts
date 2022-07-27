@@ -23,14 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-import com.github.gradle.node.yarn.task.YarnTask
-
 plugins {
     `java-library`
     `java-test-fixtures`
     signing
-
-    id("com.github.node-gradle.node") version "3.2.0"
 }
 
 publishing {
@@ -53,62 +49,28 @@ tasks.named<Test>("test") {
         if (!project.hasProperty("experimental")) {
             excludeTags("experimental")
         }
-
-        if (!project.hasProperty("experimentalTypeScript")) {
-            excludeTags("experimentalTypeScript")
-        }
     }
     maxHeapSize = "4048m"
-}
-
-node {
-    download.set(findProperty("nodeDownload")?.toString()?.toBoolean() ?: false)
-    version.set("16.4.2")
-}
-
-val yarnInstall by tasks.registering(YarnTask::class) {
-    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir("src/main/nodejs/node_modules")
-    outputs.cacheIf { true }
-
-    workingDir.set(file("src/main/nodejs"))
-    yarnCommand.set(listOf("install", "--ignore-optional"))
-}
-
-val yarnBuild by tasks.registering(YarnTask::class) {
-    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir("build/resources/main/nodejs")
-    outputs.cacheIf { true }
-
-    workingDir.set(file("src/main/nodejs"))
-    yarnCommand.set(listOf("bundle"))
-
-    dependsOn(yarnInstall)
-}
-
-if (project.hasProperty("experimentalTypeScript")) {
-    tasks.processResources {
-        dependsOn(yarnBuild)
-    }
 }
 
 dependencies {
     api("org.apache.commons:commons-lang3:3.12.0")
 
-    api("org.neo4j:neo4j-ogm-core:3.2.27")
+    api("org.neo4j:neo4j-ogm-core:3.2.36")
 
-    api("org.slf4j:jul-to-slf4j:1.7.32")
-    api("org.slf4j:slf4j-api:1.7.32")
-    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.0")
+    api("org.slf4j:jul-to-slf4j:1.7.36")
+    api("org.slf4j:slf4j-api:1.7.36")
+    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.18.0")
 
-    api("com.github.javaparser:javaparser-symbol-solver-core:3.24.0")
-    api("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.0")
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.24.2")
+    api("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
 
     // Eclipse dependencies
-    api("org.eclipse.platform:org.eclipse.core.runtime:3.24.0")
+    api("org.eclipse.platform:org.eclipse.core.runtime:3.25.0") {
+        // For some reason, this group name is wrong
+        exclude("org.osgi.service", "org.osgi.service.prefs")
+    }
+    api("org.osgi", "org.osgi.service.prefs", "1.1.2")
     api("com.ibm.icu:icu4j:71.1")
 
     // CDT
@@ -123,14 +85,16 @@ dependencies {
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.jetbrains:annotations:23.0.0")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
-
-    testFixturesApi("org.mockito:mockito-core:4.5.0")
+    testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.2")
+    testFixturesApi("org.jetbrains.kotlin:kotlin-test")
+    testFixturesApi("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
+    testFixturesApi("org.mockito:mockito-core:4.6.1")
     
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }

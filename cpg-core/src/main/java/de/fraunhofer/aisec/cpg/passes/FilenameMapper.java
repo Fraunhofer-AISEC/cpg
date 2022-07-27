@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.passes;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
+import org.jetbrains.annotations.NotNull;
 
 public class FilenameMapper extends Pass {
 
@@ -37,19 +39,20 @@ public class FilenameMapper extends Pass {
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
       String name = tu.getName();
       tu.setFile(name);
-      tu.getDeclarations().forEach(d -> handle(d, name));
-      tu.getIncludes().forEach(d -> handle(d, name));
-      tu.getNamespaces().forEach(d -> handle(d, name));
+      handle(tu, name);
     }
   }
 
   private void handle(Node node, String file) {
-    if (node != null) {
-      node.setFile(file);
-      for (Node child : SubgraphWalker.getAstChildren(node)) {
-        handle(child, file);
-      }
-    }
+    // Using a visitor to avoid loops in the AST
+    node.accept(
+        Strategy::AST_FORWARD,
+        new IVisitor<>() {
+          @Override
+          public void visit(@NotNull Node child) {
+            child.setFile(file);
+          }
+        });
   }
 
   @Override

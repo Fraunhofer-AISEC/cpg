@@ -34,8 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import java.io.File
+import kotlin.test.Test
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Test
 
 class AnalysisTest {
     @Test

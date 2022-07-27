@@ -82,7 +82,9 @@ public class PointerType extends Type implements SecondOrderType {
     return new PointerType(this, origin);
   }
 
-  /** @return dereferencing a PointerType yields the type the pointer was pointing towards */
+  /**
+   * @return dereferencing a PointerType yields the type the pointer was pointing towards
+   */
   @Override
   public Type dereference() {
     return elementType;
@@ -151,11 +153,12 @@ public class PointerType extends Type implements SecondOrderType {
     if (!(o instanceof PointerType)) return false;
     if (!super.equals(o)) return false;
     PointerType that = (PointerType) o;
-    return Objects.equals(elementType, that.elementType);
+    return Objects.equals(elementType, that.elementType)
+        && Objects.equals(pointerOrigin, that.pointerOrigin);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), elementType);
+    return Objects.hash(super.hashCode(), elementType, pointerOrigin);
   }
 }

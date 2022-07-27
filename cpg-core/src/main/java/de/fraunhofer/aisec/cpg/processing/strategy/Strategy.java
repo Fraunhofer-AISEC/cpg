@@ -26,12 +26,9 @@
 package de.fraunhofer.aisec.cpg.processing.strategy;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import java.lang.reflect.Field;
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.neo4j.ogm.annotation.Relationship;
+import org.jetbrains.annotations.NotNull;
 
 /** Strategies (iterators) for traversing graphs to be used by visitors. */
 public class Strategy {
@@ -46,8 +43,8 @@ public class Strategy {
    * @param x
    * @return
    */
-  @NonNull
-  public static Iterator<Node> NO_STRATEGY(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> NO_STRATEGY(@NotNull Node x) {
     return Collections.emptyIterator();
   }
 
@@ -57,8 +54,8 @@ public class Strategy {
    * @param x Current node in EOG.
    * @return Iterator over successors.
    */
-  @NonNull
-  public static Iterator<Node> EOG_FORWARD(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> EOG_FORWARD(@NotNull Node x) {
     return x.getNextEOG().iterator();
   }
 
@@ -68,8 +65,8 @@ public class Strategy {
    * @param x Current node in EOG.
    * @return Iterator over successors.
    */
-  @NonNull
-  public static Iterator<Node> EOG_BACKWARD(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> EOG_BACKWARD(@NotNull Node x) {
     return x.getPrevEOG().iterator();
   }
 
@@ -79,8 +76,8 @@ public class Strategy {
    * @param x Current node in DFG.
    * @return Iterator over successors.
    */
-  @NonNull
-  public static Iterator<Node> DFG_FORWARD(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> DFG_FORWARD(@NotNull Node x) {
     return x.getNextDFG().iterator();
   }
 
@@ -90,29 +87,9 @@ public class Strategy {
    * @param x Current node in DFG.
    * @return Iterator over successors.
    */
-  @NonNull
-  public static Iterator<Node> DFG_BACKWARD(@NonNull Node x) {
+  @NotNull
+  public static Iterator<Node> DFG_BACKWARD(@NotNull Node x) {
     return x.getPrevDFG().iterator();
-  }
-
-  /**
-   * Perform unwrapping if Object is a PropertyEdge by looking at the direction of the field and
-   * returning either the start ot the end node
-   *
-   * @param field field containing the object
-   * @param obj object
-   * @return node object if obj was a PropertyEdge, obj else
-   */
-  private static Object handlePropertyEdges(Field field, Object obj) {
-    boolean outgoing = true; // default
-    if (field.getAnnotation(Relationship.class) != null) {
-      outgoing = field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
-    }
-
-    if (PropertyEdge.checkForPropertyEdge(field, obj)) {
-      return PropertyEdge.unwrapPropertyEdge(obj, outgoing);
-    }
-    return obj;
   }
 
   /**
@@ -121,58 +98,8 @@ public class Strategy {
    * @param x
    * @return
    */
-  @NonNull
-  public static Iterator<Node> AST_FORWARD(@NonNull Node x) {
-    HashSet<Node> children = new HashSet<>(); // Set for duplicate elimination
-    Class<?> classType = x.getClass();
-    for (Field field : getAllFields(classType)) {
-      SubGraph subGraph = field.getAnnotation(SubGraph.class);
-      if (subGraph != null && Arrays.asList(subGraph.value()).contains("AST")) {
-        try {
-          // disable access mechanisms
-          field.setAccessible(true);
-
-          Object obj = field.get(x);
-
-          // restore old state
-          field.setAccessible(false);
-
-          // skip, if null
-          if (obj == null) {
-            continue;
-          }
-
-          obj = handlePropertyEdges(field, obj);
-
-          if (obj instanceof Node) {
-            children.add((Node) obj);
-          } else if (obj instanceof Collection) {
-            Collection<? extends Node> astChildren = (Collection<? extends Node>) obj;
-            astChildren.removeIf(Objects::isNull);
-            children.addAll(astChildren);
-          }
-        } catch (IllegalAccessException ex) {
-          // Nothing to do here
-        }
-      }
-    }
-    return children.iterator();
-  }
-
-  /**
-   * Helper method to return all Fields of a Class.
-   *
-   * @param classType
-   * @return
-   */
-  private static Collection<Field> getAllFields(Class<?> classType) {
-    if (classType.getSuperclass() != null) {
-      Collection<Field> fields = getAllFields(classType.getSuperclass());
-      fields.addAll(Arrays.asList(classType.getDeclaredFields()));
-
-      return fields;
-    }
-
-    return new ArrayList<>();
+  @NotNull
+  public static Iterator<Node> AST_FORWARD(@NotNull Node x) {
+    return SubgraphWalker.getAstChildren(x).iterator();
   }
 }

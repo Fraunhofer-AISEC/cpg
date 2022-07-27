@@ -83,6 +83,9 @@ struct add_const {
     type typeMember2;
 };
 
+// template, not to be confused with multiple typedef
+typedef template_class_A<int, int> type_B;
+
 
 int main() {
   typedef char *type;

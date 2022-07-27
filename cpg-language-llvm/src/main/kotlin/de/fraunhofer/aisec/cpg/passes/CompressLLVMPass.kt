@@ -68,7 +68,8 @@ class CompressLLVMPass : Pass() {
                 // Replace the then-statement with the basic block it jumps to iff we found that
                 // its
                 // goto statement is the only one jumping to the target
-                if (node.thenStatement in gotosToReplace &&
+                if (
+                    node.thenStatement in gotosToReplace &&
                         node !in
                             SubgraphWalker.flattenAST(
                                 (node.thenStatement as GotoStatement).targetLabel.subStatement
@@ -80,7 +81,8 @@ class CompressLLVMPass : Pass() {
                 // Replace the else-statement with the basic block it jumps to iff we found that
                 // its
                 // goto statement is the only one jumping to the target
-                if (node.elseStatement in gotosToReplace &&
+                if (
+                    node.elseStatement in gotosToReplace &&
                         node !in
                             SubgraphWalker.flattenAST(
                                 (node.elseStatement as GotoStatement).targetLabel.subStatement
@@ -95,7 +97,8 @@ class CompressLLVMPass : Pass() {
                 val caseBodyStatements = node.statement as CompoundStatement
                 val newStatements = caseBodyStatements.statements.toMutableList()
                 for (i in 0 until newStatements.size) {
-                    if (newStatements[i] in gotosToReplace &&
+                    if (
+                        newStatements[i] in gotosToReplace &&
                             newStatements[i] !in
                                 SubgraphWalker.flattenAST(
                                     (newStatements[i] as GotoStatement).targetLabel.subStatement
@@ -106,7 +109,8 @@ class CompressLLVMPass : Pass() {
                     }
                 }
                 (node.statement as CompoundStatement).statements = newStatements
-            } else if (node is TryStatement &&
+            } else if (
+                node is TryStatement &&
                     node.catchClauses.size == 1 &&
                     node.catchClauses[0].body.statements[0] is CatchClause
             ) {
@@ -130,7 +134,8 @@ class CompressLLVMPass : Pass() {
                 node.catchClauses = catchClauses
 
                 fixThrowStatementsForCatch(node.catchClauses[0])
-            } else if (node is TryStatement &&
+            } else if (
+                node is TryStatement &&
                     node.catchClauses.size == 1 &&
                     node.catchClauses[0].body.statements[0] is CompoundStatement
             ) {
@@ -149,7 +154,8 @@ class CompressLLVMPass : Pass() {
                 // Get the last statement in a CompoundStatement and replace a goto statement
                 // iff it is the only one jumping to the target
                 val goto = node.statements.lastOrNull()
-                if (goto != null &&
+                if (
+                    goto != null &&
                         goto in gotosToReplace &&
                         node !in
                             SubgraphWalker.flattenAST(

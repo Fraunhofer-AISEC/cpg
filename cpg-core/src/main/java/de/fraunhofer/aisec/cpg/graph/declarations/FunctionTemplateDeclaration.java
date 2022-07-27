@@ -30,7 +30,7 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Node representing a declaration of a FunctionTemplate */
@@ -67,7 +67,7 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
   }
 
   @Override
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NotNull Declaration declaration) {
     if (declaration instanceof TypeParamDeclaration
         || declaration instanceof ParamVariableDeclaration) {
       addIfNotContains(this.parameters, declaration);
@@ -82,7 +82,10 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
     FunctionTemplateDeclaration that = (FunctionTemplateDeclaration) o;
-    return realization.equals(that.realization) && parameters.equals(that.parameters);
+    return Objects.equals(getRealization(), that.getRealization())
+        && PropertyEdge.Companion.propertyEqualsList(realization, that.realization)
+        && Objects.equals(getParameters(), that.getParameters())
+        && PropertyEdge.Companion.propertyEqualsList(parameters, that.parameters);
   }
 
   // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the

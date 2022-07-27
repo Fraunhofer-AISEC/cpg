@@ -42,7 +42,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,9 +77,7 @@ public class VariableUsageResolver extends Pass {
   @Override
   public void cleanup() {
     this.superTypesMap.clear();
-    if (this.recordMap != null) {
-      this.recordMap.clear();
-    }
+    this.recordMap.clear();
     this.enumMap.clear();
   }
 
@@ -95,12 +93,9 @@ public class VariableUsageResolver extends Pass {
       walker.iterate(currTu);
     }
 
-    Map<Type, List<Type>> currSuperTypes =
-        recordMap.values().stream()
-            .collect(
-                Collectors.toMap(
-                    r -> TypeParser.createFrom(r.getName(), true),
-                    RecordDeclaration::getSuperTypes));
+    var currSuperTypes =
+        recordMap.entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getSuperTypes()));
     superTypesMap.putAll(currSuperTypes);
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
@@ -280,8 +275,20 @@ public class VariableUsageResolver extends Pass {
                   curClass.getName());
               base.setType(TypeParser.createFrom(Object.class.getName(), true));
             } else {
-              baseTarget = superRecord.getThis();
-              base.setRefersTo(baseTarget);
+              // We need to connect this super reference to the receiver of this method
+              var func = lang.getScopeManager().getCurrentFunction();
+              if (func instanceof MethodDeclaration) {
+                baseTarget = ((MethodDeclaration) func).getReceiver();
+              }
+
+              if (baseTarget != null) {
+                base.setRefersTo(baseTarget);
+                // Explicitly set the type of the call's base to the super type
+                base.setType(superType);
+                // And set the possible subtypes, to ensure, that really only our super type is in
+                // there
+                base.updatePossibleSubtypes(Collections.singletonList(superType));
+              }
             }
           } else {
             // no explicit super type -> java.lang.Object
@@ -354,26 +361,16 @@ public class VariableUsageResolver extends Pass {
       return enumMap.get(reference.getType());
     }
 
-    if (recordMap.containsKey(reference.getType())) {
-      RecordDeclaration recordDeclaration = recordMap.get(reference.getType());
-      if (reference.isStaticAccess()) {
-        return recordDeclaration;
-      } else {
-        // check if we have this type as a class in our graph. If so, we can refer to its "this"
-        // field
-        if (recordDeclaration.getThis() != null) {
-          return recordDeclaration.getThis();
-        } else {
-          return recordDeclaration;
-        }
-      }
-    } else {
-      return null;
-    }
+    return recordMap.getOrDefault(reference.getType(), null);
   }
 
+  @Nullable
   protected ValueDeclaration resolveMember(
       Type containingClass, DeclaredReferenceExpression reference) {
+    if (lang == null) {
+      return null;
+    }
+
     if (lang instanceof JavaLanguageFrontend
         && reference.getName().matches("(?<class>.+\\.)?super")) {
       // if we have a "super" on the member side, this is a member call. We need to resolve this
@@ -500,7 +497,12 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
+  @Nullable
   protected RecordDeclaration inferRecordDeclaration(Type type) {
+    if (lang == null) {
+      return null;
+    }
+
     if (type instanceof ObjectType) {
       log.debug(
           "Encountered an unknown record type {} during a field access. We are going to infer that record",

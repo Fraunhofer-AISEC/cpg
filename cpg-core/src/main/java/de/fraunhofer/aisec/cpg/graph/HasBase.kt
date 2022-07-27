@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 /** Specifies that a certain node has a base on which it executes an operation. */
 interface HasBase {
 
-    val base: Expression
+    val base: Expression?
 }

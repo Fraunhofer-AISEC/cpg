@@ -49,12 +49,4 @@ dependencies {
 
     // llvm
     implementation("org.bytedeco:llvm-platform:13.0.1-1.5.7")
-
-    // JUnit
-    //testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
-
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }

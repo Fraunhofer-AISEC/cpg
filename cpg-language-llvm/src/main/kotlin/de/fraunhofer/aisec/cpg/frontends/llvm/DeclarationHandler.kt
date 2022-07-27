@@ -229,7 +229,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         lang.scopeManager.leaveScope(record)
 
         // add it to the global scope
-        lang.scopeManager.globalScope?.addDeclaration(record)
+        lang.scopeManager.globalScope?.addDeclaration(record, true)
 
         return record
     }
@@ -267,7 +267,8 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      * by the [TypeParser].
      */
     private fun replaceCharsInName(name: String): String {
-        return name.replace("[]", "Array")
+        return name
+            .replace("[]", "Array")
             .replace("*", "Ptr")
             .replace("+", "%2B")
             .replace("&", "%26")

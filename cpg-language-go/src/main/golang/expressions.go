@@ -339,6 +339,10 @@ func (c *ConstructExpression) AddArgument(e *Expression) {
 	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
+func (c *ConstructExpression) AddPrevDFG(n *Node) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "addPrevDFG", jnigi.Void, (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/Node"))
+}
+
 func (n *NewExpression) SetInitializer(e *Expression) (err error) {
 	_, err = (*jnigi.ObjectRef)(n).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 

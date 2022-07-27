@@ -43,8 +43,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -157,7 +157,13 @@ public class TranslationConfiguration {
    */
   final CompilationDatabase compilationDatabase;
 
-  @NonNull private final List<Pass> passes;
+  /**
+   * If true the frontend shall use a heuristic matching of comments found in the source file to
+   * match them to the closest AST node and save it in the comment property.
+   */
+  public final boolean matchCommentsToNodes;
+
+  @NotNull private final List<Pass> passes;
 
   /** This sub configuration object holds all information about inference and smart-guessing. */
   final InferenceConfiguration inferenceConfiguration;
@@ -181,7 +187,8 @@ public class TranslationConfiguration {
       boolean useParallelFrontends,
       boolean typeSystemActiveInFrontend,
       InferenceConfiguration inferenceConfiguration,
-      CompilationDatabase compilationDatabase) {
+      CompilationDatabase compilationDatabase,
+      boolean matchCommentsToNodes) {
     this.symbols = symbols;
     this.softwareComponents = softwareComponents;
     this.topLevel = topLevel;
@@ -202,6 +209,7 @@ public class TranslationConfiguration {
     this.typeSystemActiveInFrontend = typeSystemActiveInFrontend;
     this.inferenceConfiguration = inferenceConfiguration;
     this.compilationDatabase = compilationDatabase;
+    this.matchCommentsToNodes = matchCommentsToNodes;
   }
 
   public static Builder builder() {
@@ -284,6 +292,7 @@ public class TranslationConfiguration {
     private InferenceConfiguration inferenceConfiguration =
         new InferenceConfiguration.Builder().build();
     private CompilationDatabase compilationDatabase;
+    private boolean matchCommentsToNodes = false;
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -343,6 +352,17 @@ public class TranslationConfiguration {
      */
     public Builder debugParser(boolean debugParser) {
       this.debugParser = debugParser;
+      return this;
+    }
+
+    /**
+     * Match comments found in source files to nodes according to a heuristic.
+     *
+     * @param matchCommentsToNodes
+     * @return
+     */
+    public Builder matchCommentsToNodes(boolean matchCommentsToNodes) {
+      this.matchCommentsToNodes = matchCommentsToNodes;
       return this;
     }
 
@@ -414,20 +434,20 @@ public class TranslationConfiguration {
      * @param pass
      * @return
      */
-    public Builder registerPass(@NonNull Pass pass) {
+    public Builder registerPass(@NotNull Pass pass) {
       this.passes.add(pass);
       return this;
     }
 
     /** Registers an additional {@link de.fraunhofer.aisec.cpg.frontends.LanguageFrontend}. */
     public Builder registerLanguage(
-        @NonNull Class<? extends LanguageFrontend> frontend, List<String> fileTypes) {
+        @NotNull Class<? extends LanguageFrontend> frontend, List<String> fileTypes) {
       this.frontends.put(frontend, fileTypes);
       return this;
     }
 
     /** Unregisters a registered {@link de.fraunhofer.aisec.cpg.frontends.LanguageFrontend}. */
-    public Builder unregisterLanguage(@NonNull Class<? extends LanguageFrontend> frontend) {
+    public Builder unregisterLanguage(@NotNull Class<? extends LanguageFrontend> frontend) {
       this.frontends.remove(frontend);
       return this;
     }
@@ -578,7 +598,8 @@ public class TranslationConfiguration {
           useParallelFrontends,
           typeSystemActiveInFrontend,
           inferenceConfiguration,
-          compilationDatabase);
+          compilationDatabase,
+          matchCommentsToNodes);
     }
   }
 

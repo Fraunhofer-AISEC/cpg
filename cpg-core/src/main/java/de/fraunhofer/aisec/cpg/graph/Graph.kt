@@ -140,7 +140,8 @@ class QueryContext constructor(val graph: Graph) {
                 var relationshipProperty =
                     it[
                         type.name().lowercase(Locale.getDefault()),
-                        relationship.direction().toString()]
+                        relationship.direction().toString()
+                    ]
 
                 // check for the existence of the edge
                 if (relationshipProperty is Collection<*>) {

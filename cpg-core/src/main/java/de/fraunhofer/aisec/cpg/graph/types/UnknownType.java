@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
 import java.util.Objects;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * UnknownType describe the case in which it is not possible for the CPG to determine which Type is
@@ -48,7 +48,7 @@ public class UnknownType extends Type {
    *
    * @return UnknownType instance
    */
-  @NonNull
+  @NotNull
   public static UnknownType getUnknownType() {
     return unknownType;
   }
@@ -73,7 +73,9 @@ public class UnknownType extends Type {
     return this;
   }
 
-  /** @return Same UnknownType, */
+  /**
+   * @return Same UnknownType,
+   */
   @Override
   public Type dereference() {
     return this;
@@ -101,7 +103,7 @@ public class UnknownType extends Type {
   }
 
   @Override
-  public void setStorage(@NonNull Storage storage) {
+  public void setStorage(@NotNull Storage storage) {
     // Only one instance of UnknownType, use default values
   }
 

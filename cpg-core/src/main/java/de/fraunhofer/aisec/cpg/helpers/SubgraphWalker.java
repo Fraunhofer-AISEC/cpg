@@ -26,15 +26,13 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.util.*;
@@ -45,8 +43,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +92,10 @@ public class SubgraphWalker {
   /**
    * Retrieves a list of AST children of the specified node by iterating all fields that are
    * annotated with the {@link SubGraph} annotation and its value "AST".
+   *
+   * <p>Please note, that you SHOULD NOT call this directly in a recursive function, since the AST
+   * might have loops and you will probably run into a {@link StackOverflowError}. Therefore, use of
+   * {@link Node#accept} with the {@link Strategy#AST_FORWARD(Node)} is encouraged.
    *
    * @param node the start node
    * @return a list of children from the node's AST
@@ -160,26 +162,23 @@ public class SubgraphWalker {
       return new ArrayList<>();
     }
 
-    Set<Node> list = new HashSet<>();
+    // We are using an identity set here, to avoid placing the *same* node in the identitySet twice,
+    // possibly resulting in loops
+    var identitySet = new IdentitySet<Node>();
 
-    flattenASTInternal(list, n);
+    flattenASTInternal(identitySet, n);
 
-    List<Node> ret = new ArrayList<>(list);
-
-    // sort it
-    ret.sort(new NodeComparator());
-
-    return ret;
+    return identitySet.toSortedList();
   }
 
-  private static void flattenASTInternal(@NonNull Set<Node> list, @NonNull Node n) {
-    // add the node itself
-    list.add(n);
+  private static void flattenASTInternal(@NotNull Set<Node> identitySet, @NotNull Node n) {
+    // Add the node itself and abort if its already there, to detect possible loops
+    if (!identitySet.add(n)) {
+      return;
+    }
 
     for (Node child : SubgraphWalker.getAstChildren(n)) {
-      if (!list.contains(child)) {
-        flattenASTInternal(list, child);
-      }
+      flattenASTInternal(identitySet, child);
     }
   }
 
@@ -212,36 +211,42 @@ public class SubgraphWalker {
   }
 
   public static void refreshType(Node node) {
-    for (Node child : getAstChildren(node)) {
-      refreshType(child);
-    }
-    if (node instanceof HasType) {
-      ((HasType) node).refreshType();
-    }
+    // Using a visitor to avoid loops in the AST
+    node.accept(
+        Strategy::AST_FORWARD,
+        new IVisitor<>() {
+          @Override
+          public void visit(@NotNull Node child) {
+            if (child instanceof HasType) {
+              ((HasType) child).refreshType();
+            }
+          }
+        });
   }
 
-  public static void activateTypes(Node node, ScopeManager scopeManager) {
+  public static void activateTypes(Node node) {
     AtomicInteger num = new AtomicInteger();
 
     Map<HasType, List<Type>> typeCache = TypeManager.getInstance().getTypeCache();
-    IterativeGraphWalker walker = new IterativeGraphWalker();
-    walker.registerOnNodeVisit(scopeManager::enterScopeIfExists);
-    walker.registerOnScopeExit(
-        n -> {
-          if (n instanceof HasType) {
-            HasType typeNode = (HasType) n;
-            typeCache
-                .getOrDefault(typeNode, Collections.emptyList())
-                .forEach(
-                    t -> {
-                      t = TypeManager.getInstance().resolvePossibleTypedef(t);
-                      ((HasType) n).setType(t);
-                    });
-            typeCache.remove((HasType) n);
-            num.getAndIncrement();
+    node.accept(
+        Strategy::AST_FORWARD,
+        new IVisitor<>() {
+          @Override
+          public void visit(Node n) {
+            if (n instanceof HasType) {
+              HasType typeNode = (HasType) n;
+              typeCache
+                  .getOrDefault(typeNode, Collections.emptyList())
+                  .forEach(
+                      t -> {
+                        t = TypeManager.getInstance().resolvePossibleTypedef(t);
+                        ((HasType) n).setType(t);
+                      });
+              typeCache.remove((HasType) n);
+              num.getAndIncrement();
+            }
           }
         });
-    walker.iterate(node);
 
     LOGGER.debug("Activated {} nodes for {}", num, node.getName());
 

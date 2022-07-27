@@ -104,24 +104,26 @@ class SASTests {
                     }
                 if (funcStatements?.size == 1 && funcStatements[0] is CallExpression) {
                     stubs[funcDecl] = (funcStatements[0] as CallExpression).invokes.first()
-                } else if (funcStatements?.size == 1 &&
+                } else if (
+                    funcStatements?.size == 1 &&
                         (funcStatements[0] as? ReturnStatement)?.returnValue is CallExpression
                 ) {
                     stubs[funcDecl] =
                         ((funcStatements[0] as? ReturnStatement)?.returnValue as CallExpression)
-                            .invokes.first()
-                } else if (funcStatements?.size == 2 &&
-                        ((funcStatements[0] as? DeclarationStatement)?.singleDeclaration as?
-                                VariableDeclaration)
-                            ?.initializer is
-                            CallExpression
+                            .invokes
+                            .first()
+                } else if (
+                    funcStatements?.size == 2 &&
+                        ((funcStatements[0] as? DeclarationStatement)?.singleDeclaration
+                                as? VariableDeclaration)
+                            ?.initializer is CallExpression
                 ) {
                     stubs[funcDecl] =
-                        (((funcStatements[0] as? DeclarationStatement)?.singleDeclaration as?
-                                    VariableDeclaration)
-                                ?.initializer as
-                                CallExpression)
-                            .invokes.first()
+                        (((funcStatements[0] as? DeclarationStatement)?.singleDeclaration
+                                    as? VariableDeclaration)
+                                ?.initializer as CallExpression)
+                            .invokes
+                            .first()
                 }
             }
 

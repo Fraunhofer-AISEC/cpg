@@ -36,11 +36,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import java.nio.file.Path
+import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -71,8 +71,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "ifBothPossible" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "ifBothPossible" } as FunctionDeclaration?
 
         assertNotNull(method)
 
@@ -90,8 +89,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "ifTrue" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "ifTrue" } as FunctionDeclaration?
 
         assertNotNull(method)
 
@@ -108,8 +106,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "ifFalse" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "ifFalse" } as FunctionDeclaration?
 
         assertNotNull(method)
 
@@ -126,8 +123,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "ifTrueComputed" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "ifTrueComputed" } as FunctionDeclaration?
 
         assertNotNull(method)
 
@@ -144,8 +140,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "ifFalseComputed" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "ifFalseComputed" } as FunctionDeclaration?
 
         assertNotNull(method)
 
@@ -162,8 +157,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "whileTrueEndless" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "whileTrueEndless" } as FunctionDeclaration?
 
         assertNotNull(method)
 
@@ -180,8 +174,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "whileTrue" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "whileTrue" } as FunctionDeclaration?
 
         assertNotNull(method)
 
@@ -198,8 +191,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "whileComputedTrue" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "whileComputedTrue" } as FunctionDeclaration?
 
         assertNotNull(method)
 
@@ -216,8 +208,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "whileFalse" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "whileFalse" } as FunctionDeclaration?
 
         assertNotNull(method)
 
@@ -234,8 +225,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "whileComputedFalse" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "whileComputedFalse" } as FunctionDeclaration?
 
         assertNotNull(method)
 
@@ -252,8 +242,7 @@ class UnreachableEOGPassTest {
             tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
-                ?.firstOrNull { d -> d.name == "whileUnknown" } as
-                FunctionDeclaration?
+                ?.firstOrNull { d -> d.name == "whileUnknown" } as FunctionDeclaration?
 
         assertNotNull(method)
 

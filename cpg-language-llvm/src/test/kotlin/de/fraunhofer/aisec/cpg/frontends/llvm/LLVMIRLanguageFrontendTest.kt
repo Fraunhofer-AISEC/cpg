@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.nio.file.Path
 import kotlin.test.*
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 
 class LLVMIRLanguageFrontendTest {
     @Test
@@ -74,8 +74,7 @@ class LLVMIRLanguageFrontendTest {
 
         val xVector =
             (main.bodyOrNull<CompoundStatement>(0)?.statements?.get(0) as? DeclarationStatement)
-                ?.singleDeclaration as?
-                VariableDeclaration
+                ?.singleDeclaration as? VariableDeclaration
         val xInit = xVector?.initializer as? InitializerListExpression
         assertNotNull(xInit)
         assertEquals("poison", (xInit.initializers[0] as? DeclaredReferenceExpression)?.name)
@@ -338,8 +337,8 @@ class LLVMIRLanguageFrontendTest {
         assertSame(variableDecl, (ifCondition as DeclaredReferenceExpression).refersTo)
 
         val elseBranch =
-            (ifStatement.elseStatement!! as GotoStatement).targetLabel.subStatement as
-                CompoundStatement
+            (ifStatement.elseStatement!! as GotoStatement).targetLabel.subStatement
+                as CompoundStatement
         assertEquals(2, elseBranch.statements.size)
         assertEquals("  %y = mul i32 %x, 32768", elseBranch.statements[0].code)
         assertEquals("  ret i32 %y", elseBranch.statements[1].code)
@@ -683,8 +682,8 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(compoundStatement)
         // First copy a to b
         val copyStatement =
-            (compoundStatement.statements[0] as DeclarationStatement).singleDeclaration as
-                VariableDeclaration
+            (compoundStatement.statements[0] as DeclarationStatement).singleDeclaration
+                as VariableDeclaration
         assertEquals("b", copyStatement.name)
         assertEquals("literal_i32_i8", copyStatement.type.typeName)
 
@@ -723,8 +722,8 @@ class LLVMIRLanguageFrontendTest {
 
         // Check the assignment of the function call
         val resDecl =
-            (tryStatement.tryBlock.statements[0] as? DeclarationStatement)?.singleDeclaration as?
-                VariableDeclaration
+            (tryStatement.tryBlock.statements[0] as? DeclarationStatement)?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(resDecl)
         assertEquals("res", resDecl.name)
         val call = resDecl.initializer as? CallExpression
@@ -735,8 +734,8 @@ class LLVMIRLanguageFrontendTest {
 
         // Check that the second part of the try-block is inlined by the pass
         val aDecl =
-            (tryStatement.tryBlock.statements[1] as? DeclarationStatement)?.singleDeclaration as?
-                VariableDeclaration
+            (tryStatement.tryBlock.statements[1] as? DeclarationStatement)?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(aDecl)
         assertEquals("a", aDecl.name)
         val resStatement = tryStatement.tryBlock.statements[2] as? ReturnStatement
@@ -791,8 +790,8 @@ class LLVMIRLanguageFrontendTest {
 
         val mainBody = main.body as CompoundStatement
         val yDecl =
-            (mainBody.statements[0] as DeclarationStatement).singleDeclaration as
-                VariableDeclaration
+            (mainBody.statements[0] as DeclarationStatement).singleDeclaration
+                as VariableDeclaration
         assertNotNull(yDecl)
 
         val ifStatement = mainBody.statements[3] as? IfStatement
@@ -803,8 +802,8 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(3, thenStmt.statements.size)
         assertNotNull(thenStmt.statements[1] as? BinaryOperator)
         val aDecl =
-            (thenStmt.statements[0] as DeclarationStatement).singleDeclaration as
-                VariableDeclaration
+            (thenStmt.statements[0] as DeclarationStatement).singleDeclaration
+                as VariableDeclaration
         val thenY = thenStmt.statements[1] as BinaryOperator
         assertSame(aDecl, (thenY.rhs as DeclaredReferenceExpression).refersTo)
         assertSame(yDecl, (thenY.lhs as DeclaredReferenceExpression).refersTo)
@@ -813,21 +812,21 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(elseStmt)
         assertEquals(3, elseStmt.statements.size)
         val bDecl =
-            (elseStmt.statements[0] as DeclarationStatement).singleDeclaration as
-                VariableDeclaration
+            (elseStmt.statements[0] as DeclarationStatement).singleDeclaration
+                as VariableDeclaration
         assertNotNull(elseStmt.statements[1] as? BinaryOperator)
         val elseY = elseStmt.statements[1] as BinaryOperator
         assertSame(bDecl, (elseY.rhs as DeclaredReferenceExpression).refersTo)
         assertSame(yDecl, (elseY.lhs as DeclaredReferenceExpression).refersTo)
 
         val continueBlock =
-            (thenStmt.statements[2] as? GotoStatement)?.targetLabel?.subStatement as?
-                CompoundStatement
+            (thenStmt.statements[2] as? GotoStatement)?.targetLabel?.subStatement
+                as? CompoundStatement
         assertNotNull(continueBlock)
         assertEquals(
             yDecl,
-            ((continueBlock.statements[1] as ReturnStatement).returnValue as
-                    DeclaredReferenceExpression)
+            ((continueBlock.statements[1] as ReturnStatement).returnValue
+                    as DeclaredReferenceExpression)
                 .refersTo
         )
     }
@@ -852,8 +851,8 @@ class LLVMIRLanguageFrontendTest {
         // Test that x is initialized correctly
         val mainBody = main.body as CompoundStatement
         val origX =
-            ((mainBody.statements[0] as? DeclarationStatement)?.singleDeclaration as?
-                VariableDeclaration)
+            ((mainBody.statements[0] as? DeclarationStatement)?.singleDeclaration
+                as? VariableDeclaration)
         val xInit = origX?.initializer as? InitializerListExpression
         assertNotNull(xInit)
         assertEquals(10L, (xInit.initializers[0] as? Literal<*>)?.value)
@@ -863,8 +862,8 @@ class LLVMIRLanguageFrontendTest {
 
         // Test that y is initialized correctly
         val origY =
-            ((mainBody.statements[1] as? DeclarationStatement)?.singleDeclaration as?
-                VariableDeclaration)
+            ((mainBody.statements[1] as? DeclarationStatement)?.singleDeclaration
+                as? VariableDeclaration)
         val yInit = origY?.initializer as? InitializerListExpression
         assertNotNull(yInit)
         assertEquals(15L, (yInit.initializers[0] as? Literal<*>)?.value)
@@ -874,10 +873,9 @@ class LLVMIRLanguageFrontendTest {
 
         // Test that extractelement works
         val zInit =
-            ((mainBody.statements[2] as? DeclarationStatement)?.singleDeclaration as?
-                    VariableDeclaration)
-                ?.initializer as?
-                ArraySubscriptionExpression
+            ((mainBody.statements[2] as? DeclarationStatement)?.singleDeclaration
+                    as? VariableDeclaration)
+                ?.initializer as? ArraySubscriptionExpression
         assertNotNull(zInit)
         assertEquals(0L, (zInit.subscriptExpression as? Literal<*>)?.value)
         assertEquals("x", (zInit.arrayExpression as? DeclaredReferenceExpression)?.name)
@@ -886,8 +884,7 @@ class LLVMIRLanguageFrontendTest {
         // Test the assignment of y to yMod
         val yModInit =
             ((mainBody.statements[3] as CompoundStatement).statements[0] as? DeclarationStatement)
-                ?.singleDeclaration as?
-                VariableDeclaration
+                ?.singleDeclaration as? VariableDeclaration
         assertNotNull(yModInit)
         assertEquals("y", (yModInit.initializer as? DeclaredReferenceExpression)?.name)
         assertSame(origY, (yModInit.initializer as? DeclaredReferenceExpression)?.refersTo)
@@ -900,53 +897,52 @@ class LLVMIRLanguageFrontendTest {
         )
         assertSame(
             yModInit,
-            ((yMod.lhs as? ArraySubscriptionExpression)?.arrayExpression as?
-                    DeclaredReferenceExpression)
+            ((yMod.lhs as? ArraySubscriptionExpression)?.arrayExpression
+                    as? DeclaredReferenceExpression)
                 ?.refersTo
         )
         assertEquals(8L, (yMod.rhs as? Literal<*>)?.value)
 
         // Test the last shufflevector instruction which does not contain constant as initializers.
         val shuffledInit =
-            ((mainBody.statements[4] as? DeclarationStatement)?.singleDeclaration as?
-                    VariableDeclaration)
-                ?.initializer as?
-                InitializerListExpression
+            ((mainBody.statements[4] as? DeclarationStatement)?.singleDeclaration
+                    as? VariableDeclaration)
+                ?.initializer as? InitializerListExpression
         assertNotNull(shuffledInit)
         assertSame(
             origX,
-            ((shuffledInit.initializers[0] as? ArraySubscriptionExpression)?.arrayExpression as?
-                    DeclaredReferenceExpression)
+            ((shuffledInit.initializers[0] as? ArraySubscriptionExpression)?.arrayExpression
+                    as? DeclaredReferenceExpression)
                 ?.refersTo
         )
         assertSame(
             yModInit,
-            ((shuffledInit.initializers[1] as? ArraySubscriptionExpression)?.arrayExpression as?
-                    DeclaredReferenceExpression)
+            ((shuffledInit.initializers[1] as? ArraySubscriptionExpression)?.arrayExpression
+                    as? DeclaredReferenceExpression)
                 ?.refersTo
         )
         assertSame(
             yModInit,
-            ((shuffledInit.initializers[2] as? ArraySubscriptionExpression)?.arrayExpression as?
-                    DeclaredReferenceExpression)
+            ((shuffledInit.initializers[2] as? ArraySubscriptionExpression)?.arrayExpression
+                    as? DeclaredReferenceExpression)
                 ?.refersTo
         )
         assertSame(
             1,
-            ((shuffledInit.initializers[0] as? ArraySubscriptionExpression)?.subscriptExpression as?
-                    Literal<*>)
+            ((shuffledInit.initializers[0] as? ArraySubscriptionExpression)?.subscriptExpression
+                    as? Literal<*>)
                 ?.value
         )
         assertSame(
             2,
-            ((shuffledInit.initializers[1] as? ArraySubscriptionExpression)?.subscriptExpression as?
-                    Literal<*>)
+            ((shuffledInit.initializers[1] as? ArraySubscriptionExpression)?.subscriptExpression
+                    as? Literal<*>)
                 ?.value
         )
         assertSame(
             3,
-            ((shuffledInit.initializers[2] as? ArraySubscriptionExpression)?.subscriptExpression as?
-                    Literal<*>)
+            ((shuffledInit.initializers[2] as? ArraySubscriptionExpression)?.subscriptExpression
+                    as? Literal<*>)
                 ?.value
         )
     }
@@ -1003,9 +999,9 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(funcF)
 
         val tryStatement =
-            (funcF.bodyOrNull<LabelStatement>(0)?.subStatement as? CompoundStatement)?.statements
-                ?.firstOrNull { s -> s is TryStatement } as?
-                TryStatement
+            (funcF.bodyOrNull<LabelStatement>(0)?.subStatement as? CompoundStatement)
+                ?.statements
+                ?.firstOrNull { s -> s is TryStatement } as? TryStatement
         assertNotNull(tryStatement)
         assertEquals(2, tryStatement.tryBlock.statements.size)
         assertEquals(
@@ -1022,8 +1018,8 @@ class LLVMIRLanguageFrontendTest {
             tryStatement.catchClauses[0].body.statements[0] as? DeclarationStatement
         assertNotNull(catchSwitchExpr)
         val catchswitchCall =
-            (catchSwitchExpr.singleDeclaration as? VariableDeclaration)?.initializer as?
-                CallExpression
+            (catchSwitchExpr.singleDeclaration as? VariableDeclaration)?.initializer
+                as? CallExpression
         assertNotNull(catchswitchCall)
         assertEquals("llvm.catchswitch", catchswitchCall.fqn)
         val ifExceptionMatches = tryStatement.catchClauses[0].body.statements[1] as? IfStatement
@@ -1042,10 +1038,9 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(catchBlock)
         assertEquals(
             "llvm.catchpad",
-            (((catchBlock.statements[0] as? DeclarationStatement)?.singleDeclaration as?
-                        VariableDeclaration)
-                    ?.initializer as?
-                    CallExpression)
+            (((catchBlock.statements[0] as? DeclarationStatement)?.singleDeclaration
+                        as? VariableDeclaration)
+                    ?.initializer as? CallExpression)
                 ?.fqn
         )
 
@@ -1061,15 +1056,14 @@ class LLVMIRLanguageFrontendTest {
         )
 
         val innerCatchClause =
-            (innerTry.catchClauses[0].body.statements[1] as? IfStatement)?.thenStatement as?
-                CompoundStatement
+            (innerTry.catchClauses[0].body.statements[1] as? IfStatement)?.thenStatement
+                as? CompoundStatement
         assertNotNull(innerCatchClause)
         assertEquals(
             "llvm.catchpad",
-            (((innerCatchClause.statements[0] as? DeclarationStatement)?.singleDeclaration as?
-                        VariableDeclaration)
-                    ?.initializer as?
-                    CallExpression)
+            (((innerCatchClause.statements[0] as? DeclarationStatement)?.singleDeclaration
+                        as? VariableDeclaration)
+                    ?.initializer as? CallExpression)
                 ?.fqn
         )
         assertEquals(
@@ -1078,8 +1072,8 @@ class LLVMIRLanguageFrontendTest {
         )
 
         val innerCatchThrows =
-            (innerTry.catchClauses[0].body.statements[1] as? IfStatement)?.elseStatement as?
-                UnaryOperator
+            (innerTry.catchClauses[0].body.statements[1] as? IfStatement)?.elseStatement
+                as? UnaryOperator
         assertNotNull(innerCatchThrows)
         assertNotNull(innerCatchThrows.input)
         assertSame(
