@@ -82,10 +82,10 @@ class ValueEvaluator(
             is BinaryOperator -> return handleBinaryOperator(node)
             // Casts are just a wrapper in this case, we are interested in the inner expression
             is CastExpression -> return this.evaluate(node.expression)
-            is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
+            is ArraySubscriptionExpression -> return handleArraySubscriptionExpression(node)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> handleConditionalExpression(node)
+            is ConditionalExpression -> return handleConditionalExpression(node)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe

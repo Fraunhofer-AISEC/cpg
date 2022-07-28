@@ -36,10 +36,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.CompressLLVMPass
-import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import java.nio.file.Path
 import java.util.*
@@ -48,16 +48,27 @@ import org.junit.jupiter.api.Test
 class SASTests {
     private fun prettyTable(table: List<List<String>>): String {
         var res = ""
-        val maxWidth = Collections.max(table.map { l -> Collections.max(l.map { c -> c.length }) })
+        val maxWidth =
+            Collections.max(
+                table.filter { it.size > 1 }.map { l -> Collections.max(l.map { c -> c.length }) }
+            )
 
-        val separator = ("+" + "-".repeat(maxWidth + 2)).repeat(table.size) + "+\n"
+        val separator = ("+" + "-".repeat(maxWidth + 2)).repeat(table[0].size) + "+\n"
         res += separator
         for (row in table) {
-            for (cell in row) {
-                res += "| $cell " + " ".repeat(maxWidth - cell.length)
+            if (row.size == 1) {
+                res +=
+                    "| ${row[0]} " +
+                        " ".repeat(separator.length - 4 - row[0].length) +
+                        "|\n" +
+                        separator
+            } else {
+                for (cell in row) {
+                    res += "| $cell " + " ".repeat(maxWidth - cell.length)
+                }
+                res += "|\n"
+                res += separator
             }
-            res += "|\n"
-            res += separator
         }
         return res
     }
@@ -78,6 +89,7 @@ class SASTests {
                             LLVMIRLanguageFrontend::class.java,
                             LLVMIRLanguageFrontend.LLVM_EXTENSIONS
                         )
+                        .registerPass(CompressLLVMPass())
                         .defaultPasses()
                         .registerPass(StubRemoverPass())
                 return translationConfiguration.build()
@@ -93,15 +105,24 @@ class SASTests {
             }
 
             val stubs = mutableMapOf<FunctionDeclaration, FunctionDeclaration>()
-            val allFuncs = t.all().filterIsInstance<FunctionDeclaration>()
 
             for (funcDecl in t.all().filterIsInstance<FunctionDeclaration>()) {
-                val funcStatements =
+                var funcStatements =
                     if (funcDecl.body == null && funcDecl.definition != null) {
                         (funcDecl.definition?.body as? CompoundStatement)?.statements
                     } else {
                         (funcDecl.body as? CompoundStatement)?.statements
                     }
+                if (
+                    funcStatements?.size == 1 &&
+                        (funcStatements[0] as? LabelStatement)?.subStatement is CompoundStatement
+                ) {
+                    // There's only one label statement, so we can simply get this one. Sometimes,
+                    // lifters or clang give a label to a BB even if there's nothing else...
+                    funcStatements =
+                        ((funcStatements[0] as LabelStatement).subStatement as CompoundStatement)
+                            .statements
+                }
                 if (funcStatements?.size == 1 && funcStatements[0] is CallExpression) {
                     stubs[funcDecl] = (funcStatements[0] as CallExpression).invokes.first()
                 } else if (
@@ -118,12 +139,13 @@ class SASTests {
                                 as? VariableDeclaration)
                             ?.initializer is CallExpression
                 ) {
-                    stubs[funcDecl] =
-                        (((funcStatements[0] as? DeclarationStatement)?.singleDeclaration
-                                    as? VariableDeclaration)
-                                ?.initializer as CallExpression)
+                    val func =
+                        (((funcStatements[0] as DeclarationStatement).singleDeclaration
+                                    as VariableDeclaration)
+                                .initializer as CallExpression)
                             .invokes
-                            .first()
+                            .firstOrNull()
+                    if (func != null) stubs[funcDecl] = func
                 }
             }
 
@@ -135,7 +157,7 @@ class SASTests {
                 val mutableInvokes = (callExpr as CallExpression).invokes.toMutableList()
                 mutableInvokes.replaceAll { old ->
                     if (stubs.keys.contains(old)) {
-                        stubs[old]
+                        stubs[old]!!
                     } else {
                         old
                     }
@@ -164,7 +186,7 @@ class SASTests {
             println("Calls to SSL_CTX_set_cipher_list: ${callExprs.size}")
             for (expr in callExprs) {
                 if ((expr as? CallExpression)?.arguments != null && expr.arguments.size > 1) {
-                    val arg = expr.arguments.get(1)
+                    val arg = expr.arguments[1]
                     val evalArg = ValueEvaluator().evaluate(arg)
                     println("Arg: $evalArg")
                     violation = violation || evalArg == "MD5"
@@ -177,27 +199,36 @@ class SASTests {
     @Test
     fun testVulnCheck() {
         val noIterations = 1
-        val filePath1 = Path.of("src", "test", "resources", "llvm", "vulnchecks").toFile()
-
-        val tc1 = setupConfig(filePath1, listOf("client.cpp"))
-        var resultTest = TranslationManager.builder().config(tc1!!).build().analyze().get()
+        // val filePath1 = Path.of("src", "test", "resources", "llvm", "vulnchecks").toFile()
+        // val tc1 = setupConfig(filePath1, listOf("client.cpp"))
+        // var resultTest = TranslationManager.builder().config(tc1!!).build().analyze().get()
 
         val architectures =
             listOf("macAArch64", "linuxx86", "linuxx86gcc", "linuxAArch64", "linuxArm")
-
-        var filePath = Path.of("src", "main", "resources").toFile()
+        var filePath = Path.of("src", "test", "resources", "llvm", "vulnchecks").toFile()
 
         var startTime = System.currentTimeMillis()
         var tc = setupConfig(filePath, listOf("client.cpp"))
         var resultOrig = TranslationManager.builder().config(tc!!).build().analyze().get()
         var sourceViolation = CPGQuery().querySourcecodeForViolation(resultOrig)
-        for (i in 0..noIterations) {
+        for (i in 1..noIterations) {
             resultOrig = TranslationManager.builder().config(tc).build().analyze().get()
             sourceViolation = CPGQuery().querySourcecodeForViolation(resultOrig)
         }
-        val timeOrig = (System.currentTimeMillis() - startTime) / 100
+        val timeOrig = (System.currentTimeMillis() - startTime) / noIterations
 
-        var resultSummary = ""
+        val outputList = mutableListOf<List<String>>()
+        outputList.add(listOf("", "Analysis time [ms]", "# Nodes", "# Functions", "Problem found"))
+        outputList.add(listOf("Source Code"))
+        outputList.add(
+            listOf(
+                "Original file",
+                "$timeOrig",
+                "${resultOrig.all().size}",
+                "${resultOrig.all().filterIsInstance<FunctionDeclaration>().size}",
+                "$sourceViolation"
+            )
+        )
 
         for (arch in architectures) {
             filePath = Path.of("src", "test", "resources", "llvm", "vulnchecks", arch).toFile()
@@ -209,7 +240,7 @@ class SASTests {
             var compiledViolation =
                 if (resultComp != null) CPGQuery().querySourcecodeForViolation(resultComp)
                 else "N/A"
-            for (i in 0..noIterations) {
+            for (i in 1..noIterations) {
                 resultComp =
                     if (tc != null) TranslationManager.builder().config(tc).build().analyze().get()
                     else null
@@ -217,7 +248,7 @@ class SASTests {
                     if (resultComp != null) CPGQuery().querySourcecodeForViolation(resultComp)
                     else "N/A"
             }
-            val timeComp = (System.currentTimeMillis() - startTime) / 100
+            val timeComp = (System.currentTimeMillis() - startTime) / noIterations
 
             filePath =
                 Path.of("src", "test", "resources", "llvm", "vulnchecks", arch, "lifted").toFile()
@@ -225,11 +256,11 @@ class SASTests {
             tc = setupConfig(filePath, listOf("client.ll")) // , "if.ll", "main.ll"))
             var resultLifted = TranslationManager.builder().config(tc!!).build().analyze().get()
             var liftedViolation = CPGQuery().querySourcecodeForViolation(resultLifted)
-            for (i in 0..noIterations) {
+            for (i in 1..noIterations) {
                 resultLifted = TranslationManager.builder().config(tc).build().analyze().get()
                 liftedViolation = CPGQuery().querySourcecodeForViolation(resultLifted)
             }
-            val timeLifted = (System.currentTimeMillis() - startTime) / 100
+            val timeLifted = (System.currentTimeMillis() - startTime) / noIterations
 
             /*
              * For the mac example, the CPG fails to resolve the variable g3 in the decompiled code.
@@ -239,51 +270,54 @@ class SASTests {
             tc = setupConfig(filePath, listOf("client.c")) // , "if.c", "main.c"))
             var resultDecomp = TranslationManager.builder().config(tc!!).build().analyze().get()
             var decompViolation = CPGQuery().querySourcecodeForViolation(resultDecomp)
-            for (i in 0..noIterations) {
+            for (i in 1..noIterations) {
                 resultDecomp = TranslationManager.builder().config(tc).build().analyze().get()
                 decompViolation = CPGQuery().querySourcecodeForViolation(resultDecomp)
             }
-            val timeDecomp = (System.currentTimeMillis() - startTime) / 100
+            val timeDecomp = (System.currentTimeMillis() - startTime) / noIterations
 
-            resultSummary += "\n"
-            resultSummary += "Results for clang on $arch\n"
-            resultSummary +=
-                prettyTable(
+            outputList.add(
+                listOf(
+                    if ("gcc" in arch) {
+                        "Results for g++ on $arch\n"
+                    } else {
+                        "Results for clang on $arch\n"
+                    }
+                )
+            )
+
+            if (resultComp != null) {
+                outputList.add(
                     listOf(
-                        listOf(" ", "Original", "Compiled ll", "Lifted ll", "Decompiled"),
-                        listOf(
-                            "Analysis time [ms]",
-                            "${timeOrig/noIterations}",
-                            "${timeComp/noIterations}",
-                            "${timeLifted/noIterations}",
-                            "${timeDecomp/noIterations}"
-                        ),
-                        listOf(
-                            "# Nodes",
-                            "${resultOrig.all().size}",
-                            "${resultComp?.all()?.size}",
-                            "${resultLifted.all().size}",
-                            "${resultDecomp.all().size}"
-                        ),
-                        listOf(
-                            "# Functions",
-                            "${resultOrig.all().filterIsInstance<FunctionDeclaration>().size}",
-                            "${resultComp?.all()?.filterIsInstance<FunctionDeclaration>()?.size}",
-                            "${resultLifted.all().filterIsInstance<FunctionDeclaration>().size}",
-                            "${resultDecomp.all().filterIsInstance<FunctionDeclaration>().size}"
-                        ),
-                        listOf(
-                            "Found violation",
-                            "$sourceViolation",
-                            "$compiledViolation",
-                            "$liftedViolation",
-                            "$decompViolation"
-                        )
+                        "Compiled ll",
+                        "$timeComp",
+                        "${resultComp.all().size}",
+                        "${resultComp.all().filterIsInstance<FunctionDeclaration>().size}",
+                        "$compiledViolation"
                     )
-                ) + "\n"
+                )
+            }
+            outputList.add(
+                listOf(
+                    "Lifted ll",
+                    "$timeLifted",
+                    "${resultLifted.all().size}",
+                    "${resultLifted.all().filterIsInstance<FunctionDeclaration>().size}",
+                    "$liftedViolation"
+                )
+            )
+            outputList.add(
+                listOf(
+                    "Decompiled",
+                    "$timeDecomp",
+                    "${resultDecomp.all().size}",
+                    "${resultDecomp.all().filterIsInstance<FunctionDeclaration>().size}",
+                    "$decompViolation"
+                )
+            )
         }
 
-        println(resultSummary)
+        println(prettyTable(outputList))
     }
 
     @Test
@@ -347,13 +381,21 @@ class SASTests {
                 TestUtils.analyzeAndGetFirstTU(
                     listOf(topLevel.resolve(file).toFile()),
                     topLevel,
-                    true
+                    false
                 ) {
                     it.registerLanguage(
                             LLVMIRLanguageFrontend::class.java,
                             LLVMIRLanguageFrontend.LLVM_EXTENSIONS
                         )
                         .registerPass(CompressLLVMPass())
+                        .registerPass(TypeHierarchyResolver())
+                        .registerPass(JavaExternalTypeHierarchyResolver())
+                        .registerPass(ImportResolver())
+                        .registerPass(VariableUsageResolver())
+                        .registerPass(CallResolver())
+                        .registerPass(EvaluationOrderGraphPass())
+                        .registerPass(TypeResolver())
+                        .registerPass(FilenameMapper())
                 }
             val time = System.currentTimeMillis() - start
             val problemNodes = tu.all().filterIsInstance<ProblemNode>().size
