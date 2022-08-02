@@ -579,6 +579,7 @@ public class TranslationConfiguration {
                 + "phase is not recommended when using the parallel frontends feature! "
                 + "This may result in erroneous results.");
       }
+
       return new TranslationConfiguration(
           symbols,
           softwareComponents,
@@ -589,7 +590,7 @@ public class TranslationConfiguration {
           includePaths.toArray(new String[] {}),
           includeWhitelist,
           includeBlacklist,
-          passes,
+          orderPasses(),
           frontends,
           codeInNodes,
           processAnnotations,
@@ -600,6 +601,60 @@ public class TranslationConfiguration {
           inferenceConfiguration,
           compilationDatabase,
           matchCommentsToNodes);
+    }
+
+    private List<Pass> orderPasses() {
+
+      Set<Map.Entry<Pass, Set<Class<? extends Pass>>>> workingList = new HashSet<>();
+
+      List<Pass> result = new ArrayList<>();
+      Boolean firstPassFound = false;
+      Pass firstPass = null;
+      for (Pass p : this.passes) {
+        if (p.getFirstPass()) {
+          if (firstPassFound) {
+            // TODO exception
+          }
+          result.add(p);
+          firstPass = p;
+          firstPassFound = true;
+        } else {
+          workingList.add(new AbstractMap.SimpleEntry<>(p, p.getDependsOn()));
+        }
+      }
+
+      if (firstPass != null) {
+        for (Map.Entry<Pass, Set<Class<? extends Pass>>> currentElement : workingList) {
+          currentElement.getValue().remove(firstPass.getClass());
+        }
+      }
+      // TODO sanity checks
+      whileLoop:
+      while (!workingList.isEmpty()) {
+        for (Map.Entry<Pass, Set<Class<? extends Pass>>> currentElement : workingList) {
+          if (currentElement.getValue().size() == 0) {
+            Pass passForResult = currentElement.getKey();
+            result.add(passForResult);
+
+            // remove the pass from the other passe's dependencies
+            for (Map.Entry<Pass, Set<Class<? extends Pass>>> innerCurrentElement : workingList) {
+              innerLoop:
+              for (Class<? extends Pass> it : innerCurrentElement.getValue()) {
+                if (passForResult.getClass() == it) {
+                  innerCurrentElement.getValue().remove(it);
+                  break innerLoop;
+                }
+              }
+            }
+
+            workingList.remove(currentElement);
+            break whileLoop;
+          }
+        }
+      }
+
+      // TODO @ mk
+      return result;
     }
   }
 

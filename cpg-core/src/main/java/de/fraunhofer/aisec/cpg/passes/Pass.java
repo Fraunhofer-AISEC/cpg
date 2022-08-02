@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.passes;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -44,8 +46,14 @@ public abstract class Pass implements Consumer<TranslationResult> {
 
   protected static final Logger log = LoggerFactory.getLogger(Pass.class);
 
+  protected Boolean firstPass;
+
+  protected Set<Class<? extends Pass>> dependsOn;
+
   protected Pass() {
     name = this.getClass().getName();
+    dependsOn = new HashSet<Class<? extends Pass>>();
+    firstPass = false;
   }
 
   @JsonIgnore @Nullable protected LanguageFrontend lang;
@@ -85,5 +93,13 @@ public abstract class Pass implements Consumer<TranslationResult> {
    */
   public boolean supportsLanguageFrontend(LanguageFrontend lang) {
     return true;
+  }
+
+  public boolean getFirstPass() {
+    return firstPass;
+  }
+
+  public Set<Class<? extends Pass>> getDependsOn() {
+    return dependsOn;
   }
 }

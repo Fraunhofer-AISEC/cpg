@@ -85,6 +85,7 @@ public class EvaluationOrderGraphPass extends Pass {
   protected final List<Node> intermediateNodes = new ArrayList<>();
 
   public EvaluationOrderGraphPass() {
+    super();
     map.put(IncludeDeclaration.class, this::doNothing);
     map.put(TranslationUnitDeclaration.class, this::handleTranslationUnitDeclaration);
     map.put(NamespaceDeclaration.class, this::handleNamespaceDeclaration);

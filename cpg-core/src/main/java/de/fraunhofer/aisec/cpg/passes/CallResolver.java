@@ -64,6 +64,11 @@ import org.slf4j.LoggerFactory;
  */
 public class CallResolver extends Pass {
 
+  public CallResolver() {
+    super();
+    dependsOn.add(VariableUsageResolver.class);
+  }
+
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);
 
   protected final Map<String, RecordDeclaration> recordMap = new HashMap<>();
