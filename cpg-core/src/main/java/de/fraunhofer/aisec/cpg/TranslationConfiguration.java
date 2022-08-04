@@ -664,7 +664,9 @@ public class TranslationConfiguration {
       // adding missing passes to the local working list
       while (!missingPasses.isEmpty()) {
         Class<? extends Pass> cls = missingPasses.remove(0);
-        log.info("Registering a required dependency which was not registered explicitly: ", cls);
+        log.info(
+            "Registering a required dependency which was not registered explicitly: ",
+            cls.toString());
         Pass newPass = null;
         try {
           newPass = cls.getConstructor().newInstance();
