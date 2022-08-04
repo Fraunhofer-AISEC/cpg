@@ -37,8 +37,7 @@ public class TypeResolver extends Pass {
 
   public TypeResolver() {
     super();
-
-    dependsOn.add(CallResolver.class);
+    registerDependency(CallResolver.class);
   }
 
   protected final Set<Type> firstOrderTypes = new HashSet<>();

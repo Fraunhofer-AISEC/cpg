@@ -603,40 +603,145 @@ public class TranslationConfiguration {
           matchCommentsToNodes);
     }
 
+    /**
+     * TODO @ mk
+     *
+     * @return
+     */
     private List<Pass> orderPasses() {
 
-      Set<Map.Entry<Pass, Set<Class<? extends Pass>>>> workingList = new HashSet<>();
+      log.info("Passes before enforcing order: {}", passes.toString());
 
       List<Pass> result = new ArrayList<>();
-      Boolean firstPassFound = false;
-      Pass firstPass = null;
-      for (Pass p : this.passes) {
-        if (p.getFirstPass()) {
-          if (firstPassFound) {
-            // TODO exception
+
+      // Create a local copy of all passes and their "current" dependencies without possible
+      // duplicates
+      List<Map.Entry<Pass, Set<Class<? extends Pass>>>> workingList = new ArrayList<>();
+
+      Set<Pass> firstPasses = new HashSet<>();
+      Set<Pass> lastPasses = new HashSet<>();
+
+      for (Pass p : passes) {
+        Boolean passFound = false;
+        for (Map.Entry<Pass, Set<Class<? extends Pass>>> wl : workingList) {
+          if (wl.getKey().getClass() == p.getClass()) {
+            passFound = true;
+            break;
           }
-          result.add(p);
-          firstPass = p;
-          firstPassFound = true;
-        } else {
-          workingList.add(new AbstractMap.SimpleEntry<>(p, p.getDependsOn()));
+        }
+        if (!passFound) {
+          Set<Class<? extends Pass>> deps = new HashSet<>();
+          deps.addAll(p.getDependsOn());
+          deps.addAll(p.getAfterPass());
+          workingList.add(new AbstractMap.SimpleEntry<Pass, Set<Class<? extends Pass>>>(p, deps));
+
+          if (p.getFirstPass()) {
+            firstPasses.add(p);
+          }
+          if (p.getLastPass()) {
+            lastPasses.add(p);
+          }
         }
       }
 
-      if (firstPass != null) {
-        for (Map.Entry<Pass, Set<Class<? extends Pass>>> currentElement : workingList) {
-          currentElement.getValue().remove(firstPass.getClass());
+      // add required dependencies to the working list
+      List<Class<? extends Pass>> missingPasses = new ArrayList<>();
+      for (Map.Entry<Pass, Set<Class<? extends Pass>>> p : workingList) {
+        for (Class<? extends Pass> dependency : p.getKey().getDependsOn()) {
+          Boolean dependencyFound = false;
+          for (Map.Entry<Pass, Set<Class<? extends Pass>>> inner : workingList) {
+            if (dependency == inner.getClass()) {
+              dependencyFound = true;
+              break;
+            }
+          }
+          if (!dependencyFound) {
+            missingPasses.add(dependency);
+          }
         }
       }
+
+      // adding missing passes to the local working list
+      while (!missingPasses.isEmpty()) {
+        Class<? extends Pass> cls = missingPasses.remove(0);
+        log.info("Registering a required dependency which was not registered explicitly: ", cls);
+        Pass newPass = null;
+        try {
+          newPass = cls.getConstructor().newInstance();
+        } catch (InstantiationException e) {
+          throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+          throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
+          throw new RuntimeException(e);
+        }
+
+        Set<Class<? extends Pass>> deps = new HashSet<>();
+        deps.addAll(newPass.getDependsOn());
+        deps.addAll(newPass.getAfterPass());
+        workingList.add(
+            new AbstractMap.SimpleEntry<Pass, Set<Class<? extends Pass>>>(newPass, deps));
+
+        if (newPass.getFirstPass()) {
+          firstPasses.add(newPass);
+        }
+        if (newPass.getLastPass()) {
+          lastPasses.add(newPass);
+        }
+
+        // check the dependencies of the new pass
+        for (Class<? extends Pass> dependency : newPass.getDependsOn()) {
+          Boolean dependencyFound = false;
+
+          // check whether the dependecy is already in the working list
+          for (Map.Entry<Pass, Set<Class<? extends Pass>>> p : workingList) {
+            if (dependency == p.getKey().getClass()) {
+              dependencyFound = true;
+              break;
+            }
+          }
+
+          // check whether it is already known as a missing dependency
+          if (!dependencyFound) {
+            for (Class<? extends Pass> inner : missingPasses) {
+              if (dependency == inner) {
+                dependencyFound = true;
+                break;
+              }
+            }
+          }
+
+          // it is really missing -> add it to missing passes
+          if (!dependencyFound) {
+            missingPasses.add(dependency);
+          }
+        }
+      }
+
+      if (firstPasses.size() > 1) {
+        log.error("Too many passes require to be executed as first pass: ", firstPasses.toString());
+      }
+
+      if (lastPasses.size() > 1) {
+        log.error("Too many passes require to be executed as last pass: ", lastPasses.toString());
+      }
+
       // TODO sanity checks
       whileLoop:
-      while (!workingList.isEmpty()) {
+      while (!workingList.isEmpty()) { // TODO catch loop
         for (Map.Entry<Pass, Set<Class<? extends Pass>>> currentElement : workingList) {
+
+          if (workingList.size() > 1 && currentElement.getKey().getLastPass()) {
+            continue; // last pass can only be added at the end
+          }
+
           if (currentElement.getValue().size() == 0) {
             Pass passForResult = currentElement.getKey();
             result.add(passForResult);
 
-            // remove the pass from the other passe's dependencies
+            // remove the pass from the other pass's dependencies
             for (Map.Entry<Pass, Set<Class<? extends Pass>>> innerCurrentElement : workingList) {
               innerLoop:
               for (Class<? extends Pass> it : innerCurrentElement.getValue()) {
@@ -653,7 +758,7 @@ public class TranslationConfiguration {
         }
       }
 
-      // TODO @ mk
+      log.info("Passes after enforcing order: {}", passes.toString());
       return result;
     }
   }

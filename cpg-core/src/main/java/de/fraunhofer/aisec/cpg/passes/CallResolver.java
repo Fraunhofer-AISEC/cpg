@@ -66,7 +66,7 @@ public class CallResolver extends Pass {
 
   public CallResolver() {
     super();
-    dependsOn.add(VariableUsageResolver.class);
+    registerDependency(VariableUsageResolver.class);
   }
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);

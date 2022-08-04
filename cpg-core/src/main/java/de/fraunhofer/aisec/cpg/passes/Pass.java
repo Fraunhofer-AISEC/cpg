@@ -46,14 +46,30 @@ public abstract class Pass implements Consumer<TranslationResult> {
 
   protected static final Logger log = LoggerFactory.getLogger(Pass.class);
 
-  protected Boolean firstPass;
+  /**
+   * Indicates whether this pass should be executed as the first pass. Note: setting this flag to
+   * `true` for more than one active pass will yield an error. Note: setting this flag will not
+   * activate the pass. You must register the pass manually.
+   */
+  private Boolean firstPass;
 
-  protected Set<Class<? extends Pass>> dependsOn;
+  /**
+   * Indicates whether this pass should be executed as the last pass. Note: setting this flag to
+   * `true` for more than one active pass will yield an error. Note: setting this flag will not
+   * activate the pass. You must register the pass manually.
+   */
+  private Boolean lastPass;
+
+  private Set<Class<? extends Pass>> afterPass;
+
+  private Set<Class<? extends Pass>> dependsOn;
 
   protected Pass() {
     name = this.getClass().getName();
-    dependsOn = new HashSet<Class<? extends Pass>>();
+    dependsOn = new HashSet<>();
+    afterPass = new HashSet<>();
     firstPass = false;
+    lastPass = false;
   }
 
   @JsonIgnore @Nullable protected LanguageFrontend lang;
@@ -96,10 +112,34 @@ public abstract class Pass implements Consumer<TranslationResult> {
   }
 
   public boolean getFirstPass() {
-    return firstPass;
+    return this.firstPass;
   }
 
   public Set<Class<? extends Pass>> getDependsOn() {
-    return dependsOn;
+    return this.dependsOn;
+  }
+
+  public void registerDependency(Class<? extends Pass> p) {
+    this.dependsOn.add(p);
+  }
+
+  public void registerSoftDependency(Class<? extends Pass> p) {
+    this.afterPass.add(p);
+  }
+
+  public void setFirstPass(Boolean flag) {
+    this.firstPass = flag;
+  }
+
+  public void setLastPass(Boolean flag) {
+    this.lastPass = flag;
+  }
+
+  public boolean getLastPass() {
+    return this.lastPass;
+  }
+
+  public Set<Class<? extends Pass>> getAfterPass() {
+    return this.afterPass;
   }
 }

@@ -69,7 +69,7 @@ public class VariableUsageResolver extends Pass {
 
   public VariableUsageResolver() {
     super();
-    dependsOn.add(TypeHierarchyResolver.class);
+    registerDependency(TypeHierarchyResolver.class);
   }
 
   private static final Logger log = LoggerFactory.getLogger(VariableUsageResolver.class);
