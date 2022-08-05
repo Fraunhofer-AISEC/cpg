@@ -138,7 +138,7 @@ inline fun <reified T> Node.exists(
  */
 fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Number> {
     // The cast could potentially go wrong, but if its not an int, its not really a size
-    return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(QueryTree(n)))
+    return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(), "sizeof($n)")
 }
 
 /**
@@ -152,7 +152,7 @@ fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
         return QueryTree(evalRes, mutableListOf(QueryTree(n)))
     }
     // Extend this when we have other evaluators.
-    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(QueryTree(n)))
+    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(), "min($n)")
 }
 
 /**
@@ -173,7 +173,7 @@ fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
         }
         // Extend this when we have other evaluators.
     }
-    return QueryTree(result, mutableListOf(QueryTree(n)))
+    return QueryTree(result, mutableListOf(), "min($n)")
 }
 
 /**
@@ -194,7 +194,7 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
         }
         // Extend this when we have other evaluators.
     }
-    return QueryTree(result, mutableListOf(QueryTree(n)))
+    return QueryTree(result, mutableListOf(), "max($n)")
 }
 
 /**
@@ -208,7 +208,7 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
         return QueryTree(evalRes, mutableListOf(QueryTree(n)))
     }
     // Extend this when we have other evaluators.
-    return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(QueryTree(n)))
+    return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(), "max($n)")
 }
 
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
@@ -220,13 +220,21 @@ fun dataFlow(from: Node, to: Node): QueryTree<Boolean> {
 /** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
 fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
     val evalRes = from.followNextEOGEdgesUntilHit { it == to }
-    return QueryTree(evalRes.isNotEmpty(), evalRes.map { QueryTree(it) }.toMutableList())
+    return QueryTree(
+        evalRes.isNotEmpty(),
+        evalRes.map { QueryTree(it) }.toMutableList(),
+        "executionPath($from, $to)"
+    )
 }
 
 /** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
 fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
     val evalRes = from.followNextEOGEdgesUntilHit(predicate)
-    return QueryTree(evalRes.isNotEmpty(), evalRes.map { QueryTree(it) }.toMutableList())
+    return QueryTree(
+        evalRes.isNotEmpty(),
+        evalRes.map { QueryTree(it) }.toMutableList(),
+        "executionPath($from, $predicate)"
+    )
 }
 
 /** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
@@ -259,7 +267,7 @@ val Expression.max: QueryTree<Number>
 /** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
 val Expression.value: QueryTree<Any?>
     get() {
-        return QueryTree(evaluate(), mutableListOf(QueryTree(this)))
+        return QueryTree(evaluate(), mutableListOf(), "$this")
     }
 
 /**
@@ -269,5 +277,5 @@ val Expression.value: QueryTree<Any?>
 val Expression.intValue: QueryTree<Number>?
     get() {
         val evalRes = evaluate() as? Int ?: return null
-        return QueryTree(evalRes, mutableListOf(QueryTree(this)))
+        return QueryTree(evalRes, mutableListOf(), "$this")
     }

@@ -59,13 +59,16 @@ open class QueryTree<T>(
     open val stringRepresentation: String = ""
 ) {
     fun printNicely(depth: Int = 0): String {
-        // TODO: Make this output awesome
         var res =
             "  ".repeat(depth) +
                 "$stringRepresentation (==> $value)\n" +
-                "--------".repeat(depth) +
+                "--------".repeat(depth + 1) +
                 "\n"
-        children.forEach { res += it.toString() + "\n" + "--------".repeat(depth + 1) + "\n" }
+        if (children.isNotEmpty()) {
+            children.forEach {
+                res += it.printNicely(depth + 2) + "\n" + "--------".repeat(depth + 1) + "\n"
+            }
+        }
         return res
     }
 
