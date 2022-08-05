@@ -109,6 +109,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             LLVMContextDispose(ctx)
             throw TranslationException("Could not parse IR: $errorMsg")
         }
+
         bench.addMeasurement()
         bench = Benchmark(this.javaClass, "Transform to CPG")
 

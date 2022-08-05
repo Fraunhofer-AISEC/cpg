@@ -198,10 +198,10 @@ class SASTests {
 
     @Test
     fun testVulnCheck() {
-        val noIterations = 1
-        // val filePath1 = Path.of("src", "test", "resources", "llvm", "vulnchecks").toFile()
-        // val tc1 = setupConfig(filePath1, listOf("client.cpp"))
-        // var resultTest = TranslationManager.builder().config(tc1!!).build().analyze().get()
+        val noIterations = 100
+
+        val outputList = mutableListOf<List<String>>()
+        outputList.add(listOf("", "Analysis time [ms]", "# Nodes", "# Functions", "Problem found"))
 
         val architectures =
             listOf("macAArch64", "linuxx86", "linuxx86gcc", "linuxAArch64", "linuxArm")
@@ -217,8 +217,6 @@ class SASTests {
         }
         val timeOrig = (System.currentTimeMillis() - startTime) / noIterations
 
-        val outputList = mutableListOf<List<String>>()
-        outputList.add(listOf("", "Analysis time [ms]", "# Nodes", "# Functions", "Problem found"))
         outputList.add(listOf("Source Code"))
         outputList.add(
             listOf(
@@ -409,12 +407,8 @@ class SASTests {
             atloc += "($loc,$time) "
             atnodes += "($nodes,$time) "
             println(table)
-            println(atloc)
-            println(atnodes)
         }
 
         println(table)
-        println(atloc)
-        println(atnodes)
     }
 }
