@@ -616,14 +616,14 @@ public class TranslationConfiguration {
 
       // Create a local copy of all passes and their "current" dependencies without possible
       // duplicates
-      List<Map.Entry<Pass, Set<Class<? extends Pass>>>> workingList = new ArrayList<>();
+      PassOrderingWorkingList workingList = new PassOrderingWorkingList();
 
       Set<Pass> firstPasses = new HashSet<>();
       Set<Pass> lastPasses = new HashSet<>();
 
       for (Pass p : passes) {
         Boolean passFound = false;
-        for (Map.Entry<Pass, Set<Class<? extends Pass>>> wl : workingList) {
+        for (Map.Entry<Pass, Set<Class<? extends Pass>>> wl : workingList.getWorkingList()) {
           if (wl.getKey().getClass() == p.getClass()) {
             passFound = true;
             break;
@@ -633,7 +633,8 @@ public class TranslationConfiguration {
           Set<Class<? extends Pass>> deps = new HashSet<>();
           deps.addAll(p.getDependsOn());
           deps.addAll(p.getAfterPass());
-          workingList.add(new AbstractMap.SimpleEntry<Pass, Set<Class<? extends Pass>>>(p, deps));
+          workingList.addToWorkingList(
+              new AbstractMap.SimpleEntry<Pass, Set<Class<? extends Pass>>>(p, deps));
 
           if (p.getFirstPass()) {
             firstPasses.add(p);
@@ -644,15 +645,21 @@ public class TranslationConfiguration {
         }
       }
 
+      log.debug("Working list after initial scan: ", workingList.toString());
+      log.debug("First passes after initial scan: ", firstPasses.toString());
+      log.debug("LAst passes after initial scan: ", lastPasses.toString());
+
       // add required dependencies to the working list
       List<Class<? extends Pass>> missingPasses = new ArrayList<>();
-      for (Map.Entry<Pass, Set<Class<? extends Pass>>> p : workingList) {
+      for (Map.Entry<Pass, Set<Class<? extends Pass>>> p : workingList.getWorkingList()) {
         for (Class<? extends Pass> dependency : p.getKey().getDependsOn()) {
           Boolean dependencyFound = false;
-          for (Map.Entry<Pass, Set<Class<? extends Pass>>> inner : workingList) {
-            if (dependency == inner.getClass()) {
+
+          innerLoop:
+          for (Map.Entry<Pass, Set<Class<? extends Pass>>> inner : workingList.getWorkingList()) {
+            if (dependency == inner.getKey().getClass()) {
               dependencyFound = true;
-              break;
+              break innerLoop;
             }
           }
           if (!dependencyFound) {
@@ -660,6 +667,9 @@ public class TranslationConfiguration {
           }
         }
       }
+
+      log.info(
+          "The following passes are missing required dependencies: ", missingPasses.toString());
 
       // adding missing passes to the local working list
       while (!missingPasses.isEmpty()) {
@@ -683,7 +693,7 @@ public class TranslationConfiguration {
         Set<Class<? extends Pass>> deps = new HashSet<>();
         deps.addAll(newPass.getDependsOn());
         deps.addAll(newPass.getAfterPass());
-        workingList.add(
+        workingList.addToWorkingList(
             new AbstractMap.SimpleEntry<Pass, Set<Class<? extends Pass>>>(newPass, deps));
 
         if (newPass.getFirstPass()) {
@@ -698,7 +708,7 @@ public class TranslationConfiguration {
           Boolean dependencyFound = false;
 
           // check whether the dependecy is already in the working list
-          for (Map.Entry<Pass, Set<Class<? extends Pass>>> p : workingList) {
+          for (Map.Entry<Pass, Set<Class<? extends Pass>>> p : workingList.getWorkingList()) {
             if (dependency == p.getKey().getClass()) {
               dependencyFound = true;
               break;
@@ -722,6 +732,8 @@ public class TranslationConfiguration {
         }
       }
 
+      log.debug("Working list after adding missing dependencies: ", workingList.toString());
+
       if (firstPasses.size() > 1) {
         log.error("Too many passes require to be executed as first pass: ", firstPasses.toString());
       }
@@ -733,34 +745,31 @@ public class TranslationConfiguration {
       // TODO sanity checks
       whileLoop:
       while (!workingList.isEmpty()) { // TODO catch loop
-        for (Map.Entry<Pass, Set<Class<? extends Pass>>> currentElement : workingList) {
+        for (Map.Entry<Pass, Set<Class<? extends Pass>>> currentElement :
+            workingList.getWorkingList()) {
 
           if (workingList.size() > 1 && currentElement.getKey().getLastPass()) {
             continue; // last pass can only be added at the end
           }
 
-          if (currentElement.getValue().size() == 0) {
+          if (currentElement.getValue().size() == 0) { // no unsatisfied dependencies
             Pass passForResult = currentElement.getKey();
-            result.add(passForResult);
 
             // remove the pass from the other pass's dependencies
-            for (Map.Entry<Pass, Set<Class<? extends Pass>>> innerCurrentElement : workingList) {
-              innerLoop:
-              for (Class<? extends Pass> it : innerCurrentElement.getValue()) {
-                if (passForResult.getClass() == it) {
-                  innerCurrentElement.getValue().remove(it);
-                  break innerLoop;
-                }
-              }
-            }
+            workingList.removeDependencyByClass(passForResult.getClass());
 
-            workingList.remove(currentElement);
+            workingList.getWorkingList().remove(currentElement);
+            result.add(passForResult);
+
             break whileLoop;
           }
         }
+
+        // we are in a loop :(
+        throw new RuntimeException("Failed to satisfy ordering requirements.");
       }
 
-      log.info("Passes after enforcing order: {}", passes.toString());
+      log.info("Passes after enforcing order: {}", result.toString());
       return result;
     }
   }
