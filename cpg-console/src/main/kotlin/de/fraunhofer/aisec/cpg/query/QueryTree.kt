@@ -56,74 +56,107 @@ import de.fraunhofer.aisec.cpg.graph.compareTo
 open class QueryTree<T>(
     open var value: T,
     open val children: MutableList<QueryTree<*>> = mutableListOf(),
-    open val stringRepresentation: String = ""
+    open var stringRepresentation: String = ""
 ) {
     fun printNicely(depth: Int = 0): String {
         var res =
             "  ".repeat(depth) +
                 "$stringRepresentation (==> $value)\n" +
-                "--------".repeat(depth + 1) +
-                "\n"
+                "--------".repeat(depth + 1)
         if (children.isNotEmpty()) {
-            children.forEach {
-                res += it.printNicely(depth + 2) + "\n" + "--------".repeat(depth + 1) + "\n"
+            res += "\n"
+            children.forEach { c ->
+                val next = c.printNicely(depth + 2)
+                if (next.isNotEmpty()) res += next + "\n" + "--------".repeat(depth + 1) + "\n"
             }
         }
         return res
     }
 
     /** Checks for equality of two [QueryTree]s. */
-    infix fun eq(other: QueryTree<T>): QueryTree<Boolean> {
+    infix fun eq(other: QueryTree<T>): ComparableQueryTree<Boolean> {
         val result = this.value == other.value
-        return QueryTree(result, mutableListOf(this, other), "${this.value} == ${other.value}")
+        return ComparableQueryTree(
+            result,
+            mutableListOf(this, other),
+            "${this.value} == ${other.value}"
+        )
     }
 
     /**
      * Checks for equality of a [QueryTree] with a value of the same type (e.g. useful to check for
      * constants).
      */
-    infix fun eq(other: T): QueryTree<Boolean> {
+    infix fun eq(other: T): ComparableQueryTree<Boolean> {
         val result = this.value == other
-        return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} == $value")
+        return ComparableQueryTree(
+            result,
+            mutableListOf(this, QueryTree(other)),
+            "${this.value} == $value"
+        )
     }
 
     /** Checks for inequality of two [QueryTree]s. */
-    infix fun ne(other: QueryTree<T>): QueryTree<Boolean> {
+    infix fun ne(other: QueryTree<T>): ComparableQueryTree<Boolean> {
         val result = this.value != other.value
-        return QueryTree(result, mutableListOf(this, other), "${this.value} != ${other.value}")
+        return ComparableQueryTree(
+            result,
+            mutableListOf(this, other),
+            "${this.value} != ${other.value}"
+        )
     }
 
     /**
      * Checks for inequality of a [QueryTree] with a value of the same type (e.g. useful to check
      * for constants).
      */
-    infix fun ne(other: T): QueryTree<Boolean> {
+    infix fun ne(other: T): ComparableQueryTree<Boolean> {
         val result = this.value != other
-        return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} != $value")
+        return ComparableQueryTree(
+            result,
+            mutableListOf(this, QueryTree(other)),
+            "${this.value} != $value"
+        )
     }
 
     /** Checks if the value is contained in the collection of the other [QueryTree]. */
-    infix fun IN(other: QueryTree<Collection<*>>): QueryTree<Boolean> {
+    infix fun IN(other: QueryTree<Collection<*>>): ComparableQueryTree<Boolean> {
         val result = other.value.contains(this.value)
-        return QueryTree(result, mutableListOf(this, other), "${this.value} in ${other.value}")
+        return ComparableQueryTree(
+            result,
+            mutableListOf(this, other),
+            "${this.value} in ${other.value}"
+        )
     }
 
     /** Checks if the value is contained in the collection [other]. */
-    infix fun IN(other: Collection<*>): QueryTree<Boolean> {
+    infix fun IN(other: Collection<*>): ComparableQueryTree<Boolean> {
         val result = other.contains(this.value)
-        return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} in $other")
+        return ComparableQueryTree(
+            result,
+            mutableListOf(this, QueryTree(other)),
+            "${this.value} in $other"
+        )
     }
 
     /** Checks if the value is a member of the type of the other [QueryTree]. */
-    infix fun IS(other: QueryTree<Class<*>>): QueryTree<Boolean> {
+    infix fun IS(other: QueryTree<Class<*>>): ComparableQueryTree<Boolean> {
         val result = other.value.isInstance(this.value)
-        return QueryTree(result, mutableListOf(this, other), "${this.value} is ${other.value}")
+        return ComparableQueryTree(
+            result,
+            mutableListOf(this, other),
+            "${this.value} is ${other.value}"
+        )
     }
 
     /** Checks if the value is a member of the type of [oter]. */
-    infix fun IS(other: Class<*>): QueryTree<Boolean> {
+    infix fun IS(other: Class<*>): ComparableQueryTree<Boolean> {
         val result = other.isInstance(this.value)
-        return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} is $other")
+        return ComparableQueryTree(
+            result,
+            mutableListOf(this, QueryTree(other)),
+            "${this.value} is $other"
+        )
     }
 
     override fun hashCode(): Int {
@@ -139,9 +172,19 @@ open class QueryTree<T>(
     }
 }
 
+open class ComparableQueryTree<T : Comparable<T>>(
+    override var value: T,
+    override val children: MutableList<QueryTree<*>> = mutableListOf(),
+    override var stringRepresentation: String = ""
+) : QueryTree<T>(value, children, stringRepresentation), Comparable<ComparableQueryTree<T>> {
+    override fun compareTo(other: ComparableQueryTree<T>): Int {
+        return this.value.compareTo(other.value)
+    }
+}
+
 /** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
-infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> {
-    return QueryTree(
+infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): ComparableQueryTree<Boolean> {
+    return ComparableQueryTree(
         this.value && other.value,
         mutableListOf(this, other),
         stringRepresentation = "${this.value} && ${other.value}"
@@ -149,8 +192,8 @@ infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> 
 }
 
 /** Performs a logical or (||) operation between the values of two [QueryTree]s. */
-infix fun QueryTree<Boolean>.or(other: QueryTree<Boolean>): QueryTree<Boolean> {
-    return QueryTree(
+infix fun QueryTree<Boolean>.or(other: QueryTree<Boolean>): ComparableQueryTree<Boolean> {
+    return ComparableQueryTree(
         this.value || other.value,
         mutableListOf(this, other),
         stringRepresentation = "${this.value} || ${other.value}"
@@ -158,8 +201,8 @@ infix fun QueryTree<Boolean>.or(other: QueryTree<Boolean>): QueryTree<Boolean> {
 }
 
 /** Performs a logical xor operation between the values of two [QueryTree]s. */
-infix fun QueryTree<Boolean>.xor(other: QueryTree<Boolean>): QueryTree<Boolean> {
-    return QueryTree(
+infix fun QueryTree<Boolean>.xor(other: QueryTree<Boolean>): ComparableQueryTree<Boolean> {
+    return ComparableQueryTree(
         this.value xor other.value,
         mutableListOf(this, other),
         stringRepresentation = "${this.value} xor ${other.value}"
@@ -167,8 +210,8 @@ infix fun QueryTree<Boolean>.xor(other: QueryTree<Boolean>): QueryTree<Boolean> 
 }
 
 /** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
-infix fun QueryTree<Boolean>.implies(other: QueryTree<Boolean>): QueryTree<Boolean> {
-    return QueryTree(
+infix fun QueryTree<Boolean>.implies(other: QueryTree<Boolean>): ComparableQueryTree<Boolean> {
+    return ComparableQueryTree(
         !this.value || other.value,
         mutableListOf(this, other),
         stringRepresentation = "${this.value} => ${other.value}"
@@ -176,74 +219,114 @@ infix fun QueryTree<Boolean>.implies(other: QueryTree<Boolean>): QueryTree<Boole
 }
 
 /** Compares the numeric values of two [QueryTree]s for this being "greater than" (>) [other]. */
-infix fun QueryTree<Number>.gt(other: QueryTree<Number>): QueryTree<Boolean> {
+infix fun <T : Number, S : Number> QueryTree<T>.gt(
+    other: QueryTree<S>
+): ComparableQueryTree<Boolean> {
     val result = this.value.compareTo(other.value) > 0
-    return QueryTree(result, mutableListOf(this, other), "${this.value} > ${other.value}")
+    return ComparableQueryTree(result, mutableListOf(this, other), "${this.value} > ${other.value}")
 }
 
 /**
  * Compares the numeric values of a [QueryTree] and another number for this being "greater than" (>)
  * [other].
  */
-infix fun QueryTree<Number>.gt(other: Number): QueryTree<Boolean> {
+infix fun <T : Number, S : Number> QueryTree<T>.gt(other: S): ComparableQueryTree<Boolean> {
     val result = this.value.compareTo(other) > 0
-    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} > $other")
+    return ComparableQueryTree(
+        result,
+        mutableListOf(this, QueryTree(other)),
+        "${this.value} > $other"
+    )
 }
 
 /**
  * Compares the numeric values of two [QueryTree]s for this being "greater than or equal" (>=)
  * [other].
  */
-infix fun QueryTree<Number>.ge(other: QueryTree<Number>): QueryTree<Boolean> {
+infix fun <T : Number, S : Number> QueryTree<T>.ge(
+    other: QueryTree<S>
+): ComparableQueryTree<Boolean> {
     val result = this.value.compareTo(other.value) >= 0
-    return QueryTree(result, mutableListOf(this, other), "${this.value} >= ${other.value}")
+    return ComparableQueryTree(
+        result,
+        mutableListOf(this, other),
+        "${this.value} >= ${other.value}"
+    )
 }
 
 /**
  * Compares the numeric values of a [QueryTree] and another number for this being "greater than or
  * equal" (>=) [other].
  */
-infix fun QueryTree<Number>.ge(other: Number): QueryTree<Boolean> {
+infix fun <T : Number, S : Number> QueryTree<T>.ge(other: S): ComparableQueryTree<Boolean> {
     val result = this.value.compareTo(other) >= 0
-    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} >= $other")
+    return ComparableQueryTree(
+        result,
+        mutableListOf(this, QueryTree(other)),
+        "${this.value} >= $other"
+    )
 }
 
 /** Compares the numeric values of two [QueryTree]s for this being "less than" (<) [other]. */
-infix fun QueryTree<Number>.lt(other: QueryTree<Number>): QueryTree<Boolean> {
+infix fun <T : Number, S : Number> QueryTree<T>.lt(
+    other: QueryTree<S>
+): ComparableQueryTree<Boolean> {
     val result = this.value.compareTo(other.value) < 0
-    return QueryTree(result, mutableListOf(this, other), "${this.value} < ${other.value}")
+    return ComparableQueryTree(result, mutableListOf(this, other), "${this.value} < ${other.value}")
 }
 
 /**
  * Compares the numeric values of a [QueryTree] and another number for this being "less than" (<)
  * [other].
  */
-infix fun QueryTree<Number>.lt(other: Number): QueryTree<Boolean> {
+infix fun <T : Number, S : Number> QueryTree<T>.lt(other: S): ComparableQueryTree<Boolean> {
     val result = this.value.compareTo(other) < 0
-    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} < $other")
+    return ComparableQueryTree(
+        result,
+        mutableListOf(this, QueryTree(other)),
+        "${this.value} < $other"
+    )
 }
 
 /**
  * Compares the numeric values of two [QueryTree]s for this being "less than or equal" (=) [other].
  */
-infix fun QueryTree<Number>.le(other: QueryTree<Number>): QueryTree<Boolean> {
+infix fun <T : Number, S : Number> QueryTree<T>.le(
+    other: QueryTree<S>
+): ComparableQueryTree<Boolean> {
     val result = this.value.compareTo(other.value) <= 0
-    return QueryTree(result, mutableListOf(this, other), "${this.value} <= ${other.value}")
+    return ComparableQueryTree(
+        result,
+        mutableListOf(this, other),
+        "${this.value} <= ${other.value}"
+    )
 }
 
 /**
  * Compares the numeric values of a [QueryTree] and another number for this being "less than or
  * equal" (<=) [other].
  */
-infix fun QueryTree<Number>.le(other: Number): QueryTree<Boolean> {
+infix fun <T : Number, S : Number> QueryTree<T>.le(other: S): ComparableQueryTree<Boolean> {
     val result = this.value.compareTo(other) <= 0
-    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} <= $other")
+    return ComparableQueryTree(
+        result,
+        mutableListOf(this, QueryTree(other)),
+        "${this.value} <= $other"
+    )
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
-fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
+fun not(arg: QueryTree<Boolean>): ComparableQueryTree<Boolean> {
     val result = !arg.value
-    return QueryTree(result, mutableListOf(arg), "! ${arg.value}")
+    return ComparableQueryTree(result, mutableListOf(arg), "! ${arg.value}")
+}
+
+/**
+ * This is a small wrapper to create a [QueryTree] containing a constant value, so that it can be
+ * used to in comparison with other [QueryTree] objects.
+ */
+fun <T : Comparable<T>> const(n: T): ComparableQueryTree<T> {
+    return ComparableQueryTree(n, stringRepresentation = "$n")
 }
 
 /**

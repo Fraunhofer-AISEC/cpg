@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import kotlin.experimental.ExperimentalTypeInference
 
 /**
  * Evaluates if the conditions specified in [mustSatisfy] hold for all nodes in the graph.
@@ -43,6 +44,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
 @ExperimentalGraph
+@OptIn(ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
 inline fun <reified T> TranslationResult.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>
@@ -54,8 +57,13 @@ inline fun <reified T> TranslationResult.all(
         nodes = nodes.filter(sel)
     }
 
-    val queryChildren = nodes.map(mustSatisfy)
-    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList())
+    val queryChildren =
+        nodes.map { n ->
+            val res = mustSatisfy(n)
+            res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
+            res
+        }
+    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList(), "all")
 }
 
 /**
@@ -68,6 +76,8 @@ inline fun <reified T> TranslationResult.all(
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
 @ExperimentalGraph
+@OptIn(ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
 inline fun <reified T> Node.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>
@@ -81,8 +91,37 @@ inline fun <reified T> Node.all(
         nodes = nodes.filter(sel)
     }
 
-    val queryChildren = nodes.map(mustSatisfy)
-    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList())
+    val queryChildren =
+        nodes.map { n ->
+            val res = mustSatisfy(n)
+            res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
+            res
+        }
+    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList(), "all")
+}
+
+/**
+ * Evaluates if the conditions specified in [mustSatisfy] hold for all nodes in the graph. The
+ * optional argument [sel] can be used to filter nodes for which the condition has to be fulfilled.
+ *
+ * This method can be used similar to the logical implication to test "sel => mustSatisfy".
+ */
+@ExperimentalGraph
+@OptIn(ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+inline fun <reified T> TranslationResult.all(
+    noinline sel: ((T) -> Boolean)? = null,
+    noinline mustSatisfy: (T) -> Boolean
+): Pair<Boolean, List<Node>> {
+    var nodes = this.graph.nodes.filterIsInstance<T>()
+
+    // filter the nodes according to the selector
+    if (sel != null) {
+        nodes = nodes.filter(sel)
+    }
+
+    val failedNodes = nodes.filterNot(mustSatisfy) as List<Node>
+    return Pair(failedNodes.isEmpty(), failedNodes)
 }
 
 /**
@@ -104,8 +143,13 @@ inline fun <reified T> TranslationResult.exists(
         nodes = nodes.filter(sel)
     }
 
-    val queryChildren = nodes.map(mustSatisfy)
-    return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList())
+    val queryChildren =
+        nodes.map { n ->
+            val res = mustSatisfy(n)
+            res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
+            res
+        }
+    return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList(), "exists")
 }
 
 /**
@@ -127,8 +171,13 @@ inline fun <reified T> Node.exists(
         nodes = nodes.filter(sel)
     }
 
-    val queryChildren = nodes.map(mustSatisfy)
-    return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList())
+    val queryChildren =
+        nodes.map { n ->
+            val res = mustSatisfy(n)
+            res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
+            res
+        }
+    return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList(), "exists")
 }
 
 /**
@@ -136,9 +185,9 @@ inline fun <reified T> Node.exists(
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Number> {
-    // The cast could potentially go wrong, but if its not an int, its not really a size
-    return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(), "sizeof($n)")
+fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): ComparableQueryTree<Int> {
+    // The cast could potentially go wrong, but if it's not an int, it's not really a size
+    return ComparableQueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(), "sizeof($n)")
 }
 
 /**
@@ -146,13 +195,13 @@ fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Number> 
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
+fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): ComparableQueryTree<*> {
     val evalRes = eval.evaluate(n)
-    if (evalRes is Number) {
-        return QueryTree(evalRes, mutableListOf(QueryTree(n)))
+    if (evalRes is Comparable<*>) {
+        return ComparableQueryTree(evalRes, mutableListOf(QueryTree(n)), "min($n)")
     }
     // Extend this when we have other evaluators.
-    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(), "min($n)")
+    return ComparableQueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(), "min($n)")
 }
 
 /**
@@ -212,15 +261,15 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
 }
 
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
-fun dataFlow(from: Node, to: Node): QueryTree<Boolean> {
+fun dataFlow(from: Node, to: Node): ComparableQueryTree<Boolean> {
     val evalRes = from.followNextDFGEdgesUntilHit { it == to }
-    return QueryTree(evalRes.isNotEmpty(), evalRes.map { QueryTree(it) }.toMutableList())
+    return ComparableQueryTree(evalRes.isNotEmpty(), evalRes.map { QueryTree(it) }.toMutableList())
 }
 
 /** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
-fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
+fun executionPath(from: Node, to: Node): ComparableQueryTree<Boolean> {
     val evalRes = from.followNextEOGEdgesUntilHit { it == to }
-    return QueryTree(
+    return ComparableQueryTree(
         evalRes.isNotEmpty(),
         evalRes.map { QueryTree(it) }.toMutableList(),
         "executionPath($from, $to)"
@@ -228,9 +277,9 @@ fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
 }
 
 /** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
-fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
+fun executionPath(from: Node, predicate: (Node) -> Boolean): ComparableQueryTree<Boolean> {
     val evalRes = from.followNextEOGEdgesUntilHit(predicate)
-    return QueryTree(
+    return ComparableQueryTree(
         evalRes.isNotEmpty(),
         evalRes.map { QueryTree(it) }.toMutableList(),
         "executionPath($from, $predicate)"
@@ -243,7 +292,7 @@ operator fun Expression?.invoke(): QueryTree<Any?> {
 }
 
 /** The size of this expression. It uses the default argument for `eval` of [size] */
-val Expression.size: QueryTree<Number>
+val Expression.size: ComparableQueryTree<Int>
     get() {
         return sizeof(this)
     }
@@ -274,8 +323,8 @@ val Expression.value: QueryTree<Any?>
  * Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. The
  * result is interpreted as an integer.
  */
-val Expression.intValue: QueryTree<Number>?
+val Expression.intValue: ComparableQueryTree<Int>?
     get() {
         val evalRes = evaluate() as? Int ?: return null
-        return QueryTree(evalRes, mutableListOf(), "$this")
+        return ComparableQueryTree(evalRes, mutableListOf(), "$this")
     }

@@ -56,13 +56,20 @@ class QueryTest {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val queryTreeResult =
+        val mustSatisfy = { it: CallExpression ->
+            sizeof(it.arguments[0]) > sizeof(it.arguments[1])
+        }
+        val queryTreeResult = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+
+        assertFalse(queryTreeResult.first)
+
+        /*val queryTreeResult =
             result.all<CallExpression>({ it.name == "memcpy" }) {
                 sizeof(it.arguments[0]) gt sizeof(it.arguments[1])
             }
 
         assertFalse(queryTreeResult.value)
-        println(queryTreeResult.printNicely())
+        println(queryTreeResult.printNicely())*/
 
         // result.calls.name("memcpy").all { n -> sizeof(n.arguments[0]) >= sizeof(n.arguments[1]) }
     }
