@@ -123,6 +123,9 @@ private constructor(
         }
     }
 
+    val passes: List<Pass>
+        get() = config.registeredPasses
+
     fun isCancelled(): Boolean {
         return isCancelled.get()
     }
