@@ -145,14 +145,14 @@ open class QueryTree<T>(
         } else if (this.value is Comparable<*> && other.value is Comparable<*>) {
             return (this.value as Comparable<Any>).compareTo(other.value as Any)
         }
-        return -1
+        throw QueryException("Cannot compare objects of type ${this.value} and ${other.value}")
     }
 
     public operator fun compareTo(other: Number): Int {
         if (this.value is Number) {
             return (this.value as Number).compareTo(other)
         }
-        return -1
+        throw QueryException("Cannot compare objects of type ${this.value} and $other")
     }
 }
 
@@ -278,3 +278,5 @@ fun <T : Comparable<T>> const(n: T): QueryTree<T> {
 fun <T> const(n: T): QueryTree<T> {
     return QueryTree(n, stringRepresentation = "$n")
 }
+
+class QueryException(override val message: String) : Exception(message)
