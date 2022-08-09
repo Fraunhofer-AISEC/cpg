@@ -57,9 +57,10 @@ class QueryTest {
         val result = analyzer.analyze().get()
 
         val queryTreeResult =
-            result.all<CallExpression>({ it.name == "memcpy" }) {
-                sizeof(it.arguments[0]) > sizeof(it.arguments[1])
-            }
+            result.all<CallExpression>(
+                { it.name == "memcpy" },
+                { sizeof(it.arguments[0]) > sizeof(it.arguments[1]) }
+            )
 
         assertFalse(queryTreeResult.first)
 

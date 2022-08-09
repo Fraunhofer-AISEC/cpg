@@ -46,45 +46,16 @@ import kotlin.experimental.ExperimentalTypeInference
 @ExperimentalGraph
 @OptIn(ExperimentalTypeInference::class)
 @OverloadResolutionByLambdaReturnType
-inline fun <reified T> TranslationResult.all(
-    noinline sel: ((T) -> Boolean)? = null,
-    noinline mustSatisfy: (T) -> QueryTree<Boolean>
-): QueryTree<Boolean> {
-    var nodes = this.graph.nodes.filterIsInstance<T>()
-
-    // filter the nodes according to the selector
-    if (sel != null) {
-        nodes = nodes.filter(sel)
-    }
-
-    val queryChildren =
-        nodes.map { n ->
-            val res = mustSatisfy(n)
-            res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
-            res
-        }
-    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList(), "all")
-}
-
-/**
- * Evaluates if the conditions specified in [mustSatisfy] hold for all nodes in the graph.
- *
- * The optional argument [sel] can be used to filter nodes for which the condition has to be
- * fulfilled. This filter should be rather simple in most cases since its evaluation is not part of
- * the resulting reasoning chain.
- *
- * This method can be used similar to the logical implication to test "sel => mustSatisfy".
- */
-@ExperimentalGraph
-@OptIn(ExperimentalTypeInference::class)
-@OverloadResolutionByLambdaReturnType
 inline fun <reified T> Node.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>
 ): QueryTree<Boolean> {
-    val children = this.astChildren
-
-    var nodes = children.filterIsInstance<T>()
+    var nodes =
+        if (this is TranslationResult) {
+            this.graph.nodes.filterIsInstance<T>()
+        } else {
+            this.astChildren.filterIsInstance<T>()
+        }
 
     // filter the nodes according to the selector
     if (sel != null) {
@@ -107,37 +78,16 @@ inline fun <reified T> Node.all(
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
 @ExperimentalGraph
-inline fun <reified T> TranslationResult.all(
-    noinline sel: ((T) -> Boolean)? = null,
-    noinline mustSatisfy: (T) -> Boolean
-): Pair<Boolean, List<Node>> {
-    var nodes = this.graph.nodes.filterIsInstance<T>()
-
-    // filter the nodes according to the selector
-    if (sel != null) {
-        nodes = nodes.filter(sel)
-    }
-
-    val failedNodes = nodes.filterNot(mustSatisfy) as List<Node>
-    return Pair(failedNodes.isEmpty(), failedNodes)
-}
-
-/**
- * Evaluates if the conditions specified in [mustSatisfy] hold for all nodes in the graph.
- *
- * The optional argument [sel] can be used to filter nodes for which the condition has to be
- * fulfilled.
- *
- * This method can be used similar to the logical implication to test "sel => mustSatisfy".
- */
-@ExperimentalGraph
 inline fun <reified T> Node.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean
 ): Pair<Boolean, List<Node>> {
-    val children = this.astChildren
-
-    var nodes = children.filterIsInstance<T>()
+    var nodes =
+        if (this is TranslationResult) {
+            this.graph.nodes.filterIsInstance<T>()
+        } else {
+            this.astChildren.filterIsInstance<T>()
+        }
 
     // filter the nodes according to the selector
     if (sel != null) {
@@ -158,41 +108,16 @@ inline fun <reified T> Node.all(
 @ExperimentalGraph
 @OptIn(ExperimentalTypeInference::class)
 @OverloadResolutionByLambdaReturnType
-inline fun <reified T> TranslationResult.exists(
-    noinline sel: ((T) -> Boolean)? = null,
-    noinline mustSatisfy: (T) -> QueryTree<Boolean>
-): QueryTree<Boolean> {
-    var nodes = this.graph.nodes.filterIsInstance<T>()
-
-    // filter the nodes according to the selector
-    if (sel != null) {
-        nodes = nodes.filter(sel)
-    }
-
-    val queryChildren =
-        nodes.map { n ->
-            val res = mustSatisfy(n)
-            res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
-            res
-        }
-    return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList(), "exists")
-}
-
-/**
- * Evaluates if the conditions specified in [mustSatisfy] hold for at least one node in the graph.
- *
- * The optional argument [sel] can be used to filter nodes which are considered during the
- * evaluation. This filter should be rather simple in most cases since its evaluation is not part of
- * the resulting reasoning chain.
- */
-@ExperimentalGraph
-@OptIn(ExperimentalTypeInference::class)
-@OverloadResolutionByLambdaReturnType
 inline fun <reified T> Node.exists(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>
 ): QueryTree<Boolean> {
-    var nodes = this.astChildren.filterIsInstance<T>()
+    var nodes =
+        if (this is TranslationResult) {
+            this.graph.nodes.filterIsInstance<T>()
+        } else {
+            this.astChildren.filterIsInstance<T>()
+        }
 
     // filter the nodes according to the selector
     if (sel != null) {
@@ -214,32 +139,16 @@ inline fun <reified T> Node.exists(
  * evaluation.
  */
 @ExperimentalGraph
-inline fun <reified T> TranslationResult.exists(
-    noinline sel: ((T) -> Boolean)? = null,
-    noinline mustSatisfy: (T) -> Boolean
-): Pair<Boolean, List<Node>> {
-    var nodes = this.graph.nodes.filterIsInstance<T>()
-
-    // filter the nodes according to the selector
-    if (sel != null) {
-        nodes = nodes.filter(sel)
-    }
-
-    val queryChildren = nodes.filter(mustSatisfy) as List<Node>
-    return Pair(queryChildren.isNotEmpty(), queryChildren)
-}
-
-/**
- * Evaluates if the conditions specified in [mustSatisfy] hold for at least one node in the graph.
- * The optional argument [sel] can be used to filter nodes which are considered during the
- * evaluation.
- */
-@ExperimentalGraph
 inline fun <reified T> Node.exists(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean
 ): Pair<Boolean, List<Node>> {
-    var nodes = this.astChildren.filterIsInstance<T>()
+    var nodes =
+        if (this is TranslationResult) {
+            this.graph.nodes.filterIsInstance<T>()
+        } else {
+            this.astChildren.filterIsInstance<T>()
+        }
 
     // filter the nodes according to the selector
     if (sel != null) {
