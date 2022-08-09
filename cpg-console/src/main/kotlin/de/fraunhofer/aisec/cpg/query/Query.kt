@@ -107,8 +107,6 @@ inline fun <reified T> Node.all(
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
 @ExperimentalGraph
-@OptIn(ExperimentalTypeInference::class)
-@OverloadResolutionByLambdaReturnType
 inline fun <reified T> TranslationResult.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean
@@ -185,9 +183,9 @@ inline fun <reified T> Node.exists(
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): ComparableQueryTree<Int> {
+fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Int> {
     // The cast could potentially go wrong, but if it's not an int, it's not really a size
-    return ComparableQueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(), "sizeof($n)")
+    return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(), "sizeof($n)")
 }
 
 /**
@@ -195,13 +193,13 @@ fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): ComparableQueryTre
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): ComparableQueryTree<*> {
+fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     val evalRes = eval.evaluate(n)
-    if (evalRes is Comparable<*>) {
-        return ComparableQueryTree(evalRes, mutableListOf(QueryTree(n)), "min($n)")
+    if (evalRes is Number) {
+        return QueryTree(evalRes, mutableListOf(QueryTree(n)), "min($n)")
     }
     // Extend this when we have other evaluators.
-    return ComparableQueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(), "min($n)")
+    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(), "min($n)")
 }
 
 /**
@@ -261,15 +259,15 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
 }
 
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
-fun dataFlow(from: Node, to: Node): ComparableQueryTree<Boolean> {
+fun dataFlow(from: Node, to: Node): QueryTree<Boolean> {
     val evalRes = from.followNextDFGEdgesUntilHit { it == to }
-    return ComparableQueryTree(evalRes.isNotEmpty(), evalRes.map { QueryTree(it) }.toMutableList())
+    return QueryTree(evalRes.isNotEmpty(), evalRes.map { QueryTree(it) }.toMutableList())
 }
 
 /** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
-fun executionPath(from: Node, to: Node): ComparableQueryTree<Boolean> {
+fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
     val evalRes = from.followNextEOGEdgesUntilHit { it == to }
-    return ComparableQueryTree(
+    return QueryTree(
         evalRes.isNotEmpty(),
         evalRes.map { QueryTree(it) }.toMutableList(),
         "executionPath($from, $to)"
@@ -277,9 +275,9 @@ fun executionPath(from: Node, to: Node): ComparableQueryTree<Boolean> {
 }
 
 /** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
-fun executionPath(from: Node, predicate: (Node) -> Boolean): ComparableQueryTree<Boolean> {
+fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
     val evalRes = from.followNextEOGEdgesUntilHit(predicate)
-    return ComparableQueryTree(
+    return QueryTree(
         evalRes.isNotEmpty(),
         evalRes.map { QueryTree(it) }.toMutableList(),
         "executionPath($from, $predicate)"
@@ -292,7 +290,7 @@ operator fun Expression?.invoke(): QueryTree<Any?> {
 }
 
 /** The size of this expression. It uses the default argument for `eval` of [size] */
-val Expression.size: ComparableQueryTree<Int>
+val Expression.size: QueryTree<Int>
     get() {
         return sizeof(this)
     }
@@ -300,10 +298,10 @@ val Expression.size: ComparableQueryTree<Int>
 /**
  * The minimal integer value of this expression. It uses the default argument for `eval` of [min]
  */
-val Expression.min: QueryTree<Number>
-    get() {
-        return min(this)
-    }
+/*val Expression.min: QueryTree<Number>
+get() {
+    return min(this)
+}*/
 
 /**
  * The maximal integer value of this expression. It uses the default argument for `eval` of [max]
@@ -323,8 +321,8 @@ val Expression.value: QueryTree<Any?>
  * Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. The
  * result is interpreted as an integer.
  */
-val Expression.intValue: ComparableQueryTree<Int>?
+val Expression.intValue: QueryTree<Int>?
     get() {
         val evalRes = evaluate() as? Int ?: return null
-        return ComparableQueryTree(evalRes, mutableListOf(), "$this")
+        return QueryTree(evalRes, mutableListOf(), "$this")
     }
