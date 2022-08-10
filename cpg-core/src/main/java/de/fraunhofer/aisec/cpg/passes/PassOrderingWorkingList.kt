@@ -27,6 +27,10 @@ package de.fraunhofer.aisec.cpg.passes
 
 import java.util.*
 
+/**
+ * A simple helper class for keeping track of passes and their (currently not satisfied)
+ * dependencies during ordering.
+ */
 class PassOrderingWorkingList {
     private val workingList: MutableList<PassOrderingPassWithDependencies>
 
@@ -49,6 +53,10 @@ class PassOrderingWorkingList {
         return workingList.size
     }
 
+    /**
+     * Iterate through all elements and remove the provided dependency [cls] from all passes in the
+     * working list.
+     */
     fun removeDependencyByClass(cls: Class<out Pass>) {
         for ((_, value) in workingList) {
             value.remove(cls)

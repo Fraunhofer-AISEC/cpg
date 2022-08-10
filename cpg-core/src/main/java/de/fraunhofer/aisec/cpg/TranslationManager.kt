@@ -403,7 +403,6 @@ private constructor(
         }
 
         fun build(): TranslationManager {
-
             return TranslationManager(config)
         }
     }
