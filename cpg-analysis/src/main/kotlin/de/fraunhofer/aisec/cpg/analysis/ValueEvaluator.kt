@@ -256,22 +256,26 @@ open class ValueEvaluator(
      * We handle some basic unary operators. These also affect pointers and dereferences for
      * languages that support them.
      */
-    protected open fun handleUnaryOp(expr: UnaryOperator, depth: Int): Any? {
+    protected open fun handleUnaryOp(
+        expr: UnaryOperator,
+        depth: Int,
+        input: Any? = evaluateInternal(expr.input, depth + 1)
+    ): Any? {
         return when (expr.operatorCode) {
             "-" -> {
-                when (val input = evaluateInternal(expr.input, depth + 1)) {
+                when (input) {
                     is Number -> input.negate()
                     else -> cannotEvaluate(expr, this)
                 }
             }
             "++" -> {
-                when (val input = evaluateInternal(expr.input, depth + 1)) {
+                when (input) {
                     is Number -> input.toLong() + 1
                     else -> cannotEvaluate(expr, this)
                 }
             }
-            "*" -> evaluateInternal(expr.input, depth + 1)
-            "&" -> evaluateInternal(expr.input, depth + 1)
+            "*" -> input
+            "&" -> input
             else -> cannotEvaluate(expr, this)
         }
     }

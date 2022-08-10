@@ -179,6 +179,6 @@ class MultiValueEvaluatorTest {
         printB = main.bodyOrNull<CallExpression>(4)
         assertNotNull(printB)
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
-        assertEquals(setOf<Long>(3, 5), value.values)
+        assertEquals(setOf<Long>(3, 6), value.values)
     }
 }

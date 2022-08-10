@@ -24,6 +24,7 @@ int main() {
     }
     println(b); // {-4, -2, -1, 0, 1, 2, 4}
 
-    int a = b < 2 ? 3 : 5;
-    println(a); // {3, 5}
+    int a = b < 2 ? 3 : 5++;
+    println(a); // {3, 6}
+    return 0;
 }
