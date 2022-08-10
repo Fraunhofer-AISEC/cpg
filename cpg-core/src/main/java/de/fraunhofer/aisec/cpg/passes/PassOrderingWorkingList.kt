@@ -23,41 +23,39 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes;
+package de.fraunhofer.aisec.cpg.passes
 
-import java.util.*;
+import java.util.*
 
-public class PassOrderingWorkingList {
-  private List<Map.Entry<Pass, Set<Class<? extends Pass>>>> workingList;
+class PassOrderingWorkingList {
+    private val workingList: MutableList<Map.Entry<Pass, MutableSet<Class<out Pass>>>>
 
-  public PassOrderingWorkingList() {
-    workingList = new ArrayList<>();
-  }
-
-  public List<Map.Entry<Pass, Set<Class<? extends Pass>>>> getWorkingList() {
-    return workingList;
-  }
-
-  public void addToWorkingList(
-      AbstractMap.SimpleEntry<Pass, Set<Class<? extends Pass>>> newElement) {
-    workingList.add(newElement);
-  }
-
-  public boolean isEmpty() {
-    return workingList.isEmpty();
-  }
-
-  public int size() {
-    return workingList.size();
-  }
-
-  public void removeDependencyByClass(Class<? extends Pass> cls) {
-    for (Map.Entry<Pass, Set<Class<? extends Pass>>> currentElement : workingList) {
-      currentElement.getValue().remove(cls);
+    init {
+        workingList = ArrayList()
     }
-  }
 
-  public String toString() {
-    return workingList.toString();
-  }
+    fun getWorkingList(): List<Map.Entry<Pass, MutableSet<Class<out Pass>>>> {
+        return workingList
+    }
+
+    fun addToWorkingList(newElement: AbstractMap.SimpleEntry<Pass, MutableSet<Class<out Pass>>>) {
+        workingList.add(newElement)
+    }
+
+    val isEmpty: Boolean
+        get() = workingList.isEmpty()
+
+    fun size(): Int {
+        return workingList.size
+    }
+
+    fun removeDependencyByClass(cls: Class<out Pass>) {
+        for ((_, value) in workingList) {
+            value.remove(cls)
+        }
+    }
+
+    override fun toString(): String {
+        return workingList.toString()
+    }
 }
