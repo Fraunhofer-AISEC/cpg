@@ -55,7 +55,7 @@ class ComplexDFAOrderEvaluationTest {
     private lateinit var tu: TranslationUnitDeclaration
 
     @BeforeTest
-    private fun getDFABeforeTest() {
+    fun getDFABeforeTest() {
         // allowed: cm.create(), cm.init(), (cm.start(), cm.process()*, cm.finish())+, cm.reset()?
         dfa = DFA()
         val q1 = dfa.addState(isStart = true)
