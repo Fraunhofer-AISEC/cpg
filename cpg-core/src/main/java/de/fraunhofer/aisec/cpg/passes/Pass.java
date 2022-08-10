@@ -45,8 +45,19 @@ public abstract class Pass implements Consumer<TranslationResult> {
   protected String name;
 
   protected static final Logger log = LoggerFactory.getLogger(Pass.class);
+
+  /**
+   * Dependencies which - if present - have to be executed before this pass. Note: Dependencies
+   * registered here will not be added automatically to the list of active passes. Use
+   * [hardDependencies] to add them automatically.
+   */
   private Set<Class<? extends Pass>> softDependencies;
 
+  /**
+   * Dependencies which have to be executed before this pass. Note: Dependencies registered here
+   * will be added to the list of active passes automatically. Use [softDependencies] if this is not
+   * desired.
+   */
   private Set<Class<? extends Pass>> hardDependencies;
 
   protected Pass() {
@@ -54,6 +65,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
     hardDependencies = new HashSet<>();
     softDependencies = new HashSet<>();
 
+    // collect all dependencies added by [PassRegisterSoftDependency] annotations.
     if (this.getClass().isAnnotationPresent(PassRegisterSoftDependency.class)) {
       PassRegisterSoftDependency[] dependencies =
           this.getClass().getAnnotationsByType(PassRegisterSoftDependency.class);
@@ -62,6 +74,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
       }
     }
 
+    // collect all dependencies added by [PassRegisterHardDependency] annotations.
     if (this.getClass().isAnnotationPresent(PassRegisterHardDependency.class)) {
       PassRegisterHardDependency[] dependencies =
           this.getClass().getAnnotationsByType(PassRegisterHardDependency.class);
