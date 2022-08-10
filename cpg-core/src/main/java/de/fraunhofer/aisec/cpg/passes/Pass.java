@@ -45,14 +45,6 @@ public abstract class Pass implements Consumer<TranslationResult> {
   protected String name;
 
   protected static final Logger log = LoggerFactory.getLogger(Pass.class);
-
-  /**
-   * Indicates whether this pass should be executed as the first pass. Note: setting this flag to
-   * `true` for more than one active pass will yield an error. Note: setting this flag will not
-   * activate the pass. You must register the pass manually.
-   */
-  private Boolean firstPass;
-
   private Set<Class<? extends Pass>> afterPass;
 
   private Set<Class<? extends Pass>> dependsOn;
@@ -61,7 +53,6 @@ public abstract class Pass implements Consumer<TranslationResult> {
     name = this.getClass().getName();
     dependsOn = new HashSet<>();
     afterPass = new HashSet<>();
-    firstPass = false;
   }
 
   @JsonIgnore @Nullable protected LanguageFrontend lang;
@@ -103,10 +94,6 @@ public abstract class Pass implements Consumer<TranslationResult> {
     return true;
   }
 
-  public boolean getFirstPass() {
-    return this.firstPass;
-  }
-
   public Set<Class<? extends Pass>> getDependsOn() {
     return this.dependsOn;
   }
@@ -119,15 +106,15 @@ public abstract class Pass implements Consumer<TranslationResult> {
     this.afterPass.add(p);
   }
 
-  public void setFirstPass(Boolean flag) {
-    this.firstPass = flag;
-  }
-
   public Set<Class<? extends Pass>> getAfterPass() {
     return this.afterPass;
   }
 
   public Boolean isLastPass() {
     return Pass.class.isAnnotationPresent(PassIsLastPass.class);
+  }
+
+  public Boolean isFirstPass() {
+    return Pass.class.isAnnotationPresent(PassIsFirstPass.class);
   }
 }

@@ -635,7 +635,7 @@ public class TranslationConfiguration {
           deps.addAll(p.getAfterPass());
           workingList.addToWorkingList(new PassOrderingPassWithDependencies(p, deps));
 
-          if (p.getFirstPass()) {
+          if (p.isFirstPass()) {
             firstPasses.add(p);
           }
           if (p.isLastPass()) {
@@ -694,7 +694,7 @@ public class TranslationConfiguration {
         deps.addAll(newPass.getAfterPass());
         workingList.addToWorkingList(new PassOrderingPassWithDependencies(newPass, deps));
 
-        if (newPass.getFirstPass()) {
+        if (newPass.isFirstPass()) {
           firstPasses.add(newPass);
         }
         if (newPass.isLastPass()) {
