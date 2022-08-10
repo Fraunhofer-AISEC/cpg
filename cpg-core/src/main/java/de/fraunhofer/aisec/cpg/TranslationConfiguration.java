@@ -631,8 +631,8 @@ public class TranslationConfiguration {
         }
         if (!passFound) {
           Set<Class<? extends Pass>> deps = new HashSet<>();
-          deps.addAll(p.getDependsOn());
-          deps.addAll(p.getAfterPass());
+          deps.addAll(p.getHardDependencies());
+          deps.addAll(p.getSoftDependencies());
           workingList.addToWorkingList(new PassOrderingPassWithDependencies(p, deps));
 
           if (p.isFirstPass()) {
@@ -651,7 +651,7 @@ public class TranslationConfiguration {
       // add required dependencies to the working list
       List<Class<? extends Pass>> missingPasses = new ArrayList<>();
       for (PassOrderingPassWithDependencies p : workingList.getWorkingList()) {
-        for (Class<? extends Pass> dependency : p.getPass().getDependsOn()) {
+        for (Class<? extends Pass> dependency : p.getPass().getHardDependencies()) {
           Boolean dependencyFound = false;
 
           innerLoop:
@@ -690,8 +690,8 @@ public class TranslationConfiguration {
         }
 
         Set<Class<? extends Pass>> deps = new HashSet<>();
-        deps.addAll(newPass.getDependsOn());
-        deps.addAll(newPass.getAfterPass());
+        deps.addAll(newPass.getHardDependencies());
+        deps.addAll(newPass.getSoftDependencies());
         workingList.addToWorkingList(new PassOrderingPassWithDependencies(newPass, deps));
 
         if (newPass.isFirstPass()) {
@@ -702,7 +702,7 @@ public class TranslationConfiguration {
         }
 
         // check the dependencies of the new pass
-        for (Class<? extends Pass> dependency : newPass.getDependsOn()) {
+        for (Class<? extends Pass> dependency : newPass.getHardDependencies()) {
           Boolean dependencyFound = false;
 
           // check whether the dependecy is already in the working list

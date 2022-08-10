@@ -62,11 +62,11 @@ import org.slf4j.LoggerFactory;
  * Additionally, the {@link ConstructExpression#getConstructor()} is set to the according {@link
  * ConstructorDeclaration}
  */
+@PassRegisterSoftDependency(VariableUsageResolver.class)
 public class CallResolver extends Pass {
 
   public CallResolver() {
     super();
-    registerDependency(VariableUsageResolver.class);
   }
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);

@@ -65,11 +65,11 @@ import org.slf4j.LoggerFactory;
  *
  * @author samuel
  */
+@PassRegisterSoftDependency(TypeHierarchyResolver.class)
 public class VariableUsageResolver extends Pass {
 
   public VariableUsageResolver() {
     super();
-    registerDependency(TypeHierarchyResolver.class);
   }
 
   private static final Logger log = LoggerFactory.getLogger(VariableUsageResolver.class);

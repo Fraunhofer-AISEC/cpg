@@ -33,11 +33,11 @@ import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 
+@PassRegisterSoftDependency(CallResolver.class)
 public class TypeResolver extends Pass {
 
   public TypeResolver() {
     super();
-    registerDependency(CallResolver.class);
   }
 
   protected final Set<Type> firstOrderTypes = new HashSet<>();

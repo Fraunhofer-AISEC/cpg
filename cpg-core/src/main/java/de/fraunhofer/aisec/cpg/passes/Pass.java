@@ -45,14 +45,30 @@ public abstract class Pass implements Consumer<TranslationResult> {
   protected String name;
 
   protected static final Logger log = LoggerFactory.getLogger(Pass.class);
-  private Set<Class<? extends Pass>> afterPass;
+  private Set<Class<? extends Pass>> softDependencies;
 
-  private Set<Class<? extends Pass>> dependsOn;
+  private Set<Class<? extends Pass>> hardDependencies;
 
   protected Pass() {
     name = this.getClass().getName();
-    dependsOn = new HashSet<>();
-    afterPass = new HashSet<>();
+    hardDependencies = new HashSet<>();
+    softDependencies = new HashSet<>();
+
+    if (this.getClass().isAnnotationPresent(PassRegisterSoftDependency.class)) {
+      PassRegisterSoftDependency[] dependencies =
+          this.getClass().getAnnotationsByType(PassRegisterSoftDependency.class);
+      for (PassRegisterSoftDependency d : dependencies) {
+        softDependencies.add(d.value());
+      }
+    }
+
+    if (this.getClass().isAnnotationPresent(PassRegisterHardDependency.class)) {
+      PassRegisterHardDependency[] dependencies =
+          this.getClass().getAnnotationsByType(PassRegisterHardDependency.class);
+      for (PassRegisterHardDependency d : dependencies) {
+        hardDependencies.add(d.value());
+      }
+    }
   }
 
   @JsonIgnore @Nullable protected LanguageFrontend lang;
@@ -94,27 +110,19 @@ public abstract class Pass implements Consumer<TranslationResult> {
     return true;
   }
 
-  public Set<Class<? extends Pass>> getDependsOn() {
-    return this.dependsOn;
-  }
-
-  public void registerDependency(Class<? extends Pass> p) {
-    this.dependsOn.add(p);
-  }
-
-  public void registerSoftDependency(Class<? extends Pass> p) {
-    this.afterPass.add(p);
-  }
-
-  public Set<Class<? extends Pass>> getAfterPass() {
-    return this.afterPass;
-  }
-
   public Boolean isLastPass() {
-    return Pass.class.isAnnotationPresent(PassIsLastPass.class);
+    return this.getClass().isAnnotationPresent(PassIsLastPass.class);
   }
 
   public Boolean isFirstPass() {
-    return Pass.class.isAnnotationPresent(PassIsFirstPass.class);
+    return this.getClass().isAnnotationPresent(PassIsFirstPass.class);
+  }
+
+  public Set<Class<? extends Pass>> getSoftDependencies() {
+    return this.softDependencies;
+  }
+
+  public Set<Class<? extends Pass>> getHardDependencies() {
+    return hardDependencies;
   }
 }
