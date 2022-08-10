@@ -610,7 +610,7 @@ public class TranslationConfiguration {
      */
     private List<Pass> orderPasses() {
 
-      log.info("Passes before enforcing order: {}", passes.toString());
+      log.info("Passes before enforcing order: {}", passes);
 
       List<Pass> result = new ArrayList<>();
 
@@ -622,7 +622,7 @@ public class TranslationConfiguration {
       Set<Pass> lastPasses = new HashSet<>();
 
       for (Pass p : passes) {
-        Boolean passFound = false;
+        boolean passFound = false;
         for (PassOrderingPassWithDependencies wl : workingList.getWorkingList()) {
           if (wl.getPass().getClass() == p.getClass()) {
             passFound = true;
@@ -644,21 +644,20 @@ public class TranslationConfiguration {
         }
       }
 
-      log.debug("Working list after initial scan: ", workingList.toString());
-      log.debug("First passes after initial scan: ", firstPasses.toString());
-      log.debug("LAst passes after initial scan: ", lastPasses.toString());
+      log.debug("Working list after initial scan: {}", workingList);
+      log.debug("First passes after initial scan: {}", firstPasses);
+      log.debug("LAst passes after initial scan: {}", lastPasses);
 
       // add required dependencies to the working list
       List<Class<? extends Pass>> missingPasses = new ArrayList<>();
       for (PassOrderingPassWithDependencies p : workingList.getWorkingList()) {
         for (Class<? extends Pass> dependency : p.getPass().getHardDependencies()) {
-          Boolean dependencyFound = false;
+          boolean dependencyFound = false;
 
-          innerLoop:
           for (PassOrderingPassWithDependencies inner : workingList.getWorkingList()) {
             if (dependency == inner.getPass().getClass()) {
               dependencyFound = true;
-              break innerLoop;
+              break;
             }
           }
           if (!dependencyFound) {
@@ -667,23 +666,22 @@ public class TranslationConfiguration {
         }
       }
 
-      log.info(
-          "The following passes are missing required dependencies: ", missingPasses.toString());
+      log.info("The following passes are missing required dependencies: {}", missingPasses);
 
       // adding missing passes to the local working list
       while (!missingPasses.isEmpty()) {
         Class<? extends Pass> cls = missingPasses.remove(0);
         log.info(
-            "Registering a required dependency which was not registered explicitly: ",
+            "Registering a required dependency which was not registered explicitly: {}",
             cls.toString());
-        Pass newPass = null;
+        Pass newPass;
         try {
           newPass = cls.getConstructor().newInstance();
         } catch (InstantiationException e) {
           throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-          throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
+          throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
           throw new RuntimeException(e);
         } catch (NoSuchMethodException e) {
           throw new RuntimeException(e);
@@ -703,9 +701,9 @@ public class TranslationConfiguration {
 
         // check the dependencies of the new pass
         for (Class<? extends Pass> dependency : newPass.getHardDependencies()) {
-          Boolean dependencyFound = false;
+          boolean dependencyFound = false;
 
-          // check whether the dependecy is already in the working list
+          // check whether the dependency is already in the working list
           for (PassOrderingPassWithDependencies p : workingList.getWorkingList()) {
             if (dependency == p.getPass().getClass()) {
               dependencyFound = true;
@@ -730,19 +728,23 @@ public class TranslationConfiguration {
         }
       }
 
-      log.debug("Working list after adding missing dependencies: ", workingList.toString());
+      log.debug("Working list after adding missing dependencies: {}", workingList);
 
       if (firstPasses.size() > 1) {
-        log.error("Too many passes require to be executed as first pass: ", firstPasses.toString());
+        log.error("Too many passes require to be executed as first pass: {}", firstPasses);
+        throw new RuntimeException("Too many passes require to be executed as first pass.");
       }
 
       if (lastPasses.size() > 1) {
-        log.error("Too many passes require to be executed as last pass: ", lastPasses.toString());
+        log.error("Too many passes require to be executed as last pass: {}", lastPasses);
+        throw new RuntimeException("Too many passes require to be executed as last pass.");
       }
 
-      // TODO sanity checks
+      // For testing...
+      // Collections.shuffle(workingList.getWorkingList());
+
       whileLoop:
-      while (!workingList.isEmpty()) { // TODO catch loop
+      while (!workingList.isEmpty()) {
         for (PassOrderingPassWithDependencies currentElement : workingList.getWorkingList()) {
 
           if (workingList.size() > 1 && currentElement.getPass().isLastPass()) {
@@ -766,7 +768,7 @@ public class TranslationConfiguration {
         throw new RuntimeException("Failed to satisfy ordering requirements.");
       }
 
-      log.info("Passes after enforcing order: {}", result.toString());
+      log.info("Passes after enforcing order: {}", result);
       return result;
     }
   }

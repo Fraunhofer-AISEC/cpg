@@ -29,7 +29,6 @@ import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import kotlin.reflect.KClass
 
-
 /**
  * Register a hard dependency for the annotated pass. This ensures that:
  * - the annotated pass is executed after its dependency
