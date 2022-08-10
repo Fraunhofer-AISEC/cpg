@@ -53,7 +53,7 @@ class SimpleDFAOrderEvaluationTest {
     private lateinit var tu: TranslationUnitDeclaration
 
     @BeforeTest
-    private fun getDFABeforeTest() {
+    fun getDFABeforeTest() {
         // allowed: cm.start(), cm.finish()
         dfa = DFA()
         val q1 = dfa.addState(isStart = true)
