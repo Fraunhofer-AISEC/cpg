@@ -128,10 +128,10 @@ class MultiValueEvaluator : ValueEvaluator() {
         return result
     }
 
-    override fun handleUnaryOp(expr: UnaryOperator, depth: Int, input: Any?): Any? {
+    override fun handleUnaryOp(expr: UnaryOperator, depth: Int): Any? {
         return when (expr.operatorCode) {
             "-" -> {
-                when (input) {
+                when (val input = evaluateInternal(expr.input, depth + 1)) {
                     is List<*> -> input.map { n -> (n as? Number)?.negate() }
                     is Number -> input.negate()
                     else -> cannotEvaluate(expr, this)
@@ -139,17 +139,17 @@ class MultiValueEvaluator : ValueEvaluator() {
             }
             "++" -> {
                 if (expr.astParent is ForStatement) {
-                    input
+                    evaluateInternal(expr.input, depth + 1)
                 } else {
-                    when (input) {
+                    when (val input = evaluateInternal(expr.input, depth + 1)) {
                         is Number -> input.toLong() + 1
                         is List<*> -> input.map { n -> (n as? Number)?.toLong()?.plus(1) }
                         else -> cannotEvaluate(expr, this)
                     }
                 }
             }
-            "*" -> input
-            "&" -> input
+            "*" -> evaluateInternal(expr.input, depth + 1)
+            "&" -> evaluateInternal(expr.input, depth + 1)
             else -> cannotEvaluate(expr, this)
         }
     }
@@ -273,7 +273,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                         computeBinaryOpEffect(opLhs, opRhs, loopOp) as? Number
                     }
                     is UnaryOperator -> {
-                        val input =
+                        computeUnaryOpEffect(
                             if (
                                 (loopOp.input as? DeclaredReferenceExpression)?.refersTo ==
                                     expr.refersTo
@@ -281,8 +281,10 @@ class MultiValueEvaluator : ValueEvaluator() {
                                 loopVar!!
                             } else {
                                 loopOp.input
-                            }
-                        handleUnaryOp(loopOp, depth, input) as? Number
+                            },
+                            loopOp
+                        )
+                            as? Number
                     }
                     else -> {
                         null
@@ -302,5 +304,25 @@ class MultiValueEvaluator : ValueEvaluator() {
             comparisonResult = computeBinaryOpEffect(lhs, rhs, cond)
         }
         return result
+    }
+
+    private fun computeUnaryOpEffect(input: Any, expr: UnaryOperator): Any? {
+        return when (expr.operatorCode) {
+            "-" -> {
+                when (input) {
+                    is List<*> -> input.map { n -> (n as? Number)?.negate() }
+                    is Number -> input.negate()
+                    else -> cannotEvaluate(expr, this)
+                }
+            }
+            "++" -> {
+                when (input) {
+                    is Number -> input.toLong() + 1
+                    is List<*> -> input.map { n -> (n as? Number)?.toLong()?.plus(1) }
+                    else -> cannotEvaluate(expr, this)
+                }
+            }
+            else -> cannotEvaluate(expr, this)
+        }
     }
 }
