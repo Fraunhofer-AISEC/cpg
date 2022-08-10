@@ -604,9 +604,24 @@ public class TranslationConfiguration {
     }
 
     /**
-     * TODO @ mk
+     * This function reorders passes in order to meet their dependency requirements. - soft
+     * dependencies [PassRegisterSoftDependency]: all passes registered as soft dependency will be
+     * executed before the current pass if they are registered. - hard dependencies
+     * [PassRegisterHardDependency]: all passes registered as hard dependency will be executed
+     * before the current pass - hard dependencies will be registered even if the user did not
+     * register them - first pass [PassIsFirstPass]: a pass registered as first pass will be
+     * executed in the beginning - last pass [PassIsLastPass]: a pass registered as last pass will
+     * be executed at the end
      *
-     * @return
+     * <p>This function uses a very simple (and inefficient) logic to meet the requirements above:
+     * 1. All first/last passes are collected 2. All passes are collected and combined with a list
+     * of their dependencies (workingList) 3. All missing dependencies [PassRegisterHardDependency]
+     * are added to the workingList, too. This step is repeated for new passes, as well. 4. Take the
+     * first element in the workingList which has no missing dependencies and add it to the result.
+     * Remove this pass from all other dependencies in the workingList. 5. Repeat 4 until the
+     * workingList is empty.
+     *
+     * @return a sorted list of passes
      */
     private List<Pass> orderPasses() {
 
