@@ -25,37 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import java.util.*
-
-class PassOrderingWorkingList {
-    private val workingList: MutableList<PassOrderingPassWithDependencies>
-
-    init {
-        workingList = ArrayList()
-    }
-
-    fun getWorkingList(): List<PassOrderingPassWithDependencies> {
-        return workingList
-    }
-
-    fun addToWorkingList(newElement: PassOrderingPassWithDependencies) {
-        workingList.add(newElement)
-    }
-
-    val isEmpty: Boolean
-        get() = workingList.isEmpty()
-
-    fun size(): Int {
-        return workingList.size
-    }
-
-    fun removeDependencyByClass(cls: Class<out Pass>) {
-        for ((_, value) in workingList) {
-            value.remove(cls)
-        }
-    }
-
-    override fun toString(): String {
-        return workingList.toString()
-    }
-}
+data class PassOrderingPassWithDependencies(
+    val pass: Pass,
+    val dependencies: MutableSet<Class<out Pass>>
+)

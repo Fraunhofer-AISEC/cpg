@@ -623,8 +623,8 @@ public class TranslationConfiguration {
 
       for (Pass p : passes) {
         Boolean passFound = false;
-        for (Map.Entry<Pass, Set<Class<? extends Pass>>> wl : workingList.getWorkingList()) {
-          if (wl.getKey().getClass() == p.getClass()) {
+        for (PassOrderingPassWithDependencies wl : workingList.getWorkingList()) {
+          if (wl.getPass().getClass() == p.getClass()) {
             passFound = true;
             break;
           }
@@ -633,8 +633,7 @@ public class TranslationConfiguration {
           Set<Class<? extends Pass>> deps = new HashSet<>();
           deps.addAll(p.getDependsOn());
           deps.addAll(p.getAfterPass());
-          workingList.addToWorkingList(
-              new AbstractMap.SimpleEntry<Pass, Set<Class<? extends Pass>>>(p, deps));
+          workingList.addToWorkingList(new PassOrderingPassWithDependencies(p, deps));
 
           if (p.getFirstPass()) {
             firstPasses.add(p);
@@ -651,13 +650,13 @@ public class TranslationConfiguration {
 
       // add required dependencies to the working list
       List<Class<? extends Pass>> missingPasses = new ArrayList<>();
-      for (Map.Entry<Pass, Set<Class<? extends Pass>>> p : workingList.getWorkingList()) {
-        for (Class<? extends Pass> dependency : p.getKey().getDependsOn()) {
+      for (PassOrderingPassWithDependencies p : workingList.getWorkingList()) {
+        for (Class<? extends Pass> dependency : p.getPass().getDependsOn()) {
           Boolean dependencyFound = false;
 
           innerLoop:
-          for (Map.Entry<Pass, Set<Class<? extends Pass>>> inner : workingList.getWorkingList()) {
-            if (dependency == inner.getKey().getClass()) {
+          for (PassOrderingPassWithDependencies inner : workingList.getWorkingList()) {
+            if (dependency == inner.getPass().getClass()) {
               dependencyFound = true;
               break innerLoop;
             }
@@ -693,8 +692,7 @@ public class TranslationConfiguration {
         Set<Class<? extends Pass>> deps = new HashSet<>();
         deps.addAll(newPass.getDependsOn());
         deps.addAll(newPass.getAfterPass());
-        workingList.addToWorkingList(
-            new AbstractMap.SimpleEntry<Pass, Set<Class<? extends Pass>>>(newPass, deps));
+        workingList.addToWorkingList(new PassOrderingPassWithDependencies(newPass, deps));
 
         if (newPass.getFirstPass()) {
           firstPasses.add(newPass);
@@ -708,8 +706,8 @@ public class TranslationConfiguration {
           Boolean dependencyFound = false;
 
           // check whether the dependecy is already in the working list
-          for (Map.Entry<Pass, Set<Class<? extends Pass>>> p : workingList.getWorkingList()) {
-            if (dependency == p.getKey().getClass()) {
+          for (PassOrderingPassWithDependencies p : workingList.getWorkingList()) {
+            if (dependency == p.getPass().getClass()) {
               dependencyFound = true;
               break;
             }
@@ -745,15 +743,14 @@ public class TranslationConfiguration {
       // TODO sanity checks
       whileLoop:
       while (!workingList.isEmpty()) { // TODO catch loop
-        for (Map.Entry<Pass, Set<Class<? extends Pass>>> currentElement :
-            workingList.getWorkingList()) {
+        for (PassOrderingPassWithDependencies currentElement : workingList.getWorkingList()) {
 
-          if (workingList.size() > 1 && currentElement.getKey().getLastPass()) {
+          if (workingList.size() > 1 && currentElement.getPass().getLastPass()) {
             continue; // last pass can only be added at the end
           }
 
-          if (currentElement.getValue().size() == 0) { // no unsatisfied dependencies
-            Pass passForResult = currentElement.getKey();
+          if (currentElement.getDependencies().size() == 0) { // no unsatisfied dependencies
+            Pass passForResult = currentElement.getPass();
 
             // remove the pass from the other pass's dependencies
             workingList.removeDependencyByClass(passForResult.getClass());
