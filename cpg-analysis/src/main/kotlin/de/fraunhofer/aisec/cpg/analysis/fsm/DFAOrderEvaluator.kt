@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -68,8 +69,14 @@ open class DFAOrderEvaluator(
      * its operator is considered by the DFA and its base is subject to analysis. This means that
      * the order is broken at [node].
      */
-    open fun actionMissingTransitionForNode(node: Node, fsm: DFA) {
-        log.error("There was a failure in the order of statements at node: ${node.id}")
+    open fun actionMissingTransitionForNode(node: Node, fsm: DFA, interproceduralFlow: Boolean) {
+        if (interproceduralFlow) {
+            log.error(
+                "There was a failure in the order of statements at node: ${node.id} but there was an interprocedural flow"
+            )
+        } else {
+            log.error("There was a failure in the order of statements at node: ${node.id}")
+        }
         log.error(
             fsm.executionTrace
                 .fold("") { r, t -> "$r${t.first}${t.third} (node id: ${t.second.id})\n" }
@@ -78,13 +85,27 @@ open class DFAOrderEvaluator(
     }
 
     /**
-     * Contains the functionality which is executed if the DFA did not terminate in an accepting
+     * Contains the functionality which is executed if the DFA **did not** terminate in an accepting
      * state for the given [base]. This means that not all required statements have been executed
      * for [base] so far. The [fsm] holds the execution trace found by the analysis.
      */
-    open fun actionNonAcceptingTermination(base: String, fsm: DFA) {
+    open fun actionNonAcceptingTermination(base: String, fsm: DFA, interproceduralFlow: Boolean) {
         log.error("Base $base did not terminate in an accepting state")
         log.error(
+            fsm.executionTrace.fold("") { r, t ->
+                "$r${t.first}${t.third} (node id: ${t.second.id})\n"
+            }
+        )
+    }
+
+    /**
+     * Contains the functionality which is executed if the DFA terminated in an accepting state for
+     * the given [base]. This means that all required statements have been executed for [base] so
+     * far. The [fsm] holds the execution trace found by the analysis.
+     */
+    open fun actionAcceptingTermination(base: String, fsm: DFA, interproceduralFlow: Boolean) {
+        log.debug("Base $base terminated in an accepting state")
+        log.debug(
             fsm.executionTrace.fold("") { r, t ->
                 "$r${t.first}${t.third} (node id: ${t.second.id})\n"
             }
@@ -114,6 +135,7 @@ open class DFAOrderEvaluator(
         val wrongBases = mutableSetOf<String>()
 
         var isValidOrder = true
+        val interproceduralFlows = mutableMapOf<String, Boolean>()
 
         val worklist = mutableListOf(startNode) // Keeps the nodes which have to be processed.
         while (worklist.isNotEmpty()) {
@@ -138,7 +160,7 @@ open class DFAOrderEvaluator(
                 // Check if the current node is of interest for the DFA.
                 // This is the case if the map nodesToOp contains the node.
                 if (node is CallExpression && nodeToRelevantMethod.contains(node)) {
-                    val baseAndOp = getBaseAndOpOfNode(node, eogPath)
+                    val baseAndOp = getBaseAndOpOfNode(node, eogPath, interproceduralFlows)
 
                     if (
                         baseAndOp != null &&
@@ -161,17 +183,35 @@ open class DFAOrderEvaluator(
                         if (!allOk) {
                             actionMissingTransitionForNode(
                                 node,
-                                baseToFSM.computeIfAbsent(baseAndOp.first) { dfa.clone() }
+                                baseToFSM.computeIfAbsent(baseAndOp.first) { dfa.clone() },
+                                interproceduralFlows[baseAndOp.first] == true
                             )
                             wrongBases.add(baseAndOp.first)
                             isValidOrder = false
+                        } else {
+                            // Reset the flag interproceduralFlow to false because the effects of
+                            // the previous flow should
+                            // not affect the subsequent calls. We just had a successful transition
+                            // in the DFA.
+                            interproceduralFlows[baseAndOp.first] = false
                         }
+                    }
+                } else if (node is CallExpression) {
+                    // This is a call to another method which is not relevant.
+                    // We might miss some interprocedural flows here.
+                    // We set the flag interproceduralFlow to keep track of this issue.
+                    // If we run into actionMissingTransitionForNode() for the next relevant node,
+                    // it could be due to missing the effects of this method call.
+                    callUsesInterestingBase(node, eogPath).forEach {
+                        interproceduralFlows[it] = true
                     }
                 }
 
                 // Retrieve the nodes which have to be processed later and add them at the
                 // end of the worklist.
-                worklist.addAll(getNextNodes(node, eogPath, baseToFSM, seenStates))
+                worklist.addAll(
+                    getNextNodes(node, eogPath, baseToFSM, seenStates, interproceduralFlows)
+                )
             }
             // The current node has been analyzed with all its eogPaths.
             // Remove from map, if we visit it in another iteration
@@ -182,8 +222,10 @@ open class DFAOrderEvaluator(
         for (e in baseToFSM.entries) {
             log.info("Checking fsm in current state ${e.value.currentState}")
             if (!e.value.isAccepted()) {
-                actionNonAcceptingTermination(e.key, e.value)
+                actionNonAcceptingTermination(e.key, e.value, interproceduralFlows[e.key] == true)
                 isValidOrder = false
+            } else {
+                actionAcceptingTermination(e.key, e.value, interproceduralFlows[e.key] == true)
             }
         }
 
@@ -191,22 +233,32 @@ open class DFAOrderEvaluator(
     }
 
     /**
-     * Returns a [Pair] holding the "base" and the "operator" of the function/method call happening
-     * in [node]. The operator is retrieved from the map [nodeToRelevantMethod] and is probably the
-     * name of the function called. If the call is neither a [MemberCallExpression] nor a
-     * [ConstructExpression], it probably calls a function which does not have a "base" (as it is
-     * the case for C). In that case, we try to look up the base in the map [thisPositionOfNode].
-     *
-     * The base is prefixed with [eogPath] in order to differentiate between different paths of
-     * execution in the control flow.
-     *
-     * If the base cannot be retrieved, or if the [node] is not considered by the analysis (i.e., no
-     * entry for [node] exists in the map [consideredBases]), the method returns `null`.
+     * Checks if the call expression [node] has a considered base as an argument. If so, this base
+     * could be used inside the function called and we might miss transitions in the DFA.
      */
-    private fun getBaseAndOpOfNode(node: CallExpression, eogPath: String): Pair<String, String>? {
-        // The "base" node, on which the DFA is based on. Ideally, this is a variable declaration in
-        // the end.
-        var base =
+    private fun callUsesInterestingBase(node: CallExpression, eogPath: String): List<String> {
+        val allUsedBases =
+            node.arguments
+                .map { arg -> (arg as? DeclaredReferenceExpression)?.refersTo }
+                .filter { arg -> arg != null && consideredBases.contains(arg.id) }
+                .toMutableList()
+        if (
+            node.base is DeclaredReferenceExpression &&
+                consideredBases.contains((node.base as DeclaredReferenceExpression).refersTo?.id)
+        ) {
+            allUsedBases.add((node.base as DeclaredReferenceExpression).refersTo)
+        }
+
+        val prefixedBases = allUsedBases.map { "$eogPath|${it?.name}.${it?.id}" }
+        return prefixedBases
+    }
+
+    /**
+     * Returns the "base" node belonging to [node], on which the DFA is based on. Ideally, this is a
+     * variable declaration in the end.
+     */
+    fun getBaseOfNode(node: CallExpression): Node? {
+        val base =
             when {
                 node is MemberCallExpression -> node.base
                 node is ConstructExpression -> node.astParent?.getSuitableDFGTarget()
@@ -221,6 +273,33 @@ open class DFAOrderEvaluator(
                     }
                 }
             }
+        return base
+    }
+
+    /**
+     * Returns a [Pair] holding the "base" and the "operator" of the function/method call happening
+     * in [node]. The operator is retrieved from the map [nodeToRelevantMethod] and is probably the
+     * name of the function called. If the call is neither a [MemberCallExpression] nor a
+     * [ConstructExpression], it probably calls a function which does not have a "base" (as it is
+     * the case for C). In that case, we try to look up the base in the map [thisPositionOfNode].
+     *
+     * The base is prefixed with [eogPath] in order to differentiate between different paths of
+     * execution in the control flow.
+     *
+     * If the base cannot be retrieved, or if the [node] is not considered by the analysis (i.e., no
+     * entry for [node] exists in the map [consideredBases]), the method returns `null`.
+     *
+     * The [interproceduralFlows] map is updated if the base is an argument of the function under
+     * analysis.
+     */
+    private fun getBaseAndOpOfNode(
+        node: CallExpression,
+        eogPath: String,
+        interproceduralFlows: MutableMap<String, Boolean>
+    ): Pair<String, String>? {
+        // The "base" node, on which the DFA is based on. Ideally, this is a variable declaration in
+        // the end.
+        var base = getBaseOfNode(node)
 
         if (base is DeclaredReferenceExpression && base.refersTo != null) {
             base = base.refersTo
@@ -230,6 +309,10 @@ open class DFAOrderEvaluator(
             // We add the path as prefix to the base in order to differentiate between
             // the different paths of execution which both can use the same base.
             val prefixedBase = "$eogPath|${base.name}.${base.id}"
+            if (base is ParamVariableDeclaration) {
+                // The base was the parameter of the function? We have an inter-procedural flow!
+                interproceduralFlows[prefixedBase] = true
+            }
             return Pair(prefixedBase, nodeToRelevantMethod[node]!!)
         }
 
@@ -305,7 +388,8 @@ open class DFAOrderEvaluator(
         node: Node,
         eogPath: String,
         baseToFSM: MutableMap<String, DFA>,
-        seenStates: MutableSet<String>
+        seenStates: MutableSet<String>,
+        interproceduralFlows: MutableMap<String, Boolean>
     ): List<Node> {
         val outNodes = mutableListOf<Node>()
         if (eliminateUnreachableCode) {
@@ -363,8 +447,11 @@ open class DFAOrderEvaluator(
                 } else {
                     val newEOGPath = "$eogPath$i"
                     // Clone the FSM for each of the paths in the baseToFSM map.
+                    // Also, copy the value in interproceduralFlows
                     newBases.forEach { (k: String, v: DFA) ->
                         baseToFSM[newEOGPath + k] = v.clone()
+                        interproceduralFlows[newEOGPath + k] =
+                            interproceduralFlows.computeIfAbsent(eogPath) { false }
                     }
                     // Update the eog-path directly in the map of paths for the respective node.
                     outNodes[i].addEogPath(newEOGPath)
