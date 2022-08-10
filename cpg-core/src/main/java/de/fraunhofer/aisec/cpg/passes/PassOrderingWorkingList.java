@@ -56,4 +56,8 @@ public class PassOrderingWorkingList {
       currentElement.getValue().remove(cls);
     }
   }
+
+  public String toString() {
+    return workingList.toString();
+  }
 }

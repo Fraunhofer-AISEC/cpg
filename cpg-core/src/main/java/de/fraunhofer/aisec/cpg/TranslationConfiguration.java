@@ -761,7 +761,7 @@ public class TranslationConfiguration {
             workingList.getWorkingList().remove(currentElement);
             result.add(passForResult);
 
-            break whileLoop;
+            continue whileLoop;
           }
         }
 
