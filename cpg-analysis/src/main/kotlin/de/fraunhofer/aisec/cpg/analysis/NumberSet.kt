@@ -56,7 +56,7 @@ class Interval : NumberSet() {
     }
 }
 
-class ConcreteNumberSet(private var values: MutableSet<Long> = mutableSetOf()) : NumberSet() {
+class ConcreteNumberSet(var values: MutableSet<Long> = mutableSetOf()) : NumberSet() {
     override fun addValue(value: Long) {
         values.add(value)
     }

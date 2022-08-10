@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory
 
 class MultiValueEvaluator : ValueEvaluator() {
     companion object {
-        const val MAX_DEPTH: Int = 10
+        const val MAX_DEPTH: Int = 20
     }
 
     override val log: Logger
@@ -76,10 +76,10 @@ class MultiValueEvaluator : ValueEvaluator() {
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
             is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
-            is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node, depth)
+            is ArraySubscriptionExpression -> return handleArraySubscriptionExpression(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> handleConditionalExpression(node, depth)
+            is ConditionalExpression -> return handleConditionalExpression(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
@@ -142,7 +142,12 @@ class MultiValueEvaluator : ValueEvaluator() {
             ) {
                 evaluateInternal(expr.thenExpr, depth + 1)
             } else {
-                evaluateInternal(expr.elseExpr, depth + 1)
+                val result = mutableListOf<Any?>()
+                val elseResult = evaluateInternal(expr.elseExpr, depth + 1)
+                val thenResult = evaluateInternal(expr.thenExpr, depth + 1)
+                if (thenResult is List<*>) result.addAll(thenResult) else result.add(thenResult)
+                if (elseResult is List<*>) result.addAll(elseResult) else result.add(elseResult)
+                result
             }
         }
 
@@ -191,7 +196,8 @@ class MultiValueEvaluator : ValueEvaluator() {
 
         if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.
-            return mutableListOf(evaluateInternal(prevDFG.first(), depth + 1))
+            val internalRes = evaluateInternal(prevDFG.first(), depth + 1)
+            return if (internalRes is List<*>) internalRes else mutableListOf(internalRes)
         }
 
         // We are only interested in expressions
