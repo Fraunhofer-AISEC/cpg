@@ -661,7 +661,7 @@ public class TranslationConfiguration {
 
       log.debug("Working list after initial scan: {}", workingList);
       log.debug("First passes after initial scan: {}", firstPasses);
-      log.debug("LAst passes after initial scan: {}", lastPasses);
+      log.debug("Last passes after initial scan: {}", lastPasses);
 
       // add required dependencies to the working list
       List<Class<? extends Pass>> missingPasses = new ArrayList<>();
