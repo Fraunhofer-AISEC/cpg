@@ -23,18 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes;
+package de.fraunhofer.aisec.cpg.passes
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
 
 /**
- * Indicates whether this pass should be executed as the last pass. Note: setting this flag to
- * `true` for more than one active pass will yield an error. Note: setting this flag will not
- * activate the pass. You must register the pass manually.
+ * Indicates whether this pass should be executed as the last pass. Note: setting this flag for more
+ * than one active pass will yield an error. Note: setting this flag will not activate the pass. You
+ * must register the pass manually.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface PassIsLastPass {}
+@Retention(RetentionPolicy.RUNTIME) @Target(AnnotationTarget.CLASS) annotation class PassIsLastPass
