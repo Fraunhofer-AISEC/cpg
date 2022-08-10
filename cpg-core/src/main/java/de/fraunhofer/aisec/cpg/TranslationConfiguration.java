@@ -638,7 +638,7 @@ public class TranslationConfiguration {
           if (p.getFirstPass()) {
             firstPasses.add(p);
           }
-          if (p.getLastPass()) {
+          if (p.isLastPass()) {
             lastPasses.add(p);
           }
         }
@@ -697,7 +697,7 @@ public class TranslationConfiguration {
         if (newPass.getFirstPass()) {
           firstPasses.add(newPass);
         }
-        if (newPass.getLastPass()) {
+        if (newPass.isLastPass()) {
           lastPasses.add(newPass);
         }
 
@@ -745,7 +745,7 @@ public class TranslationConfiguration {
       while (!workingList.isEmpty()) { // TODO catch loop
         for (PassOrderingPassWithDependencies currentElement : workingList.getWorkingList()) {
 
-          if (workingList.size() > 1 && currentElement.getPass().getLastPass()) {
+          if (workingList.size() > 1 && currentElement.getPass().isLastPass()) {
             continue; // last pass can only be added at the end
           }
 

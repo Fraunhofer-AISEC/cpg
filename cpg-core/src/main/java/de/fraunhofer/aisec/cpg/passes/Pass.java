@@ -53,13 +53,6 @@ public abstract class Pass implements Consumer<TranslationResult> {
    */
   private Boolean firstPass;
 
-  /**
-   * Indicates whether this pass should be executed as the last pass. Note: setting this flag to
-   * `true` for more than one active pass will yield an error. Note: setting this flag will not
-   * activate the pass. You must register the pass manually.
-   */
-  private Boolean lastPass;
-
   private Set<Class<? extends Pass>> afterPass;
 
   private Set<Class<? extends Pass>> dependsOn;
@@ -69,7 +62,6 @@ public abstract class Pass implements Consumer<TranslationResult> {
     dependsOn = new HashSet<>();
     afterPass = new HashSet<>();
     firstPass = false;
-    lastPass = false;
   }
 
   @JsonIgnore @Nullable protected LanguageFrontend lang;
@@ -131,15 +123,11 @@ public abstract class Pass implements Consumer<TranslationResult> {
     this.firstPass = flag;
   }
 
-  public void setLastPass(Boolean flag) {
-    this.lastPass = flag;
-  }
-
-  public boolean getLastPass() {
-    return this.lastPass;
-  }
-
   public Set<Class<? extends Pass>> getAfterPass() {
     return this.afterPass;
+  }
+
+  public Boolean isLastPass() {
+    return Pass.class.isAnnotationPresent(PassIsLastPass.class);
   }
 }
