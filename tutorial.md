@@ -2,7 +2,9 @@
 
 Ensuring the correct behavior of software is crucial to avoid security issues stemming from incorrect implementations. In this video, we present our CPG tool, a language-independent analysis platform for source code based on an adaption of a code property graph. Our platform has support for multiple passes that can extend the analysis after the graph is constructed and it currently supports C/C++, Java and has experimental support for Golang and Python.
 
-(TODO: Insert finished video here)
+The whole process is also documented in a short video.
+
+[![CPG video](https://img.youtube.com/vi/ngKtH6kYxx0/0.jpg)](https://www.youtube.com/watch?v=ngKtH6kYxx0)
 
 ## What is a Code Property Graph?
 
