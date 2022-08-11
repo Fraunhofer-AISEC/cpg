@@ -686,19 +686,14 @@ public class TranslationConfiguration {
       // adding missing passes to the local working list
       while (!missingPasses.isEmpty()) {
         Class<? extends Pass> cls = missingPasses.remove(0);
-        log.info(
-            "Registering a required dependency which was not registered explicitly: {}",
-            cls.toString());
+        log.info("Registering a required dependency which was not registered explicitly: {}", cls);
         Pass newPass;
         try {
           newPass = cls.getConstructor().newInstance();
-        } catch (InstantiationException e) {
-          throw new RuntimeException(e);
-        } catch (InvocationTargetException e) {
-          throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-          throw new RuntimeException(e);
-        } catch (NoSuchMethodException e) {
+        } catch (InstantiationException
+            | InvocationTargetException
+            | IllegalAccessException
+            | NoSuchMethodException e) {
           throw new RuntimeException(e);
         }
 
@@ -766,7 +761,7 @@ public class TranslationConfiguration {
             continue; // last pass can only be added at the end
           }
 
-          if (currentElement.getDependencies().size() == 0) { // no unsatisfied dependencies
+          if (currentElement.getDependencies().isEmpty()) { // no unsatisfied dependencies
             Pass passForResult = currentElement.getPass();
 
             // remove the pass from the other pass's dependencies

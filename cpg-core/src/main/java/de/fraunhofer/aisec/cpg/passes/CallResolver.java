@@ -65,10 +65,6 @@ import org.slf4j.LoggerFactory;
 @PassRegisterSoftDependency(VariableUsageResolver.class)
 public class CallResolver extends Pass {
 
-  public CallResolver() {
-    super();
-  }
-
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);
 
   protected final Map<String, RecordDeclaration> recordMap = new HashMap<>();

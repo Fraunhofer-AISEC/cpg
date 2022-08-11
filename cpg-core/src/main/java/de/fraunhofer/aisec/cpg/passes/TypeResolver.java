@@ -36,10 +36,6 @@ import java.util.*;
 @PassRegisterSoftDependency(CallResolver.class)
 public class TypeResolver extends Pass {
 
-  public TypeResolver() {
-    super();
-  }
-
   protected final Set<Type> firstOrderTypes = new HashSet<>();
   protected final Map<Type, List<Type>> typeState = new HashMap<>();
 

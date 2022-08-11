@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,12 +124,22 @@ public abstract class Pass implements Consumer<TranslationResult> {
     return true;
   }
 
+  @NotNull
   public Boolean isLastPass() {
-    return this.getClass().isAnnotationPresent(PassIsLastPass.class);
+    try {
+      return this.getClass().isAnnotationPresent(PassIsLastPass.class);
+    } catch (Exception e) {
+      return false;
+    }
   }
 
+  @NotNull
   public Boolean isFirstPass() {
-    return this.getClass().isAnnotationPresent(PassIsFirstPass.class);
+    try {
+      return this.getClass().isAnnotationPresent(PassIsFirstPass.class);
+    } catch (Exception e) {
+      return false;
+    }
   }
 
   public Set<Class<? extends Pass>> getSoftDependencies() {
