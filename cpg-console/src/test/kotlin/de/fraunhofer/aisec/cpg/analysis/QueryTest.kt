@@ -101,6 +101,27 @@ class QueryTest {
     }
 
     @Test
+    fun testMemcpyTooLargeQueryImplies() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val mustSatisfy = { it: CallExpression ->
+            (const("memcpy") eq it.name) implies
+                (lazy { it.arguments[0].size gt it.arguments[1].size })
+        }
+        val queryTreeResult = result.all<CallExpression>(mustSatisfy = mustSatisfy)
+
+        assertFalse(queryTreeResult.value)
+    }
+
+    @Test
     fun testDoubleFree() {
         val config =
             TranslationConfiguration.builder()
@@ -138,6 +159,93 @@ class QueryTest {
     }
 
     @Test
+    fun testParameterGreaterThanOrEqualConst() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.all<CallExpression>({ it.name == "memcpy" }) {
+                it.arguments[2].intValue!! >= const(11)
+            }
+        assertTrue(queryTreeResult.first)
+
+        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! ge 11 }
+        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+
+        assertTrue(queryTreeResult2.value)
+
+        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! ge const(11) }
+        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+
+        assertTrue(queryTreeResult3.value)
+    }
+
+    @Test
+    fun testParameterGreaterThanConst() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.all<CallExpression>({ it.name == "memcpy" }) {
+                it.arguments[2].intValue!! > const(11)
+            }
+        assertTrue(queryTreeResult.first)
+
+        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! gt 11 }
+        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+
+        assertTrue(queryTreeResult2.value)
+
+        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! gt const(11) }
+        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+
+        assertTrue(queryTreeResult3.value)
+    }
+
+    @Test
+    fun testParameterLessThanOrEqualConst() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.all<CallExpression>({ it.name == "memcpy" }) {
+                it.arguments[2].intValue!! <= const(11)
+            }
+        assertTrue(queryTreeResult.first)
+
+        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! le 11 }
+        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+
+        assertTrue(queryTreeResult2.value)
+
+        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! le const(11) }
+        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+
+        assertTrue(queryTreeResult3.value)
+    }
+
+    @Test
     fun testParameterEqualsConst() {
         val config =
             TranslationConfiguration.builder()
@@ -159,6 +267,100 @@ class QueryTest {
         val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
 
         assertTrue(queryTreeResult2.value)
+
+        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! eq const(11) }
+        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+
+        assertTrue(queryTreeResult3.value)
+    }
+
+    @Test
+    fun testParameterLessThanConst() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.all<CallExpression>({ it.name == "memcpy" }) {
+                it.arguments[2].intValue!! < const(11)
+            }
+        assertFalse(queryTreeResult.first)
+
+        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! lt 11 }
+        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+
+        assertFalse(queryTreeResult2.value)
+
+        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! lt const(11) }
+        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+
+        assertFalse(queryTreeResult3.value)
+    }
+
+    @Test
+    fun testParameterNotEqualsConst() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.all<CallExpression>({ it.name == "memcpy" }) {
+                it.arguments[2].intValue!! != const(11)
+            }
+        assertFalse(queryTreeResult.first)
+
+        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! ne 11 }
+        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+
+        assertFalse(queryTreeResult2.value)
+
+        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! ne const(11) }
+        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+
+        assertFalse(queryTreeResult3.value)
+    }
+
+    @Test
+    fun testParameterIn() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.all<CallExpression>({ it.name == "memcpy" }) {
+                it.arguments[2].intValue!!.value in listOf(11, 2, 3)
+            }
+        assertTrue(queryTreeResult.first)
+
+        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! IN listOf(11, 2, 3) }
+        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+
+        assertTrue(queryTreeResult2.value)
+
+        val mustSatisfy2 = { it: CallExpression ->
+            it.arguments[2].intValue!! IN const(listOf(11, 2, 3))
+        }
+        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+
+        assertTrue(queryTreeResult3.value)
     }
 
     @Test

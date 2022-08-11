@@ -192,6 +192,16 @@ infix fun QueryTree<Boolean>.implies(other: QueryTree<Boolean>): QueryTree<Boole
     )
 }
 
+/** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
+infix fun QueryTree<Boolean>.implies(other: Lazy<QueryTree<Boolean>>): QueryTree<Boolean> {
+    return QueryTree(
+        !this.value || other.value.value,
+        if (!this.value) mutableListOf(this) else mutableListOf(this, other.value),
+        stringRepresentation =
+            if (!this.value) "false => XYZ" else "${this.value} => ${other.value}"
+    )
+}
+
 /** Compares the numeric values of two [QueryTree]s for this being "greater than" (>) [other]. */
 infix fun <T : Number, S : Number> QueryTree<T>.gt(other: QueryTree<S>): QueryTree<Boolean> {
     val result = this.value.compareTo(other.value) > 0
