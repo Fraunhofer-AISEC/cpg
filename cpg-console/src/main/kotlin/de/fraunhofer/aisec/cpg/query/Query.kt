@@ -255,7 +255,10 @@ fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
     )
 }
 
-/** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
+/**
+ * Checks if a path of execution flow is possible between the nodes [from] and fulfilling the
+ * requirement specified in [predicate].
+ */
 fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
     val evalRes = from.followNextEOGEdgesUntilHit(predicate)
     return QueryTree(
@@ -279,10 +282,10 @@ val Expression.size: QueryTree<Int>
 /**
  * The minimal integer value of this expression. It uses the default argument for `eval` of [min]
  */
-/*val Expression.min: QueryTree<Number>
-get() {
-    return min(this)
-}*/
+val Expression.min: QueryTree<Number>
+    get() {
+        return min(this)
+    }
 
 /**
  * The maximal integer value of this expression. It uses the default argument for `eval` of [max]
