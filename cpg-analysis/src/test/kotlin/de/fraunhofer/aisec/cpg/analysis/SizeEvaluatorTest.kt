@@ -23,10 +23,9 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis.fsm
+package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration

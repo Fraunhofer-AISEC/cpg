@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.graph
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.astParent
 
 /** Returns all [CallExpression]s in this graph. */
@@ -52,7 +53,8 @@ fun TranslationResult.callsByName(name: String): List<CallExpression> {
 /** Set of all functions which are called from this function */
 val FunctionDeclaration.callees: Set<FunctionDeclaration>
     get() {
-        return this.body.astChildren
+
+        return SubgraphWalker.flattenAST(this.body)
             .filterIsInstance<CallExpression>()
             .map { it.invokes }
             .foldRight(
@@ -76,18 +78,21 @@ fun TranslationResult.callersOf(function: FunctionDeclaration): Set<FunctionDecl
 
 /** All nodes which depend on this if statement */
 fun IfStatement.controls(): List<Node> {
-    return this.astChildren
+    val result = mutableListOf<Node>()
+    result.addAll(SubgraphWalker.flattenAST(this.thenStatement))
+    result.addAll(SubgraphWalker.flattenAST(this.elseStatement))
+    return result
 }
 
 /** All nodes which depend on this if statement */
 fun Node.controlledBy(): List<Node> {
     val result = mutableListOf<Node>()
-    if (
-        this.astParent != null &&
-            (this.astParent is IfStatement || this.astParent is SwitchStatement)
-    ) {
-        result.add(this.astParent!!)
-        result.addAll(this.astParent!!.controlledBy())
+    var checkedNode: Node = this
+    while (checkedNode !is FunctionDeclaration) {
+        checkedNode = checkedNode.astParent!!
+        if (checkedNode is IfStatement || checkedNode is SwitchStatement) {
+            result.add(checkedNode)
+        }
     }
     return result
 }
