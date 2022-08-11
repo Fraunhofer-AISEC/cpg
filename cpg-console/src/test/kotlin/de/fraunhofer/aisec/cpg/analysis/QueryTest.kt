@@ -203,17 +203,17 @@ class QueryTest {
             result.all<CallExpression>({ it.name == "memcpy" }) {
                 it.arguments[2].intValue!! > const(11)
             }
-        assertTrue(queryTreeResult.first)
+        assertFalse(queryTreeResult.first)
 
         val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! gt 11 }
         val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
 
-        assertTrue(queryTreeResult2.value)
+        assertFalse(queryTreeResult2.value)
 
         val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! gt const(11) }
         val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
 
-        assertTrue(queryTreeResult3.value)
+        assertFalse(queryTreeResult3.value)
     }
 
     @Test
