@@ -655,74 +655,7 @@ public class TranslationConfiguration {
 
       log.debug("Working list after initial scan: {}", workingList);
 
-      // add required dependencies to the working list
-      List<Class<? extends Pass>> missingPasses = new ArrayList<>();
-      for (PassOrderingPassWithDependencies p : workingList.getWorkingList()) {
-        for (Class<? extends Pass> dependency : p.getPass().getHardDependencies()) {
-          boolean dependencyFound = false;
-
-          for (PassOrderingPassWithDependencies inner : workingList.getWorkingList()) {
-            if (dependency == inner.getPass().getClass()) {
-              dependencyFound = true;
-              break;
-            }
-          }
-          if (!dependencyFound) {
-            missingPasses.add(dependency);
-          }
-        }
-      }
-
-      log.info("The following passes are missing required dependencies: {}", missingPasses);
-
-      // adding missing passes to the local working list
-      while (!missingPasses.isEmpty()) {
-        Class<? extends Pass> cls = missingPasses.remove(0);
-        log.info("Registering a required dependency which was not registered explicitly: {}", cls);
-        Pass newPass;
-        try {
-          newPass = cls.getConstructor().newInstance();
-        } catch (InstantiationException
-            | InvocationTargetException
-            | IllegalAccessException
-            | NoSuchMethodException e) {
-          throw new RuntimeException(e);
-        }
-
-        Set<Class<? extends Pass>> deps = new HashSet<>();
-        deps.addAll(newPass.getHardDependencies());
-        deps.addAll(newPass.getSoftDependencies());
-        workingList.addToWorkingList(new PassOrderingPassWithDependencies(newPass, deps));
-
-        // check the dependencies of the new pass
-        for (Class<? extends Pass> dependency : newPass.getHardDependencies()) {
-          boolean dependencyFound = false;
-
-          // check whether the dependency is already in the working list
-          for (PassOrderingPassWithDependencies p : workingList.getWorkingList()) {
-            if (dependency == p.getPass().getClass()) {
-              dependencyFound = true;
-              break;
-            }
-          }
-
-          // check whether it is already known as a missing dependency
-          if (!dependencyFound) {
-            for (Class<? extends Pass> inner : missingPasses) {
-              if (dependency == inner) {
-                dependencyFound = true;
-                break;
-              }
-            }
-          }
-
-          // it is really missing -> add it to missing passes
-          if (!dependencyFound) {
-            missingPasses.add(dependency);
-          }
-        }
-      }
-
+      workingList.addMissingDependencies();
       log.debug("Working list after adding missing dependencies: {}", workingList);
 
       if (workingList.getFirstPasses().size() > 1) {

@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.passes.Pass.log
+import java.lang.reflect.InvocationTargetException
 import java.util.*
 
 /**
@@ -73,5 +75,74 @@ class PassOrderingWorkingList {
 
     fun getLastPasses(): List<PassOrderingPassWithDependencies> {
         return workingList.filter { it.pass.isLastPass }
+    }
+
+    private fun dependencyPresent(dep: Class<out Pass>): Boolean {
+        var result = false
+        for (currentElement in workingList) {
+            if (dep == currentElement.pass.javaClass) {
+                result = true
+                break
+            }
+        }
+
+        return result
+    }
+    fun addMissingDependencies() {
+        // add required dependencies to the working list
+        val missingPasses: MutableList<Class<out Pass>> = ArrayList()
+
+        // initially populate the missing dependencies list given the current passes
+        for (currentElement in workingList) {
+            for (dependency in currentElement.pass.hardDependencies) {
+                if (!dependencyPresent(dependency)) {
+                    missingPasses.add(dependency)
+                }
+            }
+        }
+
+        // adding missing passes to the local working list
+        while (missingPasses.isNotEmpty()) {
+            val cls = missingPasses.removeAt(0)
+            log.info(
+                "Registering a required hard dependency which was not registered explicitly: {}",
+                cls
+            )
+            var newPass: Pass =
+                try {
+                    cls.getConstructor().newInstance()
+                } catch (e: InstantiationException) {
+                    throw RuntimeException(e)
+                } catch (e: InvocationTargetException) {
+                    throw RuntimeException(e)
+                } catch (e: IllegalAccessException) {
+                    throw RuntimeException(e)
+                } catch (e: NoSuchMethodException) {
+                    throw RuntimeException(e)
+                }
+
+            val deps: MutableSet<Class<out Pass>> = HashSet()
+            deps.addAll(newPass.hardDependencies)
+            deps.addAll(newPass.softDependencies)
+            workingList.add(PassOrderingPassWithDependencies(newPass, deps))
+
+            // check the dependencies of the new pass
+            for (dependency in newPass.hardDependencies) {
+                var dependencyFound = dependencyPresent(dependency)
+                if (!dependencyFound) {
+                    for (innerElem in missingPasses) {
+                        if (dependency == innerElem) {
+                            dependencyFound = true
+                            break
+                        }
+                    }
+                }
+
+                // it is really missing -> add it to missing passes
+                if (!dependencyFound) {
+                    missingPasses.add(dependency)
+                }
+            }
+        }
     }
 }
