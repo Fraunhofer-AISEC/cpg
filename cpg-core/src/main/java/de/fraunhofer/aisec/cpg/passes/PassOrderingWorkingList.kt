@@ -66,4 +66,12 @@ class PassOrderingWorkingList {
     override fun toString(): String {
         return workingList.toString()
     }
+
+    fun getFirstPasses(): List<PassOrderingPassWithDependencies> {
+        return workingList.filter { it.pass.isFirstPass }
+    }
+
+    fun getLastPasses(): List<PassOrderingPassWithDependencies> {
+        return workingList.filter { it.pass.isLastPass }
+    }
 }

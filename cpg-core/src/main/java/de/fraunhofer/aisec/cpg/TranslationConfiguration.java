@@ -603,6 +603,26 @@ public class TranslationConfiguration {
           matchCommentsToNodes);
     }
 
+    private PassOrderingWorkingList collectInitialPasses() {
+      PassOrderingWorkingList workingList = new PassOrderingWorkingList();
+      for (Pass p : passes) {
+        boolean passFound = false;
+        for (PassOrderingPassWithDependencies wl : workingList.getWorkingList()) {
+          if (wl.getPass().getClass() == p.getClass()) {
+            passFound = true;
+            break;
+          }
+        }
+        if (!passFound) {
+          Set<Class<? extends Pass>> deps = new HashSet<>();
+          deps.addAll(p.getHardDependencies());
+          deps.addAll(p.getSoftDependencies());
+          workingList.addToWorkingList(new PassOrderingPassWithDependencies(p, deps));
+        }
+      }
+      return workingList;
+    }
+
     /**
      * This function reorders passes in order to meet their dependency requirements. - soft
      * dependencies [PassRegisterSoftDependency]: all passes registered as soft dependency will be
@@ -631,37 +651,9 @@ public class TranslationConfiguration {
 
       // Create a local copy of all passes and their "current" dependencies without possible
       // duplicates
-      PassOrderingWorkingList workingList = new PassOrderingWorkingList();
-
-      Set<Pass> firstPasses = new HashSet<>();
-      Set<Pass> lastPasses = new HashSet<>();
-
-      for (Pass p : passes) {
-        boolean passFound = false;
-        for (PassOrderingPassWithDependencies wl : workingList.getWorkingList()) {
-          if (wl.getPass().getClass() == p.getClass()) {
-            passFound = true;
-            break;
-          }
-        }
-        if (!passFound) {
-          Set<Class<? extends Pass>> deps = new HashSet<>();
-          deps.addAll(p.getHardDependencies());
-          deps.addAll(p.getSoftDependencies());
-          workingList.addToWorkingList(new PassOrderingPassWithDependencies(p, deps));
-
-          if (p.isFirstPass()) {
-            firstPasses.add(p);
-          }
-          if (p.isLastPass()) {
-            lastPasses.add(p);
-          }
-        }
-      }
+      PassOrderingWorkingList workingList = collectInitialPasses();
 
       log.debug("Working list after initial scan: {}", workingList);
-      log.debug("First passes after initial scan: {}", firstPasses);
-      log.debug("Last passes after initial scan: {}", lastPasses);
 
       // add required dependencies to the working list
       List<Class<? extends Pass>> missingPasses = new ArrayList<>();
@@ -702,13 +694,6 @@ public class TranslationConfiguration {
         deps.addAll(newPass.getSoftDependencies());
         workingList.addToWorkingList(new PassOrderingPassWithDependencies(newPass, deps));
 
-        if (newPass.isFirstPass()) {
-          firstPasses.add(newPass);
-        }
-        if (newPass.isLastPass()) {
-          lastPasses.add(newPass);
-        }
-
         // check the dependencies of the new pass
         for (Class<? extends Pass> dependency : newPass.getHardDependencies()) {
           boolean dependencyFound = false;
@@ -740,13 +725,16 @@ public class TranslationConfiguration {
 
       log.debug("Working list after adding missing dependencies: {}", workingList);
 
-      if (firstPasses.size() > 1) {
-        log.error("Too many passes require to be executed as first pass: {}", firstPasses);
+      if (workingList.getFirstPasses().size() > 1) {
+        log.error(
+            "Too many passes require to be executed as first pass: {}",
+            workingList.getWorkingList());
         throw new RuntimeException("Too many passes require to be executed as first pass.");
       }
 
-      if (lastPasses.size() > 1) {
-        log.error("Too many passes require to be executed as last pass: {}", lastPasses);
+      if (workingList.getLastPasses().size() > 1) {
+        log.error(
+            "Too many passes require to be executed as last pass: {}", workingList.getLastPasses());
         throw new RuntimeException("Too many passes require to be executed as last pass.");
       }
 
