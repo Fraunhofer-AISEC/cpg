@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory
  */
 class SizeEvaluator : ValueEvaluator() {
     override val log: Logger
-        get() = LoggerFactory.getLogger(MultiValueEvaluator::class.java)
+        get() = LoggerFactory.getLogger(SizeEvaluator::class.java)
 
     override fun evaluate(node: Any?): Any? {
         if (node is String) {

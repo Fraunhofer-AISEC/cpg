@@ -36,6 +36,11 @@ import de.fraunhofer.aisec.cpg.passes.astParent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+/**
+ * This [ValueEvaluator] can resolve multiple possible values of a node.
+ *
+ * It requires running the [EdgeCachePass] after the translation to add all necessary edges.
+ */
 class MultiValueEvaluator : ValueEvaluator() {
     companion object {
         const val MAX_DEPTH: Int = 20

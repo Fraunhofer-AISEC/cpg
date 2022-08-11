@@ -30,8 +30,12 @@ import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.evaluate
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -180,5 +184,66 @@ class MultiValueEvaluatorTest {
         assertNotNull(printB)
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(3, 6), value.values)
+    }
+
+    @Test
+    fun testLoop() {
+        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("cfexample.cpp").toFile()),
+                topLevel,
+                true
+            ) { it.registerPass(EdgeCachePass()) }
+
+        assertNotNull(tu)
+
+        val main = tu.byNameOrNull<FunctionDeclaration>("loop")
+        assertNotNull(main)
+
+        val forLoop = main.bodyOrNull<ForStatement>()
+        assertNotNull(forLoop)
+
+        val evaluator = MultiValueEvaluator()
+        val iVar = ((forLoop.statement as CompoundStatement).statements[0] as BinaryOperator).rhs
+        val value = evaluator.evaluate(iVar) as ConcreteNumberSet
+        assertEquals(setOf<Long>(0, 1, 2, 3, 4, 5), value.values)
+    }
+
+    @Test
+    fun testInterval() {
+        val interval = Interval()
+        interval.addValue(0)
+        assertEquals(0, interval.min())
+        assertEquals(0, interval.max())
+        interval.addValue(3)
+        interval.addValue(2)
+        assertEquals(0, interval.min())
+        assertEquals(3, interval.max())
+        interval.addValue(-5)
+        assertEquals(-5, interval.min())
+        assertEquals(3, interval.max())
+        interval.clear()
+        assertEquals(Long.MAX_VALUE, interval.min())
+        assertEquals(Long.MIN_VALUE, interval.max())
+    }
+
+    @Test
+    fun testConcreteNumberSet() {
+        val values = ConcreteNumberSet()
+        values.addValue(0)
+        assertEquals(setOf<Long>(0), values.values)
+        values.addValue(3)
+        values.addValue(2)
+        assertEquals(setOf<Long>(0, 2, 3), values.values)
+        assertEquals(0, values.min())
+        assertEquals(3, values.max())
+        values.addValue(-5)
+        assertEquals(setOf<Long>(-5, 0, 2, 3), values.values)
+        assertEquals(-5, values.min())
+        assertEquals(3, values.max())
+        values.clear()
+        assertEquals(Long.MAX_VALUE, values.min())
+        assertEquals(Long.MIN_VALUE, values.max())
     }
 }

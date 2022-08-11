@@ -61,10 +61,10 @@ class ConcreteNumberSet(var values: MutableSet<Long> = mutableSetOf()) : NumberS
         values.add(value)
     }
     override fun min(): Long {
-        return values.minOrNull()!!
+        return values.minOrNull() ?: Long.MAX_VALUE
     }
     override fun max(): Long {
-        return values.maxOrNull()!!
+        return values.maxOrNull() ?: Long.MIN_VALUE
     }
     override fun clear() {
         values.clear()

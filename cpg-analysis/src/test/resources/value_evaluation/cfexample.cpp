@@ -28,3 +28,11 @@ int main() {
     println(a); // {3, 6}
     return 0;
 }
+
+int loop() {
+    int array[6];
+    for(int i = 0; i < 6; i++) {
+        array[i] = i;
+    }
+    return 0;
+}

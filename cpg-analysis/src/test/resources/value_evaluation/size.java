@@ -5,6 +5,9 @@ public class MainClass {
             array[i] = i;
         }
         System.out.println(array[1]);
+
+        String str = "abcde";
+        System.out.println(str);
         return 0;
     }
  }
