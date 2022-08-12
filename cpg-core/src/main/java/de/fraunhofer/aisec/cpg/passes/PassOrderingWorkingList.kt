@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.ConfigurationException
 import de.fraunhofer.aisec.cpg.passes.Pass.log
 import java.lang.reflect.InvocationTargetException
 import java.util.*
@@ -108,17 +109,17 @@ class PassOrderingWorkingList {
                 "Registering a required hard dependency which was not registered explicitly: {}",
                 cls
             )
-            var newPass: Pass =
+            val newPass: Pass =
                 try {
                     cls.getConstructor().newInstance()
                 } catch (e: InstantiationException) {
-                    throw RuntimeException(e)
+                    throw ConfigurationException(e)
                 } catch (e: InvocationTargetException) {
-                    throw RuntimeException(e)
+                    throw ConfigurationException(e)
                 } catch (e: IllegalAccessException) {
-                    throw RuntimeException(e)
+                    throw ConfigurationException(e)
                 } catch (e: NoSuchMethodException) {
-                    throw RuntimeException(e)
+                    throw ConfigurationException(e)
                 }
 
             val deps: MutableSet<Class<out Pass>> = HashSet()
@@ -128,15 +129,8 @@ class PassOrderingWorkingList {
 
             // check the dependencies of the new pass
             for (dependency in newPass.hardDependencies) {
-                var dependencyFound = dependencyPresent(dependency)
-                if (!dependencyFound) {
-                    for (innerElem in missingPasses) {
-                        if (dependency == innerElem) {
-                            dependencyFound = true
-                            break
-                        }
-                    }
-                }
+                var dependencyFound =
+                    dependencyPresent(dependency) || missingPasses.contains(dependency)
 
                 // it is really missing -> add it to missing passes
                 if (!dependencyFound) {

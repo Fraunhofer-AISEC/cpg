@@ -572,7 +572,7 @@ public class TranslationConfiguration {
       return this;
     }
 
-    public TranslationConfiguration build() {
+    public TranslationConfiguration build() throws ConfigurationException {
       if (useParallelFrontends && typeSystemActiveInFrontend) {
         log.warn(
             "Not disabling the type system during the frontend "
@@ -643,7 +643,7 @@ public class TranslationConfiguration {
      *
      * @return a sorted list of passes
      */
-    private List<Pass> orderPasses() {
+    private List<Pass> orderPasses() throws ConfigurationException {
 
       log.info("Passes before enforcing order: {}", passes);
 
@@ -662,13 +662,13 @@ public class TranslationConfiguration {
         log.error(
             "Too many passes require to be executed as first pass: {}",
             workingList.getWorkingList());
-        throw new RuntimeException("Too many passes require to be executed as first pass.");
+        throw new ConfigurationException("Too many passes require to be executed as first pass.");
       }
 
       if (workingList.getLastPasses().size() > 1) {
         log.error(
             "Too many passes require to be executed as last pass: {}", workingList.getLastPasses());
-        throw new RuntimeException("Too many passes require to be executed as last pass.");
+        throw new ConfigurationException("Too many passes require to be executed as last pass.");
       }
 
       // For testing...
@@ -679,24 +679,25 @@ public class TranslationConfiguration {
         for (PassOrderingPassWithDependencies currentElement : workingList.getWorkingList()) {
 
           if (workingList.size() > 1 && currentElement.getPass().isLastPass()) {
-            continue; // last pass can only be added at the end
-          }
+            // last pass can only be added at the end
+          } else {
 
-          if (currentElement.getDependencies().isEmpty()) { // no unsatisfied dependencies
-            Pass passForResult = currentElement.getPass();
+            if (currentElement.getDependencies().isEmpty()) { // no unsatisfied dependencies
+              Pass passForResult = currentElement.getPass();
 
-            // remove the pass from the other pass's dependencies
-            workingList.removeDependencyByClass(passForResult.getClass());
+              // remove the pass from the other pass's dependencies
+              workingList.removeDependencyByClass(passForResult.getClass());
 
-            workingList.getWorkingList().remove(currentElement);
-            result.add(passForResult);
+              workingList.getWorkingList().remove(currentElement);
+              result.add(passForResult);
 
-            continue whileLoop;
+              continue whileLoop;
+            }
           }
         }
 
         // we are in a loop :(
-        throw new RuntimeException("Failed to satisfy ordering requirements.");
+        throw new ConfigurationException("Failed to satisfy ordering requirements.");
       }
 
       log.info("Passes after enforcing order: {}", result);
