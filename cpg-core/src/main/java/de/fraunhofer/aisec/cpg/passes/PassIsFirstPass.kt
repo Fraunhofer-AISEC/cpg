@@ -25,14 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-
 /**
  * Indicates whether this pass should be executed as the first pass. Note: setting this flag for
  * more than one active pass will yield an error. Note: setting this flag will not activate the
  * pass. You must register the pass manually.
  */
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 annotation class PassIsFirstPass

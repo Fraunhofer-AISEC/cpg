@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
 import kotlin.reflect.KClass
 
 /**
@@ -34,7 +32,7 @@ import kotlin.reflect.KClass
  * - the annotated pass is executed after its dependency
  * - the dependency is added to the list of active passes even if not manually specified by the user
  */
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
 annotation class PassRegisterHardDependency(val value: KClass<out Pass>)

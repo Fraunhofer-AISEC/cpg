@@ -60,7 +60,7 @@ class PassOrderingWorkingList {
      * Iterate through all elements and remove the provided dependency [cls] from all passes in the
      * working list.
      */
-    fun removeDependencyByClass(cls: Class<out Pass>) {
+    private fun removeDependencyByClass(cls: Class<out Pass>) {
         for ((_, value) in workingList) {
             value.remove(cls)
         }
@@ -90,6 +90,36 @@ class PassOrderingWorkingList {
         return result
     }
     fun addMissingDependencies() {
+        val it = workingList.listIterator()
+        while (it.hasNext()) {
+            val current = it.next()
+            for (dependency in current.pass.hardDependencies) {
+                if (!dependencyPresent(dependency)) {
+                    log.info(
+                        "Registering a required hard dependency which was not registered explicitly: {}",
+                        dependency
+                    )
+                    val newPass: Pass =
+                        try {
+                            dependency.getConstructor().newInstance()
+                        } catch (e: InstantiationException) {
+                            throw ConfigurationException(e)
+                        } catch (e: InvocationTargetException) {
+                            throw ConfigurationException(e)
+                        } catch (e: IllegalAccessException) {
+                            throw ConfigurationException(e)
+                        } catch (e: NoSuchMethodException) {
+                            throw ConfigurationException(e)
+                        }
+
+                    val deps: MutableSet<Class<out Pass>> = HashSet()
+                    deps.addAll(newPass.hardDependencies)
+                    deps.addAll(newPass.softDependencies)
+                    it.add(PassOrderingPassWithDependencies(newPass, deps))
+                }
+            }
+        }
+
         // add required dependencies to the working list
         val missingPasses: MutableList<Class<out Pass>> = ArrayList()
 
@@ -97,43 +127,6 @@ class PassOrderingWorkingList {
         for (currentElement in workingList) {
             for (dependency in currentElement.pass.hardDependencies) {
                 if (!dependencyPresent(dependency)) {
-                    missingPasses.add(dependency)
-                }
-            }
-        }
-
-        // adding missing passes to the local working list
-        while (missingPasses.isNotEmpty()) {
-            val cls = missingPasses.removeAt(0)
-            log.info(
-                "Registering a required hard dependency which was not registered explicitly: {}",
-                cls
-            )
-            val newPass: Pass =
-                try {
-                    cls.getConstructor().newInstance()
-                } catch (e: InstantiationException) {
-                    throw ConfigurationException(e)
-                } catch (e: InvocationTargetException) {
-                    throw ConfigurationException(e)
-                } catch (e: IllegalAccessException) {
-                    throw ConfigurationException(e)
-                } catch (e: NoSuchMethodException) {
-                    throw ConfigurationException(e)
-                }
-
-            val deps: MutableSet<Class<out Pass>> = HashSet()
-            deps.addAll(newPass.hardDependencies)
-            deps.addAll(newPass.softDependencies)
-            workingList.add(PassOrderingPassWithDependencies(newPass, deps))
-
-            // check the dependencies of the new pass
-            for (dependency in newPass.hardDependencies) {
-                var dependencyFound =
-                    dependencyPresent(dependency) || missingPasses.contains(dependency)
-
-                // it is really missing -> add it to missing passes
-                if (!dependencyFound) {
                     missingPasses.add(dependency)
                 }
             }
