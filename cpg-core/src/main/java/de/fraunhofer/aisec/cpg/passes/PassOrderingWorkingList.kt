@@ -139,4 +139,24 @@ class PassOrderingWorkingList {
             }
         }
     }
+
+    fun getAndRemoveFirstPassWithoutDependencies(): Pass? {
+        var result: Pass? = null
+        for (currentElement in workingList) {
+            if (workingList.size > 1 && currentElement.pass.isLastPass) {
+                // last pass can only be added at the end
+                continue
+            }
+
+            if (currentElement.dependencies.isEmpty()) { // no unsatisfied dependencies
+                result = currentElement.pass
+
+                // remove the pass from the other pass's dependencies
+                removeDependencyByClass(result.javaClass)
+                workingList.remove(currentElement)
+                break
+            }
+        }
+        return result
+    }
 }

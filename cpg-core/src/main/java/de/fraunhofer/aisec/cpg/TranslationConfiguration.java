@@ -671,33 +671,15 @@ public class TranslationConfiguration {
         throw new ConfigurationException("Too many passes require to be executed as last pass.");
       }
 
-      // For testing...
-      // Collections.shuffle(workingList.getWorkingList());
-
-      whileLoop:
       while (!workingList.isEmpty()) {
-        for (PassOrderingPassWithDependencies currentElement : workingList.getWorkingList()) {
+        Pass p = workingList.getAndRemoveFirstPassWithoutDependencies();
+        if (p != null) {
+          result.add(p);
+        } else {
 
-          if (workingList.size() > 1 && currentElement.getPass().isLastPass()) {
-            // last pass can only be added at the end
-          } else {
-
-            if (currentElement.getDependencies().isEmpty()) { // no unsatisfied dependencies
-              Pass passForResult = currentElement.getPass();
-
-              // remove the pass from the other pass's dependencies
-              workingList.removeDependencyByClass(passForResult.getClass());
-
-              workingList.getWorkingList().remove(currentElement);
-              result.add(passForResult);
-
-              continue whileLoop;
-            }
-          }
+          // failed to find a pass that can be added to the result -> deadlock :(
+          throw new ConfigurationException("Failed to satisfy ordering requirements.");
         }
-
-        // we are in a loop :(
-        throw new ConfigurationException("Failed to satisfy ordering requirements.");
       }
 
       log.info("Passes after enforcing order: {}", result);
