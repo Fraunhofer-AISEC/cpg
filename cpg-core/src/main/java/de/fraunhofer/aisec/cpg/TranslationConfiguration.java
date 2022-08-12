@@ -469,9 +469,6 @@ public class TranslationConfiguration {
      *
      * to be executed exactly in the specified order.
      *
-     * <p>Additionally, all extra default passes registered by a frontend
-     * [PassRegisterExtraDefaultPass] are added.
-     *
      * @return
      */
     public Builder defaultPasses() {
@@ -487,16 +484,17 @@ public class TranslationConfiguration {
       return this;
     }
 
-    /** Register extra default passes declared by a frontend with [PassRegisterExtraDefaultPass] */
-    private void registerExtraFrontendDefaultPasses() {
+    /** Register extra passes declared by a frontend with [PassRegisterExtraPass] */
+    private void registerExtraFrontendPasses() {
+
       for (Class<? extends LanguageFrontend> frontend : frontends.keySet()) {
-        if (frontend.isAnnotationPresent(PassRegisterExtraDefaultPass.class)) {
-          PassRegisterExtraDefaultPass[] extraPasses =
-              frontend.getAnnotationsByType(PassRegisterExtraDefaultPass.class);
-          for (PassRegisterExtraDefaultPass p : extraPasses) {
+        if (frontend.isAnnotationPresent(PassRegisterExtraPass.class)) {
+          PassRegisterExtraPass[] extraPasses =
+              frontend.getAnnotationsByType(PassRegisterExtraPass.class);
+          for (PassRegisterExtraPass p : extraPasses) {
             try {
               var clazz = p.value();
-              registerPass((Pass) clazz.getConstructor().newInstance());
+              registerPass(clazz.getConstructor().newInstance());
               log.info(
                   "Registered an extra (frontend dependent) default dependency: {}", p.value());
 
@@ -597,7 +595,7 @@ public class TranslationConfiguration {
                 + "This may result in erroneous results.");
       }
 
-      registerExtraFrontendDefaultPasses();
+      registerExtraFrontendPasses();
 
       return new TranslationConfiguration(
           symbols,
@@ -624,7 +622,7 @@ public class TranslationConfiguration {
 
     /**
      * Collects the requested passes stored in [passes] and generates a [PassOrderingWorkingList]
-     * consisitng of pairs of passes and their dependencies.
+     * consisting of pairs of passes and their dependencies.
      *
      * @return A populated [PassOrderingWorkingList] derived from [passes].
      */

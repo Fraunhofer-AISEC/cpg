@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.passes
 
 import kotlin.reflect.KClass
 
-/** Register a new pass to the defaultPasses. */
+/** Register a new pass required by a fronted. */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class PassRegisterExtraDefaultPass(val value: KClass<out Pass>)
+annotation class PassRegisterExtraPass(val value: KClass<out Pass>)
