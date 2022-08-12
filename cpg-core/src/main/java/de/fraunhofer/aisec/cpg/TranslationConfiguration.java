@@ -467,7 +467,7 @@ public class TranslationConfiguration {
      *   <li>TypeResolver
      * </ol>
      *
-     * to be executed exactly in the specified order.
+     * to be executed exactly in the specified order
      *
      * @return
      */
