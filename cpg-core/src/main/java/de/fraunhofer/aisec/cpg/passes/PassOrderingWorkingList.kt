@@ -152,6 +152,7 @@ class PassOrderingWorkingList {
      */
     fun getAndRemoveFirstPassWithoutDependencies(): Pass? {
         var result: Pass? = null
+
         for (currentElement in workingList) {
             if (workingList.size > 1 && currentElement.pass.isLastPass) {
                 // last pass can only be added at the end
@@ -168,5 +169,31 @@ class PassOrderingWorkingList {
             }
         }
         return result
+    }
+
+    /**
+     * Checks for passes marked as first pass by [PassIsFirstPass]
+     *
+     * If found, this pass is returned and removed from the working list.
+     *
+     * @return The first pass if present. Otherwise null.
+     */
+    fun getAndRemoveFirstPass(): Pass? {
+        val firstPasses = getFirstPasses()
+        if(firstPasses.size > 1) {
+            throw ConfigurationException("More than one pass requires to be run as first pass: {}".format(firstPasses))
+        }
+        return if(firstPasses.isNotEmpty()) {
+            val firstPass = firstPasses.first()
+            if(firstPass.pass.hardDependencies.isNotEmpty()) {
+                throw ConfigurationException("The first pass has a hard dependency.")
+            } else {
+                removeDependencyByClass(firstPass.pass.javaClass)
+                workingList.remove(firstPass)
+                firstPass.pass
+            }
+        } else {
+            null
+        }
     }
 }

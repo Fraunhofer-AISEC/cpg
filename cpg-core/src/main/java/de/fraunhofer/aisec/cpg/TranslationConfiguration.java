@@ -703,6 +703,11 @@ public class TranslationConfiguration {
         throw new ConfigurationException("Too many passes require to be executed as last pass.");
       }
 
+      Pass firstPass = workingList.getAndRemoveFirstPass();
+      if (firstPass != null) {
+        result.add(firstPass);
+      }
+
       while (!workingList.isEmpty()) {
         Pass p = workingList.getAndRemoveFirstPassWithoutDependencies();
         if (p != null) {
