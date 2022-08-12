@@ -50,6 +50,6 @@ interface Assignment {
  * The target of an assignment. The target is usually either a [VariableDeclaration] or a
  * [DeclaredReferenceExpression].
  */
-interface AssignmentTarget {
+interface AssignmentTarget : HasType {
     val name: String
 }

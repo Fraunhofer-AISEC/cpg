@@ -242,6 +242,8 @@ class MultiValueEvaluatorTest {
         assertEquals(setOf<Long>(-5, 0, 2, 3), values.values)
         assertEquals(-5, values.min())
         assertEquals(3, values.max())
+        assertTrue(values.maybe(3))
+        assertFalse(values.maybe(1))
         values.clear()
         assertEquals(Long.MAX_VALUE, values.min())
         assertEquals(Long.MIN_VALUE, values.max())

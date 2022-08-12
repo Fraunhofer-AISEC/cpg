@@ -30,11 +30,9 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.evaluate
 import de.fraunhofer.aisec.cpg.graph.followPrevDFGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.query.*
 import java.io.File
@@ -400,13 +398,13 @@ class QueryTest {
         val queryTreeResult =
             result.all<ArraySubscriptionExpression>(
                 mustSatisfy = {
-                    max(it.subscriptExpression) < min(it.size) && min(it.subscriptExpression) > 0
+                    max(it.subscriptExpression) < min(it.size) && min(it.subscriptExpression) >= 0
                 }
             )
         assertFalse(queryTreeResult.first)
 
         val mustSatisfy = { it: ArraySubscriptionExpression ->
-            (max(it.subscriptExpression) lt min(it.size)) and (min(it.subscriptExpression) gt 0)
+            (max(it.subscriptExpression) lt min(it.size)) and (min(it.subscriptExpression) ge 0)
         }
         val queryTreeResult2 = result.all<ArraySubscriptionExpression>(mustSatisfy = mustSatisfy)
         assertFalse(queryTreeResult2.value)
@@ -518,5 +516,65 @@ class QueryTest {
         val queryTreeResult2 = result.all<ArraySubscriptionExpression>(mustSatisfy = mustSatisfy)
         assertTrue(queryTreeResult2.value)
         println(queryTreeResult2.printNicely())
+    }
+
+    @Test
+    fun testDivisionBy0() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.all<BinaryOperator>(
+                { it.operatorCode == "/" },
+                { !(it.rhs.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0) }
+            )
+        assertFalse(queryTreeResult.first)
+
+        val mustSatisfy = { it: BinaryOperator ->
+            not((it.rhs.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0))
+        }
+        val queryTreeResult2 = result.all<BinaryOperator>({ it.operatorCode == "/" }, mustSatisfy)
+
+        assertFalse(queryTreeResult2.value)
+    }
+
+    @Test
+    fun testIntOverflowAssignment() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.all<Assignment>(
+                { it.target?.type?.isPrimitive == true },
+                {
+                    max(it.value) <= maxSizeOfType(it.target!!.type) &&
+                        min(it.value) >= minSizeOfType(it.target!!.type)
+                }
+            )
+        // assertFalse(queryTreeResult.first)
+
+        val mustSatisfy = { it: Assignment ->
+            (max(it.value) le maxSizeOfType(it.target!!.type)) and
+                (min(it.value) ge minSizeOfType(it.target!!.type))
+        }
+        val queryTreeResult2 =
+            result.all<Assignment>({ it.target?.type?.isPrimitive == true }, mustSatisfy)
+
+        println(queryTreeResult2.printNicely())
+        assertFalse(queryTreeResult2.value)
     }
 }

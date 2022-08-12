@@ -174,6 +174,7 @@ open class ValueEvaluator(
 
     private fun handleDiv(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
         return when {
+            rhsValue == 0 -> cannotEvaluate(expr, this)
             lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
                 lhsValue / (rhsValue as Number).toDouble()
             lhsValue is Int && rhsValue is Number -> lhsValue / rhsValue.toLong()

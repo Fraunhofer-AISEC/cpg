@@ -273,6 +273,12 @@ fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
     return QueryTree(result, mutableListOf(arg), "! ${arg.value}")
 }
 
+/** Negates the value of [arg] and returns the resulting [QueryTree]. */
+fun not(arg: Boolean): QueryTree<Boolean> {
+    val result = !arg
+    return QueryTree(result, mutableListOf(QueryTree(arg)), "! ${arg}")
+}
+
 /**
  * This is a small wrapper to create a [QueryTree] containing a constant value, so that it can be
  * used to in comparison with other [QueryTree] objects.

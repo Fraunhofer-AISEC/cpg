@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlin.experimental.ExperimentalTypeInference
 
 /**
@@ -271,6 +272,42 @@ fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> 
 /** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
 operator fun Expression?.invoke(): QueryTree<Any?> {
     return QueryTree(this?.evaluate(), mutableListOf(QueryTree(this)))
+}
+
+/**
+ * Determines the maximal value. Only works for a couple of types! TODO: This method needs
+ * improvement! It only works for Java types!
+ */
+fun maxSizeOfType(type: Type): QueryTree<Number> {
+    val maxVal =
+        when (type.typeName) {
+            "byte" -> Byte.MAX_VALUE
+            "short" -> Short.MAX_VALUE
+            "int" -> Int.MAX_VALUE
+            "long" -> Long.MAX_VALUE
+            "float" -> Float.MAX_VALUE
+            "double" -> Double.MAX_VALUE
+            else -> Long.MAX_VALUE
+        }
+    return QueryTree(maxVal, mutableListOf(QueryTree(type)), "maxSizeOfType($type)")
+}
+
+/**
+ * Determines the minimal value. Only works for a couple of types! TODO: This method needs
+ * improvement! It only works for Java types!
+ */
+fun minSizeOfType(type: Type): QueryTree<Number> {
+    val maxVal =
+        when (type.typeName) {
+            "byte" -> Byte.MIN_VALUE
+            "short" -> Short.MIN_VALUE
+            "int" -> Int.MIN_VALUE
+            "long" -> Long.MIN_VALUE
+            "float" -> Float.MIN_VALUE
+            "double" -> Double.MIN_VALUE
+            else -> Long.MIN_VALUE
+        }
+    return QueryTree(maxVal, mutableListOf(QueryTree(type)), "minSizeOfType($type)")
 }
 
 /** The size of this expression. It uses the default argument for `eval` of [size] */

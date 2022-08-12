@@ -29,6 +29,7 @@ abstract class NumberSet {
     abstract fun min(): Long
     abstract fun max(): Long
     abstract fun addValue(value: Long)
+    abstract fun maybe(value: Long): Boolean
     abstract fun clear()
 }
 
@@ -50,6 +51,9 @@ class Interval : NumberSet() {
     override fun max(): Long {
         return max
     }
+    override fun maybe(value: Long): Boolean {
+        return value in min..max
+    }
     override fun clear() {
         min = Long.MAX_VALUE
         max = Long.MIN_VALUE
@@ -65,6 +69,9 @@ class ConcreteNumberSet(var values: MutableSet<Long> = mutableSetOf()) : NumberS
     }
     override fun max(): Long {
         return values.maxOrNull() ?: Long.MIN_VALUE
+    }
+    override fun maybe(value: Long): Boolean {
+        return value in values
     }
     override fun clear() {
         values.clear()
