@@ -412,6 +412,34 @@ class QueryTest {
     }
 
     @Test
+    fun testOutOfBoundsQueryExists() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/array.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.exists<ArraySubscriptionExpression>(
+                mustSatisfy = {
+                    max(it.subscriptExpression) >= min(it.size) || min(it.subscriptExpression) < 0
+                }
+            )
+        assertTrue(queryTreeResult.first)
+
+        val mustSatisfy = { it: ArraySubscriptionExpression ->
+            (it.subscriptExpression.max ge it.size.min) or (it.subscriptExpression.min lt 0)
+        }
+        val queryTreeResult2 = result.exists<ArraySubscriptionExpression>(mustSatisfy = mustSatisfy)
+        assertTrue(queryTreeResult2.value)
+        println(queryTreeResult2.printNicely())
+    }
+
+    @Test
     fun testOutOfBoundsQuery2() {
         val config =
             TranslationConfiguration.builder()
@@ -565,7 +593,7 @@ class QueryTest {
                         min(it.value) >= minSizeOfType(it.target!!.type)
                 }
             )
-        // assertFalse(queryTreeResult.first)
+        assertFalse(queryTreeResult.first)
 
         val mustSatisfy = { it: Assignment ->
             (max(it.value) le maxSizeOfType(it.target!!.type)) and
