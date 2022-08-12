@@ -120,7 +120,7 @@ class QueryTest {
     }
 
     @Test
-    fun testDoubleFree() {
+    fun testUseAfterFree() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/vulnerable.cpp"))
@@ -139,14 +139,56 @@ class QueryTest {
                     }
                     .value
             }
+
         assertFalse(queryTreeResult.first)
-        println(queryTreeResult.second)
 
         val mustSatisfy = { outer: CallExpression ->
             not(
                 executionPath(outer) {
                     (it as? DeclaredReferenceExpression)?.refersTo ==
                         (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+                }
+            )
+        }
+        val queryTreeResult2 = result.all<CallExpression>({ it.name == "free" }, mustSatisfy)
+
+        assertFalse(queryTreeResult2.value)
+    }
+
+    @Test
+    fun testDoubleFree() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.all<CallExpression>({ it.name == "free" }) { outer ->
+                !executionPath(outer) {
+                        (it as? CallExpression)?.name == "free" &&
+                            ((it as? CallExpression)?.arguments?.getOrNull(0)
+                                    as? DeclaredReferenceExpression)
+                                ?.refersTo ==
+                                (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+                    }
+                    .value
+            }
+        assertFalse(queryTreeResult.first)
+        println(queryTreeResult.second)
+
+        val mustSatisfy = { outer: CallExpression ->
+            not(
+                executionPath(outer) {
+                    (it as? CallExpression)?.name == "free" &&
+                        ((it as? CallExpression)?.arguments?.getOrNull(0)
+                                as? DeclaredReferenceExpression)
+                            ?.refersTo ==
+                            (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
                 }
             )
         }
