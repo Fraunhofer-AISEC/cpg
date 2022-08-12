@@ -89,6 +89,29 @@ class PassOrderingWorkingList {
 
         return result
     }
+
+    private fun createNewPassWithDependency(
+        cls: Class<out Pass>
+    ): PassOrderingPassWithDependencies {
+        val newPass =
+            try {
+                cls.getConstructor().newInstance()
+            } catch (e: InstantiationException) {
+                throw ConfigurationException(e)
+            } catch (e: InvocationTargetException) {
+                throw ConfigurationException(e)
+            } catch (e: IllegalAccessException) {
+                throw ConfigurationException(e)
+            } catch (e: NoSuchMethodException) {
+                throw ConfigurationException(e)
+            }
+
+        val deps: MutableSet<Class<out Pass>> = HashSet()
+        deps.addAll(newPass.hardDependencies)
+        deps.addAll(newPass.softDependencies)
+        return PassOrderingPassWithDependencies(newPass, deps)
+    }
+
     fun addMissingDependencies() {
         val it = workingList.listIterator()
         while (it.hasNext()) {
@@ -99,23 +122,7 @@ class PassOrderingWorkingList {
                         "Registering a required hard dependency which was not registered explicitly: {}",
                         dependency
                     )
-                    val newPass: Pass =
-                        try {
-                            dependency.getConstructor().newInstance()
-                        } catch (e: InstantiationException) {
-                            throw ConfigurationException(e)
-                        } catch (e: InvocationTargetException) {
-                            throw ConfigurationException(e)
-                        } catch (e: IllegalAccessException) {
-                            throw ConfigurationException(e)
-                        } catch (e: NoSuchMethodException) {
-                            throw ConfigurationException(e)
-                        }
-
-                    val deps: MutableSet<Class<out Pass>> = HashSet()
-                    deps.addAll(newPass.hardDependencies)
-                    deps.addAll(newPass.softDependencies)
-                    it.add(PassOrderingPassWithDependencies(newPass, deps))
+                    it.add(createNewPassWithDependency(dependency))
                 }
             }
         }

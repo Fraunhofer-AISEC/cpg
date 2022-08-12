@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+/** A generic exception that can be thrown from while building the configuration. */
 class ConfigurationException : Exception {
     constructor(message: String) : super(message)
     constructor(ex: Exception) : super(ex)
