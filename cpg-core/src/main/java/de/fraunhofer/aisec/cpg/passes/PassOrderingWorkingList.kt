@@ -112,6 +112,10 @@ class PassOrderingWorkingList {
         return PassOrderingPassWithDependencies(newPass, deps)
     }
 
+    /**
+     * Recursively iterates the workingList and adds all hard dependencies
+     * [PassRegisterHardDependency] and their dependencies to the workingList.
+     */
     fun addMissingDependencies() {
         val it = workingList.listIterator()
         while (it.hasNext()) {
@@ -140,6 +144,12 @@ class PassOrderingWorkingList {
         }
     }
 
+    /**
+     * Finds the first pass that has all its dependencies satisfied. This pass is then removed from
+     * the other passes dependencies and returned.
+     *
+     * @return The first pass that has no active dependencies on success. null otherwise.
+     */
     fun getAndRemoveFirstPassWithoutDependencies(): Pass? {
         var result: Pass? = null
         for (currentElement in workingList) {

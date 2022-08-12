@@ -37,6 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.CompressLLVMPass
+import de.fraunhofer.aisec.cpg.passes.PassRegisterExtraDefaultPass
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -46,6 +48,7 @@ import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.llvm.LLVM.*
 import org.bytedeco.llvm.global.LLVM.*
 
+@PassRegisterExtraDefaultPass(CompressLLVMPass::class)
 class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::") {
 

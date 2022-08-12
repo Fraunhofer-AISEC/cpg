@@ -467,20 +467,14 @@ public class TranslationConfiguration {
      *   <li>TypeResolver
      * </ol>
      *
-     * to be executed exactly in the specified order
+     * to be executed exactly in the specified order.
+     *
+     * <p>Additionally, all extra default passes registered by a frontend
+     * [PassRegisterExtraDefaultPass] are added.
      *
      * @return
      */
     public Builder defaultPasses() {
-      try {
-        var llvmClazz = Class.forName("de.fraunhofer.aisec.cpg.passes.CompressLLVMPass");
-        registerPass((Pass) llvmClazz.getDeclaredConstructor().newInstance());
-      } catch (ClassNotFoundException
-          | NoSuchMethodException
-          | InstantiationException
-          | IllegalAccessException
-          | InvocationTargetException ignored) {
-      }
       registerPass(new TypeHierarchyResolver());
       registerPass(new JavaExternalTypeHierarchyResolver());
       registerPass(new ImportResolver());
@@ -491,6 +485,29 @@ public class TranslationConfiguration {
       registerPass(new ControlFlowSensitiveDFGPass());
       registerPass(new FilenameMapper());
       return this;
+    }
+
+    /** Register extra default passes declared by a frontend with [PassRegisterExtraDefaultPass] */
+    private void registerExtraFrontendDefaultPasses() {
+      for (Class<? extends LanguageFrontend> frontend : frontends.keySet()) {
+        if (frontend.isAnnotationPresent(PassRegisterExtraDefaultPass.class)) {
+          PassRegisterExtraDefaultPass[] extraPasses =
+              frontend.getAnnotationsByType(PassRegisterExtraDefaultPass.class);
+          for (PassRegisterExtraDefaultPass p : extraPasses) {
+            try {
+              var clazz = p.value();
+              registerPass((Pass) clazz.getConstructor().newInstance());
+              log.info(
+                  "Registered an extra (frontend dependent) default dependency: {}", p.value());
+
+            } catch (NoSuchMethodException
+                | InstantiationException
+                | IllegalAccessException
+                | InvocationTargetException ignored) {
+            }
+          }
+        }
+      }
     }
 
     /**
@@ -580,6 +597,8 @@ public class TranslationConfiguration {
                 + "This may result in erroneous results.");
       }
 
+      registerExtraFrontendDefaultPasses();
+
       return new TranslationConfiguration(
           symbols,
           softwareComponents,
@@ -603,6 +622,12 @@ public class TranslationConfiguration {
           matchCommentsToNodes);
     }
 
+    /**
+     * Collects the requested passes stored in [passes] and generates a [PassOrderingWorkingList]
+     * consisitng of pairs of passes and their dependencies.
+     *
+     * @return A populated [PassOrderingWorkingList] derived from [passes].
+     */
     private PassOrderingWorkingList collectInitialPasses() {
       PassOrderingWorkingList workingList = new PassOrderingWorkingList();
       for (Pass p : passes) {
