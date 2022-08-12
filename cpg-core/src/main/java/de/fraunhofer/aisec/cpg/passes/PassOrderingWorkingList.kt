@@ -180,12 +180,14 @@ class PassOrderingWorkingList {
      */
     fun getAndRemoveFirstPass(): Pass? {
         val firstPasses = getFirstPasses()
-        if(firstPasses.size > 1) {
-            throw ConfigurationException("More than one pass requires to be run as first pass: {}".format(firstPasses))
+        if (firstPasses.size > 1) {
+            throw ConfigurationException(
+                "More than one pass requires to be run as first pass: {}".format(firstPasses)
+            )
         }
-        return if(firstPasses.isNotEmpty()) {
+        return if (firstPasses.isNotEmpty()) {
             val firstPass = firstPasses.first()
-            if(firstPass.pass.hardDependencies.isNotEmpty()) {
+            if (firstPass.pass.hardDependencies.isNotEmpty()) {
                 throw ConfigurationException("The first pass has a hard dependency.")
             } else {
                 removeDependencyByClass(firstPass.pass.javaClass)
