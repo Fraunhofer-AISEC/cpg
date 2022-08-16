@@ -28,14 +28,14 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.graph.Assignment
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.evaluate
-import de.fraunhofer.aisec.cpg.graph.followPrevDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.query.*
 import java.io.File
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
@@ -533,7 +533,9 @@ class QueryTest {
                                 .followPrevDFGEdgesUntilHit { node ->
                                     node is ArrayCreationExpression
                                 }
-                                .map { it2 -> (it2 as ArrayCreationExpression).dimensions[0] }
+                                .map { it2 ->
+                                    (it2.last() as ArrayCreationExpression).dimensions[0]
+                                }
                         ) && min(it.subscriptExpression) > 0
                 }
             )
@@ -545,7 +547,7 @@ class QueryTest {
                     ((it.arrayExpression as DeclaredReferenceExpression).refersTo
                             as VariableDeclaration)
                         .followPrevDFGEdgesUntilHit { node -> node is ArrayCreationExpression }
-                        .map { it2 -> (it2 as ArrayCreationExpression).dimensions[0] }
+                        .map { it2 -> (it2.last() as ArrayCreationExpression).dimensions[0] }
                 )) and (min(it.subscriptExpression) ge 0)
         }
         val queryTreeResult2 = result.all<ArraySubscriptionExpression>(mustSatisfy = mustSatisfy)
@@ -646,5 +648,50 @@ class QueryTest {
 
         println(queryTreeResult2.printNicely())
         assertFalse(queryTreeResult2.value)
+    }
+
+    @Test
+    fun testDataFlowRequirement() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/Dataflow.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.all<CallExpression>(
+                { it.name == "toString" },
+                { n1 ->
+                    result
+                        .all<FunctionDeclaration>(
+                            { it.name == "print" },
+                            { n2 -> dataFlow(n1, n2.parameters[0]).value }
+                        )
+                        .first
+                }
+            )
+
+        assertTrue(queryTreeResult.first)
+        assertEquals(1, queryTreeResult.second.size)
+
+        /*val queryTreeResult2 =
+            result.all<Assignment>(
+                { (it.value as? CallExpression)?.name == "toString" },
+                { n1 ->
+                    result
+                        .all<FunctionDeclaration>(
+                            { it.name == "print" },
+                            { n2 -> dataFlow(n1 as Node, n2.parameters[0]).value }
+                        )
+                        .first
+                }
+            )
+
+        assertTrue(queryTreeResult2.first)
+        assertEquals(1, queryTreeResult2.second.size)*/
     }
 }
