@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import kotlin.experimental.ExperimentalTypeInference
 
 /**
  * Evaluates if the conditions specified in [mustSatisfy] hold for all nodes in the graph.
@@ -45,9 +44,7 @@ import kotlin.experimental.ExperimentalTypeInference
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
 @ExperimentalGraph
-@OptIn(ExperimentalTypeInference::class)
-@OverloadResolutionByLambdaReturnType
-inline fun <reified T> Node.all(
+inline fun <reified T> Node.allExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>
 ): QueryTree<Boolean> {
@@ -107,9 +104,7 @@ inline fun <reified T> Node.all(
  * the resulting reasoning chain.
  */
 @ExperimentalGraph
-@OptIn(ExperimentalTypeInference::class)
-@OverloadResolutionByLambdaReturnType
-inline fun <reified T> Node.exists(
+inline fun <reified T> Node.existsExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>
 ): QueryTree<Boolean> {

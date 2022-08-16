@@ -62,11 +62,11 @@ class QueryTest {
 
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { it: CallExpression ->
-            sizeof(it.arguments[0]) gt sizeof(it.arguments[1])
-        }
         val queryTreeResult2: QueryTree<Boolean> =
-            result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { sizeof(it.arguments[0]) gt sizeof(it.arguments[1]) }
+            )
 
         assertFalse(queryTreeResult2.value)
         println(queryTreeResult2.printNicely())
@@ -92,8 +92,11 @@ class QueryTest {
             }
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { it: CallExpression -> it.arguments[0].size gt it.arguments[1].size }
-        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[0].size gt it.arguments[1].size }
+            )
 
         assertFalse(queryTreeResult2.value)
     }
@@ -110,11 +113,13 @@ class QueryTest {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val mustSatisfy = { it: CallExpression ->
-            (const("memcpy") eq it.name) implies
-                (lazy { it.arguments[0].size gt it.arguments[1].size })
-        }
-        val queryTreeResult = result.all<CallExpression>(mustSatisfy = mustSatisfy)
+        val queryTreeResult =
+            result.allExtended<CallExpression>(
+                mustSatisfy = {
+                    (const("memcpy") eq it.name) implies
+                        (lazy { it.arguments[0].size gt it.arguments[1].size })
+                }
+            )
 
         assertFalse(queryTreeResult.value)
     }
@@ -142,15 +147,18 @@ class QueryTest {
 
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { outer: CallExpression ->
-            not(
-                executionPath(outer) {
-                    (it as? DeclaredReferenceExpression)?.refersTo ==
-                        (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+        val queryTreeResult2 =
+            result.allExtended<CallExpression>(
+                { it.name == "free" },
+                { outer ->
+                    not(
+                        executionPath(outer) {
+                            (it as? DeclaredReferenceExpression)?.refersTo ==
+                                (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+                        }
+                    )
                 }
             )
-        }
-        val queryTreeResult2 = result.all<CallExpression>({ it.name == "free" }, mustSatisfy)
 
         assertFalse(queryTreeResult2.value)
     }
@@ -181,18 +189,21 @@ class QueryTest {
         assertFalse(queryTreeResult.first)
         println(queryTreeResult.second)
 
-        val mustSatisfy = { outer: CallExpression ->
-            not(
-                executionPath(outer) {
-                    (it as? CallExpression)?.name == "free" &&
-                        ((it as? CallExpression)?.arguments?.getOrNull(0)
-                                as? DeclaredReferenceExpression)
-                            ?.refersTo ==
-                            (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+        val queryTreeResult2 =
+            result.allExtended<CallExpression>(
+                { it.name == "free" },
+                { outer ->
+                    not(
+                        executionPath(outer) {
+                            (it as? CallExpression)?.name == "free" &&
+                                ((it as? CallExpression)?.arguments?.getOrNull(0)
+                                        as? DeclaredReferenceExpression)
+                                    ?.refersTo ==
+                                    (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+                        }
+                    )
                 }
             )
-        }
-        val queryTreeResult2 = result.all<CallExpression>({ it.name == "free" }, mustSatisfy)
 
         assertFalse(queryTreeResult2.value)
         println(queryTreeResult2.printNicely())
@@ -216,13 +227,19 @@ class QueryTest {
             }
         assertTrue(queryTreeResult.first)
 
-        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! ge 11 }
-        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! ge 11 }
+            )
 
         assertTrue(queryTreeResult2.value)
 
-        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! ge const(11) }
-        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+        val queryTreeResult3 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! ge const(11) }
+            )
 
         assertTrue(queryTreeResult3.value)
     }
@@ -245,13 +262,19 @@ class QueryTest {
             }
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! gt 11 }
-        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! gt 11 }
+            )
 
         assertFalse(queryTreeResult2.value)
 
-        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! gt const(11) }
-        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+        val queryTreeResult3 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! gt const(11) }
+            )
 
         assertFalse(queryTreeResult3.value)
     }
@@ -274,13 +297,19 @@ class QueryTest {
             }
         assertTrue(queryTreeResult.first)
 
-        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! le 11 }
-        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! le 11 }
+            )
 
         assertTrue(queryTreeResult2.value)
 
-        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! le const(11) }
-        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+        val queryTreeResult3 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! le const(11) }
+            )
 
         assertTrue(queryTreeResult3.value)
     }
@@ -303,13 +332,19 @@ class QueryTest {
             }
         assertTrue(queryTreeResult.first)
 
-        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! eq 11 }
-        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! eq 11 }
+            )
 
         assertTrue(queryTreeResult2.value)
 
-        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! eq const(11) }
-        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+        val queryTreeResult3 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! eq const(11) }
+            )
 
         assertTrue(queryTreeResult3.value)
     }
@@ -332,13 +367,19 @@ class QueryTest {
             }
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! lt 11 }
-        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! lt 11 }
+            )
 
         assertFalse(queryTreeResult2.value)
 
-        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! lt const(11) }
-        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+        val queryTreeResult3 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! lt const(11) }
+            )
 
         assertFalse(queryTreeResult3.value)
     }
@@ -361,13 +402,19 @@ class QueryTest {
             }
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! ne 11 }
-        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! ne 11 }
+            )
 
         assertFalse(queryTreeResult2.value)
 
-        val mustSatisfy2 = { it: CallExpression -> it.arguments[2].intValue!! ne const(11) }
-        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+        val queryTreeResult3 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! ne const(11) }
+            )
 
         assertFalse(queryTreeResult3.value)
     }
@@ -390,15 +437,19 @@ class QueryTest {
             }
         assertTrue(queryTreeResult.first)
 
-        val mustSatisfy = { it: CallExpression -> it.arguments[2].intValue!! IN listOf(11, 2, 3) }
-        val queryTreeResult2 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! IN listOf(11, 2, 3) }
+            )
 
         assertTrue(queryTreeResult2.value)
 
-        val mustSatisfy2 = { it: CallExpression ->
-            it.arguments[2].intValue!! IN const(listOf(11, 2, 3))
-        }
-        val queryTreeResult3 = result.all<CallExpression>({ it.name == "memcpy" }, mustSatisfy2)
+        val queryTreeResult3 =
+            result.allExtended<CallExpression>(
+                { it.name == "memcpy" },
+                { it.arguments[2].intValue!! IN const(listOf(11, 2, 3)) }
+            )
 
         assertTrue(queryTreeResult3.value)
     }
@@ -419,8 +470,10 @@ class QueryTest {
             result.all<Assignment>(mustSatisfy = { (it.value.invoke() as QueryTree<Number>) < 5 })
         assertTrue(queryTreeResult.first)
 
-        val mustSatisfy = { it: Assignment -> it.value.invoke() as QueryTree<Number> lt 5 }
-        val queryTreeResult2 = result.all<Assignment>(mustSatisfy = mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<Assignment>(
+                mustSatisfy = { it.value.invoke() as QueryTree<Number> lt 5 }
+            )
 
         assertTrue(queryTreeResult2.value)
     }
@@ -445,10 +498,13 @@ class QueryTest {
             )
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { it: ArraySubscriptionExpression ->
-            (max(it.subscriptExpression) lt min(it.size)) and (min(it.subscriptExpression) ge 0)
-        }
-        val queryTreeResult2 = result.all<ArraySubscriptionExpression>(mustSatisfy = mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<ArraySubscriptionExpression>(
+                mustSatisfy = {
+                    (max(it.subscriptExpression) lt min(it.size)) and
+                        (min(it.subscriptExpression) ge 0)
+                }
+            )
         assertFalse(queryTreeResult2.value)
         println(queryTreeResult2.printNicely())
     }
@@ -473,10 +529,12 @@ class QueryTest {
             )
         assertTrue(queryTreeResult.first)
 
-        val mustSatisfy = { it: ArraySubscriptionExpression ->
-            (it.subscriptExpression.max ge it.size.min) or (it.subscriptExpression.min lt 0)
-        }
-        val queryTreeResult2 = result.exists<ArraySubscriptionExpression>(mustSatisfy = mustSatisfy)
+        val queryTreeResult2 =
+            result.existsExtended<ArraySubscriptionExpression>(
+                mustSatisfy = {
+                    (it.subscriptExpression.max ge it.size.min) or (it.subscriptExpression.min lt 0)
+                }
+            )
         assertTrue(queryTreeResult2.value)
         println(queryTreeResult2.printNicely())
     }
@@ -502,10 +560,13 @@ class QueryTest {
             )
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { it: ArraySubscriptionExpression ->
-            (max(it.subscriptExpression) lt min(it.size)) and (min(it.subscriptExpression) ge 0)
-        }
-        val queryTreeResult2 = result.all<ArraySubscriptionExpression>(mustSatisfy = mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<ArraySubscriptionExpression>(
+                mustSatisfy = {
+                    (max(it.subscriptExpression) lt min(it.size)) and
+                        (min(it.subscriptExpression) ge 0)
+                }
+            )
         assertFalse(queryTreeResult2.value)
         println(queryTreeResult2.printNicely())
     }
@@ -541,16 +602,22 @@ class QueryTest {
             )
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { it: ArraySubscriptionExpression ->
-            (max(it.subscriptExpression) lt
-                min(
-                    ((it.arrayExpression as DeclaredReferenceExpression).refersTo
-                            as VariableDeclaration)
-                        .followPrevDFGEdgesUntilHit { node -> node is ArrayCreationExpression }
-                        .map { it2 -> (it2.last() as ArrayCreationExpression).dimensions[0] }
-                )) and (min(it.subscriptExpression) ge 0)
-        }
-        val queryTreeResult2 = result.all<ArraySubscriptionExpression>(mustSatisfy = mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<ArraySubscriptionExpression>(
+                mustSatisfy = {
+                    (max(it.subscriptExpression) lt
+                        min(
+                            ((it.arrayExpression as DeclaredReferenceExpression).refersTo
+                                    as VariableDeclaration)
+                                .followPrevDFGEdgesUntilHit { node ->
+                                    node is ArrayCreationExpression
+                                }
+                                .map { it2 ->
+                                    (it2.last() as ArrayCreationExpression).dimensions[0]
+                                }
+                        )) and (min(it.subscriptExpression) ge 0)
+                }
+            )
         assertFalse(queryTreeResult2.value)
         println(queryTreeResult2.printNicely())
     }
@@ -579,13 +646,15 @@ class QueryTest {
             )
         assertTrue(queryTreeResult.first)
 
-        val mustSatisfy = { it: ArraySubscriptionExpression ->
-            val max_sub = max(it.subscriptExpression)
-            val min_dim = min(it.size)
-            val min_sub = min(it.subscriptExpression)
-            (max_sub lt min_dim) and (min_sub ge 0)
-        }
-        val queryTreeResult2 = result.all<ArraySubscriptionExpression>(mustSatisfy = mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<ArraySubscriptionExpression>(
+                mustSatisfy = {
+                    val max_sub = max(it.subscriptExpression)
+                    val min_dim = min(it.size)
+                    val min_sub = min(it.subscriptExpression)
+                    return@allExtended (max_sub lt min_dim) and (min_sub ge 0)
+                }
+            )
         assertTrue(queryTreeResult2.value)
         println(queryTreeResult2.printNicely())
     }
@@ -609,10 +678,11 @@ class QueryTest {
             )
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { it: BinaryOperator ->
-            not((it.rhs.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0))
-        }
-        val queryTreeResult2 = result.all<BinaryOperator>({ it.operatorCode == "/" }, mustSatisfy)
+        val queryTreeResult2 =
+            result.allExtended<BinaryOperator>(
+                { it.operatorCode == "/" },
+                { not((it.rhs.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0)) }
+            )
 
         assertFalse(queryTreeResult2.value)
     }
@@ -639,12 +709,14 @@ class QueryTest {
             )
         assertFalse(queryTreeResult.first)
 
-        val mustSatisfy = { it: Assignment ->
-            (max(it.value) le maxSizeOfType(it.target!!.type)) and
-                (min(it.value) ge minSizeOfType(it.target!!.type))
-        }
         val queryTreeResult2 =
-            result.all<Assignment>({ it.target?.type?.isPrimitive == true }, mustSatisfy)
+            result.allExtended<Assignment>(
+                { it.target?.type?.isPrimitive == true },
+                {
+                    (max(it.value) le maxSizeOfType(it.target!!.type)) and
+                        (min(it.value) ge minSizeOfType(it.target!!.type))
+                }
+            )
 
         println(queryTreeResult2.printNicely())
         assertFalse(queryTreeResult2.value)
