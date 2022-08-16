@@ -748,11 +748,25 @@ class QueryTest {
             )
 
         assertTrue(queryTreeResult.first)
-        assertEquals(1, queryTreeResult.second.size)
+        assertEquals(0, queryTreeResult.second.size)
 
-        /*val queryTreeResult2 =
-            result.all<Assignment>(
-                { (it.value as? CallExpression)?.name == "toString" },
+        val queryTreeResultExtended =
+            result.allExtended<CallExpression>(
+                { it.name == "toString" },
+                { n1 ->
+                    result.allExtended<FunctionDeclaration>(
+                        { it.name == "print" },
+                        { n2 -> dataFlow(n1, n2.parameters[0]) }
+                    )
+                }
+            )
+
+        assertTrue(queryTreeResultExtended.value)
+        assertEquals(1, queryTreeResultExtended.children.size)
+
+        val queryTreeResult2 =
+            result.all<CallExpression>(
+                { it.name == "test" },
                 { n1 ->
                     result
                         .all<FunctionDeclaration>(
@@ -764,6 +778,20 @@ class QueryTest {
             )
 
         assertTrue(queryTreeResult2.first)
-        assertEquals(1, queryTreeResult2.second.size)*/
+        assertEquals(0, queryTreeResult2.second.size)
+
+        val queryTreeResult2Extended =
+            result.allExtended<CallExpression>(
+                { it.name == "test" },
+                { n1 ->
+                    result.allExtended<FunctionDeclaration>(
+                        { it.name == "print" },
+                        { n2 -> dataFlow(n1 as Node, n2.parameters[0]) }
+                    )
+                }
+            )
+
+        assertTrue(queryTreeResult2Extended.value)
+        assertEquals(1, queryTreeResult2Extended.children.size)
     }
 }
