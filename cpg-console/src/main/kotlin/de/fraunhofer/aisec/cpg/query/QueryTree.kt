@@ -30,7 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.compareTo
 /**
  * Holds the [value] to which the statements have been evaluated. The [children] define previous
  * steps of the evaluation, thus building a tree of all steps of the evaluation recursively until we
- * reach the nodes of the CPG.
+ * reach the nodes of the CPG. This is necessary if we want to store all steps which are performed
+ * when evaluating a query. It helps to make the reasoning of the query more understandable to the
+ * user and gives an analyst the maximum of information available.
  *
  * Numerous methods allow to evaluate the queries while keeping track of all the steps. Currently,
  * the following operations are supported:
