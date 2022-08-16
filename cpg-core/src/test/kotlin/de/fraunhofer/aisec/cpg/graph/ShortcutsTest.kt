@@ -49,6 +49,34 @@ import kotlin.test.assertTrue
 
 class ShortcutsTest {
     @Test
+    fun followDFGUntilHitTest() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/Dataflow.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val toStringCall = result.callsByName("toString")[0]
+        val printDecl =
+            result.translationUnits[0]
+                .byNameOrNull<RecordDeclaration>("Dataflow")
+                ?.byNameOrNull<MethodDeclaration>("print")
+
+        val (fulfilled, failed) =
+            toStringCall.followNextDFGEdgesUntilHit { it == printDecl!!.parameters[0] }
+
+        assertEquals(1, fulfilled.size)
+        assertEquals(
+            1,
+            failed.size
+        ) // For some reason, the flow to the VariableDeclaration doesn't end in the call to print()
+    }
+
+    @Test
     fun testCalls() {
         val config =
             TranslationConfiguration.builder()

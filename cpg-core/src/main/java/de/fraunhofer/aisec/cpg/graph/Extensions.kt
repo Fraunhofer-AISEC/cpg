@@ -142,16 +142,22 @@ class StatementNotFound : Exception()
 
 class DeclarationNotFound(message: String) : Exception(message)
 
+class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<List<Node>>) {
+    operator fun component1(): List<List<Node>> = fulfilled
+    operator fun component2(): List<List<Node>> = failed
+}
+
 /**
- * Returns a list of nodes which are data flow paths between the starting node [this] and the end
- * node fulfilling [predicate]. Paths which do not end at such a node are not included in the
- * result. Hence, if the return value is a non-empty list, a data flow from the end node to [this]
- * is **possible but not mandatory**. This method traverses the path backwards!
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths between the end node [this] and the starting node
+ * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
+ * such a node are included in [FulfilledAndFailedPaths.failed].
  *
- * It returns all possible paths.
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Node>> {
-    val result = mutableListOf<List<Node>>()
+fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
+    val fulfilledPaths = mutableListOf<List<Node>>()
     val failedPaths = mutableListOf<List<Node>>()
     val worklist = mutableListOf<List<Node>>()
     worklist.add(listOf(this))
@@ -171,7 +177,8 @@ fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Nod
             nextPath.add(prev)
 
             if (predicate(prev)) {
-                result.add(nextPath)
+                fulfilledPaths.add(nextPath)
+                continue // Don't add this path anymore. The requirement is satisfied.
             }
             // The prev node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
@@ -181,21 +188,22 @@ fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Nod
         }
     }
 
-    return result
+    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
 }
 
 /**
- * Returns a list of nodes which are data flow paths between the starting node [this] and the end
- * node fulfilling [predicate]. Paths which do not end at such a node are not included in the
- * result. Hence, if the return value is a non-empty list, a data flow from [this] to such a node is
- * **possible but not mandatory**.
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths between the starting node [this] and the end node
+ * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
+ * such a node are included in [FulfilledAndFailedPaths.failed].
  *
- * It returns all possible paths.
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Node>> {
+fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
     // result: List of paths (between from and to)
-    val result = mutableListOf<List<Node>>()
+    val fulfilledPaths = mutableListOf<List<Node>>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
@@ -220,7 +228,8 @@ fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Nod
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.
-                result.add(nextPath)
+                fulfilledPaths.add(nextPath)
+                continue // Don't add this path anymore. The requirement is satisfied.
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
@@ -230,21 +239,23 @@ fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Nod
         }
     }
 
-    return result
+    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
 }
 
 /**
- * Returns a list of nodes which are evaluation paths between the starting node [this] and the end
- * node fulfilling [predicate]. Paths which do not end at such a node are not included in the
- * result. Hence, if the return value is a non-empty list, a path from [this] to such a node is
- * **possible but not mandatory**.
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest evaluation paths between the starting node [this] and the end node
+ * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
+ * such a node are included in [FulfilledAndFailedPaths.failed].
  *
- * It returns all possible paths.
+ * Hence, if "fulfilled" is a non-empty list, the execution of a statement fulfilling the predicate
+ * is possible after executing [this] **possible but not mandatory**. If the list "failed" is empty,
+ * such a statement is always executed.
  */
-fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Node>> {
+fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
     // result: List of paths (between from and to)
-    val result = mutableListOf<List<Node>>()
+    val fulfilledPaths = mutableListOf<List<Node>>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
@@ -258,7 +269,7 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Nod
         if (currentPath.last().nextEOG.isEmpty()) {
             // No further nodes in the path and the path criteria are not satisfied.
             failedPaths.add(currentPath)
-            continue
+            continue // Don't add this path any more. The requirement is satisfied.
         }
 
         for (next in currentPath.last().nextEOG) {
@@ -268,7 +279,8 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Nod
             nextPath.add(next)
             if (predicate(next)) {
                 // We ended up in the node "to", so we're done. Add the path to the results.
-                result.add(nextPath)
+                fulfilledPaths.add(nextPath)
+                continue // Don't add this path anymore. The requirement is satisfied.
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
@@ -278,7 +290,7 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): List<List<Nod
         }
     }
 
-    return result
+    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
 }
 
 /**
@@ -347,7 +359,7 @@ val TranslationResult.calls: List<CallExpression>
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 @OptIn(ExperimentalGraph::class)
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
-    return this.graph.nodes.filter { node ->
+    return SubgraphWalker.flattenAST(this).filter { node ->
         (node as? CallExpression)?.invokes?.any { it.name == name } == true
     } as List<CallExpression>
 }

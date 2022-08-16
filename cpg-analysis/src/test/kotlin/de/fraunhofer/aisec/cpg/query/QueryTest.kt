@@ -602,6 +602,7 @@ class QueryTest {
                                 .followPrevDFGEdgesUntilHit { node ->
                                     node is ArrayCreationExpression
                                 }
+                                .fulfilled
                                 .map { it2 ->
                                     (it2.last() as ArrayCreationExpression).dimensions[0]
                                 }
@@ -620,6 +621,7 @@ class QueryTest {
                                 .followPrevDFGEdgesUntilHit { node ->
                                     node is ArrayCreationExpression
                                 }
+                                .fulfilled
                                 .map { it2 ->
                                     (it2.last() as ArrayCreationExpression).dimensions[0]
                                 }

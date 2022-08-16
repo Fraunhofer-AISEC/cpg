@@ -238,15 +238,19 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
 fun dataFlow(from: Node, to: Node): QueryTree<Boolean> {
     val evalRes = from.followNextDFGEdgesUntilHit { it == to }
-    return QueryTree(evalRes.isNotEmpty(), evalRes.map { QueryTree(it) }.toMutableList())
+    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
+    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
+    return QueryTree(evalRes.fulfilled.isNotEmpty(), allPaths.toMutableList())
 }
 
 /** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
 fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
     val evalRes = from.followNextEOGEdgesUntilHit { it == to }
+    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
+    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
     return QueryTree(
-        evalRes.isNotEmpty(),
-        evalRes.map { QueryTree(it) }.toMutableList(),
+        evalRes.fulfilled.isNotEmpty(),
+        allPaths.toMutableList(),
         "executionPath($from, $to)"
     )
 }
@@ -257,9 +261,11 @@ fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
  */
 fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
     val evalRes = from.followNextEOGEdgesUntilHit(predicate)
+    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
+    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
     return QueryTree(
-        evalRes.isNotEmpty(),
-        evalRes.map { QueryTree(it) }.toMutableList(),
+        evalRes.fulfilled.isNotEmpty(),
+        allPaths.toMutableList(),
         "executionPath($from, $predicate)"
     )
 }
