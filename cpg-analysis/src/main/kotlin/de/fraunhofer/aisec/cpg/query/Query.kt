@@ -44,7 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
 @ExperimentalGraph
-inline fun <reified T> Node.allExtended(
+inline fun <reified T> Node.forallExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>
 ): QueryTree<Boolean> {
@@ -76,7 +76,7 @@ inline fun <reified T> Node.allExtended(
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
 @ExperimentalGraph
-inline fun <reified T> Node.all(
+inline fun <reified T> Node.forall(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean
 ): Pair<Boolean, List<Node>> {

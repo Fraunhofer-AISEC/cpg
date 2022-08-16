@@ -25,31 +25,37 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.astParent
 
 @JvmName("allNodes")
-fun TranslationResult.all(): List<Node> {
-    return this.all<Node>()
+fun TranslationResult.allChildren(): List<Node> {
+    return this.allChildren<Node>()
 }
 
-inline fun <reified T : Node> TranslationResult.all(): List<T> {
+inline fun <reified T : Node> TranslationResult.allChildren(): List<T> {
     val children = SubgraphWalker.flattenAST(this)
 
     return children.filterIsInstance<T>()
 }
 
-@JvmName("allNodes")
-fun Node.all(): List<Node> {
-    return this.all<Node>()
+@JvmName("allChildrenNodes")
+fun Node.allChildren(): List<Node> {
+    return this.allChildren<Node>()
 }
 
-inline fun <reified T : Node> Node.all(): List<T> {
+inline fun <reified T : Node> Node.allChildren(): List<T> {
     val children = SubgraphWalker.flattenAST(this)
 
     return children.filterIsInstance<T>()
@@ -332,3 +338,80 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
 
     return null
 }
+
+/** Returns all [CallExpression]s in this graph. */
+@OptIn(ExperimentalGraph::class)
+val TranslationResult.calls: List<CallExpression>
+    get() = this.graph.nodes.filterIsInstance<CallExpression>()
+
+/** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
+@OptIn(ExperimentalGraph::class)
+fun TranslationResult.callsByName(name: String): List<CallExpression> {
+    return this.graph.nodes.filter { node ->
+        (node as? CallExpression)?.invokes?.any { it.name == name } == true
+    } as List<CallExpression>
+}
+
+/** Set of all functions which are called from this function */
+val FunctionDeclaration.callees: Set<FunctionDeclaration>
+    get() {
+
+        return SubgraphWalker.flattenAST(this.body)
+            .filterIsInstance<CallExpression>()
+            .map { it.invokes }
+            .foldRight(
+                mutableListOf<FunctionDeclaration>(),
+                { l, res ->
+                    res.addAll(l)
+                    res
+                }
+            )
+            .toSet()
+    }
+
+/** Set of all functions calling [function] */
+@OptIn(ExperimentalGraph::class)
+fun TranslationResult.callersOf(function: FunctionDeclaration): Set<FunctionDeclaration> {
+    return this.graph.nodes
+        .filterIsInstance<FunctionDeclaration>()
+        .filter { function in it.callees }
+        .toSet()
+}
+
+/** All nodes which depend on this if statement */
+fun IfStatement.controls(): List<Node> {
+    val result = mutableListOf<Node>()
+    result.addAll(SubgraphWalker.flattenAST(this.thenStatement))
+    result.addAll(SubgraphWalker.flattenAST(this.elseStatement))
+    return result
+}
+
+/** All nodes which depend on this if statement */
+fun Node.controlledBy(): List<Node> {
+    val result = mutableListOf<Node>()
+    var checkedNode: Node = this
+    while (checkedNode !is FunctionDeclaration) {
+        checkedNode = checkedNode.astParent!!
+        if (checkedNode is IfStatement || checkedNode is SwitchStatement) {
+            result.add(checkedNode)
+        }
+    }
+    return result
+}
+
+/**
+ * Filters a list of [CallExpression]s for expressions which call a method with the given [name].
+ */
+fun List<CallExpression>.filterByName(name: String): List<CallExpression> {
+    return this.filter { n -> n.invokes.any { it.name == name } }
+}
+
+/**
+ * Returns the expression specifying the dimension (i.e., size) of the array during its
+ * initialization.
+ */
+val ArraySubscriptionExpression.arraySize: Expression
+    get() =
+        (((this.arrayExpression as DeclaredReferenceExpression).refersTo as VariableDeclaration)
+                .initializer as ArrayCreationExpression)
+            .dimensions[0]
