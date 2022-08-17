@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import de.fraunhofer.aisec.cpg.query.*
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -803,5 +802,40 @@ class QueryTest {
 
         assertTrue(queryTreeResult2Extended.value)
         assertEquals(1, queryTreeResult2Extended.children.size)
+    }
+
+    @Test
+    fun testClomplexDFGAndEOGRequirement() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/query/ComplexDataflow.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerPass(EdgeCachePass())
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.forallExtended<CallExpression>(
+                { it.name == "highlyCriticalOperation" },
+                { n1 ->
+                    val loggingQuery =
+                        executionPath(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                    val allCalls =
+                        loggingQuery.children.map { (it.value as List<*>).last() as CallExpression }
+                    // Problem: n1.arguments[0] is the method call. But we care about sc.a
+                    val dataFlowPaths =
+                        allCalls.map { allNonLiteralsFromFlowTo(n1.arguments[0], it.arguments[1]) }
+                    val dataFlowQuery =
+                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
+                    return@forallExtended loggingQuery and dataFlowQuery
+                }
+            )
+
+        println(queryTreeResult.printNicely())
+        assertTrue(queryTreeResult.value)
+        assertEquals(1, queryTreeResult.children.size)
     }
 }

@@ -31,7 +31,9 @@ import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
@@ -240,7 +242,11 @@ fun dataFlow(from: Node, to: Node): QueryTree<Boolean> {
     val evalRes = from.followNextDFGEdgesUntilHit { it == to }
     val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
     allPaths.addAll(evalRes.failed.map { QueryTree(it) })
-    return QueryTree(evalRes.fulfilled.isNotEmpty(), allPaths.toMutableList())
+    return QueryTree(
+        evalRes.fulfilled.isNotEmpty(),
+        allPaths.toMutableList(),
+        "data flow from $from to $to"
+    )
 }
 
 /** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
@@ -348,3 +354,38 @@ val Expression.intValue: QueryTree<Int>?
         val evalRes = evaluate() as? Int ?: return null
         return QueryTree(evalRes, mutableListOf(), "$this")
     }
+
+/**
+ * Does some magic to identify if the value which is in [from] also reaches [to]. To do so, it goes
+ * some data flow steps backwards in the graph (ideally to find the last assignment) and then
+ * follows this value to the node [to].
+ */
+fun allNonLiteralsFromFlowTo(from: Node, to: Node): QueryTree<Boolean> {
+    return when (from) {
+        is CallExpression -> {
+            val prevEdges =
+                from.prevDFG
+                    .fold(
+                        mutableListOf<Node>(),
+                        { l, e ->
+                            if (e !is Literal<*>) {
+                                l.add(e)
+                            }
+                            l
+                        }
+                    )
+                    .toMutableList()
+            prevEdges.addAll(from.arguments)
+            // For a call, we collect the incoming data flows (typically only the arguments)
+            val prevQTs = prevEdges.map { allNonLiteralsFromFlowTo(it, to) }
+            QueryTree(prevQTs.all { it.value }, prevQTs.toMutableList())
+        }
+        is Literal<*> ->
+            QueryTree(true, mutableListOf(QueryTree(from)), "DF Irrelevant for Literal node")
+        else -> {
+            // We go one step back to see if that one goes into to (e.g., the last assignment)
+            val prevQTs = from.prevDFG.map { dataFlow(it, to) }
+            QueryTree(prevQTs.all { it.value }, prevQTs.toMutableList())
+        }
+    }
+}
