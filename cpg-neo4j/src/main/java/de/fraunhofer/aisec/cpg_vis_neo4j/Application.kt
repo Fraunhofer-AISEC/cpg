@@ -107,13 +107,13 @@ class Application : Callable<Int> {
         names = ["--user"],
         description = ["Neo4j user name (default: $DEFAULT_USER_NAME)"]
     )
-    private var neo4jUsername: String = DEFAULT_USER_NAME
+    var neo4jUsername: String = DEFAULT_USER_NAME
 
     @CommandLine.Option(
         names = ["--password"],
         description = ["Neo4j password (default: $DEFAULT_PASSWORD"]
     )
-    private var neo4jPassword: String = DEFAULT_PASSWORD
+    var neo4jPassword: String = DEFAULT_PASSWORD
 
     @CommandLine.Option(
         names = ["--host"],
