@@ -294,6 +294,57 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
 }
 
 /**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest evaluation paths between the end node [this] and the start node
+ * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
+ * such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, the execution of a statement fulfilling the predicate
+ * is possible after executing [this] **possible but not mandatory**. If the list "failed" is empty,
+ * such a statement is always executed.
+ */
+fun Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
+    // Looks complicated but at least it's not recursive...
+    // result: List of paths (between from and to)
+    val fulfilledPaths = mutableListOf<List<Node>>()
+    // failedPaths: All the paths which do not satisfy "predicate"
+    val failedPaths = mutableListOf<List<Node>>()
+    // The list of paths where we're not done yet.
+    val worklist = mutableListOf<List<Node>>()
+    worklist.add(listOf(this)) // We start only with the "from" node (=this)
+
+    while (worklist.isNotEmpty()) {
+        val currentPath = worklist.removeFirst()
+        // The last node of the path is where we continue. We get all of its outgoing DFG edges and
+        // follow them
+        if (currentPath.last().prevEOG.isEmpty()) {
+            // No further nodes in the path and the path criteria are not satisfied.
+            failedPaths.add(currentPath)
+            continue // Don't add this path any more. The requirement is satisfied.
+        }
+
+        for (next in currentPath.last().prevEOG) {
+            // Copy the path for each outgoing DFG edge and add the next node
+            val nextPath = mutableListOf<Node>()
+            nextPath.addAll(currentPath)
+            nextPath.add(next)
+            if (predicate(next)) {
+                // We ended up in the node "to", so we're done. Add the path to the results.
+                fulfilledPaths.add(nextPath)
+                continue // Don't add this path anymore. The requirement is satisfied.
+            }
+            // The next node is new in the current path (i.e., there's no loop), so we add the path
+            // with the next step to the worklist.
+            if (!currentPath.contains(next)) {
+                worklist.add(nextPath)
+            }
+        }
+    }
+
+    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
+}
+
+/**
  * Returns a list of edges which are form the evaluation order between the starting node [this] and
  * an edge fulfilling [predicate]. If the return value is not `null`, a path from [this] to such an
  * edge is **possible but not mandatory**.

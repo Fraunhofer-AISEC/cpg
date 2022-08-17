@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
@@ -262,7 +263,7 @@ fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
 }
 
 /**
- * Checks if a path of execution flow is possible between the nodes [from] and fulfilling the
+ * Checks if a path of execution flow is possible starting at the node [from] and fulfilling the
  * requirement specified in [predicate].
  */
 fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
@@ -273,6 +274,21 @@ fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> 
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
         "executionPath($from, $predicate)"
+    )
+}
+
+/**
+ * Checks if a path of execution flow is possible ending at the node [to] and fulfilling the
+ * requirement specified in [predicate].
+ */
+fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
+    val evalRes = to.followPrevEOGEdgesUntilHit(predicate)
+    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
+    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
+    return QueryTree(
+        evalRes.fulfilled.isNotEmpty(),
+        allPaths.toMutableList(),
+        "executionPathBackwards($to, $predicate)"
     )
 }
 
@@ -360,7 +376,7 @@ val Expression.intValue: QueryTree<Int>?
  * some data flow steps backwards in the graph (ideally to find the last assignment) and then
  * follows this value to the node [to].
  */
-fun allNonLiteralsFromFlowTo(from: Node, to: Node): QueryTree<Boolean> {
+fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): QueryTree<Boolean> {
     return when (from) {
         is CallExpression -> {
             val prevEdges =
@@ -377,15 +393,31 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node): QueryTree<Boolean> {
                     .toMutableList()
             prevEdges.addAll(from.arguments)
             // For a call, we collect the incoming data flows (typically only the arguments)
-            val prevQTs = prevEdges.map { allNonLiteralsFromFlowTo(it, to) }
+            val prevQTs = prevEdges.map { allNonLiteralsFromFlowTo(it, to, allPaths) }
             QueryTree(prevQTs.all { it.value }, prevQTs.toMutableList())
         }
         is Literal<*> ->
             QueryTree(true, mutableListOf(QueryTree(from)), "DF Irrelevant for Literal node")
         else -> {
-            // We go one step back to see if that one goes into to (e.g., the last assignment)
+            // We go one step back to see if that one goes into to but also check that no assignment
+            // to from happens in the paths between from and to
             val prevQTs = from.prevDFG.map { dataFlow(it, to) }
-            QueryTree(prevQTs.all { it.value }, prevQTs.toMutableList())
+            var noAssignmentToFrom =
+                allPaths.none {
+                    it.any { it2 ->
+                        if (it2 is Assignment) {
+                            val prevMemberFrom = (from as? MemberExpression)?.prevDFG
+                            val nextMemberTo = (it2.target as? MemberExpression)?.nextDFG
+                            it2.target == from ||
+                                prevMemberFrom != null &&
+                                    nextMemberTo != null &&
+                                    prevMemberFrom.any { it3 -> nextMemberTo.contains(it3) }
+                        } else {
+                            false
+                        }
+                    }
+                }
+            QueryTree(prevQTs.all { it.value } && noAssignmentToFrom, prevQTs.toMutableList())
         }
     }
 }

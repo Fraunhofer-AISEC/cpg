@@ -821,21 +821,133 @@ class QueryTest {
             result.forallExtended<CallExpression>(
                 { it.name == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQuery =
+                    val loggingQueryForward =
                         executionPath(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
-                    val allCalls =
-                        loggingQuery.children.map { (it.value as List<*>).last() as CallExpression }
-                    // Problem: n1.arguments[0] is the method call. But we care about sc.a
+                    val loggingQueryBackwards =
+                        executionPathBackwards(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                    val allChildren = loggingQueryForward.children
+                    allChildren.addAll(loggingQueryBackwards.children)
+                    val allPaths =
+                        allChildren
+                            .map { (it.value as? List<*>) }
+                            .filter { it != null && it.last() is CallExpression }
+                    val allCalls = allPaths.map { it?.last() as CallExpression }
                     val dataFlowPaths =
-                        allCalls.map { allNonLiteralsFromFlowTo(n1.arguments[0], it.arguments[1]) }
+                        allCalls.map {
+                            allNonLiteralsFromFlowTo(
+                                n1.arguments[0],
+                                it.arguments[1],
+                                allPaths as List<List<Node>>
+                            )
+                        }
                     val dataFlowQuery =
                         QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-                    return@forallExtended loggingQuery and dataFlowQuery
+
+                    return@forallExtended (loggingQueryForward or loggingQueryBackwards) and
+                        dataFlowQuery
                 }
             )
 
         println(queryTreeResult.printNicely())
         assertTrue(queryTreeResult.value)
+        assertEquals(1, queryTreeResult.children.size)
+    }
+
+    @Test
+    fun testClomplexDFGAndEOGRequirement2() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/query/ComplexDataflow2.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerPass(EdgeCachePass())
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.forallExtended<CallExpression>(
+                { it.name == "highlyCriticalOperation" },
+                { n1 ->
+                    val loggingQueryForward =
+                        executionPath(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                    val loggingQueryBackwards =
+                        executionPathBackwards(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                    val allChildren = loggingQueryForward.children
+                    allChildren.addAll(loggingQueryBackwards.children)
+                    val allPaths =
+                        allChildren
+                            .map { (it.value as? List<*>) }
+                            .filter { it != null && it.last() is CallExpression }
+                    val allCalls = allPaths.map { it?.last() as CallExpression }
+                    val dataFlowPaths =
+                        allCalls.map {
+                            allNonLiteralsFromFlowTo(
+                                n1.arguments[0],
+                                it.arguments[1],
+                                allPaths as List<List<Node>>
+                            )
+                        }
+                    val dataFlowQuery =
+                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
+
+                    return@forallExtended (loggingQueryForward or loggingQueryBackwards) and
+                        dataFlowQuery
+                }
+            )
+
+        println(queryTreeResult.printNicely())
+        assertTrue(queryTreeResult.value)
+        assertEquals(1, queryTreeResult.children.size)
+    }
+
+    @Test
+    fun testClomplexDFGAndEOGRequirement3() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/query/ComplexDataflow3.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerPass(EdgeCachePass())
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val queryTreeResult =
+            result.forallExtended<CallExpression>(
+                { it.name == "highlyCriticalOperation" },
+                { n1 ->
+                    val loggingQueryForward =
+                        executionPath(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                    val loggingQueryBackwards =
+                        executionPathBackwards(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                    val allChildren = loggingQueryForward.children
+                    allChildren.addAll(loggingQueryBackwards.children)
+                    val allPaths =
+                        allChildren
+                            .map { (it.value as? List<*>) }
+                            .filter { it != null && it.last() is CallExpression }
+                    val allCalls = allPaths.map { it?.last() as CallExpression }
+                    val dataFlowPaths =
+                        allCalls.map {
+                            allNonLiteralsFromFlowTo(
+                                n1.arguments[0],
+                                it.arguments[1],
+                                allPaths as List<List<Node>>
+                            )
+                        }
+                    val dataFlowQuery =
+                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
+
+                    return@forallExtended (loggingQueryForward or loggingQueryBackwards) and
+                        dataFlowQuery
+                }
+            )
+
+        println(queryTreeResult.printNicely())
+        assertFalse(queryTreeResult.value)
         assertEquals(1, queryTreeResult.children.size)
     }
 }
