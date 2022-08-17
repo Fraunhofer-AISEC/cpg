@@ -92,13 +92,13 @@ val memcpyTooLargeQuery = { node: CallExpression ->
 }
 ```
 
-After assembling a query of the respective operators and functions, we want to run it for a subset of nodes in the graph. We therefore provide two operators: `all` (or `allExtended` for the detailed output) and `exists` (or `existsExtended` for the detailed output). Both are used in a similar way.
+After assembling a query of the respective operators and functions, we want to run it for a subset of nodes in the graph. We therefore provide two operators: `forall` (or `forallExtended` for the detailed output) and `exists` (or `existsExtended` for the detailed output). Both are used in a similar way.
 They enable the user to optionally specify conditions to determine on which nodes we want to run a query (e.g., only on `CallExpression`s which call a function called "memcpy").
 
 The following snippets use the queries from above to run them on all calls of the function "memcpy" contained in the `TranslationResult` `result`:
 ```kotlin
 val queryTreeResult =
-    result.allExtended<CallExpression>(
+    result.forallExtended<CallExpression>(
         { it.name == "memcpy" },
         { sizeof(it.arguments[0]) gt sizeof(it.arguments[1]) }
     )
@@ -106,7 +106,7 @@ val queryTreeResult =
 Less detailled:
 ```kotlin
 val queryTreeResult =
-    result.all<CallExpression>(
+    result.forall<CallExpression>(
         { it.name == "memcpy" },
         { sizeof(it.arguments[0]) > sizeof(it.arguments[1]) }
     )
