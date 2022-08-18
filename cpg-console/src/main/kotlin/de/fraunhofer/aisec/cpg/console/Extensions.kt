@@ -327,7 +327,7 @@ private fun fancyWord(
 
 fun getRelativeLocation(parentRegion: Region, region: Region): Region {
     // we only need a column offset, if the start line is the same
-    var columnOffset =
+    val columnOffset =
         if (region.startLine == parentRegion.startLine) {
             parentRegion.startColumn
         } else {

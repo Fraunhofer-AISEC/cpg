@@ -37,16 +37,30 @@ class Neo4jPlugin : Plugin {
         override val short: String by conf.get(default = "e")
         override val description: String = "exports the graph into neo4j"
 
-        override val params = "neo4j"
+        override val params = "neo4j (<username> <password>)"
 
         override fun execute(line: String): Command.Result {
-            return Command.Result.RunSnippets(
-                listOf(
+            val input = line.split(" ")
+
+            if (input.size < 2) {
+                return Command.Result.Failure("not enough arguments")
+            }
+
+            val commands =
+                mutableListOf(
                     "import de.fraunhofer.aisec.cpg_vis_neo4j.Application",
-                    "val neo4j = Application()",
-                    "neo4j.pushToNeo4j(result)"
+                    "val neo4j = Application()"
                 )
-            )
+
+            if (input.size == 4) {
+                // configure neo4j username and password
+                commands += "neo4j.neo4jPassword = ${input[2]}"
+                commands += "neo4j.neo4jUsername = ${input[3]}"
+            }
+
+            commands += "neo4j.pushToNeo4j(result)"
+
+            return Command.Result.RunSnippets(commands)
         }
     }
 
