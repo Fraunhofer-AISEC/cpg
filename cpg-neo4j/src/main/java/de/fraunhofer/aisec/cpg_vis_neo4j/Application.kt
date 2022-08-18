@@ -107,13 +107,13 @@ class Application : Callable<Int> {
         names = ["--user"],
         description = ["Neo4j user name (default: $DEFAULT_USER_NAME)"]
     )
-    private var neo4jUsername: String = DEFAULT_USER_NAME
+    var neo4jUsername: String = DEFAULT_USER_NAME
 
     @CommandLine.Option(
         names = ["--password"],
         description = ["Neo4j password (default: $DEFAULT_PASSWORD"]
     )
-    private var neo4jPassword: String = DEFAULT_PASSWORD
+    var neo4jPassword: String = DEFAULT_PASSWORD
 
     @CommandLine.Option(
         names = ["--host"],
@@ -194,6 +194,12 @@ class Application : Callable<Int> {
         description = ["Do no purge neo4j database before pushing the cpg"]
     )
     private var noPurgeDb: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--infer-nodes"],
+        description = ["Create inferred nodes for missing declarations"]
+    )
+    private var inferNodes: Boolean = false
 
     @CommandLine.Option(
         names = ["--top-level"],
@@ -385,6 +391,11 @@ class Application : Callable<Int> {
                 .forEach { translationConfiguration.includePath(it) }
         }
 
+        if (inferNodes) {
+            translationConfiguration.inferenceConfiguration(
+                InferenceConfiguration.builder().inferRecords(true).build()
+            )
+        }
         return translationConfiguration.build()
     }
 
