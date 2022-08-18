@@ -27,8 +27,18 @@ package de.fraunhofer.aisec.cpg.passes
 
 import kotlin.reflect.KClass
 
-/** Register a new pass required by a fronted. */
+/**
+ * Register a dependency for the annotated pass. This ensures that:
+ * - the annotated pass is executed after its dependency when `softDependency` is `false`:
+ * - the dependency is added to the list of active passes even if not manually specified by the user
+ * when `softDependency`is true:
+ * - the dependency is not added to the list of active passes - the order is only enforced if the
+ * user manually adds the pass
+ */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class PassRegisterExtraPass(val value: KClass<out Pass>)
+annotation class RegisterDependency(
+    val value: KClass<out Pass>,
+    val softDependency: Boolean = false
+)

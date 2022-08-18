@@ -59,6 +59,7 @@ import java.util.*;
  * <p>We here do not solve the problem of Exception-Handling, for this we will need additional
  * semantics on Edges.
  */
+@RegisterDependency(EvaluationOrderGraphPass.class)
 public class ControlFlowSensitiveDFGPass extends Pass {
 
   @Override

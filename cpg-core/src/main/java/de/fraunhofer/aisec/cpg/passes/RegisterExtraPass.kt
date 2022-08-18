@@ -27,12 +27,8 @@ package de.fraunhofer.aisec.cpg.passes
 
 import kotlin.reflect.KClass
 
-/**
- * Register a soft dependency for the annotated pass. This ensures that:
- * - the annotated pass is executed after its dependency Note: this does not register the dependency
- * as an active pass. There is no effect if the dependency is not present.
- */
+/** Register a new pass required by a fronted. */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class PassRegisterSoftDependency(val value: KClass<out Pass>)
+annotation class RegisterExtraPass(val value: KClass<out Pass>)

@@ -66,21 +66,16 @@ public abstract class Pass implements Consumer<TranslationResult> {
     hardDependencies = new HashSet<>();
     softDependencies = new HashSet<>();
 
-    // collect all dependencies added by [PassRegisterSoftDependency] annotations.
-    if (this.getClass().isAnnotationPresent(PassRegisterSoftDependency.class)) {
-      PassRegisterSoftDependency[] dependencies =
-          this.getClass().getAnnotationsByType(PassRegisterSoftDependency.class);
-      for (PassRegisterSoftDependency d : dependencies) {
-        softDependencies.add(d.value());
-      }
-    }
-
-    // collect all dependencies added by [PassRegisterHardDependency] annotations.
-    if (this.getClass().isAnnotationPresent(PassRegisterHardDependency.class)) {
-      PassRegisterHardDependency[] dependencies =
-          this.getClass().getAnnotationsByType(PassRegisterHardDependency.class);
-      for (PassRegisterHardDependency d : dependencies) {
-        hardDependencies.add(d.value());
+    // collect all dependencies added by [RegisterDependency] annotations.
+    if (this.getClass().isAnnotationPresent(RegisterDependency.class)) {
+      RegisterDependency[] dependencies =
+          this.getClass().getAnnotationsByType(RegisterDependency.class);
+      for (RegisterDependency d : dependencies) {
+        if (d.softDependency()) {
+          softDependencies.add(d.value());
+        } else {
+          hardDependencies.add(d.value());
+        }
       }
     }
   }
@@ -127,7 +122,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
   @NotNull
   public Boolean isLastPass() {
     try {
-      return this.getClass().isAnnotationPresent(PassIsLastPass.class);
+      return this.getClass().isAnnotationPresent(ExecuteLast.class);
     } catch (Exception e) {
       return false;
     }
@@ -136,7 +131,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
   @NotNull
   public Boolean isFirstPass() {
     try {
-      return this.getClass().isAnnotationPresent(PassIsFirstPass.class);
+      return this.getClass().isAnnotationPresent(FirstPass.class);
     } catch (Exception e) {
       return false;
     }

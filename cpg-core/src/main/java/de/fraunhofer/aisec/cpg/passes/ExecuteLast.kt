@@ -25,14 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import kotlin.reflect.KClass
-
 /**
- * Register a hard dependency for the annotated pass. This ensures that:
- * - the annotated pass is executed after its dependency
- * - the dependency is added to the list of active passes even if not manually specified by the user
+ * Indicates whether this pass should be executed as the last pass. Note: setting this flag for more
+ * than one active pass will yield an error. Note: setting this flag will not activate the pass. You
+ * must register the pass manually.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-@Repeatable
-annotation class PassRegisterHardDependency(val value: KClass<out Pass>)
+annotation class ExecuteLast

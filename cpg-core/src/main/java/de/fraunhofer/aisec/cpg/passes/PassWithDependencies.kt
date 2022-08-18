@@ -26,7 +26,4 @@
 package de.fraunhofer.aisec.cpg.passes
 
 /** A simple helper class to match a pass with dependencies. */
-data class PassOrderingPassWithDependencies(
-    val pass: Pass,
-    val dependencies: MutableSet<Class<out Pass>>
-)
+data class PassWithDependencies(val pass: Pass, val dependencies: MutableSet<Class<out Pass>>)

@@ -34,18 +34,18 @@ import java.util.*
  * A simple helper class for keeping track of passes and their (currently not satisfied)
  * dependencies during ordering.
  */
-class PassOrderingWorkingList {
-    private val workingList: MutableList<PassOrderingPassWithDependencies>
+class PassWithDepsContainer {
+    private val workingList: MutableList<PassWithDependencies>
 
     init {
         workingList = ArrayList()
     }
 
-    fun getWorkingList(): List<PassOrderingPassWithDependencies> {
+    fun getWorkingList(): List<PassWithDependencies> {
         return workingList
     }
 
-    fun addToWorkingList(newElement: PassOrderingPassWithDependencies) {
+    fun addToWorkingList(newElement: PassWithDependencies) {
         workingList.add(newElement)
     }
 
@@ -70,11 +70,11 @@ class PassOrderingWorkingList {
         return workingList.toString()
     }
 
-    fun getFirstPasses(): List<PassOrderingPassWithDependencies> {
+    fun getFirstPasses(): List<PassWithDependencies> {
         return workingList.filter { it.pass.isFirstPass }
     }
 
-    fun getLastPasses(): List<PassOrderingPassWithDependencies> {
+    fun getLastPasses(): List<PassWithDependencies> {
         return workingList.filter { it.pass.isLastPass }
     }
 
@@ -90,9 +90,7 @@ class PassOrderingWorkingList {
         return result
     }
 
-    private fun createNewPassWithDependency(
-        cls: Class<out Pass>
-    ): PassOrderingPassWithDependencies {
+    private fun createNewPassWithDependency(cls: Class<out Pass>): PassWithDependencies {
         val newPass =
             try {
                 cls.getConstructor().newInstance()
@@ -109,12 +107,12 @@ class PassOrderingWorkingList {
         val deps: MutableSet<Class<out Pass>> = HashSet()
         deps.addAll(newPass.hardDependencies)
         deps.addAll(newPass.softDependencies)
-        return PassOrderingPassWithDependencies(newPass, deps)
+        return PassWithDependencies(newPass, deps)
     }
 
     /**
-     * Recursively iterates the workingList and adds all hard dependencies
-     * [PassRegisterHardDependency] and their dependencies to the workingList.
+     * Recursively iterates the workingList and adds all hard dependencies [RegisterDependency] and
+     * their dependencies to the workingList.
      */
     fun addMissingDependencies() {
         val it = workingList.listIterator()
@@ -172,7 +170,7 @@ class PassOrderingWorkingList {
     }
 
     /**
-     * Checks for passes marked as first pass by [PassIsFirstPass]
+     * Checks for passes marked as first pass by [FirstPass]
      *
      * If found, this pass is returned and removed from the working list.
      *

@@ -484,14 +484,13 @@ public class TranslationConfiguration {
       return this;
     }
 
-    /** Register extra passes declared by a frontend with [PassRegisterExtraPass] */
+    /** Register extra passes declared by a frontend with [RegisterExtraPass] */
     private void registerExtraFrontendPasses() {
 
       for (Class<? extends LanguageFrontend> frontend : frontends.keySet()) {
-        if (frontend.isAnnotationPresent(PassRegisterExtraPass.class)) {
-          PassRegisterExtraPass[] extraPasses =
-              frontend.getAnnotationsByType(PassRegisterExtraPass.class);
-          for (PassRegisterExtraPass p : extraPasses) {
+        if (frontend.isAnnotationPresent(RegisterExtraPass.class)) {
+          RegisterExtraPass[] extraPasses = frontend.getAnnotationsByType(RegisterExtraPass.class);
+          for (RegisterExtraPass p : extraPasses) {
             try {
               var clazz = p.value();
               registerPass(clazz.getConstructor().newInstance());
@@ -621,16 +620,16 @@ public class TranslationConfiguration {
     }
 
     /**
-     * Collects the requested passes stored in [passes] and generates a [PassOrderingWorkingList]
+     * Collects the requested passes stored in [passes] and generates a [PassWithDepsContainer]
      * consisting of pairs of passes and their dependencies.
      *
-     * @return A populated [PassOrderingWorkingList] derived from [passes].
+     * @return A populated [PassWithDepsContainer] derived from [passes].
      */
-    private PassOrderingWorkingList collectInitialPasses() {
-      PassOrderingWorkingList workingList = new PassOrderingWorkingList();
+    private PassWithDepsContainer collectInitialPasses() {
+      PassWithDepsContainer workingList = new PassWithDepsContainer();
       for (Pass p : passes) {
         boolean passFound = false;
-        for (PassOrderingPassWithDependencies wl : workingList.getWorkingList()) {
+        for (PassWithDependencies wl : workingList.getWorkingList()) {
           if (wl.getPass().getClass() == p.getClass()) {
             passFound = true;
             break;
@@ -640,7 +639,7 @@ public class TranslationConfiguration {
           Set<Class<? extends Pass>> deps = new HashSet<>();
           deps.addAll(p.getHardDependencies());
           deps.addAll(p.getSoftDependencies());
-          workingList.addToWorkingList(new PassOrderingPassWithDependencies(p, deps));
+          workingList.addToWorkingList(new PassWithDependencies(p, deps));
         }
       }
       return workingList;
@@ -652,22 +651,21 @@ public class TranslationConfiguration {
      * <ul>
      *   <li>soft dependencies [PassRegisterSoftDependency]: all passes registered as soft
      *       dependency will be executed before the current pass if they are registered
-     *   <li>hard dependencies [PassRegisterHardDependency]: all passes registered as hard
-     *       dependency will be executed before the current pass (hard dependencies will be
-     *       registered even if the user did not register them)
-     *   <li>first pass [PassIsFirstPass]: a pass registered as first pass will be executed in the
+     *   <li>hard dependencies [RegisterDependency]: all passes registered as hard dependency will
+     *       be executed before the current pass (hard dependencies will be registered even if the
+     *       user did not register them)
+     *   <li>first pass [FirstPass]: a pass registered as first pass will be executed in the
      *       beginning
-     *   <li>last pass [PassIsLastPass]: a pass registered as last pass will be executed at the end
+     *   <li>last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
      * </ul>
      *
      * <p>This function uses a very simple (and inefficient) logic to meet the requirements above:
      *
      * <ol>
      *   <li>A list of all registered passes and their dependencies is build [workingList]
-     *   <li>All missing hard dependencies [PassRegisterHardDependency] are added to the
-     *       [workingList]
-     *   <li>The first pass [PassIsFirstPass] is added to the result and removed from the other
-     *       passes dependencies
+     *   <li>All missing hard dependencies [RegisterDependency] are added to the [workingList]
+     *   <li>The first pass [FirstPass] is added to the result and removed from the other passes
+     *       dependencies
      *   <li>The first pass in the [workingList] without dependencies is added to the result and it
      *       is removed from the other passes dependencies
      *   <li>The above step is repeated until all passes are added to the result
@@ -683,7 +681,7 @@ public class TranslationConfiguration {
 
       // Create a local copy of all passes and their "current" dependencies without possible
       // duplicates
-      PassOrderingWorkingList workingList = collectInitialPasses();
+      PassWithDepsContainer workingList = collectInitialPasses();
 
       log.debug("Working list after initial scan: {}", workingList);
 

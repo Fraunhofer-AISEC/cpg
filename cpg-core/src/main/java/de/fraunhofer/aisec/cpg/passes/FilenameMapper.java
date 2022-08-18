@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import org.jetbrains.annotations.NotNull;
 
-@PassIsLastPass
+@ExecuteLast
 public class FilenameMapper extends Pass {
   @Override
   public void accept(TranslationResult translationResult) {

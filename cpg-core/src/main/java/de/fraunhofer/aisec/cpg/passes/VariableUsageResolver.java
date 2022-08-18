@@ -65,7 +65,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author samuel
  */
-@PassRegisterSoftDependency(TypeHierarchyResolver.class)
+@RegisterDependency(TypeHierarchyResolver.class)
 public class VariableUsageResolver extends Pass {
   private static final Logger log = LoggerFactory.getLogger(VariableUsageResolver.class);
   protected final Map<Type, List<Type>> superTypesMap = new HashMap<>();
