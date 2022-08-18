@@ -649,11 +649,12 @@ public class TranslationConfiguration {
      * This function reorders passes in order to meet their dependency requirements.
      *
      * <ul>
-     *   <li>soft dependencies [PassRegisterSoftDependency]: all passes registered as soft
-     *       dependency will be executed before the current pass if they are registered
-     *   <li>hard dependencies [RegisterDependency]: all passes registered as hard dependency will
-     *       be executed before the current pass (hard dependencies will be registered even if the
-     *       user did not register them)
+     *   <li>soft dependencies [RegisterDependency] with `softDependency == true`: all passes
+     *       registered as soft dependency will be executed before the current pass if they are
+     *       registered
+     *   <li>hard dependencies [RegisterDependency] with `softDependency == false (default)`: all
+     *       passes registered as hard dependency will be executed before the current pass (hard
+     *       dependencies will be registered even if the user did not register them)
      *   <li>first pass [FirstPass]: a pass registered as first pass will be executed in the
      *       beginning
      *   <li>last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
