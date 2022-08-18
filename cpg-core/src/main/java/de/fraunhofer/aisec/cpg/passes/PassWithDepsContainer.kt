@@ -174,7 +174,7 @@ class PassWithDepsContainer {
      *
      * If found, this pass is returned and removed from the working list.
      *
-     * @return The first pass if present. Otherwise null.
+     * @return The first pass if present. Otherwise, null.
      */
     fun getAndRemoveFirstPass(): Pass? {
         val firstPasses = getFirstPasses()

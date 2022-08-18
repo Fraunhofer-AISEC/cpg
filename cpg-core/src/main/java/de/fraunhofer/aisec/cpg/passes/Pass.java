@@ -52,14 +52,14 @@ public abstract class Pass implements Consumer<TranslationResult> {
    * registered here will not be added automatically to the list of active passes. Use
    * [hardDependencies] to add them automatically.
    */
-  private Set<Class<? extends Pass>> softDependencies;
+  private final Set<Class<? extends Pass>> softDependencies;
 
   /**
    * Dependencies which have to be executed before this pass. Note: Dependencies registered here
    * will be added to the list of active passes automatically. Use [softDependencies] if this is not
    * desired.
    */
-  private Set<Class<? extends Pass>> hardDependencies;
+  private final Set<Class<? extends Pass>> hardDependencies;
 
   protected Pass() {
     name = this.getClass().getName();
@@ -155,7 +155,11 @@ public abstract class Pass implements Consumer<TranslationResult> {
     if (this.getClass().isAnnotationPresent(RequiredFrontend.class)) {
       Class<? extends LanguageFrontend> frontend =
           this.getClass().getAnnotation(RequiredFrontend.class).value();
-      return this.lang.getClass() == frontend;
+      if (this.lang != null) {
+        return this.lang.getClass() == frontend;
+      } else {
+        return true;
+      }
     } else {
       return true;
     }
