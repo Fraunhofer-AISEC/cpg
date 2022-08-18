@@ -35,13 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.util.*
 
+@RequiredFrontend(LLVMIRLanguageFrontend::class)
 class CompressLLVMPass : Pass() {
     override fun accept(t: TranslationResult?) {
-        // Run only for LLVM.
-        if (this.lang !is LLVMIRLanguageFrontend) {
-            return
-        }
-
         val flatAST = SubgraphWalker.flattenAST(t)
         // Get all goto statements
         val allGotos = flatAST.filterIsInstance<GotoStatement>()

@@ -98,7 +98,9 @@ private constructor(
                 for (pass in config.registeredPasses) {
                     passesNeedCleanup.add(pass)
                     bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                    pass.accept(result)
+                    if (pass.runWithCurrentFrontend()) {
+                        pass.accept(result)
+                    }
                     bench.addMeasurement()
                     if (result.isCancelled) {
                         log.warn("Analysis interrupted, stopping Pass evaluation")

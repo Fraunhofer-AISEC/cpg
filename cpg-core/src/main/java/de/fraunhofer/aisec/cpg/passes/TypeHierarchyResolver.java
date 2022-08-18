@@ -55,7 +55,6 @@ import org.jetbrains.annotations.NotNull;
  * where it is crucial to have parsed all {@link RecordDeclaration}s. Otherwise, type information in
  * the graph might not be fully correct
  */
-@RegisterDependency(CallResolver.class)
 public class TypeHierarchyResolver extends Pass {
 
   protected final Map<String, RecordDeclaration> recordMap = new HashMap<>();

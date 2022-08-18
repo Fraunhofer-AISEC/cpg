@@ -144,4 +144,20 @@ public abstract class Pass implements Consumer<TranslationResult> {
   public Set<Class<? extends Pass>> getHardDependencies() {
     return hardDependencies;
   }
+
+  /**
+   * Check whether the current language matches the language required by [RequiredLanguage]
+   *
+   * @return true, if the pass does not require a specific language frontend or if it matches the
+   *     [RequiredLanguage]
+   */
+  public boolean runWithCurrentFrontend() {
+    if (this.getClass().isAnnotationPresent(RequiredFrontend.class)) {
+      Class<? extends LanguageFrontend> frontend =
+          this.getClass().getAnnotation(RequiredFrontend.class).value();
+      return this.lang.getClass() == frontend;
+    } else {
+      return true;
+    }
+  }
 }
