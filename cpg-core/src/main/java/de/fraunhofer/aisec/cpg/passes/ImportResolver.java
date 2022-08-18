@@ -41,7 +41,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @RegisterDependency(TypeHierarchyResolver.class)
-@RegisterDependency(JavaExternalTypeHierarchyResolver.class)
+@RegisterDependency(value = JavaExternalTypeHierarchyResolver.class, softDependency = true)
 public class ImportResolver extends Pass {
 
   protected final List<RecordDeclaration> records = new ArrayList<>();
