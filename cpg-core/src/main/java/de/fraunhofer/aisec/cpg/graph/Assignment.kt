@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,19 +25,31 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-fun Expression.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
-    return evaluator.evaluate(this)
+/** An assignment assigns a certain value (usually an [Expression]) to a certain target. */
+interface Assignment {
+    /**
+     * The target of this assignment. Note that this is intentionally nullable, because while
+     * [BinaryOperator] implements [Assignment], not all binary operations are assignments. Thus,
+     * the target is only non-null for operations that have a == operator.
+     */
+    val target: AssignmentTarget?
+
+    /**
+     * The value expression that is assigned to the target. This is intentionally nullable for the
+     * same reason as [target].
+     */
+    val value: Expression?
 }
 
-fun Declaration.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
-    return evaluator.evaluate(this)
+/**
+ * The target of an assignment. The target is usually either a [VariableDeclaration] or a
+ * [DeclaredReferenceExpression].
+ */
+interface AssignmentTarget : HasType {
+    val name: String
 }
-
-val ArrayCreationExpression.capacity: Int
-    get() {
-        return dimensions.first().evaluate() as Int
-    }
