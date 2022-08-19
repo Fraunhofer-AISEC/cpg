@@ -136,7 +136,7 @@ class DFA : Cloneable {
         val res =
             other != null &&
                 other is DFA &&
-                other.currentState!!.equals(currentState) &&
+                other.currentState == currentState &&
                 other.stateCounter == stateCounter &&
                 other.states == states
         if (res) {
