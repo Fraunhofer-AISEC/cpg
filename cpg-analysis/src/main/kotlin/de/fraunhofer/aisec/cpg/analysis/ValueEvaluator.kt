@@ -162,10 +162,10 @@ open class ValueEvaluator(
             lhsValue is Long && rhsValue is Number -> lhsValue - rhsValue.toLong()
             lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
                 lhsValue - (rhsValue as Number).toDouble()
-            lhsValue is Short && rhsValue is Number -> lhsValue - rhsValue.toShort()
+            lhsValue is Short && rhsValue is Number -> lhsValue - rhsValue.toLong()
             lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
                 lhsValue - (rhsValue as Number).toDouble()
-            lhsValue is Byte && rhsValue is Number -> lhsValue - rhsValue.toByte()
+            lhsValue is Byte && rhsValue is Number -> lhsValue - rhsValue.toLong()
             lhsValue is Double && rhsValue is Number -> lhsValue - rhsValue.toDouble()
             lhsValue is Float && rhsValue is Number -> lhsValue - rhsValue.toDouble()
             else -> cannotEvaluate(expr, this)
@@ -265,8 +265,18 @@ open class ValueEvaluator(
                     else -> cannotEvaluate(expr, this)
                 }
             }
+            "--" -> {
+                when (val input = evaluateInternal(expr.input, depth + 1)) {
+                    is Double -> input - 1
+                    is Float -> input - 1
+                    is Number -> input.toLong() - 1
+                    else -> cannotEvaluate(expr, this)
+                }
+            }
             "++" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
+                    is Double -> input + 1
+                    is Float -> input + 1
                     is Number -> input.toLong() + 1
                     else -> cannotEvaluate(expr, this)
                 }
