@@ -196,6 +196,12 @@ class Application : Callable<Int> {
     private var noPurgeDb: Boolean = false
 
     @CommandLine.Option(
+        names = ["--infer-nodes"],
+        description = ["Create inferred nodes for missing declarations"]
+    )
+    private var inferNodes: Boolean = false
+
+    @CommandLine.Option(
         names = ["--top-level"],
         description =
             [
@@ -385,6 +391,11 @@ class Application : Callable<Int> {
                 .forEach { translationConfiguration.includePath(it) }
         }
 
+        if (inferNodes) {
+            translationConfiguration.inferenceConfiguration(
+                InferenceConfiguration.builder().inferRecords(true).build()
+            )
+        }
         return translationConfiguration.build()
     }
 
