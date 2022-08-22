@@ -94,6 +94,6 @@ public abstract class Statement extends Node implements DeclarationHolder {
 
   @NotNull
   public List<Declaration> getDeclarations() {
-    return new ArrayList<Declaration>(this.getLocals());
+    return new ArrayList<>(this.getLocals());
   }
 }
