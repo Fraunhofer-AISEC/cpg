@@ -499,6 +499,6 @@ public class Util {
     } else if (branchingDecl != null) {
       conditionNodes = getAdjacentDFGNodes(branchingDecl, true);
     }
-    conditionNodes.forEach(c -> n.addPrevDFG(c));
+    conditionNodes.forEach(n::addPrevDFG);
   }
 }

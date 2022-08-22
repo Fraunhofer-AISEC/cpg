@@ -104,5 +104,7 @@ class TranslatePlugin : Plugin {
         repl.registerCommand(Load(config))
     }
 
-    override fun cleanUp() {}
+    override fun cleanUp() {
+        // nothing to do
+    }
 }

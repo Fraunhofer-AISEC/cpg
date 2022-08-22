@@ -86,7 +86,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
 
       if (astNode.getFileLocation() != null
           && astNode.getFileLocation().getContextInclusionStatement() != null) {
-        log.debug("Skip parsing include file" + astNode.getContainingFilename());
+        log.debug("Skip parsing include file {}", astNode.getContainingFilename());
         return null;
       }
     }

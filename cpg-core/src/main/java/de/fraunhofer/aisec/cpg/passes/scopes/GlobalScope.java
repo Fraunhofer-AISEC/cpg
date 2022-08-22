@@ -54,20 +54,4 @@ public class GlobalScope extends StructureDeclarationScope {
       }
     }
   }
-  /*
-
-  private List<VariableDeclaration> variables = new ArrayList<>();
-
-  public List<VariableDeclaration> getVariables() {
-    return variables;
-  }
-
-  public void setVariables(List<VariableDeclaration> variables) {
-    this.variables = variables;
-  }
-
-  public void addVariable(VariableDeclaration variable) {
-    this.variables.add(variable);
-  }*/
-
 }

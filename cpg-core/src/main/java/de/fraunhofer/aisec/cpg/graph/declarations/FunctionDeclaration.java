@@ -300,14 +300,14 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
       return ((CompoundStatement) body)
           .getStatements().stream()
               // only declaration statements
-              .filter(statement -> statement instanceof DeclarationStatement)
+              .filter(DeclarationStatement.class::isInstance)
               // cast them
               .map(DeclarationStatement.class::cast)
               // flatten the declarations (could be more than one) of the statements so we can
               // search them
               .flatMap(declarationStatement -> declarationStatement.getDeclarations().stream())
               // only variable declarations
-              .filter(declaration -> declaration instanceof VariableDeclaration)
+              .filter(VariableDeclaration.class::isInstance)
               // cast them
               .map(VariableDeclaration.class::cast)
               // filter them by name

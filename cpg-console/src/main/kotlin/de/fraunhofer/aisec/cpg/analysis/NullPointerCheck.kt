@@ -118,15 +118,8 @@ class NullPointerCheck {
 
                     val path =
                         it.followPrevEOG { edge ->
-                            return@followPrevEOG when (edge.start) {
-                                is IfStatement -> {
-                                    true
-                                }
-                                is FunctionDeclaration -> {
-                                    true
-                                }
-                                else -> false
-                            }
+                            return@followPrevEOG edge.start is IfStatement ||
+                                edge.start is FunctionDeclaration
                         }
 
                     val last = path?.last()?.start

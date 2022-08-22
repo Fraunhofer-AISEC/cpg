@@ -163,6 +163,9 @@ public class TranslationConfiguration {
    */
   public final boolean matchCommentsToNodes;
 
+  /** If true the (cpp) frontend connects a node to required includes. */
+  public final boolean addIncludesToGraph;
+
   @NotNull private final List<Pass> passes;
 
   /** This sub configuration object holds all information about inference and smart-guessing. */
@@ -188,7 +191,8 @@ public class TranslationConfiguration {
       boolean typeSystemActiveInFrontend,
       InferenceConfiguration inferenceConfiguration,
       CompilationDatabase compilationDatabase,
-      boolean matchCommentsToNodes) {
+      boolean matchCommentsToNodes,
+      boolean addIncludesToGraph) {
     this.symbols = symbols;
     this.softwareComponents = softwareComponents;
     this.topLevel = topLevel;
@@ -210,6 +214,7 @@ public class TranslationConfiguration {
     this.inferenceConfiguration = inferenceConfiguration;
     this.compilationDatabase = compilationDatabase;
     this.matchCommentsToNodes = matchCommentsToNodes;
+    this.addIncludesToGraph = addIncludesToGraph;
   }
 
   public static Builder builder() {
@@ -293,6 +298,7 @@ public class TranslationConfiguration {
         new InferenceConfiguration.Builder().build();
     private CompilationDatabase compilationDatabase;
     private boolean matchCommentsToNodes = false;
+    private boolean addIncludesToGraph = true;
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -363,6 +369,12 @@ public class TranslationConfiguration {
      */
     public Builder matchCommentsToNodes(boolean matchCommentsToNodes) {
       this.matchCommentsToNodes = matchCommentsToNodes;
+      return this;
+    }
+
+    /** Adds all required includes. */
+    public Builder addIncludesToGraph(boolean addIncludesToGraph) {
+      this.addIncludesToGraph = addIncludesToGraph;
       return this;
     }
 
@@ -480,6 +492,7 @@ public class TranslationConfiguration {
           | InstantiationException
           | IllegalAccessException
           | InvocationTargetException ignored) {
+        // Nothing to do, we didn't load the llvm submodule
       }
       registerPass(new TypeHierarchyResolver());
       registerPass(new JavaExternalTypeHierarchyResolver());
@@ -599,7 +612,8 @@ public class TranslationConfiguration {
           typeSystemActiveInFrontend,
           inferenceConfiguration,
           compilationDatabase,
-          matchCommentsToNodes);
+          matchCommentsToNodes,
+          addIncludesToGraph);
     }
   }
 

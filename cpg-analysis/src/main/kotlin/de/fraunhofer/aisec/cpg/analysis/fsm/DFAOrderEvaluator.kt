@@ -319,7 +319,7 @@ open class DFAOrderEvaluator(
         if (base == null) {
             log.warn("The base of a call expression must not be null.")
         } else if (!consideredBases.contains(base.id)) {
-            log.info("Skipping call because the base $[base.id} is not considered.")
+            log.info("Skipping call because the base ${base.id} is not considered.")
         }
 
         return null

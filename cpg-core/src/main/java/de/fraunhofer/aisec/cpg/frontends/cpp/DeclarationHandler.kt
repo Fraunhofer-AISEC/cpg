@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
-import java.util.function.Consumer
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
@@ -145,10 +144,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Store the reference to a record declaration, if we managed to find one. This is most
         // likely the case, if the function is defined within the class itself.
-        val recordDeclaration =
-            if (declaration is MethodDeclaration) declaration.recordDeclaration else null
+        val recordDeclaration = (declaration as? MethodDeclaration)?.recordDeclaration
 
-        // We want to determine, whether we are currently outside of a record. In this case, our
+        // We want to determine, whether we are currently outside a record. In this case, our
         // function
         // is either really a function or a method definition external to a class.
         val outsideOfRecord =
@@ -666,69 +664,72 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 continue // do not care about these for now
             }
             val decl = handle(declaration) ?: continue
-            if (decl is ProblemDeclaration) {
-                decl.location?.let {
-                    val problems =
-                        problematicIncludes.computeIfAbsent(it.artifactLocation.toString()) {
-                            HashSet()
-                        }
-                    problems.add(decl)
-                }
+            (decl as? ProblemDeclaration)?.location?.let {
+                val problems =
+                    problematicIncludes.computeIfAbsent(it.artifactLocation.toString()) {
+                        HashSet()
+                    }
+                problems.add(decl)
             }
         }
 
-        // TODO: Remark CB: I am not quite sure, what the point of the code beyord this line is.
-        // Probably needs to be refactored
-        val addIncludesToGraph = true // todo move to config
-        if (addIncludesToGraph) {
-
-            // this tree is a bit problematic: If a file was already included before, it will not be
-            // shown
-            // connecting to other leaves.
-            // I.e. if FileA includes FileB and FileC, and FileC also includes FileB, _no_
-            // connection
-            // between FileC and FileB will be shown.
-            val dependencyTree = translationUnit.dependencyTree
-            val allIncludes = HashMap<String, HashSet<String?>>()
-            parseInclusions(dependencyTree.inclusions, allIncludes)
-
-            //      for (Map.Entry<String, HashSet<String>> entry : allIncludes.entrySet()) {
-            //        System.out.println(entry.getKey() + ":");
-            //        for (String s : entry.getValue()) {
-            //          System.out.println("\t" + s);
-            //        }
-            //      }
-            if (allIncludes.size > 0) {
-                // create all include nodes, potentially attach problemdecl
-                val includesStrings = HashSet<String?>()
-                val includeMap = HashMap<String?, IncludeDeclaration>()
-                allIncludes.values.forEach(
-                    Consumer { c: HashSet<String?>? -> includesStrings.addAll(c!!) }
-                )
-                for (includeString in includesStrings) {
-                    val problems = problematicIncludes[includeString]
-                    val includeDeclaration = NodeBuilder.newIncludeDeclaration(includeString ?: "")
-                    if (problems != null) {
-                        includeDeclaration.addProblems(problems)
-                    }
-                    includeMap[includeString] = includeDeclaration
-                }
-
-                // attach to root note
-                for (incl in allIncludes[translationUnit.filePath]!!) {
-                    node.addDeclaration(includeMap[incl]!!)
-                }
-                allIncludes.remove(translationUnit.filePath)
-                // attach to remaining nodes
-                for ((key, value) in allIncludes) {
-                    val includeDeclaration = includeMap[key]
-                    for (s in value) {
-                        includeDeclaration!!.addInclude(includeMap[s])
-                    }
-                }
-            }
+        if (lang.config.addIncludesToGraph) {
+            addIncludes(translationUnit, problematicIncludes, node)
         }
 
         return node
+    }
+
+    private fun addIncludes(
+        translationUnit: IASTTranslationUnit,
+        problematicIncludes: Map<String?, Set<ProblemDeclaration>>,
+        node: TranslationUnitDeclaration
+    ) {
+        // TODO: Remark CB: I am not quite sure, what the point of the code beyond this line is.
+        // Probably needs to be refactored
+
+        // this tree is a bit problematic: If a file was already included before, it will not be
+        // shown connecting to other leaves.
+        // I.e. if FileA includes FileB and FileC, and FileC also includes FileB, _no_
+        // connection
+        // between FileC and FileB will be shown.
+        val dependencyTree = translationUnit.dependencyTree
+        val allIncludes = HashMap<String, HashSet<String?>>()
+        parseInclusions(dependencyTree.inclusions, allIncludes)
+
+        if (allIncludes.size == 0) {
+            return
+        }
+
+        // create all include nodes, potentially attach problemdecl
+        val includeMap = HashMap<String?, IncludeDeclaration>()
+
+        for (includesStrings in allIncludes.values) {
+            for (includeString in includesStrings) {
+                if (includeString in includeMap) {
+                    continue
+                }
+
+                val problems = problematicIncludes[includeString]
+                val includeDeclaration = NodeBuilder.newIncludeDeclaration(includeString ?: "")
+                if (problems != null) {
+                    includeDeclaration.addProblems(problems)
+                }
+                includeMap[includeString] = includeDeclaration
+            }
+        }
+
+        // attach to root note
+        for (incl in allIncludes[translationUnit.filePath]!!) {
+            node.addDeclaration(includeMap[incl]!!)
+        }
+        allIncludes.remove(translationUnit.filePath)
+        // attach to remaining nodes
+        for ((key, value) in allIncludes) {
+            val includeDeclaration = includeMap[key]
+            for (s in value) {
+                includeDeclaration!!.addInclude(includeMap[s])
+            }
+        }
     }
 }
