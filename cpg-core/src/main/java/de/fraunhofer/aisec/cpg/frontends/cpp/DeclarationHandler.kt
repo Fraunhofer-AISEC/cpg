@@ -697,36 +697,38 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val allIncludes = HashMap<String, HashSet<String?>>()
         parseInclusions(dependencyTree.inclusions, allIncludes)
 
-        if (allIncludes.size > 0) {
-            // create all include nodes, potentially attach problemdecl
-            val includeMap = HashMap<String?, IncludeDeclaration>()
+        if (allIncludes.size == 0) {
+            return
+        }
 
-            for (includesStrings in allIncludes.values) {
-                for (includeString in includesStrings) {
-                    if (includeString in includeMap) {
-                        continue
-                    }
+        // create all include nodes, potentially attach problemdecl
+        val includeMap = HashMap<String?, IncludeDeclaration>()
 
-                    val problems = problematicIncludes[includeString]
-                    val includeDeclaration = NodeBuilder.newIncludeDeclaration(includeString ?: "")
-                    if (problems != null) {
-                        includeDeclaration.addProblems(problems)
-                    }
-                    includeMap[includeString] = includeDeclaration
+        for (includesStrings in allIncludes.values) {
+            for (includeString in includesStrings) {
+                if (includeString in includeMap) {
+                    continue
                 }
-            }
 
-            // attach to root note
-            for (incl in allIncludes[translationUnit.filePath]!!) {
-                node.addDeclaration(includeMap[incl]!!)
-            }
-            allIncludes.remove(translationUnit.filePath)
-            // attach to remaining nodes
-            for ((key, value) in allIncludes) {
-                val includeDeclaration = includeMap[key]
-                for (s in value) {
-                    includeDeclaration!!.addInclude(includeMap[s])
+                val problems = problematicIncludes[includeString]
+                val includeDeclaration = NodeBuilder.newIncludeDeclaration(includeString ?: "")
+                if (problems != null) {
+                    includeDeclaration.addProblems(problems)
                 }
+                includeMap[includeString] = includeDeclaration
+            }
+        }
+
+        // attach to root note
+        for (incl in allIncludes[translationUnit.filePath]!!) {
+            node.addDeclaration(includeMap[incl]!!)
+        }
+        allIncludes.remove(translationUnit.filePath)
+        // attach to remaining nodes
+        for ((key, value) in allIncludes) {
+            val includeDeclaration = includeMap[key]
+            for (s in value) {
+                includeDeclaration!!.addInclude(includeMap[s])
             }
         }
     }

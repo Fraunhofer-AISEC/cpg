@@ -75,6 +75,7 @@ public class DeclarationStatement extends Statement {
   }
 
   @NotNull
+  @Override
   public List<Declaration> getDeclarations() {
     return unwrap(this.declarations, true);
   }
