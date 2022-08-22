@@ -120,10 +120,15 @@ class DFA : Cloneable {
     /** Copies the FSM to enable multiple independent branches of execution. */
     public override fun clone(): DFA {
         val newDFA = DFA()
-        newDFA.currentState = this.currentState
-        newDFA.states = this.states
+        newDFA.currentState = this.currentState?.clone()
+        val startingState = this.states.first { it.isStart }
+        newDFA.states = startingState.cloneRecursively()
+        // newDFA.states = this.states.map { it.clone() }.toMutableSet()
         newDFA.executionTrace = mutableListOf()
         newDFA.stateCounter = stateCounter
+        for (t in this.executionTrace) {
+            val traceState = newDFA.states.first { it.name == t.first.name }
+        }
         newDFA.executionTrace.addAll(this.executionTrace)
         return newDFA
     }

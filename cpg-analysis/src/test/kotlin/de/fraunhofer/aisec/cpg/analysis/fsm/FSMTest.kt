@@ -79,7 +79,15 @@ class FSMTest {
         assertNotEquals(oldFsm, fsm)
 
         oldFsm.makeTransitionWithOp("create()", emptyNode)
-        assertEquals(oldFsm, fsm) // TODO: Fix the clone method!
+        assertEquals(oldFsm, fsm)
+
+        oldFsm.addEdge(
+            oldFsm.states.first { it.name == "q1" },
+            oldFsm.states.first { it.name == "q3" },
+            "create2()",
+            "v"
+        )
+        assertNotEquals(oldFsm, fsm)
     }
 
     @Test

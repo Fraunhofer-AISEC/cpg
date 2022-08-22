@@ -68,6 +68,27 @@ class State(val name: String, val isStart: Boolean = false, var isAcceptingState
         return newState
     }
 
+    fun cloneRecursively(currentStates: MutableSet<State> = mutableSetOf()): MutableSet<State> {
+        if (currentStates.any { it.name == name }) {
+            return currentStates
+        }
+
+        val newState = State(name, isStart, isAcceptingState)
+        currentStates.add(newState)
+
+        for (outE in outgoingEdges) {
+            outE.nextState.cloneRecursively(currentStates)
+            newState.outgoingEdges.add(
+                BaseOpEdge(
+                    outE.op,
+                    outE.base,
+                    currentStates.first { it.name == outE.nextState.name }
+                )
+            )
+        }
+        return currentStates
+    }
+
     override fun hashCode(): Int {
         return name.hashCode()
     }
