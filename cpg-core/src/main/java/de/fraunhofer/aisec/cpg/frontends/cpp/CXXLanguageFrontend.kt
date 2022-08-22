@@ -278,79 +278,76 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     }
 
     override fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation? {
-        if (astNode is ASTNode) {
-            val node = astNode as ASTNode
-            val fLocation = node.fileLocation
-            if (fLocation != null) {
-                val lineBreaks: IntArray =
-                    try {
-                        val fLoc = getField(fLocation.javaClass, "fLocationCtx")
-                        fLoc.trySetAccessible()
-                        val locCtx = fLoc[fLocation]
-                        val fLineOffsets = getField(locCtx.javaClass, "fLineOffsets")
-                        val getLineNumber =
-                            getMethod(locCtx.javaClass, "getLineNumber", Int::class.java)
-                        fLineOffsets.trySetAccessible()
-
-                        // force to cache line numbers, this calls computeLineOffsets internally
-                        getLineNumber.trySetAccessible()
-                        getLineNumber.invoke(locCtx, 0)
-
-                        fLineOffsets[locCtx] as IntArray
-                    } catch (e: ReflectiveOperationException) {
-                        LOGGER.warn(
-                            "Reflective retrieval of AST node source failed. Falling back to getRawSignature()"
-                        )
-                        IntArray(0)
-                    } catch (e: ClassCastException) {
-                        LOGGER.warn(
-                            "Reflective retrieval of AST node source failed. Falling back to getRawSignature()"
-                        )
-                        IntArray(0)
-                    } catch (e: NullPointerException) {
-                        LOGGER.warn(
-                            "Reflective retrieval of AST node source failed. Cannot reliably determine content of the file that contains the node"
-                        )
-                        return null
-                    }
-
-                // our start line, indexed by 0
-                val startLine = node.fileLocation.startingLineNumber - 1
-
-                // our end line, indexed by 0
-                val endLine = node.fileLocation.endingLineNumber - 1
-
-                // our start column, index by 0
-                val startColumn =
-                    if (startLine == 0) {
-                        // if we are in the first line, the start column is just the node offset
-                        node.fileLocation.nodeOffset
-                    } else {
-                        // otherwise, we need to calculate the difference to the previous line break
-                        node.fileLocation.nodeOffset -
-                            lineBreaks[startLine - 1] -
-                            1 // additional -1 because of the '\n' itself
-                    }
-
-                // our end column, index by 0
-                val endColumn =
-                    if (endLine == 0) {
-                        // if we are in the first line, the end column is just the node offset
-                        node.fileLocation.nodeOffset + node.fileLocation.nodeLength
-                    } else {
-                        // otherwise, we need to calculate the difference to the previous line break
-                        (node.fileLocation.nodeOffset + node.fileLocation.nodeLength) -
-                            lineBreaks[endLine - 1] -
-                            1 // additional -1 because of the '\n' itself
-                    }
-
-                // for a SARIF compliant format, we need to add +1, since its index begins at 1 and
-                // not 0
-                val region = Region(startLine + 1, startColumn + 1, endLine + 1, endColumn + 1)
-                return PhysicalLocation(Path.of(node.containingFilename).toUri(), region)
-            }
+        if (astNode !is ASTNode) {
+            return null
         }
-        return null
+        val node = astNode as ASTNode
+        val fLocation = node.fileLocation ?: return null
+        val lineBreaks: IntArray =
+            try {
+                val fLoc = getField(fLocation.javaClass, "fLocationCtx")
+                fLoc.trySetAccessible()
+                val locCtx = fLoc[fLocation]
+                val fLineOffsets = getField(locCtx.javaClass, "fLineOffsets")
+                val getLineNumber = getMethod(locCtx.javaClass, "getLineNumber", Int::class.java)
+                fLineOffsets.trySetAccessible()
+
+                // force to cache line numbers, this calls computeLineOffsets internally
+                getLineNumber.trySetAccessible()
+                getLineNumber.invoke(locCtx, 0)
+
+                fLineOffsets[locCtx] as IntArray
+            } catch (e: ReflectiveOperationException) {
+                LOGGER.warn(
+                    "Reflective retrieval of AST node source failed. Falling back to getRawSignature()"
+                )
+                IntArray(0)
+            } catch (e: ClassCastException) {
+                LOGGER.warn(
+                    "Reflective retrieval of AST node source failed. Falling back to getRawSignature()"
+                )
+                IntArray(0)
+            } catch (e: NullPointerException) {
+                LOGGER.warn(
+                    "Reflective retrieval of AST node source failed. Cannot reliably determine content of the file that contains the node"
+                )
+                return null
+            }
+
+        // our start line, indexed by 0
+        val startLine = node.fileLocation.startingLineNumber - 1
+
+        // our end line, indexed by 0
+        val endLine = node.fileLocation.endingLineNumber - 1
+
+        // our start column, index by 0
+        val startColumn =
+            if (startLine == 0) {
+                // if we are in the first line, the start column is just the node offset
+                node.fileLocation.nodeOffset
+            } else {
+                // otherwise, we need to calculate the difference to the previous line break
+                node.fileLocation.nodeOffset -
+                    lineBreaks[startLine - 1] -
+                    1 // additional -1 because of the '\n' itself
+            }
+
+        // our end column, index by 0
+        val endColumn =
+            if (endLine == 0) {
+                // if we are in the first line, the end column is just the node offset
+                node.fileLocation.nodeOffset + node.fileLocation.nodeLength
+            } else {
+                // otherwise, we need to calculate the difference to the previous line break
+                (node.fileLocation.nodeOffset + node.fileLocation.nodeLength) -
+                    lineBreaks[endLine - 1] -
+                    1 // additional -1 because of the '\n' itself
+            }
+
+        // for a SARIF compliant format, we need to add +1, since its index begins at 1 and
+        // not 0
+        val region = Region(startLine + 1, startColumn + 1, endLine + 1, endColumn + 1)
+        return PhysicalLocation(Path.of(node.containingFilename).toUri(), region)
     }
 
     /**

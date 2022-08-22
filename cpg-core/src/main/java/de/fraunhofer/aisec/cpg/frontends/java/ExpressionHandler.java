@@ -540,10 +540,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
           type = TypeParser.createFrom(symbol.getType().describe(), true);
         }
 
-        DeclaredReferenceExpression declaredReferenceExpression =
-            NodeBuilder.newDeclaredReferenceExpression(symbol.getName(), type, nameExpr.toString());
-
-        return declaredReferenceExpression;
+        return NodeBuilder.newDeclaredReferenceExpression(
+            symbol.getName(), type, nameExpr.toString());
       }
     } catch (UnsolvedSymbolException ex) {
       String typeString;
@@ -577,11 +575,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       Type t = TypeParser.createFrom("UNKNOWN4", true);
       log.info("Unresolved symbol: {}", nameExpr.getNameAsString());
 
-      DeclaredReferenceExpression declaredReferenceExpression =
-          NodeBuilder.newDeclaredReferenceExpression(
-              nameExpr.getNameAsString(), t, nameExpr.toString());
-
-      return declaredReferenceExpression;
+      return NodeBuilder.newDeclaredReferenceExpression(
+          nameExpr.getNameAsString(), t, nameExpr.toString());
     }
   }
 

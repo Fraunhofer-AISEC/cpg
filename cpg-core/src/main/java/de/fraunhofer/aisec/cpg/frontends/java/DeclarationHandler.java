@@ -110,15 +110,15 @@ public class DeclarationHandler
           com.github.javaparser.ast.body.ConstructorDeclaration constructorDecl) {
     ResolvedConstructorDeclaration resolvedConstructor = constructorDecl.resolve();
 
-    var record = lang.getScopeManager().getCurrentRecord();
+    var currentRecordDecl = lang.getScopeManager().getCurrentRecord();
     de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration declaration =
         newConstructorDeclaration(
-            resolvedConstructor.getName(), constructorDecl.toString(), record);
+            resolvedConstructor.getName(), constructorDecl.toString(), currentRecordDecl);
     lang.getScopeManager().addDeclaration(declaration);
 
     lang.getScopeManager().enterScope(declaration);
 
-    createMethodReceiver(record, declaration);
+    createMethodReceiver(currentRecordDecl, declaration);
 
     declaration.addThrowTypes(
         constructorDecl.getThrownExceptions().stream()
@@ -165,15 +165,18 @@ public class DeclarationHandler
       com.github.javaparser.ast.body.MethodDeclaration methodDecl) {
     ResolvedMethodDeclaration resolvedMethod = methodDecl.resolve();
 
-    var record = lang.getScopeManager().getCurrentRecord();
+    var currentRecordDecl = lang.getScopeManager().getCurrentRecord();
 
     de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
         newMethodDeclaration(
-            resolvedMethod.getName(), methodDecl.toString(), methodDecl.isStatic(), record);
+            resolvedMethod.getName(),
+            methodDecl.toString(),
+            methodDecl.isStatic(),
+            currentRecordDecl);
 
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    createMethodReceiver(record, functionDeclaration);
+    createMethodReceiver(currentRecordDecl, functionDeclaration);
 
     functionDeclaration.addThrowTypes(
         methodDecl.getThrownExceptions().stream()
@@ -228,13 +231,13 @@ public class DeclarationHandler
   }
 
   private void createMethodReceiver(
-      RecordDeclaration record, MethodDeclaration functionDeclaration) {
+      RecordDeclaration recordDecl, MethodDeclaration functionDeclaration) {
     // create the receiver
     var receiver =
         newVariableDeclaration(
             "this",
-            record != null
-                ? TypeParser.createFrom(record.getName(), false)
+            recordDecl != null
+                ? TypeParser.createFrom(recordDecl.getName(), false)
                 : UnknownType.getUnknownType(),
             "this",
             false);
