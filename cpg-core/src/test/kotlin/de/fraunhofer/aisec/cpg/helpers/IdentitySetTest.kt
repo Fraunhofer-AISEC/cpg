@@ -68,8 +68,8 @@ class IdentitySetTest {
 
         assertTrue(set.equals(setOf(1, 2)))
         assertFalse(set.equals(setOf(1, 2, 3)))
-        assertTrue(set.equals(setOf("1", "2", 3)))
-        assertTrue(set.equals(setOf(1)))
+        assertFalse(set.equals(setOf("1", "2", 3)))
+        assertFalse(set.equals(setOf(1)))
 
         assertEquals(setOf(1, 2), set)
         assertNotEquals(setOf(1, 2, 3), set)
