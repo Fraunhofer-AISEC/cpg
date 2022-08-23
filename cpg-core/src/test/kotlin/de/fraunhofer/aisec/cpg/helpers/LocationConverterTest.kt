@@ -87,6 +87,35 @@ internal class LocationConverterTest : BaseTest() {
     }
 
     @Test
+    fun toEntityAttributeWithNullGraph() {
+        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val have = sut.toGraphProperties(null)
+        assertEquals(mapOf(), have)
+    }
+
+    @Test
+    fun toEntityAttributeWithIntegerGraph() {
+        // arrange
+        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val value: MutableMap<String, Any?> = HashMap()
+        val startLineValue = 1
+        value[LocationConverter.START_LINE] = startLineValue // autoboxing to Integer
+        val endLineValue = 2
+        value[LocationConverter.END_LINE] = endLineValue
+        val startColumnValue = 3
+        value[LocationConverter.START_COLUMN] = startColumnValue
+        val endColumnValue = 4
+        value[LocationConverter.END_COLUMN] = endColumnValue
+        value[LocationConverter.ARTIFACT] = URI_STRING
+        val region = Region(startLineValue, startColumnValue, endLineValue, endColumnValue)
+        val want = PhysicalLocation(URI_TO_TEST, region)
+        // act
+        val have = sut.toGraphProperties(want)
+        // assert
+        assertEquals(value, have)
+    }
+
+    @Test
     fun toEntityAttributeWithLong() {
         // arrange
         val sut: CompositeAttributeConverter<PhysicalLocation> = sut

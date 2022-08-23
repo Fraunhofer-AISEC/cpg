@@ -59,6 +59,11 @@ class IdentitySet<T : Any> : MutableSet<T> {
         return map.containsKey(element)
     }
 
+    override fun equals(other: Any?): Boolean {
+        val otherSet = other as? Set<T>
+        return otherSet != null && this.containsAll(otherSet) && otherSet.containsAll(this)
+    }
+
     override fun add(element: T): Boolean {
         // Since we are a Set, we only want to add elements that are not already there
         if (!contains(element)) {
