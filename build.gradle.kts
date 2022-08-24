@@ -153,6 +153,10 @@ subprojects {
         }
     }
 
+    jacoco {
+        toolVersion = "0.8.8"
+    }
+
     tasks.withType<JavaCompile> {
         dependsOn("spotlessApply")
     }
