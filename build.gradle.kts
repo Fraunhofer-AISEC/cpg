@@ -35,7 +35,7 @@ plugins {
 
     id("org.jetbrains.dokka") version "1.7.10"
     id("org.sonarqube") version "3.4.0.2513"
-    id("com.diffplug.spotless") version "6.9.1"
+    id("com.diffplug.spotless") version "6.10.0"
     kotlin("jvm") version "1.7.10" apply false
 }
 
