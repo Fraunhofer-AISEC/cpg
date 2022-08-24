@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -364,7 +365,43 @@ class ShortcutsTest {
         val paramPassed = attrAssignment.followPrevEOGEdgesUntilHit { it is Literal<*> }
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(0, paramPassed.failed.size)
-        assertEquals(3, (paramPassed.fulfilled[0].last() as? Literal<*>)?.value)
+        assertEquals(
+            5,
+            (paramPassed.fulfilled[0].last() as? Literal<*>)?.value
+        ) // It's the comparison
+    }
+
+    @Test
+    fun testFollowNextEOGEdgesUntilHit() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerPass(EdgeCachePass())
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val classDecl =
+            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+        assertNotNull(magic)
+
+        val ifCondition =
+            ((magic.body as CompoundStatement).statements[0] as IfStatement).condition
+                as BinaryOperator
+
+        val paramPassed =
+            ifCondition.followNextEOGEdgesUntilHit {
+                it is BinaryOperator &&
+                    it.operatorCode == "=" &&
+                    (it.rhs as? DeclaredReferenceExpression)?.refersTo ==
+                        (ifCondition.lhs as DeclaredReferenceExpression).refersTo
+            }
+        assertEquals(1, paramPassed.fulfilled.size)
+        assertEquals(2, paramPassed.failed.size)
     }
 
     @Test
