@@ -148,7 +148,6 @@ class FrontendHelperTest {
         val forLoop = (mainMethod.body as CompoundStatement).statements[0] as ForStatement
         val printStatement = (forLoop.statement as CompoundStatement).statements.first()
 
-        // Sounds weird but the Sysout is in line 23 and starts at column 13
         val regionSysout = FrontendUtils.parseColumnPositionsFromFile(tu.code!!, 20, 13, 17, 17)
 
         assertEquals(printStatement.location?.region, regionSysout)

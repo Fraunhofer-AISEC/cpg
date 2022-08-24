@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
@@ -302,5 +303,97 @@ class ShortcutsTest {
 
         assertTrue(expected.containsAll(actual))
         assertTrue(actual.containsAll(expected))
+    }
+
+    @Test
+    fun testFollowPrevDFGEdgesUntilHit() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerPass(EdgeCachePass())
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val classDecl =
+            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+        assertNotNull(magic)
+
+        val attrAssignment =
+            ((((magic.body as CompoundStatement).statements[0] as IfStatement).elseStatement
+                        as CompoundStatement)
+                    .statements[0]
+                    as BinaryOperator)
+                .lhs
+
+        val paramPassed = attrAssignment.followPrevDFGEdgesUntilHit { it is Literal<*> }
+        assertEquals(1, paramPassed.fulfilled.size)
+        assertEquals(0, paramPassed.failed.size)
+        assertEquals(3, (paramPassed.fulfilled[0].last() as? Literal<*>)?.value)
+    }
+
+    @Test
+    fun testFollowPrevEOGEdgesUntilHit() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerPass(EdgeCachePass())
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val classDecl =
+            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+        assertNotNull(magic)
+
+        val attrAssignment =
+            ((((magic.body as CompoundStatement).statements[0] as IfStatement).elseStatement
+                        as CompoundStatement)
+                    .statements[0]
+                    as BinaryOperator)
+                .lhs
+
+        val paramPassed = attrAssignment.followPrevEOGEdgesUntilHit { it is Literal<*> }
+        assertEquals(1, paramPassed.fulfilled.size)
+        assertEquals(0, paramPassed.failed.size)
+        assertEquals(3, (paramPassed.fulfilled[0].last() as? Literal<*>)?.value)
+    }
+
+    @Test
+    fun testFollowPrevDFGEdges() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerPass(EdgeCachePass())
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val classDecl =
+            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+        assertNotNull(magic)
+
+        val attrAssignment =
+            ((((magic.body as CompoundStatement).statements[0] as IfStatement).elseStatement
+                        as CompoundStatement)
+                    .statements[0]
+                    as BinaryOperator)
+                .lhs
+
+        val paramPassed = attrAssignment.followPrevDFG { it is Literal<*> }
+        assertNotNull(paramPassed)
+        assertEquals(3, (paramPassed.last() as? Literal<*>)?.value)
     }
 }
