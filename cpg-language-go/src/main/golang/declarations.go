@@ -162,6 +162,12 @@ func (r *RecordDeclaration) AddMethod(m *MethodDeclaration) (err error) {
 	return
 }
 
+func (r *RecordDeclaration) AddSuperClass(t *Type) (err error) {
+	(*jnigi.ObjectRef)(r).CallMethod(env, "addSuperClass", nil, t)
+
+	return
+}
+
 func (r *RecordDeclaration) IsNil() bool {
 	return (*jnigi.ObjectRef)(r).IsNil()
 }
