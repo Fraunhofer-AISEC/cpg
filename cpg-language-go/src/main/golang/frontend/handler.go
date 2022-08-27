@@ -193,19 +193,25 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 		var recordType = this.handleType(recv.Type)
 
-		receiver = cpg.NewVariableDeclaration(fset, nil)
+		// The name of the Go receiver is optional. In fact, if the name is not
+		// specified we probably do not need any receiver variable at all,
+		// because the syntax is only there to ensure that this method is part
+		// of the struct, but it is not modifying the receiver.
+		if len(recv.Names) > 0 {
+			receiver = cpg.NewVariableDeclaration(fset, nil)
 
-		// TODO: should we use the FQN here? FQNs are a mess in the CPG...
-		receiver.SetName(recv.Names[0].Name)
-		receiver.SetType(recordType)
+			// TODO: should we use the FQN here? FQNs are a mess in the CPG...
+			receiver.SetName(recv.Names[0].Name)
+			receiver.SetType(recordType)
 
-		err := m.SetReceiver(receiver)
-		if err != nil {
-			log.Fatal(err)
+			err := m.SetReceiver(receiver)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		if recordType != nil {
-			var recordName = (*cpg.Node)(recordType).GetName()
+			var recordName = recordType.GetName()
 
 			// TODO: this will only find methods within the current translation unit
 			// this is a limitation that we have for C++ as well
@@ -275,7 +281,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		}
 	}
 
-	this.LogDebug("Function has return type %s", (*cpg.Node)(t).GetName())
+	this.LogDebug("Function has return type %s", t.GetName())
 
 	f.SetType(t)
 
@@ -283,13 +289,29 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 	// this is a method; however I am not quite sure if this makes sense for
 	// go, since we do not have a 'this', but rather a named receiver
 
-	this.LogDebug("Parsing function body")
-
 	for _, param := range funcDecl.Type.Params.List {
 		p := cpg.NewParamVariableDeclaration(fset, param)
 
-		// TODO: more than one name?
-		p.SetName(param.Names[0].Name)
+		this.LogDebug("Parsing param: %+v", param)
+
+		// Somehow parameters end up having no name sometimes, have not fully understood why.
+		if len(param.Names) > 0 {
+			// TODO: more than one name?
+			var name = param.Names[0].Name
+
+			// If the name is an underscore, it means that the parameter is
+			// unnamed. In order to avoid confusing and some compatibility with
+			// other languages, we are just setting the name to an empty string
+			// in this case.
+			if name == "_" {
+				name = ""
+			}
+
+			p.SetName(name)
+		} else {
+			this.LogError("Some param has no name, which is a bit weird: %+v", param)
+		}
+
 		p.SetType(this.handleType(param.Type))
 
 		// add parameter to scope
@@ -297,6 +319,8 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 		this.handleComments((*cpg.Node)(p), param)
 	}
+
+	this.LogDebug("Parsing function body of %s", (*cpg.Node)(f).GetName())
 
 	// parse body
 	s := this.handleBlockStmt(fset, funcDecl.Body)
@@ -430,7 +454,7 @@ func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDe
 
 			if field.Names == nil {
 				// retrieve the root type name
-				var typeName = (*cpg.Node)(t.GetRoot()).GetName()
+				var typeName = t.GetRoot().GetName()
 
 				this.LogDebug("Handling embedded field of type %s", typeName)
 
@@ -465,14 +489,25 @@ func (this *GoLanguageFrontend) handleInterfaceTypeSpec(fset *token.FileSet, typ
 
 	if !interfaceType.Incomplete {
 		for _, method := range interfaceType.Methods.List {
-			m := cpg.NewMethodDeclaration(fset, method)
-
 			t := this.handleType(method.Type)
 
-			m.SetType(t)
-			m.SetName(method.Names[0].Name)
+			// Even though this list is called "Methods", it contains all kinds
+			// of things, so we need to proceed with caution. Only if the
+			// "method" actually has a name, we declare a new method
+			// declaration.
+			if len(method.Names) > 0 {
+				m := cpg.NewMethodDeclaration(fset, method)
+				m.SetType(t)
+				m.SetName(method.Names[0].Name)
 
-			scope.AddDeclaration((*cpg.Declaration)(m))
+				scope.AddDeclaration((*cpg.Declaration)(m))
+			} else {
+				this.LogDebug("Adding %s as super class of interface %s", t.GetName(), (*cpg.Node)(r).GetName())
+				// Otherwise, it contains either types or interfaces. For now we
+				// hope that it only has interfaces. We consider embedded
+				// interfaces as sort of super types for this interface.
+				r.AddSuperClass(t)
+			}
 		}
 	}
 
@@ -1102,7 +1137,7 @@ func (this *GoLanguageFrontend) handleCompositeLit(fset *token.FileSet, lit *ast
 	var typ = this.handleType(lit.Type)
 
 	if typ != nil {
-		(*cpg.Node)(c).SetName((*cpg.Node)(typ).GetName())
+		(*cpg.Node)(c).SetName(typ.GetName())
 		(*cpg.Expression)(c).SetType(typ)
 	}
 
@@ -1168,7 +1203,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 			log.Fatal(err)
 		}
 
-		this.LogDebug("Pointer to %s", (*cpg.Node)(t).GetName())
+		this.LogDebug("Pointer to %s", t.GetName())
 
 		return t.Reference(i)
 	case *ast.ArrayType:
@@ -1180,7 +1215,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 			log.Fatal(err)
 		}
 
-		this.LogDebug("Array of %s", (*cpg.Node)(t).GetName())
+		this.LogDebug("Array of %s", t.GetName())
 
 		return t.Reference(i)
 	case *ast.MapType:
@@ -1190,8 +1225,9 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		keyType := this.handleType(v.Key)
 		valueType := this.handleType(v.Value)
 
-		(*cpg.ObjectType)(t).AddGeneric(keyType)
-		(*cpg.ObjectType)(t).AddGeneric(valueType)
+		// TODO(oxisto): Find a better way to represent casts
+		(&(cpg.ObjectType{Type: *t})).AddGeneric(keyType)
+		(&(cpg.ObjectType{Type: *t})).AddGeneric(valueType)
 
 		return t
 	case *ast.ChanType:
@@ -1199,7 +1235,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		t := cpg.TypeParser_createFrom("chan", false)
 		chanType := this.handleType(v.Value)
 
-		(*cpg.ObjectType)(t).AddGeneric(chanType)
+		(&(cpg.ObjectType{Type: *t})).AddGeneric(chanType)
 
 		return t
 	case *ast.FuncType:
@@ -1211,7 +1247,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		}
 	}
 
-	return cpg.UnknownType_getUnknown()
+	return &cpg.UnknownType_getUnknown().Type
 }
 
 func (this *GoLanguageFrontend) isBuiltinType(s string) bool {
