@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
