@@ -60,12 +60,13 @@ func (g *GoLanguageFrontend) SetCurrentTU(tu *cpg.TranslationUnitDeclaration) {
 }
 
 func (g *GoLanguageFrontend) GetCurrentTU() *cpg.TranslationUnitDeclaration {
-	i, err := g.GetField(env, "currentTU", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"))
+	var tu = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration")
+	err := g.GetField(env, "currentTU", tu)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return (*cpg.TranslationUnitDeclaration)(i.(*jnigi.ObjectRef))
+	return (*cpg.TranslationUnitDeclaration)(tu)
 }
 
 func (g *GoLanguageFrontend) GetCodeFromRawNode(fset *token.FileSet, astNode ast.Node) string {
@@ -76,22 +77,18 @@ func (g *GoLanguageFrontend) GetCodeFromRawNode(fset *token.FileSet, astNode ast
 }
 
 func (g *GoLanguageFrontend) GetScopeManager() *cpg.ScopeManager {
-	scope, err := g.GetField(env, "scopeManager", jnigi.ObjectType("de/fraunhofer/aisec/cpg/passes/scopes/ScopeManager"))
-
+	var scope = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/passes/scopes/ScopeManager")
+	err := g.GetField(env, "scopeManager", scope)
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
-	return (*cpg.ScopeManager)(scope.(*jnigi.ObjectRef))
+	return (*cpg.ScopeManager)(scope)
 }
 
 func (g *GoLanguageFrontend) getLog() (logger *jnigi.ObjectRef, err error) {
-	var ref interface{}
-
-	ref, err = env.GetStaticField("de/fraunhofer/aisec/cpg/frontends/LanguageFrontend", "log", jnigi.ObjectType("org/slf4j/Logger"))
-
-	logger = ref.(*jnigi.ObjectRef)
+	logger = jnigi.NewObjectRef("org/slf4j/Logger")
+	err = env.GetStaticField("de/fraunhofer/aisec/cpg/frontends/LanguageFrontend", "log", logger)
 
 	return
 }
@@ -103,7 +100,7 @@ func (g *GoLanguageFrontend) LogInfo(format string, args ...interface{}) (err er
 		return
 	}
 
-	_, err = logger.CallMethod(env, "info", jnigi.Void, cpg.NewString(fmt.Sprintf(format, args...)))
+	err = logger.CallMethod(env, "info", nil, cpg.NewString(fmt.Sprintf(format, args...)))
 
 	return
 }
@@ -115,7 +112,7 @@ func (g *GoLanguageFrontend) LogDebug(format string, args ...interface{}) (err e
 		return
 	}
 
-	_, err = logger.CallMethod(env, "debug", jnigi.Void, cpg.NewString(fmt.Sprintf(format, args...)))
+	err = logger.CallMethod(env, "debug", nil, cpg.NewString(fmt.Sprintf(format, args...)))
 
 	return
 }
@@ -127,7 +124,7 @@ func (g *GoLanguageFrontend) LogError(format string, args ...interface{}) (err e
 		return
 	}
 
-	_, err = logger.CallMethod(env, "error", jnigi.Void, cpg.NewString(fmt.Sprintf(format, args...)))
+	err = logger.CallMethod(env, "error", nil, cpg.NewString(fmt.Sprintf(format, args...)))
 
 	return
 }
