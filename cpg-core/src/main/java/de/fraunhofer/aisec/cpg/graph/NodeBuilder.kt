@@ -949,8 +949,7 @@ object NodeBuilder {
         lang: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ProblemExpression {
-        val node = ProblemExpression()
-        node.problem = problem
+        val node = ProblemExpression(problem, type)
         node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node

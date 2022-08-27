@@ -262,6 +262,15 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   }
 
   /**
+   * Adds a type to the list of super classes for this record declaration.
+   *
+   * @param superClass the super class.
+   */
+  public void addSuperClass(Type superClass) {
+    this.superClasses.add(superClass);
+  }
+
+  /**
    * Interfaces implemented by this class. This concept is not present in C++
    *
    * @return the list of implemented interfaces
