@@ -40,8 +40,12 @@ class ShowCodePlugin : Plugin {
         override val params = "<node>"
 
         override fun execute(line: String): Command.Result {
-            val p = line.indexOf(' ')
-            val node = line.substring(p + 1).trim()
+            val input = line.indexOf(' ')
+            if (input == -1) {
+                return Command.Result.Failure("not enough arguments")
+            }
+
+            val node = line.substring(input + 1).trim()
 
             return Command.Result.RunSnippets(listOf("${node}.printCode(0, true)"))
         }
