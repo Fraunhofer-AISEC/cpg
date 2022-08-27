@@ -54,18 +54,20 @@ func (n *Node) SetLocation(location *PhysicalLocation) error {
 }
 
 func (n *Node) GetName() string {
-	o, _ := (*jnigi.ObjectRef)(n).CallMethod(env, "getName", jnigi.ObjectType("java/lang/String"))
+	var o = jnigi.NewObjectRef("java/lang/String")
+	_ = (*jnigi.ObjectRef)(n).CallMethod(env, "getName", o)
 
 	if o == nil {
 		return ""
 	}
 
-	b, err := o.(*jnigi.ObjectRef).CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
+	var b []byte
+	err := o.CallMethod(env, "getBytes", &b)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return string(b.([]byte))
+	return string(b)
 }
 
 func updateCode(fset *token.FileSet, node *Node, astNode ast.Node) {
