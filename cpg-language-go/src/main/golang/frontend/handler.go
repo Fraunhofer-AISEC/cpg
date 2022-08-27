@@ -661,6 +661,8 @@ func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, expr ast.Expr) (
 		e = (*cpg.Expression)(this.handleBinaryExpr(fset, v))
 	case *ast.UnaryExpr:
 		e = (*cpg.Expression)(this.handleUnaryExpr(fset, v))
+	case *ast.StarExpr:
+		e = (*cpg.Expression)(this.handleStarExpr(fset, v))
 	case *ast.SelectorExpr:
 		e = (*cpg.Expression)(this.handleSelectorExpr(fset, v))
 	case *ast.KeyValueExpr:
@@ -1019,6 +1021,23 @@ func (this *GoLanguageFrontend) handleUnaryExpr(fset *token.FileSet, unaryExpr *
 	input := this.handleExpr(fset, unaryExpr.X)
 
 	err := u.SetOperatorCode(unaryExpr.Op.String())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if input != nil {
+		u.SetInput(input)
+	}
+
+	return u
+}
+
+func (this *GoLanguageFrontend) handleStarExpr(fset *token.FileSet, unaryExpr *ast.StarExpr) *cpg.UnaryOperator {
+	u := cpg.NewUnaryOperator(fset, unaryExpr)
+
+	input := this.handleExpr(fset, unaryExpr.X)
+
+	err := u.SetOperatorCode("*")
 	if err != nil {
 		log.Fatal(err)
 	}
