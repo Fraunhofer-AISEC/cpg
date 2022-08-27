@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
-import de.fraunhofer.aisec.cpg.graph.compareTo
+import de.fraunhofer.aisec.cpg.analysis.compareTo
 
 /**
  * Holds the [value] to which the statements have been evaluated. The [children] define previous
