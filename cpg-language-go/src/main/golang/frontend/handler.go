@@ -890,12 +890,13 @@ func (this *GoLanguageFrontend) handleNewExpr(fset *token.FileSet, callExpr *ast
 	t := this.handleType(callExpr.Args[0])
 
 	// new is a pointer, so need to reference the type with a pointer
-	pointer, err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
+	var pointer = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin")
+	err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", pointer)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	(*cpg.HasType)(n).SetType(t.Reference(pointer.(*jnigi.ObjectRef)))
+	(*cpg.HasType)(n).SetType(t.Reference(pointer))
 
 	// a new expression also needs an initializer, which is usually a constructexpression
 	c := cpg.NewConstructExpression(fset, callExpr)
@@ -1161,25 +1162,27 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 	case *ast.StarExpr:
 		t := this.handleType(v.X)
 
-		i, err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
+		var i = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin")
+		err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", i)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		this.LogDebug("Pointer to %s", (*cpg.Node)(t).GetName())
 
-		return t.Reference(i.(*jnigi.ObjectRef))
+		return t.Reference(i)
 	case *ast.ArrayType:
 		t := this.handleType(v.Elt)
 
-		i, err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "ARRAY", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
+		var i = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin")
+		err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "ARRAY", i)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		this.LogDebug("Array of %s", (*cpg.Node)(t).GetName())
 
-		return t.Reference(i.(*jnigi.ObjectRef))
+		return t.Reference(i)
 	case *ast.MapType:
 		// we cannot properly represent Golangs built-in map types, yet so we have
 		// to make a shortcut here and represent it as a Java-like map<K, V> type.
