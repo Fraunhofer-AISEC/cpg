@@ -118,7 +118,8 @@ class DeclarationTest {
         val myOtherInterface = main.byNameOrNull<RecordDeclaration>("main.MyOtherInterface")
         assertNotNull(myOtherInterface)
 
-        // MyOtherInterface should be in the superClasses and superTypeDeclarations of MyInterface, since it is embedded and thus MyInterface "extends" it
+        // MyOtherInterface should be in the superClasses and superTypeDeclarations of MyInterface,
+        // since it is embedded and thus MyInterface "extends" it
         assertContains(myInterface.superTypeDeclarations, myOtherInterface)
         assertTrue(myInterface.superClasses.any { it.name == myOtherInterface.name })
     }

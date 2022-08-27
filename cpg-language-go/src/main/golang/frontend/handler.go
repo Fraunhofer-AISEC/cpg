@@ -671,6 +671,10 @@ func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, expr ast.Expr) (
 		e = (*cpg.Expression)(this.handleCompositeLit(fset, v))
 	case *ast.Ident:
 		e = (*cpg.Expression)(this.handleIdent(fset, v))
+	case *ast.TypeAssertExpr:
+		e = (*cpg.Expression)(this.handleTypeAssertExpr(fset, v))
+	case *ast.ParenExpr:
+		e = this.handleExpr(fset, v.X)
 	default:
 		this.LogError("Could not parse expression of type %T: %+v", v, v)
 		// TODO: return an error instead?
@@ -1177,6 +1181,21 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 	ref.SetName(ident.Name)
 
 	return ref
+}
+
+func (this *GoLanguageFrontend) handleTypeAssertExpr(fset *token.FileSet, assert *ast.TypeAssertExpr) *cpg.CastExpression {
+	cast := cpg.NewCastExpression(fset, assert)
+
+	// Parse the inner expression
+	expr := this.handleExpr(fset, assert.X)
+
+	// Parse the type
+	typ := this.handleType(assert.Type)
+
+	cast.SetExpression(expr)
+	cast.SetCastType(typ)
+
+	return cast
 }
 
 func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {

@@ -49,6 +49,7 @@ func (e *Expression) IsArray() bool {
 }
 
 type CallExpression Expression
+type CastExpression Expression
 type NewExpression Expression
 type ArrayCreationExpression Expression
 type ArraySubscriptionExpression Expression
@@ -73,6 +74,19 @@ func NewCallExpression(fset *token.FileSet, astNode ast.Node) *CallExpression {
 	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*CallExpression)(c)
+}
+
+func NewCastExpression(fset *token.FileSet, astNode ast.Node) *CastExpression {
+	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/CastExpression")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
+
+	return (*CastExpression)(c)
 }
 
 func NewMemberExpression(fset *token.FileSet, astNode ast.Node) *MemberExpression {
@@ -241,6 +255,14 @@ func (c *CallExpression) SetName(s string) {
 
 func (c *CallExpression) SetFqn(s string) {
 	(*jnigi.ObjectRef)(c).SetField(env, "fqn", NewString(s))
+}
+
+func (c *CastExpression) SetExpression(e *Expression) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "setExpression", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (c *CastExpression) SetCastType(t *Type) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "setCastType", nil, t)
 }
 
 func (c *MemberCallExpression) SetName(s string) {
