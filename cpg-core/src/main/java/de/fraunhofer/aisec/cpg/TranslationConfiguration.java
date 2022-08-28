@@ -484,16 +484,6 @@ public class TranslationConfiguration {
      * @return
      */
     public Builder defaultPasses() {
-      try {
-        var llvmClazz = Class.forName("de.fraunhofer.aisec.cpg.passes.CompressLLVMPass");
-        registerPass((Pass) llvmClazz.getDeclaredConstructor().newInstance());
-      } catch (ClassNotFoundException
-          | NoSuchMethodException
-          | InstantiationException
-          | IllegalAccessException
-          | InvocationTargetException ignored) {
-        // Nothing to do, we didn't load the llvm submodule
-      }
       registerPass(new TypeHierarchyResolver());
       registerPass(new JavaExternalTypeHierarchyResolver());
       registerPass(new ImportResolver());
@@ -504,6 +494,30 @@ public class TranslationConfiguration {
       registerPass(new ControlFlowSensitiveDFGPass());
       registerPass(new FilenameMapper());
       return this;
+    }
+
+    /** Register extra passes declared by a frontend with [RegisterExtraPass] */
+    private void registerExtraFrontendPasses() throws ConfigurationException {
+
+      for (Class<? extends LanguageFrontend> frontend : frontends.keySet()) {
+        if (frontend.isAnnotationPresent(RegisterExtraPass.class)) {
+          RegisterExtraPass[] extraPasses = frontend.getAnnotationsByType(RegisterExtraPass.class);
+          for (RegisterExtraPass p : extraPasses) {
+            try {
+              var clazz = p.value();
+              registerPass(clazz.getConstructor().newInstance());
+              log.info(
+                  "Registered an extra (frontend dependent) default dependency: {}", p.value());
+
+            } catch (NoSuchMethodException
+                | InstantiationException
+                | IllegalAccessException
+                | InvocationTargetException ignored) {
+              throw new ConfigurationException("Failed to load frontend: {}" + frontend.getName());
+            }
+          }
+        }
+      }
     }
 
     /**
@@ -585,13 +599,16 @@ public class TranslationConfiguration {
       return this;
     }
 
-    public TranslationConfiguration build() {
+    public TranslationConfiguration build() throws ConfigurationException {
       if (useParallelFrontends && typeSystemActiveInFrontend) {
         log.warn(
             "Not disabling the type system during the frontend "
                 + "phase is not recommended when using the parallel frontends feature! "
                 + "This may result in erroneous results.");
       }
+
+      registerExtraFrontendPasses();
+
       return new TranslationConfiguration(
           symbols,
           softwareComponents,
@@ -602,7 +619,7 @@ public class TranslationConfiguration {
           includePaths.toArray(new String[] {}),
           includeWhitelist,
           includeBlacklist,
-          passes,
+          orderPasses(),
           frontends,
           codeInNodes,
           processAnnotations,
@@ -614,6 +631,107 @@ public class TranslationConfiguration {
           compilationDatabase,
           matchCommentsToNodes,
           addIncludesToGraph);
+    }
+
+    /**
+     * Collects the requested passes stored in [passes] and generates a [PassWithDepsContainer]
+     * consisting of pairs of passes and their dependencies.
+     *
+     * @return A populated [PassWithDepsContainer] derived from [passes].
+     */
+    private PassWithDepsContainer collectInitialPasses() {
+      PassWithDepsContainer workingList = new PassWithDepsContainer();
+      for (Pass p : passes) {
+        boolean passFound = false;
+        for (PassWithDependencies wl : workingList.getWorkingList()) {
+          if (wl.getPass().getClass() == p.getClass()) {
+            passFound = true;
+            break;
+          }
+        }
+        if (!passFound) {
+          Set<Class<? extends Pass>> deps = new HashSet<>();
+          deps.addAll(p.getHardDependencies());
+          deps.addAll(p.getSoftDependencies());
+          workingList.addToWorkingList(new PassWithDependencies(p, deps));
+        }
+      }
+      return workingList;
+    }
+
+    /**
+     * This function reorders passes in order to meet their dependency requirements.
+     *
+     * <ul>
+     *   <li>soft dependencies [DependsOn] with `softDependency == true`: all passes registered as
+     *       soft dependency will be executed before the current pass if they are registered
+     *   <li>hard dependencies [DependsOn] with `softDependency == false (default)`: all passes
+     *       registered as hard dependency will be executed before the current pass (hard
+     *       dependencies will be registered even if the user did not register them)
+     *   <li>first pass [ExecuteFirst]: a pass registered as first pass will be executed in the
+     *       beginning
+     *   <li>last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
+     * </ul>
+     *
+     * <p>This function uses a very simple (and inefficient) logic to meet the requirements above:
+     *
+     * <ol>
+     *   <li>A list of all registered passes and their dependencies is build [workingList]
+     *   <li>All missing hard dependencies [DependsOn] are added to the [workingList]
+     *   <li>The first pass [ExecuteFirst] is added to the result and removed from the other passes
+     *       dependencies
+     *   <li>The first pass in the [workingList] without dependencies is added to the result and it
+     *       is removed from the other passes dependencies
+     *   <li>The above step is repeated until all passes are added to the result
+     * </ol>
+     *
+     * @return a sorted list of passes
+     */
+    private List<Pass> orderPasses() throws ConfigurationException {
+
+      log.info("Passes before enforcing order: {}", passes);
+
+      List<Pass> result = new ArrayList<>();
+
+      // Create a local copy of all passes and their "current" dependencies without possible
+      // duplicates
+      PassWithDepsContainer workingList = collectInitialPasses();
+
+      log.debug("Working list after initial scan: {}", workingList);
+
+      workingList.addMissingDependencies();
+      log.debug("Working list after adding missing dependencies: {}", workingList);
+
+      if (workingList.getFirstPasses().size() > 1) {
+        log.error(
+            "Too many passes require to be executed as first pass: {}",
+            workingList.getWorkingList());
+        throw new ConfigurationException("Too many passes require to be executed as first pass.");
+      }
+
+      if (workingList.getLastPasses().size() > 1) {
+        log.error(
+            "Too many passes require to be executed as last pass: {}", workingList.getLastPasses());
+        throw new ConfigurationException("Too many passes require to be executed as last pass.");
+      }
+
+      Pass firstPass = workingList.getAndRemoveFirstPass();
+      if (firstPass != null) {
+        result.add(firstPass);
+      }
+
+      while (!workingList.isEmpty()) {
+        Pass p = workingList.getAndRemoveFirstPassWithoutDependencies();
+        if (p != null) {
+          result.add(p);
+        } else {
+          // failed to find a pass that can be added to the result -> deadlock :(
+          throw new ConfigurationException("Failed to satisfy ordering requirements.");
+        }
+      }
+
+      log.info("Passes after enforcing order: {}", result);
+      return result;
     }
   }
 
