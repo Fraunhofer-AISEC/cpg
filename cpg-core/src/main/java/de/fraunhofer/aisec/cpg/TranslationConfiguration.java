@@ -497,7 +497,7 @@ public class TranslationConfiguration {
     }
 
     /** Register extra passes declared by a frontend with [RegisterExtraPass] */
-    private void registerExtraFrontendPasses() {
+    private void registerExtraFrontendPasses() throws ConfigurationException {
 
       for (Class<? extends LanguageFrontend> frontend : frontends.keySet()) {
         if (frontend.isAnnotationPresent(RegisterExtraPass.class)) {
@@ -513,6 +513,7 @@ public class TranslationConfiguration {
                 | InstantiationException
                 | IllegalAccessException
                 | InvocationTargetException ignored) {
+              throw new ConfigurationException("Failed to load frontend: {}" + frontend.getName());
             }
           }
         }
@@ -667,7 +668,7 @@ public class TranslationConfiguration {
      *   <li>hard dependencies [DependsOn] with `softDependency == false (default)`: all passes
      *       registered as hard dependency will be executed before the current pass (hard
      *       dependencies will be registered even if the user did not register them)
-     *   <li>first pass [FirstPass]: a pass registered as first pass will be executed in the
+     *   <li>first pass [ExecuteFirst]: a pass registered as first pass will be executed in the
      *       beginning
      *   <li>last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
      * </ul>
@@ -677,7 +678,7 @@ public class TranslationConfiguration {
      * <ol>
      *   <li>A list of all registered passes and their dependencies is build [workingList]
      *   <li>All missing hard dependencies [DependsOn] are added to the [workingList]
-     *   <li>The first pass [FirstPass] is added to the result and removed from the other passes
+     *   <li>The first pass [ExecuteFirst] is added to the result and removed from the other passes
      *       dependencies
      *   <li>The first pass in the [workingList] without dependencies is added to the result and it
      *       is removed from the other passes dependencies

@@ -170,7 +170,7 @@ class PassWithDepsContainer {
     }
 
     /**
-     * Checks for passes marked as first pass by [FirstPass]
+     * Checks for passes marked as first pass by [ExecuteFirst]
      *
      * If found, this pass is returned and removed from the working list.
      *

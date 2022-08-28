@@ -130,7 +130,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
   @NotNull
   public Boolean isFirstPass() {
     try {
-      return this.getClass().isAnnotationPresent(FirstPass.class);
+      return this.getClass().isAnnotationPresent(ExecuteFirst.class);
     } catch (Exception e) {
       return false;
     }

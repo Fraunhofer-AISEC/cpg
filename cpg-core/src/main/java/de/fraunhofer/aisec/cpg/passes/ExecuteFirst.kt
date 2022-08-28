@@ -30,4 +30,6 @@ package de.fraunhofer.aisec.cpg.passes
  * more than one active pass will yield an error. Note: setting this flag will not activate the
  * pass. You must register the pass manually.
  */
-@Retention(AnnotationRetention.RUNTIME) @Target(AnnotationTarget.CLASS) annotation class FirstPass
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
+annotation class ExecuteFirst
