@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import kotlin.test.*
+import org.junit.jupiter.api.assertThrows
 
 class FSMTest {
     private val simpleStringRepresentation =
@@ -68,5 +69,36 @@ class FSMTest {
         fsm.addEdge(q5, q4, "update()", "v")
 
         assertEquals(simpleStringRepresentation, fsm.toDotString())
+
+        val oldFsm = fsm.clone()
+
+        val emptyNode = NodeBuilder.newEmptyStatement()
+        fsm.makeTransitionWithOp("create()", emptyNode)
+
+        assertTrue(fsm.isAccepted())
+        assertNotEquals(oldFsm, fsm)
+
+        oldFsm.makeTransitionWithOp("create()", emptyNode)
+        assertEquals(oldFsm, fsm)
+
+        oldFsm.addEdge(
+            oldFsm.states.first { it.name == "q1" },
+            oldFsm.states.first { it.name == "q3" },
+            "create2()",
+            "v"
+        )
+        assertNotEquals(oldFsm, fsm)
+    }
+
+    @Test
+    fun testFSMFailure() {
+        val fsm = DFA()
+        val q1 = fsm.addState(isStart = true)
+        val q2 = fsm.addState(isAcceptingState = true)
+        val q3 = fsm.addState()
+        fsm.addEdge(q1, q2, "create()", "v")
+        fsm.addEdge(q2, q3, "check_whole_msg()", "v")
+        assertThrows<FSMBuilderException> { fsm.addEdge(q1, q3, "create()", "v") }
+        assertFalse(fsm.isAccepted())
     }
 }

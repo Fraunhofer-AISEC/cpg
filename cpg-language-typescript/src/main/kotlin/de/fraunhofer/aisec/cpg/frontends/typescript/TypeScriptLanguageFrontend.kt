@@ -187,7 +187,7 @@ class TypeScriptLanguageFrontend(config: TranslationConfiguration, scopeManager:
         val lineNumberReader: LineNumberReader = LineNumberReader(FileReader(file))
 
         // Start and end position given by the parser are sometimes including spaces in front of the
-        // code and loc.end - loc.pos > code.length. This is cause by the parser and results in
+        // code and loc.end - loc.pos > code.length. This is caused by the parser and results in
         // unexpected
         // but correct regions if the start and end positions are assumed to be correct.
         lineNumberReader.skip(start.toLong())

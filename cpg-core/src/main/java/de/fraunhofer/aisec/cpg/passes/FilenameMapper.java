@@ -56,5 +56,7 @@ public class FilenameMapper extends Pass {
   }
 
   @Override
-  public void cleanup() {}
+  public void cleanup() {
+    // nothing to do
+  }
 }

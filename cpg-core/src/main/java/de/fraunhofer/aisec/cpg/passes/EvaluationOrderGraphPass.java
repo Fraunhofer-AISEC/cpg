@@ -476,8 +476,7 @@ public class EvaluationOrderGraphPass extends Pass {
     // out for java, but impossible for c++)
 
     // evaluate base first, if there is one
-    if (callExpression instanceof MemberCallExpression
-        && callExpression.getBase() instanceof Statement) {
+    if (callExpression instanceof MemberCallExpression && callExpression.getBase() != null) {
       createEOG(callExpression.getBase());
     }
 
@@ -672,9 +671,9 @@ public class EvaluationOrderGraphPass extends Pass {
       // Try to catch all internally thrown exceptions under the catching clause and remove caught
       // ones
       HashSet<Type> toRemove = new HashSet<>();
-      for (Map.Entry entry : catchesOrRelays.entrySet()) {
-        Type throwType = (Type) entry.getKey();
-        List<Node> eogEdges = (List<Node>) entry.getValue();
+      for (Map.Entry<Type, List<Node>> entry : catchesOrRelays.entrySet()) {
+        Type throwType = entry.getKey();
+        List<Node> eogEdges = entry.getValue();
         if (catchClause.getParameter() == null) { // e.g. catch (...)
           currentEOG.addAll(eogEdges);
         } else if (TypeManager.getInstance()
@@ -704,9 +703,9 @@ public class EvaluationOrderGraphPass extends Pass {
 
       //  all current-eog edges , result of finally execution as value List of uncought
       // catchesOrRelaysThrows
-      for (Map.Entry entry : catchesOrRelays.entrySet()) {
-        ((List) entry.getValue()).clear();
-        ((List) entry.getValue()).addAll(this.currentEOG);
+      for (Map.Entry<Type, List<Node>> entry : catchesOrRelays.entrySet()) {
+        entry.getValue().clear();
+        entry.getValue().addAll(this.currentEOG);
       }
     }
     // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
@@ -716,14 +715,13 @@ public class EvaluationOrderGraphPass extends Pass {
                 lang.getScopeManager().getCurrentScope().getParent(),
                 scope -> scope instanceof TryScope || scope instanceof FunctionScope);
     if (outerScope != null) {
-      Map outerCatchesOrRelays =
+      Map<Type, List<Node>> outerCatchesOrRelays =
           outerScope instanceof TryScope
               ? ((TryScope) outerScope).getCatchesOrRelays()
               : ((FunctionScope) outerScope).getCatchesOrRelays();
-      for (Map.Entry entry : catchesOrRelays.entrySet()) {
-        List<Node> catches =
-            (List<Node>) outerCatchesOrRelays.getOrDefault(entry.getKey(), new ArrayList<Node>());
-        catches.addAll((List<Node>) entry.getValue());
+      for (Map.Entry<Type, List<Node>> entry : catchesOrRelays.entrySet()) {
+        List<Node> catches = outerCatchesOrRelays.getOrDefault(entry.getKey(), new ArrayList<>());
+        catches.addAll(entry.getValue());
         outerCatchesOrRelays.put(entry.getKey(), catches);
       }
     }
@@ -903,7 +901,7 @@ public class EvaluationOrderGraphPass extends Pass {
     }
 
     LoopScope loopScope =
-        (LoopScope) lang.getScopeManager().firstScopeOrNull(scope -> scope instanceof LoopScope);
+        (LoopScope) lang.getScopeManager().firstScopeOrNull(LoopScope.class::isInstance);
     if (loopScope == null) {
       LOGGER.error("I am unexpectedly not in a loop, cannot add edge to loop start");
       return;

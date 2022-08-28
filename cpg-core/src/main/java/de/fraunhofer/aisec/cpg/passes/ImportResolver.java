@@ -68,17 +68,17 @@ public class ImportResolver extends Pass {
       findImportables(tu);
     }
 
-    for (RecordDeclaration record : records) {
-      Set<Declaration> imports = getDeclarationsForTypeNames(record.getImportStatements());
-      record.setImports(imports);
-      Set<ValueDeclaration> staticImports = getStaticImports(record);
-      record.setStaticImports(staticImports);
+    for (RecordDeclaration recordDecl : records) {
+      Set<Declaration> imports = getDeclarationsForTypeNames(recordDecl.getImportStatements());
+      recordDecl.setImports(imports);
+      Set<ValueDeclaration> staticImports = getStaticImports(recordDecl);
+      recordDecl.setStaticImports(staticImports);
     }
   }
 
-  protected Set<ValueDeclaration> getStaticImports(RecordDeclaration record) {
+  protected Set<ValueDeclaration> getStaticImports(RecordDeclaration recordDecl) {
     Map<Boolean, List<String>> partitioned =
-        record.getStaticImportStatements().stream()
+        recordDecl.getStaticImportStatements().stream()
             .collect(Collectors.partitioningBy(i -> i.endsWith("*")));
 
     Set<ValueDeclaration> staticImports = new HashSet<>();
@@ -131,11 +131,9 @@ public class ImportResolver extends Pass {
   }
 
   protected Set<ValueDeclaration> getOrCreateMembers(EnumDeclaration base, String name) {
-    Set<ValueDeclaration> entries =
-        base.getEntries().stream()
-            .filter(e -> e.getName().equals(name))
-            .collect(Collectors.toSet());
-    return entries;
+    return base.getEntries().stream()
+        .filter(e -> e.getName().equals(name))
+        .collect(Collectors.toSet());
   }
 
   protected Set<ValueDeclaration> getOrCreateMembers(RecordDeclaration base, String name) {

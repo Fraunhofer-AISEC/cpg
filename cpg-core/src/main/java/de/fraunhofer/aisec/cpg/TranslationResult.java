@@ -61,7 +61,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
    */
   private final Set<Node> additionalNodes = new HashSet<>();
 
-  private final List<MeasurementHolder> benchmarks = new ArrayList<>();
+  private final Set<MeasurementHolder> benchmarks = new LinkedHashSet<>();
 
   public TranslationResult(TranslationManager translationManager) {
     this.translationManager = translationManager;
@@ -171,7 +171,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
   }
 
   @NotNull
-  public List<MeasurementHolder> getBenchmarks() {
+  public Set<MeasurementHolder> getBenchmarks() {
     return benchmarks;
   }
 

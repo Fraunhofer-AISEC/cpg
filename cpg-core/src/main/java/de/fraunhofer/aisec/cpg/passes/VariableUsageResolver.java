@@ -424,7 +424,6 @@ public class VariableUsageResolver extends Pass {
       }
     }
 
-    // fields.putIfAbsent(base, new ArrayList<>());
     var recordDeclaration = recordMap.get(base);
 
     if (recordDeclaration == null) {
@@ -441,7 +440,6 @@ public class VariableUsageResolver extends Pass {
               name, type, Collections.emptyList(), "", null, null, false);
       recordDeclaration.addField(declaration);
       declaration.setInferred(true);
-      // lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
     } else {
       return target.get();

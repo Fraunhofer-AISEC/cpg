@@ -32,7 +32,6 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.util.*
-import kotlin.IllegalArgumentException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -55,24 +54,30 @@ class BenchmarkResults(val entries: List<List<Any>>) {
 /** Interface definition to hold different statistics about the translation process. */
 interface StatisticsHolder {
     val translatedFiles: List<String>
-    val benchmarks: List<MeasurementHolder>
+    val benchmarks: Set<MeasurementHolder>
     val config: TranslationConfiguration
 
     fun addBenchmark(b: MeasurementHolder)
 
     val benchmarkResults: BenchmarkResults
         get() {
-            return BenchmarkResults(
-                listOf(
+            val results =
+                mutableListOf(
                     listOf("Translation config", config),
                     listOf("Number of files translated", translatedFiles.size),
                     listOf(
                         "Translated file(s)",
                         translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) }
                     ),
-                    *benchmarks.map { it.benchmarkedValues }.toTypedArray()
                 )
-            )
+
+            benchmarks.forEach {
+                it.measurements.forEach { measurement ->
+                    results += listOf(measurement.key, measurement.value)
+                }
+            }
+
+            return BenchmarkResults(results)
         }
 }
 
@@ -212,7 +217,7 @@ constructor(
     ): Any? {
         if (measurementKey == null || measurementValue == null) return null
 
-        measurements["Measured $measurementKey"] = measurementValue
+        measurements["Measurement: $measurementKey"] = measurementValue
         logDebugMsg("$caller $measurementKey: result is $measurementValue")
 
         // update our holder, if we have any

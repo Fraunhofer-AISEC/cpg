@@ -109,12 +109,12 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
                         ParsedCompilationDatabaseEntry()
                     }
                 val basedir = entry.directory
-                if (!srcFile.isAbsolute) {
-                    if (basedir != null) {
-                        if (Paths.get(basedir, fileNameInTheObject).toFile().exists()) {
-                            srcFile = Paths.get(basedir, fileNameInTheObject).toFile()
-                        }
-                    }
+                if (
+                    !srcFile.isAbsolute &&
+                        basedir != null &&
+                        Paths.get(basedir, fileNameInTheObject).toFile().exists()
+                ) {
+                    srcFile = Paths.get(basedir, fileNameInTheObject).toFile()
                 }
 
                 if (srcFile.exists()) {

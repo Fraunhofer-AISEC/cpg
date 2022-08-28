@@ -34,7 +34,22 @@ import (
 )
 
 type Expression Statement
+
+func (e *Expression) ConvertToGo(o *jnigi.ObjectRef) error {
+	*e = (Expression)(*o)
+	return nil
+}
+
+func (e *Expression) GetClassName() string {
+	return "de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"
+}
+
+func (e *Expression) IsArray() bool {
+	return false
+}
+
 type CallExpression Expression
+type CastExpression Expression
 type NewExpression Expression
 type ArrayCreationExpression Expression
 type ArraySubscriptionExpression Expression
@@ -59,6 +74,19 @@ func NewCallExpression(fset *token.FileSet, astNode ast.Node) *CallExpression {
 	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*CallExpression)(c)
+}
+
+func NewCastExpression(fset *token.FileSet, astNode ast.Node) *CastExpression {
+	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/CastExpression")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
+
+	return (*CastExpression)(c)
 }
 
 func NewMemberExpression(fset *token.FileSet, astNode ast.Node) *MemberExpression {
@@ -229,6 +257,14 @@ func (c *CallExpression) SetFqn(s string) {
 	(*jnigi.ObjectRef)(c).SetField(env, "fqn", NewString(s))
 }
 
+func (c *CastExpression) SetExpression(e *Expression) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "setExpression", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (c *CastExpression) SetCastType(t *Type) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "setCastType", nil, t)
+}
+
 func (c *MemberCallExpression) SetName(s string) {
 	(*Node)(c).SetName(s)
 }
@@ -254,12 +290,13 @@ func (m *MemberExpression) SetBase(e *Expression) {
 }
 
 func (m *MemberExpression) GetBase() *Expression {
-	i, err := (*jnigi.ObjectRef)(m).GetField(env, "base", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	var expr Expression
+	err := (*jnigi.ObjectRef)(m).GetField(env, "base", &expr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return (*Expression)(i.(*jnigi.ObjectRef))
+	return &expr
 }
 
 func (e *Expression) GetName() string {
@@ -275,15 +312,15 @@ func (r *DeclaredReferenceExpression) Node() *Node {
 }
 
 func (c *CallExpression) AddArgument(e *Expression) {
-	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (b *BinaryOperator) SetLHS(e *Expression) {
-	(*jnigi.ObjectRef)(b).CallMethod(env, "setLhs", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(b).CallMethod(env, "setLhs", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (b *BinaryOperator) SetRHS(e *Expression) {
-	(*jnigi.ObjectRef)(b).CallMethod(env, "setRhs", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(b).CallMethod(env, "setRhs", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (b *BinaryOperator) SetOperatorCode(s string) (err error) {
@@ -291,7 +328,7 @@ func (b *BinaryOperator) SetOperatorCode(s string) (err error) {
 }
 
 func (u *UnaryOperator) SetInput(e *Expression) {
-	(*jnigi.ObjectRef)(u).CallMethod(env, "setInput", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(u).CallMethod(env, "setInput", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (u *UnaryOperator) SetOperatorCode(s string) (err error) {
@@ -320,43 +357,43 @@ func (r *DeclaredReferenceExpression) SetName(s string) {
 }
 
 func (r *DeclaredReferenceExpression) SetRefersTo(d *Declaration) {
-	(*jnigi.ObjectRef)(r).CallMethod(env, "setRefersTo", jnigi.Void, (*jnigi.ObjectRef)(d).Cast("de/fraunhofer/aisec/cpg/graph/declarations/Declaration"))
+	(*jnigi.ObjectRef)(r).CallMethod(env, "setRefersTo", nil, (*jnigi.ObjectRef)(d).Cast("de/fraunhofer/aisec/cpg/graph/declarations/Declaration"))
 }
 
 func (r *ArrayCreationExpression) AddDimension(e *Expression) {
-	(*jnigi.ObjectRef)(r).CallMethod(env, "addDimension", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(r).CallMethod(env, "addDimension", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (r *ArraySubscriptionExpression) SetArrayExpression(e *Expression) {
-	(*jnigi.ObjectRef)(r).CallMethod(env, "setArrayExpression", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(r).CallMethod(env, "setArrayExpression", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (r *ArraySubscriptionExpression) SetSubscriptExpression(e *Expression) {
-	(*jnigi.ObjectRef)(r).CallMethod(env, "setSubscriptExpression", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(r).CallMethod(env, "setSubscriptExpression", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (c *ConstructExpression) AddArgument(e *Expression) {
-	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (c *ConstructExpression) AddPrevDFG(n *Node) {
-	(*jnigi.ObjectRef)(c).CallMethod(env, "addPrevDFG", jnigi.Void, (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/Node"))
+	(*jnigi.ObjectRef)(c).CallMethod(env, "addPrevDFG", nil, (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/Node"))
 }
 
 func (n *NewExpression) SetInitializer(e *Expression) (err error) {
-	_, err = (*jnigi.ObjectRef)(n).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	err = (*jnigi.ObjectRef)(n).CallMethod(env, "setInitializer", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 
 	return
 }
 
 func (c *InitializerListExpression) AddInitializer(e *Expression) {
-	(*jnigi.ObjectRef)(c).CallMethod(env, "addInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(c).CallMethod(env, "addInitializer", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (k *KeyValueExpression) SetKey(e *Expression) {
-	(*jnigi.ObjectRef)(k).CallMethod(env, "setKey", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(k).CallMethod(env, "setKey", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (k *KeyValueExpression) SetValue(e *Expression) {
-	(*jnigi.ObjectRef)(k).CallMethod(env, "setValue", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(k).CallMethod(env, "setValue", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }

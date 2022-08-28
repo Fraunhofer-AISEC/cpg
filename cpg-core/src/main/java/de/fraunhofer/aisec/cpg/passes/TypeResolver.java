@@ -48,7 +48,7 @@ public class TypeResolver extends Pass {
   protected void processSecondOrderTypes(Type type) {
     Type root = type.getRoot();
 
-    var state = typeState.computeIfAbsent(root, (param) -> new ArrayList<>());
+    var state = typeState.computeIfAbsent(root, param -> new ArrayList<>());
 
     if (state.contains(type)) {
       return;

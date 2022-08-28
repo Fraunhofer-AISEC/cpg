@@ -67,37 +67,40 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 	frontend.InitEnv(env)
 	cpg.InitEnv(env)
 
-	src, err := srcObject.CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
+	var src []byte
+	err := srcObject.CallMethod(env, "getBytes", &src)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	path, err := pathObject.CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
+	var path []byte
+	err = pathObject.CallMethod(env, "getBytes", &path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	topLevel, err := topLevelObject.CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
+	var topLevel []byte
+	err = topLevelObject.CallMethod(env, "getBytes", &topLevel)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, string(path.([]byte)), string(src.([]byte)), parser.ParseComments)
+	file, err := parser.ParseFile(fset, string(path), string(src), parser.ParseComments)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	goFrontend.CommentMap = ast.NewCommentMap(fset, file, file.Comments)
 
-	_, err = goFrontend.ParseModule(string(topLevel.([]byte)))
+	_, err = goFrontend.ParseModule(string(topLevel))
 	if err != nil {
 		goFrontend.LogError("Error occurred while looking for Go modules file: %v", err)
 	}
 
 	goFrontend.File = file
 
-	tu, err := goFrontend.HandleFile(fset, file, string(path.([]byte)))
+	tu, err := goFrontend.HandleFile(fset, file, string(path))
 	if err != nil {
 		log.Fatal(err)
 	}

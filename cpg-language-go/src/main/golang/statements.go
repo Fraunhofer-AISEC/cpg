@@ -148,11 +148,11 @@ func NewDefaultStatement(fset *token.FileSet, astNode ast.Node) *DefaultStatemen
 }
 
 func (f *CompoundStatement) AddStatement(s *Statement) {
-	(*jnigi.ObjectRef)(f).CallMethod(env, "addStatement", jnigi.Void, (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
+	(*jnigi.ObjectRef)(f).CallMethod(env, "addStatement", nil, (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
 }
 
 func (f *DeclarationStatement) SetSingleDeclaration(d *Declaration) {
-	(*jnigi.ObjectRef)(f).CallMethod(env, "setSingleDeclaration", jnigi.Void, (*jnigi.ObjectRef)(d).Cast("de/fraunhofer/aisec/cpg/graph/declarations/Declaration"))
+	(*jnigi.ObjectRef)(f).CallMethod(env, "setSingleDeclaration", nil, (*jnigi.ObjectRef)(d).Cast("de/fraunhofer/aisec/cpg/graph/declarations/Declaration"))
 }
 
 func (m *IfStatement) SetThenStatement(s *Statement) {
@@ -200,5 +200,5 @@ func (fw *ForStatement) SetIterationStatement(s *Statement) {
 }
 
 func (r *ReturnStatement) SetReturnValue(e *Expression) {
-	(*jnigi.ObjectRef)(r).CallMethod(env, "setReturnValue", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(r).CallMethod(env, "setReturnValue", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }

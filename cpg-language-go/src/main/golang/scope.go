@@ -31,53 +31,57 @@ type ScopeManager jnigi.ObjectRef
 type Scope jnigi.ObjectRef
 
 func (s *ScopeManager) EnterScope(n *Node) {
-	(*jnigi.ObjectRef)(s).CallMethod(env, "enterScope", jnigi.Void, (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/Node"))
+	(*jnigi.ObjectRef)(s).CallMethod(env, "enterScope", nil, (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/Node"))
 }
 
 func (s *ScopeManager) LeaveScope(n *Node) (err error) {
-	_, err = (*jnigi.ObjectRef)(s).CallMethod(env, "leaveScope", jnigi.ObjectType("de/fraunhofer/aisec/cpg/passes/scopes/Scope"), (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/Node"))
+	var scope = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/passes/scopes/Scope")
+	err = (*jnigi.ObjectRef)(s).CallMethod(env, "leaveScope", scope, (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/Node"))
 
 	return err
 }
 
 func (s *ScopeManager) ResetToGlobal(n *Node) {
-	(*jnigi.ObjectRef)(s).CallMethod(env, "resetToGlobal", jnigi.Void, (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"))
+	(*jnigi.ObjectRef)(s).CallMethod(env, "resetToGlobal", nil, (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"))
 }
 
 func (s *ScopeManager) GetCurrentScope() *Scope {
-	o, _ := (*jnigi.ObjectRef)(s).CallMethod(env, "getCurrentScope", jnigi.ObjectType("de/fraunhofer/aisec/cpg/passes/scopes/Scope"))
+	var o = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/passes/scopes/Scope")
+	(*jnigi.ObjectRef)(s).CallMethod(env, "getCurrentScope", o)
 
-	return (*Scope)(o.(*jnigi.ObjectRef))
+	return (*Scope)(o)
 }
 
 func (s *ScopeManager) GetCurrentFunction() *FunctionDeclaration {
-	o, _ := (*jnigi.ObjectRef)(s).CallMethod(env, "getCurrentFunction", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/FunctionDeclaration"))
+	var o = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/FunctionDeclaration")
+	(*jnigi.ObjectRef)(s).CallMethod(env, "getCurrentFunction", o)
 
-	return (*FunctionDeclaration)(o.(*jnigi.ObjectRef))
+	return (*FunctionDeclaration)(o)
 }
 
 func (s *ScopeManager) GetCurrentBlock() *CompoundStatement {
-	o, _ := (*jnigi.ObjectRef)(s).CallMethod(env, "getCurrentBlock", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/statements/CompoundStatement"))
+	var o = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/statements/CompoundStatement")
+	(*jnigi.ObjectRef)(s).CallMethod(env, "getCurrentBlock", o)
 
-	return (*CompoundStatement)(o.(*jnigi.ObjectRef))
+	return (*CompoundStatement)(o)
 }
 
 func (s *ScopeManager) GetRecordForName(scope *Scope, recordName string) (record *RecordDeclaration, err error) {
-	var o interface{}
+	var o = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/RecordDeclaration")
 
-	o, err = (*jnigi.ObjectRef)(s).CallMethod(env,
+	err = (*jnigi.ObjectRef)(s).CallMethod(env,
 		"getRecordForName",
-		jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/RecordDeclaration"),
+		o,
 		(*jnigi.ObjectRef)(scope).Cast("de/fraunhofer/aisec/cpg/passes/scopes/Scope"),
 		NewString(recordName))
 
-	record = (*RecordDeclaration)(o.(*jnigi.ObjectRef))
+	record = (*RecordDeclaration)(o)
 
 	return
 }
 
 func (s *ScopeManager) AddDeclaration(d *Declaration) (err error) {
-	_, err = (*jnigi.ObjectRef)(s).CallMethod(env, "addDeclaration", jnigi.Void, (*jnigi.ObjectRef)(d).Cast("de/fraunhofer/aisec/cpg/graph/declarations/Declaration"))
+	err = (*jnigi.ObjectRef)(s).CallMethod(env, "addDeclaration", nil, (*jnigi.ObjectRef)(d).Cast("de/fraunhofer/aisec/cpg/graph/declarations/Declaration"))
 
 	return
 }

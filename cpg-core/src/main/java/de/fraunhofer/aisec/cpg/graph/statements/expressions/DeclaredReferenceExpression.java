@@ -42,7 +42,8 @@ import org.neo4j.ogm.annotation.Relationship;
  * DeclaredReferenceExpression}s, one for the variable <code>a</code> and one for variable <code>b
  * </code>, which have been previously been declared.
  */
-public class DeclaredReferenceExpression extends Expression implements TypeListener {
+public class DeclaredReferenceExpression extends Expression
+    implements TypeListener, AssignmentTarget {
 
   /** The {@link Declaration}s this expression might refer to. */
   @Relationship(value = "REFERS_TO")

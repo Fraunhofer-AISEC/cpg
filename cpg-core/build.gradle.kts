@@ -58,8 +58,8 @@ dependencies {
 
     api("org.neo4j:neo4j-ogm-core:3.2.36")
 
-    api("org.slf4j:jul-to-slf4j:1.7.36")
-    api("org.slf4j:slf4j-api:1.7.36")
+    api("org.slf4j:jul-to-slf4j:2.0.0")
+    api("org.slf4j:slf4j-api:2.0.0")
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.18.0")
 
     api("com.github.javaparser:javaparser-symbol-solver-core:3.24.4")
