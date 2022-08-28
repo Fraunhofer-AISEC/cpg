@@ -247,6 +247,15 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(f32)
         assertEquals("f32", f32.name)
         assertEquals(TypeParser.createFrom("float32", false), f32.type)
+
+        val n = p.byNameOrNull<VariableDeclaration>("n")
+        assertNotNull(n)
+        assertEquals(TypeParser.createFrom("int*", false), n.type)
+
+        val nil = n.initializer as? Literal<*>
+        assertNotNull(nil)
+        assertEquals("nil", nil.name)
+        assertEquals(null, nil.value)
     }
 
     @Test
