@@ -25,16 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-fun Expression.evaluate(): Any? {
-    return ValueEvaluator().evaluate(this)
+fun Expression.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
+    return evaluator.evaluate(this)
 }
 
-fun Declaration.evaluate(): Any? {
-    return ValueEvaluator().evaluate(this)
+fun Declaration.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
+    return evaluator.evaluate(this)
 }
 
 val ArrayCreationExpression.capacity: Int

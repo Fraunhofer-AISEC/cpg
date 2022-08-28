@@ -120,15 +120,15 @@ public abstract class LanguageFrontend {
 
   public void registerPredicateListener(
       BiPredicate<Object, Object> predicate, BiConsumer<Object, Object> biConsumer) {
-    List<Entry> matchingEntries = new ArrayList<>();
-    for (Map.Entry mapping : processedMapping.entrySet()) {
+    List<Entry<Object, Object>> matchingEntries = new ArrayList<>();
+    for (Map.Entry<Object, Object> mapping : processedMapping.entrySet()) {
       if (predicate.test(mapping.getKey(), mapping.getValue())) {
         matchingEntries.add(mapping);
       }
     }
 
     if (!matchingEntries.isEmpty()) {
-      for (Map.Entry match : matchingEntries) {
+      for (Map.Entry<Object, Object> match : matchingEntries) {
         biConsumer.accept(match.getKey(), match.getValue());
       }
     }
@@ -197,7 +197,6 @@ public abstract class LanguageFrontend {
     if (cpgNode instanceof Node && astNode != null) {
       if (config.codeInNodes) {
         // only set code, if its not already set or empty
-        /*if (((Node) cpgNode).getCode() == null || Objects.equals(((Node) cpgNode).getCode(), "")) {*/
         String code = getCodeFromRawNode(astNode);
 
         if (code != null) {
@@ -205,7 +204,6 @@ public abstract class LanguageFrontend {
         } else {
           log.warn("Unexpected: No code for node {}", astNode);
         }
-        // }
       }
       ((Node) cpgNode).setLocation(getLocationFromRawNode(astNode));
     }

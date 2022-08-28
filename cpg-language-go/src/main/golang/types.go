@@ -36,8 +36,46 @@ import (
 
 var env *jnigi.Env
 
-type Type jnigi.ObjectRef
-type ObjectType jnigi.ObjectRef
+type Type struct{ *jnigi.ObjectRef }
+
+func (t *Type) ConvertToGo(o *jnigi.ObjectRef) error {
+	t.ObjectRef = o
+	return nil
+}
+
+func (t *Type) ConvertToJava() (obj *jnigi.ObjectRef, err error) {
+	return t.ObjectRef, nil
+}
+
+func (*Type) GetClassName() string {
+	return "de/fraunhofer/aisec/cpg/graph/types/Type"
+}
+
+func (*Type) IsArray() bool {
+	return false
+}
+
+func (t *Type) GetName() string {
+	// A little bit hacky until we also convert node to a struct
+	return (*Node)(t.ObjectRef).GetName()
+}
+
+type ObjectType struct {
+	Type
+}
+
+func (*ObjectType) GetClassName() string {
+	return "de/fraunhofer/aisec/cpg/graph/types/ObjectType"
+}
+
+type UnknownType struct {
+	Type
+}
+
+func (*UnknownType) GetClassName() string {
+	return "de/fraunhofer/aisec/cpg/graph/types/UnknownType"
+}
+
 type HasType jnigi.ObjectRef
 
 func InitEnv(e *jnigi.Env) {
@@ -45,62 +83,69 @@ func InitEnv(e *jnigi.Env) {
 }
 
 func TypeParser_createFrom(s string, resolveAlias bool) *Type {
-	t, err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/TypeParser", "createFrom", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/Type"), NewString(s), resolveAlias)
+	var t Type
+	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/TypeParser", "createFrom", &t, NewString(s), resolveAlias)
 	if err != nil {
 		log.Fatal(err)
 
 	}
 
-	return (*Type)(t.(*jnigi.ObjectRef))
+	return &t
 }
 
-func UnknownType_getUnknown() *Type {
-	t, err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/UnknownType", "getUnknownType", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/UnknownType"))
+func UnknownType_getUnknown() *UnknownType {
+	var t UnknownType
+	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/UnknownType", "getUnknownType", &t)
 	if err != nil {
 		log.Fatal(err)
 
 	}
 
-	return (*Type)(t.(*jnigi.ObjectRef))
+	return &t
 }
 
-func (h *Type) GetRoot() *Type {
-	o, err := (*jnigi.ObjectRef)(h).CallMethod(env, "getRoot", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/Type"))
+func (t *Type) GetRoot() *Type {
+	var root Type
+	err := t.CallMethod(env, "getRoot", &root)
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
-	return (*Type)(o.(*jnigi.ObjectRef))
+	return &root
 }
 
 func (t *Type) Reference(o *jnigi.ObjectRef) *Type {
-	i, err := (*jnigi.ObjectRef)(t).CallMethod(env, "reference", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/Type"), (*jnigi.ObjectRef)(o).Cast("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
+	var refType Type
+	err := t.CallMethod(env, "reference", &refType, (*jnigi.ObjectRef)(o).Cast("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return (*Type)(i.(*jnigi.ObjectRef))
+	return &refType
 }
 
 func (h *HasType) SetType(t *Type) {
 	if t != nil {
-		(*jnigi.ObjectRef)(h).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t).Cast("de/fraunhofer/aisec/cpg/graph/types/Type"))
+		(*jnigi.ObjectRef)(h).CallMethod(env, "setType", nil, t.Cast("de/fraunhofer/aisec/cpg/graph/types/Type"))
 	}
 }
 
 func (h *HasType) GetType() *Type {
-	i, err := (*jnigi.ObjectRef)(h).CallMethod(env, "getType", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/Type"))
+	var t Type
+	err := (*jnigi.ObjectRef)(h).CallMethod(env, "getType", &t)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return (*Type)(i.(*jnigi.ObjectRef))
+	return &t
 }
 
 func (t *ObjectType) AddGeneric(g *Type) {
-	_, err := (*jnigi.ObjectRef)(t).Cast("de/fraunhofer/aisec/cpg/graph/types/ObjectType").CallMethod(env, "addGeneric", jnigi.Void, (*jnigi.ObjectRef)(g).Cast("de/fraunhofer/aisec/cpg/graph/types/Type"))
+	// Stupid workaround, since casting does not work. See
+	// https://github.com/timob/jnigi/issues/60
+	var objType = jnigi.WrapJObject(uintptr(t.JObject()), "de/fraunhofer/aisec/cpg/graph/types/ObjectType", false)
+	err := objType.CallMethod(env, "addGeneric", nil, g.Cast("de/fraunhofer/aisec/cpg/graph/types/Type"))
 	if err != nil {
 		log.Fatal(err)
 	}

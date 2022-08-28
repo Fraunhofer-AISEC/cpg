@@ -56,7 +56,7 @@ class StatisticsCollectionPass : Pass() {
 
         val nodeMeasurement =
             MeasurementHolder(this.javaClass, "Measuring Nodes", false, translationResult)
-        nodeMeasurement.addMeasurement("Graph nodes", nodes.toString())
+        nodeMeasurement.addMeasurement("Total graph nodes", nodes.toString())
         nodeMeasurement.addMeasurement("Problem nodes", problemNodes.toString())
     }
 

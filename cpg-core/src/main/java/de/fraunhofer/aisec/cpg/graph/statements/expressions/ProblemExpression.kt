@@ -44,15 +44,15 @@ class ProblemExpression(
             .toString()
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
             return true
         }
-        if (o !is ProblemExpression) {
+        if (other !is ProblemExpression) {
             return false
         }
-        val that = o
-        return (super.equals(that) && problem == that.problem)
+
+        return (super.equals(other) && problem == other.problem)
     }
 
     override fun hashCode(): Int {

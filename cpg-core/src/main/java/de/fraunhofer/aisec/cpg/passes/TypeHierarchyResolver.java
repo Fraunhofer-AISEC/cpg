@@ -74,11 +74,11 @@ public class TypeHierarchyResolver extends Pass {
       findRecordsAndEnums(tu);
     }
 
-    for (RecordDeclaration record : recordMap.values()) {
-      Set<RecordDeclaration> supertypeRecords = findSupertypeRecords(record);
+    for (RecordDeclaration recordDecl : recordMap.values()) {
+      Set<RecordDeclaration> supertypeRecords = findSupertypeRecords(recordDecl);
       List<MethodDeclaration> allMethodsFromSupertypes =
           getAllMethodsFromSupertypes(supertypeRecords);
-      analyzeOverridingMethods(record, allMethodsFromSupertypes);
+      analyzeOverridingMethods(recordDecl, allMethodsFromSupertypes);
     }
 
     for (EnumDeclaration enumDecl : enums) {
@@ -122,15 +122,15 @@ public class TypeHierarchyResolver extends Pass {
         .collect(Collectors.toList());
   }
 
-  protected Set<RecordDeclaration> findSupertypeRecords(RecordDeclaration record) {
+  protected Set<RecordDeclaration> findSupertypeRecords(RecordDeclaration recordDecl) {
     Set<RecordDeclaration> superTypeDeclarations =
-        record.getSuperTypes().stream()
+        recordDecl.getSuperTypes().stream()
             .map(Type::getTypeName)
             .map(recordMap::get)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
 
-    record.setSuperTypeDeclarations(superTypeDeclarations);
+    recordDecl.setSuperTypeDeclarations(superTypeDeclarations);
     return superTypeDeclarations;
   }
 
@@ -147,5 +147,7 @@ public class TypeHierarchyResolver extends Pass {
   }
 
   @Override
-  public void cleanup() {}
+  public void cleanup() {
+    // nothing to do
+  }
 }

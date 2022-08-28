@@ -374,18 +374,18 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             IASTUnaryExpression.op_not -> operatorCode = "!"
             IASTUnaryExpression.op_sizeof -> operatorCode = "sizeof"
             IASTUnaryExpression.op_bracketedPrimary -> {
-                if (lang.config.inferenceConfiguration.guessCastExpressions) {
+                if (
+                    lang.config.inferenceConfiguration.guessCastExpressions &&
+                        ctx.operand is IASTIdExpression
+                ) {
                     // this can either be just a meaningless bracket or it can be a cast expression
-                    if (ctx.operand is IASTIdExpression) {
-                        val typeName = (ctx.operand as IASTIdExpression).name.toString()
-                        if (TypeManager.getInstance().typeExists(typeName)) {
-                            val cast =
-                                NodeBuilder.newCastExpression(lang.getCodeFromRawNode<Any>(ctx))
-                            cast.castType = TypeParser.createFrom(typeName, false)
-                            cast.expression = input
-                            cast.location = lang.getLocationFromRawNode<Any>(ctx)
-                            return cast
-                        }
+                    val typeName = (ctx.operand as IASTIdExpression).name.toString()
+                    if (TypeManager.getInstance().typeExists(typeName)) {
+                        val cast = NodeBuilder.newCastExpression(lang.getCodeFromRawNode<Any>(ctx))
+                        cast.castType = TypeParser.createFrom(typeName, false)
+                        cast.expression = input
+                        cast.location = lang.getLocationFromRawNode<Any>(ctx)
+                        return cast
                     }
                 }
 
@@ -856,37 +856,38 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             } else {
                 numberValue = bigValue.toLong()
             }
-        } else {
+        } else if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
             // No suffix, we just cast it to the appropriate signed type that is required, but only
             // within Long.MAX_VALUE
-            if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
-                // keep it as BigInteger
-                numberValue = bigValue
-                Util.warnWithFileLocation(
-                    lang,
-                    ctx,
-                    log,
-                    "Integer literal {} is too large to represented in a signed type, interpreting it as unsigned.",
-                    ctx
-                )
-            } else if (bigValue.toLong() > Int.MAX_VALUE) {
-                numberValue = bigValue.toLong()
-            } else {
-                numberValue = bigValue.toInt()
-            }
+
+            // keep it as BigInteger
+            numberValue = bigValue
+            Util.warnWithFileLocation(
+                lang,
+                ctx,
+                log,
+                "Integer literal {} is too large to represented in a signed type, interpreting it as unsigned.",
+                ctx
+            )
+        } else if (bigValue.toLong() > Int.MAX_VALUE) {
+            numberValue = bigValue.toLong()
+        } else {
+            numberValue = bigValue.toInt()
         }
 
         // retrieve type based on stored Java number
         val type =
-            if (numberValue is BigInteger) {
+            if (numberValue is BigInteger && "ul" == suffix) {
                 // we follow the way clang/llvm handles this and this seems to always
                 // be an unsigned long long, except if it is explicitly specified as ul
-                if ("ul" == suffix) TypeParser.createFrom("unsigned long", true)
-                else TypeParser.createFrom("unsigned long long", true)
-            } else if (numberValue is Long) {
+                TypeParser.createFrom("unsigned long", true)
+            } else if (numberValue is BigInteger) {
+                TypeParser.createFrom("unsigned long long", true)
+            } else if (numberValue is Long && "ll" == suffix) {
                 // differentiate between long and long long
-                if ("ll" == suffix) TypeParser.createFrom("long long", true)
-                else TypeParser.createFrom("long", true)
+                TypeParser.createFrom("long long", true)
+            } else if (numberValue is Long) {
+                TypeParser.createFrom("long", true)
             } else {
                 TypeParser.createFrom("int", true)
             }

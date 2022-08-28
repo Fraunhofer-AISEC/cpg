@@ -66,11 +66,11 @@ func (f *FunctionDeclaration) SetType(t *Type) {
 }
 
 func (f *FunctionDeclaration) AddParameter(p *ParamVariableDeclaration) {
-	(*jnigi.ObjectRef)(f).CallMethod(env, "addParameter", jnigi.Void, (*jnigi.ObjectRef)(p))
+	(*jnigi.ObjectRef)(f).CallMethod(env, "addParameter", nil, (*jnigi.ObjectRef)(p))
 }
 
 func (f *FunctionDeclaration) SetBody(s *Statement) (err error) {
-	_, err = (*jnigi.ObjectRef)(f).CallMethod(env, "setBody", jnigi.Void, (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
+	err = (*jnigi.ObjectRef)(f).CallMethod(env, "setBody", nil, (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
 
 	return
 }
@@ -88,14 +88,15 @@ func (m *MethodDeclaration) SetReceiver(v *VariableDeclaration) error {
 }
 
 func (m *MethodDeclaration) GetReceiver() *VariableDeclaration {
-	o, err := (*jnigi.ObjectRef)(m).GetField(env, "receiver", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration"))
+	o := jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration")
+	err := (*jnigi.ObjectRef)(m).GetField(env, "receiver", o)
 
 	if err != nil {
 		log.Fatal(err)
 		debug.PrintStack()
 	}
 
-	return (*VariableDeclaration)(o.(*jnigi.ObjectRef))
+	return (*VariableDeclaration)(o)
 }
 
 func (p *ParamVariableDeclaration) SetType(t *Type) {
@@ -127,7 +128,7 @@ func (v *VariableDeclaration) IsNil() bool {
 }
 
 func (v *VariableDeclaration) SetInitializer(e *Expression) (err error) {
-	_, err = (*jnigi.ObjectRef)(v).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	err = (*jnigi.ObjectRef)(v).CallMethod(env, "setInitializer", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 
 	return
 }
@@ -137,13 +138,14 @@ func (v *VariableDeclaration) Declaration() *Declaration {
 }
 
 func (t *TranslationUnitDeclaration) GetIncludeByName(s string) *IncludeDeclaration {
-	i, err := (*jnigi.ObjectRef)(t).CallMethod(env, "getIncludeByName", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/IncludeDeclaration"), NewString(s))
+	var i = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/IncludeDeclaration")
+	err := (*jnigi.ObjectRef)(t).CallMethod(env, "getIncludeByName", i, NewString(s))
 	if err != nil {
 		log.Fatal(err)
 		debug.PrintStack()
 	}
 
-	return (*IncludeDeclaration)(i.(*jnigi.ObjectRef))
+	return (*IncludeDeclaration)(i)
 }
 
 func (r *RecordDeclaration) SetName(s string) error {
@@ -155,7 +157,13 @@ func (r *RecordDeclaration) SetKind(s string) error {
 }
 
 func (r *RecordDeclaration) AddMethod(m *MethodDeclaration) (err error) {
-	_, err = (*jnigi.ObjectRef)(r).CallMethod(env, "addMethod", jnigi.Void, (*jnigi.ObjectRef)(m))
+	err = (*jnigi.ObjectRef)(r).CallMethod(env, "addMethod", nil, (*jnigi.ObjectRef)(m))
+
+	return
+}
+
+func (r *RecordDeclaration) AddSuperClass(t *Type) (err error) {
+	(*jnigi.ObjectRef)(r).CallMethod(env, "addSuperClass", nil, t)
 
 	return
 }
@@ -177,23 +185,26 @@ func (c *CaseStatement) SetCaseExpression(e *Expression) error {
 }
 
 func NewTranslationUnitDeclaration(fset *token.FileSet, astNode ast.Node, name string, code string) *TranslationUnitDeclaration {
-	o, err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/NodeBuilder", "newTranslationUnitDeclaration", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"), NewString(name), NewString(code))
+	tu := jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration")
+
+	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/NodeBuilder", "newTranslationUnitDeclaration", tu, NewString(name), NewString(code))
 	if err != nil {
 		log.Fatal(err)
 		debug.PrintStack()
 	}
 
-	return (*TranslationUnitDeclaration)(o.(*jnigi.ObjectRef))
+	return (*TranslationUnitDeclaration)(tu)
 }
 
 func NewNamespaceDeclaration(fset *token.FileSet, astNode ast.Node, name string, code string) *NamespaceDeclaration {
-	o, err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/NodeBuilder", "newNamespaceDeclaration", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/NamespaceDeclaration"), NewString(name), NewString(code))
+	var o = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/NamespaceDeclaration")
+	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/NodeBuilder", "newNamespaceDeclaration", o, NewString(name), NewString(code))
 	if err != nil {
 		log.Fatal(err)
 		debug.PrintStack()
 	}
 
-	return (*NamespaceDeclaration)(o.(*jnigi.ObjectRef))
+	return (*NamespaceDeclaration)(o)
 }
 
 func NewIncludeDeclaration(fset *token.FileSet, astNode ast.Node) *IncludeDeclaration {
