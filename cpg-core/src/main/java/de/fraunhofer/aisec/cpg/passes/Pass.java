@@ -68,8 +68,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
 
     // collect all dependencies added by [RegisterDependency] annotations.
     if (this.getClass().isAnnotationPresent(DependsOn.class)) {
-      DependsOn[] dependencies =
-          this.getClass().getAnnotationsByType(DependsOn.class);
+      DependsOn[] dependencies = this.getClass().getAnnotationsByType(DependsOn.class);
       for (DependsOn d : dependencies) {
         if (d.softDependency()) {
           softDependencies.add(d.value());
