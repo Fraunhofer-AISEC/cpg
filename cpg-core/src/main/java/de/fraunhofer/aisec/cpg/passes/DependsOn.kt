@@ -38,7 +38,7 @@ import kotlin.reflect.KClass
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class RegisterDependency(
+annotation class DependsOn(
     val value: KClass<out Pass>,
     val softDependency: Boolean = false
 )

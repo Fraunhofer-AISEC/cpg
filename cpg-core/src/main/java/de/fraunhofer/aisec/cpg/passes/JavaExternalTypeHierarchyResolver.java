@@ -40,7 +40,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RegisterDependency(TypeHierarchyResolver.class)
+@DependsOn(TypeHierarchyResolver.class)
 @RequiredFrontend(JavaLanguageFrontend.class)
 public class JavaExternalTypeHierarchyResolver extends Pass {
   private static final Logger LOGGER =

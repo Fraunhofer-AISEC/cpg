@@ -67,10 +67,10 @@ public abstract class Pass implements Consumer<TranslationResult> {
     softDependencies = new HashSet<>();
 
     // collect all dependencies added by [RegisterDependency] annotations.
-    if (this.getClass().isAnnotationPresent(RegisterDependency.class)) {
-      RegisterDependency[] dependencies =
-          this.getClass().getAnnotationsByType(RegisterDependency.class);
-      for (RegisterDependency d : dependencies) {
+    if (this.getClass().isAnnotationPresent(DependsOn.class)) {
+      DependsOn[] dependencies =
+          this.getClass().getAnnotationsByType(DependsOn.class);
+      for (DependsOn d : dependencies) {
         if (d.softDependency()) {
           softDependencies.add(d.value());
         } else {
@@ -151,7 +151,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
    * @return true, if the pass does not require a specific language frontend or if it matches the
    *     [RequiredLanguage]
    */
-  public boolean runWithCurrentFrontend() {
+  public boolean runsWithCurrentFrontend() {
     if (this.getClass().isAnnotationPresent(RequiredFrontend.class)) {
       Class<? extends LanguageFrontend> frontend =
           this.getClass().getAnnotation(RequiredFrontend.class).value();

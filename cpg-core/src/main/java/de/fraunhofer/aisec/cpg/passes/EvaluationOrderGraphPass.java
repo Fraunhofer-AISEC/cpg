@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
  *       of the methods as a node.
  * </ul>
  */
-@RegisterDependency(CallResolver.class)
+@DependsOn(CallResolver.class)
 public class EvaluationOrderGraphPass extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass.class);

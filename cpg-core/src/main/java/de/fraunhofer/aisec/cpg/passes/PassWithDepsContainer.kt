@@ -111,7 +111,7 @@ class PassWithDepsContainer {
     }
 
     /**
-     * Recursively iterates the workingList and adds all hard dependencies [RegisterDependency] and
+     * Recursively iterates the workingList and adds all hard dependencies [DependsOn] and
      * their dependencies to the workingList.
      */
     fun addMissingDependencies() {

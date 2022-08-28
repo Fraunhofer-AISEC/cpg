@@ -98,7 +98,7 @@ private constructor(
                 for (pass in config.registeredPasses) {
                     passesNeedCleanup.add(pass)
                     bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                    if (pass.runWithCurrentFrontend()) {
+                    if (pass.runsWithCurrentFrontend()) {
                         pass.accept(result)
                     }
                     bench.addMeasurement()
