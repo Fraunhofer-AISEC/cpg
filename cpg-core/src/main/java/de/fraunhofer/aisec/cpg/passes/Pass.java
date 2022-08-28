@@ -66,7 +66,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
     hardDependencies = new HashSet<>();
     softDependencies = new HashSet<>();
 
-    // collect all dependencies added by [RegisterDependency] annotations.
+    // collect all dependencies added by [DependsOn] annotations.
     if (this.getClass().isAnnotationPresent(DependsOn.class)) {
       DependsOn[] dependencies = this.getClass().getAnnotationsByType(DependsOn.class);
       for (DependsOn d : dependencies) {
