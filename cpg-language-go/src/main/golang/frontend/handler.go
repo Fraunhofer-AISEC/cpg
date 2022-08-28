@@ -1184,7 +1184,16 @@ func (this *GoLanguageFrontend) handleCompositeLit(fset *token.FileSet, lit *ast
 	return c
 }
 
-func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Ident) *cpg.DeclaredReferenceExpression {
+func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Ident) *cpg.Expression {
+	// Check, if this is 'nil', because then we handle it as a literal in the graph
+	if ident.Name == "nil" {
+		lit := cpg.NewLiteral(fset, ident)
+
+		(*cpg.Node)(lit).SetName(ident.Name)
+
+		return (*cpg.Expression)(lit)
+	}
+
 	ref := cpg.NewDeclaredReferenceExpression(fset, ident)
 
 	tu := this.GetCurrentTU()
@@ -1199,7 +1208,7 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 
 	ref.SetName(ident.Name)
 
-	return ref
+	return (*cpg.Expression)(ref)
 }
 
 func (this *GoLanguageFrontend) handleTypeAssertExpr(fset *token.FileSet, assert *ast.TypeAssertExpr) *cpg.CastExpression {
