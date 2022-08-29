@@ -70,6 +70,7 @@ import org.slf4j.LoggerFactory;
  *       of the methods as a node.
  * </ul>
  */
+@DependsOn(CallResolver.class)
 public class EvaluationOrderGraphPass extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass.class);
@@ -85,6 +86,7 @@ public class EvaluationOrderGraphPass extends Pass {
   protected final List<Node> intermediateNodes = new ArrayList<>();
 
   public EvaluationOrderGraphPass() {
+    super();
     map.put(IncludeDeclaration.class, this::doNothing);
     map.put(TranslationUnitDeclaration.class, this::handleTranslationUnitDeclaration);
     map.put(NamespaceDeclaration.class, this::handleNamespaceDeclaration);

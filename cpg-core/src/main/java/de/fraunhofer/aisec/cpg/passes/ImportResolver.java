@@ -40,6 +40,8 @@ import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+@DependsOn(TypeHierarchyResolver.class)
+@DependsOn(value = JavaExternalTypeHierarchyResolver.class, softDependency = true)
 public class ImportResolver extends Pass {
 
   protected final List<RecordDeclaration> records = new ArrayList<>();

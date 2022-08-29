@@ -28,7 +28,10 @@ package de.fraunhofer.aisec.cpg.passes;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Consumer;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,8 +47,36 @@ public abstract class Pass implements Consumer<TranslationResult> {
 
   protected static final Logger log = LoggerFactory.getLogger(Pass.class);
 
+  /**
+   * Dependencies which - if present - have to be executed before this pass. Note: Dependencies
+   * registered here will not be added automatically to the list of active passes. Use
+   * [hardDependencies] to add them automatically.
+   */
+  private final Set<Class<? extends Pass>> softDependencies;
+
+  /**
+   * Dependencies which have to be executed before this pass. Note: Dependencies registered here
+   * will be added to the list of active passes automatically. Use [softDependencies] if this is not
+   * desired.
+   */
+  private final Set<Class<? extends Pass>> hardDependencies;
+
   protected Pass() {
     name = this.getClass().getName();
+    hardDependencies = new HashSet<>();
+    softDependencies = new HashSet<>();
+
+    // collect all dependencies added by [DependsOn] annotations.
+    if (this.getClass().isAnnotationPresent(DependsOn.class)) {
+      DependsOn[] dependencies = this.getClass().getAnnotationsByType(DependsOn.class);
+      for (DependsOn d : dependencies) {
+        if (d.softDependency()) {
+          softDependencies.add(d.value());
+        } else {
+          hardDependencies.add(d.value());
+        }
+      }
+    }
   }
 
   @JsonIgnore @Nullable protected LanguageFrontend lang;
@@ -85,5 +116,51 @@ public abstract class Pass implements Consumer<TranslationResult> {
    */
   public boolean supportsLanguageFrontend(LanguageFrontend lang) {
     return true;
+  }
+
+  @NotNull
+  public Boolean isLastPass() {
+    try {
+      return this.getClass().isAnnotationPresent(ExecuteLast.class);
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  @NotNull
+  public Boolean isFirstPass() {
+    try {
+      return this.getClass().isAnnotationPresent(ExecuteFirst.class);
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  public Set<Class<? extends Pass>> getSoftDependencies() {
+    return this.softDependencies;
+  }
+
+  public Set<Class<? extends Pass>> getHardDependencies() {
+    return hardDependencies;
+  }
+
+  /**
+   * Check whether the current language matches the language required by [RequiredLanguage]
+   *
+   * @return true, if the pass does not require a specific language frontend or if it matches the
+   *     [RequiredLanguage]
+   */
+  public boolean runsWithCurrentFrontend() {
+    if (this.getClass().isAnnotationPresent(RequiredFrontend.class)) {
+      Class<? extends LanguageFrontend> frontend =
+          this.getClass().getAnnotation(RequiredFrontend.class).value();
+      if (this.lang != null) {
+        return this.lang.getClass() == frontend;
+      } else {
+        return true;
+      }
+    } else {
+      return true;
+    }
   }
 }

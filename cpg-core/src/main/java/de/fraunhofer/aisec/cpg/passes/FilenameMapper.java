@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import org.jetbrains.annotations.NotNull;
 
+@ExecuteLast
 public class FilenameMapper extends Pass {
-
   @Override
   public void accept(TranslationResult translationResult) {
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
