@@ -62,7 +62,7 @@ class CompilationDatabase : Plugin {
                     "import de.fraunhofer.aisec.cpg.graph.statements.expressions.*",
                     // helper builtins
                     "import de.fraunhofer.aisec.cpg.graph.evaluate",
-                    "import de.fraunhofer.aisec.cpg.graph.all",
+                    "import de.fraunhofer.aisec.cpg.graph.allChildren",
                     "import de.fraunhofer.aisec.cpg.graph.ast",
                     "import de.fraunhofer.aisec.cpg.graph.dfgFrom",
                     "import de.fraunhofer.aisec.cpg.graph.byName",
