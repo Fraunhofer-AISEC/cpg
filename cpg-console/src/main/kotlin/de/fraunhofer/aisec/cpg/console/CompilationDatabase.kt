@@ -31,12 +31,12 @@ import org.jetbrains.kotlinx.ki.shell.Plugin
 import org.jetbrains.kotlinx.ki.shell.Shell
 import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfiguration
 
-class TranslatePlugin : Plugin {
+class CompilationDatabase : Plugin {
     inner class Load(conf: ReplConfiguration) : BaseCommand() {
-        override val name: String by conf.get(default = "translate")
-        override val short: String by conf.get(default = "tr")
+        override val name: String by conf.get(default = "translateCompilationDatabase")
+        override val short: String by conf.get(default = "trdb")
         override val description: String =
-            "translates the source code files at the path into the CPG"
+            "translates the source code files using the provided compilation database into the CPG"
 
         override val params = "<path>"
 
@@ -71,12 +71,14 @@ class TranslatePlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.console.printCode",
                     // some basic java stuff
                     "import java.io.File",
+                    // prepare the compilation database
+                    "import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile",
+                    "val db = fromFile(File(\"$path\"))",
                     // lets build and analyze
                     "@OptIn(de.fraunhofer.aisec.cpg.ExperimentalGolang::class, de.fraunhofer.aisec.cpg.ExperimentalPython::class) val config =\n" +
                         "                TranslationConfiguration.builder()\n" +
-                        "                    .sourceLocations(File(\"" +
-                        path +
-                        "\"))\n" +
+                        "                    .useCompilationDatabase(db)\n" +
+                        "                    .sourceLocations(db.sourceFiles)\n" +
                         "                    .defaultLanguages()\n" +
                         //                      "
                         // .registerLanguage(GoLanguageFrontend::class.java,
@@ -104,7 +106,5 @@ class TranslatePlugin : Plugin {
         repl.registerCommand(Load(config))
     }
 
-    override fun cleanUp() {
-        // nothing to do
-    }
+    override fun cleanUp() {}
 }

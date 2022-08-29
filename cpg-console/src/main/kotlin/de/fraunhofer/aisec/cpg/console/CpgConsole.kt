@@ -88,6 +88,7 @@ object CpgConsole {
                         list += Neo4jPlugin()
                         list += ShowCodePlugin()
                         list += RunPlugin()
+                        list += CompilationDatabase()
 
                         return list.listIterator()
                     }
