@@ -33,14 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.types.*
 import java.nio.file.Path
 import java.util.function.Predicate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 internal class FunctionTemplateTest : BaseTest() {
@@ -145,7 +143,9 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, functionTemplateDeclaration.realization.size)
 
         val fixedMultiply = functionTemplateDeclaration.realization[0]
-        assertEquals(typeT, fixedMultiply.type)
+        val funcType = fixedMultiply.type as? FunctionType
+        assertNotNull(funcType)
+        assertEquals(typeT, funcType.returnTypes.firstOrNull())
 
         val `val` = fixedMultiply.parameters[0]
         assertEquals(typeT, `val`.type)
@@ -182,7 +182,7 @@ internal class FunctionTemplateTest : BaseTest() {
             )
         val doubleFixedMultiply =
             findByUniquePredicate(result.functions) { f: FunctionDeclaration ->
-                f.name == "fixed_multiply" && f.type.name == "double"
+                f.name == "fixed_multiply" && f.returnTypes.firstOrNull()?.name == "double"
             }
         val call =
             findByUniquePredicate(result.calls) { c: CallExpression -> c.name == "fixed_multiply" }
@@ -212,7 +212,7 @@ internal class FunctionTemplateTest : BaseTest() {
             }
         val fixedMultiply =
             findByUniquePredicate(result.functions) { f: FunctionDeclaration ->
-                f.name == "fixed_multiply" && f.type.name == "T"
+                f.name == "fixed_multiply" && f.returnTypes.firstOrNull()?.name == "T"
             }
 
         // Check realization of template maps to our target function
@@ -261,7 +261,7 @@ internal class FunctionTemplateTest : BaseTest() {
             }
         val fixedMultiply =
             findByUniquePredicate(result.functions) { f: FunctionDeclaration ->
-                f.name == "fixed_multiply" && f.type.name == "T"
+                f.name == "fixed_multiply" && f.returnTypes.firstOrNull()?.name == "T"
             }
 
         // Check realization of template maps to our target function
@@ -295,12 +295,11 @@ internal class FunctionTemplateTest : BaseTest() {
             )
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
-                t: FunctionTemplateDeclaration ->
-                t.name == "fixed_multiply"
+                it.name == "fixed_multiply"
             }
         val fixedMultiply =
-            findByUniquePredicate(result.functions) { f: FunctionDeclaration ->
-                f.name == "fixed_multiply" && f.type.name == "T"
+            findByUniquePredicate(result.functions) {
+                it.name == "fixed_multiply" && it.returnTypes.firstOrNull()?.name == "T"
             }
 
         // Check realization of template maps to our target function
@@ -315,9 +314,7 @@ internal class FunctionTemplateTest : BaseTest() {
 
         // Check template parameters
         val intType =
-            findByUniquePredicate<ObjectType>(result.allChildren<ObjectType>()) { t: ObjectType ->
-                t.name == "int"
-            }
+            findByUniquePredicate(result.allChildren()) { t: ObjectType -> t.name == "int" }
         val literal5 =
             findByUniquePredicate<Literal<*>>(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)
@@ -345,7 +342,7 @@ internal class FunctionTemplateTest : BaseTest() {
             }
         val fixedMultiply =
             findByUniquePredicate(result.functions) { f: FunctionDeclaration ->
-                f.name == "fixed_multiply" && f.type.name == "T"
+                f.name == "fixed_multiply" && f.returnTypes.firstOrNull()?.name == "T"
             }
 
         // Check realization of template maps to our target function
@@ -394,7 +391,7 @@ internal class FunctionTemplateTest : BaseTest() {
             }
         val fixedMultiply =
             findByUniquePredicate(result.functions) { f: FunctionDeclaration ->
-                f.name == "fixed_multiply" && f.type.name == "T"
+                f.name == "fixed_multiply" && f.returnTypes.firstOrNull()?.name == "T"
             }
 
         // Check realization of template maps to our target function

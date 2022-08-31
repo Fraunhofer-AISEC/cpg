@@ -153,7 +153,7 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testParamVarNameAccessed() {
-        val declaration = outerFunction2?.parameters["varName"]
+        val declaration = outerFunction2.parameters["varName"]
         assertUsageOf(callParamMap["func2_param_varName"], declaration)
     }
 

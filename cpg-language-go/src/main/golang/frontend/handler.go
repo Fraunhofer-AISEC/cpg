@@ -258,17 +258,18 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		this.GetScopeManager().AddDeclaration((*cpg.Declaration)(receiver))
 	}
 
-	var t *cpg.Type
+	var t *cpg.Type = this.handleType(funcDecl.Type)
+	var returnTypes []*cpg.Type = []*cpg.Type{}
 
 	// TODO: for now, just the first result type. Maybe later combine it into a pair?
 	if funcDecl.Type.Results == nil {
 		// its proably void
-		t = cpg.TypeParser_createFrom("void", false)
+		returnTypes = append(returnTypes, cpg.TypeParser_createFrom("void", false))
 	} else {
-		t = this.handleType(funcDecl.Type.Results.List[0].Type)
-
-		// if the function has named return variables, be sure to declare them as well
 		for _, returnVariable := range funcDecl.Type.Results.List {
+			returnTypes = append(returnTypes, this.handleType(returnVariable.Type))
+
+			// if the function has named return variables, be sure to declare them as well
 			if returnVariable.Names != nil {
 				p := cpg.NewVariableDeclaration(fset, returnVariable)
 
@@ -284,6 +285,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 	this.LogDebug("Function has return type %s", t.GetName())
 
 	f.SetType(t)
+	f.SetReturnTypes(returnTypes)
 
 	// TODO: for other languages, we would enter the record declaration, if
 	// this is a method; however I am not quite sure if this makes sense for
@@ -1227,6 +1229,8 @@ func (this *GoLanguageFrontend) handleTypeAssertExpr(fset *token.FileSet, assert
 }
 
 func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
+	var err error
+
 	this.LogDebug("Parsing type %T: %+v", typeExpr, typeExpr)
 
 	switch v := typeExpr.(type) {
@@ -1245,7 +1249,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		t := this.handleType(v.X)
 
 		var i = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin")
-		err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", i)
+		err = env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", i)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -1257,7 +1261,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		t := this.handleType(v.Elt)
 
 		var i = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin")
-		err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "ARRAY", i)
+		err = env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "ARRAY", i)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -1286,12 +1290,44 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 
 		return t
 	case *ast.FuncType:
-		if v.Results == nil {
-			return cpg.TypeParser_createFrom("void", false)
-		} else {
-			// for now, we are only interested in the return type
-			return this.handleType(v.Results.List[0].Type)
+		var parametersTypesList, returnTypesList, name *jnigi.ObjectRef
+		var parameterTypes = []*cpg.Type{}
+		var returnTypes = []*cpg.Type{}
+
+		for _, param := range v.Params.List {
+			parameterTypes = append(parameterTypes, this.handleType(param.Type))
 		}
+
+		parametersTypesList, err = cpg.ListOf(parameterTypes)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if v.Results != nil {
+			for _, ret := range v.Results.List {
+				returnTypes = append(returnTypes, this.handleType(ret.Type))
+			}
+		}
+
+		returnTypesList, err = cpg.ListOf(returnTypes)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		name, err = cpg.StringOf(funcTypeName(parameterTypes, returnTypes))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var t, err = env.NewObject("de/fraunhofer/aisec/cpg/graph/types/FunctionType",
+			name,
+			parametersTypesList.Cast("java/util/List"),
+			returnTypesList.Cast("java/util/List"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return &cpg.Type{ObjectRef: t}
 	}
 
 	return &cpg.UnknownType_getUnknown().Type
@@ -1342,4 +1378,28 @@ func (this *GoLanguageFrontend) isBuiltinType(s string) bool {
 	default:
 		return false
 	}
+}
+
+// funcTypeName produces a Go-style function type name such as `func(int, string) string` or `func(int) (error, string)`
+func funcTypeName(paramTypes []*cpg.Type, returnTypes []*cpg.Type) string {
+	var rn []string
+	var pn []string
+
+	for _, t := range paramTypes {
+		pn = append(pn, t.GetName())
+	}
+
+	for _, t := range returnTypes {
+		rn = append(rn, t.GetName())
+	}
+
+	var rs string
+
+	if len(returnTypes) > 1 {
+		rs = fmt.Sprintf(" (%s)", strings.Join(rn, ", "))
+	} else if len(returnTypes) > 0 {
+		rs = fmt.Sprintf(" %s", strings.Join(rn, ", "))
+	}
+
+	return fmt.Sprintf("func(%s)%s", strings.Join(pn, ", "), rs)
 }

@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
+import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
@@ -629,8 +630,14 @@ class ScopeManager {
                     // for equality
                     if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
                         val fptrType = (ref as HasType).type as FunctionPointerType
-                        val d = it
-                        if (d.type == fptrType.returnType && d.hasSignature(fptrType.parameters)) {
+                        // TODO(oxisto): This is the third place where function pointers are
+                        //   resolved. WHY?
+                        // TODO(oxisto): Support multiple return values
+                        val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
+                        if (
+                            returnType == fptrType.returnType &&
+                                it.hasSignature(fptrType.parameters)
+                        ) {
                             return@resolve true
                         }
                     } else {

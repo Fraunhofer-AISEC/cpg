@@ -32,6 +32,9 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -462,10 +465,23 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
      * Returns the [Type] that is represented by the [declarator] and [specifier]. This tries to
      * resolve as much information about the type on its own using by analyzing the AST of the
      * supplied declarator and specifier. Finally, [TypeParser.createFrom] is invoked on the
-     * inner-most type, but all other type adjustments, such as creating a [PointerType] is done
+     * innermost type, but all other type adjustments, such as creating a [PointerType] is done
      * within this method.
+     *
+     * Optionally, a [hint] in the form of an existing [Declaration] can be provided. The idea
+     * behind this, is that in some scenarios we create the [Declaration] before the type and in
+     * some, we derive the declaration from the type. In the first one, we might get some necessary
+     * information from the declaration, that influences the type parsing. One such example is that
+     * we check, whether a declaration is a [ConstructorDeclaration] and return an [ObjectType] that
+     * corresponds with the record name it instantiates.
+     *
+     * @param hint an optional [Declaration], which serves as a parsing hint.
      */
-    fun typeOf(declarator: IASTDeclarator, specifier: IASTDeclSpecifier): Type {
+    fun typeOf(
+        declarator: IASTDeclarator,
+        specifier: IASTDeclSpecifier,
+        hint: Declaration? = null
+    ): Type {
         // Retrieve the "name" of this type, including qualifiers.
         // TODO: In the future, we should parse the qualifiers, such as const here, instead of in
         //  the TypeParser
@@ -474,8 +490,12 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         var type =
             when (specifier) {
                 is IASTSimpleDeclSpecifier -> {
-                    // A primitive type
-                    TypeParser.createFrom(name, false)
+                    if (hint is ConstructorDeclaration) {
+                        TypeParser.createFrom(hint.name, false)
+                    } else {
+                        // A primitive type
+                        TypeParser.createFrom(name, false)
+                    }
                 }
                 is IASTNamedTypeSpecifier -> {
                     val nameDecl = specifier.name
@@ -506,8 +526,8 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             }
 
         type = TypeManager.getInstance().registerType(type)
-
         type = this.adjustType(declarator, type)
+
         return type
     }
 
@@ -564,9 +584,15 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 )
             }
 
-            // We need to construct a function (pointer) type here. The existing type
-            // so far is the return value. We then add the parameters
-            type = FunctionPointerType(type.qualifier, type.storage, paramTypes, type)
+            // We need to construct a function type here. The existing type
+            // so far is the return value. We then add the parameters and give it a name.
+            val name =
+                paramTypes.joinToString(
+                    FunctionDeclaration.COMMA + FunctionDeclaration.WHITESPACE,
+                    FunctionDeclaration.BRACKET_LEFT,
+                    FunctionDeclaration.BRACKET_RIGHT
+                ) { it.typeName } + type.typeName
+            type = FunctionType(name, paramTypes, listOf(type), type.qualifier, type.storage)
         }
 
         // Lastly, there might be further nested declarators that adjust the type further.

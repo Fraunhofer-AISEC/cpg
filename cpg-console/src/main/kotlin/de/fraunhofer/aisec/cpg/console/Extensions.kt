@@ -277,8 +277,10 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
             // color the name
             fancyWord(node.name, node, list, styles.function)
 
-            // forward it to the body
-            list.addAll(getFanciesFor(original, node.body))
+            node.body?.let {
+                // forward it to the body
+                list.addAll(getFanciesFor(original, it))
+            }
 
             return list
         }

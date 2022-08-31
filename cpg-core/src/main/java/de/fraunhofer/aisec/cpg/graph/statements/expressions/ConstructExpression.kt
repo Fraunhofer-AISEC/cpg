@@ -32,6 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -71,9 +73,37 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
             }
         }
 
+    /**
+     * This function implements the [HasType.TypeListener] interface. We need to be really careful
+     * about type changes in the [ConstructExpression]. The problem is, that usually, a
+     * [VariableDeclaration] is registered as a type listener for its initializer, e.g, to infer the
+     * type of the variable declaration based on its literal initializer. BUT, if the initializer
+     * also implements [HasType.TypeListener], as does [ConstructExpression], the initializer is
+     * also registered as a type listener for the declaration. The reason for that is primary
+     * stemming from the way the C++ AST works where we need to get information about `Integer
+     * i(4)`, in which the `Integer` type is only available to the declaration AST element and `(4)`
+     * which is the [ConstructExpression] does not have the type information.
+     *
+     * Furthermore, there is a second source of type listening events coming from the [CallResolver]
+     * , more specifically, if [CallExpression.invokes] is set. In this case, the call target, i.e.,
+     * the [ConstructorDeclaration] invokes this function here. We have to differentiate between
+     * those two, because in the second case we are not interested in the full
+     * [FunctionDeclaration.type] that propagates this change (which is a [FunctionType], but only
+     * its [FunctionDeclaration.returnTypes]. This is already handled by
+     * [CallExpression.typeChanged], so we can just delegate to that.
+     *
+     * In fact, we could get rid of this particular implementation altogether, if we would somehow
+     * work around the first case in a different way.
+     */
     override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
+        }
+
+        // In the second case (see above), the src is always a function declaration, so we can
+        // delegate this to our parent.
+        if (src is FunctionDeclaration) {
+            return super.typeChanged(src, root, oldType)
         }
 
         val previous: Type = this.type

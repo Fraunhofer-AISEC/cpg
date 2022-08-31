@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.nio.file.Path
 import kotlin.test.Test
@@ -260,15 +261,29 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["p"]
         assertNotNull(p)
 
-        val main = p.declarations.first() as? FunctionDeclaration
+        val main = p.functions["main"]
         assertNotNull(main)
 
-        val myTest = p.declarations[1] as? FunctionDeclaration
+        var type = main.type as? FunctionType
+        assertNotNull(type)
+        assertEquals("func()", type.name)
+        assertEquals(0, type.parameters.size)
+        assertEquals(0, type.returnTypes.size)
+
+        val myTest = p.functions["myTest"]
         assertNotNull(myTest)
         assertEquals(1, myTest.parameters.size)
+        assertEquals(2, myTest.returnTypes.size)
+
+        type = myTest.type as? FunctionType
+        assertNotNull(type)
+        assertEquals("func(string) (int, error)", type.name)
+        assertEquals(myTest.parameters.size, type.parameters.size)
+        assertEquals(myTest.returnTypes.size, type.returnTypes.size)
+        assertEquals(listOf("int", "error"), type.returnTypes.map { it.name })
 
         var body = main.body as? CompoundStatement
         assertNotNull(body)
@@ -307,15 +322,15 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals("s", ref.name)
         assertEquals(s, ref.refersTo)
 
-        val stmt = body.statements[1] as? DeclarationStatement
+        val stmt = body.statements[1] as? BinaryOperator
         assertNotNull(stmt)
 
-        val a = stmt.singleDeclaration as? VariableDeclaration
+        val a = stmt.lhs as? DeclaredReferenceExpression
         assertNotNull(a)
 
         assertEquals("a", a.name)
 
-        val op = a.initializer as? BinaryOperator
+        val op = stmt.rhs as? BinaryOperator
         assertNotNull(op)
 
         assertEquals("+", op.operatorCode)
@@ -391,7 +406,7 @@ class GoLanguageFrontendTest : BaseTest() {
         myFunc = methods.first()
 
         assertEquals("MyFunc", myFunc.name)
-        assertEquals(TypeParser.createFrom("string", false), myFunc.type)
+        assertEquals("func() string", myFunc.type.name)
 
         val newMyStruct =
             p.getDeclarationsByName("NewMyStruct", FunctionDeclaration::class.java)
@@ -644,25 +659,21 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals(TypeParser.createFrom("p.MyStruct*", false), c.type)
 
         val newMyStruct = c.initializer as? CallExpression
+        assertNotNull(newMyStruct)
 
         // fetch the function declaration from the other TU
         val tu2 = tus[1]
 
-        val p2 = tu2.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
-        val newMyStructDef =
-            p2.getDeclarationsByName("NewMyStruct", FunctionDeclaration::class.java)
-                .iterator()
-                .next()
+        val p2 = tu2.namespaces["p"]
+        assertNotNull(p2)
 
-        assertNotNull(newMyStruct)
+        val newMyStructDef = p2.functions["NewMyStruct"]
         assertTrue(newMyStruct.invokes.contains(newMyStructDef))
 
         val call = body.statements[1] as? MemberCallExpression
-
         assertNotNull(call)
 
         val base = call.base as? DeclaredReferenceExpression
-
         assertNotNull(base)
         assertEquals(c, base.refersTo)
     }

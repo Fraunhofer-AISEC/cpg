@@ -690,10 +690,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val method = recordDeclaration.methods[0]
         assertEquals("method", method.name)
         assertEquals(0, method.parameters.size)
-        assertEquals(TypeParser.createFrom("void*", true), method.type)
+        assertEquals("()void*", method.type.typeName)
         assertFalse(method.hasBody())
 
-        var definition = method.definition as MethodDeclaration
+        var definition = method.definition as? MethodDeclaration
         assertNotNull(definition)
         assertEquals("method", definition.name)
         assertEquals(0, definition.parameters.size)
@@ -703,7 +703,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals("method", methodWithParam.name)
         assertEquals(1, methodWithParam.parameters.size)
         assertEquals(TypeParser.createFrom("int", true), methodWithParam.parameters[0].type)
-        assertEquals(TypeParser.createFrom("void*", true), methodWithParam.type)
+        assertEquals(
+            FunctionType(
+                "(int)void*",
+                listOf(TypeParser.createFrom("int", true)),
+                listOf(TypeParser.createFrom("void*", true))
+            ),
+            methodWithParam.type
+        )
         assertFalse(methodWithParam.hasBody())
 
         definition = methodWithParam.definition as MethodDeclaration
@@ -714,12 +721,18 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val inlineMethod = recordDeclaration.methods[2]
         assertEquals("inlineMethod", inlineMethod.name)
-        assertEquals(TypeParser.createFrom("void*", true), inlineMethod.type)
+        assertEquals(
+            FunctionType("()void*", listOf(), listOf(TypeParser.createFrom("void*", true))),
+            inlineMethod.type
+        )
         assertTrue(inlineMethod.hasBody())
 
         val inlineConstructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration.name, inlineConstructor.name)
-        assertEquals(TypeParser.createFrom("SomeClass", true), inlineConstructor.type)
+        assertEquals(
+            FunctionType("()SomeClass", listOf(), listOf(TypeParser.createFrom("SomeClass", true))),
+            inlineConstructor.type
+        )
         assertTrue(inlineConstructor.hasBody())
 
         val constructorDefinition =
@@ -727,7 +740,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(constructorDefinition)
         assertEquals(1, constructorDefinition.parameters.size)
         assertEquals(TypeParser.createFrom("int", true), constructorDefinition.parameters[0].type)
-        assertEquals(TypeParser.createFrom("SomeClass", true), constructorDefinition.type)
+        assertEquals(
+            FunctionType(
+                "(int)SomeClass",
+                listOf(TypeParser.createFrom("int", false)),
+                listOf(TypeParser.createFrom("SomeClass", true))
+            ),
+            constructorDefinition.type
+        )
         assertTrue(constructorDefinition.hasBody())
 
         val constructorDeclaration = recordDeclaration.constructors[1]
@@ -840,7 +860,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testObjectCreation() {
-        val file = File("src/test/resources/objcreation.cpp")
+        val file = File("src/test/resources/cxx/objcreation.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         assertNotNull(declaration)
 
@@ -867,6 +887,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 as VariableDeclaration
         // type should be Integer*
         assertEquals(TypeParser.createFrom("Integer*", true), m.type)
+
+        val constructor = constructExpression.constructor
+        assertNotNull(constructor)
+        assertEquals("Integer", constructor.name)
+        assertFalse(constructor.isImplicit)
 
         // initializer should be a new expression
         val newExpression = m.initializer as? NewExpression
@@ -1004,9 +1029,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             declaration.byNameOrNull<FunctionDeclaration>("testExpressionInExpressionList")
         assertEquals("testExpressionInExpressionList()int", function!!.signature)
 
-        val locals = function.body.locals
+        val locals = function.body?.locals
+        assertNotNull(locals)
+
         // Expecting x, foo, t
-        val localNames = locals.stream().map(Node::name).collect(Collectors.toSet())
+        val localNames = locals.map(Node::name).toSet()
         assertTrue(localNames.contains("x"))
         assertTrue(localNames.contains("foo"))
         assertTrue(localNames.contains("t"))
@@ -1175,7 +1202,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testParenthesis() {
-        val file = File("src/test/resources/parenthesis.cpp")
+        val file = File("src/test/resources/cxx/parenthesis.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 config: TranslationConfiguration.Builder ->

@@ -150,10 +150,20 @@ public class VariableUsageResolver extends Pass {
               recordMap.get(containingClass).getMethods().stream()
                   .map(FunctionDeclaration.class::cast)
                   .filter(
-                      f ->
-                          f.getName().equals(finalFunctionName)
-                              && f.getType().equals(fptrType.getReturnType())
-                              && f.hasSignature(fptrType.getParameters()))
+                      f -> {
+                        // TODO(oxisto): there is the same logic in the CallResolver.. why
+                        Type returnType;
+                        if (f.getReturnTypes().isEmpty()) {
+                          returnType = new IncompleteType();
+                        } else {
+                          // TODO(oxisto): support multiple return types
+                          returnType = f.getReturnTypes().get(0);
+                        }
+
+                        return f.getName().equals(finalFunctionName)
+                            && returnType.equals(fptrType.getReturnType())
+                            && f.hasSignature(fptrType.getParameters());
+                      })
                   .findFirst();
         }
       }
@@ -474,18 +484,31 @@ public class VariableUsageResolver extends Pass {
 
   protected FunctionDeclaration handleUnknownMethod(
       String name, Type returnType, List<Type> signature) {
+    // TODO(oxisto): This is actually the fourth place where we resolve function pointers :(
     Optional<FunctionDeclaration> target =
         currTu.getDeclarations().stream()
             .filter(FunctionDeclaration.class::isInstance)
             .map(FunctionDeclaration.class::cast)
             .filter(f -> f.getName().equals(name))
-            .filter(f -> f.getType().equals(returnType))
+            .filter(
+                f -> {
+                  Type type;
+                  if (f.getReturnTypes().isEmpty()) {
+                    type = new IncompleteType();
+                  } else {
+                    // TODO(oxisto): support multiple return types
+                    type = f.getReturnTypes().get(0);
+                  }
+
+                  return type.equals(returnType);
+                })
             .filter(f -> f.hasSignature(signature))
             .findFirst();
     if (target.isEmpty()) {
       FunctionDeclaration declaration = NodeBuilder.newFunctionDeclaration(name, "");
-      declaration.setType(returnType);
       declaration.setParameters(Util.createInferredParameters(signature));
+      declaration.setReturnTypes(Collections.singletonList(returnType));
+      declaration.setType(FunctionType.computeType(declaration));
 
       currTu.addDeclaration(declaration);
       declaration.setInferred(true);

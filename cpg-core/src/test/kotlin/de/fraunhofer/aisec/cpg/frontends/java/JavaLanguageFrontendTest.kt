@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -273,9 +274,17 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertTrue(fields.contains("field"))
 
         val method = recordDeclaration.methods[0]
+        assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
         assertEquals("method", method.name)
-        assertEquals(TypeParser.createFrom("java.lang.Integer", true), method?.type)
+        assertEquals(
+            TypeParser.createFrom("java.lang.Integer", true),
+            method.returnTypes.firstOrNull()
+        )
+
+        val functionType = method.type as? FunctionType
+        assertNotNull(functionType)
+        assertEquals("method()java.lang.Integer", functionType.name)
 
         val constructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration, constructor.recordDeclaration)

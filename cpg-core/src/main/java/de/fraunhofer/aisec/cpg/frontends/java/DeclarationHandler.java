@@ -49,10 +49,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
-import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.List;
@@ -207,8 +204,11 @@ public class DeclarationHandler
       lang.getScopeManager().addDeclaration(param);
     }
 
-    functionDeclaration.setType(
-        this.lang.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod));
+    var returnTypes = List.of(this.lang.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod));
+    functionDeclaration.setReturnTypes(returnTypes);
+
+    var type = FunctionType.computeType(functionDeclaration);
+    functionDeclaration.setType(type);
 
     // check, if method has body (i.e. its not abstract or something)
     Optional<BlockStmt> o = methodDecl.getBody();

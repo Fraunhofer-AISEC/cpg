@@ -37,10 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTypeParamDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
@@ -467,7 +464,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             constructorDeclaration.isImplicit = true
 
             // and set the type, constructors always have implicitly the return type of their class
-            constructorDeclaration.type = TypeParser.createFrom(recordDeclaration.name, true, lang)
+            constructorDeclaration.type = FunctionType.computeType(constructorDeclaration)
             recordDeclaration.addConstructor(constructorDeclaration)
             lang.scopeManager.addDeclaration(constructorDeclaration)
         }
