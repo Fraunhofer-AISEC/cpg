@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.TestUtils.flattenIsInstance
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
@@ -35,22 +34,32 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.Util
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.test.assertContains
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.fail
+import kotlin.test.*
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.mockito.Mockito
 
 object TestUtils {
+
+    /**
+     * Currently when variables or fields are used they can be stored in the expression itself, in
+     * the future, a reference as usage indicator pointing to the used ValueDeclaration is planed.
+     */
+    var ENFORCE_REFERENCES = false
+
+    /**
+     * Currently there is no unified enforced structure when using fields, this field is used set
+     * whether or not the tests enforce the presence of a member expression
+     */
+    var ENFORCE_MEMBER_EXPRESSION = false
+
     fun <S : Node?> findByUniquePredicate(nodes: Collection<S>, predicate: Predicate<S>): S {
         val results = nodes.filter { predicate.test(it) }
 
@@ -66,19 +75,11 @@ object TestUtils {
         return node
     }
 
-    @Deprecated(
-        replaceWith = ReplaceWith("nodes.filter(predicate)"),
-        message = "should be replace with kotlin filter"
-    )
-    fun <S : Node> findByPredicate(nodes: Collection<S>, predicate: (S) -> Boolean): List<S> {
-        return nodes.filter(predicate)
-    }
-
     fun <S : Node> findByUniqueName(nodes: Collection<S>, name: String): S {
         return findByUniquePredicate(nodes) { m: S -> m.name == name }
     }
 
-    fun <S : Node> findByName(nodes: Collection<S>, name: String): List<S> {
+    fun <S : Node> findByName(nodes: Collection<S>, name: String): Collection<S> {
         return nodes.filter { m: S -> m.name == name }
     }
 
@@ -102,12 +103,12 @@ object TestUtils {
         topLevel: Path,
         usePasses: Boolean,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
-    ): List<TranslationUnitDeclaration> {
+    ): TranslationResult {
         val files =
             Files.walk(topLevel, Int.MAX_VALUE)
-                .map { obj: Path -> obj.toFile() }
-                .filter { obj: File -> obj.isFile }
-                .filter { f: File -> f.name.endsWith(fileExtension!!) }
+                .map(Path::toFile)
+                .filter { it.isFile }
+                .filter { it.name.endsWith(fileExtension!!) }
                 .sorted()
                 .collect(Collectors.toList())
         return analyze(files, topLevel, usePasses, configModifier)
@@ -126,27 +127,6 @@ object TestUtils {
     @JvmOverloads
     @Throws(Exception::class)
     fun analyze(
-        files: List<File>?,
-        topLevel: Path,
-        usePasses: Boolean,
-        configModifier: Consumer<TranslationConfiguration.Builder>? = null
-    ): List<TranslationUnitDeclaration> {
-        return analyzeWithResult(files, topLevel, usePasses, configModifier).translationUnits
-    }
-
-    /**
-     * Default way of parsing a list of files into a full CPG. All default passes are applied
-     *
-     * @param topLevel The directory to traverse while looking for files to parse
-     * @param usePasses Whether the analysis should run passes after the initial phase
-     * @param configModifier An optional modifier for the config
-     *
-     * @return A list of [TranslationUnitDeclaration] nodes, representing the CPG roots
-     * @throws Exception Any exception thrown during the parsing process
-     */
-    @JvmOverloads
-    @Throws(Exception::class)
-    fun analyzeWithResult(
         files: List<File>?,
         topLevel: Path,
         usePasses: Boolean,
@@ -196,8 +176,8 @@ object TestUtils {
         usePasses: Boolean,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
     ): TranslationUnitDeclaration {
-        val translationUnits = analyze(files, topLevel, usePasses, configModifier)
-        return translationUnits.stream().findFirst().orElseThrow()
+        val result = analyze(files, topLevel, usePasses, configModifier)
+        return result.translationUnits.first()
     }
 
     @Throws(Exception::class)
@@ -206,7 +186,7 @@ object TestUtils {
         usePasses: Boolean,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
     ): TranslationResult {
-        return analyzeWithResult(listOf(), jsonCompilationDatabase.parentFile.toPath(), usePasses) {
+        return analyze(listOf(), jsonCompilationDatabase.parentFile.toPath(), usePasses) {
             val db = CompilationDatabase.fromFile(jsonCompilationDatabase)
             if (db.isNotEmpty()) {
                 it.useCompilationDatabase(db)
@@ -230,16 +210,13 @@ object TestUtils {
      *
      * @param <S> Some class that extends [Node]. </S>
      */
-    fun <S : Node?> getOfTypeWithName(
-        listOfNodes: List<Node?>?,
-        specificClass: Class<S>?,
+    fun <S : Node> getOfTypeWithName(
+        listOfNodes: List<Node>,
+        specificClass: Class<S>,
         name: String
     ): S? {
         val listOfNodesWithName =
-            Util.filterCast(listOfNodes, specificClass)
-                .stream()
-                .filter { s: S -> s!!.name == name }
-                .collect(Collectors.toList())
+            listOfNodes.filterIsInstance(specificClass).filter { it.name == name }
         return if (listOfNodesWithName.isEmpty()) {
             null
         } else listOfNodesWithName[0]
@@ -252,36 +229,16 @@ object TestUtils {
      *
      * @param <S> Some class that extends [Node]. </S>
      */
-    fun <S : Node?> getSubnodeOfTypeWithName(
+    fun <S : Node> getSubnodeOfTypeWithName(
         root: Node?,
-        specificClass: Class<S>?,
+        specificClass: Class<S>,
         name: String
     ): S? {
+        if (root == null) {
+            return null
+        }
+
         return getOfTypeWithName(SubgraphWalker.flattenAST(root), specificClass, name)
-    }
-
-    /**
-     * Given a root node in the AST graph, all AST children of the node are filtered for a specific
-     * CPG Node type and returned.
-     *
-     * @param node root of the searched AST subtree
-     * @param <S> Type variable that allows returning a list of specific type
-     * @return a List of searched types </S>
-     */
-    inline fun <reified S : Node> flattenIsInstance(node: Node): List<S> {
-        return SubgraphWalker.flattenAST(node).filterIsInstance<S>()
-    }
-
-    /** Similar to [TestUtils.flattenIsInstance] but working in a list of nodes. */
-    inline fun <reified S : Node> flattenListIsInstance(
-        roots: Collection<Node>,
-    ): List<S> {
-        return roots
-            .stream()
-            .map { flattenIsInstance<S>(it) }
-            .flatMap { it.stream() }
-            .filter(Util.distinctByIdentity())
-            .collect(Collectors.toList())
     }
 
     /**
@@ -320,5 +277,58 @@ object TestUtils {
      */
     fun assertInvokes(call: CallExpression, func: FunctionDeclaration?) {
         assertContains(call.invokes, func)
+    }
+
+    /**
+     * Asserts equality or containing of the expected usedNode in the usingNode. If [ ]
+     * [VRUtil.ENFORCE_REFERENCES] is true, `usingNode` must be a [ ] where
+     * [DeclaredReferenceExpression.refersTo] is or contains `usedNode`. If this is not the case,
+     * usage can also be interpreted as equality of the two.
+     *
+     * @param usingNode
+     * - The node that shows usage of another node.
+     * @param usedNode
+     * - The node that is expected to be used.
+     */
+    fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
+        assertNotNull(usingNode)
+        if (usingNode !is DeclaredReferenceExpression && !ENFORCE_REFERENCES) {
+            assertSame(usedNode, usingNode)
+        } else {
+            assertTrue(usingNode is DeclaredReferenceExpression)
+            val reference = usingNode as? DeclaredReferenceExpression
+            assertEquals(reference?.refersTo, usedNode)
+        }
+    }
+
+    /**
+     * Asserts that `usingNode` uses/references the provided `usedBase` and `usedMember`. If
+     * [VRUtil.ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [MemberExpression] where
+     * [MemberExpression.base] uses `usedBase` and [ ][MemberExpression.refersTo] uses `usedMember`.
+     * Using is checked as preformed per [ ][VRUtil.assertUsageOf]
+     *
+     * @param usingNode
+     * - Node that uses some member
+     * @param usedBase
+     * - The expected base that is used
+     * @param usedMember
+     * - THe expected member that is used
+     */
+    fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Node?) {
+        assertNotNull(usingNode)
+        if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
+            // Assumtion here is that the target of the member portion of the expression and not the
+            // base
+            // is resolved
+            assertUsageOf(usingNode, usedMember)
+        } else {
+            assertTrue(usingNode is MemberExpression)
+            val memberExpression = usingNode as MemberExpression?
+            assertNotNull(memberExpression)
+
+            val base: Node = memberExpression.base
+            assertUsageOf(base, usedBase)
+            assertUsageOf(memberExpression.refersTo, usedMember)
+        }
     }
 }

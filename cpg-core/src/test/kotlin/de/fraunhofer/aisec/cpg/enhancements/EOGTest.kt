@@ -30,9 +30,8 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.TestUtils.flattenIsInstance
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -88,12 +87,12 @@ internal class EOGTest : BaseTest() {
         val nodes = translateToNodes(relPath)
 
         // All BinaryOperators (including If conditions) have only one successor
-        val binops = Util.filterCast(nodes, BinaryOperator::class.java)
+        val binops = nodes.filterIsInstance<BinaryOperator>()
         for (binop in binops) {
             val binopEOG = SubgraphWalker.getEOGPathEdges(binop)
             assertEquals(1, binopEOG.exits.size)
         }
-        val ifs = Util.filterCast(nodes, IfStatement::class.java)
+        val ifs = nodes.filterIsInstance<IfStatement>()
         assertEquals(2, ifs.size)
         ifs.forEach(Consumer { ifnode: IfStatement -> assertNotNull(ifnode.thenStatement) })
         assertTrue(
@@ -179,10 +178,9 @@ internal class EOGTest : BaseTest() {
     fun testConditionShortCircuit() {
         val nodes = translateToNodes("src/test/resources/cfg/ShortCircuit.java")
         val binaryOperators =
-            Util.filterCast(nodes, BinaryOperator::class.java)
-                .stream()
-                .filter { bo: BinaryOperator -> bo.operatorCode == "&&" || bo.operatorCode == "||" }
-                .collect(Collectors.toList())
+            nodes.filterIsInstance<BinaryOperator>().filter { bo: BinaryOperator ->
+                bo.operatorCode == "&&" || bo.operatorCode == "||"
+            }
         for (bo in binaryOperators) {
             assertTrue(
                 Util.eogConnect(
@@ -217,7 +215,7 @@ internal class EOGTest : BaseTest() {
                 .stream()
                 .filter { node: Node -> node.code == REFNODESTRINGJAVA }
                 .collect(Collectors.toList())
-        val fstat = Util.filterCast(nodes, ForStatement::class.java)
+        val fstat = nodes.filterIsInstance<ForStatement>()
         var fs = fstat[0]
         assertTrue(Util.eogConnect(Connect.NODE, Util.Edge.EXITS, prints[0], Connect.SUBTREE, fs))
         assertTrue(
@@ -284,7 +282,7 @@ internal class EOGTest : BaseTest() {
                 .stream()
                 .filter { node: Node -> node.code == REFNODESTRINGCXX }
                 .collect(Collectors.toList())
-        val fstat = Util.filterCast(nodes, ForStatement::class.java)
+        val fstat = nodes.filterIsInstance<ForStatement>()
         var fs = fstat[0]
         assertTrue(Util.eogConnect(Connect.NODE, Util.Edge.EXITS, prints[0], Connect.SUBTREE, fs))
         assertTrue(
@@ -374,8 +372,8 @@ internal class EOGTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPPCallGraph() {
         val nodes = translateToNodes("src/test/resources/cg.cpp")
-        val calls = flattenListIsInstance<CallExpression>(nodes)
-        val functions = flattenListIsInstance<FunctionDeclaration>(nodes)
+        val calls = nodes.filterIsInstance<CallExpression>()
+        val functions = nodes.filterIsInstance<FunctionDeclaration>()
         val first = findByUniqueName(calls, "first")
         assertNotNull(first)
 
@@ -429,7 +427,10 @@ internal class EOGTest : BaseTest() {
                 .filter { node: Node -> node.code == refNodeString }
                 .collect(Collectors.toList())
         assertEquals(1, nodes.stream().filter { node: Node? -> node is WhileStatement }.count())
-        val wstat = Util.filterCast(nodes, WhileStatement::class.java)[0]
+
+        val wstat = nodes.filterIsInstance<WhileStatement>().firstOrNull()
+        assertNotNull(wstat)
+
         var conditionEOG = SubgraphWalker.getEOGPathEdges(wstat.condition)
         var blockEOG = SubgraphWalker.getEOGPathEdges(wstat.statement)
 
@@ -462,7 +463,9 @@ internal class EOGTest : BaseTest() {
         // Assert: The EOGs going into the second print come either from the then branch or the
         // condition
         assertTrue(Util.eogConnect(Connect.SUBTREE, Util.Edge.EXITS, wstat, prints[1]))
-        val dostat = Util.filterCast(nodes, DoStatement::class.java)[0]
+        val dostat = nodes.filterIsInstance<DoStatement>().firstOrNull()
+        assertNotNull(dostat)
+
         conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.condition)
         blockEOG = SubgraphWalker.getEOGPathEdges(dostat.statement)
 
@@ -496,16 +499,13 @@ internal class EOGTest : BaseTest() {
     fun testSwitch(relPath: String, refNodeString: String?) {
         val nodes = translateToNodes(relPath)
         val functions =
-            Util.filterCast(nodes, FunctionDeclaration::class.java)
-                .stream()
-                .filter { f: FunctionDeclaration? -> f !is ConstructorDeclaration }
-                .collect(Collectors.toList())
+            nodes.filterIsInstance<FunctionDeclaration>().filter { it !is ConstructorDeclaration }
 
         // main()
-        var swch = flattenIsInstance<SwitchStatement>(functions[0])[0]
+        var swch = functions[0].allChildren<SwitchStatement>()[0]
         var prints = Util.subnodesOfCode(functions[0], refNodeString)
-        var cases = flattenIsInstance<CaseStatement>(swch)
-        var defaults = flattenIsInstance<DefaultStatement>(swch)
+        var cases = swch.allChildren<CaseStatement>()
+        var defaults = swch.allChildren<DefaultStatement>()
         assertTrue(Util.eogConnect(Util.Edge.EXITS, prints[0], Connect.SUBTREE, swch.getSelector()))
         assertTrue(Util.eogConnect(Connect.SUBTREE, Util.Edge.EXITS, swch, prints[1]))
 
@@ -533,7 +533,7 @@ internal class EOGTest : BaseTest() {
         }
 
         // Assert: All breaks inside of switch connect to the switch root node
-        for (b in flattenIsInstance<BreakStatement>(swch)) assertTrue(
+        for (b in swch.allChildren<BreakStatement>()) assertTrue(
             Util.eogConnect(
                 Util.Quantifier.ALL,
                 Connect.SUBTREE,
@@ -545,11 +545,11 @@ internal class EOGTest : BaseTest() {
         )
 
         // whileswitch
-        swch = flattenIsInstance<SwitchStatement>(functions[1])[0]
+        swch = functions[1].allChildren<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[1], refNodeString)
-        cases = flattenIsInstance(swch)
-        defaults = flattenIsInstance(swch)
-        var wstat = flattenIsInstance<WhileStatement>(functions[1]).firstOrNull()
+        cases = swch.allChildren<CaseStatement>()
+        defaults = swch.allChildren<DefaultStatement>()
+        var wstat = functions[1].allChildren<WhileStatement>().firstOrNull()
         assertTrue(Util.eogConnect(Util.Edge.EXITS, prints[0], wstat))
         assertTrue(Util.eogConnect(Connect.NODE, Util.Edge.EXITS, wstat, prints[2]))
         // Assert: switch root node exits connect to either case or default statements entries
@@ -575,18 +575,18 @@ internal class EOGTest : BaseTest() {
         )
 
         // switch-while
-        swch = flattenIsInstance<SwitchStatement>(functions[2])[0]
+        swch = functions[2].allChildren<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[2], refNodeString)
-        wstat = flattenIsInstance<WhileStatement>(functions[2])[0]
-        cases = flattenIsInstance(swch)
-        defaults = flattenIsInstance(swch)
+        wstat = functions[2].allChildren<WhileStatement>()[0]
+        cases = swch.allChildren<CaseStatement>()
+        defaults = swch.allChildren<DefaultStatement>()
         assertTrue(Util.eogConnect(Util.Edge.EXITS, prints[0], swch))
         assertTrue(Util.eogConnect(Util.Edge.EXITS, swch, prints[2]))
         // Assert: Selector exits connect to either case or default statements entries
         assertTrue(Util.eogConnect(Util.Edge.EXITS, swch.getSelector(), Connect.NODE, swch))
-        swch = flattenIsInstance<SwitchStatement>(functions[1])[0]
+        swch = functions[1].allChildren<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[1], refNodeString)
-        var breaks = flattenIsInstance<BreakStatement>(swch)
+        var breaks = swch.allChildren<BreakStatement>()
 
         // Assert: while-switch, all breaks inside the switch connect to the containing switch
         // unless it has a label which connects the break to the  while
@@ -597,10 +597,10 @@ internal class EOGTest : BaseTest() {
                 assertTrue(Util.eogConnect(Util.Edge.EXITS, b, Connect.SUBTREE, prints[1]))
             }
         }
-        swch = flattenIsInstance<SwitchStatement>(functions[2])[0]
+        swch = functions[2].allChildren<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[2], refNodeString)
-        val whiles = flattenIsInstance<WhileStatement>(functions[2])[0]
-        breaks = flattenIsInstance(whiles)
+        val whiles = functions[2].allChildren<WhileStatement>()[0]
+        breaks = whiles.allChildren<BreakStatement>()
 
         // Assert: switch-while, all breaks inside the while connect to the containing while unless
         // it has a label which connects the break to the switch
@@ -646,15 +646,16 @@ internal class EOGTest : BaseTest() {
 
         // Test If-Block
         val firstIf: IfStatement =
-            flattenListIsInstance<IfStatement>(result)
-                .filter { l -> l.location?.region?.startLine == 6 }[0]
+            result.allChildren<IfStatement>().filter { l -> l.location?.region?.startLine == 6 }[0]
         val a: DeclaredReferenceExpression =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
+            result
+                .allChildren<DeclaredReferenceExpression>()
                 .filter { l: DeclaredReferenceExpression ->
                     l.location?.region?.startLine == 8 && l.name == "a"
                 }[0]
         val b: DeclaredReferenceExpression =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
+            result
+                .allChildren<DeclaredReferenceExpression>()
                 .filter { l: DeclaredReferenceExpression ->
                     l.location?.region?.startLine == 7 && l.name == "b"
                 }[0]
@@ -672,16 +673,19 @@ internal class EOGTest : BaseTest() {
             }
         }
         val elseIf: IfStatement =
-            flattenListIsInstance<IfStatement>(result)
+            result
+                .allChildren<IfStatement>()
                 .filter { l: IfStatement -> l.location?.region?.startLine == 8 }[0]
         assertEquals(elseIf, firstIf.elseStatement)
         val b2: DeclaredReferenceExpression =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
+            result
+                .allChildren<DeclaredReferenceExpression>()
                 .filter { l: DeclaredReferenceExpression ->
                     l.location?.region?.startLine == 9 && l.name == "b"
                 }[0]
         val x: DeclaredReferenceExpression =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
+            result
+                .allChildren<DeclaredReferenceExpression>()
                 .filter { l: DeclaredReferenceExpression ->
                     l.location?.region?.startLine == 11 && l.name == "x"
                 }[0]
@@ -716,9 +720,10 @@ internal class EOGTest : BaseTest() {
                 .filter { node: Node -> node.code == refNodeString }
                 .collect(Collectors.toList())
         assertEquals(1, nodes.stream().filter { node: Node? -> node is WhileStatement }.count())
-        val breaks = Util.filterCast(nodes, BreakStatement::class.java)
-        val continues = Util.filterCast(nodes, ContinueStatement::class.java)
-        val wstat = Util.filterCast(nodes, WhileStatement::class.java)[0]
+        val breaks = nodes.filterIsInstance<BreakStatement>()
+        val continues = nodes.filterIsInstance<ContinueStatement>()
+        val wstat = nodes.filterIsInstance<WhileStatement>().firstOrNull()
+        assertNotNull(wstat)
         var conditionEOG = SubgraphWalker.getEOGPathEdges(wstat.condition)
         var blockEOG = SubgraphWalker.getEOGPathEdges(wstat.statement)
 
@@ -745,7 +750,9 @@ internal class EOGTest : BaseTest() {
             Util.eogConnect(Connect.NODE, Util.Edge.EXITS, wstat, prints[1]) ||
                 Util.eogConnect(Connect.NODE, Util.Edge.EXITS, breaks[0], prints[1])
         )
-        val dostat = Util.filterCast(nodes, DoStatement::class.java)[0]
+        val dostat = nodes.filterIsInstance<DoStatement>().firstOrNull()
+        assertNotNull(dostat)
+
         conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.condition)
         blockEOG = SubgraphWalker.getEOGPathEdges(dostat.statement)
 

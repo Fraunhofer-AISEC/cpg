@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -66,19 +65,31 @@ public class NamespaceDeclaration extends Declaration
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 
   public List<FieldDeclaration> getFields() {
-    return Util.filterCast(declarations, FieldDeclaration.class);
+    return declarations.stream()
+        .filter(d -> d instanceof FieldDeclaration)
+        .map(d -> (FieldDeclaration) d)
+        .collect(Collectors.toList());
   }
 
   public List<FunctionDeclaration> getFunctions() {
-    return Util.filterCast(declarations, FunctionDeclaration.class);
+    return declarations.stream()
+        .filter(d -> d instanceof FunctionDeclaration)
+        .map(d -> (FunctionDeclaration) d)
+        .collect(Collectors.toList());
   }
 
   public List<RecordDeclaration> getRecords() {
-    return Util.filterCast(declarations, RecordDeclaration.class);
+    return declarations.stream()
+        .filter(d -> d instanceof RecordDeclaration)
+        .map(d -> (RecordDeclaration) d)
+        .collect(Collectors.toList());
   }
 
   public List<NamespaceDeclaration> getNamespaces() {
-    return Util.filterCast(declarations, NamespaceDeclaration.class);
+    return declarations.stream()
+        .filter(d -> d instanceof NamespaceDeclaration)
+        .map(d -> (NamespaceDeclaration) d)
+        .collect(Collectors.toList());
   }
 
   @NotNull

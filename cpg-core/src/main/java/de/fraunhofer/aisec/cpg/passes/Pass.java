@@ -157,7 +157,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
       if (this.lang != null) {
         return this.lang.getClass() == frontend;
       } else {
-        return true;
+        return false;
       }
     } else {
       return true;

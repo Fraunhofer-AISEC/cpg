@@ -428,6 +428,7 @@ public class Util {
    * @param <S> Class type to filter for.
    * @return a specific List as all elements are cast to the specified class type.
    */
+  @Deprecated
   public static <T, S extends T> List<S> filterCast(List<T> genericList, Class<S> specificClass) {
     return genericList.stream()
         .filter(g -> specificClass.isAssignableFrom(g.getClass()))

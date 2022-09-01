@@ -26,23 +26,24 @@
 package de.fraunhofer.aisec.cpg.enhancements.variable_resolution
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOf
+import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.getOfTypeWithName
-import de.fraunhofer.aisec.cpg.TestUtils.getSubnodeOfTypeWithName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.Util
 import java.io.File
-import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.stream.Collectors
 import kotlin.test.Test
@@ -100,86 +101,41 @@ internal class VariableResolverCppTest : BaseTest() {
                     SubgraphWalker.flattenAST(tUnit).stream()
                 }
                 .collect(Collectors.toList())
-        val calls = findByName(Util.filterCast(nodes, CallExpression::class.java), "printLog")
-
-        val records = Util.filterCast(nodes, RecordDeclaration::class.java)
+        val calls = findByName(nodes.filterIsInstance<CallExpression>(), "printLog")
+        val records = nodes.filterIsInstance<RecordDeclaration>()
+        val functions = nodes.filterIsInstance<FunctionDeclaration>()
 
         // Extract all Variable declarations and field declarations for matching
-        externalClass = getOfTypeWithName(nodes, RecordDeclaration::class.java, "ExternalClass")
-        externVarName =
-            getSubnodeOfTypeWithName(externalClass, FieldDeclaration::class.java, "varName")
-        externStaticVarName =
-            getSubnodeOfTypeWithName(externalClass, FieldDeclaration::class.java, "staticVarName")
+        externalClass = records["ExternalClass"]
+        externVarName = externalClass.allChildren<FieldDeclaration>()["varName"]
+        externStaticVarName = externalClass.allChildren<FieldDeclaration>()["staticVarName"]
         outerClass = getOfTypeWithName(nodes, RecordDeclaration::class.java, "ScopeVariables")
-        outerVarName = outerClass!!.byNameOrNull<FieldDeclaration>("varName")
-        outerStaticVarName = outerClass!!.byNameOrNull<FieldDeclaration>("staticVarName")
-        function2Receiver = outerClass!!.byNameOrNull<MethodDeclaration>("function2")?.receiver
-        val classes = Util.filterCast(nodes, RecordDeclaration::class.java)
+        outerVarName = outerClass?.byNameOrNull("varName")
+        outerStaticVarName = outerClass?.byNameOrNull("staticVarName")
+        function2Receiver = outerClass?.byNameOrNull<MethodDeclaration>("function2")?.receiver
 
         // Inner class and its fields
-        innerClass =
-            getOfTypeWithName(nodes, RecordDeclaration::class.java, "ScopeVariables::InnerClass")
-        innerVarName =
-            innerClass!!
-                .fields
-                .stream()
-                .filter { n: FieldDeclaration -> n.name == "varName" }
-                .findFirst()
-                .get()
-        innerStaticVarName =
-            innerClass!!
-                .fields
-                .stream()
-                .filter { n: FieldDeclaration -> n.name == "staticVarName" }
-                .findFirst()
-                .get()
-        main = getOfTypeWithName(nodes, FunctionDeclaration::class.java, "main")
+        innerClass = records["ScopeVariables::InnerClass"]
+        innerVarName = innerClass.allChildren<FieldDeclaration>()["varName"]
+        innerStaticVarName = innerClass.allChildren<FieldDeclaration>()["staticVarName"]
+        main = functions["main"]
 
         // Functions in the outer and inner object
         outerFunction1 =
-            outerClass!!
-                .methods
-                .stream()
-                .filter { method: MethodDeclaration -> method.name == "function1" }
-                .collect(Collectors.toList())[0]
-        forStatements =
-            Util.filterCast(SubgraphWalker.flattenAST(outerFunction1), ForStatement::class.java)
+            outerClass?.methods?.first { method: MethodDeclaration -> method.name == "function1" }
+        forStatements = outerFunction1.allChildren()
         outerFunction2 =
-            outerClass!!
-                .methods
-                .stream()
-                .filter { method: MethodDeclaration -> method.name == "function2" }
-                .collect(Collectors.toList())[0]
+            outerClass?.methods?.first { method: MethodDeclaration -> method.name == "function2" }
         outerFunction3 =
-            outerClass!!
-                .methods
-                .stream()
-                .filter { method: MethodDeclaration -> method.name == "function3" }
-                .collect(Collectors.toList())[0]
+            outerClass?.methods?.first { method: MethodDeclaration -> method.name == "function3" }
         outerFunction4 =
-            outerClass!!
-                .methods
-                .stream()
-                .filter { method: MethodDeclaration -> method.name == "function4" }
-                .collect(Collectors.toList())[0]
+            outerClass?.methods?.first { method: MethodDeclaration -> method.name == "function4" }
         outerFunction5 =
-            outerClass!!
-                .methods
-                .stream()
-                .filter { method: MethodDeclaration -> method.name == "function5" }
-                .collect(Collectors.toList())[0]
+            outerClass?.methods?.first { method: MethodDeclaration -> method.name == "function5" }
         innerFunction1 =
-            innerClass!!
-                .methods
-                .stream()
-                .filter { method: MethodDeclaration -> method.name == "function1" }
-                .collect(Collectors.toList())[0]
+            innerClass?.methods?.first { method: MethodDeclaration -> method.name == "function1" }
         innerFunction2 =
-            innerClass!!
-                .methods
-                .stream()
-                .filter { method: MethodDeclaration -> method.name == "function2" }
-                .collect(Collectors.toList())[0]
+            innerClass?.methods?.first { method: MethodDeclaration -> method.name == "function2" }
         for (call in calls) {
             val first = call.arguments[0]
             val logId = (first as Literal<*>).value.toString()
@@ -188,68 +144,46 @@ internal class VariableResolverCppTest : BaseTest() {
         }
     }
 
-    private fun getCallWithReference(literal: String): DeclaredReferenceExpression? {
-        val exp = callParamMap[literal]
-        return if (exp is DeclaredReferenceExpression) exp else null
-    }
-
-    fun getCallWithMemberExpression(literal: String): MemberExpression? {
-        val exp = callParamMap[literal]
-        return if (exp is MemberExpression) exp else null
-    }
-
     @Test
     fun testOuterVarNameAccessedImplicitThis() {
-        VRUtil.assertUsageOf(callParamMap["func1_impl_this_varName"], outerVarName)
+        assertUsageOf(callParamMap["func1_impl_this_varName"], outerVarName)
     }
 
     @Test
     fun testStaticFieldAccessedImplicitly() {
-        VRUtil.assertUsageOf(callParamMap["func1_static_staticVarName"], outerStaticVarName)
+        assertUsageOf(callParamMap["func1_static_staticVarName"], outerStaticVarName)
     }
 
     @Test
     fun testVarNameOfFirstLoopAccessed() {
-        val asReference = getCallWithReference("func1_first_loop_varName")
+        val asReference = callParamMap["func1_first_loop_varName"] as? DeclaredReferenceExpression
         assertNotNull(asReference)
-        val vDeclaration =
-            getSubnodeOfTypeWithName(forStatements!![0], VariableDeclaration::class.java, "varName")
-        VRUtil.assertUsageOf(callParamMap["func1_first_loop_varName"], vDeclaration)
+        val vDeclaration = forStatements?.first().variables["varName"]
+        assertUsageOf(callParamMap["func1_first_loop_varName"], vDeclaration)
     }
 
     @Test
     fun testAccessLocalVarNameInNestedBlock() {
-        val innerBlock =
-            getSubnodeOfTypeWithName(forStatements!![1], CompoundStatement::class.java, "")
-        val nestedDeclaration =
-            getSubnodeOfTypeWithName(innerBlock, VariableDeclaration::class.java, "varName")
-        VRUtil.assertUsageOf(
-            callParamMap["func1_nested_block_shadowed_local_varName"],
-            nestedDeclaration
-        )
+        val innerBlock = forStatements?.get(1).allChildren<CompoundStatement>()[""]
+        val nestedDeclaration = innerBlock.variables["varName"]
+        assertUsageOf(callParamMap["func1_nested_block_shadowed_local_varName"], nestedDeclaration)
     }
 
     @Test
     fun testVarNameOfSecondLoopAccessed() {
-        val vDeclaration =
-            getSubnodeOfTypeWithName(forStatements!![1], VariableDeclaration::class.java, "varName")
-        VRUtil.assertUsageOf(callParamMap["func1_second_loop_varName"], vDeclaration)
+        val vDeclaration = forStatements?.get(1).variables["varName"]
+        assertUsageOf(callParamMap["func1_second_loop_varName"], vDeclaration)
     }
 
     @Test
     fun testParamVarNameAccessed() {
-        val declaration =
-            getSubnodeOfTypeWithName(
-                outerFunction2,
-                ParamVariableDeclaration::class.java,
-                "varName"
-            )
-        VRUtil.assertUsageOf(callParamMap["func2_param_varName"], declaration)
+        val declaration = outerFunction2?.parameters["varName"]
+        assertUsageOf(callParamMap["func2_param_varName"], declaration)
     }
 
     @Test
     fun testMemberVarNameOverExplicitThis() {
-        VRUtil.assertUsageOfMemberAndBase(
+        assertUsageOfMemberAndBase(
             callParamMap["func2_this_varName"],
             function2Receiver,
             outerVarName
@@ -259,34 +193,20 @@ internal class VariableResolverCppTest : BaseTest() {
     @Test
     fun testVarNameDeclaredInIfClause() {
         val declaration =
-            getSubnodeOfTypeWithName(
-                getSubnodeOfTypeWithName(outerFunction2, IfStatement::class.java, Node.EMPTY_NAME),
-                VariableDeclaration::class.java,
-                "varName"
-            )
-        VRUtil.assertUsageOf(callParamMap["func2_if_varName"], declaration)
+            outerFunction2.allChildren<IfStatement>()[Node.EMPTY_NAME].variables["varName"]
+        assertUsageOf(callParamMap["func2_if_varName"], declaration)
     }
 
     @Test
     fun testVarNameCoughtAsException() {
-        val declaration =
-            getSubnodeOfTypeWithName(
-                getSubnodeOfTypeWithName(outerFunction2, CatchClause::class.java, Node.EMPTY_NAME),
-                VariableDeclaration::class.java,
-                "varName"
-            )
-        VRUtil.assertUsageOf(callParamMap["func2_catch_varName"], declaration)
+        val declaration = outerFunction2.allChildren<CatchClause>()[""].variables["varName"]
+        assertUsageOf(callParamMap["func2_catch_varName"], declaration)
     }
 
     @Test
     fun testMemberAccessedOverInstance() {
-        val declaration =
-            getSubnodeOfTypeWithName(
-                outerFunction2,
-                VariableDeclaration::class.java,
-                "scopeVariables"
-            )
-        VRUtil.assertUsageOfMemberAndBase(
+        val declaration = outerFunction2.variables["scopeVariables"]
+        assertUsageOfMemberAndBase(
             callParamMap["func2_instance_varName"],
             declaration,
             outerVarName
@@ -295,13 +215,8 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testMemberAccessedOverInstanceAfterParamDeclaration() {
-        val declaration =
-            getSubnodeOfTypeWithName(
-                outerFunction3,
-                VariableDeclaration::class.java,
-                "scopeVariables"
-            )
-        VRUtil.assertUsageOfMemberAndBase(
+        val declaration = outerFunction3.variables["scopeVariables"]
+        assertUsageOfMemberAndBase(
             callParamMap["func3_instance_varName"],
             declaration,
             outerVarName
@@ -310,13 +225,8 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testAccessExternalClassMemberVarnameOverInstance() {
-        val declaration =
-            getSubnodeOfTypeWithName(
-                outerFunction3,
-                VariableDeclaration::class.java,
-                "externalClass"
-            )
-        VRUtil.assertUsageOfMemberAndBase(
+        val declaration = outerFunction3.variables["externalClass"]
+        assertUsageOfMemberAndBase(
             callParamMap["func3_external_instance_varName"],
             declaration,
             externVarName
@@ -325,29 +235,18 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testExplicitlyReferenceStaticMemberInInternalClass() {
-        VRUtil.assertUsageOf(
-            callParamMap["func4_static_staticVarName"],
-            outerStaticVarName!!.definition
-        )
+        assertUsageOf(callParamMap["func4_static_staticVarName"], outerStaticVarName?.definition)
     }
 
     @Test
     fun testExplicitlyReferenceStaticMemberInExternalClass() {
-        VRUtil.assertUsageOf(
-            callParamMap["func4_external_staticVarName"],
-            externStaticVarName!!.definition
-        )
+        assertUsageOf(callParamMap["func4_external_staticVarName"], externStaticVarName?.definition)
     }
 
     @Test
     fun testAccessExternalMemberOverInstance() {
-        val externalInstance =
-            getSubnodeOfTypeWithName(
-                outerFunction4,
-                VariableDeclaration::class.java,
-                "externalClass"
-            )
-        VRUtil.assertUsageOfMemberAndBase(
+        val externalInstance = outerFunction4.variables["externalClass"]
+        assertUsageOfMemberAndBase(
             callParamMap["func4_external_instance_varName"],
             externalInstance,
             externVarName
@@ -356,44 +255,41 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testAccessExternalStaticMemberAfterInstanceCreation() {
-        VRUtil.assertUsageOf(
+        assertUsageOf(
             callParamMap["func4_second_external_staticVarName"],
-            externStaticVarName!!.definition
+            externStaticVarName?.definition
         )
     }
 
     @Test
     fun testAccessStaticMemberThroughInstanceFirst() {
-        val declaration =
-            getSubnodeOfTypeWithName(outerFunction5, VariableDeclaration::class.java, "first")
-        VRUtil.assertUsageOfMemberAndBase(
+        val declaration = outerFunction5.variables["first"]
+        assertUsageOfMemberAndBase(
             callParamMap["func5_staticVarName_throughInstance_first"],
             declaration,
-            outerStaticVarName!!.definition
+            outerStaticVarName?.definition
         )
     }
 
     @Test
     fun testAccessStaticMemberThroughInstanceSecond() {
-        val declaration =
-            getSubnodeOfTypeWithName(outerFunction5, VariableDeclaration::class.java, "second")
-        VRUtil.assertUsageOfMemberAndBase(
+        val declaration = outerFunction5.variables["second"]
+        assertUsageOfMemberAndBase(
             callParamMap["func5_staticVarName_throughInstance_second"],
             declaration,
-            outerStaticVarName!!.definition
+            outerStaticVarName?.definition
         )
     }
 
     @Test
     fun testImplicitThisAccessOfInnerClassMember() {
-        VRUtil.assertUsageOf(callParamMap["func1_inner_imp_this_varName"], innerVarName)
+        assertUsageOf(callParamMap["func1_inner_imp_this_varName"], innerVarName)
     }
 
     @Test
     fun testAccessOfInnerClassMemberOverInstance() {
-        val declaration =
-            getSubnodeOfTypeWithName(innerFunction1, VariableDeclaration::class.java, "inner")
-        VRUtil.assertUsageOfMemberAndBase(
+        val declaration = innerFunction1.variables["inner"]
+        assertUsageOfMemberAndBase(
             callParamMap["func1_inner_instance_varName"],
             declaration,
             innerVarName
@@ -402,13 +298,8 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testAccessOfOuterMemberOverInstance() {
-        val declaration =
-            getSubnodeOfTypeWithName(
-                innerFunction1,
-                VariableDeclaration::class.java,
-                "scopeVariables"
-            )
-        VRUtil.assertUsageOfMemberAndBase(
+        val declaration = innerFunction1.variables["scopeVariables"]
+        assertUsageOfMemberAndBase(
             callParamMap["func1_outer_instance_varName"],
             declaration,
             outerVarName
@@ -417,25 +308,24 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testAccessOfOuterStaticMember() {
-        VRUtil.assertUsageOf(
+        assertUsageOf(
             callParamMap["func1_outer_static_staticVarName"],
-            outerStaticVarName!!.definition
+            outerStaticVarName?.definition
         )
     }
 
     @Test
     fun testAccessOfInnerStaticMember() {
-        VRUtil.assertUsageOf(
+        assertUsageOf(
             callParamMap["func1_inner_static_staticVarName"],
-            innerStaticVarName!!.definition
+            innerStaticVarName?.definition
         )
     }
 
     @Test
     fun testAccessOfInnerClassMemberOverInstanceWithSameNamedVariable() {
-        val declaration =
-            getSubnodeOfTypeWithName(innerFunction2, VariableDeclaration::class.java, "inner")
-        VRUtil.assertUsageOfMemberAndBase(
+        val declaration = innerFunction2.variables["inner"]
+        assertUsageOfMemberAndBase(
             callParamMap["func2_inner_instance_varName_with_shadows"],
             declaration,
             innerVarName
@@ -444,13 +334,8 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testAccessOfOuterMemberOverInstanceWithSameNamedVariable() {
-        val declaration =
-            getSubnodeOfTypeWithName(
-                innerFunction2,
-                VariableDeclaration::class.java,
-                "scopeVariables"
-            )
-        VRUtil.assertUsageOfMemberAndBase(
+        val declaration = innerFunction2.variables["scopeVariables"]
+        assertUsageOfMemberAndBase(
             callParamMap["func2_outer_instance_varName_with_shadows"],
             declaration,
             outerVarName
@@ -458,24 +343,24 @@ internal class VariableResolverCppTest : BaseTest() {
     }
 
     @Test
-    fun testAccessOfOuterStaticMembertWithSameNamedVariable() {
-        VRUtil.assertUsageOf(
+    fun testAccessOfOuterStaticMemberWithSameNamedVariable() {
+        assertUsageOf(
             callParamMap["func2_outer_static_staticVarName_with_shadows"],
-            outerStaticVarName!!.definition
+            outerStaticVarName?.definition
         )
     }
 
     @Test
     fun testAccessOfInnerStaticMemberWithSameNamedVariable() {
-        VRUtil.assertUsageOf(
+        assertUsageOf(
             callParamMap["func2_inner_static_staticVarName_with_shadows"],
-            innerStaticVarName!!.definition
+            innerStaticVarName?.definition
         )
     }
 
     @Test
     fun testLocalVariableUsedAsParameter() {
-        val declaration = getSubnodeOfTypeWithName(main, VariableDeclaration::class.java, "varName")
-        VRUtil.assertUsageOf(callParamMap["main_local_varName"], declaration)
+        val declaration = main.variables["varName"]
+        assertUsageOf(callParamMap["main_local_varName"], declaration)
     }
 }

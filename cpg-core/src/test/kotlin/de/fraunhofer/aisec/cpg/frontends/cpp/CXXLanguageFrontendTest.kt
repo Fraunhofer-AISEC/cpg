@@ -27,21 +27,16 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
+import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithResult
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeManager
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -396,26 +391,20 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testSwitch() {
         val file = File("src/test/resources/cfg/switch.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val graphNodes = SubgraphWalker.flattenAST(declaration)
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
 
-        assertTrue(graphNodes.size != 0)
+        assertTrue(tu.allChildren<Node>().isNotEmpty())
 
-        val switchStatements = Util.filterCast(graphNodes, SwitchStatement::class.java)
+        val switchStatements = tu.allChildren<SwitchStatement>()
         assertTrue(switchStatements.size == 3)
 
         val switchStatement = switchStatements[0]
         assertTrue((switchStatement.statement as CompoundStatement).statements.size == 11)
 
-        val caseStatements =
-            Util.filterCast(SubgraphWalker.flattenAST(switchStatement), CaseStatement::class.java)
+        val caseStatements = switchStatement.allChildren<CaseStatement>()
         assertTrue(caseStatements.size == 4)
 
-        val defaultStatements =
-            Util.filterCast(
-                SubgraphWalker.flattenAST(switchStatement),
-                DefaultStatement::class.java
-            )
+        val defaultStatements = switchStatement.allChildren<DefaultStatement>()
         assertTrue(defaultStatements.size == 1)
     }
 
@@ -1292,7 +1281,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testTypedef() {
         val file = File("src/test/resources/c/typedef_in_header/main.c")
-        val result = analyzeWithResult(listOf(file), file.parentFile.toPath(), true)
+        val result = analyze(listOf(file), file.parentFile.toPath(), true)
 
         val typedefs = TypeManager.getInstance().frontend?.scopeManager?.currentTypedefs
         assertNotNull(typedefs)

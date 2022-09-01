@@ -26,17 +26,16 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
+import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.TestUtils.flattenIsInstance
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -51,23 +50,21 @@ class CallResolverTest : BaseTest() {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
-        val innerMethods =
-            findByName(flattenIsInstance<MethodDeclaration>(callsRecord), "innerTarget")
-        val innerCalls = findByName(flattenIsInstance<CallExpression>(callsRecord), "innerTarget")
+        val innerMethods = findByName(callsRecord.allChildren<MethodDeclaration>(), "innerTarget")
+        val innerCalls = findByName(callsRecord.allChildren<CallExpression>(), "innerTarget")
         checkCalls(intType, stringType, innerMethods, innerCalls)
         val superMethods =
-            findByName(flattenIsInstance<MethodDeclaration>(superClassRecord), "superTarget")
+            findByName(superClassRecord.allChildren<MethodDeclaration>(), "superTarget")
                 .toMutableList()
         // We can't infer that a call to superTarget(int, int, int) is intended to be part of the
         // superclass. It looks like a call to a member of Calls.java, thus we need to add these
         // methods to the lookup
-        superMethods.addAll(findByName(flattenIsInstance(callsRecord), "superTarget"))
-        val superCalls = findByName(flattenIsInstance<CallExpression>(callsRecord), "superTarget")
+        superMethods.addAll(findByName(callsRecord.allChildren<MethodDeclaration>(), "superTarget"))
+        val superCalls = findByName(callsRecord.allChildren<CallExpression>(), "superTarget")
         checkCalls(intType, stringType, superMethods, superCalls)
         val externalMethods =
-            findByName(flattenIsInstance<MethodDeclaration>(externalRecord), "externalTarget")
-        val externalCalls =
-            findByName(flattenIsInstance<CallExpression>(callsRecord), "externalTarget")
+            findByName(externalRecord.allChildren<MethodDeclaration>(), "externalTarget")
+        val externalCalls = findByName(callsRecord.allChildren<CallExpression>(), "externalTarget")
         checkCalls(intType, stringType, externalMethods, externalCalls)
     }
 
@@ -76,7 +73,7 @@ class CallResolverTest : BaseTest() {
         assertTrue(records.stream().noneMatch { r: RecordDeclaration -> r.name == "Unknown" })
 
         val unknownCall =
-            findByUniqueName(flattenIsInstance<CallExpression>(callsRecord), "unknownTarget")
+            findByUniqueName(callsRecord.allChildren<CallExpression>(), "unknownTarget")
         assertEquals(listOf<Any>(), unknownCall.invokes)
     }
 
@@ -86,13 +83,13 @@ class CallResolverTest : BaseTest() {
      *
      * @param result
      */
-    private fun ensureInvocationOfMethodsInFunction(result: List<TranslationUnitDeclaration>) {
-        assertEquals(1, result.size)
-        val tu = result[0]
+    private fun ensureInvocationOfMethodsInFunction(result: TranslationResult) {
+        assertEquals(1, result.translationUnits.size)
+        val tu = result.translationUnits[0]
         for (declaration in tu.declarations) {
             assertNotEquals("invoke", declaration.name)
         }
-        val callExpressions = flattenListIsInstance<CallExpression>(result)
+        val callExpressions = result.allChildren<CallExpression>()
         val invoke = findByUniqueName(callExpressions, "invoke")
         assertEquals(1, invoke.invokes.size)
         assertTrue(invoke.invokes[0] is MethodDeclaration)
@@ -101,8 +98,8 @@ class CallResolverTest : BaseTest() {
     private fun checkCalls(
         intType: Type,
         stringType: Type,
-        methods: List<FunctionDeclaration>,
-        calls: List<CallExpression>
+        methods: Collection<FunctionDeclaration>,
+        calls: Collection<CallExpression>
     ) {
         val signatures = listOf(listOf(), listOf(intType, intType), listOf(intType, stringType))
         for (signature in signatures) {
@@ -133,17 +130,10 @@ class CallResolverTest : BaseTest() {
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
         val originalMethod =
-            findByUniqueName(
-                flattenIsInstance<MethodDeclaration>(superClassRecord),
-                "overridingTarget"
-            )
+            findByUniqueName(superClassRecord.allChildren<MethodDeclaration>(), "overridingTarget")
         val overridingMethod =
-            findByUniqueName(
-                flattenIsInstance<MethodDeclaration>(externalRecord),
-                "overridingTarget"
-            )
-        val call =
-            findByUniqueName(flattenIsInstance<CallExpression>(callsRecord), "overridingTarget")
+            findByUniqueName(externalRecord.allChildren<MethodDeclaration>(), "overridingTarget")
+        val call = findByUniqueName(callsRecord.allChildren<CallExpression>(), "overridingTarget")
 
         // TODO related to #204: Currently we have both the original and the overriding method in
         //  the invokes list. This check needs to be adjusted to the choice we make on solving #204
@@ -155,8 +145,8 @@ class CallResolverTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testJava() {
-        val result = analyze("java", topLevel, true)
-        val records = flattenListIsInstance<RecordDeclaration>(result)
+        val result = TestUtils.analyze("java", topLevel, true)
+        val records = result.records
         val intType = TypeParser.createFrom("int", true)
         val stringType = TypeParser.createFrom("java.lang.String", true)
         testMethods(records, intType, stringType)
@@ -168,8 +158,12 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testCpp() {
         val result =
-            analyze(listOf(Path.of(topLevel.toString(), "calls.cpp").toFile()), topLevel, true)
-        val records = flattenListIsInstance<RecordDeclaration>(result)
+            TestUtils.analyze(
+                listOf(Path.of(topLevel.toString(), "calls.cpp").toFile()),
+                topLevel,
+                true
+            )
+        val records = result.records
         val intType = TypeParser.createFrom("int", true)
         val stringType = TypeParser.createFrom("char*", true)
         testMethods(records, intType, stringType)
@@ -177,10 +171,10 @@ class CallResolverTest : BaseTest() {
 
         // Test functions (not methods!)
         val functions =
-            flattenListIsInstance<FunctionDeclaration>(result).filter { f: FunctionDeclaration ->
+            result.allChildren<FunctionDeclaration>().filter { f: FunctionDeclaration ->
                 f.name == "functionTarget" && f !is MethodDeclaration
             }
-        val calls = findByName(flattenListIsInstance<CallExpression>(result), "functionTarget")
+        val calls = findByName(result.allChildren<CallExpression>(), "functionTarget")
         checkCalls(intType, stringType, functions, calls)
         ensureNoUnknownClassDummies(records)
         ensureInvocationOfMethodsInFunction(result)
@@ -190,7 +184,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testImplicitCastMethodCallResolution() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(
                     Path.of(topLevel.toString(), "implicitcast", "implicitCastInMethod.cpp")
                         .toFile()
@@ -198,8 +192,8 @@ class CallResolverTest : BaseTest() {
                 topLevel,
                 true
             )
-        val functionDeclarations = flattenListIsInstance<FunctionDeclaration>(result)
-        val callExpressions = flattenListIsInstance<CallExpression>(result)
+        val functionDeclarations = result.functions
+        val callExpressions = result.calls
 
         // Check resolution of calc
         val calc = findByUniqueName(callExpressions, "calc")
@@ -230,7 +224,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testImplicitCastCallResolution() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(
                     Path.of(topLevel.toString(), "implicitcast", "ambiguouscall.cpp").toFile(),
                     Path.of(topLevel.toString(), "implicitcast", "implicitcast.cpp").toFile()
@@ -238,7 +232,7 @@ class CallResolverTest : BaseTest() {
                 topLevel,
                 true
             )
-        val callExpressions = flattenListIsInstance<CallExpression>(result)
+        val callExpressions = result.calls
 
         // Check resolution of implicit cast
         val multiply = findByUniqueName(callExpressions, "multiply")
@@ -278,15 +272,15 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testDefaultArgumentsInDeclaration() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(
                     Path.of(topLevel.toString(), "defaultargs", "defaultInDeclaration.cpp").toFile()
                 ),
                 topLevel,
                 true
             )
-        val calls = flattenListIsInstance<CallExpression>(result)
-        val functionDeclarations = flattenListIsInstance<FunctionDeclaration>(result)
+        val calls = result.calls
+        val functionDeclarations = result.functions
         val displayDeclaration =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
                 f.name == "display" && !f.isDefinition && !f.isImplicit
@@ -365,23 +359,21 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testDefaultArgumentsInDefinition() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(
                     Path.of(topLevel.toString(), "defaultargs", "defaultInDefinition.cpp").toFile()
                 ),
                 topLevel,
                 true
             )
-        val calls = flattenListIsInstance<CallExpression>(result)
-        val functionDeclarations = flattenListIsInstance<FunctionDeclaration>(result)
+        val calls = result.calls
+        val functionDeclarations = result.functions
         val displayFunction =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
                 f.name == "display" && !f.isImplicit
             }
-        val literalStar =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == '*' }
-        val literal3 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 3 }
+        val literalStar = findByUniquePredicate(result.literals) { it.value == '*' }
+        val literal3 = findByUniquePredicate(result.literals) { it.value == 3 }
         // Check defaults edge of ParamVariableDeclaration
         assertTrue(displayFunction.defaultParameters[0] is Literal<*>)
         assertTrue(displayFunction.defaultParameters[1] is Literal<*>)
@@ -433,13 +425,13 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testPartialDefaultArguments() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(Path.of(topLevel.toString(), "defaultargs", "partialDefaults.cpp").toFile()),
                 topLevel,
                 true
             )
-        val calls = flattenListIsInstance<CallExpression>(result)
-        val functionDeclarations = flattenListIsInstance<FunctionDeclaration>(result)
+        val calls = result.calls
+        val functionDeclarations = result.functions
         val addFunction =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
                 f.name == "add" && !f.isInferred
@@ -501,23 +493,21 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testDefaultArgumentsMethodResolution() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(Path.of(topLevel.toString(), "defaultargs", "defaultInMethod.cpp").toFile()),
                 topLevel,
                 true
             )
-        val calls = flattenListIsInstance<CallExpression>(result)
-        val functionDeclarations = flattenListIsInstance<FunctionDeclaration>(result)
-        val declaredReferenceExpressions =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
+        val calls = result.calls
+        val functionDeclarations = result.functions
+        val declaredReferenceExpressions = result.refs
 
         // Check calc call
         val calc =
             findByUniquePredicate(functionDeclarations) { it.name == "calc" && !it.isImplicit }
         val callCalc = findByUniquePredicate(calls) { it.name == "calc" }
         val x = findByUniquePredicate(declaredReferenceExpressions) { it.name == "x" }
-        val literal5 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 5 }
+        val literal5 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 5 }
         assertEquals(1, callCalc.invokes.size)
         assertEquals(calc, callCalc.invokes[0])
         assertEquals(x, callCalc.arguments[0])
@@ -529,10 +519,8 @@ class CallResolverTest : BaseTest() {
                 f.name == "doSmth" && !f.isImplicit
             }
         val callDoSmth = findByUniquePredicate(calls) { f: CallExpression -> f.name == "doSmth" }
-        val literal1 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 1 }
-        val literal2 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 2 }
+        val literal1 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 1 }
+        val literal2 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 2 }
         assertEquals(1, callDoSmth.invokes.size)
         assertEquals(doSmth, callDoSmth.invokes[0])
         assertTrue(doSmth.nextEOG.contains(literal1))
@@ -544,15 +532,15 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testScopedFunctionResolutionUndefined() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(Path.of(topLevel.toString(), "cxxprioresolution", "undefined.cpp").toFile()),
                 topLevel,
                 true
             )
-        val calls = flattenListIsInstance<CallExpression>(result)
+        val calls = result.calls
         assertEquals(1, calls.size)
 
-        val functionDeclarations = flattenListIsInstance<FunctionDeclaration>(result)
+        val functionDeclarations = result.functions
         assertEquals(2, functionDeclarations.size)
         assertEquals(1, calls[0].invokes.size)
         assertEquals("f", calls[0].invokes[0].name)
@@ -562,15 +550,15 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testScopedFunctionResolutionDefined() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(Path.of(topLevel.toString(), "cxxprioresolution", "defined.cpp").toFile()),
                 topLevel,
                 true
             )
-        val calls = flattenListIsInstance<CallExpression>(result)
+        val calls = result.allChildren<CallExpression>()
         assertEquals(1, calls.size)
 
-        val functionDeclarations = flattenListIsInstance<FunctionDeclaration>(result)
+        val functionDeclarations = result.allChildren<FunctionDeclaration>()
         assertEquals(2, functionDeclarations.size)
         assertEquals(1, calls[0].invokes.size)
         assertFalse(calls[0].invokes[0].isImplicit)
@@ -578,7 +566,7 @@ class CallResolverTest : BaseTest() {
     }
 
     private fun testScopedFunctionResolutionFunctionGlobal(
-        result: List<TranslationUnitDeclaration>,
+        result: TranslationResult,
         calls: List<CallExpression>
     ) {
         val fh =
@@ -586,8 +574,7 @@ class CallResolverTest : BaseTest() {
                 calls,
                 Predicate { c: CallExpression -> c.location!!.region.startLine == 4 }
             )
-        val literal7 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 7 }
+        val literal7 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 7 }
         assertEquals(1, fh.invokes.size)
         assertFalse(fh.invokes[0].isImplicit)
         assertEquals(2, fh.invokes[0].location!!.region.startLine)
@@ -600,7 +587,7 @@ class CallResolverTest : BaseTest() {
     }
 
     private fun testScopedFunctionResolutionRedeclaration(
-        result: List<TranslationUnitDeclaration>,
+        result: TranslationResult,
         calls: List<CallExpression>
     ) {
         val fm1 =
@@ -617,8 +604,7 @@ class CallResolverTest : BaseTest() {
                 calls,
                 Predicate { c: CallExpression -> c.location!!.region.startLine == 10 }
             )
-        val literal5 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 5 }
+        val literal5 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 5 }
         assertEquals(1, fm2.invokes.size)
         assertEquals(9, fm2.invokes[0].location!!.region.startLine)
         assertEquals(1, fm2.arguments.size)
@@ -630,12 +616,11 @@ class CallResolverTest : BaseTest() {
     }
 
     private fun testScopedFunctionResolutionAfterRedeclaration(
-        result: List<TranslationUnitDeclaration>,
+        result: TranslationResult,
         calls: List<CallExpression>
     ) {
         val fn = findByUniquePredicate(calls, Predicate { it.location?.region?.startLine == 13 })
-        val literal7 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 7 }
+        val literal7 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 7 }
         assertEquals(1, fn.invokes.size)
         assertFalse(fn.invokes[0].isImplicit)
         assertEquals(2, fn.invokes[0].location!!.region.startLine)
@@ -651,7 +636,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testScopedFunctionResolutionWithDefaults() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(
                     Path.of(
                             topLevel.toString(),
@@ -663,7 +648,7 @@ class CallResolverTest : BaseTest() {
                 topLevel,
                 true
             )
-        val calls = flattenListIsInstance<CallExpression>(result)
+        val calls = result.allChildren<CallExpression>()
         testScopedFunctionResolutionFunctionGlobal(result, calls)
         testScopedFunctionResolutionRedeclaration(result, calls)
         testScopedFunctionResolutionAfterRedeclaration(result, calls)
@@ -673,7 +658,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testCxxPrioResolutionWithMethods() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(
                     Path.of(
                             topLevel.toString(),
@@ -686,8 +671,8 @@ class CallResolverTest : BaseTest() {
                 topLevel,
                 true
             )
-        val calls = flattenListIsInstance<CallExpression>(result)
-        val methodDeclarations = flattenListIsInstance<MethodDeclaration>(result)
+        val calls = result.allChildren<CallExpression>()
+        val methodDeclarations = result.methods
         val calcOverload: FunctionDeclaration =
             findByUniquePredicate(methodDeclarations) { c: MethodDeclaration ->
                 c.recordDeclaration!!.name == "Overload" && c !is ConstructorDeclaration
@@ -721,7 +706,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testCXXMethodResolutionStopOnFirstOccurrence() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(
                     Path.of(
                             topLevel.toString(),
@@ -734,7 +719,7 @@ class CallResolverTest : BaseTest() {
                 topLevel,
                 true
             )
-        val calls = flattenListIsInstance<CallExpression>(result)
+        val calls = result.allChildren<CallExpression>()
 
         /*
          This call cannot be resolved to the overloaded calc because the signature doesn't match.

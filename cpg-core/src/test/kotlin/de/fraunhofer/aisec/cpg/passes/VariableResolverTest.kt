@@ -28,9 +28,10 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.flattenIsInstance
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.fields
+import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -44,17 +45,17 @@ internal class VariableResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testFields() {
         val result = analyze("java", topLevel, true)
-        val methods = flattenListIsInstance<MethodDeclaration>(result)
-        val fields = flattenListIsInstance<FieldDeclaration>(result)
+        val methods = result.methods
+        val fields = result.fields
         val field = findByUniqueName(fields, "field")
         val getField = findByUniqueName(methods, "getField")
-        var returnStatement = flattenIsInstance<ReturnStatement>(getField).firstOrNull()
+        var returnStatement = getField.allChildren<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
         assertEquals(field, (returnStatement.returnValue as MemberExpression).refersTo)
 
         val noShadow = findByUniqueName(methods, "getField")
 
-        returnStatement = flattenIsInstance<ReturnStatement>(noShadow).firstOrNull()
+        returnStatement = noShadow.allChildren<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
         assertEquals(field, (returnStatement.returnValue as MemberExpression).refersTo)
     }
@@ -63,14 +64,14 @@ internal class VariableResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testLocalVars() {
         val result = analyze("java", topLevel, true)
-        val methods = flattenListIsInstance<MethodDeclaration>(result)
-        val fields = flattenListIsInstance<FieldDeclaration>(result)
+        val methods = result.methods
+        val fields = result.allChildren<FieldDeclaration>()
         val field = findByUniqueName(fields, "field")
         val getLocal = findByUniqueName(methods, "getLocal")
-        var returnStatement = flattenIsInstance<ReturnStatement>(getLocal).firstOrNull()
+        var returnStatement = getLocal.allChildren<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
 
-        var local = flattenIsInstance<VariableDeclaration>(getLocal).firstOrNull()
+        var local = getLocal.allChildren<VariableDeclaration>().firstOrNull()
 
         var returnValue = returnStatement.returnValue as DeclaredReferenceExpression
         assertNotEquals(field, returnValue.refersTo)
@@ -78,10 +79,10 @@ internal class VariableResolverTest : BaseTest() {
 
         val getShadow = findByUniqueName(methods, "getShadow")
 
-        returnStatement = flattenIsInstance<ReturnStatement>(getShadow).firstOrNull()
+        returnStatement = getShadow.allChildren<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
 
-        local = flattenIsInstance<VariableDeclaration>(getShadow).firstOrNull()
+        local = getShadow.allChildren<VariableDeclaration>().firstOrNull()
 
         returnValue = returnStatement.returnValue as DeclaredReferenceExpression
         assertNotEquals(field, returnValue.refersTo)

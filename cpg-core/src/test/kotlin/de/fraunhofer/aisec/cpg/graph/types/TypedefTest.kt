@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
 import de.fraunhofer.aisec.cpg.graph.TypeManager
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.records
+import de.fraunhofer.aisec.cpg.graph.variables
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -43,7 +43,7 @@ internal class TypedefTest : BaseTest() {
     @Throws(Exception::class)
     fun testSingle() {
         val result = analyze("cpp", topLevel, true)
-        val variables = flattenListIsInstance<ValueDeclaration>(result)
+        val variables = result.variables
 
         // normal type
         val l1 = findByUniqueName(variables, "l1")
@@ -84,7 +84,7 @@ internal class TypedefTest : BaseTest() {
     @Throws(Exception::class)
     fun testWithModifier() {
         val result = analyze("cpp", topLevel, true)
-        val variables = flattenListIsInstance<ValueDeclaration>(result)
+        val variables = result.variables
 
         // pointer
         val l1ptr = findByUniqueName(variables, "l1ptr")
@@ -109,7 +109,7 @@ internal class TypedefTest : BaseTest() {
     @Throws(Exception::class)
     fun testChained() {
         val result = analyze("cpp", topLevel, true)
-        val variables = flattenListIsInstance<ValueDeclaration>(result)
+        val variables = result.variables
         val l1 = findByUniqueName(variables, "l1")
         val l3 = findByUniqueName(variables, "l3")
         val l4 = findByUniqueName(variables, "l4")
@@ -121,7 +121,7 @@ internal class TypedefTest : BaseTest() {
     @Throws(Exception::class)
     fun testMultiple() {
         val result = analyze("cpp", topLevel, true)
-        val variables = flattenListIsInstance<ValueDeclaration>(result)
+        val variables = result.variables
 
         // simple type
         val i1 = findByUniqueName(variables, "i1")
@@ -145,7 +145,7 @@ internal class TypedefTest : BaseTest() {
 
         // template, not to be confused with multiple typedef
         val template =
-            findByUniquePredicate(result.firstOrNull()?.typedefs ?: listOf()) {
+            findByUniquePredicate(result.translationUnits.firstOrNull()?.typedefs ?: listOf()) {
                 it.type.typeName == "template_class_A"
             }
         assertEquals(template.alias.typeName, "type_B")
@@ -155,7 +155,7 @@ internal class TypedefTest : BaseTest() {
     @Throws(Exception::class)
     fun testStructs() {
         val result = analyze("cpp", topLevel, true)
-        val variables = flattenListIsInstance<ValueDeclaration>(result)
+        val variables = result.variables
         val ps1 = findByUniqueName(variables, "ps1")
         val ps2 = findByUniqueName(variables, "ps2")
         assertEquals(ps1.type, ps2.type)
@@ -165,7 +165,7 @@ internal class TypedefTest : BaseTest() {
     @Throws(Exception::class)
     fun testArbitraryTypedefLocation() {
         val result = analyze("cpp", topLevel, true)
-        val variables = flattenListIsInstance<ValueDeclaration>(result)
+        val variables = result.variables
         val ullong1 = findByUniqueName(variables, "someUllong1")
         val ullong2 = findByUniqueName(variables, "someUllong2")
         assertEquals(ullong1.type, ullong2.type)
@@ -175,8 +175,8 @@ internal class TypedefTest : BaseTest() {
     @Throws(Exception::class)
     fun testMemberTypeDef() {
         val result = analyze("cpp", topLevel, true)
-        val variables = flattenListIsInstance<ValueDeclaration>(result)
-        val records = flattenListIsInstance<RecordDeclaration>(result)
+        val variables = result.variables
+        val records = result.records
         val addConst = findByUniqueName(records, "add_const")
         val typeMember1: ValueDeclaration = findByUniqueName(addConst.fields, "typeMember1")
         val typeMember2: ValueDeclaration = findByUniqueName(addConst.fields, "typeMember2")

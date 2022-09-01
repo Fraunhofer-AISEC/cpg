@@ -157,7 +157,7 @@ public class SubgraphWalker {
    * @param n the node which contains the ast children to flatten
    * @return the flattened nodes
    */
-  public static List<Node> flattenAST(Node n) {
+  public static List<Node> flattenAST(@Nullable Node n) {
     if (n == null) {
       return new ArrayList<>();
     }

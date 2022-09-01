@@ -26,19 +26,17 @@
 package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import java.io.File
 import kotlin.test.*
-import kotlin.test.BeforeTest
-import kotlin.test.Test
 
 internal class ScopeManagerTest : BaseTest() {
     private lateinit var config: TranslationConfiguration
@@ -64,10 +62,7 @@ internal class ScopeManagerTest : BaseTest() {
         val scopeManager = ScopeManager()
         val frontend = CXXLanguageFrontend(config, scopeManager)
         val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
-        val methods =
-            flattenListIsInstance<MethodDeclaration>(tu.declarations).filter {
-                it !is ConstructorDeclaration
-            }
+        val methods = tu.allChildren<MethodDeclaration>().filter { it !is ConstructorDeclaration }
         assertFalse(methods.isEmpty())
 
         methods.forEach {
@@ -75,7 +70,7 @@ internal class ScopeManagerTest : BaseTest() {
             assertSame(it, scope!!.getAstNode())
         }
 
-        val constructors = flattenListIsInstance<ConstructorDeclaration>(tu.declarations)
+        val constructors = tu.allChildren<ConstructorDeclaration>()
         assertFalse(constructors.isEmpty())
 
         // make sure that the scope of the constructor actually has the constructor as an ast node.

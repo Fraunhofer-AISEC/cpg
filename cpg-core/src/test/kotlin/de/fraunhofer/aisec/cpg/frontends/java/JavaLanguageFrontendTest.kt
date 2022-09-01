@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
+import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -298,21 +297,16 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         assertTrue(graphNodes.size != 0)
 
-        val switchStatements = Util.filterCast(graphNodes, SwitchStatement::class.java)
+        val switchStatements = graphNodes.filterIsInstance<SwitchStatement>()
         assertEquals(3, switchStatements.size)
 
         val switchStatement = switchStatements[0]
         assertEquals(11, (switchStatement.statement as? CompoundStatement)?.statements?.size)
 
-        val caseStatements =
-            Util.filterCast(SubgraphWalker.flattenAST(switchStatement), CaseStatement::class.java)
+        val caseStatements = switchStatement.allChildren<CaseStatement>()
         assertEquals(4, caseStatements.size)
 
-        val defaultStatements =
-            Util.filterCast(
-                SubgraphWalker.flattenAST(switchStatement),
-                DefaultStatement::class.java
-            )
+        val defaultStatements = switchStatement.allChildren<DefaultStatement>()
         assertEquals(1, defaultStatements.size)
     }
 
@@ -560,8 +554,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     fun testSuperFieldUsage() {
         val file1 = File("src/test/resources/fix-328/Cat.java")
         val file2 = File("src/test/resources/fix-328/Animal.java")
-        val result = analyze(listOf(file1, file2), file1.parentFile.toPath(), true)
-        val tu = findByUniqueName(result, "src/test/resources/fix-328/Cat.java")
+        val result = TestUtils.analyze(listOf(file1, file2), file1.parentFile.toPath(), true)
+        val tu = findByUniqueName(result.translationUnits, "src/test/resources/fix-328/Cat.java")
         val namespace = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
         assertNotNull(namespace)
 

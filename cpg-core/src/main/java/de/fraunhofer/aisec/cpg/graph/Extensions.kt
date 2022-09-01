@@ -25,11 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -39,26 +36,21 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.astParent
 
-@JvmName("allNodes")
-fun TranslationResult.allChildren(): List<Node> {
-    return this.allChildren<Node>()
-}
+/**
+ * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
+ * optional predicate function [predicate] can be supplied, which will be applied via
+ * [Collection.filter]
+ */
+@JvmOverloads
+inline fun <reified T> Node?.allChildren(noinline predicate: ((T) -> Boolean)? = null): List<T> {
+    val nodes = SubgraphWalker.flattenAST(this)
+    val filtered = nodes.filterIsInstance<T>()
 
-inline fun <reified T : Node> TranslationResult.allChildren(): List<T> {
-    val children = SubgraphWalker.flattenAST(this)
-
-    return children.filterIsInstance<T>()
-}
-
-@JvmName("allChildrenNodes")
-fun Node.allChildren(): List<Node> {
-    return this.allChildren<Node>()
-}
-
-inline fun <reified T : Node> Node.allChildren(): List<T> {
-    val children = SubgraphWalker.flattenAST(this)
-
-    return children.filterIsInstance<T>()
+    return if (predicate != null) {
+        filtered.filter(predicate)
+    } else {
+        filtered
+    }
 }
 
 @JvmName("astNodes")
@@ -74,6 +66,16 @@ inline fun <reified T : Node> Node.ast(): List<T> {
 
 inline fun <reified T : Node> Node.dfgFrom(): List<T> {
     return this.prevDFG.toList().filterIsInstance<T>()
+}
+
+/** This function returns the *first* node that matches the name on the supplied list of nodes. */
+fun <T : Node> List<T>?.byNameOrNull(lookup: String): T? {
+    return this?.firstOrNull { it.name == lookup }
+}
+
+/** A shortcut to call [byNameOrNull] using the `[]` syntax. */
+operator fun <T : Node> List<T>?.get(lookup: String): T? {
+    return this.byNameOrNull(lookup)
 }
 
 inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
@@ -402,13 +404,39 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
     return null
 }
 
-/** Returns all [CallExpression]s in this graph. */
-@OptIn(ExperimentalGraph::class)
-val TranslationResult.calls: List<CallExpression>
-    get() = this.graph.nodes.filterIsInstance<CallExpression>()
+/** Returns all [CallExpression] children in this graph, starting with this [Node]. */
+val Node?.calls: List<CallExpression>
+    get() = this?.allChildren() ?: listOf()
+
+/** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
+val Node?.methods: List<MethodDeclaration>
+    get() = this?.allChildren() ?: listOf()
+
+/** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
+val Node?.fields: List<FieldDeclaration>
+    get() = this?.allChildren() ?: listOf()
+
+/** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
+val Node?.functions: List<FunctionDeclaration>
+    get() = this?.allChildren() ?: listOf()
+
+/** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
+val Node?.records: List<RecordDeclaration>
+    get() = this?.allChildren() ?: listOf()
+
+/** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
+val Node?.variables: List<VariableDeclaration>
+    get() = this?.allChildren() ?: listOf()
+
+/** Returns all [Literal] children in this graph, starting with this [Node]. */
+val Node?.literals: List<Literal<*>>
+    get() = this?.allChildren() ?: listOf()
+
+/** Returns all [DeclaredReferenceExpression] children in this graph, starting with this [Node]. */
+val Node?.refs: List<DeclaredReferenceExpression>
+    get() = this?.allChildren() ?: listOf()
 
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
-@OptIn(ExperimentalGraph::class)
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
     return SubgraphWalker.flattenAST(this).filter { node ->
         (node as? CallExpression)?.invokes?.any { it.name == name } == true
@@ -422,23 +450,16 @@ val FunctionDeclaration.callees: Set<FunctionDeclaration>
         return SubgraphWalker.flattenAST(this.body)
             .filterIsInstance<CallExpression>()
             .map { it.invokes }
-            .foldRight(
-                mutableListOf<FunctionDeclaration>(),
-                { l, res ->
-                    res.addAll(l)
-                    res
-                }
-            )
+            .foldRight(mutableListOf<FunctionDeclaration>()) { l, res ->
+                res.addAll(l)
+                res
+            }
             .toSet()
     }
 
 /** Set of all functions calling [function] */
-@OptIn(ExperimentalGraph::class)
 fun TranslationResult.callersOf(function: FunctionDeclaration): Set<FunctionDeclaration> {
-    return this.graph.nodes
-        .filterIsInstance<FunctionDeclaration>()
-        .filter { function in it.callees }
-        .toSet()
+    return this.functions.filter { function in it.callees }.toSet()
 }
 
 /** All nodes which depend on this if statement */

@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.flattenIsInstance
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.methods
+import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.nio.file.Path
@@ -45,22 +45,21 @@ internal class StaticImportsTest : BaseTest() {
     @Throws(Exception::class)
     fun testSingleStaticImport() {
         val result = analyze("java", topLevel.resolve("single"), true)
-        val methods = flattenListIsInstance<MethodDeclaration>(result)
+        val methods = result.methods
         val test = findByUniqueName(methods, "test")
         val main = findByUniqueName(methods, "main")
-        val call = flattenIsInstance<CallExpression>(main).firstOrNull()
+        val call = main.allChildren<CallExpression>().firstOrNull()
         assertNotNull(call)
         assertEquals(listOf(test), call.invokes)
 
-        val testFields =
-            flattenListIsInstance<FieldDeclaration>(result).filter { it.name == "test" }
+        val testFields = result.allChildren<FieldDeclaration>().filter { it.name == "test" }
         assertEquals(1, testFields.size)
 
         val staticField = testFields.firstOrNull()
         assertNotNull(staticField)
         assertTrue(staticField.modifiers.contains("static"))
 
-        val memberExpressions = flattenIsInstance<MemberExpression>(main)
+        val memberExpressions = main.allChildren<MemberExpression>()
         val usage = findByUniqueName(memberExpressions, "test")
         assertEquals(staticField, usage.refersTo)
     }
@@ -69,12 +68,12 @@ internal class StaticImportsTest : BaseTest() {
     @Throws(Exception::class)
     fun testAsteriskImport() {
         val result = analyze("java", topLevel.resolve("asterisk"), true)
-        val methods = flattenListIsInstance<MethodDeclaration>(result)
+        val methods = result.methods
         val main = findByUniqueName(methods, "main")
-        val records = flattenListIsInstance<RecordDeclaration>(result)
+        val records = result.records
         val a = findByUniqueName(records, "A")
         val b = findByUniqueName(records, "B")
-        for (call in flattenIsInstance<CallExpression>(main)) {
+        for (call in main.allChildren<CallExpression>()) {
             when (call.name) {
                 "a" -> {
                     assertEquals(listOf(findByUniqueName(methods, "a")), call.invokes)
@@ -91,13 +90,13 @@ internal class StaticImportsTest : BaseTest() {
                 }
             }
         }
-        val testFields = flattenIsInstance<FieldDeclaration>(a)
+        val testFields = a.allChildren<FieldDeclaration>()
         val staticField = findByUniqueName(testFields, "staticField")
         val nonStaticField = findByUniqueName(testFields, "nonStaticField")
         assertTrue(staticField.modifiers.contains("static"))
         assertFalse(nonStaticField.modifiers.contains("static"))
 
-        val declaredReferences = flattenIsInstance<MemberExpression>(main)
+        val declaredReferences = main.allChildren<MemberExpression>()
         val usage = findByUniqueName(declaredReferences, "staticField")
         assertEquals(staticField, usage.refersTo)
 
