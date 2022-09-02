@@ -406,35 +406,35 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
 
 /** Returns all [CallExpression] children in this graph, starting with this [Node]. */
 val Node?.calls: List<CallExpression>
-    get() = this?.allChildren() ?: listOf()
+    get() = this.allChildren()
 
 /** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
 val Node?.methods: List<MethodDeclaration>
-    get() = this?.allChildren() ?: listOf()
+    get() = this.allChildren()
 
 /** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
 val Node?.fields: List<FieldDeclaration>
-    get() = this?.allChildren() ?: listOf()
+    get() = this.allChildren()
 
 /** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
 val Node?.functions: List<FunctionDeclaration>
-    get() = this?.allChildren() ?: listOf()
+    get() = this.allChildren()
 
 /** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
 val Node?.records: List<RecordDeclaration>
-    get() = this?.allChildren() ?: listOf()
+    get() = this.allChildren()
 
 /** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
 val Node?.variables: List<VariableDeclaration>
-    get() = this?.allChildren() ?: listOf()
+    get() = this.allChildren()
 
 /** Returns all [Literal] children in this graph, starting with this [Node]. */
 val Node?.literals: List<Literal<*>>
-    get() = this?.allChildren() ?: listOf()
+    get() = this.allChildren()
 
 /** Returns all [DeclaredReferenceExpression] children in this graph, starting with this [Node]. */
 val Node?.refs: List<DeclaredReferenceExpression>
-    get() = this?.allChildren() ?: listOf()
+    get() = this.allChildren()
 
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
@@ -446,9 +446,7 @@ fun TranslationResult.callsByName(name: String): List<CallExpression> {
 /** Set of all functions which are called from this function */
 val FunctionDeclaration.callees: Set<FunctionDeclaration>
     get() {
-
-        return SubgraphWalker.flattenAST(this.body)
-            .filterIsInstance<CallExpression>()
+        return this.calls
             .map { it.invokes }
             .foldRight(mutableListOf<FunctionDeclaration>()) { l, res ->
                 res.addAll(l)

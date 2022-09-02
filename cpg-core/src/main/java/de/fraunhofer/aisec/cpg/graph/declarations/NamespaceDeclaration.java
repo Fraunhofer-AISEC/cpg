@@ -66,29 +66,29 @@ public class NamespaceDeclaration extends Declaration
 
   public List<FieldDeclaration> getFields() {
     return declarations.stream()
-        .filter(d -> d instanceof FieldDeclaration)
-        .map(d -> (FieldDeclaration) d)
+        .filter(FieldDeclaration.class::isInstance)
+        .map(FieldDeclaration.class::cast)
         .collect(Collectors.toList());
   }
 
   public List<FunctionDeclaration> getFunctions() {
     return declarations.stream()
-        .filter(d -> d instanceof FunctionDeclaration)
-        .map(d -> (FunctionDeclaration) d)
+        .filter(FunctionDeclaration.class::isInstance)
+        .map(FunctionDeclaration.class::cast)
         .collect(Collectors.toList());
   }
 
   public List<RecordDeclaration> getRecords() {
     return declarations.stream()
-        .filter(d -> d instanceof RecordDeclaration)
-        .map(d -> (RecordDeclaration) d)
+        .filter(RecordDeclaration.class::isInstance)
+        .map(RecordDeclaration.class::cast)
         .collect(Collectors.toList());
   }
 
   public List<NamespaceDeclaration> getNamespaces() {
     return declarations.stream()
-        .filter(d -> d instanceof NamespaceDeclaration)
-        .map(d -> (NamespaceDeclaration) d)
+        .filter(NamespaceDeclaration.class::isInstance)
+        .map(NamespaceDeclaration.class::cast)
         .collect(Collectors.toList());
   }
 
