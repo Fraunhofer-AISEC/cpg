@@ -70,11 +70,11 @@ inline fun <reified T : Node> Node.dfgFrom(): List<T> {
 
 /** This function returns the *first* node that matches the name on the supplied list of nodes. */
 fun <T : Node> List<T>?.byNameOrNull(lookup: String, modifier: SearchModifier): T? {
-    return if(modifier == SearchModifier.NONE) {
+    return if (modifier == SearchModifier.NONE) {
         this?.firstOrNull { it.name == lookup }
     } else {
-        val nodes = this?.filter { it.name == lookup} ?: listOf()
-        if(nodes.size > 1) {
+        val nodes = this?.filter { it.name == lookup } ?: listOf()
+        if (nodes.size > 1) {
             throw NoSuchElementException("result is not unique")
         }
 
@@ -84,16 +84,41 @@ fun <T : Node> List<T>?.byNameOrNull(lookup: String, modifier: SearchModifier): 
 
 enum class SearchModifier {
     NONE,
+
+    /**
+     * This search modifier denotes that the result returned by the search needs to be unique. If it
+     * is not unique, a [NoSuchElementException] is thrown, even if a `orNull` function is used.
+     */
     UNIQUE
 }
 
 /** A shortcut to call [byNameOrNull] using the `[]` syntax. */
-operator fun <T : Node> List<T>?.get(lookup: String, modifier: SearchModifier = SearchModifier.NONE): T? {
+operator fun <T : Node> List<T>?.get(
+    lookup: String,
+    modifier: SearchModifier = SearchModifier.NONE
+): T? {
     return this.byNameOrNull(lookup, modifier)
 }
 
+/** A shortcut to call [firstOrNull] using the `[]` syntax. */
+operator fun <T : Node> List<T>?.get(
+    predicate: (T) -> Boolean,
+    modifier: SearchModifier = SearchModifier.NONE
+): T? {
+    return if (modifier == SearchModifier.NONE) {
+        return this?.firstOrNull(predicate)
+    } else {
+        val nodes = this?.filter(predicate) ?: listOf()
+        if (nodes.size > 1) {
+            throw NoSuchElementException("result is not unique")
+        }
+
+        nodes.firstOrNull()
+    }
+}
+
 /** A shortcut invoke [filter] on a list of nodes. */
-operator fun <T: Node> List<T>.invoke(predicate: (T) -> Boolean): List<T> {
+operator fun <T : Node> List<T>.invoke(predicate: (T) -> Boolean): List<T> {
     return this.filter(predicate)
 }
 

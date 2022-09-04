@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.enhancements.calls
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
@@ -55,7 +54,8 @@ internal class FunctionPointerTest : BaseTest() {
         val main = functions["main", SearchModifier.UNIQUE]
         val calls = main.calls
         val noParam =
-            findByUniquePredicate(functions) { it.name == "target" && it.parameters.isEmpty() }
+            functions[{ it.name == "target" && it.parameters.isEmpty() }, SearchModifier.UNIQUE]
+        findByUniquePredicate(functions) { it.name == "target" && it.parameters.isEmpty() }
         val singleParam =
             findByUniquePredicate(functions) { it.name == "target" && it.parameters.size == 1 }
         val noParamUnknown =
@@ -150,4 +150,3 @@ internal class FunctionPointerTest : BaseTest() {
         test("cpp")
     }
 }
-

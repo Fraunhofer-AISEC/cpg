@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -377,10 +377,10 @@ internal class EOGTest : BaseTest() {
         val first = findByUniqueName(calls, "first")
         assertNotNull(first)
 
-        var target = findByUniqueName(functions, "first")
+        var target = functions["first", UNIQUE]
         assertEquals(listOf(target), first.invokes)
 
-        val second = findByUniqueName(calls, "second")
+        val second = calls["second", UNIQUE]
         assertNotNull(second)
 
         target = findByUniqueName(functions, "second")
@@ -389,7 +389,7 @@ internal class EOGTest : BaseTest() {
         val third = findByUniqueName(calls, "third")
         assertNotNull(third)
 
-        target = findByUniquePredicate(functions) { it.name == "third" && it.parameters.size == 2 }
+        target = functions[{ it.name == "third" && it.parameters.size == 2 }, UNIQUE]
         assertEquals(listOf(target), third.invokes)
 
         val fourth = findByUniqueName(calls, "fourth")

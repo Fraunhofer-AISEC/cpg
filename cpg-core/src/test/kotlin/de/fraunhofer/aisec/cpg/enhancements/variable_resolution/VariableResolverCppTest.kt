@@ -340,4 +340,3 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOf(callParamMap["main_local_varName"], declaration)
     }
 }
-
