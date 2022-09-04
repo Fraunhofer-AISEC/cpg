@@ -77,7 +77,7 @@ internal class VariableResolverCppTest : BaseTest() {
                 topLevel.resolve(it).toFile()
             }
         val result = analyze(files, topLevel, true)
-        val calls = result.calls.filter { it.name == "printLog" }
+        val calls = result.calls { it.name == "printLog" }
         val records = result.records
         val functions = result.functions
 
@@ -340,3 +340,4 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOf(callParamMap["main_local_varName"], declaration)
     }
 }
+

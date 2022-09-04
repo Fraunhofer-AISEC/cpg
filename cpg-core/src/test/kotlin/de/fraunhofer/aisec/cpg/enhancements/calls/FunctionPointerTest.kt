@@ -30,12 +30,9 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import java.nio.file.Path
 import java.util.*
@@ -55,7 +52,7 @@ internal class FunctionPointerTest : BaseTest() {
     fun test(language: String) {
         val result = analyze(language)
         val functions = result.functions
-        val main = findByUniqueName(functions, "main")
+        val main = functions["main", SearchModifier.UNIQUE]
         val calls = main.calls
         val noParam =
             findByUniquePredicate(functions) { it.name == "target" && it.parameters.isEmpty() }
@@ -153,3 +150,4 @@ internal class FunctionPointerTest : BaseTest() {
         test("cpp")
     }
 }
+
