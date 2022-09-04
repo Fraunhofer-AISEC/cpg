@@ -29,11 +29,7 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.compareLineFromLocationIfExists
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.getSubnodeOfTypeWithName
-import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -361,8 +357,8 @@ internal class DFGTest {
     @Throws(Exception::class)
     fun testSensitivityThroughLoop() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
-        val tu = analyze(listOf(topLevel.resolve("LoopDFGs.java").toFile()), topLevel, true)
-        val looping = getSubnodeOfTypeWithName(tu, MethodDeclaration::class.java, "looping")
+        val result = analyze(listOf(topLevel.resolve("LoopDFGs.java").toFile()), topLevel, true)
+        val looping = result.methods["looping"]
         val methodNodes = SubgraphWalker.flattenAST(looping)
         val l0 = getLiteral(methodNodes, 0)
         val l1 = getLiteral(methodNodes, 1)
@@ -374,7 +370,7 @@ internal class DFGTest {
             }
         val dfgNodes =
             flattenDFGGraph(
-                getSubnodeOfTypeWithName(calls[0], DeclaredReferenceExpression::class.java, "a"),
+                calls[0].refs["a"],
                 false
             )
         assertTrue(dfgNodes.contains(l0))
@@ -409,8 +405,7 @@ internal class DFGTest {
                 topLevel,
                 true
             )
-        val looping =
-            getSubnodeOfTypeWithName(tu, MethodDeclaration::class.java, "labeledBreakContinue")
+        val looping = tu.methods["labeledBreakContinue"]
         val methodNodes = SubgraphWalker.flattenAST(looping)
         val l0 = getLiteral(methodNodes, 0)
         val l1 = getLiteral(methodNodes, 1)
@@ -422,19 +417,16 @@ internal class DFGTest {
                 .filter { n: Node -> n is CallExpression && n.name == "println" }
                 .toMutableList()
         val dfgNodesA0 =
-            flattenDFGGraph(
-                getSubnodeOfTypeWithName(calls[0], DeclaredReferenceExpression::class.java, "a"),
+            flattenDFGGraph(calls[0].refs["a"],
                 false
             )
         val dfgNodesA1 =
             flattenDFGGraph(
-                getSubnodeOfTypeWithName(calls[1], DeclaredReferenceExpression::class.java, "a"),
-                false
+                calls[1].refs["a"],                false
             )
         val dfgNodesA2 =
             flattenDFGGraph(
-                getSubnodeOfTypeWithName(calls[2], DeclaredReferenceExpression::class.java, "a"),
-                false
+                calls[2].refs["a"],                false
             )
         assertTrue(dfgNodesA0.contains(l0))
         assertTrue(dfgNodesA0.contains(l1))

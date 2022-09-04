@@ -29,32 +29,29 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOf
 import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
-import de.fraunhofer.aisec.cpg.TestUtils.getSubnodeOfTypeWithName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
 import kotlin.test.Test
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testVarNameDeclaredInLoop() {
-        val firstLoopLocal =
-            getSubnodeOfTypeWithName(forStatements!![0], VariableDeclaration::class.java, "varName")
+        val firstLoopLocal = forStatements?.get(0).variables["varName"]
         assertUsageOf(callParamMap["func1_first_loop_varName"], firstLoopLocal)
     }
 
     @Test
     fun testVarNameInSecondLoop() {
-        val secondLoopLocal =
-            getSubnodeOfTypeWithName(forStatements!![1], VariableDeclaration::class.java, "varName")
+        val secondLoopLocal =forStatements?.get(1).variables["varName"]
         assertUsageOf(callParamMap["func1_second_loop_varName"], secondLoopLocal)
     }
 
@@ -65,23 +62,13 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testReferenceToParameter() {
-        val param: ValueDeclaration? =
-            getSubnodeOfTypeWithName(
-                outerFunction2,
-                ParamVariableDeclaration::class.java,
-                "varName"
-            )
+        val param: ValueDeclaration? = outerFunction2?.parameters["varName"]
         assertUsageOf(callParamMap["func2_param_varName"], param)
     }
 
     @Test
     fun testVarNameInInstanceOfExternalClass() {
-        val externalClassInstance =
-            getSubnodeOfTypeWithName(
-                outerFunction3,
-                VariableDeclaration::class.java,
-                "externalClass"
-            )
+        val externalClassInstance = outerFunction3.variables["externalClass"]
         assertUsageOfMemberAndBase(
             callParamMap["func3_external_instance_varName"],
             externalClassInstance,
@@ -138,11 +125,7 @@ internal class VariableResolverJavaTest : BaseTest() {
     fun testParamVarNameInInnerClass() {
         assertUsageOf(
             callParamMap["func2_inner_param_varName"],
-            getSubnodeOfTypeWithName(
-                innerFunction2,
-                ParamVariableDeclaration::class.java,
-                "varName"
-            )
+            innerFunction2?.parameters["varName"]
         )
     }
 
@@ -158,19 +141,15 @@ internal class VariableResolverJavaTest : BaseTest() {
     @Test
     fun testStaticVarNameAsCoughtExcpetionInInner() {
         val staticVarNameException =
-            getSubnodeOfTypeWithName(
-                innerFunction3,
-                VariableDeclaration::class.java,
-                "staticVarName"
-            )
+            innerFunction3.variables["staticVarName"]
         assertUsageOf(callParamMap["func3_inner_exception_staticVarName"], staticVarNameException)
     }
 
     @Test
-    fun testVarNameAsCoughtExcpetionInInner() {
-        val varNameExcepetion =
-            getSubnodeOfTypeWithName(innerFunction3, VariableDeclaration::class.java, "varName")
-        assertUsageOf(callParamMap["func3_inner_exception_varName"], varNameExcepetion)
+    fun testVarNameAsCaughtExceptionInInner() {
+        val varNameException =
+            innerFunction3.variables["varName"]
+        assertUsageOf(callParamMap["func3_inner_exception_varName"], varNameException)
     }
 
     companion object {

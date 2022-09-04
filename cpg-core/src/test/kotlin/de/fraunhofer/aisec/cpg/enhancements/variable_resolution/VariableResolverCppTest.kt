@@ -26,26 +26,20 @@
 package de.fraunhofer.aisec.cpg.enhancements.variable_resolution
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOf
 import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
-import de.fraunhofer.aisec.cpg.TestUtils.findByName
-import de.fraunhofer.aisec.cpg.TestUtils.getOfTypeWithName
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import java.io.File
+import java.nio.file.Path
 import java.util.concurrent.ExecutionException
-import java.util.stream.Collectors
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.BeforeAll
@@ -73,43 +67,25 @@ internal class VariableResolverCppTest : BaseTest() {
     private var innerFunction1: MethodDeclaration? = null
     private var innerFunction2: MethodDeclaration? = null
     private val callParamMap: MutableMap<String, Expression> = HashMap()
+
     @BeforeAll
     @Throws(ExecutionException::class, InterruptedException::class)
     fun initTests() {
-        val topLevelPath = "src/test/resources/variables_extended/cpp/"
-        val fileNames = listOf("scope_variables.cpp", "external_class.cpp")
-        val fileLocations =
-            fileNames
-                .stream()
-                .map { fileName: String -> File(topLevelPath + fileName) }
-                .collect(Collectors.toList())
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(*fileLocations.toTypedArray())
-                .topLevel(File(topLevelPath))
-                .defaultPasses()
-                .debugParser(true)
-                .defaultLanguages()
-                .failOnError(true)
-                .loadIncludes(true)
-                .build()
-        val analyzer = builder().config(config).build()
-        val tu = analyzer.analyze().get().translationUnits
-        val nodes =
-            tu.stream()
-                .flatMap { tUnit: TranslationUnitDeclaration? ->
-                    SubgraphWalker.flattenAST(tUnit).stream()
-                }
-                .collect(Collectors.toList())
-        val calls = findByName(nodes.filterIsInstance<CallExpression>(), "printLog")
-        val records = nodes.filterIsInstance<RecordDeclaration>()
-        val functions = nodes.filterIsInstance<FunctionDeclaration>()
+        val topLevel = Path.of("src/test/resources/variables_extended/cpp/")
+        val files =
+            listOf("scope_variables.cpp", "external_class.cpp").map {
+                topLevel.resolve(it).toFile()
+            }
+        val result = analyze(files, topLevel, true)
+        val calls = result.calls.filter { it.name == "printLog" }
+        val records = result.records
+        val functions = result.functions
 
         // Extract all Variable declarations and field declarations for matching
         externalClass = records["ExternalClass"]
         externVarName = externalClass.allChildren<FieldDeclaration>()["varName"]
         externStaticVarName = externalClass.allChildren<FieldDeclaration>()["staticVarName"]
-        outerClass = getOfTypeWithName(nodes, RecordDeclaration::class.java, "ScopeVariables")
+        outerClass = records["ScopeVariables"]
         outerVarName = outerClass?.byNameOrNull("varName")
         outerStaticVarName = outerClass?.byNameOrNull("staticVarName")
         function2Receiver = outerClass?.byNameOrNull<MethodDeclaration>("function2")?.receiver

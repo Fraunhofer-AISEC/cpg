@@ -205,43 +205,6 @@ object TestUtils {
     }
 
     /**
-     * Returns the first element of the specified Class-type `specificClass` that has the name
-     * `name` in the list `listOfNodes`.
-     *
-     * @param <S> Some class that extends [Node]. </S>
-     */
-    fun <S : Node> getOfTypeWithName(
-        listOfNodes: List<Node>,
-        specificClass: Class<S>,
-        name: String
-    ): S? {
-        val listOfNodesWithName =
-            listOfNodes.filterIsInstance(specificClass).filter { it.name == name }
-        return if (listOfNodesWithName.isEmpty()) {
-            null
-        } else listOfNodesWithName[0]
-        // Here we return the first node, if there are more nodes
-    }
-
-    /**
-     * Returns the first element of the specified Class-type {code specifiedClass} that has the name
-     * `name` in the list of nodes that are subnodes of the AST-root node `root`.
-     *
-     * @param <S> Some class that extends [Node]. </S>
-     */
-    fun <S : Node> getSubnodeOfTypeWithName(
-        root: Node?,
-        specificClass: Class<S>,
-        name: String
-    ): S? {
-        if (root == null) {
-            return null
-        }
-
-        return getOfTypeWithName(SubgraphWalker.flattenAST(root), specificClass, name)
-    }
-
-    /**
      * Compare the given parameter `toCompare` to the start- or end-line of the given node. If the
      * node has no location `false` is returned. `startLine` is used to specify if the start-line or
      * end-line of a location is supposed to be used.
@@ -280,8 +243,8 @@ object TestUtils {
     }
 
     /**
-     * Asserts equality or containing of the expected usedNode in the usingNode. If [ ]
-     * [VRUtil.ENFORCE_REFERENCES] is true, `usingNode` must be a [ ] where
+     * Asserts equality or containing of the expected usedNode in the usingNode. If
+     * [ENFORCE_REFERENCES] is true, `usingNode` must be a [DeclaredReferenceExpression] where
      * [DeclaredReferenceExpression.refersTo] is or contains `usedNode`. If this is not the case,
      * usage can also be interpreted as equality of the two.
      *
@@ -303,9 +266,9 @@ object TestUtils {
 
     /**
      * Asserts that `usingNode` uses/references the provided `usedBase` and `usedMember`. If
-     * [VRUtil.ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [MemberExpression] where
+     * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [MemberExpression] where
      * [MemberExpression.base] uses `usedBase` and [ ][MemberExpression.refersTo] uses `usedMember`.
-     * Using is checked as preformed per [ ][VRUtil.assertUsageOf]
+     * Using is checked as preformed per [assertUsageOf]
      *
      * @param usingNode
      * - Node that uses some member
