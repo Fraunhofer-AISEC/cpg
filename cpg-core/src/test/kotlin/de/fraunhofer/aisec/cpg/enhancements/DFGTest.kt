@@ -368,11 +368,7 @@ internal class DFGTest {
             SubgraphWalker.flattenAST(looping).filter { n: Node ->
                 n is CallExpression && n.name == "println"
             }
-        val dfgNodes =
-            flattenDFGGraph(
-                calls[0].refs["a"],
-                false
-            )
+        val dfgNodes = flattenDFGGraph(calls[0].refs["a"], false)
         assertTrue(dfgNodes.contains(l0))
         assertTrue(dfgNodes.contains(l1))
         assertTrue(dfgNodes.contains(l2))
@@ -416,18 +412,9 @@ internal class DFGTest {
             SubgraphWalker.flattenAST(looping)
                 .filter { n: Node -> n is CallExpression && n.name == "println" }
                 .toMutableList()
-        val dfgNodesA0 =
-            flattenDFGGraph(calls[0].refs["a"],
-                false
-            )
-        val dfgNodesA1 =
-            flattenDFGGraph(
-                calls[1].refs["a"],                false
-            )
-        val dfgNodesA2 =
-            flattenDFGGraph(
-                calls[2].refs["a"],                false
-            )
+        val dfgNodesA0 = flattenDFGGraph(calls[0].refs["a"], false)
+        val dfgNodesA1 = flattenDFGGraph(calls[1].refs["a"], false)
+        val dfgNodesA2 = flattenDFGGraph(calls[2].refs["a"], false)
         assertTrue(dfgNodesA0.contains(l0))
         assertTrue(dfgNodesA0.contains(l1))
         assertTrue(dfgNodesA0.contains(l3))

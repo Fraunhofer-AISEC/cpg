@@ -679,10 +679,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals("class", recordDeclaration.kind)
         assertEquals(2, recordDeclaration.fields.size)
 
-        val field = recordDeclaration.getField("field")
+        val field = recordDeclaration.fields["field"]
         assertNotNull(field)
 
-        val constant = recordDeclaration.getField("CONSTANT")
+        val constant = recordDeclaration.fields["CONSTANT"]
         assertNotNull(constant)
         assertEquals(TypeParser.createFrom("void*", true), field.type)
         assertEquals(3, recordDeclaration.methods.size)

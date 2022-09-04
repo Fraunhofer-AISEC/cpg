@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -521,7 +522,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 val field: FieldDeclaration?
                 val fieldName: String?
                 if (index is Int) {
-                    field = record.getField("field_$index")
+                    field = record.fields["field_$index"]
                     fieldName = field?.name
                 } else {
                     // We won't find a field because it's accessed by a variable index.

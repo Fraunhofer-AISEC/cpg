@@ -490,7 +490,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals("value", value.name)
         assertEquals(2, (value.value as? Literal<*>)?.value)
 
-        var field = record.getField("field")
+        var field = record.fields["field"]
         assertNotNull(field)
         annotations = field.annotations
         assertEquals(1, annotations.size)
@@ -498,7 +498,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         var forField = annotations[0]
         assertEquals("AnnotatedField", forField.name)
 
-        field = record.getField("anotherField")
+        field = record.fields["anotherField"]
         assertNotNull(field)
 
         annotations = field.annotations

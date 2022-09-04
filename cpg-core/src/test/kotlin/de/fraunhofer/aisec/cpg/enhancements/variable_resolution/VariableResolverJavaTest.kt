@@ -34,11 +34,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
 import kotlin.test.Test
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class VariableResolverJavaTest : BaseTest() {
@@ -51,7 +51,7 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testVarNameInSecondLoop() {
-        val secondLoopLocal =forStatements?.get(1).variables["varName"]
+        val secondLoopLocal = forStatements?.get(1).variables["varName"]
         assertUsageOf(callParamMap["func1_second_loop_varName"], secondLoopLocal)
     }
 
@@ -140,15 +140,13 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testStaticVarNameAsCoughtExcpetionInInner() {
-        val staticVarNameException =
-            innerFunction3.variables["staticVarName"]
+        val staticVarNameException = innerFunction3.variables["staticVarName"]
         assertUsageOf(callParamMap["func3_inner_exception_staticVarName"], staticVarNameException)
     }
 
     @Test
     fun testVarNameAsCaughtExceptionInInner() {
-        val varNameException =
-            innerFunction3.variables["varName"]
+        val varNameException = innerFunction3.variables["varName"]
         assertUsageOf(callParamMap["func3_inner_exception_varName"], varNameException)
     }
 
