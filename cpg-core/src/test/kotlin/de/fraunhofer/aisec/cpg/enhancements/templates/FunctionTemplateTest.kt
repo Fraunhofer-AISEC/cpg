@@ -55,11 +55,11 @@ internal class FunctionTemplateTest : BaseTest() {
                 topLevel,
                 true
             )
-        val variableDeclarations = result.allChildren<VariableDeclaration>()
+        val variableDeclarations = result.variables
         val x = findByUniqueName(variableDeclarations, "x")
         assertEquals(UnknownType.getUnknownType(), x.type)
 
-        val declaredReferenceExpressions = result.allChildren<DeclaredReferenceExpression>()
+        val declaredReferenceExpressions = result.refs
         val xDeclaredReferenceExpression = findByUniqueName(declaredReferenceExpressions, "x")
         assertEquals(UnknownType.getUnknownType(), xDeclaredReferenceExpression.type)
 

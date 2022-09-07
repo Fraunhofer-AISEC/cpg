@@ -647,18 +647,15 @@ internal class EOGTest : BaseTest() {
         // Test If-Block
         val firstIf: IfStatement =
             result.allChildren<IfStatement>().filter { l -> l.location?.region?.startLine == 6 }[0]
-        val a: DeclaredReferenceExpression =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { l: DeclaredReferenceExpression ->
-                    l.location?.region?.startLine == 8 && l.name == "a"
-                }[0]
-        val b: DeclaredReferenceExpression =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { l: DeclaredReferenceExpression ->
-                    l.location?.region?.startLine == 7 && l.name == "b"
-                }[0]
+        val a =
+            result.refs[
+                    { l: DeclaredReferenceExpression ->
+                        l.location?.region?.startLine == 8 && l.name == "a"
+                    }
+                ]
+        assertNotNull(a)
+        val b = result.refs[{ it.location?.region?.startLine == 7 && it.name == "b" }]
+        assertNotNull(b)
         var nextEOG: List<PropertyEdge<Node>> = firstIf.nextEOGEdges
         assertEquals(2, nextEOG.size)
         for (edge in nextEOG) {
@@ -677,18 +674,10 @@ internal class EOGTest : BaseTest() {
                 .allChildren<IfStatement>()
                 .filter { l: IfStatement -> l.location?.region?.startLine == 8 }[0]
         assertEquals(elseIf, firstIf.elseStatement)
-        val b2: DeclaredReferenceExpression =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { l: DeclaredReferenceExpression ->
-                    l.location?.region?.startLine == 9 && l.name == "b"
-                }[0]
-        val x: DeclaredReferenceExpression =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { l: DeclaredReferenceExpression ->
-                    l.location?.region?.startLine == 11 && l.name == "x"
-                }[0]
+        val b2 = result.refs[{ it.location?.region?.startLine == 9 && it.name == "b" }]
+        assertNotNull(b2)
+        val x = result.refs[{ it.location?.region?.startLine == 11 && it.name == "x" }]
+        assertNotNull(x)
         nextEOG = elseIf.nextEOGEdges
         assertEquals(2, nextEOG.size)
         for (edge in nextEOG) {

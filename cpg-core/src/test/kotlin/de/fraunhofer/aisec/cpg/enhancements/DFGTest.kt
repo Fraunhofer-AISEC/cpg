@@ -54,10 +54,8 @@ internal class DFGTest {
         val literal2 = result.literals[{ it.value == 2 }]
         assertNotNull(literal2)
 
-        val a2 =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { it: DeclaredReferenceExpression -> it.access == AccessValues.WRITE }[0]
+        val a2 = result.refs[{ it.access == AccessValues.WRITE }]
+        assertNotNull(a2)
         assertTrue(literal2.nextDFG.contains(a2))
         assertEquals(1, a2.nextDFG.size) // Outgoing DFG Edges only to VariableDeclaration
 
@@ -129,10 +127,9 @@ internal class DFGTest {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result =
             analyze(listOf(topLevel.resolve("conditional_expression.cpp").toFile()), topLevel, true)
-        val b =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { it.name == "b" && it.location?.region?.startLine == 6 }[0]
+        val b = result.refs[{ it.name == "b" && it.location?.region?.startLine == 6 }]
+        assertNotNull(b)
+
         val val2 = result.literals[{ it.value == 2 }]
         assertNotNull(val2)
 
@@ -155,29 +152,14 @@ internal class DFGTest {
                 true
             )
         val a = result.allChildren<VariableDeclaration>().filter { it.name == "a" }[0]
-        val b =
-            result
-                .allChildren<VariableDeclaration>()
-                .filter { it: VariableDeclaration -> it.name == "b" }[0]
+        val b = result.allChildren<VariableDeclaration>().filter { it.name == "b" }[0]
         val ab = b.prevEOG[0] as DeclaredReferenceExpression
-        val a10 =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { it: DeclaredReferenceExpression ->
-                    compareLineFromLocationIfExists(it, true, 8)
-                }[0]
-        val a11 =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { it: DeclaredReferenceExpression ->
-                    compareLineFromLocationIfExists(it, true, 11)
-                }[0]
-        val a12 =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { it: DeclaredReferenceExpression ->
-                    compareLineFromLocationIfExists(it, true, 14)
-                }[0]
+        val a10 = result.refs[{ compareLineFromLocationIfExists(it, true, 8) }]
+        val a11 = result.refs[{ compareLineFromLocationIfExists(it, true, 11) }]
+        val a12 = result.refs[{ compareLineFromLocationIfExists(it, true, 14) }]
+        assertNotNull(a10)
+        assertNotNull(a11)
+        assertNotNull(a12)
         val literal0 = result.literals[{ it.value == 0 }]
         val literal10 = result.literals[{ it.value == 10 }]
         val literal11 = result.literals[{ it.value == 11 }]
@@ -208,10 +190,8 @@ internal class DFGTest {
         val println = result.calls["println"]
         assertNotNull(println)
 
-        val aPrintln =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { it.nextEOG.contains(println) }[0]
+        val aPrintln = result.refs[{ it.nextEOG.contains(println) }]
+        assertNotNull(aPrintln)
         assertEquals(2, aPrintln.prevDFG.size)
         assertTrue(aPrintln.prevDFG.contains(literal0))
         assertTrue(aPrintln.prevDFG.contains(literal12))
@@ -228,7 +208,7 @@ internal class DFGTest {
             findByUniqueName<BinaryOperator>(result.allChildren<BinaryOperator>(), "+=")
         assertNotNull(rwCompoundOperator)
 
-        val expression = findByUniqueName(result.allChildren<DeclaredReferenceExpression>(), "i")
+        val expression = findByUniqueName(result.refs, "i")
         assertNotNull(expression)
 
         val prevDFGOperator = rwCompoundOperator.prevDFG
@@ -248,7 +228,7 @@ internal class DFGTest {
         val rwUnaryOperator = findByUniqueName(result.allChildren<UnaryOperator>(), "++")
         assertNotNull(rwUnaryOperator)
 
-        val expression = findByUniqueName(result.allChildren<DeclaredReferenceExpression>(), "i")
+        val expression = findByUniqueName(result.refs, "i")
         assertNotNull(expression)
 
         val prevDFGOperator: Set<Node> = rwUnaryOperator.prevDFG
@@ -289,7 +269,7 @@ internal class DFGTest {
 
         val lhsA = binaryOperatorAssignment.lhs as DeclaredReferenceExpression
         val rhsA = binaryOperatorAddition.lhs as DeclaredReferenceExpression
-        val b = findByUniqueName(result.allChildren<DeclaredReferenceExpression>(), "b")
+        val b = findByUniqueName(result.refs, "b")
         assertNotNull(b)
 
         val literal0 = result.literals[{ it.value == 0 }]
