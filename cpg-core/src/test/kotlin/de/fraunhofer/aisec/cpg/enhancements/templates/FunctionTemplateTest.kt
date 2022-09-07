@@ -522,11 +522,8 @@ internal class FunctionTemplateTest : BaseTest() {
             callExpression.templateParametersEdges?.get(0)?.getProperty(Properties.INSTANTIATION)
         )
         assertEquals(0, callExpression.templateParametersEdges!![0].getProperty(Properties.INDEX))
-        val int5: Literal<Int> =
-            findByUniquePredicate(
-                result.allChildren<Literal<Int>>(),
-                Predicate { l: Literal<*> -> l.value == 5 }
-            )
+        val int5 =
+            findByUniquePredicate(result.literals, Predicate { l: Literal<*> -> l.value == 5 })
         assertEquals(int5, callExpression.templateParameters[1])
         assertEquals(1, callExpression.templateParametersEdges!![1].getProperty(Properties.INDEX))
         assertEquals(

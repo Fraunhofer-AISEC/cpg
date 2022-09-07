@@ -77,10 +77,9 @@ internal class DFGTest {
         assertEquals(println, a1.nextEOG[0])
 
         // Test Merging
-        val b =
-            result
-                .allChildren<VariableDeclaration>()
-                .filter { it: VariableDeclaration -> it.name == "b" }[0]
+        val b = result.variables["b"]
+        assertNotNull(b)
+
         val ab = b.prevEOG[0] as DeclaredReferenceExpression
         assertTrue(literal1.nextDFG.contains(ab))
         assertTrue(literal2.nextDFG.contains(ab))

@@ -53,16 +53,14 @@ class CallResolverTest : BaseTest() {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
-        val innerMethods = findByName(callsRecord.allChildren<MethodDeclaration>(), "innerTarget")
+        val innerMethods = findByName(callsRecord.methods, "innerTarget")
         val innerCalls = findByName(callsRecord.calls, "innerTarget")
         checkCalls(intType, stringType, innerMethods, innerCalls)
-        val superMethods =
-            findByName(superClassRecord.allChildren<MethodDeclaration>(), "superTarget")
-                .toMutableList()
+        val superMethods = findByName(superClassRecord.methods, "superTarget").toMutableList()
         // We can't infer that a call to superTarget(int, int, int) is intended to be part of the
         // superclass. It looks like a call to a member of Calls.java, thus we need to add these
         // methods to the lookup
-        superMethods.addAll(findByName(callsRecord.allChildren<MethodDeclaration>(), "superTarget"))
+        superMethods.addAll(findByName(callsRecord.methods, "superTarget"))
         val superCalls = findByName(callsRecord.calls, "superTarget")
         checkCalls(intType, stringType, superMethods, superCalls)
         val externalMethods = findByName(externalRecord.methods, "externalTarget")

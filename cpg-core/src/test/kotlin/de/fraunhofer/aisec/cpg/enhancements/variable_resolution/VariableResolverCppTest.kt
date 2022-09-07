@@ -84,7 +84,7 @@ internal class VariableResolverCppTest : BaseTest() {
         // Extract all Variable declarations and field declarations for matching
         externalClass = records["ExternalClass"]
         externVarName = externalClass.fields["varName"]
-        externStaticVarName = externalClass.allChildren<FieldDeclaration>()["staticVarName"]
+        externStaticVarName = externalClass.fields["staticVarName"]
         outerClass = records["ScopeVariables"]
         outerVarName = outerClass?.byNameOrNull("varName")
         outerStaticVarName = outerClass?.byNameOrNull("staticVarName")
@@ -92,8 +92,8 @@ internal class VariableResolverCppTest : BaseTest() {
 
         // Inner class and its fields
         innerClass = records["ScopeVariables::InnerClass"]
-        innerVarName = innerClass.allChildren<FieldDeclaration>()["varName"]
-        innerStaticVarName = innerClass.allChildren<FieldDeclaration>()["staticVarName"]
+        innerVarName = innerClass.fields["varName"]
+        innerStaticVarName = innerClass.fields["staticVarName"]
         main = functions["main"]
 
         // Functions in the outer and inner object

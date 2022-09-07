@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.TestUtils.disableTypeManagerCleanup
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import java.nio.file.Path
 import java.util.*
 import kotlin.test.*
@@ -856,7 +855,7 @@ internal class TypeTests : BaseTest() {
                     true
                 )
             )
-        val variables = tu.allChildren<VariableDeclaration>()
+        val variables = tu.variables
         val localTwoParam = findByUniqueName(variables, "local_two_param")
         assertNotNull(localTwoParam)
         assertEquals(twoParamType, localTwoParam.type)

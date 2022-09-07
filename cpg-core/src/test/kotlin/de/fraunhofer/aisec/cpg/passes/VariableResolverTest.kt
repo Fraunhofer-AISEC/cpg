@@ -29,14 +29,17 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.fields
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.variables
 import java.nio.file.Path
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 
 internal class VariableResolverTest : BaseTest() {
     private val topLevel = Path.of("src", "test", "resources", "variables")
@@ -71,7 +74,7 @@ internal class VariableResolverTest : BaseTest() {
         var returnStatement = getLocal.allChildren<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
 
-        var local = getLocal.allChildren<VariableDeclaration>().firstOrNull()
+        var local = getLocal.variables.firstOrNull()
 
         var returnValue = returnStatement.returnValue as DeclaredReferenceExpression
         assertNotEquals(field, returnValue.refersTo)
@@ -82,7 +85,7 @@ internal class VariableResolverTest : BaseTest() {
         returnStatement = getShadow.allChildren<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
 
-        local = getShadow.allChildren<VariableDeclaration>().firstOrNull()
+        local = getShadow.variables.firstOrNull()
 
         returnValue = returnStatement.returnValue as DeclaredReferenceExpression
         assertNotEquals(field, returnValue.refersTo)
