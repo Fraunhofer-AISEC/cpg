@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.nio.file.Path
@@ -88,7 +87,7 @@ internal class StaticImportsTest : BaseTest() {
                 }
             }
         }
-        val testFields = a.allChildren<FieldDeclaration>()
+        val testFields = a.fields
         val staticField = findByUniqueName(testFields, "staticField")
         val nonStaticField = findByUniqueName(testFields, "nonStaticField")
         assertTrue(staticField.modifiers.contains("static"))

@@ -102,10 +102,7 @@ internal class DFGTest {
                 topLevel,
                 true
             )
-        val b =
-            result.allChildren<VariableDeclaration>().firstOrNull { it: VariableDeclaration ->
-                it.name == "b"
-            }
+        val b = result.variables["b"]
         assertNotNull(b)
 
         val ab = b.prevEOG[0] as DeclaredReferenceExpression
@@ -151,8 +148,12 @@ internal class DFGTest {
                 topLevel,
                 true
             )
-        val a = result.allChildren<VariableDeclaration>().filter { it.name == "a" }[0]
-        val b = result.allChildren<VariableDeclaration>().filter { it.name == "b" }[0]
+        val a = result.variables["a"]
+        assertNotNull(a)
+
+        val b = result.variables["b"]
+        assertNotNull(b)
+
         val ab = b.prevEOG[0] as DeclaredReferenceExpression
         val a10 = result.refs[{ compareLineFromLocationIfExists(it, true, 8) }]
         val a11 = result.refs[{ compareLineFromLocationIfExists(it, true, 11) }]
@@ -160,6 +161,7 @@ internal class DFGTest {
         assertNotNull(a10)
         assertNotNull(a11)
         assertNotNull(a12)
+
         val literal0 = result.literals[{ it.value == 0 }]
         val literal10 = result.literals[{ it.value == 10 }]
         val literal11 = result.literals[{ it.value == 11 }]
@@ -168,6 +170,7 @@ internal class DFGTest {
         assertNotNull(literal10)
         assertNotNull(literal11)
         assertNotNull(literal12)
+
         assertEquals(3, literal10.nextDFG.size)
         assertTrue(literal10.nextDFG.contains(a10))
         assertEquals(3, literal11.nextDFG.size)
@@ -261,10 +264,10 @@ internal class DFGTest {
         val binaryOperatorAddition = findByUniqueName(result.allChildren<BinaryOperator>(), "+")
         assertNotNull(binaryOperatorAddition)
 
-        val varA = findByUniqueName(result.allChildren<VariableDeclaration>(), "a")
+        val varA = findByUniqueName(result.variables, "a")
         assertNotNull(varA)
 
-        val varB = findByUniqueName(result.allChildren<VariableDeclaration>(), "b")
+        val varB = findByUniqueName(result.variables, "b")
         assertNotNull(varB)
 
         val lhsA = binaryOperatorAssignment.lhs as DeclaredReferenceExpression
@@ -328,7 +331,7 @@ internal class DFGTest {
     fun testNoOutgoingDFGFromVariableDeclaration() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result = analyze(listOf(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true)
-        val varA = findByUniqueName(result.allChildren<VariableDeclaration>(), "a")
+        val varA = findByUniqueName(result.variables, "a")
         assertNotNull(varA)
         assertEquals(0, varA.nextDFG.size)
         assertEquals(7, varA.prevDFG.size)

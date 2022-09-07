@@ -31,12 +31,8 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.disableTypeManagerCleanup
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.graph.TypeManager
-import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.methods
-import de.fraunhofer.aisec.cpg.graph.records
 import java.nio.file.Path
 import java.util.*
 import kotlin.test.*
@@ -717,7 +713,7 @@ internal class TypeTests : BaseTest() {
         assertEquals(typeT, TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T"))
 
         // Type of field t
-        val fieldDeclarations = result.allChildren<FieldDeclaration>()
+        val fieldDeclarations = result.fields
         val fieldDeclarationT = findByUniqueName(fieldDeclarations, "t")
         assertEquals(typeT, fieldDeclarationT.type)
         assertTrue(fieldDeclarationT.possibleSubTypes.contains(typeT))
@@ -750,7 +746,7 @@ internal class TypeTests : BaseTest() {
         }
 
         // Test uniqueness of types x and y have same type
-        val fieldDeclarations = result.allChildren<FieldDeclaration>()
+        val fieldDeclarations = result.fields
         val x = findByUniqueName(fieldDeclarations, "x")
         val z = findByUniqueName(fieldDeclarations, "z")
         assertSame(x.type, z.type)
@@ -760,7 +756,7 @@ internal class TypeTests : BaseTest() {
         assertTrue(y.type.qualifier.isConst)
 
         // Test propagation of specifiers in non-primitive fields (final A a)
-        var variableDeclarations = result.allChildren<VariableDeclaration>()
+        var variableDeclarations = result.variables
         val aA = findByUniqueName(variableDeclarations, "a")
         assertTrue(aA.type.qualifier.isConst)
 
@@ -783,7 +779,7 @@ internal class TypeTests : BaseTest() {
 
         topLevel = Path.of("src", "test", "resources", "types")
         result = analyze("cpp", topLevel, true)
-        variableDeclarations = result.allChildren<VariableDeclaration>()
+        variableDeclarations = result.variables
 
         // Test PointerType chain with pointer
         val regularInt = findByUniqueName(variableDeclarations, "regularInt")

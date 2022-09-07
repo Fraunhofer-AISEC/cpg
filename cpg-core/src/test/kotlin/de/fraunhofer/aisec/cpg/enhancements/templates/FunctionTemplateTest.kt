@@ -130,12 +130,10 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(typeT, typeParamDeclaration.type)
         assertEquals(intType, typeParamDeclaration.default)
 
-        val N = findByUniqueName(result.allChildren<ParamVariableDeclaration>(), "N")
+        val N = findByUniqueName(result.parameters, "N")
         val int2 = findByUniquePredicate(result.literals { it.value == 2 }) { it.value == 2 }
-        val int3 =
-            findByUniquePredicate(result.allChildren<Literal<*>>(), Predicate { it.value == 3 })
-        val int5 =
-            findByUniquePredicate(result.allChildren<Literal<*>>(), Predicate { it.value == 5 })
+        val int3 = findByUniquePredicate(result.literals) { it.value == 3 }
+        val int5 = findByUniquePredicate(result.literals) { it.value == 5 }
         assertEquals(N, functionTemplateDeclaration.parameters[1])
         assertEquals(intType, N.type)
         assertEquals(5, (N.default as Literal<*>).value)
@@ -237,10 +235,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 ObjectType.Modifier.SIGNED,
                 true
             )
-        val literal5 =
-            findByUniquePredicate(result.allChildren<Literal<*>>()) { l: Literal<*> ->
-                l.value == 5
-            }
+        val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)
         assertEquals(doubleType, (call.templateParameters[0] as TypeExpression).type)
         assertEquals(literal5, call.templateParameters[1])
@@ -279,10 +274,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val literal5 =
-            findByUniquePredicate(result.allChildren<Literal<*>>()) { l: Literal<*> ->
-                l.value == 5
-            }
+        val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)
         assertEquals("double", call.templateParameters[0].name)
         assertEquals(literal5, call.templateParameters[1])
@@ -327,9 +319,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 t.name == "int"
             }
         val literal5 =
-            findByUniquePredicate<Literal<*>>(result.allChildren<Literal<*>>()) { l: Literal<*> ->
-                l.value == 5
-            }
+            findByUniquePredicate<Literal<*>>(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)
         assertEquals(intType, (call.templateParameters[0] as TypeExpression).type)
         assertEquals(literal5, call.templateParameters[1])
@@ -378,10 +368,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 ObjectType.Modifier.SIGNED,
                 true
             )
-        val literal5 =
-            findByUniquePredicate(result.allChildren<Literal<*>>()) { l: Literal<*> ->
-                l.value == 5
-            }
+        val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)
         assertEquals(doubleType, (call.templateParameters[0] as TypeExpression).type)
         assertEquals(literal5, call.templateParameters[1])

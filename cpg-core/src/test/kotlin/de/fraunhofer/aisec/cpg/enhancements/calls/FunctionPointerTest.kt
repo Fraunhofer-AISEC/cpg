@@ -102,7 +102,8 @@ internal class FunctionPointerTest : BaseTest() {
                 }
                 else -> fail("Unexpected call " + call.name)
             }
-            val variables = result.allChildren<VariableDeclaration>()
+            val variables = result.variables
+
             for (variable in variables) {
                 when (variable.name) {
                     "no_param_unused",

@@ -503,7 +503,7 @@ class CallResolverTest : BaseTest() {
             findByUniquePredicate(functionDeclarations) { it.name == "calc" && !it.isImplicit }
         val callCalc = findByUniquePredicate(calls) { it.name == "calc" }
         val x = findByUniquePredicate(declaredReferenceExpressions) { it.name == "x" }
-        val literal5 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 5 }
+        val literal5 = findByUniquePredicate(result.literals) { it.value == 5 }
         assertEquals(1, callCalc.invokes.size)
         assertEquals(calc, callCalc.invokes[0])
         assertEquals(x, callCalc.arguments[0])
@@ -515,8 +515,8 @@ class CallResolverTest : BaseTest() {
                 f.name == "doSmth" && !f.isImplicit
             }
         val callDoSmth = findByUniquePredicate(calls) { f: CallExpression -> f.name == "doSmth" }
-        val literal1 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 1 }
-        val literal2 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 2 }
+        val literal1 = findByUniquePredicate(result.literals) { it.value == 1 }
+        val literal2 = findByUniquePredicate(result.literals) { it.value == 2 }
         assertEquals(1, callDoSmth.invokes.size)
         assertEquals(doSmth, callDoSmth.invokes[0])
         assertTrue(doSmth.nextEOG.contains(literal1))
@@ -570,7 +570,7 @@ class CallResolverTest : BaseTest() {
                 calls,
                 Predicate { c: CallExpression -> c.location!!.region.startLine == 4 }
             )
-        val literal7 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 7 }
+        val literal7 = findByUniquePredicate(result.literals) { it.value == 7 }
         assertEquals(1, fh.invokes.size)
         assertFalse(fh.invokes[0].isImplicit)
         assertEquals(2, fh.invokes[0].location!!.region.startLine)
@@ -600,7 +600,7 @@ class CallResolverTest : BaseTest() {
                 calls,
                 Predicate { c: CallExpression -> c.location!!.region.startLine == 10 }
             )
-        val literal5 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 5 }
+        val literal5 = findByUniquePredicate(result.literals) { it.value == 5 }
         assertEquals(1, fm2.invokes.size)
         assertEquals(9, fm2.invokes[0].location!!.region.startLine)
         assertEquals(1, fm2.arguments.size)
@@ -616,7 +616,7 @@ class CallResolverTest : BaseTest() {
         calls: List<CallExpression>
     ) {
         val fn = findByUniquePredicate(calls, Predicate { it.location?.region?.startLine == 13 })
-        val literal7 = findByUniquePredicate(result.allChildren<Literal<*>>()) { it.value == 7 }
+        val literal7 = findByUniquePredicate(result.literals) { it.value == 7 }
         assertEquals(1, fn.invokes.size)
         assertFalse(fn.invokes[0].isImplicit)
         assertEquals(2, fn.invokes[0].location!!.region.startLine)

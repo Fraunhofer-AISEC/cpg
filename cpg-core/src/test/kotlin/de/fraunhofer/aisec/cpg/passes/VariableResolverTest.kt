@@ -65,7 +65,7 @@ internal class VariableResolverTest : BaseTest() {
     fun testLocalVars() {
         val result = analyze("java", topLevel, true)
         val methods = result.methods
-        val fields = result.allChildren<FieldDeclaration>()
+        val fields = result.fields
         val field = findByUniqueName(fields, "field")
         val getLocal = findByUniqueName(methods, "getLocal")
         var returnStatement = getLocal.allChildren<ReturnStatement>().firstOrNull()
