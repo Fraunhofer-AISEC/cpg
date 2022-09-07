@@ -28,12 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.methods
-import de.fraunhofer.aisec.cpg.graph.records
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.nio.file.Path
 import kotlin.test.*
@@ -48,11 +45,11 @@ internal class StaticImportsTest : BaseTest() {
         val methods = result.methods
         val test = findByUniqueName(methods, "test")
         val main = findByUniqueName(methods, "main")
-        val call = main.allChildren<CallExpression>().firstOrNull()
+        val call = main.calls.firstOrNull()
         assertNotNull(call)
         assertEquals(listOf(test), call.invokes)
 
-        val testFields = result.allChildren<FieldDeclaration>().filter { it.name == "test" }
+        val testFields = result.fields { it.name == "test" }
         assertEquals(1, testFields.size)
 
         val staticField = testFields.firstOrNull()
@@ -69,19 +66,20 @@ internal class StaticImportsTest : BaseTest() {
     fun testAsteriskImport() {
         val result = analyze("java", topLevel.resolve("asterisk"), true)
         val methods = result.methods
-        val main = findByUniqueName(methods, "main")
+        val main = methods["main", SearchModifier.UNIQUE]
         val records = result.records
-        val a = findByUniqueName(records, "A")
-        val b = findByUniqueName(records, "B")
-        for (call in main.allChildren<CallExpression>()) {
+        val a = records["A", SearchModifier.UNIQUE]
+        val b = records["B", SearchModifier.UNIQUE]
+
+        for (call in main.calls) {
             when (call.name) {
                 "a" -> {
                     assertEquals(listOf(findByUniqueName(methods, "a")), call.invokes)
                     assertTrue((call.invokes[0] as MethodDeclaration).isStatic)
                 }
                 "b" -> {
-                    val bs = methods.filter { it.name == "b" && it.isStatic }
-                    assertEquals(call.invokes, bs.filter { it.hasSignature(call.signature) })
+                    val bs = methods { it.name == "b" && it.isStatic }
+                    assertEquals(call.invokes, bs { it.hasSignature(call.signature) })
                 }
                 "nonStatic" -> {
                     val nonStatic = findByUniqueName(b.methods, "nonStatic")

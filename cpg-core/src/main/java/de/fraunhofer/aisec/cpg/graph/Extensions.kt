@@ -69,7 +69,7 @@ inline fun <reified T : Node> Node.dfgFrom(): List<T> {
 }
 
 /** This function returns the *first* node that matches the name on the supplied list of nodes. */
-fun <T : Node> List<T>?.byNameOrNull(lookup: String, modifier: SearchModifier): T? {
+fun <T : Node> Collection<T>?.byNameOrNull(lookup: String, modifier: SearchModifier): T? {
     return if (modifier == SearchModifier.NONE) {
         this?.firstOrNull { it.name == lookup }
     } else {
@@ -93,7 +93,7 @@ enum class SearchModifier {
 }
 
 /** A shortcut to call [byNameOrNull] using the `[]` syntax. */
-operator fun <T : Node> List<T>?.get(
+operator fun <T : Node> Collection<T>?.get(
     lookup: String,
     modifier: SearchModifier = SearchModifier.NONE
 ): T? {
@@ -101,7 +101,7 @@ operator fun <T : Node> List<T>?.get(
 }
 
 /** A shortcut to call [firstOrNull] using the `[]` syntax. */
-operator fun <T : Node> List<T>?.get(
+operator fun <T : Node> Collection<T>?.get(
     predicate: (T) -> Boolean,
     modifier: SearchModifier = SearchModifier.NONE
 ): T? {
@@ -118,8 +118,13 @@ operator fun <T : Node> List<T>?.get(
 }
 
 /** A shortcut invoke [filter] on a list of nodes. */
-operator fun <T : Node> List<T>.invoke(predicate: (T) -> Boolean): List<T> {
+operator fun <T : Node> Collection<T>.invoke(predicate: (T) -> Boolean): List<T> {
     return this.filter(predicate)
+}
+
+/** A shortcut to filter a list of nodes by their name. */
+operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
+    return this.filter { it.name == lookup }
 }
 
 inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
@@ -458,6 +463,10 @@ val Node?.methods: List<MethodDeclaration>
 
 /** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
 val Node?.fields: List<FieldDeclaration>
+    get() = this.allChildren()
+
+/** Returns all [ParamVariableDeclaration] children in this graph, starting with this [Node]. */
+val Node?.parameters: List<ParamVariableDeclaration>
     get() = this.allChildren()
 
 /** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */

@@ -31,12 +31,8 @@ import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.records
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.nio.file.Path
@@ -54,12 +50,12 @@ internal class SuperCallTest : BaseTest() {
         val result = analyze("java", topLevel, true)
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
-        val superMethods = superClass.allChildren<MethodDeclaration>()
+        val superMethods = superClass.methods
         val superTarget = findByUniqueName(superMethods, "target")
         val subClass = findByUniqueName(records, "SubClass")
-        val methods = subClass.allChildren<MethodDeclaration>()
+        val methods = subClass.methods
         val target = findByUniqueName(methods, "target")
-        val calls = target.allChildren<CallExpression>()
+        val calls = target.calls
         val superCall = findByUniquePredicate(calls) { "super.target();" == it.code }
         assertEquals(listOf(superTarget), superCall.invokes)
     }
@@ -70,15 +66,15 @@ internal class SuperCallTest : BaseTest() {
         val result = analyze("java", topLevel, true)
         val records = result.records
         val interface1 = findByUniqueName(records, "Interface1")
-        val interface1Methods = interface1.allChildren<MethodDeclaration>()
+        val interface1Methods = interface1.methods
         val interface1Target = findByUniqueName(interface1Methods, "target")
         val interface2 = findByUniqueName(records, "Interface2")
-        val interface2Methods = interface2.allChildren<MethodDeclaration>()
+        val interface2Methods = interface2.methods
         val interface2Target = findByUniqueName(interface2Methods, "target")
         val subClass = findByUniqueName(records, "SubClass")
-        val methods = subClass.allChildren<MethodDeclaration>()
+        val methods = subClass.methods
         val target = findByUniqueName(methods, "target")
-        val calls = target.allChildren<CallExpression>()
+        val calls = target.calls
         val interface1Call =
             findByUniquePredicate(calls) { "Interface1.super.target();" == it.code }
         val interface2Call =
@@ -117,12 +113,12 @@ internal class SuperCallTest : BaseTest() {
         val result = analyze("java", topLevel, true)
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
-        val superMethods = superClass.allChildren<MethodDeclaration>()
+        val superMethods = superClass.methods
         val superTarget = findByUniqueName(superMethods, "target")
         val innerClass = findByUniqueName(records, "SubClass.Inner")
-        val methods = innerClass.allChildren<MethodDeclaration>()
+        val methods = innerClass.methods
         val target = findByUniqueName(methods, "inner")
-        val calls = target.allChildren<CallExpression>()
+        val calls = target.calls
         val superCall = findByUniquePredicate(calls) { "SubClass.super.target();" == it.code }
         assertInvokes(superCall, superTarget)
     }

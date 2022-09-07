@@ -33,7 +33,10 @@ import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -51,7 +54,7 @@ class CallResolverTest : BaseTest() {
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
         val innerMethods = findByName(callsRecord.allChildren<MethodDeclaration>(), "innerTarget")
-        val innerCalls = findByName(callsRecord.allChildren<CallExpression>(), "innerTarget")
+        val innerCalls = findByName(callsRecord.calls, "innerTarget")
         checkCalls(intType, stringType, innerMethods, innerCalls)
         val superMethods =
             findByName(superClassRecord.allChildren<MethodDeclaration>(), "superTarget")
@@ -60,20 +63,18 @@ class CallResolverTest : BaseTest() {
         // superclass. It looks like a call to a member of Calls.java, thus we need to add these
         // methods to the lookup
         superMethods.addAll(findByName(callsRecord.allChildren<MethodDeclaration>(), "superTarget"))
-        val superCalls = findByName(callsRecord.allChildren<CallExpression>(), "superTarget")
+        val superCalls = findByName(callsRecord.calls, "superTarget")
         checkCalls(intType, stringType, superMethods, superCalls)
-        val externalMethods =
-            findByName(externalRecord.allChildren<MethodDeclaration>(), "externalTarget")
-        val externalCalls = findByName(callsRecord.allChildren<CallExpression>(), "externalTarget")
+        val externalMethods = findByName(externalRecord.methods, "externalTarget")
+        val externalCalls = findByName(callsRecord.calls, "externalTarget")
         checkCalls(intType, stringType, externalMethods, externalCalls)
     }
 
     private fun ensureNoUnknownClassDummies(records: List<RecordDeclaration>) {
         val callsRecord = findByUniqueName(records, "Calls")
-        assertTrue(records.stream().noneMatch { r: RecordDeclaration -> r.name == "Unknown" })
+        assertTrue(records.stream().noneMatch { it.name == "Unknown" })
 
-        val unknownCall =
-            findByUniqueName(callsRecord.allChildren<CallExpression>(), "unknownTarget")
+        val unknownCall = findByUniqueName(callsRecord.calls, "unknownTarget")
         assertEquals(listOf<Any>(), unknownCall.invokes)
     }
 
@@ -89,7 +90,7 @@ class CallResolverTest : BaseTest() {
         for (declaration in tu.declarations) {
             assertNotEquals("invoke", declaration.name)
         }
-        val callExpressions = result.allChildren<CallExpression>()
+        val callExpressions = result.calls
         val invoke = findByUniqueName(callExpressions, "invoke")
         assertEquals(1, invoke.invokes.size)
         assertTrue(invoke.invokes[0] is MethodDeclaration)
@@ -103,7 +104,7 @@ class CallResolverTest : BaseTest() {
     ) {
         val signatures = listOf(listOf(), listOf(intType, intType), listOf(intType, stringType))
         for (signature in signatures) {
-            for (call in calls.filter { c: CallExpression -> c.signature == signature }) {
+            for (call in calls.filter { it.signature == signature }) {
                 val target =
                     findByUniquePredicate(methods) { m: FunctionDeclaration ->
                         m.hasSignature(signature)
@@ -129,11 +130,9 @@ class CallResolverTest : BaseTest() {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
-        val originalMethod =
-            findByUniqueName(superClassRecord.allChildren<MethodDeclaration>(), "overridingTarget")
-        val overridingMethod =
-            findByUniqueName(externalRecord.allChildren<MethodDeclaration>(), "overridingTarget")
-        val call = findByUniqueName(callsRecord.allChildren<CallExpression>(), "overridingTarget")
+        val originalMethod = findByUniqueName(superClassRecord.methods, "overridingTarget")
+        val overridingMethod = findByUniqueName(externalRecord.methods, "overridingTarget")
+        val call = findByUniqueName(callsRecord.calls, "overridingTarget")
 
         // TODO related to #204: Currently we have both the original and the overriding method in
         //  the invokes list. This check needs to be adjusted to the choice we make on solving #204
@@ -170,11 +169,8 @@ class CallResolverTest : BaseTest() {
         testOverriding(records)
 
         // Test functions (not methods!)
-        val functions =
-            result.allChildren<FunctionDeclaration>().filter { f: FunctionDeclaration ->
-                f.name == "functionTarget" && f !is MethodDeclaration
-            }
-        val calls = findByName(result.allChildren<CallExpression>(), "functionTarget")
+        val functions = result.functions { it.name == "functionTarget" && it !is MethodDeclaration }
+        val calls = findByName(result.calls, "functionTarget")
         checkCalls(intType, stringType, functions, calls)
         ensureNoUnknownClassDummies(records)
         ensureInvocationOfMethodsInFunction(result)
@@ -555,10 +551,10 @@ class CallResolverTest : BaseTest() {
                 topLevel,
                 true
             )
-        val calls = result.allChildren<CallExpression>()
+        val calls = result.calls
         assertEquals(1, calls.size)
 
-        val functionDeclarations = result.allChildren<FunctionDeclaration>()
+        val functionDeclarations = result.functions
         assertEquals(2, functionDeclarations.size)
         assertEquals(1, calls[0].invokes.size)
         assertFalse(calls[0].invokes[0].isImplicit)
@@ -648,7 +644,7 @@ class CallResolverTest : BaseTest() {
                 topLevel,
                 true
             )
-        val calls = result.allChildren<CallExpression>()
+        val calls = result.calls
         testScopedFunctionResolutionFunctionGlobal(result, calls)
         testScopedFunctionResolutionRedeclaration(result, calls)
         testScopedFunctionResolutionAfterRedeclaration(result, calls)
@@ -671,7 +667,7 @@ class CallResolverTest : BaseTest() {
                 topLevel,
                 true
             )
-        val calls = result.allChildren<CallExpression>()
+        val calls = result.calls
         val methodDeclarations = result.methods
         val calcOverload: FunctionDeclaration =
             findByUniquePredicate(methodDeclarations) { c: MethodDeclaration ->
@@ -719,7 +715,7 @@ class CallResolverTest : BaseTest() {
                 topLevel,
                 true
             )
-        val calls = result.allChildren<CallExpression>()
+        val calls = result.calls
 
         /*
          This call cannot be resolved to the overloaded calc because the signature doesn't match.

@@ -51,7 +51,9 @@ internal class DFGTest {
             )
 
         // Test If-Block
-        val literal2 = result.allChildren<Literal<*>>().filter { it.value == 2 }[0]
+        val literal2 = result.literals[{ it.value == 2 }]
+        assertNotNull(literal2)
+
         val a2 =
             result
                 .allChildren<DeclaredReferenceExpression>()
@@ -65,16 +67,12 @@ internal class DFGTest {
         assertEquals(a2.nextDFG.iterator().next(), refersTo)
 
         // Test Else-Block with System.out.println()
-        val literal1 =
-            result.allChildren<Literal<*>>().filter { it: Literal<*> -> it.value == 1 }[0]
-        val println =
-            result
-                .allChildren<CallExpression>()
-                .filter { it: CallExpression -> it.name == "println" }[0]
-        val a1 =
-            result
-                .allChildren<DeclaredReferenceExpression>()
-                .filter { it: DeclaredReferenceExpression -> it.nextEOG.contains(println) }[0]
+        val literal1 = result.literals[{ it.value == 1 }]
+        assertNotNull(literal1)
+        val println = result.calls["println"]
+        assertNotNull(println)
+        val a1 = result.refs[{ it.nextEOG.contains(println) }]
+        assertNotNull(a1)
         assertEquals(1, a1.prevDFG.size)
         assertEquals(literal1, a1.prevDFG.iterator().next())
         assertEquals(1, a1.nextEOG.size)
@@ -107,15 +105,14 @@ internal class DFGTest {
                 true
             )
         val b =
-            result
-                .allChildren<VariableDeclaration>()
-                .filter { it: VariableDeclaration -> it.name == "b" }
-                .firstOrNull()
+            result.allChildren<VariableDeclaration>().firstOrNull { it: VariableDeclaration ->
+                it.name == "b"
+            }
         assertNotNull(b)
 
         val ab = b.prevEOG[0] as DeclaredReferenceExpression
-        val literal4 =
-            result.allChildren<Literal<*>>().filter { it: Literal<*> -> it.value == 4 }[0]
+        val literal4 = result.literals[{ it.value == 4 }]
+        assertNotNull(literal4)
         assertTrue(literal4.nextDFG.contains(ab))
         assertEquals(1, ab.prevDFG.size)
     }
@@ -136,9 +133,13 @@ internal class DFGTest {
             result
                 .allChildren<DeclaredReferenceExpression>()
                 .filter { it.name == "b" && it.location?.region?.startLine == 6 }[0]
-        val val2 = result.allChildren<Literal<*>>().filter { it.value == 2 }[0]
-        val val3 = result.allChildren<Literal<*>>().filter { it.value == 3 }[0]
+        val val2 = result.literals[{ it.value == 2 }]
+        assertNotNull(val2)
+
+        val val3 = result.literals[{ it.value == 3 }]
+        assertNotNull(val3)
         assertEquals(2, b.prevDFG.size)
+
         assertTrue(b.prevDFG.contains(val2))
         assertTrue(b.prevDFG.contains(val3))
     }
@@ -177,14 +178,14 @@ internal class DFGTest {
                 .filter { it: DeclaredReferenceExpression ->
                     compareLineFromLocationIfExists(it, true, 14)
                 }[0]
-        val literal0 =
-            result.allChildren<Literal<*>>().filter { it: Literal<*> -> it.value == 0 }[0]
-        val literal10 =
-            result.allChildren<Literal<*>>().filter { it: Literal<*> -> it.value == 10 }[0]
-        val literal11 =
-            result.allChildren<Literal<*>>().filter { it: Literal<*> -> it.value == 11 }[0]
-        val literal12 =
-            result.allChildren<Literal<*>>().filter { it: Literal<*> -> it.value == 12 }[0]
+        val literal0 = result.literals[{ it.value == 0 }]
+        val literal10 = result.literals[{ it.value == 10 }]
+        val literal11 = result.literals[{ it.value == 11 }]
+        val literal12 = result.literals[{ it.value == 12 }]
+        assertNotNull(literal0)
+        assertNotNull(literal10)
+        assertNotNull(literal11)
+        assertNotNull(literal12)
         assertEquals(3, literal10.nextDFG.size)
         assertTrue(literal10.nextDFG.contains(a10))
         assertEquals(3, literal11.nextDFG.size)
@@ -204,14 +205,13 @@ internal class DFGTest {
         assertTrue(ab.nextDFG.contains(b))
 
         // Fallthrough test
-        val println =
-            result
-                .allChildren<CallExpression>()
-                .filter { it: CallExpression -> it.name == "println" }[0]
+        val println = result.calls["println"]
+        assertNotNull(println)
+
         val aPrintln =
             result
                 .allChildren<DeclaredReferenceExpression>()
-                .filter { it: DeclaredReferenceExpression -> it.nextEOG.contains(println) }[0]
+                .filter { it.nextEOG.contains(println) }[0]
         assertEquals(2, aPrintln.prevDFG.size)
         assertTrue(aPrintln.prevDFG.contains(literal0))
         assertTrue(aPrintln.prevDFG.contains(literal12))
@@ -292,10 +292,11 @@ internal class DFGTest {
         val b = findByUniqueName(result.allChildren<DeclaredReferenceExpression>(), "b")
         assertNotNull(b)
 
-        val literal0 =
-            result.allChildren<Literal<*>>().filter { it: Literal<*> -> it.value == 0 }[0]
-        val literal1 =
-            result.allChildren<Literal<*>>().filter { it: Literal<*> -> it.value == 1 }[0]
+        val literal0 = result.literals[{ it.value == 0 }]
+        assertNotNull(literal0)
+
+        val literal1 = result.literals[{ it.value == 1 }]
+        assertNotNull(literal1)
         assertEquals(0, varA.nextDFG.size) // No outgoing DFG edges from VariableDeclaration a
         assertEquals(0, varB.nextDFG.size) // No outgoing DFG edges from VariableDeclaration b
 
