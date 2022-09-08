@@ -25,14 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements
 
+import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.compareLineFromLocationIfExists
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
-import de.fraunhofer.aisec.cpg.TestUtils.getSubnodeOfTypeWithName
-import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -48,17 +45,17 @@ internal class DFGTest {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result =
             analyze(
-                java.util.List.of(topLevel.resolve("ControlFlowSensitiveDFGIfMerge.java").toFile()),
+                listOf(topLevel.resolve("ControlFlowSensitiveDFGIfMerge.java").toFile()),
                 topLevel,
                 true
             )
 
         // Test If-Block
-        val literal2 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 2 }[0]
-        val a2 =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
-                .filter { it: DeclaredReferenceExpression -> it.access == AccessValues.WRITE }[0]
+        val literal2 = result.literals[{ it.value == 2 }]
+        assertNotNull(literal2)
+
+        val a2 = result.refs[{ it.access == AccessValues.WRITE }]
+        assertNotNull(a2)
         assertTrue(literal2.nextDFG.contains(a2))
         assertEquals(1, a2.nextDFG.size) // Outgoing DFG Edges only to VariableDeclaration
 
@@ -68,23 +65,21 @@ internal class DFGTest {
         assertEquals(a2.nextDFG.iterator().next(), refersTo)
 
         // Test Else-Block with System.out.println()
-        val literal1 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 1 }[0]
-        val println =
-            flattenListIsInstance<CallExpression>(result)
-                .filter { it: CallExpression -> it.name == "println" }[0]
-        val a1 =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
-                .filter { it: DeclaredReferenceExpression -> it.nextEOG.contains(println) }[0]
+        val literal1 = result.literals[{ it.value == 1 }]
+        assertNotNull(literal1)
+        val println = result.calls["println"]
+        assertNotNull(println)
+        val a1 = result.refs[{ it.nextEOG.contains(println) }]
+        assertNotNull(a1)
         assertEquals(1, a1.prevDFG.size)
         assertEquals(literal1, a1.prevDFG.iterator().next())
         assertEquals(1, a1.nextEOG.size)
         assertEquals(println, a1.nextEOG[0])
 
         // Test Merging
-        val b =
-            flattenListIsInstance<VariableDeclaration>(result)
-                .filter { it: VariableDeclaration -> it.name == "b" }[0]
+        val b = result.variables["b"]
+        assertNotNull(b)
+
         val ab = b.prevEOG[0] as DeclaredReferenceExpression
         assertTrue(literal1.nextDFG.contains(ab))
         assertTrue(literal2.nextDFG.contains(ab))
@@ -106,15 +101,12 @@ internal class DFGTest {
                 topLevel,
                 true
             )
-        val b =
-            flattenListIsInstance<VariableDeclaration>(result)
-                .filter { it: VariableDeclaration -> it.name == "b" }
-                .firstOrNull()
+        val b = result.variables["b"]
         assertNotNull(b)
 
         val ab = b.prevEOG[0] as DeclaredReferenceExpression
-        val literal4 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 4 }[0]
+        val literal4 = result.literals[{ it.value == 4 }]
+        assertNotNull(literal4)
         assertTrue(literal4.nextDFG.contains(ab))
         assertEquals(1, ab.prevDFG.size)
     }
@@ -131,16 +123,16 @@ internal class DFGTest {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result =
             analyze(listOf(topLevel.resolve("conditional_expression.cpp").toFile()), topLevel, true)
-        val b =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
-                .filter { it: DeclaredReferenceExpression ->
-                    it.name == "b" && it.location?.region?.startLine == 6
-                }[0]
-        val val2 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 2 }[0]
-        val val3 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 3 }[0]
+        val b = result.refs[{ it.name == "b" && it.location?.region?.startLine == 6 }]
+        assertNotNull(b)
+
+        val val2 = result.literals[{ it.value == 2 }]
+        assertNotNull(val2)
+
+        val val3 = result.literals[{ it.value == 3 }]
+        assertNotNull(val3)
         assertEquals(2, b.prevDFG.size)
+
         assertTrue(b.prevDFG.contains(val2))
         assertTrue(b.prevDFG.contains(val3))
     }
@@ -155,36 +147,29 @@ internal class DFGTest {
                 topLevel,
                 true
             )
-        val a =
-            flattenListIsInstance<VariableDeclaration>(result)
-                .filter { it: VariableDeclaration -> it.name == "a" }[0]
-        val b =
-            flattenListIsInstance<VariableDeclaration>(result)
-                .filter { it: VariableDeclaration -> it.name == "b" }[0]
+        val a = result.variables["a"]
+        assertNotNull(a)
+
+        val b = result.variables["b"]
+        assertNotNull(b)
+
         val ab = b.prevEOG[0] as DeclaredReferenceExpression
-        val a10 =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
-                .filter { it: DeclaredReferenceExpression ->
-                    compareLineFromLocationIfExists(it, true, 8)
-                }[0]
-        val a11 =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
-                .filter { it: DeclaredReferenceExpression ->
-                    compareLineFromLocationIfExists(it, true, 11)
-                }[0]
-        val a12 =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
-                .filter { it: DeclaredReferenceExpression ->
-                    compareLineFromLocationIfExists(it, true, 14)
-                }[0]
-        val literal0 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 0 }[0]
-        val literal10 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 10 }[0]
-        val literal11 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 11 }[0]
-        val literal12 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 12 }[0]
+        val a10 = result.refs[{ compareLineFromLocationIfExists(it, true, 8) }]
+        val a11 = result.refs[{ compareLineFromLocationIfExists(it, true, 11) }]
+        val a12 = result.refs[{ compareLineFromLocationIfExists(it, true, 14) }]
+        assertNotNull(a10)
+        assertNotNull(a11)
+        assertNotNull(a12)
+
+        val literal0 = result.literals[{ it.value == 0 }]
+        val literal10 = result.literals[{ it.value == 10 }]
+        val literal11 = result.literals[{ it.value == 11 }]
+        val literal12 = result.literals[{ it.value == 12 }]
+        assertNotNull(literal0)
+        assertNotNull(literal10)
+        assertNotNull(literal11)
+        assertNotNull(literal12)
+
         assertEquals(3, literal10.nextDFG.size)
         assertTrue(literal10.nextDFG.contains(a10))
         assertEquals(3, literal11.nextDFG.size)
@@ -204,12 +189,11 @@ internal class DFGTest {
         assertTrue(ab.nextDFG.contains(b))
 
         // Fallthrough test
-        val println =
-            flattenListIsInstance<CallExpression>(result)
-                .filter { it: CallExpression -> it.name == "println" }[0]
-        val aPrintln =
-            flattenListIsInstance<DeclaredReferenceExpression>(result)
-                .filter { it: DeclaredReferenceExpression -> it.nextEOG.contains(println) }[0]
+        val println = result.calls["println"]
+        assertNotNull(println)
+
+        val aPrintln = result.refs[{ it.nextEOG.contains(println) }]
+        assertNotNull(aPrintln)
         assertEquals(2, aPrintln.prevDFG.size)
         assertTrue(aPrintln.prevDFG.contains(literal0))
         assertTrue(aPrintln.prevDFG.contains(literal12))
@@ -223,11 +207,10 @@ internal class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("compoundoperator.cpp").toFile()), topLevel, true)
         val rwCompoundOperator =
-            findByUniqueName<BinaryOperator>(flattenListIsInstance(result), "+=")
+            findByUniqueName<BinaryOperator>(result.allChildren<BinaryOperator>(), "+=")
         assertNotNull(rwCompoundOperator)
 
-        val expression =
-            findByUniqueName(flattenListIsInstance<DeclaredReferenceExpression>(result), "i")
+        val expression = findByUniqueName(result.refs, "i")
         assertNotNull(expression)
 
         val prevDFGOperator = rwCompoundOperator.prevDFG
@@ -244,11 +227,10 @@ internal class DFGTest {
     fun testUnaryOperatorDFG() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result = analyze(listOf(topLevel.resolve("unaryoperator.cpp").toFile()), topLevel, true)
-        val rwUnaryOperator = findByUniqueName(flattenListIsInstance<UnaryOperator>(result), "++")
+        val rwUnaryOperator = findByUniqueName(result.allChildren<UnaryOperator>(), "++")
         assertNotNull(rwUnaryOperator)
 
-        val expression =
-            findByUniqueName(flattenListIsInstance<DeclaredReferenceExpression>(result), "i")
+        val expression = findByUniqueName(result.refs, "i")
         assertNotNull(expression)
 
         val prevDFGOperator: Set<Node> = rwUnaryOperator.prevDFG
@@ -271,33 +253,32 @@ internal class DFGTest {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result =
             analyze(
-                java.util.List.of(topLevel.resolve("DelayedAssignmentAfterRHS.java").toFile()),
+                listOf(topLevel.resolve("DelayedAssignmentAfterRHS.java").toFile()),
                 topLevel,
                 true
             )
-        val binaryOperatorAssignment =
-            findByUniqueName(flattenListIsInstance<BinaryOperator>(result), "=")
+        val binaryOperatorAssignment = findByUniqueName(result.allChildren<BinaryOperator>(), "=")
         assertNotNull(binaryOperatorAssignment)
 
-        val binaryOperatorAddition =
-            findByUniqueName(flattenListIsInstance<BinaryOperator>(result), "+")
+        val binaryOperatorAddition = findByUniqueName(result.allChildren<BinaryOperator>(), "+")
         assertNotNull(binaryOperatorAddition)
 
-        val varA = findByUniqueName(flattenListIsInstance<VariableDeclaration>(result), "a")
+        val varA = findByUniqueName(result.variables, "a")
         assertNotNull(varA)
 
-        val varB = findByUniqueName(flattenListIsInstance<VariableDeclaration>(result), "b")
+        val varB = findByUniqueName(result.variables, "b")
         assertNotNull(varB)
 
         val lhsA = binaryOperatorAssignment.lhs as DeclaredReferenceExpression
         val rhsA = binaryOperatorAddition.lhs as DeclaredReferenceExpression
-        val b = findByUniqueName(flattenListIsInstance<DeclaredReferenceExpression>(result), "b")
+        val b = findByUniqueName(result.refs, "b")
         assertNotNull(b)
 
-        val literal0 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 0 }[0]
-        val literal1 =
-            flattenListIsInstance<Literal<*>>(result).filter { it: Literal<*> -> it.value == 1 }[0]
+        val literal0 = result.literals[{ it.value == 0 }]
+        assertNotNull(literal0)
+
+        val literal1 = result.literals[{ it.value == 1 }]
+        assertNotNull(literal1)
         assertEquals(0, varA.nextDFG.size) // No outgoing DFG edges from VariableDeclaration a
         assertEquals(0, varB.nextDFG.size) // No outgoing DFG edges from VariableDeclaration b
 
@@ -348,9 +329,8 @@ internal class DFGTest {
     @Throws(Exception::class)
     fun testNoOutgoingDFGFromVariableDeclaration() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
-        val result =
-            analyze(java.util.List.of(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true)
-        val varA = findByUniqueName(flattenListIsInstance<VariableDeclaration>(result), "a")
+        val result = analyze(listOf(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true)
+        val varA = findByUniqueName(result.variables, "a")
         assertNotNull(varA)
         assertEquals(0, varA.nextDFG.size)
         assertEquals(7, varA.prevDFG.size)
@@ -360,8 +340,8 @@ internal class DFGTest {
     @Throws(Exception::class)
     fun testSensitivityThroughLoop() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
-        val result = analyze(listOf(topLevel.resolve("LoopDFGs.java").toFile()), topLevel, true)[0]
-        val looping = getSubnodeOfTypeWithName(result, MethodDeclaration::class.java, "looping")
+        val result = analyze(listOf(topLevel.resolve("LoopDFGs.java").toFile()), topLevel, true)
+        val looping = result.methods["looping"]
         val methodNodes = SubgraphWalker.flattenAST(looping)
         val l0 = getLiteral(methodNodes, 0)
         val l1 = getLiteral(methodNodes, 1)
@@ -371,11 +351,7 @@ internal class DFGTest {
             SubgraphWalker.flattenAST(looping).filter { n: Node ->
                 n is CallExpression && n.name == "println"
             }
-        val dfgNodes =
-            flattenDFGGraph(
-                getSubnodeOfTypeWithName(calls[0], DeclaredReferenceExpression::class.java, "a"),
-                false
-            )
+        val dfgNodes = flattenDFGGraph(calls[0].refs["a"], false)
         assertTrue(dfgNodes.contains(l0))
         assertTrue(dfgNodes.contains(l1))
         assertTrue(dfgNodes.contains(l2))
@@ -402,9 +378,13 @@ internal class DFGTest {
     @Throws(Exception::class)
     fun testSensitivityWithLabels() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
-        val result = analyze(listOf(topLevel.resolve("LoopDFGs.java").toFile()), topLevel, true)[0]
-        val looping =
-            getSubnodeOfTypeWithName(result, MethodDeclaration::class.java, "labeledBreakContinue")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("LoopDFGs.java").toFile()),
+                topLevel,
+                true
+            )
+        val looping = tu.methods["labeledBreakContinue"]
         val methodNodes = SubgraphWalker.flattenAST(looping)
         val l0 = getLiteral(methodNodes, 0)
         val l1 = getLiteral(methodNodes, 1)
@@ -415,21 +395,9 @@ internal class DFGTest {
             SubgraphWalker.flattenAST(looping)
                 .filter { n: Node -> n is CallExpression && n.name == "println" }
                 .toMutableList()
-        val dfgNodesA0 =
-            flattenDFGGraph(
-                getSubnodeOfTypeWithName(calls[0], DeclaredReferenceExpression::class.java, "a"),
-                false
-            )
-        val dfgNodesA1 =
-            flattenDFGGraph(
-                getSubnodeOfTypeWithName(calls[1], DeclaredReferenceExpression::class.java, "a"),
-                false
-            )
-        val dfgNodesA2 =
-            flattenDFGGraph(
-                getSubnodeOfTypeWithName(calls[2], DeclaredReferenceExpression::class.java, "a"),
-                false
-            )
+        val dfgNodesA0 = flattenDFGGraph(calls[0].refs["a"], false)
+        val dfgNodesA1 = flattenDFGGraph(calls[1].refs["a"], false)
+        val dfgNodesA2 = flattenDFGGraph(calls[2].refs["a"], false)
         assertTrue(dfgNodesA0.contains(l0))
         assertTrue(dfgNodesA0.contains(l1))
         assertTrue(dfgNodesA0.contains(l3))

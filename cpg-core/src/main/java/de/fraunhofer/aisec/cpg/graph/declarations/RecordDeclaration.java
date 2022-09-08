@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.Transient;
 
@@ -126,15 +125,6 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
 
   public void removeField(FieldDeclaration fieldDeclaration) {
     this.fields.removeIf(propertyEdge -> propertyEdge.getEnd().equals(fieldDeclaration));
-  }
-
-  @Nullable
-  public FieldDeclaration getField(String name) {
-    return fields.stream()
-        .map(PropertyEdge::getEnd)
-        .filter(f -> f.getName().equals(name))
-        .findFirst()
-        .orElse(null);
   }
 
   public void setFields(List<FieldDeclaration> fields) {

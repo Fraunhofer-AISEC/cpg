@@ -31,17 +31,13 @@ import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.TestUtils.flattenIsInstance
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 internal class SuperCallTest : BaseTest() {
@@ -51,14 +47,14 @@ internal class SuperCallTest : BaseTest() {
     @Throws(Exception::class)
     fun testSimpleCall() {
         val result = analyze("java", topLevel, true)
-        val records = flattenListIsInstance<RecordDeclaration>(result)
+        val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
-        val superMethods = flattenIsInstance<MethodDeclaration>(superClass)
+        val superMethods = superClass.methods
         val superTarget = findByUniqueName(superMethods, "target")
         val subClass = findByUniqueName(records, "SubClass")
-        val methods = flattenIsInstance<MethodDeclaration>(subClass)
+        val methods = subClass.methods
         val target = findByUniqueName(methods, "target")
-        val calls = flattenIsInstance<CallExpression>(target)
+        val calls = target.calls
         val superCall = findByUniquePredicate(calls) { "super.target();" == it.code }
         assertEquals(listOf(superTarget), superCall.invokes)
     }
@@ -67,17 +63,17 @@ internal class SuperCallTest : BaseTest() {
     @Throws(Exception::class)
     fun testInterfaceCall() {
         val result = analyze("java", topLevel, true)
-        val records = flattenListIsInstance<RecordDeclaration>(result)
+        val records = result.records
         val interface1 = findByUniqueName(records, "Interface1")
-        val interface1Methods = flattenIsInstance<MethodDeclaration>(interface1)
+        val interface1Methods = interface1.methods
         val interface1Target = findByUniqueName(interface1Methods, "target")
         val interface2 = findByUniqueName(records, "Interface2")
-        val interface2Methods = flattenIsInstance<MethodDeclaration>(interface2)
+        val interface2Methods = interface2.methods
         val interface2Target = findByUniqueName(interface2Methods, "target")
         val subClass = findByUniqueName(records, "SubClass")
-        val methods = flattenIsInstance<MethodDeclaration>(subClass)
+        val methods = subClass.methods
         val target = findByUniqueName(methods, "target")
-        val calls = flattenIsInstance<CallExpression>(target)
+        val calls = target.calls
         val interface1Call =
             findByUniquePredicate(calls) { "Interface1.super.target();" == it.code }
         val interface2Call =
@@ -90,17 +86,17 @@ internal class SuperCallTest : BaseTest() {
     @Throws(Exception::class)
     fun testSuperField() {
         val result = analyze("java", topLevel, true)
-        val records = flattenListIsInstance<RecordDeclaration>(result)
+        val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
         val superField = findByUniqueName(superClass.fields, "field")
         val subClass = findByUniqueName(records, "SubClass")
-        val methods = flattenIsInstance<MethodDeclaration>(subClass)
+        val methods = subClass.methods
         val field = findByUniqueName(subClass.fields, "field")
         val getField = findByUniqueName(methods, "getField")
-        var refs = flattenIsInstance<MemberExpression>(getField)
+        var refs = getField.allChildren<MemberExpression>()
         val fieldRef = findByUniquePredicate(refs) { "field" == it.code }
         val getSuperField = findByUniqueName(methods, "getSuperField")
-        refs = flattenIsInstance(getSuperField)
+        refs = getSuperField.allChildren<MemberExpression>()
         val superFieldRef = findByUniquePredicate(refs) { "super.field" == it.code }
         assertTrue(fieldRef.base is DeclaredReferenceExpression)
         assertRefersTo(fieldRef.base, getField.receiver)
@@ -114,14 +110,14 @@ internal class SuperCallTest : BaseTest() {
     @Throws(Exception::class)
     fun testInnerCall() {
         val result = analyze("java", topLevel, true)
-        val records = flattenListIsInstance<RecordDeclaration>(result)
+        val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
-        val superMethods = flattenIsInstance<MethodDeclaration>(superClass)
+        val superMethods = superClass.methods
         val superTarget = findByUniqueName(superMethods, "target")
         val innerClass = findByUniqueName(records, "SubClass.Inner")
-        val methods = flattenIsInstance<MethodDeclaration>(innerClass)
+        val methods = innerClass.methods
         val target = findByUniqueName(methods, "inner")
-        val calls = flattenIsInstance<CallExpression>(target)
+        val calls = target.calls
         val superCall = findByUniquePredicate(calls) { "SubClass.super.target();" == it.code }
         assertInvokes(superCall, superTarget)
     }
@@ -130,8 +126,10 @@ internal class SuperCallTest : BaseTest() {
     @Throws(Exception::class)
     fun testNoExcessFields() {
         val result = analyze("java", topLevel, true)
-        val records = flattenListIsInstance<RecordDeclaration>(result)
-        val superClass = findByUniqueName(records, "SuperClass")
+        val records = result.records
+
+        val superClass = records["SuperClass"]
+        assertNotNull(superClass)
         assertEquals(1, superClass.fields.size)
         assertEquals(listOf("field"), superClass.fields.map(Node::name))
 

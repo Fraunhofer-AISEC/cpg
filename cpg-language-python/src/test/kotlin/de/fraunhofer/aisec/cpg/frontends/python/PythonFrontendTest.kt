@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -388,13 +389,16 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(recordFoo.fields.size, 4)
         assertEquals(recordFoo.methods.size, 1)
 
-        val fieldX = recordFoo.getField("x")
+        val fieldX = recordFoo.fields["x"]
         assertNotNull(fieldX)
-        val fieldY = recordFoo.getField("y")
+
+        val fieldY = recordFoo.fields["y"]
         assertNotNull(fieldY)
-        val fieldZ = recordFoo.getField("z")
+
+        val fieldZ = recordFoo.fields["z"]
         assertNotNull(fieldZ)
-        val fieldBaz = recordFoo.getField("baz")
+
+        val fieldBaz = recordFoo.fields["baz"]
         assertNotNull(fieldBaz)
 
         assertEquals(fieldX.name, "x")
@@ -706,11 +710,13 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(methBar)
 
         // val stmtsOutsideCls TODO
-        val classFieldNoInitializer = clsFoo.getField("classFieldNoInitializer")
+        val classFieldNoInitializer = clsFoo.fields["classFieldNoInitializer"]
         assertNotNull(classFieldNoInitializer)
-        val classFieldWithInit = clsFoo.getField("classFieldWithInit")
+
+        val classFieldWithInit = clsFoo.fields["classFieldWithInit"]
         assertNotNull(classFieldWithInit)
-        val classFieldDeclaredInFunction = clsFoo.getField("classFieldDeclaredInFunction")
+
+        val classFieldDeclaredInFunction = clsFoo.fields["classFieldDeclaredInFunction"]
         assertNotNull(classFieldDeclaredInFunction)
         // assertEquals(3, clsFoo.fields.size) // TODO should "self" be considered a field here?
 

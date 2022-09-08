@@ -26,61 +26,36 @@
 package de.fraunhofer.aisec.cpg.enhancements.calls
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
+import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.TestUtils.flattenIsInstance
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import java.util.function.Consumer
 import java.util.regex.Pattern
-import java.util.stream.Collectors
 import kotlin.test.*
 
 internal class FunctionPointerTest : BaseTest() {
     @Throws(Exception::class)
-    private fun analyze(language: String): List<TranslationUnitDeclaration> {
+    private fun analyze(language: String): TranslationResult {
         val topLevel = Path.of("src", "test", "resources", "functionPointers")
-        val files =
-            Files.walk(topLevel, Int.MAX_VALUE)
-                .map { obj: Path -> obj.toFile() }
-                .filter { obj: File -> obj.isFile }
-                .filter { f: File ->
-                    f.name.endsWith("." + language.lowercase(Locale.getDefault()))
-                }
-                .sorted()
-                .collect(Collectors.toList())
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(files)
-                .topLevel(topLevel.toFile())
-                .defaultPasses()
-                .defaultLanguages()
-                .debugParser(true)
-                .failOnError(true)
-                .build()
-        val analyzer = builder().config(config).build()
-        return analyzer.analyze().get().translationUnits
+
+        return TestUtils.analyze(language, topLevel, true)
     }
 
     @Throws(Exception::class)
     fun test(language: String) {
         val result = analyze(language)
-        val functions = flattenListIsInstance<FunctionDeclaration>(result)
-        val main = findByUniqueName(functions, "main")
-        val calls = flattenIsInstance<CallExpression>(main)
+        val functions = result.functions
+        val main = functions["main", SearchModifier.UNIQUE]
+        val calls = main.calls
         val noParam =
-            findByUniquePredicate(functions) { it.name == "target" && it.parameters.isEmpty() }
+            functions[{ it.name == "target" && it.parameters.isEmpty() }, SearchModifier.UNIQUE]
+        findByUniquePredicate(functions) { it.name == "target" && it.parameters.isEmpty() }
         val singleParam =
             findByUniquePredicate(functions) { it.name == "target" && it.parameters.size == 1 }
         val noParamUnknown =
@@ -127,7 +102,8 @@ internal class FunctionPointerTest : BaseTest() {
                 }
                 else -> fail("Unexpected call " + call.name)
             }
-            val variables = flattenListIsInstance<VariableDeclaration>(result)
+            val variables = result.variables
+
             for (variable in variables) {
                 when (variable.name) {
                     "no_param_unused",
@@ -166,12 +142,12 @@ internal class FunctionPointerTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testC() {
-        test("C")
+        test("c")
     }
 
     @Test
     @Throws(Exception::class)
     fun testCPP() {
-        test("CPP")
+        test("cpp")
     }
 }

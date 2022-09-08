@@ -26,21 +26,16 @@
 package de.fraunhofer.aisec.cpg.enhancements.variable_resolution
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.findByName
-import de.fraunhofer.aisec.cpg.TestUtils.getOfTypeWithName
-import de.fraunhofer.aisec.cpg.TestUtils.getSubnodeOfTypeWithName
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.TestUtils.analyze
+import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOf
+import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.Util
-import java.io.File
-import java.util.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import java.nio.file.Path
 import java.util.concurrent.ExecutionException
-import java.util.stream.Collectors
 import kotlin.test.Test
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
@@ -48,59 +43,33 @@ import org.junit.jupiter.api.TestInstance
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class VariableResolverJavaTest : BaseTest() {
 
-    fun getCallWithReference(literal: String): DeclaredReferenceExpression? {
-        val exp = callParamMap[literal]
-        return if (exp is DeclaredReferenceExpression) exp else null
-    }
-
-    fun getCallWithMemberExpression(literal: String): MemberExpression? {
-        val exp = callParamMap[literal]
-        return if (exp is MemberExpression) exp else null
-    }
-
     @Test
     fun testVarNameDeclaredInLoop() {
-        val firstLoopLocal =
-            getSubnodeOfTypeWithName(forStatements!![0], VariableDeclaration::class.java, "varName")
-        VRUtil.assertUsageOf(callParamMap["func1_first_loop_varName"], firstLoopLocal)
+        val firstLoopLocal = forStatements?.get(0).variables["varName"]
+        assertUsageOf(callParamMap["func1_first_loop_varName"], firstLoopLocal)
     }
 
     @Test
     fun testVarNameInSecondLoop() {
-        val secondLoopLocal =
-            getSubnodeOfTypeWithName(forStatements!![1], VariableDeclaration::class.java, "varName")
-        VRUtil.assertUsageOf(callParamMap["func1_second_loop_varName"], secondLoopLocal)
+        val secondLoopLocal = forStatements?.get(1).variables["varName"]
+        assertUsageOf(callParamMap["func1_second_loop_varName"], secondLoopLocal)
     }
 
     @Test
     fun testImplicitThisVarNameAfterLoops() {
-        VRUtil.assertUsageOfMemberAndBase(
-            callParamMap["func1_imp_this_varName"],
-            outerClass,
-            outerVarName
-        )
+        assertUsageOfMemberAndBase(callParamMap["func1_imp_this_varName"], outerClass, outerVarName)
     }
 
     @Test
     fun testReferenceToParameter() {
-        val param: ValueDeclaration? =
-            getSubnodeOfTypeWithName(
-                outerFunction2,
-                ParamVariableDeclaration::class.java,
-                "varName"
-            )
-        VRUtil.assertUsageOf(callParamMap["func2_param_varName"], param)
+        val param: ValueDeclaration? = outerFunction2?.parameters["varName"]
+        assertUsageOf(callParamMap["func2_param_varName"], param)
     }
 
     @Test
     fun testVarNameInInstanceOfExternalClass() {
-        val externalClassInstance =
-            getSubnodeOfTypeWithName(
-                outerFunction3,
-                VariableDeclaration::class.java,
-                "externalClass"
-            )
-        VRUtil.assertUsageOfMemberAndBase(
+        val externalClassInstance = outerFunction3.variables["externalClass"]
+        assertUsageOfMemberAndBase(
             callParamMap["func3_external_instance_varName"],
             externalClassInstance,
             externVarName
@@ -109,7 +78,7 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testStaticVarNameInExternalClass() {
-        VRUtil.assertUsageOfMemberAndBase(
+        assertUsageOfMemberAndBase(
             callParamMap["func3_external_static_staticVarName"],
             externalClass,
             externStaticVarName
@@ -118,7 +87,7 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testStaticVarnameWithoutPreviousInstance() {
-        VRUtil.assertUsageOfMemberAndBase(
+        assertUsageOfMemberAndBase(
             callParamMap["func4_external_static_staticVarName"],
             externalClass,
             externStaticVarName
@@ -127,7 +96,7 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testVarNameOverImpThisInnerClass() {
-        VRUtil.assertUsageOfMemberAndBase(
+        assertUsageOfMemberAndBase(
             callParamMap["func1_inner_imp_this_varName"],
             function1Receiver,
             innerVarName
@@ -136,7 +105,7 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testVarNameInOuterFromInnerClass() {
-        VRUtil.assertUsageOfMemberAndBase(
+        assertUsageOfMemberAndBase(
             callParamMap["func1_outer_this_varName"],
             implicitOuterThis,
             outerVarName
@@ -145,7 +114,7 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testStaticOuterFromInner() {
-        VRUtil.assertUsageOfMemberAndBase(
+        assertUsageOfMemberAndBase(
             callParamMap["func1_outer_static_staticVarName"],
             outerClass,
             outerStaticVarName
@@ -154,19 +123,15 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testParamVarNameInInnerClass() {
-        VRUtil.assertUsageOf(
+        assertUsageOf(
             callParamMap["func2_inner_param_varName"],
-            getSubnodeOfTypeWithName(
-                innerFunction2,
-                ParamVariableDeclaration::class.java,
-                "varName"
-            )
+            innerFunction2?.parameters["varName"]
         )
     }
 
     @Test
     fun testInnerVarnameOverExplicitThis() {
-        VRUtil.assertUsageOfMemberAndBase(
+        assertUsageOfMemberAndBase(
             callParamMap["func2_inner_this_varName"],
             function2Receiver,
             innerVarName
@@ -175,23 +140,14 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testStaticVarNameAsCoughtExcpetionInInner() {
-        val staticVarNameException =
-            getSubnodeOfTypeWithName(
-                innerFunction3,
-                VariableDeclaration::class.java,
-                "staticVarName"
-            )
-        VRUtil.assertUsageOf(
-            callParamMap["func3_inner_exception_staticVarName"],
-            staticVarNameException
-        )
+        val staticVarNameException = innerFunction3.variables["staticVarName"]
+        assertUsageOf(callParamMap["func3_inner_exception_staticVarName"], staticVarNameException)
     }
 
     @Test
-    fun testVarNameAsCoughtExcpetionInInner() {
-        val varNameExcepetion =
-            getSubnodeOfTypeWithName(innerFunction3, VariableDeclaration::class.java, "varName")
-        VRUtil.assertUsageOf(callParamMap["func3_inner_exception_varName"], varNameExcepetion)
+    fun testVarNameAsCaughtExceptionInInner() {
+        val varNameException = innerFunction3.variables["varName"]
+        assertUsageOf(callParamMap["func3_inner_exception_varName"], varNameException)
     }
 
     companion object {
@@ -224,145 +180,46 @@ internal class VariableResolverJavaTest : BaseTest() {
         @JvmStatic
         @Throws(ExecutionException::class, InterruptedException::class)
         fun initTests() {
-            val topLevelPath = "src/test/resources/variables_extended/java/"
-            val fileNames = listOf("ScopeVariables.java", "ExternalClass.java")
-            val fileLocations =
-                fileNames
-                    .stream()
-                    .map { fileName: String -> File(topLevelPath + fileName) }
-                    .collect(Collectors.toList())
-            val config =
-                TranslationConfiguration.builder()
-                    .sourceLocations(*fileLocations.toTypedArray())
-                    .topLevel(File(topLevelPath))
-                    .defaultPasses()
-                    .defaultLanguages()
-                    .debugParser(true)
-                    .failOnError(true)
-                    .build()
-            val analyzer = builder().config(config).build()
-            val tu = analyzer.analyze().get().translationUnits
-            val nodes =
-                tu.stream()
-                    .flatMap { tUnit: TranslationUnitDeclaration? ->
-                        SubgraphWalker.flattenAST(tUnit).stream()
-                    }
-                    .collect(Collectors.toList())
-            val calls = findByName(Util.filterCast(nodes, CallExpression::class.java), "printLog")
+            val topLevel = Path.of("src/test/resources/variables_extended/java/")
+            val fileNames =
+                listOf(
+                        topLevel.resolve("ScopeVariables.java"),
+                        topLevel.resolve("ExternalClass.java")
+                    )
+                    .map(Path::toFile)
+            val result = analyze(fileNames, topLevel, true)
 
-            val records = Util.filterCast(nodes, RecordDeclaration::class.java)
+            val calls = result.calls { it.name == "printLog" }
+            val records = result.records
 
             // Extract all Variable declarations and field declarations for matching
-            externalClass =
-                getOfTypeWithName(
-                    nodes,
-                    RecordDeclaration::class.java,
-                    "variables_extended.ExternalClass"
-                )
-            externVarName =
-                getSubnodeOfTypeWithName(externalClass, FieldDeclaration::class.java, "varName")
-            externStaticVarName =
-                getSubnodeOfTypeWithName(
-                    externalClass,
-                    FieldDeclaration::class.java,
-                    "staticVarName"
-                )
-            outerClass =
-                getOfTypeWithName(
-                    nodes,
-                    RecordDeclaration::class.java,
-                    "variables_extended.ScopeVariables"
-                )
-            outerVarName =
-                outerClass!!
-                    .fields
-                    .stream()
-                    .filter { n: FieldDeclaration -> n.name == "varName" }
-                    .findFirst()
-                    .get()
-            outerStaticVarName =
-                outerClass!!
-                    .fields
-                    .stream()
-                    .filter { n: FieldDeclaration -> n.name == "staticVarName" }
-                    .findFirst()
-                    .get()
+            externalClass = records["variables_extended.ExternalClass"]
+            externVarName = externalClass.fields["varName"]
+            externStaticVarName = externalClass.fields["staticVarName"]
+            outerClass = records["variables_extended.ScopeVariables"]
+            outerVarName = outerClass.fields["varName"]
+            outerStaticVarName = outerClass.fields["staticVarName"]
 
             // Inner class and its fields
-            innerClass =
-                getOfTypeWithName(
-                    nodes,
-                    RecordDeclaration::class.java,
-                    "variables_extended.ScopeVariables.InnerClass"
-                )
-            implicitOuterThis =
-                innerClass?.fields?.firstOrNull { n: FieldDeclaration ->
-                    n.name == "ScopeVariables.this"
-                }
-            innerVarName =
-                innerClass!!
-                    .fields
-                    .stream()
-                    .filter { n: FieldDeclaration -> n.name == "varName" }
-                    .findFirst()
-                    .get()
-            innerStaticVarName =
-                getSubnodeOfTypeWithName(innerClass, FieldDeclaration::class.java, "staticVarName")
-            function1Receiver = innerClass!!.byNameOrNull<MethodDeclaration>("function1")?.receiver
-            function2Receiver = innerClass!!.byNameOrNull<MethodDeclaration>("function2")?.receiver
-            innerImpOuter =
-                getSubnodeOfTypeWithName(
-                    innerClass,
-                    FieldDeclaration::class.java,
-                    "ScopeVariables.this"
-                )
-            main = getSubnodeOfTypeWithName(outerClass, MethodDeclaration::class.java, "main")
-            outerFunction1 =
-                outerClass!!
-                    .methods
-                    .stream()
-                    .filter { method: MethodDeclaration -> method.name == "function1" }
-                    .collect(Collectors.toList())[0]
-            forStatements =
-                Util.filterCast(SubgraphWalker.flattenAST(outerFunction1), ForStatement::class.java)
+            innerClass = records["variables_extended.ScopeVariables.InnerClass"]
+            implicitOuterThis = innerClass.fields["ScopeVariables.this"]
+            innerVarName = innerClass.fields["varName"]
+            innerStaticVarName = innerClass.fields["staticVarName"]
+            function1Receiver = innerClass.methods["function1"]?.receiver
+            function2Receiver = innerClass.methods["function2"]?.receiver
+            innerImpOuter = innerClass.fields["ScopeVariables.this"]
+            main = outerClass.methods["main"]
+            outerFunction1 = outerClass.methods["function1"]
+            forStatements = outerFunction1.allChildren()
 
-            // Functions i nthe outer and inner object
-            outerFunction2 =
-                outerClass!!
-                    .methods
-                    .stream()
-                    .filter { method: MethodDeclaration -> method.name == "function2" }
-                    .collect(Collectors.toList())[0]
-            outerFunction3 =
-                outerClass!!
-                    .methods
-                    .stream()
-                    .filter { method: MethodDeclaration -> method.name == "function3" }
-                    .collect(Collectors.toList())[0]
-            outerFunction4 =
-                outerClass!!
-                    .methods
-                    .stream()
-                    .filter { method: MethodDeclaration -> method.name == "function4" }
-                    .collect(Collectors.toList())[0]
-            innerFunction1 =
-                innerClass!!
-                    .methods
-                    .stream()
-                    .filter { method: MethodDeclaration -> method.name == "function1" }
-                    .collect(Collectors.toList())[0]
-            innerFunction2 =
-                innerClass!!
-                    .methods
-                    .stream()
-                    .filter { method: MethodDeclaration -> method.name == "function2" }
-                    .collect(Collectors.toList())[0]
-            innerFunction3 =
-                innerClass!!
-                    .methods
-                    .stream()
-                    .filter { method: MethodDeclaration -> method.name == "function3" }
-                    .collect(Collectors.toList())[0]
+            // Functions in the outer and inner object
+            outerFunction2 = outerClass.methods["function2"]
+            outerFunction3 = outerClass.methods["function3"]
+            outerFunction4 = outerClass.methods["function4"]
+            innerFunction1 = innerClass.methods["function1"]
+            innerFunction2 = innerClass.methods["function2"]
+            innerFunction3 = innerClass.methods["function3"]
+
             for (call in calls) {
                 val first = call.arguments[0]
                 val logId = (first as Literal<*>).value.toString()

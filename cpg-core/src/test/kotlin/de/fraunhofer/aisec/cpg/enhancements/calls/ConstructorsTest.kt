@@ -26,13 +26,14 @@
 package de.fraunhofer.aisec.cpg.enhancements.calls
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
+import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.literals
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.variables
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -42,12 +43,12 @@ internal class ConstructorsTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testJava() {
-        val result = analyze("java", topLevel, true)
-        val constructors = flattenListIsInstance<ConstructorDeclaration>(result)
+        val result = TestUtils.analyze("java", topLevel, true)
+        val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg = findByUniquePredicate(constructors) { it.parameters.size == 0 }
         val singleArg = findByUniquePredicate(constructors) { it.parameters.size == 1 }
         val twoArgs = findByUniquePredicate(constructors) { it.parameters.size == 2 }
-        val variables = flattenListIsInstance<VariableDeclaration>(result)
+        val variables = result.variables
         val a1 = findByUniqueName(variables, "a1")
         assertNotNull(a1)
         assertTrue(a1.initializer is NewExpression)
@@ -80,15 +81,15 @@ internal class ConstructorsTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testCPP() {
-        val result = analyze("cpp", topLevel, true)
-        val constructors = flattenListIsInstance<ConstructorDeclaration>(result)
+        val result = TestUtils.analyze("cpp", topLevel, true)
+        val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg =
             findByUniquePredicate(constructors) { it.parameters.size == 0 && it.name == "A" }
         val singleArg =
             findByUniquePredicate(constructors) { it.parameters.size == 1 && it.name == "A" }
         val twoArgs =
             findByUniquePredicate(constructors) { it.parameters.size == 2 && it.name == "A" }
-        val variables = flattenListIsInstance<VariableDeclaration>(result)
+        val variables = result.variables
         val a1 = findByUniqueName(variables, "a1")
         assertNotNull(a1)
         assertTrue(a1.initializer is ConstructExpression)
@@ -168,23 +169,21 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPPFullDefault() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(
                     Path.of(topLevel.toString(), "defaultarg", "constructorDefault.cpp").toFile()
                 ),
                 topLevel,
                 true
             )
-        val constructors = flattenListIsInstance<ConstructorDeclaration>(result)
-        val variables = flattenListIsInstance<VariableDeclaration>(result)
+        val constructors = result.allChildren<ConstructorDeclaration>()
+        val variables = result.variables
         val twoDefaultArg =
             findByUniquePredicate(constructors) { it.defaultParameters.size == 2 && it.name == "D" }
         assertNotNull(twoDefaultArg)
 
-        val literal0 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 0 }
-        val literal1 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 1 }
+        val literal0 = findByUniquePredicate(result.literals) { it.value == 0 }
+        val literal1 = findByUniquePredicate(result.literals) { it.value == 1 }
         val d1 = findByUniqueName(variables, "d1")
         assertNotNull(d1)
         assertTrue(d1.initializer is ConstructExpression)
@@ -223,21 +222,20 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPPPartialDefault() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(
                     Path.of(topLevel.toString(), "defaultarg", "constructorDefault.cpp").toFile()
                 ),
                 topLevel,
                 true
             )
-        val constructors = flattenListIsInstance<ConstructorDeclaration>(result)
-        val variables = flattenListIsInstance<VariableDeclaration>(result)
+        val constructors = result.allChildren<ConstructorDeclaration>()
+        val variables = result.variables
         val singleDefaultArg =
             findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
                 c.parameters.size == 2 && c.name == "E"
             }
-        val literal10 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 10 }
+        val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val e1 = findByUniqueName(variables, "e1")
         assertTrue(e1.initializer is ConstructExpression)
         val e1Initializer = e1.initializer as ConstructExpression
@@ -268,7 +266,7 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPPImplicitCast() {
         val result =
-            analyze(
+            TestUtils.analyze(
                 listOf(
                     Path.of(topLevel.toString(), "implicitcastarg", "constructorImplicit.cpp")
                         .toFile()
@@ -276,12 +274,11 @@ internal class ConstructorsTest : BaseTest() {
                 topLevel,
                 true
             )
-        val constructors = flattenListIsInstance<ConstructorDeclaration>(result)
-        val variables = flattenListIsInstance<VariableDeclaration>(result)
+        val constructors = result.allChildren<ConstructorDeclaration>()
+        val variables = result.variables
         val implicitConstructor =
             findByUniquePredicate(constructors) { c: ConstructorDeclaration -> c.name == "I" }
-        val literal10 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 10 }
+        val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val i1 = findByUniqueName(variables, "i1")
         assertTrue(i1.initializer is ConstructExpression)
 

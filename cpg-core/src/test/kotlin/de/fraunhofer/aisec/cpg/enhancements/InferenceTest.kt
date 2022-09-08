@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.get
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,11 +57,11 @@ class InferenceTest {
 
         assertEquals(2, record.fields.size)
 
-        val valueField = record.getField("value")
+        val valueField = record.fields["value"]
         assertNotNull(valueField)
         assertEquals("int", valueField.type.typeName)
 
-        val nextField = record.getField("next")
+        val nextField = record.fields["next"]
         assertNotNull(nextField)
         assertEquals("T*", nextField.type.typeName)
     }
@@ -85,11 +86,11 @@ class InferenceTest {
 
         assertEquals(2, record.fields.size)
 
-        val valueField = record.getField("value")
+        val valueField = record.fields["value"]
         assertNotNull(valueField)
         assertEquals("int", valueField.type.typeName)
 
-        val nextField = record.getField("next")
+        val nextField = record.fields["next"]
         assertNotNull(nextField)
         assertEquals("T*", nextField.type.typeName)
     }

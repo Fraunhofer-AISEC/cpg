@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
-import de.fraunhofer.aisec.cpg.ExperimentalGraph
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
@@ -47,22 +45,11 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  *
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
-@ExperimentalGraph
 inline fun <reified T> Node.allExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>
 ): QueryTree<Boolean> {
-    var nodes =
-        if (this is TranslationResult) {
-            this.graph.nodes.filterIsInstance<T>()
-        } else {
-            this.astChildren.filterIsInstance<T>()
-        }
-
-    // filter the nodes according to the selector
-    if (sel != null) {
-        nodes = nodes.filter(sel)
-    }
+    val nodes = this.allChildren(sel)
 
     val queryChildren =
         nodes.map { n ->
@@ -79,22 +66,11 @@ inline fun <reified T> Node.allExtended(
  *
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
-@ExperimentalGraph
 inline fun <reified T> Node.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean
 ): Pair<Boolean, List<Node>> {
-    var nodes =
-        if (this is TranslationResult) {
-            this.graph.nodes.filterIsInstance<T>()
-        } else {
-            this.astChildren.filterIsInstance<T>()
-        }
-
-    // filter the nodes according to the selector
-    if (sel != null) {
-        nodes = nodes.filter(sel)
-    }
+    val nodes = this.allChildren(sel)
 
     val failedNodes = nodes.filterNot(mustSatisfy) as List<Node>
     return Pair(failedNodes.isEmpty(), failedNodes)
@@ -107,22 +83,11 @@ inline fun <reified T> Node.all(
  * evaluation. This filter should be rather simple in most cases since its evaluation is not part of
  * the resulting reasoning chain.
  */
-@ExperimentalGraph
-inline fun <reified T> Node.existsExtended(
+inline fun <reified T : Node> Node.existsExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>
 ): QueryTree<Boolean> {
-    var nodes =
-        if (this is TranslationResult) {
-            this.graph.nodes.filterIsInstance<T>()
-        } else {
-            this.astChildren.filterIsInstance<T>()
-        }
-
-    // filter the nodes according to the selector
-    if (sel != null) {
-        nodes = nodes.filter(sel)
-    }
+    val nodes = this.allChildren(sel)
 
     val queryChildren =
         nodes.map { n ->
@@ -138,22 +103,11 @@ inline fun <reified T> Node.existsExtended(
  * The optional argument [sel] can be used to filter nodes which are considered during the
  * evaluation.
  */
-@ExperimentalGraph
-inline fun <reified T> Node.exists(
+inline fun <reified T : Node> Node.exists(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean
 ): Pair<Boolean, List<Node>> {
-    var nodes =
-        if (this is TranslationResult) {
-            this.graph.nodes.filterIsInstance<T>()
-        } else {
-            this.astChildren.filterIsInstance<T>()
-        }
-
-    // filter the nodes according to the selector
-    if (sel != null) {
-        nodes = nodes.filter(sel)
-    }
+    val nodes = this.allChildren(sel)
 
     val queryChildren = nodes.filter(mustSatisfy) as List<Node>
     return Pair(queryChildren.isNotEmpty(), queryChildren)
@@ -382,15 +336,12 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
         is CallExpression -> {
             val prevEdges =
                 from.prevDFG
-                    .fold(
-                        mutableListOf<Node>(),
-                        { l, e ->
-                            if (e !is Literal<*>) {
-                                l.add(e)
-                            }
-                            l
+                    .fold(mutableListOf<Node>()) { l, e ->
+                        if (e !is Literal<*>) {
+                            l.add(e)
                         }
-                    )
+                        l
+                    }
                     .toMutableList()
             prevEdges.addAll(from.arguments)
             // For a call, we collect the incoming data flows (typically only the arguments)
@@ -403,7 +354,7 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
             // We go one step back to see if that one goes into to but also check that no assignment
             // to from happens in the paths between from and to
             val prevQTs = from.prevDFG.map { dataFlow(it, to) }
-            var noAssignmentToFrom =
+            val noAssignmentToFrom =
                 allPaths.none {
                     it.any { it2 ->
                         if (it2 is Assignment) {

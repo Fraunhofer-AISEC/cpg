@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -73,7 +74,7 @@ internal class CXXIncludeTest : BaseTest() {
         val ref = returnStatement.returnValue as DeclaredReferenceExpression
         assertNotNull(ref)
 
-        val someField = someClass.getField("someField")
+        val someField = someClass.fields["someField"]
         assertNotNull(someField)
         assertEquals(someField, ref.refersTo)
     }

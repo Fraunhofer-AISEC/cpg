@@ -58,6 +58,7 @@ import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -711,7 +712,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 )
 
                 // look for the field
-                val field = record.getField("field_$index")
+                val field = record.fields["field_$index"]
 
                 // our new base-type is the type of the field
                 baseType = field?.type ?: UnknownType.getUnknownType()

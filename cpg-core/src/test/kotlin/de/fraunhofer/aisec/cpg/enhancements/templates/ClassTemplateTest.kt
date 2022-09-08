@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -139,29 +138,28 @@ internal class ClassTemplateTest : BaseTest() {
     fun testClassTemplateStructure() {
         val result =
             analyze(listOf(Path.of(topLevel.toString(), "pair.cpp").toFile()), topLevel, true)
-        val classTemplateDeclarations = flattenListIsInstance<ClassTemplateDeclaration>(result)
+        val classTemplateDeclarations = result.allChildren<ClassTemplateDeclaration>()
         val template =
             findByUniqueName(
                 classTemplateDeclarations,
                 "template<class Type1, class Type2> class Pair"
             )
-        val pair = findByUniqueName(flattenListIsInstance<RecordDeclaration>(result), "Pair")
-        val type1 =
-            findByUniqueName(flattenListIsInstance<TypeParamDeclaration>(result), "class Type1")
-        val type2 =
-            findByUniqueName(flattenListIsInstance<TypeParamDeclaration>(result), "class Type2")
-        val first = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "first")
-        val second = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "second")
+        val pair = findByUniqueName(result.records, "Pair")
+        val type1 = findByUniqueName(result.allChildren<TypeParamDeclaration>(), "class Type1")
+        val type2 = findByUniqueName(result.allChildren<TypeParamDeclaration>(), "class Type2")
+        val first = findByUniqueName(result.fields, "first")
+        val second = findByUniqueName(result.fields, "second")
         val receiver = pair.byNameOrNull<MethodDeclaration>("Pair")?.receiver
         assertNotNull(receiver)
 
         val pairConstructorDeclaration =
-            findByUniqueName(flattenListIsInstance<ConstructorDeclaration>(result), "Pair")
+            findByUniqueName(result.allChildren<ConstructorDeclaration>(), "Pair")
         val constructExpression =
-            findByUniquePredicate(flattenListIsInstance(result)) { c: ConstructExpression ->
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) {
+                c: ConstructExpression ->
                 c.code == "()"
             }
-        val point1 = findByUniqueName(flattenListIsInstance<VariableDeclaration>(result), "point1")
+        val point1 = findByUniqueName(result.variables, "point1")
 
         // Test Template Structure
         testTemplateStructure(template, pair, type1, type2)
@@ -192,33 +190,26 @@ internal class ClassTemplateTest : BaseTest() {
         // Test pair2.cpp: Add Value Parameter to Template Instantiation
         val result =
             analyze(listOf(Path.of(topLevel.toString(), "pair2.cpp").toFile()), topLevel, true)
-        val classTemplateDeclarations = flattenListIsInstance<ClassTemplateDeclaration>(result)
+        val classTemplateDeclarations = result.allChildren<ClassTemplateDeclaration>()
         val template =
             findByUniqueName(
                 classTemplateDeclarations,
                 "template<class Type1, class Type2, int N> class Pair"
             )
-        val pair = findByUniqueName(flattenListIsInstance<RecordDeclaration>(result), "Pair")
-        val paramN = findByUniqueName(flattenListIsInstance<ParamVariableDeclaration>(result), "N")
-        val n = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "n")
+        val pair = findByUniqueName(result.records, "Pair")
+        val paramN = findByUniqueName(result.parameters, "N")
+        val n = findByUniqueName(result.fields, "n")
         val receiver = pair.byNameOrNull<ConstructorDeclaration>("Pair")?.receiver
         assertNotNull(receiver)
 
         val pairConstructorDeclaration =
-            findByUniqueName(flattenListIsInstance<ConstructorDeclaration>(result), "Pair")
+            findByUniqueName(result.allChildren<ConstructorDeclaration>(), "Pair")
         val constructExpression =
-            findByUniquePredicate(flattenListIsInstance<ConstructExpression>(result)) {
-                it.code == "()"
-            }
-        val literal3 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) {
-                it.value == 3 && !it.isImplicit
-            }
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "()" }
+        val literal3 = findByUniquePredicate(result.literals) { it.value == 3 && !it.isImplicit }
         val literal3Implicit =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) {
-                it.value == 3 && it.isImplicit
-            }
-        val point1 = findByUniqueName(flattenListIsInstance<VariableDeclaration>(result), "point1")
+            findByUniquePredicate(result.literals) { it.value == 3 && it.isImplicit }
+        val point1 = findByUniqueName(result.variables, "point1")
         assertEquals(3, template.parameters.size)
         assertEquals(paramN, template.parameters[2])
         assertTrue(pair.fields.contains(n))
@@ -299,26 +290,20 @@ internal class ClassTemplateTest : BaseTest() {
             analyze(listOf(Path.of(topLevel.toString(), "pair3.cpp").toFile()), topLevel, true)
         val template =
             findByUniqueName(
-                flattenListIsInstance<ClassTemplateDeclaration>(result),
+                result.allChildren<ClassTemplateDeclaration>(),
                 "template<class Type1, class Type2 = Type1> struct Pair"
             )
-        val pair = findByUniqueName(flattenListIsInstance<RecordDeclaration>(result), "Pair")
+        val pair = findByUniqueName(result.records, "Pair")
         val pairConstructorDeclaration =
-            findByUniqueName(flattenListIsInstance<ConstructorDeclaration>(result), "Pair")
-        val type1 =
-            findByUniqueName(flattenListIsInstance<TypeParamDeclaration>(result), "class Type1")
+            findByUniqueName(result.allChildren<ConstructorDeclaration>(), "Pair")
+        val type1 = findByUniqueName(result.allChildren<TypeParamDeclaration>(), "class Type1")
         val type2 =
-            findByUniqueName(
-                flattenListIsInstance<TypeParamDeclaration>(result),
-                "class Type2 = Type1"
-            )
-        val first = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "first")
-        val second = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "second")
-        val point1 = findByUniqueName(flattenListIsInstance<VariableDeclaration>(result), "point1")
+            findByUniqueName(result.allChildren<TypeParamDeclaration>(), "class Type2 = Type1")
+        val first = findByUniqueName(result.fields, "first")
+        val second = findByUniqueName(result.fields, "second")
+        val point1 = findByUniqueName(result.variables, "point1")
         val constructExpression =
-            findByUniquePredicate(flattenListIsInstance<ConstructExpression>(result)) {
-                it.code == "()"
-            }
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "()" }
         assertEquals(1, template.realization.size)
         assertEquals(pair, template.realization[0])
         assertEquals(2, template.parameters.size)
@@ -358,23 +343,16 @@ internal class ClassTemplateTest : BaseTest() {
             analyze(listOf(Path.of(topLevel.toString(), "pair3-1.cpp").toFile()), topLevel, true)
         val template =
             findByUniqueName(
-                flattenListIsInstance<ClassTemplateDeclaration>(result),
+                result.allChildren<ClassTemplateDeclaration>(),
                 "template<class Type1, class Type2 = Type1, int A=1, int B=A> struct Pair"
             )
-        val pair = findByUniqueName(flattenListIsInstance<RecordDeclaration>(result), "Pair")
+        val pair = findByUniqueName(result.records, "Pair")
         val constructExpression =
-            findByUniquePredicate(flattenListIsInstance<ConstructExpression>(result)) {
-                it.code == "()"
-            }
-        val literal2 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) {
-                it.value == 2 && !it.isImplicit
-            }
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "()" }
+        val literal2 = findByUniquePredicate(result.literals) { it.value == 2 && !it.isImplicit }
         assertNotNull(literal2)
         val literal2Implicit =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) {
-                it.value == 2 && it.isImplicit
-            }
+            findByUniquePredicate(result.literals) { it.value == 2 && it.isImplicit }
         assertEquals(pair, constructExpression.instantiates)
         assertEquals(template, constructExpression.templateInstantiation)
         assertEquals(4, constructExpression.templateParameters.size)
@@ -422,18 +400,18 @@ internal class ClassTemplateTest : BaseTest() {
             analyze(listOf(Path.of(topLevel.toString(), "pair3-2.cpp").toFile()), topLevel, true)
         val template =
             findByUniqueName(
-                flattenListIsInstance<ClassTemplateDeclaration>(result),
+                result.allChildren<ClassTemplateDeclaration>(),
                 "template<class Type1, class Type2 = Type1, int A=1, int B=A> struct Pair"
             )
-        val pair = findByUniqueName(flattenListIsInstance<RecordDeclaration>(result), "Pair")
-        val paramA = findByUniqueName(flattenListIsInstance<ParamVariableDeclaration>(result), "A")
-        val paramB = findByUniqueName(flattenListIsInstance<ParamVariableDeclaration>(result), "B")
+        val pair = findByUniqueName(result.records, "Pair")
+        val paramA = findByUniqueName(result.parameters, "A")
+        val paramB = findByUniqueName(result.parameters, "B")
         val constructExpression =
-            findByUniquePredicate(flattenListIsInstance(result)) { c: ConstructExpression ->
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) {
+                c: ConstructExpression ->
                 c.code == "()"
             }
-        val literal1 =
-            findByUniquePredicate(flattenListIsInstance(result)) { l: Literal<*> -> l.value == 1 }
+        val literal1 = findByUniquePredicate(result.literals) { it.value == 1 }
         assertEquals(4, template.parameters.size)
         assertEquals(paramA, template.parameters[2])
         assertEquals(literal1, paramA.default)
@@ -502,16 +480,14 @@ internal class ClassTemplateTest : BaseTest() {
             analyze(listOf(Path.of(topLevel.toString(), "array.cpp").toFile()), topLevel, true)
         val template =
             findByUniqueName(
-                flattenListIsInstance<ClassTemplateDeclaration>(result),
+                result.allChildren<ClassTemplateDeclaration>(),
                 "template<typename T, int N=10> class Array"
             )
-        val array = findByUniqueName(flattenListIsInstance<RecordDeclaration>(result), "Array")
-        val paramN = findByUniqueName(flattenListIsInstance<ParamVariableDeclaration>(result), "N")
-        val paramT =
-            findByUniqueName(flattenListIsInstance<TypeParamDeclaration>(result), "typename T")
-        val literal10 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) { it.value == 10 }
-        val mArray = findByUniqueName(flattenListIsInstance<FieldDeclaration>(result), "m_Array")
+        val array = findByUniqueName(result.records, "Array")
+        val paramN = findByUniqueName(result.parameters, "N")
+        val paramT = findByUniqueName(result.allChildren<TypeParamDeclaration>(), "typename T")
+        val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
+        val mArray = findByUniqueName(result.fields, "m_Array")
         assertEquals(2, template.parameters.size)
         assertEquals(paramT, template.parameters[0])
         assertEquals(paramN, template.parameters[1])
@@ -535,9 +511,7 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(typeT, tArray.elementType)
 
         val constructExpression =
-            findByUniquePredicate(flattenListIsInstance<ConstructExpression>(result)) {
-                it.code == "()"
-            }
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "()" }
         assertEquals(template, constructExpression.templateInstantiation)
         assertEquals(array, constructExpression.instantiates)
         assertEquals("int", constructExpression.templateParameters[0].name)
@@ -557,30 +531,30 @@ internal class ClassTemplateTest : BaseTest() {
             analyze(listOf(Path.of(topLevel.toString(), "array2.cpp").toFile()), topLevel, true)
         val template =
             findByUniqueName(
-                flattenListIsInstance<ClassTemplateDeclaration>(result),
+                result.allChildren<ClassTemplateDeclaration>(),
                 "template<typename T, int N=10> class Array"
             )
-        val array = findByUniqueName(flattenListIsInstance<RecordDeclaration>(result), "Array")
+        val array = findByUniqueName(result.records, "Array")
         val constructExpression =
-            findByUniquePredicate(flattenListIsInstance(result)) { c: ConstructExpression ->
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) {
+                c: ConstructExpression ->
                 c.code == "()"
             }
         val literal5 =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) {
+            findByUniquePredicate(result.literals) {
                 it.value == 5 && it.location!!.region.endColumn == 41 && !it.isImplicit
             }
         assertNotNull(literal5)
         val literal5Declaration =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) {
+            findByUniquePredicate(result.literals) {
                 it.value == 5 && it.location!!.region.endColumn == 14 && !it.isImplicit
             }
         val literal5Implicit =
-            findByUniquePredicate(flattenListIsInstance<Literal<*>>(result)) {
+            findByUniquePredicate(result.literals) {
                 it.value == 5 && it.location!!.region.endColumn == 41 && it.isImplicit
             }
-        val arrayVariable =
-            findByUniqueName(flattenListIsInstance<VariableDeclaration>(result), "array")
-        val newExpression = findByUniqueName(flattenListIsInstance<NewExpression>(result), "")
+        val arrayVariable = findByUniqueName(result.variables, "array")
+        val newExpression = findByUniqueName(result.allChildren<NewExpression>(), "")
         assertEquals(array, constructExpression.instantiates)
         assertEquals(template, constructExpression.templateInstantiation)
         assertEquals(2, constructExpression.templateParameters.size)

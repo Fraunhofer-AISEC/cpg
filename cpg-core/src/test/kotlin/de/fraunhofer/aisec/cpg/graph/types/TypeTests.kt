@@ -31,13 +31,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.disableTypeManagerCleanup
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.flattenIsInstance
-import de.fraunhofer.aisec.cpg.TestUtils.flattenListIsInstance
-import de.fraunhofer.aisec.cpg.graph.TypeManager
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import java.nio.file.Path
 import java.util.*
 import kotlin.test.*
@@ -712,19 +706,19 @@ internal class TypeTests : BaseTest() {
         val result = analyze("java", topLevel, true)
 
         // Check Parameterized
-        val recordDeclarations = flattenListIsInstance<RecordDeclaration>(result)
+        val recordDeclarations = result.records
         val recordDeclarationBox = findByUniqueName(recordDeclarations, "Box")
         val typeT = TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T")
         assertEquals(typeT, TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T"))
 
         // Type of field t
-        val fieldDeclarations = flattenListIsInstance<FieldDeclaration>(result)
+        val fieldDeclarations = result.fields
         val fieldDeclarationT = findByUniqueName(fieldDeclarations, "t")
         assertEquals(typeT, fieldDeclarationT.type)
         assertTrue(fieldDeclarationT.possibleSubTypes.contains(typeT))
 
         // Parameter of set Method
-        val methodDeclarations = flattenListIsInstance<MethodDeclaration>(result)
+        val methodDeclarations = result.methods
         val methodDeclarationSet = findByUniqueName(methodDeclarations, "set")
         val t = methodDeclarationSet.parameters[0]
         assertEquals(typeT, t.type)
@@ -740,8 +734,8 @@ internal class TypeTests : BaseTest() {
     fun graphTest() {
         var topLevel = Path.of("src", "test", "resources", "types")
         var result = analyze("java", topLevel, true)
-        val variables = flattenListIsInstance<ObjectType>(result)
-        val recordDeclarations = flattenListIsInstance<RecordDeclaration>(result)
+        val variables = result.allChildren<ObjectType>()
+        val recordDeclarations = result.records
 
         // Test RecordDeclaration relationship
         val objectTypes = findByName(variables, "A")
@@ -751,7 +745,7 @@ internal class TypeTests : BaseTest() {
         }
 
         // Test uniqueness of types x and y have same type
-        val fieldDeclarations = flattenListIsInstance<FieldDeclaration>(result)
+        val fieldDeclarations = result.fields
         val x = findByUniqueName(fieldDeclarations, "x")
         val z = findByUniqueName(fieldDeclarations, "z")
         assertSame(x.type, z.type)
@@ -761,7 +755,7 @@ internal class TypeTests : BaseTest() {
         assertTrue(y.type.qualifier.isConst)
 
         // Test propagation of specifiers in non-primitive fields (final A a)
-        var variableDeclarations = flattenListIsInstance<VariableDeclaration>(result)
+        var variableDeclarations = result.variables
         val aA = findByUniqueName(variableDeclarations, "a")
         assertTrue(aA.type.qualifier.isConst)
 
@@ -784,7 +778,7 @@ internal class TypeTests : BaseTest() {
 
         topLevel = Path.of("src", "test", "resources", "types")
         result = analyze("cpp", topLevel, true)
-        variableDeclarations = flattenListIsInstance(result)
+        variableDeclarations = result.variables
 
         // Test PointerType chain with pointer
         val regularInt = findByUniqueName(variableDeclarations, "regularInt")
@@ -861,7 +855,7 @@ internal class TypeTests : BaseTest() {
                     true
                 )
             )
-        val variables = flattenIsInstance<VariableDeclaration>(tu)
+        val variables = tu.variables
         val localTwoParam = findByUniqueName(variables, "local_two_param")
         assertNotNull(localTwoParam)
         assertEquals(twoParamType, localTwoParam.type)

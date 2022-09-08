@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -391,7 +392,7 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(method)
         assertEquals("dontcall", method.annotations.firstOrNull()?.name)
 
-        val field = myClass.getField("something")
+        val field = myClass.fields["something"]
         assertNotNull(field)
 
         val annotation = field.annotations.firstOrNull()

@@ -42,16 +42,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -416,23 +407,6 @@ public class Util {
 
     paramName.append(i);
     return paramName.toString();
-  }
-
-  /**
-   * Filters a list of elements with common type T for all elements of instance S, returning a list
-   * of type {@link List}.
-   *
-   * @param genericList List with elements fo type T.
-   * @param specificClass Class type to filter for.
-   * @param <T> Generic List type.
-   * @param <S> Class type to filter for.
-   * @return a specific List as all elements are cast to the specified class type.
-   */
-  public static <T, S extends T> List<S> filterCast(List<T> genericList, Class<S> specificClass) {
-    return genericList.stream()
-        .filter(g -> specificClass.isAssignableFrom(g.getClass()))
-        .map(specificClass::cast)
-        .collect(Collectors.toList());
   }
 
   static <T> Stream<T> reverse(Stream<T> input) {

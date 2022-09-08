@@ -80,6 +80,9 @@ open class Node : IVisitable<Node>, Persistable {
     /**
      * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
      * retrieve the appropriate nodes.
+     *
+     * Note: This only returns the *direct* children of this node. If you want to have *all*
+     * children, e.g., a flattened AST, you need to call [Node.allChildren].
      */
     val astChildren: List<Node>
         get() = SubgraphWalker.getAstChildren(this)
