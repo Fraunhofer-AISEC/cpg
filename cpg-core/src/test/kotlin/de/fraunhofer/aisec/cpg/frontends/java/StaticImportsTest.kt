@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.nio.file.Path
@@ -42,8 +42,8 @@ internal class StaticImportsTest : BaseTest() {
     fun testSingleStaticImport() {
         val result = analyze("java", topLevel.resolve("single"), true)
         val methods = result.methods
-        val test = findByUniqueName(methods, "test")
-        val main = findByUniqueName(methods, "main")
+        val test = assertNotNull(methods["test", UNIQUE])
+        val main = assertNotNull(methods["main", UNIQUE])
         val call = main.calls.firstOrNull()
         assertNotNull(call)
         assertEquals(listOf(test), call.invokes)
@@ -56,7 +56,7 @@ internal class StaticImportsTest : BaseTest() {
         assertTrue(staticField.modifiers.contains("static"))
 
         val memberExpressions = main.allChildren<MemberExpression>()
-        val usage = findByUniqueName(memberExpressions, "test")
+        val usage = assertNotNull(memberExpressions["test", UNIQUE])
         assertEquals(staticField, usage.refersTo)
     }
 
@@ -73,7 +73,7 @@ internal class StaticImportsTest : BaseTest() {
         for (call in main.calls) {
             when (call.name) {
                 "a" -> {
-                    assertEquals(listOf(findByUniqueName(methods, "a")), call.invokes)
+                    assertEquals(listOf(assertNotNull(methods["a", UNIQUE])), call.invokes)
                     assertTrue((call.invokes[0] as MethodDeclaration).isStatic)
                 }
                 "b" -> {
@@ -81,23 +81,23 @@ internal class StaticImportsTest : BaseTest() {
                     assertEquals(call.invokes, bs { it.hasSignature(call.signature) })
                 }
                 "nonStatic" -> {
-                    val nonStatic = findByUniqueName(b.methods, "nonStatic")
+                    val nonStatic = assertNotNull(b.methods["nonStatic", UNIQUE])
                     assertTrue(nonStatic.isInferred)
                     assertEquals(listOf(nonStatic), call.invokes)
                 }
             }
         }
         val testFields = a.fields
-        val staticField = findByUniqueName(testFields, "staticField")
-        val nonStaticField = findByUniqueName(testFields, "nonStaticField")
+        val staticField = assertNotNull(testFields["staticField", UNIQUE])
+        val nonStaticField = assertNotNull(testFields["nonStaticField", UNIQUE])
         assertTrue(staticField.modifiers.contains("static"))
         assertFalse(nonStaticField.modifiers.contains("static"))
 
         val declaredReferences = main.allChildren<MemberExpression>()
-        val usage = findByUniqueName(declaredReferences, "staticField")
+        val usage = assertNotNull(declaredReferences["staticField", UNIQUE])
         assertEquals(staticField, usage.refersTo)
 
-        val nonStatic = findByUniqueName(declaredReferences, "nonStaticField")
+        val nonStatic = assertNotNull(declaredReferences["nonStaticField", UNIQUE])
         assertNotEquals(nonStaticField, nonStatic.refersTo)
         assertTrue(nonStatic.refersTo!!.isInferred)
     }

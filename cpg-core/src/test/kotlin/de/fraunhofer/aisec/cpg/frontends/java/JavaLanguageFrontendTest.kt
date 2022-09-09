@@ -30,11 +30,11 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
+import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -555,7 +555,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file1 = File("src/test/resources/fix-328/Cat.java")
         val file2 = File("src/test/resources/fix-328/Animal.java")
         val result = TestUtils.analyze(listOf(file1, file2), file1.parentFile.toPath(), true)
-        val tu = findByUniqueName(result.translationUnits, "src/test/resources/fix-328/Cat.java")
+        val tu =
+            assertNotNull(result.translationUnits["src/test/resources/fix-328/Cat.java", UNIQUE])
         val namespace = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
         assertNotNull(namespace)
 

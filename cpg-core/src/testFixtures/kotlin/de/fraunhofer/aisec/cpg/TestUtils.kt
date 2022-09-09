@@ -74,6 +74,14 @@ object TestUtils {
         return node
     }
 
+    @Deprecated(
+        message = "better syntax",
+        ReplaceWith(
+            "assertNotNull(nodes[name, UNIQUE])",
+            "de.fraunhofer.aisec.cpg.graph.*",
+            "de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE"
+        )
+    )
     fun <S : Node> findByUniqueName(nodes: Collection<S>, name: String): S {
         return findByUniquePredicate(nodes) { m: S -> m.name == name }
     }

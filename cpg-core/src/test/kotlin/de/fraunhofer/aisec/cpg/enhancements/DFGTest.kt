@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.enhancements
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.compareLineFromLocationIfExists
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -206,11 +206,10 @@ internal class DFGTest {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result =
             analyze(listOf(topLevel.resolve("compoundoperator.cpp").toFile()), topLevel, true)
-        val rwCompoundOperator =
-            findByUniqueName<BinaryOperator>(result.allChildren<BinaryOperator>(), "+=")
+        val rwCompoundOperator = assertNotNull(result.allChildren<BinaryOperator>()["+=", UNIQUE])
         assertNotNull(rwCompoundOperator)
 
-        val expression = findByUniqueName(result.refs, "i")
+        val expression = assertNotNull(result.refs["i", UNIQUE])
         assertNotNull(expression)
 
         val prevDFGOperator = rwCompoundOperator.prevDFG
@@ -227,10 +226,10 @@ internal class DFGTest {
     fun testUnaryOperatorDFG() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result = analyze(listOf(topLevel.resolve("unaryoperator.cpp").toFile()), topLevel, true)
-        val rwUnaryOperator = findByUniqueName(result.allChildren<UnaryOperator>(), "++")
+        val rwUnaryOperator = assertNotNull(result.allChildren<UnaryOperator>()["++", UNIQUE])
         assertNotNull(rwUnaryOperator)
 
-        val expression = findByUniqueName(result.refs, "i")
+        val expression = assertNotNull(result.refs["i", UNIQUE])
         assertNotNull(expression)
 
         val prevDFGOperator: Set<Node> = rwUnaryOperator.prevDFG
@@ -257,21 +256,23 @@ internal class DFGTest {
                 topLevel,
                 true
             )
-        val binaryOperatorAssignment = findByUniqueName(result.allChildren<BinaryOperator>(), "=")
+        val binaryOperatorAssignment =
+            assertNotNull(result.allChildren<BinaryOperator>()["=", UNIQUE])
         assertNotNull(binaryOperatorAssignment)
 
-        val binaryOperatorAddition = findByUniqueName(result.allChildren<BinaryOperator>(), "+")
+        val binaryOperatorAddition =
+            assertNotNull(result.allChildren<BinaryOperator>()["+", UNIQUE])
         assertNotNull(binaryOperatorAddition)
 
-        val varA = findByUniqueName(result.variables, "a")
+        val varA = assertNotNull(result.variables["a", UNIQUE])
         assertNotNull(varA)
 
-        val varB = findByUniqueName(result.variables, "b")
+        val varB = assertNotNull(result.variables["b", UNIQUE])
         assertNotNull(varB)
 
         val lhsA = binaryOperatorAssignment.lhs as DeclaredReferenceExpression
         val rhsA = binaryOperatorAddition.lhs as DeclaredReferenceExpression
-        val b = findByUniqueName(result.refs, "b")
+        val b = assertNotNull(result.refs["b", UNIQUE])
         assertNotNull(b)
 
         val literal0 = result.literals[{ it.value == 0 }]
@@ -330,7 +331,7 @@ internal class DFGTest {
     fun testNoOutgoingDFGFromVariableDeclaration() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result = analyze(listOf(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true)
-        val varA = findByUniqueName(result.variables, "a")
+        val varA = assertNotNull(result.variables["a", UNIQUE])
         assertNotNull(varA)
         assertEquals(0, varA.nextDFG.size)
         assertEquals(7, varA.prevDFG.size)

@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.enhancements.templates
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -41,6 +41,7 @@ import java.nio.file.Path
 import java.util.function.Predicate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 internal class FunctionTemplateTest : BaseTest() {
@@ -56,11 +57,11 @@ internal class FunctionTemplateTest : BaseTest() {
                 true
             )
         val variableDeclarations = result.variables
-        val x = findByUniqueName(variableDeclarations, "x")
+        val x = assertNotNull(variableDeclarations["x", UNIQUE])
         assertEquals(UnknownType.getUnknownType(), x.type)
 
         val declaredReferenceExpressions = result.refs
-        val xDeclaredReferenceExpression = findByUniqueName(declaredReferenceExpressions, "x")
+        val xDeclaredReferenceExpression = assertNotNull(declaredReferenceExpressions["x", UNIQUE])
         assertEquals(UnknownType.getUnknownType(), xDeclaredReferenceExpression.type)
 
         val binaryOperators = result.allChildren<BinaryOperator>()
@@ -130,7 +131,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(typeT, typeParamDeclaration.type)
         assertEquals(intType, typeParamDeclaration.default)
 
-        val N = findByUniqueName(result.parameters, "N")
+        val N = assertNotNull(result.parameters["N", UNIQUE])
         val int2 = findByUniquePredicate(result.literals { it.value == 2 }) { it.value == 2 }
         val int3 = findByUniquePredicate(result.literals) { it.value == 3 }
         val int5 = findByUniquePredicate(result.literals) { it.value == 5 }

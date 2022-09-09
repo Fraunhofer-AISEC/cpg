@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.disableTypeManagerCleanup
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import java.nio.file.Path
 import java.util.*
 import kotlin.test.*
@@ -707,25 +707,25 @@ internal class TypeTests : BaseTest() {
 
         // Check Parameterized
         val recordDeclarations = result.records
-        val recordDeclarationBox = findByUniqueName(recordDeclarations, "Box")
+        val recordDeclarationBox = assertNotNull(recordDeclarations["Box", UNIQUE])
         val typeT = TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T")
         assertEquals(typeT, TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T"))
 
         // Type of field t
         val fieldDeclarations = result.fields
-        val fieldDeclarationT = findByUniqueName(fieldDeclarations, "t")
+        val fieldDeclarationT = assertNotNull(fieldDeclarations["t", UNIQUE])
         assertEquals(typeT, fieldDeclarationT.type)
         assertTrue(fieldDeclarationT.possibleSubTypes.contains(typeT))
 
         // Parameter of set Method
         val methodDeclarations = result.methods
-        val methodDeclarationSet = findByUniqueName(methodDeclarations, "set")
+        val methodDeclarationSet = assertNotNull(methodDeclarations["set", UNIQUE])
         val t = methodDeclarationSet.parameters[0]
         assertEquals(typeT, t.type)
         assertTrue(t.possibleSubTypes.contains(typeT))
 
         // Return Type of get Method
-        val methodDeclarationGet = findByUniqueName(methodDeclarations, "get")
+        val methodDeclarationGet = assertNotNull(methodDeclarations["get", UNIQUE])
         assertEquals(typeT, methodDeclarationGet.type)
     }
 
@@ -739,37 +739,37 @@ internal class TypeTests : BaseTest() {
 
         // Test RecordDeclaration relationship
         val objectTypes = findByName(variables, "A")
-        val recordDeclarationA = findByUniqueName(recordDeclarations, "A")
+        val recordDeclarationA = assertNotNull(recordDeclarations["A", UNIQUE])
         for (objectType in objectTypes) {
             assertEquals(recordDeclarationA, objectType.recordDeclaration)
         }
 
         // Test uniqueness of types x and y have same type
         val fieldDeclarations = result.fields
-        val x = findByUniqueName(fieldDeclarations, "x")
-        val z = findByUniqueName(fieldDeclarations, "z")
+        val x = assertNotNull(fieldDeclarations["x", UNIQUE])
+        val z = assertNotNull(fieldDeclarations["z", UNIQUE])
         assertSame(x.type, z.type)
 
         // Test propagation of specifiers in primitive fields (final int y)
-        val y = findByUniqueName(fieldDeclarations, "y")
+        val y = assertNotNull(fieldDeclarations["y", UNIQUE])
         assertTrue(y.type.qualifier.isConst)
 
         // Test propagation of specifiers in non-primitive fields (final A a)
         var variableDeclarations = result.variables
-        val aA = findByUniqueName(variableDeclarations, "a")
+        val aA = assertNotNull(variableDeclarations["a", UNIQUE])
         assertTrue(aA.type.qualifier.isConst)
 
         // Test propagation of specifiers in variables (final String s)
-        val sString = findByUniqueName(variableDeclarations, "s")
+        val sString = assertNotNull(variableDeclarations["s", UNIQUE])
         assertTrue(sString.type.qualifier.isConst)
 
         // Test PointerType chain with array
-        val array = findByUniqueName(variableDeclarations, "array")
+        val array = assertNotNull(variableDeclarations["array", UNIQUE])
         assertTrue(array.type is PointerType)
         assertEquals((array.type as PointerType).elementType, x.type)
 
         // Test java generics
-        val map = findByUniqueName(variableDeclarations, "map")
+        val map = assertNotNull(variableDeclarations["map", UNIQUE])
         assertTrue(map.type is ObjectType)
         assertEquals("C", map.type.name)
         assertEquals(2, (map.type as ObjectType).generics.size)
@@ -781,17 +781,17 @@ internal class TypeTests : BaseTest() {
         variableDeclarations = result.variables
 
         // Test PointerType chain with pointer
-        val regularInt = findByUniqueName(variableDeclarations, "regularInt")
-        val ptr = findByUniqueName(variableDeclarations, "ptr")
+        val regularInt = assertNotNull(variableDeclarations["regularInt", UNIQUE])
+        val ptr = assertNotNull(variableDeclarations["ptr", UNIQUE])
         assertTrue(ptr.type is PointerType)
         assertEquals((ptr.type as PointerType).elementType, regularInt.type)
 
         // Test type Propagation (auto) UnknownType
-        val unknown = findByUniqueName(variableDeclarations, "unknown")
+        val unknown = assertNotNull(variableDeclarations["unknown", UNIQUE])
         assertEquals(UnknownType.getUnknownType(), unknown.type)
 
         // Test type Propagation auto
-        val propagated = findByUniqueName(variableDeclarations, "propagated")
+        val propagated = assertNotNull(variableDeclarations["propagated", UNIQUE])
         assertEquals(regularInt.type, propagated.type)
     }
 
@@ -856,27 +856,27 @@ internal class TypeTests : BaseTest() {
                 )
             )
         val variables = tu.variables
-        val localTwoParam = findByUniqueName(variables, "local_two_param")
+        val localTwoParam = assertNotNull(variables["local_two_param", UNIQUE])
         assertNotNull(localTwoParam)
         assertEquals(twoParamType, localTwoParam.type)
 
-        val localOneParam = findByUniqueName(variables, "local_one_param")
+        val localOneParam = assertNotNull(variables["local_one_param", UNIQUE])
         assertNotNull(localOneParam)
         assertEquals(oneParamType, localOneParam.type)
 
-        val globalNoParam = findByUniqueName(variables, "global_no_param")
+        val globalNoParam = assertNotNull(variables["global_no_param", UNIQUE])
         assertNotNull(globalNoParam)
         assertEquals(noParamType, globalNoParam.type)
 
-        val globalNoParamVoid = findByUniqueName(variables, "global_no_param_void")
+        val globalNoParamVoid = assertNotNull(variables["global_no_param_void", UNIQUE])
         assertNotNull(globalNoParamVoid)
         assertEquals(noParamType, globalNoParamVoid.type)
 
-        val globalTwoParam = findByUniqueName(variables, "global_two_param")
+        val globalTwoParam = assertNotNull(variables["global_two_param", UNIQUE])
         assertNotNull(globalTwoParam)
         assertEquals(twoParamType, globalTwoParam.type)
 
-        val globalOneParam = findByUniqueName(variables, "global_one_param")
+        val globalOneParam = assertNotNull(variables["global_one_param", UNIQUE])
         assertNotNull(globalOneParam)
         assertEquals(oneParamType, globalOneParam.type)
     }

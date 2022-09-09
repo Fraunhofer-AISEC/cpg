@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -50,9 +50,9 @@ import kotlin.test.*
 
 class CallResolverTest : BaseTest() {
     private fun testMethods(records: List<RecordDeclaration>, intType: Type, stringType: Type) {
-        val callsRecord = findByUniqueName(records, "Calls")
-        val externalRecord = findByUniqueName(records, "External")
-        val superClassRecord = findByUniqueName(records, "SuperClass")
+        val callsRecord = assertNotNull(records["Calls", UNIQUE])
+        val externalRecord = assertNotNull(records["External", UNIQUE])
+        val superClassRecord = assertNotNull(records["SuperClass", UNIQUE])
         val innerMethods = findByName(callsRecord.methods, "innerTarget")
         val innerCalls = findByName(callsRecord.calls, "innerTarget")
         checkCalls(intType, stringType, innerMethods, innerCalls)
@@ -69,10 +69,10 @@ class CallResolverTest : BaseTest() {
     }
 
     private fun ensureNoUnknownClassDummies(records: List<RecordDeclaration>) {
-        val callsRecord = findByUniqueName(records, "Calls")
+        val callsRecord = assertNotNull(records["Calls", UNIQUE])
         assertTrue(records.stream().noneMatch { it.name == "Unknown" })
 
-        val unknownCall = findByUniqueName(callsRecord.calls, "unknownTarget")
+        val unknownCall = assertNotNull(callsRecord.calls["unknownTarget", UNIQUE])
         assertEquals(listOf<Any>(), unknownCall.invokes)
     }
 
@@ -89,7 +89,7 @@ class CallResolverTest : BaseTest() {
             assertNotEquals("invoke", declaration.name)
         }
         val callExpressions = result.calls
-        val invoke = findByUniqueName(callExpressions, "invoke")
+        val invoke = assertNotNull(callExpressions["invoke", UNIQUE])
         assertEquals(1, invoke.invokes.size)
         assertTrue(invoke.invokes[0] is MethodDeclaration)
     }
@@ -125,12 +125,12 @@ class CallResolverTest : BaseTest() {
     }
 
     private fun testOverriding(records: List<RecordDeclaration>) {
-        val callsRecord = findByUniqueName(records, "Calls")
-        val externalRecord = findByUniqueName(records, "External")
-        val superClassRecord = findByUniqueName(records, "SuperClass")
-        val originalMethod = findByUniqueName(superClassRecord.methods, "overridingTarget")
-        val overridingMethod = findByUniqueName(externalRecord.methods, "overridingTarget")
-        val call = findByUniqueName(callsRecord.calls, "overridingTarget")
+        val callsRecord = assertNotNull(records["Calls", UNIQUE])
+        val externalRecord = assertNotNull(records["External", UNIQUE])
+        val superClassRecord = assertNotNull(records["SuperClass", UNIQUE])
+        val originalMethod = assertNotNull(superClassRecord.methods["overridingTarget", UNIQUE])
+        val overridingMethod = assertNotNull(externalRecord.methods["overridingTarget", UNIQUE])
+        val call = assertNotNull(callsRecord.calls["overridingTarget", UNIQUE])
 
         // TODO related to #204: Currently we have both the original and the overriding method in
         //  the invokes list. This check needs to be adjusted to the choice we make on solving #204
@@ -190,7 +190,7 @@ class CallResolverTest : BaseTest() {
         val callExpressions = result.calls
 
         // Check resolution of calc
-        val calc = findByUniqueName(callExpressions, "calc")
+        val calc = assertNotNull(callExpressions["calc", UNIQUE])
         val calcFunctionDeclaration =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
                 f.name == "calc" && !f.isInferred
@@ -202,7 +202,7 @@ class CallResolverTest : BaseTest() {
         assertEquals("int", (calc.arguments[0] as CastExpression).castType.name)
 
         // Check resolution of doSmth
-        val doSmth = findByUniqueName(callExpressions, "doSmth")
+        val doSmth = assertNotNull(callExpressions["doSmth", UNIQUE])
         val doSmthFunctionDeclaration =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
                 f.name == "doSmth" && !f.isInferred
@@ -229,7 +229,7 @@ class CallResolverTest : BaseTest() {
         val callExpressions = result.calls
 
         // Check resolution of implicit cast
-        val multiply = findByUniqueName(callExpressions, "multiply")
+        val multiply = assertNotNull(callExpressions["multiply", UNIQUE])
         assertEquals(1, multiply.invokes.size)
 
         val functionDeclaration = multiply.invokes[0]
@@ -242,7 +242,7 @@ class CallResolverTest : BaseTest() {
         assertEquals("10.0", implicitCast.expression.code)
 
         // Check implicit cast in case of ambiguous call
-        val ambiguousCall = findByUniqueName(callExpressions, "ambiguous_multiply")
+        val ambiguousCall = assertNotNull(callExpressions["ambiguous_multiply", UNIQUE])
 
         // Check invokes
         val functionDeclarations = ambiguousCall.invokes

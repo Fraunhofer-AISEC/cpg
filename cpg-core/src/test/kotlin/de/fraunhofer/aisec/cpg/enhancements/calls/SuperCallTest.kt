@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.nio.file.Path
@@ -48,12 +48,12 @@ internal class SuperCallTest : BaseTest() {
     fun testSimpleCall() {
         val result = analyze("java", topLevel, true)
         val records = result.records
-        val superClass = findByUniqueName(records, "SuperClass")
+        val superClass = assertNotNull(records["SuperClass", UNIQUE])
         val superMethods = superClass.methods
-        val superTarget = findByUniqueName(superMethods, "target")
-        val subClass = findByUniqueName(records, "SubClass")
+        val superTarget = assertNotNull(superMethods["target", UNIQUE])
+        val subClass = assertNotNull(records["SubClass", UNIQUE])
         val methods = subClass.methods
-        val target = findByUniqueName(methods, "target")
+        val target = assertNotNull(methods["target", UNIQUE])
         val calls = target.calls
         val superCall = findByUniquePredicate(calls) { "super.target();" == it.code }
         assertEquals(listOf(superTarget), superCall.invokes)
@@ -64,15 +64,15 @@ internal class SuperCallTest : BaseTest() {
     fun testInterfaceCall() {
         val result = analyze("java", topLevel, true)
         val records = result.records
-        val interface1 = findByUniqueName(records, "Interface1")
+        val interface1 = assertNotNull(records["Interface1", UNIQUE])
         val interface1Methods = interface1.methods
-        val interface1Target = findByUniqueName(interface1Methods, "target")
-        val interface2 = findByUniqueName(records, "Interface2")
+        val interface1Target = assertNotNull(interface1Methods["target", UNIQUE])
+        val interface2 = assertNotNull(records["Interface2", UNIQUE])
         val interface2Methods = interface2.methods
-        val interface2Target = findByUniqueName(interface2Methods, "target")
-        val subClass = findByUniqueName(records, "SubClass")
+        val interface2Target = assertNotNull(interface2Methods["target", UNIQUE])
+        val subClass = assertNotNull(records["SubClass", UNIQUE])
         val methods = subClass.methods
-        val target = findByUniqueName(methods, "target")
+        val target = assertNotNull(methods["target", UNIQUE])
         val calls = target.calls
         val interface1Call =
             findByUniquePredicate(calls) { "Interface1.super.target();" == it.code }
@@ -87,15 +87,15 @@ internal class SuperCallTest : BaseTest() {
     fun testSuperField() {
         val result = analyze("java", topLevel, true)
         val records = result.records
-        val superClass = findByUniqueName(records, "SuperClass")
-        val superField = findByUniqueName(superClass.fields, "field")
-        val subClass = findByUniqueName(records, "SubClass")
+        val superClass = assertNotNull(records["SuperClass", UNIQUE])
+        val superField = assertNotNull(superClass.fields["field", UNIQUE])
+        val subClass = assertNotNull(records["SubClass", UNIQUE])
         val methods = subClass.methods
-        val field = findByUniqueName(subClass.fields, "field")
-        val getField = findByUniqueName(methods, "getField")
+        val field = assertNotNull(subClass.fields["field", UNIQUE])
+        val getField = assertNotNull(methods["getField", UNIQUE])
         var refs = getField.allChildren<MemberExpression>()
         val fieldRef = findByUniquePredicate(refs) { "field" == it.code }
-        val getSuperField = findByUniqueName(methods, "getSuperField")
+        val getSuperField = assertNotNull(methods["getSuperField", UNIQUE])
         refs = getSuperField.allChildren<MemberExpression>()
         val superFieldRef = findByUniquePredicate(refs) { "super.field" == it.code }
         assertTrue(fieldRef.base is DeclaredReferenceExpression)
@@ -111,12 +111,12 @@ internal class SuperCallTest : BaseTest() {
     fun testInnerCall() {
         val result = analyze("java", topLevel, true)
         val records = result.records
-        val superClass = findByUniqueName(records, "SuperClass")
+        val superClass = assertNotNull(records["SuperClass", UNIQUE])
         val superMethods = superClass.methods
-        val superTarget = findByUniqueName(superMethods, "target")
-        val innerClass = findByUniqueName(records, "SubClass.Inner")
+        val superTarget = assertNotNull(superMethods["target", UNIQUE])
+        val innerClass = assertNotNull(records["SubClass.Inner", UNIQUE])
         val methods = innerClass.methods
-        val target = findByUniqueName(methods, "inner")
+        val target = assertNotNull(methods["inner", UNIQUE])
         val calls = target.calls
         val superCall = findByUniquePredicate(calls) { "SubClass.super.target();" == it.code }
         assertInvokes(superCall, superTarget)
@@ -133,11 +133,11 @@ internal class SuperCallTest : BaseTest() {
         assertEquals(1, superClass.fields.size)
         assertEquals(listOf("field"), superClass.fields.map(Node::name))
 
-        val subClass = findByUniqueName(records, "SubClass")
+        val subClass = assertNotNull(records["SubClass", UNIQUE])
         assertEquals(1, subClass.fields.size)
         assertEquals(listOf("field"), subClass.fields.map(Node::name))
 
-        val inner = findByUniqueName(records, "SubClass.Inner")
+        val inner = assertNotNull(records["SubClass.Inner", UNIQUE])
         assertEquals(1, inner.fields.size)
         assertEquals(listOf("SubClass.this"), inner.fields.map(Node::name))
     }
