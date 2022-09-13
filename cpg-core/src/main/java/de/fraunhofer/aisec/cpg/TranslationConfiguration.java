@@ -491,6 +491,7 @@ public class TranslationConfiguration {
       registerPass(new CallResolver()); // creates CG
       registerPass(new EvaluationOrderGraphPass()); // creates EOG
       registerPass(new TypeResolver());
+      registerPass(new UnresolvedDFGPass());
       registerPass(new ControlFlowSensitiveDFGPass());
       registerPass(new FilenameMapper());
       return this;

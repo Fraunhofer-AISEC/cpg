@@ -49,7 +49,6 @@ class UnresolvedDFGPassTest {
                 topLevel,
                 true
             ) {
-                it.registerPass(UnresolvedDFGPass())
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferDfgForUnresolvedCalls(true).build()
                 )
@@ -92,7 +91,6 @@ class UnresolvedDFGPassTest {
                 topLevel,
                 true
             ) {
-                it.registerPass(UnresolvedDFGPass())
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferDfgForUnresolvedCalls(false).build()
                 )

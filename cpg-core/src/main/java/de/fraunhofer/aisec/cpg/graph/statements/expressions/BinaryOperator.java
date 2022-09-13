@@ -87,9 +87,6 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
         this.registerTypeListener((TypeListener) lhs);
         this.registerTypeListener((TypeListener) this.lhs);
       }
-      if (this.rhs != null) {
-        lhs.addPrevDFG(rhs);
-      }
     } else if (compoundOperators.contains(operatorCode)) {
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
@@ -101,10 +98,6 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
         this.registerTypeListener((TypeListener) lhs);
         this.registerTypeListener((TypeListener) this.lhs);
       }
-      this.addPrevDFG(lhs);
-      this.addNextDFG(lhs);
-    } else {
-      this.addPrevDFG(lhs);
     }
   }
 
@@ -114,17 +107,6 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
       if (this.lhs instanceof TypeListener) {
         unregisterTypeListener((TypeListener) this.lhs);
       }
-      if (this.rhs != null) {
-        this.lhs.removePrevDFG(this.lhs);
-      }
-      if (this.lhs instanceof TypeListener) {
-        this.unregisterTypeListener((TypeListener) this.lhs);
-      }
-    } else if (compoundOperators.contains(operatorCode)) {
-      this.removePrevDFG(this.lhs);
-      this.removeNextDFG(this.lhs);
-    } else {
-      this.removePrevDFG(this.lhs);
     }
   }
 

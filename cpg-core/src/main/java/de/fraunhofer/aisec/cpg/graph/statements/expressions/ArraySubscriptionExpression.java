@@ -54,7 +54,6 @@ public class ArraySubscriptionExpression extends Expression implements TypeListe
 
   public void setArrayExpression(Expression arrayExpression) {
     this.arrayExpression = arrayExpression;
-    this.addPrevDFG(arrayExpression);
     setType(getSubscriptType(arrayExpression.getType()));
     arrayExpression.registerTypeListener(this);
   }

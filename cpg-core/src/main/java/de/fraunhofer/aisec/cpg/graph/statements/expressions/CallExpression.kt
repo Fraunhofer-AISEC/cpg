@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOu
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -67,17 +66,9 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             return Collections.unmodifiableList(targets)
         }
         set(value) {
-            unwrap(invokesRelationship).forEach {
-                it.unregisterTypeListener(this)
-                Util.detachCallParameters(it, arguments)
-                removePrevDFG(it)
-            }
+            unwrap(invokesRelationship).forEach { it.unregisterTypeListener(this) }
             invokesRelationship = transformIntoOutgoingPropertyEdgeList(value, this)
-            value.forEach {
-                it.registerTypeListener(this)
-                Util.attachCallParameters(it, arguments)
-                addPrevDFG(it)
-            }
+            value.forEach { it.registerTypeListener(this) }
         }
 
     /**
