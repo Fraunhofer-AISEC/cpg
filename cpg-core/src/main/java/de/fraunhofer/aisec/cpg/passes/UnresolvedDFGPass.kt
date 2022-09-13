@@ -29,8 +29,28 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
+/**
+ * Adds DFG edges for unresolved function calls as follows:
+ * - from base (if available) to the CallExpression
+ * - from all arguments to the CallExpression
+ */
 class UnresolvedDFGPass : Pass() {
     override fun accept(t: TranslationResult) {
+        if (t.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedCalls) {
+            addDfgEdgesForUnresolvedCalls(t)
+        }
+    }
+
+    override fun cleanup() {
+        // Nothing to do
+    }
+
+    /**
+     * Adds DFG edges for unresolved function calls as follows:
+     * - from base (if available) to the CallExpression
+     * - from all arguments to the CallExpression
+     */
+    private fun addDfgEdgesForUnresolvedCalls(t: TranslationResult) {
         val unresolvedCalls = t.allChildren<CallExpression> { it.invokes.isEmpty() }
         for (call in unresolvedCalls) {
             call.base?.let {
@@ -42,9 +62,5 @@ class UnresolvedDFGPass : Pass() {
                 it.addNextDFG(call)
             }
         }
-    }
-
-    override fun cleanup() {
-        // Nothing to do
     }
 }
