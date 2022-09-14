@@ -2,7 +2,7 @@ plugins {
     id("com.gradle.enterprise") version("3.6.4")
 }
 
-include(":cpg")
+include(":cpg-all")
 include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
