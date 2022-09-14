@@ -91,7 +91,6 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener, 
     if (this.initializer != null) {
       setIsDefinition(true);
       this.initializer.unregisterTypeListener(this);
-      this.removePrevDFG(this.initializer);
       if (this.initializer instanceof TypeListener) {
         this.unregisterTypeListener((TypeListener) this.initializer);
       }
@@ -99,7 +98,6 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener, 
     this.initializer = initializer;
     if (initializer != null) {
       initializer.registerTypeListener(this);
-      this.addPrevDFG(initializer);
       if (initializer instanceof TypeListener) {
         this.registerTypeListener((TypeListener) initializer);
       }

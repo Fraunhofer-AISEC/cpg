@@ -98,15 +98,6 @@ public class DeclaredReferenceExpression extends Expression
 
     // unregister type listeners for current declaration
     if (current != null) {
-      if (access == AccessValues.WRITE) {
-        this.removeNextDFG(current);
-      } else if (access == AccessValues.READ) {
-        this.removePrevDFG(current);
-      } else {
-        this.removeNextDFG(current);
-        this.removePrevDFG(current);
-      }
-
       if (current instanceof ValueDeclaration) {
         ((ValueDeclaration) current).unregisterTypeListener(this);
       }
@@ -119,14 +110,6 @@ public class DeclaredReferenceExpression extends Expression
     this.refersTo = refersTo;
 
     // update type listeners
-    if (access == AccessValues.WRITE) {
-      this.addNextDFG(this.refersTo);
-    } else if (access == AccessValues.READ) {
-      this.addPrevDFG(this.refersTo);
-    } else {
-      this.addNextDFG(this.refersTo);
-      this.addPrevDFG(this.refersTo);
-    }
     if (this.refersTo instanceof ValueDeclaration) {
       ((ValueDeclaration) this.refersTo).registerTypeListener(this);
     }
@@ -166,34 +149,8 @@ public class DeclaredReferenceExpression extends Expression
   }
 
   public void setAccess(AccessValues access) {
-    var current = this.refersTo;
-
-    // remove DFG for the current reference
-    if (current != null) {
-      if (this.access == AccessValues.WRITE) {
-        this.removeNextDFG(current);
-      } else if (this.access == AccessValues.READ) {
-        this.removePrevDFG(current);
-      } else {
-        this.removeNextDFG(current);
-        this.removePrevDFG(current);
-      }
-    }
-
     // set the access
     this.access = access;
-
-    // update the DFG again
-    if (current != null) {
-      if (this.access == AccessValues.WRITE) {
-        this.addNextDFG(current);
-      } else if (this.access == AccessValues.READ) {
-        this.addPrevDFG(current);
-      } else {
-        this.addNextDFG(current);
-        this.addPrevDFG(current);
-      }
-    }
   }
 
   @Override

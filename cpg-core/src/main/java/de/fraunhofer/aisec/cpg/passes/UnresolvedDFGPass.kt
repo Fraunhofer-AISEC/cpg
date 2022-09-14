@@ -66,7 +66,7 @@ class UnresolvedDFGPass : Pass() {
             is ArrayCreationExpression -> handleArrayCreationExpression(node)
             is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
-            // is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
+            is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
             is ExpressionList -> handleExpressionList(node)
             // is InitializerListExpression -> handleInitializerListExpression(node)
             is KeyValueExpression -> handleKeyValueExpression(node)
@@ -75,9 +75,9 @@ class UnresolvedDFGPass : Pass() {
             // Statements
             is ReturnStatement -> handleReturnStatement(node)
             // Declarations
-            // is FieldDeclaration -> handleFieldDeclaration(node)
+            is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
-            // is VariableDeclaration -> handleVariableDeclaration(node)
+            is VariableDeclaration -> handleVariableDeclaration(node)
             // Other
             is Assignment -> handleAssignment(node)
         }
