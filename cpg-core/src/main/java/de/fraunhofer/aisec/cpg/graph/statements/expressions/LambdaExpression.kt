@@ -42,17 +42,13 @@ class LambdaExpression : Expression(), HasType.TypeListener {
     var function: FunctionDeclaration? = null
         set(value) {
             if (value != null) {
-                removePrevDFG(value)
                 value.unregisterTypeListener(this)
                 if (value is HasType.TypeListener) {
                     unregisterTypeListener(value as HasType.TypeListener?)
                 }
             }
             field = value
-            if (value != null) {
-                addPrevDFG(value)
-                value.registerTypeListener(this)
-            }
+            value?.registerTypeListener(this)
         }
 
     override fun typeChanged(src: HasType?, root: MutableList<HasType>?, oldType: Type?) {

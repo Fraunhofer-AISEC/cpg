@@ -57,12 +57,10 @@ public class ExpressionList extends Expression implements TypeListener {
       Statement lastExpression = this.expressions.get(this.expressions.size() - 1).getEnd();
       if (lastExpression instanceof HasType)
         ((HasType) lastExpression).unregisterTypeListener(this);
-      this.removePrevDFG(lastExpression);
     }
     this.expressions = PropertyEdge.transformIntoOutgoingPropertyEdgeList(expressions, this);
     if (!this.expressions.isEmpty()) {
       Statement lastExpression = this.expressions.get(this.expressions.size() - 1).getEnd();
-      this.addPrevDFG(lastExpression);
       if (lastExpression instanceof HasType) ((HasType) lastExpression).registerTypeListener(this);
     }
   }
@@ -72,12 +70,10 @@ public class ExpressionList extends Expression implements TypeListener {
       Statement lastExpression = this.expressions.get(this.expressions.size() - 1).getEnd();
       if (lastExpression instanceof HasType)
         ((HasType) lastExpression).unregisterTypeListener(this);
-      this.removePrevDFG(lastExpression);
     }
     PropertyEdge<Statement> propertyEdge = new PropertyEdge<>(this, expression);
     propertyEdge.addProperty(Properties.INDEX, this.expressions.size());
     this.expressions.add(propertyEdge);
-    this.addPrevDFG(expression);
     if (expression instanceof HasType) {
       ((HasType) expression).registerTypeListener(this);
     }

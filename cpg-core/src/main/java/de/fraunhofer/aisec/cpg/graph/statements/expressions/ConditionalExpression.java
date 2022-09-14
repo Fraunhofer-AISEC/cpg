@@ -65,12 +65,10 @@ public class ConditionalExpression extends Expression implements TypeListener {
   public void setThenExpr(Expression thenExpr) {
     if (this.thenExpr != null) {
       this.thenExpr.unregisterTypeListener(this);
-      this.removePrevDFG(this.thenExpr);
     }
     this.thenExpr = thenExpr;
     if (thenExpr != null) {
       thenExpr.registerTypeListener(this);
-      this.addPrevDFG(thenExpr);
     }
   }
 
@@ -81,12 +79,10 @@ public class ConditionalExpression extends Expression implements TypeListener {
   public void setElseExpr(Expression elseExpr) {
     if (this.elseExpr != null) {
       this.elseExpr.unregisterTypeListener(this);
-      this.removePrevDFG(this.elseExpr);
     }
     this.elseExpr = elseExpr;
     if (elseExpr != null) {
       elseExpr.registerTypeListener(this);
-      this.addPrevDFG(elseExpr);
     }
   }
 

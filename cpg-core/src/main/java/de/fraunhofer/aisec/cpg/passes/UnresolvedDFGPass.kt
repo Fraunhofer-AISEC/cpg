@@ -26,13 +26,10 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -41,6 +38,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
  * - from base (if available) to the CallExpression
  * - from all arguments to the CallExpression
  */
+@DependsOn(VariableUsageResolver::class)
 class UnresolvedDFGPass : Pass() {
     var inferDfgForUnresolvedCalls: Boolean = false
 
@@ -60,13 +58,101 @@ class UnresolvedDFGPass : Pass() {
 
     private fun handle(node: Node?) {
         when (node) {
+            // Expressions
             is CallExpression -> handleCallExpression(node)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node)
-            is Assignment -> handleAssignment(node)
             is ArrayCreationExpression -> handleArrayCreationExpression(node)
             is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
+            is ConditionalExpression -> handleConditionalExpression(node)
+            // is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
+            is ExpressionList -> handleExpressionList(node)
+            // is InitializerListExpression -> handleInitializerListExpression(node)
+            is KeyValueExpression -> handleKeyValueExpression(node)
+            is LambdaExpression -> handleLambdaExpression(node)
+            is UnaryOperator -> handleUnaryOperator(node)
+            is Assignment -> handleAssignment(node)
         }
+    }
+
+    /**
+     * Adds the DFG edges for an [UnaryOperator]. The data flow from the input to this node and, in
+     * case of the operators "++" and "--" also from the node back to the input.
+     *
+     * TODO: We cannot replace the logic for * and & because some function pointer tests fail
+     */
+    private fun handleUnaryOperator(node: UnaryOperator) {
+        // node.addPrevDFG(node.input)
+        if (node.operatorCode == "++" || node.operatorCode == "--") {
+            node.addNextDFG(node.input)
+        }
+    }
+
+    /**
+     * Adds the DFG edge for a [LambdaExpression]. The data flow from the function representing the
+     * lambda to the expression.
+     */
+    private fun handleLambdaExpression(node: LambdaExpression) {
+        node.function?.let { node.addPrevDFG(it) }
+    }
+
+    /**
+     * Adds the DFG edges for an [KeyValueExpression]. The value flows to this expression. TODO:
+     * Check with python and JS implementation
+     */
+    private fun handleKeyValueExpression(node: KeyValueExpression) {
+        node.value?.let { node.addPrevDFG(it) }
+    }
+
+    /**
+     * Adds the DFG edges for an [InitializerListExpression]. All values in the initializer flow to
+     * this expression.
+     *
+     * TODO: This change seems to have performance issues!
+     */
+    private fun handleInitializerListExpression(node: InitializerListExpression) {
+        node.initializers?.forEach {
+            it.registerTypeListener(node)
+            node.addPrevDFG(it)
+        }
+    }
+
+    /**
+     * Adds the DFG edge to an [ExpressionList]. The data of the last expression flow to the whole
+     * list.
+     */
+    private fun handleExpressionList(node: ExpressionList) {
+        node.expressions.lastOrNull()?.let { node.addPrevDFG(it) }
+    }
+
+    /**
+     * Adds the DFG edges to a [DeclaredReferenceExpression] as follows:
+     * - If the variable is written to, data flows from this node to the variable declaration.
+     * - If the variable is read from, data flows from the variable declaration to this node.
+     * - For a combined read and write, both edges for data flows are added.
+     *
+     * TODO: Doesn't seem to work (yet)! some function pointer tests fail
+     */
+    private fun handleDeclaredReferenceExpression(node: DeclaredReferenceExpression) {
+        node.refersTo?.let {
+            when (node.access) {
+                AccessValues.WRITE -> node.addNextDFG(it)
+                AccessValues.READ -> node.addPrevDFG(it)
+                else -> {
+                    node.addNextDFG(it)
+                    node.addPrevDFG(it)
+                }
+            }
+        }
+    }
+
+    /**
+     * Adds the DFG edge to a [ConditionalExpression]. Data flows from the then and the else
+     * expression to the whole expression.
+     */
+    private fun handleConditionalExpression(node: ConditionalExpression) {
+        node.addPrevDFG(node.thenExpr)
+        node.addPrevDFG(node.elseExpr)
     }
 
     /**

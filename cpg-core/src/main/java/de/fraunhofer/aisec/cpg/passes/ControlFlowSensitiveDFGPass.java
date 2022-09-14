@@ -60,6 +60,7 @@ import java.util.*;
  * semantics on Edges.
  */
 @DependsOn(EvaluationOrderGraphPass.class)
+@DependsOn(UnresolvedDFGPass.class)
 public class ControlFlowSensitiveDFGPass extends Pass {
 
   @Override

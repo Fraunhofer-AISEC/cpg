@@ -63,6 +63,7 @@ import org.slf4j.LoggerFactory;
  * ConstructorDeclaration}
  */
 @DependsOn(VariableUsageResolver.class)
+@DependsOn(UnresolvedDFGPass.class)
 public class CallResolver extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);
