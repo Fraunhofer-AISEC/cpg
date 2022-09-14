@@ -6,7 +6,7 @@ plugins {
 
 publishing {
     publications {
-        named<MavenPublication>("cpg") {
+        named<MavenPublication>("cpg-all") {
             pom {
                 artifactId = "cpg" // for legacy reasons (this will be renamed to cpg-core at some point)
                 name.set("Code Property Graph")
