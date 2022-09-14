@@ -41,13 +41,11 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(VariableUsageResolver::class)
 class UnresolvedDFGPass : Pass() {
-    var inferDfgForUnresolvedCalls: Boolean = false
-
     override fun accept(tr: TranslationResult) {
-        inferDfgForUnresolvedCalls =
+        val inferDfgForUnresolvedCalls =
             tr.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedCalls
         val walker = IterativeGraphWalker()
-        walker.registerOnNodeVisit { handle(it) }
+        walker.registerOnNodeVisit { handle(it, inferDfgForUnresolvedCalls) }
         for (tu in tr.translationUnits) {
             walker.iterate(tu)
         }
@@ -57,10 +55,10 @@ class UnresolvedDFGPass : Pass() {
         // Nothing to do
     }
 
-    private fun handle(node: Node?) {
+    private fun handle(node: Node?, inferDfgForUnresolvedCalls: Boolean) {
         when (node) {
             // Expressions
-            is CallExpression -> handleCallExpression(node)
+            is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedCalls)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node)
             is ArrayCreationExpression -> handleArrayCreationExpression(node)
@@ -263,7 +261,11 @@ class UnresolvedDFGPass : Pass() {
     }
 
     /** Adds the DFG edges to a [CallExpression]. */
-    private fun handleCallExpression(call: CallExpression) {
+    fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedCalls: Boolean) {
+        while (call.prevDFG.isNotEmpty()) {
+            call.prevDFG.first().removeNextDFG(call)
+        }
+
         if (call.invokes.isEmpty() && inferDfgForUnresolvedCalls) {
             // Unresolved call expression
             handleUnresolvedCalls(call)
@@ -272,7 +274,6 @@ class UnresolvedDFGPass : Pass() {
                 Util.attachCallParameters(it, call.arguments)
                 call.addPrevDFG(it)
             }
-            // TODO: Call expression with resolved function
         }
     }
 
@@ -282,13 +283,7 @@ class UnresolvedDFGPass : Pass() {
      * - from all arguments to the CallExpression
      */
     private fun handleUnresolvedCalls(call: CallExpression) {
-        call.base?.let {
-            call.addPrevDFG(it)
-            it.addNextDFG(call)
-        }
-        call.arguments.forEach {
-            call.addPrevDFG(it)
-            it.addNextDFG(call)
-        }
+        call.base?.let { call.addPrevDFG(it) }
+        call.arguments.forEach { call.addPrevDFG(it) }
     }
 }

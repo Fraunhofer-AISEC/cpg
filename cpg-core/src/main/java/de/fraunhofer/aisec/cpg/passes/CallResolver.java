@@ -67,6 +67,7 @@ import org.slf4j.LoggerFactory;
 public class CallResolver extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);
+  private boolean inferDfgForUnresolvedCalls;
 
   protected final Map<String, RecordDeclaration> recordMap = new HashMap<>();
   protected final List<TemplateDeclaration> templateList = new ArrayList<>();
@@ -87,6 +88,9 @@ public class CallResolver extends Pass {
     walker.registerHandler(this::findRecords);
     walker.registerHandler(this::findTemplates);
     walker.registerHandler(this::registerMethods);
+
+    inferDfgForUnresolvedCalls =
+        translationResult.getConfig().getInferenceConfiguration().getInferDfgForUnresolvedCalls();
 
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
       walker.iterate(tu);
@@ -590,6 +594,7 @@ public class CallResolver extends Pass {
               initializationSignature,
               initializationType,
               orderedInitializationSignature);
+          new UnresolvedDFGPass().handleCallExpression(templateCall, inferDfgForUnresolvedCalls);
           return true;
         }
       }
@@ -613,8 +618,10 @@ public class CallResolver extends Pass {
         }
       }
 
+      new UnresolvedDFGPass().handleCallExpression(templateCall, inferDfgForUnresolvedCalls);
       return true;
     }
+    new UnresolvedDFGPass().handleCallExpression(templateCall, inferDfgForUnresolvedCalls);
     return false;
   }
 
@@ -693,6 +700,7 @@ public class CallResolver extends Pass {
         initializationSignature.get(declaration).addNextDFG(declaration);
       }
     }
+    new UnresolvedDFGPass().handleCallExpression(templateCall, inferDfgForUnresolvedCalls);
   }
 
   /**
@@ -1067,6 +1075,7 @@ public class CallResolver extends Pass {
     } else if (!handlePossibleStaticImport(call, curClass)) {
       handleMethodCall(curClass, call);
     }
+    new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
   }
 
   protected void handleNormalCallCXX(RecordDeclaration curClass, CallExpression call) {
@@ -1108,6 +1117,7 @@ public class CallResolver extends Pass {
     }
     createInferredFunction(invocationCandidates, call);
     call.setInvokes(invocationCandidates);
+    new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
   }
 
   protected void createInferredFunction(
@@ -1159,6 +1169,7 @@ public class CallResolver extends Pass {
 
     createMethodDummies(invocationCandidates, possibleContainingTypes, call);
     call.setInvokes(invocationCandidates);
+    new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
   }
 
   /**
@@ -1531,6 +1542,7 @@ public class CallResolver extends Pass {
       curr.getPrevDFG().forEach(worklist::push);
     }
     call.setInvokes(invocationCandidates);
+    new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
   }
 
   protected void resolveExplicitConstructorInvocation(ExplicitConstructorInvocation eci) {
@@ -1546,6 +1558,7 @@ public class CallResolver extends Pass {
         eci.setInvokes(invokes);
       }
     }
+    new UnresolvedDFGPass().handleCallExpression(eci, inferDfgForUnresolvedCalls);
   }
 
   protected boolean handlePossibleStaticImport(
@@ -1561,6 +1574,7 @@ public class CallResolver extends Pass {
             .filter(m -> m.getName().equals(name) || m.getName().endsWith("." + name))
             .collect(Collectors.toList());
     if (nameMatches.isEmpty()) {
+      new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
       return false;
     } else {
       List<FunctionDeclaration> invokes = new ArrayList<>();
@@ -1576,6 +1590,7 @@ public class CallResolver extends Pass {
       }
 
       call.setInvokes(invokes);
+      new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
       return true;
     }
   }
