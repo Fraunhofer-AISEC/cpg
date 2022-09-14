@@ -488,10 +488,10 @@ public class TranslationConfiguration {
       registerPass(new JavaExternalTypeHierarchyResolver());
       registerPass(new ImportResolver());
       registerPass(new VariableUsageResolver());
+      registerPass(new UnresolvedDFGPass());
       registerPass(new CallResolver()); // creates CG
       registerPass(new EvaluationOrderGraphPass()); // creates EOG
       registerPass(new TypeResolver());
-      registerPass(new UnresolvedDFGPass());
       registerPass(new ControlFlowSensitiveDFGPass());
       registerPass(new FilenameMapper());
       return this;

@@ -132,7 +132,7 @@ class UnresolvedDFGPass : Pass() {
      * TODO: We cannot replace the logic for * and & because some function pointer tests fail
      */
     private fun handleUnaryOperator(node: UnaryOperator) {
-        // node.addPrevDFG(node.input)
+        node.addPrevDFG(node.input)
         if (node.operatorCode == "++" || node.operatorCode == "--") {
             node.addNextDFG(node.input)
         }
