@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -216,25 +215,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public void setBody(Statement body) {
-    if (this.body instanceof ReturnStatement) {
-      this.removePrevDFG(this.body);
-    } else if (this.body instanceof CompoundStatement) {
-      ((CompoundStatement) this.body)
-          .getStatements().stream()
-              .filter(ReturnStatement.class::isInstance)
-              .forEach(this::removePrevDFG);
-    }
-
     this.body = body;
-
-    if (body instanceof ReturnStatement) {
-      this.addPrevDFG(body);
-    } else if (body instanceof CompoundStatement) {
-      ((CompoundStatement) body)
-          .getStatements().stream()
-              .filter(ReturnStatement.class::isInstance)
-              .forEach(this::addPrevDFG);
-    }
   }
 
   public List<ParamVariableDeclaration> getParameters() {

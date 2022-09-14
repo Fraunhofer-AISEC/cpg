@@ -29,16 +29,16 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 
-/**
- * Adds DFG edges for unresolved function calls as follows:
- * - from base (if available) to the CallExpression
- * - from all arguments to the CallExpression
- */
+/** Adds the DFG edges for various types of nodes. */
 @DependsOn(VariableUsageResolver::class)
 class UnresolvedDFGPass : Pass() {
     var inferDfgForUnresolvedCalls: Boolean = false
@@ -74,9 +74,47 @@ class UnresolvedDFGPass : Pass() {
             is UnaryOperator -> handleUnaryOperator(node)
             // Statements
             is ReturnStatement -> handleReturnStatement(node)
+            // Declarations
+            // is FieldDeclaration -> handleFieldDeclaration(node)
+            is FunctionDeclaration -> handleFunctionDeclaration(node)
+            // is VariableDeclaration -> handleVariableDeclaration(node)
             // Other
             is Assignment -> handleAssignment(node)
         }
+    }
+
+    /**
+     * Adds the DFG edge for a [FunctionDeclaration]. The data flow from the return statement(s) to
+     * the function.
+     *
+     * TODO: Does not seem to work (yet)! Some function pointer tests fail
+     */
+    private fun handleVariableDeclaration(node: VariableDeclaration) {
+        node.initializer?.let { node.addPrevDFG(it) }
+    }
+
+    /**
+     * Adds the DFG edge for a [FunctionDeclaration]. The data flow from the return statement(s) to
+     * the function.
+     */
+    private fun handleFunctionDeclaration(node: FunctionDeclaration) {
+        if (node.body is ReturnStatement) {
+            node.addPrevDFG(node.body)
+        } else if (node.body is CompoundStatement) {
+            (node.body as CompoundStatement)
+                .statements
+                .filterIsInstance<ReturnStatement>()
+                .forEach { node.addPrevDFG(it) }
+        }
+    }
+
+    /**
+     * Adds the DFG edge for a [FieldDeclaration]. The data flow from the initializer to the field.
+     *
+     * TODO: Doesn't seem to work (yet)! Some function pointer tests fail
+     */
+    private fun handleFieldDeclaration(node: FieldDeclaration) {
+        node.initializer?.let { node.addPrevDFG(it) }
     }
 
     /**
@@ -143,7 +181,7 @@ class UnresolvedDFGPass : Pass() {
      * - If the variable is read from, data flows from the variable declaration to this node.
      * - For a combined read and write, both edges for data flows are added.
      *
-     * TODO: Doesn't seem to work (yet)! some function pointer tests fail
+     * TODO: Doesn't seem to work (yet)! Some function pointer tests fail
      */
     private fun handleDeclaredReferenceExpression(node: DeclaredReferenceExpression) {
         node.refersTo?.let {
