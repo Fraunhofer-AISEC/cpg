@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -71,8 +72,19 @@ class UnresolvedDFGPass : Pass() {
             is KeyValueExpression -> handleKeyValueExpression(node)
             is LambdaExpression -> handleLambdaExpression(node)
             is UnaryOperator -> handleUnaryOperator(node)
+            // Statements
+            is ReturnStatement -> handleReturnStatement(node)
+            // Other
             is Assignment -> handleAssignment(node)
         }
+    }
+
+    /**
+     * Adds the DFG edge for a [ReturnStatement]. The data flow from the return value to the
+     * statement.
+     */
+    private fun handleReturnStatement(node: ReturnStatement) {
+        node.returnValue?.let { node.addPrevDFG(it) }
     }
 
     /**
