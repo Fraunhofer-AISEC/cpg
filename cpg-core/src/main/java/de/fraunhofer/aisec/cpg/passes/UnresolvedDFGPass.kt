@@ -130,9 +130,11 @@ class UnresolvedDFGPass : Pass() {
      * TODO: We cannot replace the logic for * and & because some function pointer tests fail
      */
     private fun handleUnaryOperator(node: UnaryOperator) {
-        node.addPrevDFG(node.input)
-        if (node.operatorCode == "++" || node.operatorCode == "--") {
-            node.addNextDFG(node.input)
+        node.input?.let {
+            node.addPrevDFG(it)
+            if (node.operatorCode == "++" || node.operatorCode == "--") {
+                node.addNextDFG(it)
+            }
         }
     }
 
@@ -199,8 +201,8 @@ class UnresolvedDFGPass : Pass() {
      * expression to the whole expression.
      */
     private fun handleConditionalExpression(node: ConditionalExpression) {
-        node.addPrevDFG(node.thenExpr)
-        node.addPrevDFG(node.elseExpr)
+        node.thenExpr?.let { node.addPrevDFG(it) }
+        node.elseExpr?.let { node.addPrevDFG(it) }
     }
 
     /**
@@ -208,7 +210,7 @@ class UnresolvedDFGPass : Pass() {
      * result `x[i]`.
      */
     private fun handleArraySubscriptionExpression(node: ArraySubscriptionExpression) {
-        node.addPrevDFG(node.arrayExpression)
+        node.arrayExpression?.let { node.addPrevDFG(it) }
     }
 
     /**
@@ -224,7 +226,7 @@ class UnresolvedDFGPass : Pass() {
      */
     private fun handleBinaryOp(node: BinaryOperator) {
         when (node.operatorCode) {
-            "=" -> node.lhs.addPrevDFG(node.rhs)
+            "=" -> node.rhs?.let { node.lhs.addPrevDFG(it) }
             "*=",
             "/=",
             "%=",
@@ -235,13 +237,15 @@ class UnresolvedDFGPass : Pass() {
             "&=",
             "^=",
             "|=" -> {
-                node.addPrevDFG(node.lhs)
-                node.addPrevDFG(node.rhs)
-                node.addNextDFG(node.lhs)
+                node.lhs?.let {
+                    node.addPrevDFG(it)
+                    node.addNextDFG(it)
+                }
+                node.rhs?.let { node.addPrevDFG(it) }
             }
             else -> {
-                node.addPrevDFG(node.lhs)
-                node.addPrevDFG(node.rhs)
+                node.lhs?.let { node.addPrevDFG(it) }
+                node.rhs?.let { node.addPrevDFG(it) }
             }
         }
     }
@@ -255,9 +259,7 @@ class UnresolvedDFGPass : Pass() {
      * Adds the DFG edge to a [CastExpression]. The inner expression flows to the cast expression.
      */
     private fun handleCastExpression(castExpression: CastExpression) {
-        if (castExpression.expression != null) {
-            castExpression.addPrevDFG(castExpression.expression)
-        }
+        castExpression.expression?.let { castExpression.addPrevDFG(it) }
     }
 
     /** Adds the DFG edges to a [CallExpression]. */
