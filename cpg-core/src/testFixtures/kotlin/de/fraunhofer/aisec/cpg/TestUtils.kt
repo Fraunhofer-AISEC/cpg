@@ -113,15 +113,6 @@ object TestUtils {
         return analyze(files, topLevel, usePasses, configModifier)
     }
 
-    fun allWithExtension(fileExtension: String?, topLevel: Path): List<File> {
-        return Files.walk(topLevel, Int.MAX_VALUE)
-            .map { obj: Path -> obj.toFile() }
-            .filter { obj: File -> obj.isFile }
-            .filter { f: File -> f.name.endsWith(fileExtension!!) }
-            .sorted()
-            .collect(Collectors.toList())
-    }
-
     /**
      * Default way of parsing a list of files into a full CPG. All default passes are applied
      *

@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -226,13 +225,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
         }
 
     val signatureTypes: List<Type>
-        get() {
-            val signatureTypes: MutableList<Type> = ArrayList()
-            for (paramVariableDeclaration in parameters) {
-                signatureTypes.add(paramVariableDeclaration.getType())
-            }
-            return signatureTypes
-        }
+        get() = parameters.map { it.type }
 
     fun addParameter(paramVariableDeclaration: ParamVariableDeclaration) {
         val propertyEdge = PropertyEdge(this, paramVariableDeclaration)
@@ -244,40 +237,6 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
         parameterEdges.removeIf { propertyEdge: PropertyEdge<ParamVariableDeclaration> ->
             propertyEdge.end == paramVariableDeclaration
         }
-    }
-
-    /**
-     * Looks for a variable declaration by the given name.
-     *
-     * @param name the name of the variable
-     * @return an optional value containing the variable declaration if found
-     */
-    fun getVariableDeclarationByName(name: String?): Optional<VariableDeclaration> {
-        return if (body is CompoundStatement) {
-            (body as CompoundStatement)
-                .statements
-                .stream() // only declaration statements
-                .filter { obj: Statement? ->
-                    DeclarationStatement::class.java.isInstance(obj)
-                } // cast them
-                .map { obj: Statement? ->
-                    DeclarationStatement::class.java.cast(obj)
-                } // flatten the declarations (could be more than one) of the statements so we can
-                // search them
-                .flatMap { declarationStatement: DeclarationStatement ->
-                    declarationStatement.declarations.stream()
-                } // only variable declarations
-                .filter { obj: Declaration? ->
-                    VariableDeclaration::class.java.isInstance(obj)
-                } // cast them
-                .map { obj: Declaration? ->
-                    VariableDeclaration::class.java.cast(obj)
-                } // filter them by name
-                .filter { declaration: VariableDeclaration ->
-                    declaration.name == name
-                } // return the first (later ones should not exist anyway)
-                .findFirst()
-        } else Optional.empty()
     }
 
     override fun toString(): String {

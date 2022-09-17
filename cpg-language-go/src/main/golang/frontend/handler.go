@@ -261,11 +261,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 	var t *cpg.Type = this.handleType(funcDecl.Type)
 	var returnTypes []*cpg.Type = []*cpg.Type{}
 
-	// TODO: for now, just the first result type. Maybe later combine it into a pair?
-	if funcDecl.Type.Results == nil {
-		// its proably void
-		returnTypes = append(returnTypes, cpg.TypeParser_createFrom("void", false))
-	} else {
+	if funcDecl.Type.Results != nil {
 		for _, returnVariable := range funcDecl.Type.Results.List {
 			returnTypes = append(returnTypes, this.handleType(returnVariable.Type))
 
@@ -282,7 +278,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		}
 	}
 
-	this.LogDebug("Function has return type %s", t.GetName())
+	this.LogDebug("Function has type %s", t.GetName())
 
 	f.SetType(t)
 	f.SetReturnTypes(returnTypes)

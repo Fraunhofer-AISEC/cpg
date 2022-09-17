@@ -63,22 +63,22 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = declaration.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
 
-        val a = main.getVariableDeclarationByName("a").orElse(null)
+        val a = main.variables["a"]
         assertNotNull(a)
         assertEquals(1, ((a.initializer as? UnaryOperator)?.input as? Literal<*>)?.value)
 
-        val b = main.getVariableDeclarationByName("b").orElse(null)
+        val b = main.variables["b"]
         assertNotNull(b)
         assertEquals(2147483648L, ((b.initializer as? UnaryOperator)?.input as? Literal<*>)?.value)
 
-        val c = main.getVariableDeclarationByName("c").orElse(null)
+        val c = main.variables["c"]
         assertNotNull(c)
         assertEquals(
             BigInteger("9223372036854775808"),
             ((c.initializer as? UnaryOperator)?.input as? Literal<*>)?.value
         )
 
-        val d = main.getVariableDeclarationByName("d").orElse(null)
+        val d = main.variables["d"]
         assertNotNull(d)
         assertEquals(
             9223372036854775807L,
@@ -95,7 +95,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(declaration)
 
         val main = declaration.methods[0]
-        val ls = main.getVariableDeclarationByName("ls").orElse(null)
+        val ls = main.variables["ls"]
         assertNotNull(ls)
 
         val forStatement = main.getBodyStatementAs(2, ForStatement::class.java)
@@ -119,7 +119,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(declaration)
 
         val main = declaration.methods[0]
-        val ls = main.getVariableDeclarationByName("ls").orElse(null)
+        val ls = main.variables["ls"]
         assertNotNull(ls)
 
         val forEachStatement = main.getBodyStatementAs(1, ForEachStatement::class.java)

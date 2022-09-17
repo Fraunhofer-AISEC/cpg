@@ -58,7 +58,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertFalse(main.isEmpty())
 
         val decl = main.iterator().next()
-        val ls = decl.getVariableDeclarationByName("ls").orElse(null)
+        val ls = decl.variables["ls"]
         assertNotNull(ls)
         assertEquals(TypeParser.createFrom("std::vector<int>", true), ls.type)
         assertEquals("ls", ls.name)
@@ -125,7 +125,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(main)
 
         val funcDecl = main.iterator().next()
-        val i = funcDecl.getVariableDeclarationByName("i").orElse(null)
+        val i = funcDecl.variables["i"]
         assertNotNull(i)
 
         val sizeof = i.initializer as? TypeIdExpression
@@ -133,7 +133,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals("sizeof", sizeof.name)
         assertEquals(TypeParser.createFrom("std::size_t", true), sizeof.type)
 
-        val typeInfo = funcDecl.getVariableDeclarationByName("typeInfo").orElse(null)
+        val typeInfo = funcDecl.variables["typeInfo"]
         assertNotNull(typeInfo)
 
         val typeid = typeInfo.initializer as? TypeIdExpression
@@ -141,7 +141,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals("typeid", typeid.name)
         assertEquals(TypeParser.createFrom("const std::type_info&", true), typeid.type)
 
-        val j = funcDecl.getVariableDeclarationByName("j").orElse(null)
+        val j = funcDecl.variables["j"]
         assertNotNull(j)
 
         val alignOf = j.initializer as? TypeIdExpression
