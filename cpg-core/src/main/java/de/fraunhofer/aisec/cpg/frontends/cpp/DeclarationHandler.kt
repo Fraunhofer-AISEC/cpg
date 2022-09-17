@@ -46,7 +46,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  * It heavily relies on its sibling handler, the [DeclaratorHandler].
  *
  * In the C/C++ language, the meaning of a declaration depends on two major factors: First, a list
- * of so called declaration
+ * of so-called declaration
  * [specifiers](https://en.cppreference.com/w/cpp/language/declarations#Specifiers), which specify
  * the type of declaration. Prominent examples include `class` or `enum`. Second, a list of
  * [declarators](https://en.cppreference.com/w/cpp/language/declarations#Declarators), which
@@ -134,13 +134,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             )
         }
 
-        // Retrieve the type. This is the function (pointer) type. For now, we only set the
-        // returnType to the type property of the function. However, this might change with
-        // https://github.com/Fraunhofer-AISEC/cpg/issues/824.
-        val type = lang.typeOf(ctx.declarator, ctx.declSpecifier)
-        declaration.type =
-            (type as? FunctionPointerType)?.returnType ?: UnknownType.getUnknownType()
-        declaration.setIsDefinition(true)
+        // Retrieve the type. This should parse as a function type, otherwise it is unknown.
+        val type = lang.typeOf(ctx.declarator, ctx.declSpecifier, declaration) as? FunctionType
+        declaration.type = type ?: UnknownType.getUnknownType()
+        declaration.isDefinition = true
+
+        // We also need to set the return type, based on the function type.
+        declaration.returnTypes = type?.returnTypes ?: listOf(IncompleteType())
 
         // Store the reference to a record declaration, if we managed to find one. This is most
         // likely the case, if the function is defined within the class itself.
@@ -383,7 +383,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // Add parameterizedTypes to ConstructorDeclaration type and adjust their receiver types
         for (constructor in innerDeclaration.constructors) {
             constructor.receiver?.let { addParameterizedTypesToType(it.type, parameterizedTypes) }
-            addParameterizedTypesToType(constructor.type, parameterizedTypes)
+
+            // We need to add the type to (first) return type as well. The function type is somehow
+            // magically updated then as well.
+            constructor.returnTypes.firstOrNull()?.let {
+                addParameterizedTypesToType(it, parameterizedTypes)
+            }
         }
     }
 
@@ -477,27 +482,38 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         declSpecifier
                     }
 
-                val type = lang.typeOf(declarator, declSpecifierToUse)
+                // It is important, that we parse the type first, so that the type is known before
+                // parsing the declaration.
+                // This allows us to guess cast vs. call expression in
+                // ExpressionHandler.handleUnaryExpression.
+                var type = lang.typeOf(declarator, declSpecifierToUse)
 
-                // Instead of a variable declaration, this is a typedef, so we handle it
-                // like this
                 if (ctx.isTypedef) {
+                    // Handle typedefs.
                     val declaration = handleTypedef(declarator, ctx, type)
 
                     sequence.addDeclaration(declaration)
                 } else {
                     val declaration = lang.declaratorHandler.handle(declarator) as? ValueDeclaration
 
+                    // We need to reparse the type, if this is a constructor declaration, so that we
+                    // can supply this as a hint to
+                    // the typeOf
+                    if (declaration is ConstructorDeclaration) {
+                        type = lang.typeOf(declarator, declSpecifierToUse, declaration)
+                    }
+
+                    // For function *declarations*, we need to update the return types based on the
+                    // function type. For function *definitions*, this is done in
+                    // [handleFunctionDefinition].
+                    if (declaration is FunctionDeclaration) {
+                        declaration.returnTypes =
+                            (type as? FunctionType)?.returnTypes ?: listOf(IncompleteType())
+                    }
+
                     if (declaration != null) {
-                        // Only return type for functions. See
-                        // https://github.com/Fraunhofer-AISEC/cpg/issues/824
-                        if (declaration is FunctionDeclaration) {
-                            declaration.type =
-                                (type as? FunctionPointerType)?.returnType
-                                    ?: UnknownType.getUnknownType()
-                        } else {
-                            declaration.type = type
-                        }
+                        // We also need to set the return type, based on the function type.
+                        declaration.type = type
 
                         // process attributes
                         lang.processAttributes(declaration, ctx)

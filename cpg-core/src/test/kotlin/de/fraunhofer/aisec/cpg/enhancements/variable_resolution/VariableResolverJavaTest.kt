@@ -62,7 +62,7 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testReferenceToParameter() {
-        val param: ValueDeclaration? = outerFunction2?.parameters["varName"]
+        val param: ValueDeclaration? = outerFunction2.parameters["varName"]
         assertUsageOf(callParamMap["func2_param_varName"], param)
     }
 
@@ -125,7 +125,7 @@ internal class VariableResolverJavaTest : BaseTest() {
     fun testParamVarNameInInnerClass() {
         assertUsageOf(
             callParamMap["func2_inner_param_varName"],
-            innerFunction2?.parameters["varName"]
+            innerFunction2.parameters["varName"]
         )
     }
 

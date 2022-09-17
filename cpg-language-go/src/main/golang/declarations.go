@@ -65,6 +65,23 @@ func (f *FunctionDeclaration) SetType(t *Type) {
 	(*HasType)(f).SetType(t)
 }
 
+func (f *FunctionDeclaration) SetReturnTypes(types []*Type) (err error) {
+	var list *jnigi.ObjectRef
+
+	list, err = ListOf[*Type](types)
+	if err != nil {
+		return err
+	}
+
+	// Stupid workaround, since casting does not work. See
+	// https://github.com/timob/jnigi/issues/60
+	var funcDecl = jnigi.WrapJObject(uintptr((*jnigi.ObjectRef)(f).JObject()), "de/fraunhofer/aisec/cpg/graph/declarations/FunctionDeclaration", false)
+
+	err = (*jnigi.ObjectRef)(funcDecl).CallMethod(env, "setReturnTypes", nil, list.Cast("java/util/List"))
+
+	return
+}
+
 func (f *FunctionDeclaration) AddParameter(p *ParamVariableDeclaration) {
 	(*jnigi.ObjectRef)(f).CallMethod(env, "addParameter", nil, (*jnigi.ObjectRef)(p))
 }

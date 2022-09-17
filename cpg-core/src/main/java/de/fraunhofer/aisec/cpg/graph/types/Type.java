@@ -324,6 +324,8 @@ public abstract class Type extends Node {
   public boolean isFirstOrderType() {
     return this instanceof ObjectType
         || this instanceof UnknownType
+        || this instanceof FunctionType
+        // TODO(oxisto): convert FunctionPointerType to second order type
         || this instanceof FunctionPointerType
         || this instanceof IncompleteType
         || this instanceof ParameterizedType;

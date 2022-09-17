@@ -246,13 +246,14 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
         } else {
             val previous = type
             val types =
-                invokesRelationship
-                    .map(PropertyEdge<FunctionDeclaration>::end)
-                    .map { it.type }
-                    .filter(Objects::nonNull)
+                invokesRelationship.map(PropertyEdge<FunctionDeclaration>::end).mapNotNull {
+                    // TODO(oxisto): Support multiple return values
+                    it.returnTypes.firstOrNull()
+                }
             val alternative = if (types.isNotEmpty()) types[0] else null
             val commonType = TypeManager.getInstance().getCommonType(types).orElse(alternative)
             val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
+
             subTypes.remove(oldType)
             subTypes.addAll(types)
             setType(commonType, root)

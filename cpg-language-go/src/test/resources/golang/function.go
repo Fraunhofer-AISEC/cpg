@@ -6,10 +6,10 @@ func main() {
     myTest("some string")
 }
 
-func myTest(s string) (err error) {
+func myTest(s string) (a int, err error) {
     fmt.Printf("%s", s)
 
-    a := 1 + 2
+    a = 1 + 2
 
     err = nil
 

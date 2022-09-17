@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** A declaration of a function or nontype template parameter. */
@@ -49,6 +50,7 @@ public class ParamVariableDeclaration extends ValueDeclaration implements HasDef
     this.variadic = variadic;
   }
 
+  @Nullable
   public Expression getDefault() {
     return defaultValue;
   }

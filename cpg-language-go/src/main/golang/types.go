@@ -150,3 +150,14 @@ func (t *ObjectType) AddGeneric(g *Type) {
 		log.Fatal(err)
 	}
 }
+
+func FunctionType_ComputeType(decl *FunctionDeclaration) (t *Type, err error) {
+	var funcType Type
+
+	err = env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/FunctionType", "computeType", &t, decl)
+	if err != nil {
+		return nil, err
+	}
+
+	return &funcType, nil
+}

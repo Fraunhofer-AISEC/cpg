@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,23 +23,35 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations;
+package cpg
 
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
-import org.jetbrains.annotations.Nullable;
+import "tekao.net/jnigi"
 
-/**
- * The declaration of a constructor within a {@link RecordDeclaration}. Is it essentially a special
- * case of a {@link MethodDeclaration}.
- */
-public class ConstructorDeclaration extends MethodDeclaration {
+type Castable interface {
+	Cast(className string) *jnigi.CastedObjectRef
+}
 
-  @Override
-  public void setRecordDeclaration(@Nullable RecordDeclaration recordDeclaration) {
-    super.setRecordDeclaration(recordDeclaration);
-    if (recordDeclaration != null) {
-      // constructors always have implicitly the return type of their class
-      setType(TypeParser.createFrom(recordDeclaration.getName(), true));
-    }
-  }
+func ListOf[T Castable](slice []T) (list *jnigi.ObjectRef, err error) {
+	list, err = env.NewObject("java/util/ArrayList")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, t := range slice {
+		var dummy bool
+		if err := list.CallMethod(env, "add", &dummy, t.Cast("java/lang/Object")); err != nil {
+			return nil, err
+		}
+	}
+
+	return
+}
+
+func StringOf(str string) (obj *jnigi.ObjectRef, err error) {
+	obj, err = env.NewObject("java/lang/String", []byte(str))
+	if err != nil {
+		return nil, err
+	}
+
+	return
 }

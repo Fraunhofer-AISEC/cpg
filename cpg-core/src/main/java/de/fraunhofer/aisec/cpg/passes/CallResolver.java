@@ -390,11 +390,11 @@ public class CallResolver extends Pass {
       Map<Declaration, Node> instantiationSignature,
       Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
       Map<Declaration, Integer> orderedInitializationSignature) {
-    if (((HasDefault) functionTemplateDeclaration.getParameters().get(index)).getDefault()
+    if (((HasDefault<?>) functionTemplateDeclaration.getParameters().get(index)).getDefault()
         != null) {
       // If we have a default we fill it in
       Node defaultNode =
-          ((HasDefault) functionTemplateDeclaration.getParameters().get(index)).getDefault();
+          ((HasDefault<?>) functionTemplateDeclaration.getParameters().get(index)).getDefault();
 
       if (defaultNode instanceof Type) {
         defaultNode = NodeBuilder.newTypeExpression(defaultNode.getName(), (Type) defaultNode);
@@ -654,8 +654,9 @@ public class CallResolver extends Pass {
     templateCall.setTemplateInstantiation(functionTemplateDeclaration);
     templateCall.setInvokes(List.of(function));
 
+    // TODO(oxisto): Support multiple return values
     // Set return Value of call if resolved
-    Type returnType = function.getType();
+    Type returnType = function.getReturnTypes().get(0);
     Map<ParameterizedType, TypeParamDeclaration> parameterizedTypeResolution =
         getParameterizedSignaturesFromInitialization(initializationSignature);
     if (returnType instanceof ParameterizedType) {
@@ -1519,7 +1520,18 @@ public class CallResolver extends Pass {
         // Even if it is a function declaration, the dataflow might just come from a situation
         // where the target of a fptr is passed through via a return value. Keep searching if
         // return type or signature don't match
-        if (TypeManager.getInstance().isSupertypeOf(pointerType.getReturnType(), f.getType())
+
+        // In some languages, there might be no explicit return type. In this case we are using a
+        // single void return type.
+        Type returnType;
+        if (f.getReturnTypes().isEmpty()) {
+          returnType = new IncompleteType();
+        } else {
+          // TODO(oxisto): support multiple return types
+          returnType = f.getReturnTypes().get(0);
+        }
+
+        if (TypeManager.getInstance().isSupertypeOf(pointerType.getReturnType(), returnType)
             && f.hasSignature(pointerType.getParameters())) {
           invocationCandidates.add((FunctionDeclaration) curr);
           // We have found a target. Don't follow this path any further, but still continue the

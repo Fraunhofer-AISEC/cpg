@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -159,7 +160,7 @@ internal class CXXLiteralTest : BaseTest() {
         assertFalse(main.isEmpty())
 
         val funcDecl = main.iterator().next()
-        val a = funcDecl.getVariableDeclarationByName("a").orElse(null)
+        val a = funcDecl.variables["a"]
         assertNotNull(a)
         assertEquals(1, (a.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value)
 
@@ -168,21 +169,21 @@ internal class CXXLiteralTest : BaseTest() {
         // in an integer, it should be automatically converted to a long. The resulting value
         // -2147483648 however is small enough to fit into an int, so it is ok for the variable a to
         // have an int type
-        val b = funcDecl.getVariableDeclarationByName("b").orElse(null)
+        val b = funcDecl.variables["b"]
         assertNotNull(b)
         assertEquals(
             2147483648L,
             (b.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
         )
 
-        val c = funcDecl.getVariableDeclarationByName("c").orElse(null)
+        val c = funcDecl.variables["c"]
         assertNotNull(c)
         assertEquals(
             2147483649L,
             (c.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
         )
 
-        val d = funcDecl.getVariableDeclarationByName("d").orElse(null)
+        val d = funcDecl.variables["d"]
         assertNotNull(d)
         assertEquals(
             BigInteger("9223372036854775808"),
@@ -196,8 +197,7 @@ internal class CXXLiteralTest : BaseTest() {
         functionDeclaration: FunctionDeclaration,
         name: String
     ) {
-        val variableDeclaration =
-            functionDeclaration.getVariableDeclarationByName(name).orElse(null)
+        val variableDeclaration = functionDeclaration.variables[name]
         assertNotNull(variableDeclaration)
 
         val literal = variableDeclaration.getInitializerAs(Literal::class.java)!!
