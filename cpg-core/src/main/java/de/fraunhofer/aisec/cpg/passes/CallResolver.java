@@ -60,7 +60,9 @@ import org.slf4j.LoggerFactory;
  * <p>Constructor calls with {@link ConstructExpression} are resolved in such a way that their
  * {@link ConstructExpression#getInstantiates()} points to the correct {@link RecordDeclaration}.
  * Additionally, the {@link ConstructExpression#getConstructor()} is set to the according {@link
- * ConstructorDeclaration}
+ * ConstructorDeclaration}.
+ *
+ * <p>This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
 @DependsOn(VariableUsageResolver.class)
 public class CallResolver extends Pass {
@@ -295,7 +297,7 @@ public class CallResolver extends Pass {
       Node member = ((MemberCallExpression) call).getMember();
       if (member instanceof HasType
           && ((HasType) member).getType() instanceof FunctionPointerType) {
-        handleFunctionPointerCall(call, member);
+        // handled by extra pass
       } else {
         handleMethodCall(curClass, call);
       }
@@ -315,7 +317,7 @@ public class CallResolver extends Pass {
             call,
             v -> v.getType() instanceof FunctionPointerType && v.getName().equals(call.getName()));
     if (funcPointer.isPresent()) {
-      handleFunctionPointerCall(call, funcPointer.get());
+      // handled by extra pass
     } else {
       handleNormalCalls(curClass, call);
     }
@@ -1497,51 +1499,6 @@ public class CallResolver extends Pass {
         }
       }
     }
-  }
-
-  protected void handleFunctionPointerCall(CallExpression call, Node pointer) {
-    if (!(pointer instanceof HasType
-        && ((HasType) pointer).getType() instanceof FunctionPointerType)) {
-      LOGGER.error("Can't handle a function pointer call without function pointer type");
-      return;
-    }
-    FunctionPointerType pointerType = (FunctionPointerType) ((HasType) pointer).getType();
-    List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
-    Deque<Node> worklist = new ArrayDeque<>();
-    Set<Node> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-    worklist.push(pointer);
-    while (!worklist.isEmpty()) {
-      Node curr = worklist.pop();
-      if (!seen.add(curr)) {
-        continue;
-      }
-      if (curr instanceof FunctionDeclaration) {
-        FunctionDeclaration f = (FunctionDeclaration) curr;
-        // Even if it is a function declaration, the dataflow might just come from a situation
-        // where the target of a fptr is passed through via a return value. Keep searching if
-        // return type or signature don't match
-
-        // In some languages, there might be no explicit return type. In this case we are using a
-        // single void return type.
-        Type returnType;
-        if (f.getReturnTypes().isEmpty()) {
-          returnType = new IncompleteType();
-        } else {
-          // TODO(oxisto): support multiple return types
-          returnType = f.getReturnTypes().get(0);
-        }
-
-        if (TypeManager.getInstance().isSupertypeOf(pointerType.getReturnType(), returnType)
-            && f.hasSignature(pointerType.getParameters())) {
-          invocationCandidates.add((FunctionDeclaration) curr);
-          // We have found a target. Don't follow this path any further, but still continue the
-          // other paths that might be left, as we could have several potential targets at runtime
-          continue;
-        }
-      }
-      curr.getPrevDFG().forEach(worklist::push);
-    }
-    call.setInvokes(invocationCandidates);
   }
 
   protected void resolveExplicitConstructorInvocation(ExplicitConstructorInvocation eci) {
