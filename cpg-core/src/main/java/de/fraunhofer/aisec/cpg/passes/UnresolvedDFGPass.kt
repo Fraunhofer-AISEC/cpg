@@ -264,9 +264,10 @@ class UnresolvedDFGPass : Pass() {
 
     /** Adds the DFG edges to a [CallExpression]. */
     fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedCalls: Boolean) {
-        while (call.prevDFG.isNotEmpty()) {
-            call.prevDFG.first().removeNextDFG(call)
-        }
+        // Remove existing DFG edges since they are no longer valid (e.g. after updating the
+        // CallExpression with the invokes edges to the called functions)
+        call.prevDFG.forEach { it.nextDFG.remove(call) }
+        call.prevDFG.clear()
 
         if (call.invokes.isEmpty() && inferDfgForUnresolvedCalls) {
             // Unresolved call expression
