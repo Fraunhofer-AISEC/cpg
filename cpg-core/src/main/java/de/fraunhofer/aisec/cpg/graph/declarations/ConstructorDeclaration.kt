@@ -23,23 +23,23 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations;
+package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
-import org.jetbrains.annotations.Nullable;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 
 /**
- * The declaration of a constructor within a {@link RecordDeclaration}. Is it essentially a special
- * case of a {@link MethodDeclaration}.
+ * The declaration of a constructor within a [RecordDeclaration]. Is it essentially a special case
+ * of a [MethodDeclaration].
  */
-public class ConstructorDeclaration extends MethodDeclaration {
-
-  @Override
-  public void setRecordDeclaration(@Nullable RecordDeclaration recordDeclaration) {
-    super.setRecordDeclaration(recordDeclaration);
-    if (recordDeclaration != null) {
-      // constructors always have implicitly the return type of their class
-      setType(TypeParser.createFrom(recordDeclaration.getName(), true));
-    }
-  }
+class ConstructorDeclaration : MethodDeclaration() {
+    // constructors always have implicitly the return type of their class
+    override var recordDeclaration: RecordDeclaration?
+        get() = super.recordDeclaration
+        set(recordDeclaration) {
+            super.recordDeclaration = recordDeclaration
+            if (recordDeclaration != null) {
+                // constructors always have implicitly the return type of their class
+                returnTypes = listOf(TypeParser.createFrom(recordDeclaration.name, true))
+            }
+        }
 }

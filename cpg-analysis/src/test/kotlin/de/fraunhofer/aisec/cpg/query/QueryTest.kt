@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
-import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
@@ -41,7 +40,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
-@ExperimentalGraph
 class QueryTest {
     @Test
     fun testMemcpyTooLargeQuery2() {

@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -93,7 +94,10 @@ internal class ClassTemplateTest : BaseTest() {
     ) {
         assertEquals(pair, pairConstructorDeclaration.recordDeclaration)
         assertTrue(pair.constructors.contains(pairConstructorDeclaration))
-        assertEquals(pairType, pairConstructorDeclaration.type)
+
+        val type = pairConstructorDeclaration.type as? FunctionType
+        assertNotNull(type)
+        assertEquals(pairType, type.returnTypes.firstOrNull())
     }
 
     private fun testClassTemplateInvocation(
@@ -218,7 +222,10 @@ internal class ClassTemplateTest : BaseTest() {
         // Test Type
         val type = ((receiver.type as? PointerType)?.elementType as? ObjectType)
         assertNotNull(type)
-        assertEquals(pairConstructorDeclaration.type, type)
+        assertEquals(
+            (pairConstructorDeclaration.type as? FunctionType)?.returnTypes?.firstOrNull(),
+            type
+        )
         assertEquals(pair, type.recordDeclaration)
         assertEquals(2, type.generics.size)
         assertEquals("Type1", type.generics[0].name)
@@ -311,13 +318,16 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(type2, template.parameters[1])
         assertEquals("Type1", type1.type.name)
 
-        val type1ParameterizedType = type1.type as ParameterizedType
+        val type1ParameterizedType = type1.type as? ParameterizedType
         assertEquals("Type2", type2.type.name)
 
-        val type2ParameterizedType = type2.type as ParameterizedType
+        val type2ParameterizedType = type2.type as? ParameterizedType
         assertEquals(type1ParameterizedType, type2.default)
 
-        val pairType = pairConstructorDeclaration.type as ObjectType
+        val pairType =
+            (pairConstructorDeclaration.type as FunctionType).returnTypes.firstOrNull()
+                as? ObjectType
+        assertNotNull(pairType)
         assertEquals(2, pairType.generics.size)
         assertEquals(type1ParameterizedType, pairType.generics[0])
         assertEquals(type2ParameterizedType, pairType.generics[1])

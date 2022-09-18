@@ -97,7 +97,7 @@ class UnresolvedDFGPass : Pass() {
      */
     private fun handleFunctionDeclaration(node: FunctionDeclaration) {
         if (node.body is ReturnStatement) {
-            node.addPrevDFG(node.body)
+            node.addPrevDFG(node.body as ReturnStatement)
         } else if (node.body is CompoundStatement) {
             (node.body as CompoundStatement)
                 .statements

@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -62,22 +63,22 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = declaration.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
 
-        val a = main.getVariableDeclarationByName("a").orElse(null)
+        val a = main.variables["a"]
         assertNotNull(a)
         assertEquals(1, ((a.initializer as? UnaryOperator)?.input as? Literal<*>)?.value)
 
-        val b = main.getVariableDeclarationByName("b").orElse(null)
+        val b = main.variables["b"]
         assertNotNull(b)
         assertEquals(2147483648L, ((b.initializer as? UnaryOperator)?.input as? Literal<*>)?.value)
 
-        val c = main.getVariableDeclarationByName("c").orElse(null)
+        val c = main.variables["c"]
         assertNotNull(c)
         assertEquals(
             BigInteger("9223372036854775808"),
             ((c.initializer as? UnaryOperator)?.input as? Literal<*>)?.value
         )
 
-        val d = main.getVariableDeclarationByName("d").orElse(null)
+        val d = main.variables["d"]
         assertNotNull(d)
         assertEquals(
             9223372036854775807L,
@@ -94,7 +95,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(declaration)
 
         val main = declaration.methods[0]
-        val ls = main.getVariableDeclarationByName("ls").orElse(null)
+        val ls = main.variables["ls"]
         assertNotNull(ls)
 
         val forStatement = main.getBodyStatementAs(2, ForStatement::class.java)
@@ -118,7 +119,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(declaration)
 
         val main = declaration.methods[0]
-        val ls = main.getVariableDeclarationByName("ls").orElse(null)
+        val ls = main.variables["ls"]
         assertNotNull(ls)
 
         val forEachStatement = main.getBodyStatementAs(1, ForEachStatement::class.java)
@@ -273,9 +274,17 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertTrue(fields.contains("field"))
 
         val method = recordDeclaration.methods[0]
+        assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
         assertEquals("method", method.name)
-        assertEquals(TypeParser.createFrom("java.lang.Integer", true), method?.type)
+        assertEquals(
+            TypeParser.createFrom("java.lang.Integer", true),
+            method.returnTypes.firstOrNull()
+        )
+
+        val functionType = method.type as? FunctionType
+        assertNotNull(functionType)
+        assertEquals("method()java.lang.Integer", functionType.name)
 
         val constructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration, constructor.recordDeclaration)

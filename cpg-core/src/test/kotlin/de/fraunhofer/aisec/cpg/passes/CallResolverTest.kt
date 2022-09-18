@@ -135,8 +135,11 @@ class CallResolverTest : BaseTest() {
         // TODO related to #204: Currently we have both the original and the overriding method in
         //  the invokes list. This check needs to be adjusted to the choice we make on solving #204
         assertTrue(call.invokes.contains(overridingMethod))
-        assertEquals(listOf(originalMethod), overridingMethod.overrides)
-        assertEquals(listOf(overridingMethod), originalMethod.overriddenBy)
+        assertEquals<List<FunctionDeclaration>>(listOf(originalMethod), overridingMethod.overrides)
+        assertEquals<List<FunctionDeclaration>>(
+            listOf(overridingMethod),
+            originalMethod.overriddenBy
+        )
     }
 
     @Test
@@ -303,18 +306,18 @@ class CallResolverTest : BaseTest() {
         assertEquals(2, display1.invokes.size)
         assertTrue(display1.invokes.contains(displayDeclaration))
         assertEquals("1", display1.arguments[0].code)
-        assertTrue(displayDeclaration.nextEOG.contains(displayDeclaration.defaultParameters[1]))
-        assertTrue(displayDeclaration.nextEOG.contains(displayDeclaration.defaultParameters[0]))
+        assertTrue(displayDeclaration.nextEOG.contains(displayDeclaration.defaultParameters[1]!!))
+        assertTrue(displayDeclaration.nextEOG.contains(displayDeclaration.defaultParameters[0]!!))
         assertTrue(
             displayDeclaration.defaultParameters[0]
-                .nextEOG
-                .contains(displayDeclaration.defaultParameters[1])
+                ?.nextEOG
+                ?.contains(displayDeclaration.defaultParameters[1]!!) == true
         )
         for (node in displayDeclaration.nextEOG) {
             assertTrue(
                 node == displayDeclaration.defaultParameters[0] ||
                     node == displayDeclaration.defaultParameters[1] ||
-                    displayDeclaration.defaultParameters[1].nextEOG.contains(node)
+                    displayDeclaration.defaultParameters[1]?.nextEOG?.contains(node) == true
             )
         }
         val display =
@@ -455,16 +458,18 @@ class CallResolverTest : BaseTest() {
         assertEquals(2, add12.arguments.size)
         assertEquals("1", add12.arguments[0].code)
         assertEquals("2", add12.arguments[1].code)
-        assertTrue(addFunction.nextEOG.contains(addFunction.defaultParameters[2]))
-        assertTrue(addFunction.nextEOG.contains(addFunction.defaultParameters[3]))
+        assertTrue(addFunction.nextEOG.contains(addFunction.defaultParameters[2]!!))
+        assertTrue(addFunction.nextEOG.contains(addFunction.defaultParameters[3]!!))
         assertTrue(
-            addFunction.defaultParameters[2].nextEOG.contains(addFunction.defaultParameters[3])
+            addFunction.defaultParameters[2]
+                ?.nextEOG
+                ?.contains(addFunction.defaultParameters[3]!!) == true
         )
         for (node in addFunction.nextEOG) {
             assertTrue(
                 node == addFunction.defaultParameters[2] ||
                     node == addFunction.defaultParameters[3] ||
-                    addFunction.defaultParameters[3].nextEOG.contains(node)
+                    addFunction.defaultParameters[3]?.nextEOG?.contains(node) == true
             )
         }
 

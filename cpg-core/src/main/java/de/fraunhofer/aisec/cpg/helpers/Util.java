@@ -315,9 +315,7 @@ public class Util {
    * @param arguments The call's arguments to be connected to the target's parameters
    */
   public static void attachCallParameters(FunctionDeclaration target, List<Expression> arguments) {
-    target
-        .getParametersPropertyEdge()
-        .sort(Comparator.comparing(pe -> pe.getEnd().getArgumentIndex()));
+    target.getParameterEdges().sort(Comparator.comparing(pe -> pe.getEnd().getArgumentIndex()));
 
     for (int j = 0; j < arguments.size(); j++) {
       var parameters = target.getParameters();

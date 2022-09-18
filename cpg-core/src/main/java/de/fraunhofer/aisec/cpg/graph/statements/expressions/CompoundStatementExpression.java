@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import java.util.Objects;
 

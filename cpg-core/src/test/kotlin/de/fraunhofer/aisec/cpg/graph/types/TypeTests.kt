@@ -709,6 +709,7 @@ internal class TypeTests : BaseTest() {
         val recordDeclarations = result.records
         val recordDeclarationBox = findByUniqueName(recordDeclarations, "Box")
         val typeT = TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T")
+        assertNotNull(typeT)
         assertEquals(typeT, TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T"))
 
         // Type of field t
@@ -726,7 +727,7 @@ internal class TypeTests : BaseTest() {
 
         // Return Type of get Method
         val methodDeclarationGet = findByUniqueName(methodDeclarations, "get")
-        assertEquals(typeT, methodDeclarationGet.type)
+        assertEquals(FunctionType("get()T", listOf(), listOf(typeT)), methodDeclarationGet.type)
     }
 
     @Test

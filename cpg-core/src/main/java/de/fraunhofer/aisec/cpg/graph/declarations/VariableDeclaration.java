@@ -114,7 +114,7 @@ public class VariableDeclaration extends ValueDeclaration
       initializer.registerTypeListener(this);
 
       // if the initializer implements a type listener, inform it about our type changes
-      // since the type is tied to the declaration but it is convenient to have the type
+      // since the type is tied to the declaration, but it is convenient to have the type
       // information in the initializer, i.e. in a ConstructExpression.
       if (initializer instanceof TypeListener) {
         this.registerTypeListener((TypeListener) initializer);
