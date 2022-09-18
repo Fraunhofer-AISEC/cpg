@@ -57,7 +57,7 @@ object NodeBuilder {
     @JvmStatic
     @JvmOverloads
     fun newCallExpression(
-        name: String?,
+        callee: Expression?,
         fqn: String?,
         code: String? = null,
         template: Boolean,
@@ -65,7 +65,7 @@ object NodeBuilder {
         rawNode: Any? = null
     ): CallExpression {
         val node = CallExpression()
-        node.name = name!!
+        node.callee = callee
         node.setCodeAndRegion(lang, rawNode, code)
         node.fqn = fqn
         node.template = template

@@ -219,7 +219,7 @@ def handle_expression_impl(self, expr):
                     return cast
                 else:
                     call = NodeBuilder.newCallExpression(
-                        name, name, self.get_src_code(expr), False)
+                        ref, name, self.get_src_code(expr), False)
         for a in expr.args:
             call.addArgument(self.handle_expression(a))
         for keyword in expr.keywords:

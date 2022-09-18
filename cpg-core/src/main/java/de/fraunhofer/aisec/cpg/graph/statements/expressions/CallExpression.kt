@@ -97,6 +97,26 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             value?.registerTypeListener(this)
         }
 
+    /**
+     * The expression that is being "called". This is currently not yet used in the [CallResolver]
+     * but will be in the future.
+     */
+    @field:SubGraph("AST")
+    var callee: Expression? = null
+        set(value) {
+            field?.unregisterTypeListener(this)
+
+            // We also want to update this node's name, based on the callee. This is purely for
+            // readability reasons
+            field = value
+            this.name = value?.name ?: ""
+
+            // Register the callee as a type listener for this call expressions. Once we re-design
+            // call resolution, we need to probably do this in the opposite way so that the call
+            // expressions listens for the type of the callee.
+            field?.registerTypeListener(this)
+        }
+
     var fqn: String? = null
 
     fun setArgument(index: Int, argument: Expression) {
