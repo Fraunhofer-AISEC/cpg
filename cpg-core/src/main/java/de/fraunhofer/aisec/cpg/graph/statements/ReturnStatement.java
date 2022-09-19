@@ -43,15 +43,7 @@ public class ReturnStatement extends Statement {
   }
 
   public void setReturnValue(Expression returnValue) {
-    if (this.returnValue != null) {
-      this.removePrevDFG(this.returnValue);
-    }
-
     this.returnValue = returnValue;
-
-    if (returnValue != null) {
-      this.addPrevDFG(returnValue);
-    }
   }
 
   @Override

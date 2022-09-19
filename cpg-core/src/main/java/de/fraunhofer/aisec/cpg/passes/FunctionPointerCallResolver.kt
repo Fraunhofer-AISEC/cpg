@@ -55,12 +55,14 @@ import java.util.function.Consumer
  * as Go.
  */
 @DependsOn(CallResolver::class)
-// @DependsOn(DFGPass::class)
+@DependsOn(DFGPass::class)
 @RequiredFrontend(CXXLanguageFrontend::class)
 class FunctionPointerCallResolver : Pass() {
     private lateinit var walker: ScopedWalker
+    private var inferDfgForUnresolvedCalls = false
 
     override fun accept(t: TranslationResult) {
+        inferDfgForUnresolvedCalls = t.config.inferenceConfiguration.inferDfgForUnresolvedCalls
         walker = ScopedWalker(lang)
         walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
             walker.collectDeclarations(currNode)
@@ -152,6 +154,9 @@ class FunctionPointerCallResolver : Pass() {
         }
 
         call.invokes = invocationCandidates
+        // We have to update the dfg edges because this call could now be resolved (which was not
+        // the case before).
+        DFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls)
     }
 
     override fun cleanup() {

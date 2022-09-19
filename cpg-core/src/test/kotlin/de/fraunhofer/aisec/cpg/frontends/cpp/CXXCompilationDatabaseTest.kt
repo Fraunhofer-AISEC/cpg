@@ -115,8 +115,7 @@ class CXXCompilationDatabaseTest {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_multi_tus.json")
         val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
         val tus = result.translationUnits
-        assertEquals(tus.size, 2)
-
+        assertEquals(2, tus.size)
         val ref = mapOf("main_tu_1.c" to 1, "main_tu_2.c" to 2)
 
         for (i in tus.indices) {

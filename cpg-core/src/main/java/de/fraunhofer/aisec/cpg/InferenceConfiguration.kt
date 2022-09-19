@@ -39,12 +39,25 @@ private constructor(
     val guessCastExpressions: Boolean,
 
     /** Enables the inference of record declarations */
-    val inferRecords: Boolean
+    val inferRecords: Boolean,
+    /**
+     * Uses heuristics to add DFG edges for call expressions to unresolved functions (i.e.,
+     * functions not implemented in the given source code).
+     */
+    val inferDfgForUnresolvedCalls: Boolean
 ) {
-    class Builder(var guessCastExpressions: Boolean = false, var inferRecords: Boolean = false) {
+    class Builder(
+        var guessCastExpressions: Boolean = false,
+        var inferRecords: Boolean = false,
+        var inferDfgForUnresolvedCalls: Boolean = true
+    ) {
         fun guessCastExpressions(guess: Boolean) = apply { this.guessCastExpressions = guess }
         fun inferRecords(infer: Boolean) = apply { this.inferRecords = infer }
-        fun build() = InferenceConfiguration(guessCastExpressions, inferRecords)
+        fun inferDfgForUnresolvedCalls(infer: Boolean) = apply {
+            this.inferDfgForUnresolvedCalls = infer
+        }
+        fun build() =
+            InferenceConfiguration(guessCastExpressions, inferRecords, inferDfgForUnresolvedCalls)
     }
 
     companion object {

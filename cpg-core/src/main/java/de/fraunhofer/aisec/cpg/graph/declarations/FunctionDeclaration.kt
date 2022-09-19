@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -49,20 +48,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     @field:SubGraph("AST")
     var body: Statement? = null
         set(value) {
-            if (this.body is ReturnStatement) {
-                removePrevDFG(this.body)
-            } else if (this.body is CompoundStatement) {
-                (this.body as CompoundStatement)
-                    .statements
-                    .filterIsInstance<ReturnStatement>()
-                    .forEach(::removePrevDFG)
-            }
             field = value
-            if (value is ReturnStatement) {
-                addPrevDFG(value)
-            } else if (value is CompoundStatement) {
-                value.statements.filterIsInstance<ReturnStatement>().forEach(::addPrevDFG)
-            }
         }
 
     /**

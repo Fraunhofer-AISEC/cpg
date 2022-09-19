@@ -295,10 +295,9 @@ public class CallResolver extends Pass {
 
     if (call instanceof MemberCallExpression) {
       Node member = ((MemberCallExpression) call).getMember();
-      if (member instanceof HasType
-          && ((HasType) member).getType() instanceof FunctionPointerType) {
-        // handled by extra pass
-      } else {
+      if (!(member instanceof HasType
+          && ((HasType) member).getType() instanceof FunctionPointerType)) {
+        // function pointers are handled by extra pass
         handleMethodCall(curClass, call);
       }
       return;
@@ -316,9 +315,8 @@ public class CallResolver extends Pass {
         walker.getDeclarationForScope(
             call,
             v -> v.getType() instanceof FunctionPointerType && v.getName().equals(call.getName()));
-    if (funcPointer.isPresent()) {
-      // handled by extra pass
-    } else {
+    if (!funcPointer.isPresent()) {
+      // function pointers are handled by extra pass
       handleNormalCalls(curClass, call);
     }
   }

@@ -47,10 +47,6 @@ class KeyValueExpression : Expression() {
     @field:SubGraph("AST")
     var value: Expression? = null
         set(value) {
-            if (this.value != null) {
-                this.removePrevDFG(this.value)
-            }
-            value?.let { this.addPrevDFG(value) }
             field = value
         }
 

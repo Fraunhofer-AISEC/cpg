@@ -50,15 +50,7 @@ public class CastExpression extends Expression implements TypeListener {
   }
 
   public void setExpression(Expression expression) {
-    if (this.expression != null) {
-      this.removePrevDFG(this.expression);
-    }
-
     this.expression = expression;
-
-    if (expression != null) {
-      this.addPrevDFG(expression);
-    }
   }
 
   public Type getCastType() {

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.astParent
@@ -184,6 +185,12 @@ class MultiValueEvaluator : ValueEvaluator() {
             expressions.size == 2 &&
                 expressions.all { e ->
                     (e.astParent?.astParent as? ForStatement)?.initializerStatement == e ||
+                        (((e.astParent?.astParent as? ForStatement)?.initializerStatement
+                                as? DeclarationStatement)
+                            ?.singleDeclaration != null &&
+                            ((e.astParent?.astParent as? ForStatement)?.initializerStatement
+                                    as? DeclarationStatement)
+                                ?.singleDeclaration == e.astParent) ||
                         (e.astParent as? ForStatement)?.iterationStatement == e
                 }
         ) {

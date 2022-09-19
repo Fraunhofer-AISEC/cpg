@@ -67,12 +67,10 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
   public void setInitializer(Expression initializer) {
     if (this.initializer != null) {
       this.initializer.unregisterTypeListener(this);
-      this.removePrevDFG(initializer);
     }
     this.initializer = initializer;
     if (initializer != null) {
       initializer.registerTypeListener(this);
-      this.addPrevDFG(initializer);
     }
   }
 

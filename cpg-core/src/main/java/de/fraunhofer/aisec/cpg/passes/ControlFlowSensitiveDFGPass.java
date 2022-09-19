@@ -43,7 +43,7 @@ import java.util.*;
  * <p>Control Flow Sensitivity in the DFG is only performed on VariableDeclarations and not on
  * FieldDeclarations. The reason for this being the fact, that the value of a field might be
  * modified to a value that is not present in the method, thus it is not detected by our variable
- * tracking
+ * tracking.
  *
  * <p>This pass will split up at every branch in the EOG. Because of the existence of loops and
  * multiple paths being able to run to through the same Declared reference expression we have to
@@ -60,6 +60,7 @@ import java.util.*;
  * semantics on Edges.
  */
 @DependsOn(EvaluationOrderGraphPass.class)
+@DependsOn(DFGPass.class)
 public class ControlFlowSensitiveDFGPass extends Pass {
 
   @Override

@@ -101,7 +101,6 @@ public class VariableDeclaration extends ValueDeclaration
 
   public void setInitializer(@Nullable Expression initializer) {
     if (this.initializer != null) {
-      this.removePrevDFG(this.initializer);
       this.initializer.unregisterTypeListener(this);
 
       if (this.initializer instanceof TypeListener) {
@@ -112,7 +111,6 @@ public class VariableDeclaration extends ValueDeclaration
     this.initializer = initializer;
 
     if (initializer != null) {
-      this.addPrevDFG(initializer);
       initializer.registerTypeListener(this);
 
       // if the initializer implements a type listener, inform it about our type changes
