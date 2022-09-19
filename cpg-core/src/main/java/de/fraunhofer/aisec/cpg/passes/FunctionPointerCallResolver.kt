@@ -154,6 +154,8 @@ class FunctionPointerCallResolver : Pass() {
         }
 
         call.invokes = invocationCandidates
+        // We have to update the dfg edges because this call could now be resolved (which was not
+        // the case before).
         DFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls)
     }
 
