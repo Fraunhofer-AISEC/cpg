@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsL
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import java.util.*
@@ -106,10 +107,16 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
         set(value) {
             field?.unregisterTypeListener(this)
 
-            // We also want to update this node's name, based on the callee. This is purely for
-            // readability reasons
             field = value
-            this.name = value?.name ?: ""
+            // We also want to update this node's name, based on the callee. This is purely for
+            // readability reasons. We have a special handling for function pointers, where we want
+            // to have the name of the variable. This might change in the future.
+            this.name =
+                if (value is UnaryOperator && value.input.type is FunctionPointerType) {
+                    value.input.name
+                } else {
+                    value?.name ?: ""
+                }
 
             // Register the callee as a type listener for this call expressions. Once we re-design
             // call resolution, we need to probably do this in the opposite way so that the call
