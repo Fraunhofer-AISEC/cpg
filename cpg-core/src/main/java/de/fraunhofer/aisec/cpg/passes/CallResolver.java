@@ -60,14 +60,14 @@ import org.slf4j.LoggerFactory;
  * <p>Constructor calls with {@link ConstructExpression} are resolved in such a way that their
  * {@link ConstructExpression#getInstantiates()} points to the correct {@link RecordDeclaration}.
  * Additionally, the {@link ConstructExpression#getConstructor()} is set to the according {@link
- * ConstructorDeclaration}
+ * ConstructorDeclaration}.
+ *
+ * <p>This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
 @DependsOn(VariableUsageResolver.class)
-@DependsOn(UnresolvedDFGPass.class)
 public class CallResolver extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);
-  private boolean inferDfgForUnresolvedCalls;
 
   protected final Map<String, RecordDeclaration> recordMap = new HashMap<>();
   protected final List<TemplateDeclaration> templateList = new ArrayList<>();
@@ -88,9 +88,6 @@ public class CallResolver extends Pass {
     walker.registerHandler(this::findRecords);
     walker.registerHandler(this::findTemplates);
     walker.registerHandler(this::registerMethods);
-
-    inferDfgForUnresolvedCalls =
-        translationResult.getConfig().getInferenceConfiguration().getInferDfgForUnresolvedCalls();
 
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
       walker.iterate(tu);
@@ -298,10 +295,9 @@ public class CallResolver extends Pass {
 
     if (call instanceof MemberCallExpression) {
       Node member = ((MemberCallExpression) call).getMember();
-      if (member instanceof HasType
-          && ((HasType) member).getType() instanceof FunctionPointerType) {
-        handleFunctionPointerCall(call, member);
-      } else {
+      if (!(member instanceof HasType
+          && ((HasType) member).getType() instanceof FunctionPointerType)) {
+        // function pointers are handled by extra pass
         handleMethodCall(curClass, call);
       }
       return;
@@ -319,9 +315,8 @@ public class CallResolver extends Pass {
         walker.getDeclarationForScope(
             call,
             v -> v.getType() instanceof FunctionPointerType && v.getName().equals(call.getName()));
-    if (funcPointer.isPresent()) {
-      handleFunctionPointerCall(call, funcPointer.get());
-    } else {
+    if (!funcPointer.isPresent()) {
+      // function pointers are handled by extra pass
       handleNormalCalls(curClass, call);
     }
   }
@@ -594,7 +589,6 @@ public class CallResolver extends Pass {
               initializationSignature,
               initializationType,
               orderedInitializationSignature);
-          new UnresolvedDFGPass().handleCallExpression(templateCall, inferDfgForUnresolvedCalls);
           return true;
         }
       }
@@ -618,10 +612,8 @@ public class CallResolver extends Pass {
         }
       }
 
-      new UnresolvedDFGPass().handleCallExpression(templateCall, inferDfgForUnresolvedCalls);
       return true;
     }
-    new UnresolvedDFGPass().handleCallExpression(templateCall, inferDfgForUnresolvedCalls);
     return false;
   }
 
@@ -701,7 +693,6 @@ public class CallResolver extends Pass {
         initializationSignature.get(declaration).addNextDFG(declaration);
       }
     }
-    new UnresolvedDFGPass().handleCallExpression(templateCall, inferDfgForUnresolvedCalls);
   }
 
   /**
@@ -1076,7 +1067,6 @@ public class CallResolver extends Pass {
     } else if (!handlePossibleStaticImport(call, curClass)) {
       handleMethodCall(curClass, call);
     }
-    new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
   }
 
   protected void handleNormalCallCXX(RecordDeclaration curClass, CallExpression call) {
@@ -1118,7 +1108,6 @@ public class CallResolver extends Pass {
     }
     createInferredFunction(invocationCandidates, call);
     call.setInvokes(invocationCandidates);
-    new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
   }
 
   protected void createInferredFunction(
@@ -1170,7 +1159,6 @@ public class CallResolver extends Pass {
 
     createMethodDummies(invocationCandidates, possibleContainingTypes, call);
     call.setInvokes(invocationCandidates);
-    new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
   }
 
   /**
@@ -1511,52 +1499,6 @@ public class CallResolver extends Pass {
     }
   }
 
-  protected void handleFunctionPointerCall(CallExpression call, Node pointer) {
-    if (!(pointer instanceof HasType
-        && ((HasType) pointer).getType() instanceof FunctionPointerType)) {
-      LOGGER.error("Can't handle a function pointer call without function pointer type");
-      return;
-    }
-    FunctionPointerType pointerType = (FunctionPointerType) ((HasType) pointer).getType();
-    List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
-    Deque<Node> worklist = new ArrayDeque<>();
-    Set<Node> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-    worklist.push(pointer);
-    while (!worklist.isEmpty()) {
-      Node curr = worklist.pop();
-      if (!seen.add(curr)) {
-        continue;
-      }
-      if (curr instanceof FunctionDeclaration) {
-        FunctionDeclaration f = (FunctionDeclaration) curr;
-        // Even if it is a function declaration, the dataflow might just come from a situation
-        // where the target of a fptr is passed through via a return value. Keep searching if
-        // return type or signature don't match
-
-        // In some languages, there might be no explicit return type. In this case we are using a
-        // single void return type.
-        Type returnType;
-        if (f.getReturnTypes().isEmpty()) {
-          returnType = new IncompleteType();
-        } else {
-          // TODO(oxisto): support multiple return types
-          returnType = f.getReturnTypes().get(0);
-        }
-
-        if (TypeManager.getInstance().isSupertypeOf(pointerType.getReturnType(), returnType)
-            && f.hasSignature(pointerType.getParameters())) {
-          invocationCandidates.add((FunctionDeclaration) curr);
-          // We have found a target. Don't follow this path any further, but still continue the
-          // other paths that might be left, as we could have several potential targets at runtime
-          continue;
-        }
-      }
-      curr.getPrevDFG().forEach(worklist::push);
-    }
-    call.setInvokes(invocationCandidates);
-    new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
-  }
-
   protected void resolveExplicitConstructorInvocation(ExplicitConstructorInvocation eci) {
     if (eci.getContainingClass() != null) {
       RecordDeclaration recordDeclaration = recordMap.get(eci.getContainingClass());
@@ -1570,7 +1512,6 @@ public class CallResolver extends Pass {
         eci.setInvokes(invokes);
       }
     }
-    new UnresolvedDFGPass().handleCallExpression(eci, inferDfgForUnresolvedCalls);
   }
 
   protected boolean handlePossibleStaticImport(
@@ -1586,7 +1527,6 @@ public class CallResolver extends Pass {
             .filter(m -> m.getName().equals(name) || m.getName().endsWith("." + name))
             .collect(Collectors.toList());
     if (nameMatches.isEmpty()) {
-      new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
       return false;
     } else {
       List<FunctionDeclaration> invokes = new ArrayList<>();
@@ -1602,7 +1542,6 @@ public class CallResolver extends Pass {
       }
 
       call.setInvokes(invokes);
-      new UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls);
       return true;
     }
   }

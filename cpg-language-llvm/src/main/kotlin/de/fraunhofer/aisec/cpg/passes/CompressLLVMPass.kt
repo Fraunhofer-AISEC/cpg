@@ -38,7 +38,7 @@ import java.util.*
 @ExecuteFirst
 @RequiredFrontend(LLVMIRLanguageFrontend::class)
 class CompressLLVMPass : Pass() {
-    override fun accept(t: TranslationResult?) {
+    override fun accept(t: TranslationResult) {
         val flatAST = SubgraphWalker.flattenAST(t)
         // Get all goto statements
         val allGotos = flatAST.filterIsInstance<GotoStatement>()
