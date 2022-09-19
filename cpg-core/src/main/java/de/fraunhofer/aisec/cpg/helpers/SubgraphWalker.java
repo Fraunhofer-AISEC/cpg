@@ -524,6 +524,13 @@ public class SubgraphWalker {
       return result;
     }
 
+    /**
+     * @deprecated The scope manager should be used instead.
+     * @param scope
+     * @param predicate
+     * @return
+     */
+    @Deprecated
     public Optional<? extends ValueDeclaration> getDeclarationForScope(
         Node scope, Predicate<ValueDeclaration> predicate) {
       Node currentScope = scope;

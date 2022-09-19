@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Passes are expected to mutate the {@code TranslationResult}.
  */
-public abstract class Pass implements Consumer<TranslationResult> {
+public abstract class Pass implements Consumer<@NotNull TranslationResult> {
 
   protected String name;
 
