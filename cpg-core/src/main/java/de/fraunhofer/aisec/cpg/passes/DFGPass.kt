@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(VariableUsageResolver::class)
-class UnresolvedDFGPass : Pass() {
+class DFGPass : Pass() {
     override fun accept(tr: TranslationResult) {
         val inferDfgForUnresolvedCalls =
             tr.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedCalls
@@ -66,6 +66,8 @@ class UnresolvedDFGPass : Pass() {
             is ConditionalExpression -> handleConditionalExpression(node)
             is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
             is ExpressionList -> handleExpressionList(node)
+            // We keep the logic for the InitializerListExpression in that class because the
+            // performance would decrease too much.
             // is InitializerListExpression -> handleInitializerListExpression(node)
             is KeyValueExpression -> handleKeyValueExpression(node)
             is LambdaExpression -> handleLambdaExpression(node)
@@ -82,17 +84,15 @@ class UnresolvedDFGPass : Pass() {
     }
 
     /**
-     * Adds the DFG edge for a [FunctionDeclaration]. The data flow from the return statement(s) to
+     * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
      * the function.
-     *
-     * TODO: Does not seem to work (yet)! Some function pointer tests fail
      */
     private fun handleVariableDeclaration(node: VariableDeclaration) {
         node.initializer?.let { node.addPrevDFG(it) }
     }
 
     /**
-     * Adds the DFG edge for a [FunctionDeclaration]. The data flow from the return statement(s) to
+     * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
      * the function.
      */
     private fun handleFunctionDeclaration(node: FunctionDeclaration) {
@@ -107,16 +107,14 @@ class UnresolvedDFGPass : Pass() {
     }
 
     /**
-     * Adds the DFG edge for a [FieldDeclaration]. The data flow from the initializer to the field.
-     *
-     * TODO: Doesn't seem to work (yet)! Some function pointer tests fail
+     * Adds the DFG edge for a [FieldDeclaration]. The data flows from the initializer to the field.
      */
     private fun handleFieldDeclaration(node: FieldDeclaration) {
         node.initializer?.let { node.addPrevDFG(it) }
     }
 
     /**
-     * Adds the DFG edge for a [ReturnStatement]. The data flow from the return value to the
+     * Adds the DFG edge for a [ReturnStatement]. The data flows from the return value to the
      * statement.
      */
     private fun handleReturnStatement(node: ReturnStatement) {
@@ -126,8 +124,6 @@ class UnresolvedDFGPass : Pass() {
     /**
      * Adds the DFG edges for an [UnaryOperator]. The data flow from the input to this node and, in
      * case of the operators "++" and "--" also from the node back to the input.
-     *
-     * TODO: We cannot replace the logic for * and & because some function pointer tests fail
      */
     private fun handleUnaryOperator(node: UnaryOperator) {
         node.input?.let {
@@ -180,8 +176,6 @@ class UnresolvedDFGPass : Pass() {
      * - If the variable is written to, data flows from this node to the variable declaration.
      * - If the variable is read from, data flows from the variable declaration to this node.
      * - For a combined read and write, both edges for data flows are added.
-     *
-     * TODO: Doesn't seem to work (yet)! Some function pointer tests fail
      */
     private fun handleDeclaredReferenceExpression(node: DeclaredReferenceExpression) {
         node.refersTo?.let {

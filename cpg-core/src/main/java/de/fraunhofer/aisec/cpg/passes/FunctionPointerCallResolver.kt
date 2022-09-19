@@ -55,7 +55,7 @@ import java.util.function.Consumer
  * as Go.
  */
 @DependsOn(CallResolver::class)
-@DependsOn(UnresolvedDFGPass::class)
+@DependsOn(DFGPass::class)
 @RequiredFrontend(CXXLanguageFrontend::class)
 class FunctionPointerCallResolver : Pass() {
     private lateinit var walker: ScopedWalker
@@ -154,7 +154,7 @@ class FunctionPointerCallResolver : Pass() {
         }
 
         call.invokes = invocationCandidates
-        UnresolvedDFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls)
+        DFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls)
     }
 
     override fun cleanup() {
