@@ -76,10 +76,6 @@ dependencies {
     // CDT
     api("org.eclipse.cdt:core:7.2.100.202105180159")
 
-    // openCypher
-    api("org.opencypher:parser-9.0:9.0.20210312")
-    api("org.scala-lang:scala-library:2.13.9") // Dependency of opencypher manually upgraded due to vulnerability
-
     api("commons-io:commons-io:2.11.0")
 
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
