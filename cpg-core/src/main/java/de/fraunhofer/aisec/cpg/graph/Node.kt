@@ -180,6 +180,11 @@ open class Node : IVisitable<Node>, Persistable {
         prev.nextDFG.add(this)
     }
 
+    fun addAllPrevDFG(prev: Collection<Node>) {
+        prevDFG.addAll(prev)
+        prev.forEach { it.nextDFG.add(this) }
+    }
+
     fun removePrevDFG(prev: Node?) {
         if (prev != null) {
             prevDFG.remove(prev)

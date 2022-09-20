@@ -1,4 +1,6 @@
 public class Dataflow {
+    private String attr = "";
+
     public String toString() {
         return "Dataflow: attr=" + attr;
     }
