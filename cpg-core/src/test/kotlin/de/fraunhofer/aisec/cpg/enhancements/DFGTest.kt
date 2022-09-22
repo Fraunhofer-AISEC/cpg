@@ -57,12 +57,21 @@ internal class DFGTest {
         val a2 = result.refs[{ it.access == AccessValues.WRITE }]
         assertNotNull(a2)
         assertTrue(literal2.nextDFG.contains(a2))
-        assertEquals(1, a2.nextDFG.size) // Outgoing DFG Edges only to VariableDeclaration
+        assertEquals(
+            1,
+            a2.nextDFG.size
+        ) // Outgoing DFG Edges only to the DeclaredReferenceExpression
 
         val refersTo = a2.getRefersToAs(VariableDeclaration::class.java)
         assertNotNull(refersTo)
-        assertEquals(0, refersTo.nextDFG.size)
-        assertEquals(a2.nextDFG.iterator().next(), refersTo)
+        assertEquals(
+            0,
+            refersTo.nextDFG.size
+        ) // TODO: Why? Shouldn't it go to the print and assignment to b?
+        assertEquals(
+            a2.nextDFG.iterator().next(),
+            refersTo
+        ) // TODO: Why? It should go to the assignment of b
 
         // Test Else-Block with System.out.println()
         val literal1 = result.literals[{ it.value == 1 }]
@@ -134,8 +143,12 @@ internal class DFGTest {
         assertNotNull(val3)
         assertEquals(2, b.prevDFG.size)
 
-        assertTrue(b.prevDFG.contains(val2))
-        assertTrue(b.prevDFG.contains(val3))
+        assertTrue(
+            b.prevDFG.contains(val2)
+        ) // TODO: Shouldn't it be the DeclaredReferenceExpression b where 2 flows to?
+        assertTrue(
+            b.prevDFG.contains(val3)
+        ) // TODO: Shouldn't it be the DeclaredReferenceExpression b where 3 flows to?
     }
 
     @Test
@@ -177,7 +190,7 @@ internal class DFGTest {
         assertTrue(literal11.nextDFG.contains(a11))
         assertEquals(2, literal12.nextDFG.size)
         assertTrue(literal12.nextDFG.contains(a12))
-        assertEquals(7, a.prevDFG.size) // TODO: Get rid of some of the "=" things?
+        assertEquals(4, a.prevDFG.size)
         assertTrue(a.prevDFG.contains(literal0))
         assertTrue(a.prevDFG.contains(a10))
         assertTrue(a.prevDFG.contains(a11))
@@ -277,6 +290,9 @@ internal class DFGTest {
 
         val literal1 = result.literals[{ it.value == 1 }]
         assertNotNull(literal1)
+        // TODO: Why?? a and b do flow to the DeclaredReferenceExpressions in (a+b). What else is
+        // the model?
+        // TODO: Check the rest of this test
         assertEquals(0, varA.nextDFG.size) // No outgoing DFG edges from VariableDeclaration a
         assertEquals(0, varB.nextDFG.size) // No outgoing DFG edges from VariableDeclaration b
 
@@ -330,6 +346,7 @@ internal class DFGTest {
         val result = analyze(listOf(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true)
         val varA = findByUniqueName(result.variables, "a")
         assertNotNull(varA)
+        // TODO: Why?? What else should flow to a-- or a = a*2?
         assertEquals(0, varA.nextDFG.size)
         assertEquals(7, varA.prevDFG.size)
     }

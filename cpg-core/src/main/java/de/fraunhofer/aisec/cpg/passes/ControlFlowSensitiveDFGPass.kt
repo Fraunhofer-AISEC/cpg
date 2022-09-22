@@ -90,7 +90,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 val assignmentNode = obtainAssignmentNode(ref)
                 if (assignmentNode != null) {
                     ref.addPrevDFG(assignmentNode)
-                    ref.refersTo?.addPrevDFG(assignmentNode)
+                    // ref.refersTo?.addPrevDFG(assignmentNode)
                     ref.refersTo?.removeNextDFG(ref)
                 }
             } else {
