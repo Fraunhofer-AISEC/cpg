@@ -67,7 +67,7 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
     softDependencies = new HashSet<>();
 
     // collect all dependencies added by [DependsOn] annotations.
-    if (this.getClass().isAnnotationPresent(DependsOn.class)) {
+    if (this.getClass().getAnnotationsByType(DependsOn.class).length != 0) {
       DependsOn[] dependencies = this.getClass().getAnnotationsByType(DependsOn.class);
       for (DependsOn d : dependencies) {
         if (d.softDependency()) {
