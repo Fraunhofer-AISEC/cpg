@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.CallResolver
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -100,7 +101,9 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
 
     /**
      * The expression that is being "called". This is currently not yet used in the [CallResolver]
-     * but will be in the future.
+     * but will be in the future. In most cases, this is a [DeclaredReferenceExpression] and its
+     * [DeclaredReferenceExpression.refersTo] is intentionally left empty. It is not filled by the
+     * [VariableUsageResolver].
      */
     @field:SubGraph("AST")
     var callee: Expression? = null
