@@ -730,8 +730,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
                 name, qualifiedName, methodCallExpr.toString(), targetClass);
       }
     } else {
+      var ref = NodeBuilder.newDeclaredReferenceExpression(name);
       callExpression =
-          NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString(), false);
+          NodeBuilder.newCallExpression(ref, qualifiedName, methodCallExpr.toString(), false);
     }
 
     callExpression.setType(TypeParser.createFrom(typeString, true));

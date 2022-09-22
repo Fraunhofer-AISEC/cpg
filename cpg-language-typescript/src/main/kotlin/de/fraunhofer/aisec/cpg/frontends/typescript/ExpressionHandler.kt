@@ -247,8 +247,11 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             // TODO: fqn - how?
             val fqn = name
             // regular function call
+
+            val ref = NodeBuilder.newDeclaredReferenceExpression(name)
+
             call =
-                NodeBuilder.newCallExpression(name, fqn, this.lang.getCodeFromRawNode(node), false)
+                NodeBuilder.newCallExpression(ref, fqn, this.lang.getCodeFromRawNode(node), false)
         }
 
         // parse the arguments. the first node is the identifier, so we skip that
