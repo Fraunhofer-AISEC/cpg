@@ -107,7 +107,8 @@ internal class DFGTest {
         val ab = b.prevEOG[0] as DeclaredReferenceExpression
         val literal4 = result.literals[{ it.value == 4 }]
         assertNotNull(literal4)
-        assertTrue(literal4.nextDFG.contains(ab))
+        val a4 = ab.prevDFG.first { it is DeclaredReferenceExpression }
+        assertTrue(literal4.nextDFG.contains(a4))
         assertEquals(1, ab.prevDFG.size)
     }
 
@@ -170,21 +171,18 @@ internal class DFGTest {
         assertNotNull(literal11)
         assertNotNull(literal12)
 
-        assertEquals(3, literal10.nextDFG.size)
+        assertEquals(2, literal10.nextDFG.size)
         assertTrue(literal10.nextDFG.contains(a10))
-        assertEquals(3, literal11.nextDFG.size)
+        assertEquals(2, literal11.nextDFG.size)
         assertTrue(literal11.nextDFG.contains(a11))
-        assertEquals(4, literal12.nextDFG.size)
+        assertEquals(2, literal12.nextDFG.size)
         assertTrue(literal12.nextDFG.contains(a12))
-        assertEquals(4, a.prevDFG.size)
+        assertEquals(7, a.prevDFG.size) // TODO: Get rid of some of the "=" things?
         assertTrue(a.prevDFG.contains(literal0))
         assertTrue(a.prevDFG.contains(a10))
         assertTrue(a.prevDFG.contains(a11))
         assertTrue(a.prevDFG.contains(a12))
-        assertTrue(ab.prevDFG.contains(literal0))
-        assertTrue(ab.prevDFG.contains(literal10))
-        assertTrue(ab.prevDFG.contains(literal11))
-        assertTrue(ab.prevDFG.contains(literal12))
+
         assertEquals(1, ab.nextDFG.size)
         assertTrue(ab.nextDFG.contains(b))
 
@@ -195,8 +193,8 @@ internal class DFGTest {
         val aPrintln = result.refs[{ it.nextEOG.contains(println) }]
         assertNotNull(aPrintln)
         assertEquals(2, aPrintln.prevDFG.size)
-        assertTrue(aPrintln.prevDFG.contains(literal0))
-        assertTrue(aPrintln.prevDFG.contains(literal12))
+        assertTrue(aPrintln.prevDFG.contains(a))
+        assertTrue(aPrintln.prevDFG.contains(a12))
     }
 
     // Test DFG when ReadWrite access occurs, such as compoundoperators or unaryoperators

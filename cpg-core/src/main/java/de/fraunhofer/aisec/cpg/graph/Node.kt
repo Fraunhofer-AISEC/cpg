@@ -192,6 +192,18 @@ open class Node : IVisitable<Node>, Persistable {
         }
     }
 
+    fun clearPrevDFG() {
+        for (prev in ArrayList(prevDFG)) {
+            removePrevDFG(prev)
+        }
+    }
+
+    fun clearNextDFG() {
+        for (prev in ArrayList(nextDFG)) {
+            removeNextDFG(prev)
+        }
+    }
+
     fun addTypedef(typedef: TypedefDeclaration) {
         typedefs.add(typedef)
     }
