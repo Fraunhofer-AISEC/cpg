@@ -84,7 +84,7 @@ class DFGPass : Pass() {
     }
 
     /**
-     * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
+     * Adds the DFG edge for a [VariableDeclaration]. The data flows from the return statement(s) to
      * the function.
      */
     private fun handleVariableDeclaration(node: VariableDeclaration) {
