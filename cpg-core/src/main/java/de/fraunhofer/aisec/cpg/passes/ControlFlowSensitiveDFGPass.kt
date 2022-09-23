@@ -54,7 +54,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      * @param node every node in the TranslationResult
      */
     protected fun handle(node: Node) {
-        if (node is FunctionDeclaration || node is StatementHolder) {
+        if (node is FunctionDeclaration) {
             handleStatementHolder(node)
         }
     }
@@ -73,6 +73,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         // For assignments with "=" and DeclaredReferenceExpressions, we always have 2 edges: one
         // using the = and one the actual target. That's annoying for other analyses since it
         // doubles the path to check, so we remove the DFG edge across the "=".
+        // TODO: This is a bad idea for conditional expressions
         result.forEach {
             if ((it as? BinaryOperator)?.operatorCode == "=") {
                 it.removeNextDFG(it.lhs)
@@ -107,11 +108,14 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     // edges: one using the = and one the actual target. That's annoying for other
                     // analyses since it doubles the path to check, so we remove the DFG edge across
                     // the "=".
+                    // TODO: This is a bad idea for conditional expressions
                     assignmentNode.removePrevDFG(assignmentNode.rhs)
                     assignmentNode.removeNextDFG(assignmentNode.lhs)
                     // Add the edge from rhs to this
                     ref.addPrevDFG(assignmentNode.rhs)
-                    assignmentNode.lhs.addPrevDFG(assignmentNode.rhs)
+                    assignmentNode.lhs.addPrevDFG(
+                        assignmentNode.rhs
+                    ) // TODO: I'm quite sure this is the same as the step before.
                     ref.refersTo?.removeNextDFG(ref)
                     if ((ref.refersTo as? VariableDeclaration)?.initializer != null) {
                         ref.refersTo?.removePrevDFG(ref)
@@ -135,6 +139,14 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         }
 
         for (varDecl in node.variables { it.prevDFG.size > 1 }) {
+            // Remove all the data flows to the variable declaration except the initialization
+            for (prev in HashSet(varDecl.prevDFG)) {
+                if (prev != varDecl.initializer) {
+                    prev.removeNextDFG(varDecl)
+                }
+            }
+
+            // Remove all outgoing links of the variable declaration
             for (n in varDecl.nextDFG) {
                 if (alwaysAssignBetween(varDecl, n)) {
                     n.removeNextDFG(varDecl)

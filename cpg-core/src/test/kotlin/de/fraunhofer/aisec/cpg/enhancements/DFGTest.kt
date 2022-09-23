@@ -71,6 +71,7 @@ internal class DFGTest {
 
         val refersTo = a2.getRefersToAs(VariableDeclaration::class.java)
         assertNotNull(refersTo)
+        // TODO: Why does refersTo flow to length in line 5??? That doesn't make any sense
         assertEquals(2, refersTo.nextDFG.size) // The print and assignment to b
         // Outgoing DFG Edge to the DeclaredReferenceExpression in the assignment of b
         assertTrue(refersTo.nextDFG.contains(b.initializer!!))
@@ -133,8 +134,8 @@ internal class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("conditional_expression.cpp").toFile()), topLevel, true)
         val bJoin = result.refs[{ it.name == "b" && it.location?.region?.startLine == 6 }]
-        val a5 = result.refs[{ it.name == "b" && it.location?.region?.startLine == 5 }]
-        val a6 = result.refs[{ it.name == "b" && it.location?.region?.startLine == 6 }]
+        val a5 = result.refs[{ it.name == "a" && it.location?.region?.startLine == 5 }]
+        val a6 = result.refs[{ it.name == "a" && it.location?.region?.startLine == 6 }]
         val bCond =
             result.refs[
                     {
@@ -172,16 +173,18 @@ internal class DFGTest {
         val val3 = result.literals[{ it.value == 3 }]
         assertNotNull(val3)
 
-        assertEquals(2, b2.prevDFG.size) // The = and the variable
+        assertEquals(1, b2.prevDFG.size)
         assertTrue(b2.prevDFG.contains(val2))
-        assertEquals(2, b3.prevDFG.size) // The = and the variable
+        assertEquals(1, b3.prevDFG.size)
         assertTrue(b3.prevDFG.contains(val3))
 
-        assertEquals(2, a5.prevDFG.size)
-        assertTrue(a5.prevDFG.contains(b2))
-        assertTrue(a5.prevDFG.contains(b3))
+        // We want the ConditionalExpression
+        assertEquals(1, a5.prevDFG.size)
+        assertTrue(a5.prevDFG.first() is ConditionalExpression)
+        assertTrue(flattenDFGGraph(a5, false).contains(val2))
+        assertTrue(flattenDFGGraph(a5, false).contains(val3))
 
-        assertEquals(2, a6.prevDFG.size) // The = and the variable
+        assertEquals(1, a6.prevDFG.size)
         assertTrue(a6.prevDFG.contains(bJoin))
         assertEquals(2, bJoin.prevDFG.size)
         // The b which got assigned 2 flows to the b in line 6
@@ -350,12 +353,11 @@ internal class DFGTest {
         assertTrue(binaryOperatorAddition.prevDFG.contains(b))
         assertTrue(binaryOperatorAddition.prevDFG.contains(rhsA))
 
-        // The + binary op flows to the = and the lhs
-        assertEquals(2, binaryOperatorAddition.nextDFG.size)
+        // The + binary op flows to the lhs
+        // TODO: Somehow, there's a flow to the "=" of the assignment even if during the
+        // CFSensitiveDFGPass, I can't see this.
+        assertEquals(1, binaryOperatorAddition.nextDFG.size)
         assertTrue(binaryOperatorAddition.nextDFG.contains(lhsA))
-        assertTrue(
-            binaryOperatorAddition.nextDFG.contains(binaryOperatorAssignment)
-        ) // I don't get it: The value is there but the check "contains" fails
     }
 
     /**
@@ -437,6 +439,7 @@ internal class DFGTest {
         val dfgNodesA0 = flattenDFGGraph(calls[0].refs["a"], false)
         val dfgNodesA1 = flattenDFGGraph(calls[1].refs["a"], false)
         val dfgNodesA2 = flattenDFGGraph(calls[2].refs["a"], false)
+        assertEquals(3, calls[0].refs["a"]?.prevDFG?.size)
         assertTrue(dfgNodesA0.contains(l0))
         assertTrue(dfgNodesA0.contains(l1))
         assertTrue(dfgNodesA0.contains(l3))
