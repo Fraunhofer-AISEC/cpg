@@ -59,15 +59,29 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         }
     }
 
-    private fun findLastWrites(node: DeclaredReferenceExpression) =
-        node
-            .followPrevEOGEdgesUntilHit {
-                it is Assignment &&
-                    ((it.target as? DeclaredReferenceExpression)?.refersTo == node.refersTo ||
-                        (it.target as? VariableDeclaration) == node.refersTo)
+    private fun findLastWrites(node: DeclaredReferenceExpression): List<Node> {
+        val result =
+            node
+                .followPrevEOGEdgesUntilHit {
+                    it is Assignment &&
+                        ((it.target as? DeclaredReferenceExpression)?.refersTo == node.refersTo ||
+                            (it.target as? VariableDeclaration) == node.refersTo)
+                }
+                .fulfilled
+                .mapNotNull { (it.last() as? Assignment) }
+
+        // For assignments with "=" and DeclaredReferenceExpressions, we always have 2 edges: one
+        // using the = and one the actual target. That's annoying for other analyses since it
+        // doubles the path to check, so we remove the DFG edge across the "=".
+        result.forEach {
+            if ((it as? BinaryOperator)?.operatorCode == "=") {
+                it.removeNextDFG(it.lhs)
+                it.removePrevDFG(it.rhs)
             }
-            .fulfilled
-            .mapNotNull { (it.last() as? Assignment)?.target as? Node }
+        }
+
+        return result.mapNotNull { it.target as? Node }
+    }
 
     private fun obtainAssignmentNode(node: DeclaredReferenceExpression): BinaryOperator? {
         val alreadyVisited = mutableSetOf<Node>()
@@ -89,14 +103,23 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 // We write to the DeclaredReferenceExpression
                 val assignmentNode = obtainAssignmentNode(ref)
                 if (assignmentNode != null) {
-                    ref.addPrevDFG(assignmentNode)
-                    // ref.refersTo?.addPrevDFG(assignmentNode)
+                    // For assignments with "=" and DeclaredReferenceExpressions, we always have 2
+                    // edges: one using the = and one the actual target. That's annoying for other
+                    // analyses since it doubles the path to check, so we remove the DFG edge across
+                    // the "=".
+                    assignmentNode.removePrevDFG(assignmentNode.rhs)
+                    assignmentNode.removeNextDFG(assignmentNode.lhs)
+                    // Add the edge from rhs to this
+                    ref.addPrevDFG(assignmentNode.rhs)
+                    assignmentNode.lhs.addPrevDFG(assignmentNode.rhs)
                     ref.refersTo?.removeNextDFG(ref)
                     if ((ref.refersTo as? VariableDeclaration)?.initializer != null) {
                         ref.refersTo?.removePrevDFG(ref)
                     }
                 }
             } else {
+                // TODO: Fix the readwrite issue. It should not flow back to the VariableDeclaration
+                // (example: DFGTest.testNoOutgoingDFGFromVariableDeclaration())
                 // We read the value. That's a bit different to the write case.
                 val lastWrites = findLastWrites(ref)
                 for (lastWrite in lastWrites) {

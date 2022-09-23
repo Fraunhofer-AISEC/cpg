@@ -72,10 +72,7 @@ class ShortcutsTest {
             toStringCall.followNextDFGEdgesUntilHit { it == printDecl!!.parameters[0] }
 
         assertEquals(1, fulfilled.size)
-        assertEquals(
-            1,
-            failed.size
-        ) // For some reason, the flow to the VariableDeclaration doesn't end in the call to print()
+        assertEquals(0, failed.size)
     }
 
     @Test
@@ -106,6 +103,7 @@ class ShortcutsTest {
         )
         expected.add((main.body as CompoundStatement).statements[1] as MemberCallExpression)
         expected.add((main.body as CompoundStatement).statements[2] as MemberCallExpression)
+        expected.add((main.body as CompoundStatement).statements[3] as MemberCallExpression)
 
         val print = classDecl.byNameOrNull<MethodDeclaration>("print")
         assertNotNull(print)
@@ -168,6 +166,10 @@ class ShortcutsTest {
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
         expected.add(magic)
+
+        val magic2 = classDecl.byNameOrNull<MethodDeclaration>("magic2")
+        assertNotNull(magic2)
+        expected.add(magic2)
 
         val main = classDecl.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
@@ -321,6 +323,21 @@ class ShortcutsTest {
 
         val classDecl =
             result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val magic2 = classDecl.byNameOrNull<MethodDeclaration>("magic2")
+        assertNotNull(magic2)
+
+        val aAssignment2 =
+            ((((magic2.body as CompoundStatement).statements[1] as IfStatement).elseStatement
+                        as CompoundStatement)
+                    .statements[0]
+                    as BinaryOperator)
+                .lhs
+
+        val paramPassed2 = aAssignment2.followPrevDFGEdgesUntilHit { it is Literal<*> }
+        assertEquals(1, paramPassed2.fulfilled.size)
+        assertEquals(0, paramPassed2.failed.size)
+        assertEquals(5, (paramPassed2.fulfilled[0].last() as? Literal<*>)?.value)
+
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 

@@ -229,11 +229,11 @@ internal class DFGTest {
         assertTrue(literal11.nextDFG.contains(a11))
         assertEquals(2, literal12.nextDFG.size)
         assertTrue(literal12.nextDFG.contains(a12))
-        assertEquals(4, a.prevDFG.size)
+        assertEquals(1, a.prevDFG.size)
         assertTrue(a.prevDFG.contains(literal0))
-        assertTrue(a.prevDFG.contains(a10))
-        assertTrue(a.prevDFG.contains(a11))
-        assertTrue(a.prevDFG.contains(a12))
+        assertFalse(a.prevDFG.contains(a10))
+        assertFalse(a.prevDFG.contains(a11))
+        assertFalse(a.prevDFG.contains(a12))
 
         assertEquals(1, ab.nextDFG.size)
         assertTrue(ab.nextDFG.contains(b))
@@ -353,7 +353,9 @@ internal class DFGTest {
         // The + binary op flows to the = and the lhs
         assertEquals(2, binaryOperatorAddition.nextDFG.size)
         assertTrue(binaryOperatorAddition.nextDFG.contains(lhsA))
-        assertTrue(binaryOperatorAddition.nextDFG.contains(binaryOperatorAssignment))
+        assertTrue(
+            binaryOperatorAddition.nextDFG.contains(binaryOperatorAssignment)
+        ) // I don't get it: The value is there but the check "contains" fails
     }
 
     /**
@@ -368,9 +370,9 @@ internal class DFGTest {
         val result = analyze(listOf(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true)
         val varA = findByUniqueName(result.variables, "a")
         assertNotNull(varA)
-        // TODO: Why?? What else should flow to a-- or a = a*2?
-        assertEquals(0, varA.nextDFG.size)
-        assertEquals(7, varA.prevDFG.size)
+        // The variable can flow to lines 19, 23, 24, 26, 31, 34 without modifications.
+        assertEquals(6, varA.nextDFG.size)
+        assertEquals(1, varA.prevDFG.size) // Only the initializer should flow there.
     }
 
     @Test
