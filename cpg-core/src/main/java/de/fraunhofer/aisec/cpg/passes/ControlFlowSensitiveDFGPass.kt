@@ -92,6 +92,9 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     ref.addPrevDFG(assignmentNode)
                     // ref.refersTo?.addPrevDFG(assignmentNode)
                     ref.refersTo?.removeNextDFG(ref)
+                    if ((ref.refersTo as? VariableDeclaration)?.initializer != null) {
+                        ref.refersTo?.removePrevDFG(ref)
+                    }
                 }
             } else {
                 // We read the value. That's a bit different to the write case.

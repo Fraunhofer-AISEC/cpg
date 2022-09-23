@@ -54,44 +54,43 @@ internal class DFGTest {
         val literal2 = result.literals[{ it.value == 2 }]
         assertNotNull(literal2)
 
+        val b = result.variables["b"]
+        assertNotNull(b)
+
         val a2 = result.refs[{ it.access == AccessValues.WRITE }]
         assertNotNull(a2)
         assertTrue(literal2.nextDFG.contains(a2))
         assertEquals(
             1,
             a2.nextDFG.size
-        ) // Outgoing DFG Edges only to the DeclaredReferenceExpression
+        ) // Outgoing DFG Edges only to the DeclaredReferenceExpression in the assignment to b
+        assertEquals(
+            b.initializer!!,
+            a2.nextDFG.first(),
+        )
 
         val refersTo = a2.getRefersToAs(VariableDeclaration::class.java)
         assertNotNull(refersTo)
-        assertEquals(
-            0,
-            refersTo.nextDFG.size
-        ) // TODO: Why? Shouldn't it go to the print and assignment to b?
-        assertEquals(
-            a2.nextDFG.iterator().next(),
-            refersTo
-        ) // TODO: Why? It should go to the assignment of b
+        assertEquals(2, refersTo.nextDFG.size) // The print and assignment to b
+        // Outgoing DFG Edge to the DeclaredReferenceExpression in the assignment of b
+        assertTrue(refersTo.nextDFG.contains(b.initializer!!))
 
         // Test Else-Block with System.out.println()
         val literal1 = result.literals[{ it.value == 1 }]
         assertNotNull(literal1)
         val println = result.calls["println"]
         assertNotNull(println)
-        val a1 = result.refs[{ it.nextEOG.contains(println) }]
-        assertNotNull(a1)
-        assertEquals(1, a1.prevDFG.size)
-        assertEquals(literal1, a1.prevDFG.iterator().next())
-        assertEquals(1, a1.nextEOG.size)
-        assertEquals(println, a1.nextEOG[0])
+        val aPrintln = println.arguments[0]
+        assertTrue(refersTo.nextDFG.contains(aPrintln))
 
-        // Test Merging
-        val b = result.variables["b"]
-        assertNotNull(b)
+        assertEquals(1, aPrintln.prevDFG.size)
+        assertEquals(refersTo, aPrintln.prevDFG.first())
+        assertEquals(1, aPrintln.nextEOG.size)
+        assertEquals(println, aPrintln.nextEOG[0])
 
         val ab = b.prevEOG[0] as DeclaredReferenceExpression
-        assertTrue(literal1.nextDFG.contains(ab))
-        assertTrue(literal2.nextDFG.contains(ab))
+        assertTrue(refersTo.nextDFG.contains(ab))
+        assertTrue(a2.nextDFG.contains(ab))
     }
 
     /**
@@ -133,22 +132,62 @@ internal class DFGTest {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result =
             analyze(listOf(topLevel.resolve("conditional_expression.cpp").toFile()), topLevel, true)
-        val b = result.refs[{ it.name == "b" && it.location?.region?.startLine == 6 }]
-        assertNotNull(b)
+        val bJoin = result.refs[{ it.name == "b" && it.location?.region?.startLine == 6 }]
+        val a5 = result.refs[{ it.name == "b" && it.location?.region?.startLine == 5 }]
+        val a6 = result.refs[{ it.name == "b" && it.location?.region?.startLine == 6 }]
+        val bCond =
+            result.refs[
+                    {
+                        it.name == "b" &&
+                            it.location?.region?.startLine == 5 &&
+                            it.location?.region?.startColumn == 16
+                    }
+                ]
+        val b2 =
+            result.refs[
+                    {
+                        it.name == "b" &&
+                            it.location?.region?.startLine == 5 &&
+                            it.location?.region?.startColumn == 16
+                    }
+                ]
+        val b3 =
+            result.refs[
+                    {
+                        it.name == "b" &&
+                            it.location?.region?.startLine == 5 &&
+                            it.location?.region?.startColumn == 23
+                    }
+                ]
+        assertNotNull(bJoin)
+        assertNotNull(bCond)
+        assertNotNull(b2)
+        assertNotNull(b3)
+        assertNotNull(a5)
+        assertNotNull(a6)
 
         val val2 = result.literals[{ it.value == 2 }]
         assertNotNull(val2)
 
         val val3 = result.literals[{ it.value == 3 }]
         assertNotNull(val3)
-        assertEquals(2, b.prevDFG.size)
 
-        assertTrue(
-            b.prevDFG.contains(val2)
-        ) // TODO: Shouldn't it be the DeclaredReferenceExpression b where 2 flows to?
-        assertTrue(
-            b.prevDFG.contains(val3)
-        ) // TODO: Shouldn't it be the DeclaredReferenceExpression b where 3 flows to?
+        assertEquals(2, b2.prevDFG.size) // The = and the variable
+        assertTrue(b2.prevDFG.contains(val2))
+        assertEquals(2, b3.prevDFG.size) // The = and the variable
+        assertTrue(b3.prevDFG.contains(val3))
+
+        assertEquals(2, a5.prevDFG.size)
+        assertTrue(a5.prevDFG.contains(b2))
+        assertTrue(a5.prevDFG.contains(b3))
+
+        assertEquals(2, a6.prevDFG.size) // The = and the variable
+        assertTrue(a6.prevDFG.contains(bJoin))
+        assertEquals(2, bJoin.prevDFG.size)
+        // The b which got assigned 2 flows to the b in line 6
+        assertTrue(bJoin.prevDFG.contains(b2))
+        // The b which got assigned 3 flows to the b in line 6
+        assertTrue(bJoin.prevDFG.contains(b3))
     }
 
     @Test
@@ -290,48 +329,31 @@ internal class DFGTest {
 
         val literal1 = result.literals[{ it.value == 1 }]
         assertNotNull(literal1)
-        // TODO: Why?? a and b do flow to the DeclaredReferenceExpressions in (a+b). What else is
-        // the model?
-        // TODO: Check the rest of this test
-        assertEquals(0, varA.nextDFG.size) // No outgoing DFG edges from VariableDeclaration a
-        assertEquals(0, varB.nextDFG.size) // No outgoing DFG edges from VariableDeclaration b
-
-        // Check that the replacement of the current value for VariableDeclaration a is delayed
-        // until
-        // the assignment is completed. This means that the DeclaredReferenceExpression on the rhs
-        // must
-        // contain a prev dfg edge to the previous valid value for VariableDeclaration a (literal 0)
+        // a and b flow to the DeclaredReferenceExpressions in (a+b)
+        assertEquals(1, varA.nextDFG.size)
+        assertEquals(1, varB.nextDFG.size)
+        assertTrue(varA.nextDFG.contains(rhsA))
+        assertTrue(varB.nextDFG.contains(b))
         assertEquals(1, rhsA.prevDFG.size)
-        assertTrue(rhsA.prevDFG.contains(literal0))
+        assertTrue(rhsA.prevDFG.contains(varA))
+        assertEquals(1, b.prevDFG.size)
+        assertTrue(b.prevDFG.contains(varB))
 
-        // Check outgoing dfg edges of literal 0 (VariableDeclaration a initializer and rhs
-        // expression
-        // of a = a + b
-        assertEquals(2, literal0.nextDFG.size)
-        assertEquals(0, literal0.prevDFG.size)
-        assertTrue(literal0.nextDFG.contains(varA))
+        // The literals flow to the VariableDeclarationExpression
+        assertEquals(1, literal0.nextDFG.size)
+        assertEquals(varA, literal0.nextDFG.first())
+        assertEquals(1, literal0.nextDFG.size)
+        assertEquals(varB, literal1.nextDFG.first())
 
-        // Check incoming dfg edges of VariableDeclaration a (lhs of a = a + b, 0 and expr a + b
-        assertEquals(2, varA.prevDFG.size)
-        assertTrue(varA.prevDFG.contains(lhsA))
-        assertTrue(varA.prevDFG.contains(literal0))
-
-        // Check incoming dfg edges in binaryOperator + (DeclaredReferenceExpression a and b)
+        // a and b flow to the + Binary Op
         assertEquals(2, binaryOperatorAddition.prevDFG.size)
         assertTrue(binaryOperatorAddition.prevDFG.contains(b))
         assertTrue(binaryOperatorAddition.prevDFG.contains(rhsA))
 
-        // Check outgoing dfg edges from a of a = a + b and into
-        // VariableDeclaration a)
+        // The + binary op flows to the = and the lhs
         assertEquals(2, binaryOperatorAddition.nextDFG.size)
         assertTrue(binaryOperatorAddition.nextDFG.contains(lhsA))
-
-        // Check outgoing dfg edges of literal1 (VariableDeclaration b and
-        // DeclaredReferenceExpression
-        // b)
-        assertEquals(2, literal1.nextDFG.size)
-        assertTrue(literal1.nextDFG.contains(varB))
-        assertTrue(literal1.nextDFG.contains(b))
+        assertTrue(binaryOperatorAddition.nextDFG.contains(binaryOperatorAssignment))
     }
 
     /**

@@ -1,6 +1,7 @@
 public class ControlFlowSensitiveDFGIfMerge {
-  void func() {
+  void func(int[] args) {
     int a = 1;
+
     if (args.length > 3) {
       a = 2;
     } else {
