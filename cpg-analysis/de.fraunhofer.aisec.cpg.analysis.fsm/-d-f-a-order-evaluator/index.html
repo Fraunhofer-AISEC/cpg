@@ -1,0 +1,215 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>DFAOrderEvaluator</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
+const savedDarkMode = storage ? JSON.parse(storage) : false
+if(savedDarkMode === true){
+    document.getElementsByTagName("html")[0].classList.add("theme-dark")
+}</script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/jetbrains-mono.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script></head>
+<body>
+<div class="navigation-wrapper" id="navigation-wrapper">
+    <div id="leftToggler"><span class="icon-toggler"></span></div>
+    <div class="library-name">
+<a href="../../../index.html">
+<span>cpg</span>            </a>    </div>
+    <div>5.0.0
+    </div>
+    <div class="pull-right d-flex">
+        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
+        <div id="searchBar"></div>
+    </div>
+</div>
+<div id="container">
+    <div id="leftColumn">
+        <div id="sideMenu"></div>
+    </div>
+    <div id="main">
+<div class="main-content" id="content" pageids="cpg-analysis::de.fraunhofer.aisec.cpg.analysis.fsm/DFAOrderEvaluator///PointingToDeclaration//439033401">
+  <div class="breadcrumbs"><a href="../../index.html">cpg-analysis</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.analysis.fsm</a><span class="delimiter">/</span><a href="index.html">DFAOrderEvaluator</a></div>
+  <div class="cover ">
+    <h1 class="cover"><span>DFAOrder</span><wbr><span><span>Evaluator</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="index.html">DFAOrderEvaluator</a><span class="token punctuation">(</span><span class="parameters wrapped"><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;<span class="token keyword">var </span>consideredBases<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html">Long</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;<span class="token keyword">var </span>nodeToRelevantMethod<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;<span class="token keyword">var </span>thisPositionOfNode<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mapOf()<span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;<span class="token keyword">var </span>eliminateUnreachableCode<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">true</span></span></span><span class="token punctuation">)</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><p class="paragraph">This class uses a <a href="../-d-f-a/index.html">DFA</a> to evaluate if the order of statements in the CPG is correct. It needs the following inputs:</p><ul><li><p class="paragraph"><a href="considered-bases.html">consideredBases</a>: A set of the IDs of nodes (typically the <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a>) which are considered.</p></li><li><p class="paragraph"><a href="node-to-relevant-method.html">nodeToRelevantMethod</a>: A mapping between CPG nodes and their operators used by the respective edges in the DFA. Currently, we only consider <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a>s. If a node is not contained in this list, it is not considered by the evaluation as we assume that the method is not relevant.</p></li><li><p class="paragraph"><a href="this-position-of-node.html">thisPositionOfNode</a>: If a non-object oriented language was used, this is a map from CPG nodes (i.e., the <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a>) to the argument position serving as base of the operation.</p></li></ul><p class="paragraph">To improve the results, it is useful to run <a href="../../de.fraunhofer.aisec.cpg.passes/-unreachable-e-o-g-pass/index.html">de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass</a> prior to running the analysis and set the flag <a href="eliminate-unreachable-code.html">eliminateUnreachableCode</a> to <code class="lang-kotlin">true</code>. This removes results which may occur in unreachable code.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Constructors">Constructors</button><button class="section-tab" data-togglable="Functions">Functions</button><button class="section-tab" data-togglable="Properties">Properties</button></div>
+    <div class="tabs-section-body">
+      <h2 class="tabbedcontent">Constructors</h2>
+      <div class="table" data-togglable="Constructors"><a data-name="952163770%2FConstructors%2F439033401" anchor-label="DFAOrderEvaluator" id="952163770%2FConstructors%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue TabbedContent">
+            <div class=""><span class="inline-flex">
+                <div><a href="-d-f-a-order-evaluator.html"><span>DFAOrder</span><wbr><span><span>Evaluator</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="952163770%2FConstructors%2F439033401"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="-d-f-a-order-evaluator.html"><span class="token function">DFAOrderEvaluator</span></a><span class="token punctuation">(</span><span class="parameters wrapped"><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;consideredBases<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html">Long</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;nodeToRelevantMethod<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;thisPositionOfNode<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mapOf()<span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;eliminateUnreachableCode<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">true</span></span></span><span class="token punctuation">)</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Functions</h2>
+      <div class="table" data-togglable="Functions"><a data-name="688629883%2FFunctions%2F439033401" anchor-label="actionAcceptingTermination" id="688629883%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="action-accepting-termination.html"><span>action</span><wbr><span>Accepting</span><wbr><span><span>Termination</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="688629883%2FFunctions%2F439033401"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="action-accepting-termination.html"><span class="token function">actionAcceptingTermination</span></a><span class="token punctuation">(</span><span class="parameters wrapped"><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;base<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;fsm<span class="token operator">: </span><a href="../-d-f-a/index.html">DFA</a><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;interproceduralFlow<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Contains the functionality which is executed if the DFA terminated in an accepting state for the given <a href="action-accepting-termination.html">base</a>. This means that all required statements have been executed for <a href="action-accepting-termination.html">base</a> so far. The <a href="action-accepting-termination.html">fsm</a> holds the execution trace found by the analysis.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-286241883%2FFunctions%2F439033401" anchor-label="actionMissingTransitionForNode" id="-286241883%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="action-missing-transition-for-node.html"><span>action</span><wbr><span>Missing</span><wbr><span>Transition</span><wbr><span>For</span><wbr><span><span>Node</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-286241883%2FFunctions%2F439033401"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="action-missing-transition-for-node.html"><span class="token function">actionMissingTransitionForNode</span></a><span class="token punctuation">(</span><span class="parameters wrapped"><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;node<span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;fsm<span class="token operator">: </span><a href="../-d-f-a/index.html">DFA</a><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;interproceduralFlow<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Contains the functionality which is executed if the DFA does not contain a suitable transition for the given <a href="action-missing-transition-for-node.html">node</a>. The evaluation ensures that the <a href="action-missing-transition-for-node.html">node</a> is relevant, i.e., its operator is considered by the DFA and its base is subject to analysis. This means that the order is broken at <a href="action-missing-transition-for-node.html">node</a>.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="943698708%2FFunctions%2F439033401" anchor-label="actionNonAcceptingTermination" id="943698708%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="action-non-accepting-termination.html"><span>action</span><wbr><span>Non</span><wbr><span>Accepting</span><wbr><span><span>Termination</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="943698708%2FFunctions%2F439033401"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="action-non-accepting-termination.html"><span class="token function">actionNonAcceptingTermination</span></a><span class="token punctuation">(</span><span class="parameters wrapped"><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;base<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;fsm<span class="token operator">: </span><a href="../-d-f-a/index.html">DFA</a><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;interproceduralFlow<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Contains the functionality which is executed if the DFA <strong>did not</strong> terminate in an accepting state for the given <a href="action-non-accepting-termination.html">base</a>. This means that not all required statements have been executed for <a href="action-non-accepting-termination.html">base</a> so far. The <a href="action-non-accepting-termination.html">fsm</a> holds the execution trace found by the analysis.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1622158908%2FFunctions%2F439033401" anchor-label="evaluateOrder" id="-1622158908%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="evaluate-order.html"><span>evaluate</span><wbr><span><span>Order</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1622158908%2FFunctions%2F439033401"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="evaluate-order.html"><span class="token function">evaluateOrder</span></a><span class="token punctuation">(</span><span class="parameters wrapped"><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;dfa<span class="token operator">: </span><a href="../-d-f-a/index.html">DFA</a><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;startNode<span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;stopOnWrongBase<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">true</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Checks if a sequence of <a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a>s/statemets starting from <a href="evaluate-order.html">startNode</a> follows the sequence given by the <a href="evaluate-order.html">dfa</a>. If the sequence of statements violates the rules, the method returns <code class="lang-kotlin">false</code>, if it is correct, the method returns <code class="lang-kotlin">true</code>. The flag <a href="evaluate-order.html">stopOnWrongBase</a> makes the FSM stop evaluation of a base if an unexpected operation was observed for that base.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="679159674%2FFunctions%2F439033401" anchor-label="getBaseOfNode" id="679159674%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="get-base-of-node.html"><span>get</span><wbr><span>Base</span><wbr><span>Of</span><wbr><span><span>Node</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="679159674%2FFunctions%2F439033401"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="get-base-of-node.html"><span class="token function">getBaseOfNode</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">?</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Returns the "base" node belonging to <a href="get-base-of-node.html">node</a>, on which the DFA is based on. Ideally, this is a variable declaration in the end.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Properties</h2>
+      <div class="table" data-togglable="Properties"><a data-name="-310103289%2FProperties%2F439033401" anchor-label="consideredBases" id="-310103289%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="considered-bases.html"><span>considered</span><wbr><span><span>Bases</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-310103289%2FProperties%2F439033401"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><a data-name="-310103289%2FProperties%2F439033401" anchor-label="consideredBases" id="-310103289%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="considered-bases.html">consideredBases</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html">Long</a><span class="token operator">&gt;</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1261432874%2FProperties%2F439033401" anchor-label="eliminateUnreachableCode" id="1261432874%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="eliminate-unreachable-code.html"><span>eliminate</span><wbr><span>Unreachable</span><wbr><span><span>Code</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1261432874%2FProperties%2F439033401"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><a data-name="1261432874%2FProperties%2F439033401" anchor-label="eliminateUnreachableCode" id="1261432874%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="eliminate-unreachable-code.html">eliminateUnreachableCode</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">true</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="400228014%2FProperties%2F439033401" anchor-label="nodeToRelevantMethod" id="400228014%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="node-to-relevant-method.html"><span>node</span><wbr><span>To</span><wbr><span>Relevant</span><wbr><span><span>Method</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="400228014%2FProperties%2F439033401"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><a data-name="400228014%2FProperties%2F439033401" anchor-label="nodeToRelevantMethod" id="400228014%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="node-to-relevant-method.html">nodeToRelevantMethod</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="449508201%2FProperties%2F439033401" anchor-label="thisPositionOfNode" id="449508201%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="this-position-of-node.html"><span>this</span><wbr><span>Position</span><wbr><span>Of</span><wbr><span><span>Node</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="449508201%2FProperties%2F439033401"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><a data-name="449508201%2FProperties%2F439033401" anchor-label="thisPositionOfNode" id="449508201%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="this-position-of-node.html">thisPositionOfNode</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt;</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2022 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
+    </div>
+</div>
+
+</body></html>
+
