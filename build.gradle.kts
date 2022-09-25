@@ -23,6 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
+import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -72,9 +73,17 @@ subprojects {
     apply(plugin = "maven-publish")
     apply(plugin = "signing")
 
+    val dokkaHtml by tasks.getting(DokkaTask::class)
+    val javadocJar by tasks.registering(Jar::class) {
+        dependsOn(dokkaHtml)
+        archiveClassifier.set("javadoc")
+        from(dokkaHtml.outputDirectory)
+    }
+
     publishing {
         publications {
             create<MavenPublication>(name) {
+                artifact(javadocJar)
                 from(components["java"])
 
                 pom {
@@ -143,7 +152,7 @@ subprojects {
     }
 
     java {
-        withJavadocJar()
+        //withJavadocJar()
         withSourcesJar()
     }
 
