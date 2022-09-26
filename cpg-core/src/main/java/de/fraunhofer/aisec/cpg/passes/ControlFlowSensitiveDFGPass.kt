@@ -64,6 +64,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             node
                 .followPrevEOGEdgesUntilHit {
                     it is Assignment &&
+                        node.refersTo != null &&
                         ((it.target as? DeclaredReferenceExpression)?.refersTo == node.refersTo ||
                             (it.target as? VariableDeclaration) == node.refersTo)
                 }
@@ -73,13 +74,16 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         // For assignments with "=" and DeclaredReferenceExpressions, we always have 2 edges: one
         // using the = and one the actual target. That's annoying for other analyses since it
         // doubles the path to check, so we remove the DFG edge across the "=".
-        // TODO: This is a bad idea for conditional expressions
-        result.forEach {
-            if ((it as? BinaryOperator)?.operatorCode == "=") {
+        // This is a bad idea for conditional expressions
+        /*result.forEach {
+            if (
+                (it as? BinaryOperator)?.operatorCode == "=" &&
+                    (it.astParent as? ConditionalExpression) != null
+            ) {
                 it.removeNextDFG(it.lhs)
                 it.removePrevDFG(it.rhs)
             }
-        }
+        }*/
 
         return result.mapNotNull { it.target as? Node }
     }
@@ -107,10 +111,11 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     // For assignments with "=" and DeclaredReferenceExpressions, we always have 2
                     // edges: one using the = and one the actual target. That's annoying for other
                     // analyses since it doubles the path to check, so we remove the DFG edge across
-                    // the "=".
-                    // TODO: This is a bad idea for conditional expressions
-                    assignmentNode.removePrevDFG(assignmentNode.rhs)
-                    assignmentNode.removeNextDFG(assignmentNode.lhs)
+                    // the "=". This is a bad idea for conditional expressions
+                    /*if ((assignmentNode.astParent as? ConditionalExpression) != null) {
+                        assignmentNode.removePrevDFG(assignmentNode.rhs)
+                        assignmentNode.removeNextDFG(assignmentNode.lhs)
+                    }*/
                     // Add the edge from rhs to this
                     ref.addPrevDFG(assignmentNode.rhs)
                     assignmentNode.lhs.addPrevDFG(

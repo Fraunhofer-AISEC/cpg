@@ -42,14 +42,16 @@ Interesting fields:
 * `lhs: Expression`: The left-hand side of the operation
 * `rhs: Expression`: The right-hand side of the operation
 
-We have to differentiate between the operators. We can group them into three categories: 1) Assignment, 2) Assignment with a Computation and 3) Computation
+We have to differentiate between the operators. We can group them into three categories: 1) Assignment, 2) Assignment with a Computation and 3) Computation.
 
 ### Case 1: Assignment (`operatorCode: =`)
 
-The `rhs` flows to `lhs`.
+The `rhs` flows to `lhs`. In some languages, it is possible to have an assignment in a subexpression (e.g. `a + (b=1)`).
+For this reason, if the assignment's ast parent is not a `CompoundStatement` (i.e., a block of statements), we also add a DFG edge to the whole operator.
 
 Scheme:
 * `rhs` -- DFG --> `lhs`
+* `rhs` -- DFG --> `lhs = rhs` if the ast parent is not a CompoundStatement
 
 ### Case 2: Assignment with a Computation (`operatorCode: *=, /=, %=, +=, -=, <<=, >>=, &=, ^=, |=` )
 
@@ -121,6 +123,17 @@ For write access, data flow from the expression to the declaration.
 For readwrite access, both flows are present.
 
 *This is very very dangerous and is completely changed in the ControlFlowSensitiveDFGPass! Update and fix!*
+
+## MemberExpression
+
+Interesting fields:
+* `base: Expression`: The base object whose field is accessed
+* `refersTo: Declaration?`: The field it refers to. If the class is not implemented in the code under analysis, it is `null`.
+
+The MemberExpression represents an access to an object's field and extends a DeclaredReferenceExpression with a `base`.
+
+If an implementation of the respective class is available, we handle it like a normal DeclaredReferenceExpression.
+If the `refersTo` field is `null` (i.e., the implementation is not available), base flows to the expression.
 
 ## ExpressionList
 

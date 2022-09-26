@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(VariableUsageResolver::class)
+@DependsOn(EdgeCachePass::class)
 class DFGPass : Pass() {
     override fun accept(tr: TranslationResult) {
         val inferDfgForUnresolvedCalls =
@@ -64,6 +65,7 @@ class DFGPass : Pass() {
             is ArrayCreationExpression -> handleArrayCreationExpression(node)
             is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
+            is MemberExpression -> handleMemberExpression(node)
             is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
             is ExpressionList -> handleExpressionList(node)
             // We keep the logic for the InitializerListExpression in that class because the
@@ -80,6 +82,18 @@ class DFGPass : Pass() {
             is VariableDeclaration -> handleVariableDeclaration(node)
             // Other
             is Assignment -> handleAssignment(node)
+        }
+    }
+
+    /**
+     * For a [MemberExpression], the base flows to the expression if the field is not implemented in
+     * the code under analysis. Otherwise, it's handled as a [DeclaredReferenceExpression].
+     */
+    private fun handleMemberExpression(node: MemberExpression) {
+        if (node.refersTo == null) {
+            node.addPrevDFG(node.base)
+        } else {
+            handleDeclaredReferenceExpression(node)
         }
     }
 
@@ -220,7 +234,18 @@ class DFGPass : Pass() {
      */
     private fun handleBinaryOp(node: BinaryOperator) {
         when (node.operatorCode) {
-            "=" -> node.rhs?.let { node.lhs.addPrevDFG(it) }
+            "=" -> {
+                node.rhs?.let { node.lhs.addPrevDFG(it) }
+                // There are cases where we explicitly want to connect the rhs to the =.
+                // E.g., this is the case in C++ where subexpressions can make the assignment.
+                // Examples: a + (b = 1)  or  a = a == b ? b = 2: b = 3
+                // When the parent is a compound statement (or similar block of code), we can safely
+                // assume that we're not in such a sub-expression
+                // TODO: Extend this list
+                if (node.astParent !is CompoundStatement) {
+                    node.rhs?.addNextDFG(node)
+                }
+            }
             "*=",
             "/=",
             "%=",

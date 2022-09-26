@@ -134,12 +134,9 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
       if (rhs instanceof TypeListener) {
         this.registerTypeListener((TypeListener) rhs);
       }
-      if (this.lhs != null) {
-        this.lhs.addPrevDFG(rhs);
-      }
     }
-    this.addPrevDFG(
-        rhs); // in C++ we can have a + (b = 1) so the rhs has to connected to the BinOp in all
+    // this.addPrevDFG(rhs);
+    // in C++ we can have a + (b = 1) so the rhs has to connected to the BinOp in all
     // cases
   }
 
@@ -149,13 +146,7 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
       if (this.rhs instanceof TypeListener) {
         unregisterTypeListener((TypeListener) this.rhs);
       }
-      if (this.lhs != null) {
-        this.lhs.removePrevDFG(this.rhs);
-      }
     }
-    this.removePrevDFG(
-        this.rhs); // in C++ we can have a + (b = 1) so the rhs has to connected to the BinOp in all
-    // cases
   }
 
   public String getOperatorCode() {

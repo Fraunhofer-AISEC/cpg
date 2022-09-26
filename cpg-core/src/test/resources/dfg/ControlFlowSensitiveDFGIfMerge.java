@@ -11,4 +11,10 @@ public class ControlFlowSensitiveDFGIfMerge {
     int b = a;
   }
 
+  int bla;
+
+  public static void main(String[] args) {
+    ControlFlowSensitiveDFGIfMerge obj = new ControlFlowSensitiveDFGIfMerge();
+    obj.bla = 3;
+  }
 }
