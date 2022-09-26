@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -63,15 +64,23 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         val result =
             node
                 .followPrevEOGEdgesUntilHit {
-                    it is Assignment &&
+                    (it is Assignment &&
                         node.refersTo != null &&
                         ((it.target as? DeclaredReferenceExpression)?.refersTo == node.refersTo ||
-                            (it.target as? VariableDeclaration) == node.refersTo)
+                            (it.target as? VariableDeclaration) == node.refersTo)) ||
+                        (node.refersTo != null &&
+                            it is UnaryOperator &&
+                            (it.operatorCode == "++" || it.operatorCode == "--") &&
+                            (it.input as? DeclaredReferenceExpression)?.refersTo == node.refersTo)
                 }
                 .fulfilled
-                .mapNotNull { (it.last() as? Assignment) }
+                .mapNotNull {
+                    (it.last() as? Assignment)?.target as? Node
+                        ?: (it.last() as? UnaryOperator)?.input
+                }
+                .toMutableList()
 
-        return result.mapNotNull { it.target as? Node }
+        return result
     }
 
     private fun obtainAssignmentNode(node: DeclaredReferenceExpression): BinaryOperator? {

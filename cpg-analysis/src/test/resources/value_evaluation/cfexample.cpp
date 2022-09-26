@@ -31,7 +31,7 @@ int main() {
 
 int loop() {
     int array[6];
-    for(int i = 0; i < 6; i = i+1) {
+    for(int i = 0; i < 6; i++) {
         array[i] = i;
     }
     return 0;
