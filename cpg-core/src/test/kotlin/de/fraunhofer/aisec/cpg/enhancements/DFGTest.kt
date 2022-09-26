@@ -71,7 +71,6 @@ internal class DFGTest {
 
         val refersTo = a2.getRefersToAs(VariableDeclaration::class.java)
         assertNotNull(refersTo)
-        // TODO: Why does refersTo flow to length in line 5??? That doesn't make any sense
         assertEquals(2, refersTo.nextDFG.size) // The print and assignment to b
         // Outgoing DFG Edge to the DeclaredReferenceExpression in the assignment of b
         assertTrue(refersTo.nextDFG.contains(b.initializer!!))
@@ -259,8 +258,7 @@ internal class DFGTest {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result =
             analyze(listOf(topLevel.resolve("compoundoperator.cpp").toFile()), topLevel, true)
-        val rwCompoundOperator =
-            findByUniqueName<BinaryOperator>(result.allChildren<BinaryOperator>(), "+=")
+        val rwCompoundOperator = findByUniqueName(result.allChildren(), "+=")
         assertNotNull(rwCompoundOperator)
 
         val expression = findByUniqueName(result.refs, "i")
@@ -354,8 +352,6 @@ internal class DFGTest {
         assertTrue(binaryOperatorAddition.prevDFG.contains(rhsA))
 
         // The + binary op flows to the lhs
-        // TODO: Somehow, there's a flow to the "=" of the assignment even if during the
-        // CFSensitiveDFGPass, I can't see this.
         assertEquals(1, binaryOperatorAddition.nextDFG.size)
         assertTrue(binaryOperatorAddition.nextDFG.contains(lhsA))
     }
