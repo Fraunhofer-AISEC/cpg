@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -56,8 +57,97 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      */
     protected fun handle(node: Node) {
         if (node is FunctionDeclaration) {
-            handleStatementHolder(node)
+            val dependencyMap = dependencyTree(node)
+            handleStatementHolder(node, dependencyMap)
         }
+    }
+
+    private fun dependencyTree(node: Node): Map<Node, Set<Node?>> {
+        val worklist = mutableListOf(Pair(node, mutableMapOf<Declaration, Node>()))
+
+        val dependencyMap = mutableMapOf<Node, MutableSet<Node?>>()
+
+        while (worklist.isNotEmpty()) {
+            val (currentNode, previousWrite) = worklist.removeFirst()
+            var updatedDependencies = currentNode !in dependencyMap
+            var writeNode = false
+
+            if (
+                (currentNode as? DeclaredReferenceExpression)?.access == AccessValues.WRITE &&
+                    currentNode.refersTo != null
+            ) {
+                previousWrite[currentNode.refersTo!!] = currentNode
+                updatedDependencies =
+                    updatedDependencies || previousWrite[currentNode.refersTo] == currentNode
+                writeNode = true
+                updatedDependencies =
+                    dependencyMap
+                        .computeIfAbsent(currentNode) { mutableSetOf() }
+                        .add(obtainAssignmentNode(currentNode)) || updatedDependencies
+            } else if ((currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ) {
+                // Get previous write
+                updatedDependencies =
+                    dependencyMap
+                        .computeIfAbsent(currentNode) { mutableSetOf() }
+                        .add(previousWrite[currentNode.refersTo]) || updatedDependencies
+            } else if (
+                (currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READWRITE
+            ) {
+                writeNode = true
+                updatedDependencies =
+                    dependencyMap
+                        .computeIfAbsent(currentNode) { mutableSetOf() }
+                        .add(previousWrite[currentNode.refersTo]) || updatedDependencies
+
+                updatedDependencies =
+                    updatedDependencies || previousWrite[currentNode.refersTo] == currentNode
+                previousWrite[currentNode.refersTo!!] = currentNode
+            } else if ((currentNode as? VariableDeclaration)?.initializer != null) {
+                val initValue =
+                    if (currentNode.initializer is DeclaredReferenceExpression) {
+                        previousWrite[
+                            (currentNode.initializer as DeclaredReferenceExpression).refersTo]
+                    } else {
+                        currentNode.initializer
+                    }
+                writeNode = true
+                updatedDependencies =
+                    dependencyMap.computeIfAbsent(currentNode) { mutableSetOf() }.add(initValue) ||
+                        updatedDependencies
+                updatedDependencies =
+                    updatedDependencies || previousWrite[currentNode] == currentNode
+                previousWrite[currentNode] = currentNode
+            }
+
+            // Only add the nextEOG nodes which have not been processed before or if the writes
+            // changed, we also want to update the existing nodes.
+            if (updatedDependencies || !writeNode) {
+                val newNextNodes = currentNode.nextEOG
+                if (newNextNodes.size > 1) {
+                    newNextNodes.forEach { next ->
+                        val new =
+                            worklist.none { (n, prev) ->
+                                n == next &&
+                                    prev.keys == previousWrite.keys &&
+                                    prev.all { (decl, lastWrite) ->
+                                        previousWrite[decl] == lastWrite
+                                    }
+                            }
+                        if (new) worklist.add(Pair(next, HashMap(previousWrite)))
+                    }
+                } else if (newNextNodes.size == 1) {
+                    val next = newNextNodes.first()
+                    val new =
+                        worklist.none { (n, prev) ->
+                            n == next &&
+                                prev.keys == previousWrite.keys &&
+                                prev.all { (decl, lastWrite) -> previousWrite[decl] == lastWrite }
+                        }
+                    if (new) worklist.add(Pair(next, previousWrite))
+                }
+            }
+        }
+        return dependencyMap
     }
 
     private fun findLastWrites(node: DeclaredReferenceExpression): List<Node> {
@@ -97,8 +187,9 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         return null
     }
 
-    private fun handleStatementHolder(node: Node) {
+    private fun handleStatementHolder(node: Node, dependencyMap: Map<Node, Set<Node?>>) {
         for (ref in node.refs) {
+            val writeNodes = dependencyMap[ref]
             if (ref.access == AccessValues.WRITE) {
                 // We write to the DeclaredReferenceExpression
                 val assignmentNode = obtainAssignmentNode(ref)
