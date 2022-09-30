@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import java.nio.file.Path
 import java.util.*
@@ -135,6 +136,23 @@ internal class FunctionPointerTest : BaseTest() {
                 curr.prevDFG.forEach(Consumer { e: Node -> worklist.push(e) })
             }
         }
+        if (functions.size == 0) {
+            variable.usageEdges
+                .filter { it.getProperty(Properties.ACCESS) == AccessValues.WRITE }
+                .forEach { worklist.push(it.end) }
+            while (!worklist.isEmpty()) {
+                val curr = worklist.pop()
+                if (!seen.add(curr)) {
+                    continue
+                }
+                if (curr is FunctionDeclaration) {
+                    functions.add(curr)
+                } else {
+                    curr.prevDFG.forEach(Consumer { e: Node -> worklist.push(e) })
+                }
+            }
+        }
+
         assertEquals(1, functions.size)
         return functions[0]
     }

@@ -108,6 +108,9 @@ public class DeclaredReferenceExpression extends Expression
 
     // set it
     this.refersTo = refersTo;
+    if (refersTo instanceof ValueDeclaration) {
+      ((ValueDeclaration) refersTo).addUsageEdge(this);
+    }
 
     // update type listeners
     if (this.refersTo instanceof ValueDeclaration) {

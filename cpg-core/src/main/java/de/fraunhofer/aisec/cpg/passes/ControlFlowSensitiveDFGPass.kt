@@ -30,7 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -57,193 +61,113 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      */
     protected fun handle(node: Node) {
         if (node is FunctionDeclaration) {
-            val dependencyMap = dependencyTree(node)
-            handleStatementHolder(node, dependencyMap)
+            handleFunction(node)
         }
     }
 
-    private fun dependencyTree(node: Node): Map<Node, Set<Node?>> {
-        val worklist = mutableListOf(Pair(node, mutableMapOf<Declaration, Node>()))
+    private fun handleFunction(node: FunctionDeclaration) {
+        for (varDecl in node.variables) {
+            varDecl.clearPrevDFG()
+            varDecl.clearNextDFG()
+        }
 
-        val dependencyMap = mutableMapOf<Node, MutableSet<Node?>>()
+        val worklist =
+            mutableListOf<Pair<Node, MutableMap<Declaration, MutableList<Node>>>>(
+                Pair(node, mutableMapOf())
+            )
+
+        val loopPoints = mutableMapOf<Node, MutableSet<Map<Declaration, MutableList<Node>>>>()
 
         while (worklist.isNotEmpty()) {
-            val (currentNode, previousWrite) = worklist.removeFirst()
-            var updatedDependencies = currentNode !in dependencyMap
-            var writeNode = false
+            val (currentNode, previousWrites) = worklist.removeFirst()
+            var writtenDecl: Declaration? = null
+            var currentWritten = currentNode
 
-            if (
-                (currentNode as? DeclaredReferenceExpression)?.access == AccessValues.WRITE &&
-                    currentNode.refersTo != null
+            if ((currentNode as? VariableDeclaration)?.initializer != null) {
+                // A variable declaration with an initializer => The initializer flows to the
+                // declaration.
+                val initValue = currentNode.initializer
+                writtenDecl = currentNode
+
+                initValue?.let { currentNode.addPrevDFG(it) }
+
+                // Add the node to the list of previous write nodes in this path
+                previousWrites[currentNode] = mutableListOf(currentNode)
+            } else if (
+                currentNode is UnaryOperator &&
+                    (currentNode.operatorCode == "++" || currentNode.operatorCode == "--")
             ) {
-                previousWrite[currentNode.refersTo!!] = currentNode
-                updatedDependencies =
-                    updatedDependencies || previousWrite[currentNode.refersTo] == currentNode
-                writeNode = true
-                updatedDependencies =
-                    dependencyMap
-                        .computeIfAbsent(currentNode) { mutableSetOf() }
-                        .add(obtainAssignmentNode(currentNode)) || updatedDependencies
+                // Increment or decrement => Add the prevWrite of the input to the input. After the
+                // operation, the prevWrite of the input's variable is this node.
+                val input = currentNode.input as? DeclaredReferenceExpression
+                writtenDecl = input?.refersTo
+                if (input != null && writtenDecl != null) {
+                    previousWrites[writtenDecl]?.lastOrNull()?.let { input.addPrevDFG(it) }
+
+                    // TODO: Do we want to have a flow from the input back to the input? One test
+                    // says yes but I'm not sure. If not, comment in the following line:
+                    // currentNode.removeNextDFG(input)
+
+                    // Add the whole node to the list of previous write nodes in this path. This
+                    // prevents some weird circular dependencies.
+                    previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
+                }
+            } else if (
+                currentNode is Assignment &&
+                    (currentNode.target as? DeclaredReferenceExpression)?.refersTo != null
+            ) {
+                // We write to the target => value flows to target
+                writtenDecl = (currentNode.target as? DeclaredReferenceExpression)?.refersTo!!
+
+                previousWrites
+                    .computeIfAbsent(writtenDecl, ::mutableListOf)
+                    .add(currentNode.target as Node)
+                currentWritten = currentNode.target as Node
+
+                currentNode.value?.let {
+                    (currentNode.target as DeclaredReferenceExpression).addPrevDFG(it)
+                }
             } else if ((currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ) {
                 // Get previous write
-                updatedDependencies =
-                    dependencyMap
-                        .computeIfAbsent(currentNode) { mutableSetOf() }
-                        .add(previousWrite[currentNode.refersTo]) || updatedDependencies
-            } else if (
-                (currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READWRITE
+                previousWrites[currentNode.refersTo]?.lastOrNull()?.let {
+                    currentNode.addPrevDFG(it)
+                }
+            }
+
+            if (
+                currentNode is ForStatement ||
+                    currentNode is WhileStatement ||
+                    currentNode is ForEachStatement ||
+                    currentNode is DoStatement ||
+                    currentNode is GotoStatement
             ) {
-                writeNode = true
-                updatedDependencies =
-                    dependencyMap
-                        .computeIfAbsent(currentNode) { mutableSetOf() }
-                        .add(previousWrite[currentNode.refersTo]) || updatedDependencies
-
-                updatedDependencies =
-                    updatedDependencies || previousWrite[currentNode.refersTo] == currentNode
-                previousWrite[currentNode.refersTo!!] = currentNode
-            } else if ((currentNode as? VariableDeclaration)?.initializer != null) {
-                val initValue =
-                    if (currentNode.initializer is DeclaredReferenceExpression) {
-                        previousWrite[
-                            (currentNode.initializer as DeclaredReferenceExpression).refersTo]
-                    } else {
-                        currentNode.initializer
-                    }
-                writeNode = true
-                updatedDependencies =
-                    dependencyMap.computeIfAbsent(currentNode) { mutableSetOf() }.add(initValue) ||
-                        updatedDependencies
-                updatedDependencies =
-                    updatedDependencies || previousWrite[currentNode] == currentNode
-                previousWrite[currentNode] = currentNode
+                val state = loopPoints.computeIfAbsent(currentNode) { mutableSetOf() }
+                if (previousWrites in state) {
+                    continue
+                }
+                state.add(previousWrites)
             }
 
-            // Only add the nextEOG nodes which have not been processed before or if the writes
-            // changed, we also want to update the existing nodes.
-            if (updatedDependencies || !writeNode) {
-                val newNextNodes = currentNode.nextEOG
-                if (newNextNodes.size > 1) {
-                    newNextNodes.forEach { next ->
-                        val new =
-                            worklist.none { (n, prev) ->
-                                n == next &&
-                                    prev.keys == previousWrite.keys &&
-                                    prev.all { (decl, lastWrite) ->
-                                        previousWrite[decl] == lastWrite
-                                    }
-                            }
-                        if (new) worklist.add(Pair(next, HashMap(previousWrite)))
-                    }
-                } else if (newNextNodes.size == 1) {
-                    val next = newNextNodes.first()
-                    val new =
-                        worklist.none { (n, prev) ->
-                            n == next &&
-                                prev.keys == previousWrite.keys &&
-                                prev.all { (decl, lastWrite) -> previousWrite[decl] == lastWrite }
-                        }
-                    if (new) worklist.add(Pair(next, previousWrite))
+            if (
+                writtenDecl == null ||
+                    previousWrites[writtenDecl]!!.filter { it == currentWritten }.size < 2
+            ) {
+                currentNode.nextEOG.forEach {
+                    val newPair = Pair(it, copyMap(previousWrites))
+                    if (newPair !in worklist) worklist.add(newPair)
                 }
             }
         }
-        return dependencyMap
     }
 
-    private fun findLastWrites(node: DeclaredReferenceExpression): List<Node> {
-        val result =
-            node
-                .followPrevEOGEdgesUntilHit {
-                    (it is Assignment &&
-                        node.refersTo != null &&
-                        ((it.target as? DeclaredReferenceExpression)?.refersTo == node.refersTo ||
-                            (it.target as? VariableDeclaration) == node.refersTo)) ||
-                        (node.refersTo != null &&
-                            it is UnaryOperator &&
-                            (it.operatorCode == "++" || it.operatorCode == "--") &&
-                            (it.input as? DeclaredReferenceExpression)?.refersTo == node.refersTo)
-                }
-                .fulfilled
-                .mapNotNull {
-                    (it.last() as? Assignment)?.target as? Node
-                        ?: (it.last() as? UnaryOperator)?.input
-                }
-                .toMutableList()
-
+    private fun copyMap(
+        map: Map<Declaration, MutableList<Node>>
+    ): MutableMap<Declaration, MutableList<Node>> {
+        val result = mutableMapOf<Declaration, MutableList<Node>>()
+        for ((k, v) in map) {
+            result[k] = mutableListOf()
+            result[k]?.addAll(v)
+        }
         return result
-    }
-
-    private fun obtainAssignmentNode(node: DeclaredReferenceExpression): BinaryOperator? {
-        val alreadyVisited = mutableSetOf<Node>()
-        val worklist = mutableListOf<Node>()
-        worklist.addAll(node.nextEOG)
-        while (worklist.isNotEmpty()) {
-            val n = worklist.removeFirst()
-            if (n is BinaryOperator && n.lhs == node) return n
-            worklist.addAll(n.nextEOG.filter { it !in worklist && it !in alreadyVisited })
-            alreadyVisited.add(n)
-        }
-
-        return null
-    }
-
-    private fun handleStatementHolder(node: Node, dependencyMap: Map<Node, Set<Node?>>) {
-        for (ref in node.refs) {
-            val writeNodes = dependencyMap[ref]
-            if (ref.access == AccessValues.WRITE) {
-                // We write to the DeclaredReferenceExpression
-                val assignmentNode = obtainAssignmentNode(ref)
-                if (assignmentNode != null) {
-                    // Add the edge from rhs to this
-                    ref.addPrevDFG(assignmentNode.rhs)
-                    assignmentNode.lhs.addPrevDFG(
-                        assignmentNode.rhs
-                    ) // TODO: I'm quite sure this is the same as the step before.
-                    ref.refersTo?.removeNextDFG(ref)
-                    if ((ref.refersTo as? VariableDeclaration)?.initializer != null) {
-                        ref.refersTo?.removePrevDFG(ref)
-                    }
-                }
-            } else {
-                // TODO: Fix the readwrite issue. It should not flow back to the VariableDeclaration
-                // (example: DFGTest.testNoOutgoingDFGFromVariableDeclaration())
-                // We read the value. That's a bit different to the write case.
-                val lastWrites = findLastWrites(ref)
-                for (lastWrite in lastWrites) {
-                    ref.addPrevDFG(lastWrite)
-                    if (
-                        lastWrite is DeclaredReferenceExpression &&
-                            lastWrite.refersTo?.let { !lastWrites.contains(it) } == true
-                    ) {
-                        ref.removePrevDFG(lastWrite.refersTo)
-                    }
-                }
-            }
-        }
-
-        for (varDecl in node.variables { it.prevDFG.size > 1 }) {
-            // Remove all the data flows to the variable declaration except the initialization
-            for (prev in HashSet(varDecl.prevDFG)) {
-                if (prev != varDecl.initializer) {
-                    prev.removeNextDFG(varDecl)
-                }
-            }
-
-            // Remove all outgoing links of the variable declaration
-            for (n in varDecl.nextDFG) {
-                if (alwaysAssignBetween(varDecl, n)) {
-                    n.removeNextDFG(varDecl)
-                }
-            }
-        }
-    }
-
-    private fun alwaysAssignBetween(from: Node, to: Node): Boolean {
-        val paths =
-            to.followPrevEOGEdgesUntilHit {
-                (it as? BinaryOperator)?.operatorCode == "=" &&
-                    ((it as? BinaryOperator)?.lhs as? DeclaredReferenceExpression)?.refersTo == from
-            }
-        return paths.failed.isEmpty()
     }
 }
