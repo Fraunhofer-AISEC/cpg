@@ -186,16 +186,17 @@ class MultiValueEvaluator : ValueEvaluator() {
                 prevDFG.all { e ->
                     var forStatement = e.astParent as? ForStatement
                     if (forStatement == null) forStatement = e.astParent?.astParent as? ForStatement
-
-                    (forStatement?.initializerStatement as? DeclarationStatement)
-                        ?.singleDeclaration == e ||
-                        forStatement?.initializerStatement == e ||
-                        ((forStatement?.initializerStatement as? DeclarationStatement)
-                            ?.singleDeclaration != null &&
-                            (forStatement.initializerStatement as? DeclarationStatement)
-                                ?.singleDeclaration == e.astParent) ||
-                        forStatement?.iterationStatement == e ||
-                        forStatement?.iterationStatement == e.astParent
+                    if (forStatement == null) false
+                    else
+                        (forStatement.initializerStatement as? DeclarationStatement)
+                            ?.singleDeclaration == e ||
+                            forStatement.initializerStatement == e ||
+                            ((forStatement.initializerStatement as? DeclarationStatement)
+                                ?.singleDeclaration != null &&
+                                (forStatement.initializerStatement as? DeclarationStatement)
+                                    ?.singleDeclaration == e.astParent) ||
+                            forStatement.iterationStatement == e ||
+                            forStatement.iterationStatement == e.astParent
                 }
         ) {
             return handleSimpleLoopVariable(expr, depth)
