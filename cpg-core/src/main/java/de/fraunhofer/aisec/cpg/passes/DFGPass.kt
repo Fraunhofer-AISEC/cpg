@@ -40,13 +40,14 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(VariableUsageResolver::class)
-@DependsOn(EdgeCachePass::class)
 class DFGPass : Pass() {
     override fun accept(tr: TranslationResult) {
         val inferDfgForUnresolvedCalls =
             tr.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedCalls
         val walker = IterativeGraphWalker()
-        walker.registerOnNodeVisit { handle(it, inferDfgForUnresolvedCalls) }
+        walker.registerOnNodeVisit2 { node, parent ->
+            handle(node, parent, inferDfgForUnresolvedCalls)
+        }
         for (tu in tr.translationUnits) {
             walker.iterate(tu)
         }
@@ -56,12 +57,12 @@ class DFGPass : Pass() {
         // Nothing to do
     }
 
-    private fun handle(node: Node?, inferDfgForUnresolvedCalls: Boolean) {
+    private fun handle(node: Node?, parent: Node?, inferDfgForUnresolvedCalls: Boolean) {
         when (node) {
             // Expressions
             is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedCalls)
             is CastExpression -> handleCastExpression(node)
-            is BinaryOperator -> handleBinaryOp(node)
+            is BinaryOperator -> handleBinaryOp(node, parent)
             is ArrayCreationExpression -> handleArrayCreationExpression(node)
             is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
@@ -232,7 +233,7 @@ class DFGPass : Pass() {
      * Adds the DFG edge to an [BinaryOperator]. The value flows to the target of an assignment or
      * to the whole expression.
      */
-    private fun handleBinaryOp(node: BinaryOperator) {
+    private fun handleBinaryOp(node: BinaryOperator, parent: Node?) {
         when (node.operatorCode) {
             "=" -> {
                 node.rhs?.let { node.lhs.addPrevDFG(it) }
@@ -241,8 +242,7 @@ class DFGPass : Pass() {
                 // Examples: a + (b = 1)  or  a = a == b ? b = 2: b = 3
                 // When the parent is a compound statement (or similar block of code), we can safely
                 // assume that we're not in such a sub-expression
-                // TODO: Extend this list
-                if (node.astParent !is CompoundStatement) {
+                if (parent == null || parent !is CompoundStatement) {
                     node.rhs?.addNextDFG(node)
                 }
             }

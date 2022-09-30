@@ -489,7 +489,6 @@ public class TranslationConfiguration {
       registerPass(new ImportResolver());
       registerPass(new VariableUsageResolver());
       registerPass(new CallResolver()); // creates CG
-      registerPass(new EdgeCachePass());
       registerPass(new DFGPass());
       registerPass(new FunctionPointerCallResolver());
       registerPass(new EvaluationOrderGraphPass()); // creates EOG
