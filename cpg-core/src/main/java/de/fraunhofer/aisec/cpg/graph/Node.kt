@@ -50,7 +50,9 @@ class Name(var localName: String, var parent: Name? = null, private val delimite
         localName + (if (parent != null) delimiter + parent.toString() else "")
     override fun equals(other: Any?): Boolean = TODO("Add checks for both Name objects and Strings")
     override fun hashCode() = toString().hashCode()
-    operator fun getValue(node: Node, property: KProperty<*>) = toString()
+
+    operator fun getValue(node: Node, property: KProperty<*>) = localName
+
     operator fun setValue(node: Node, property: KProperty<*>, s: String) {
         parent = null
         localName = s
