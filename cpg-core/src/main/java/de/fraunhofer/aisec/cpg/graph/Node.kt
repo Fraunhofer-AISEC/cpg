@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
+import kotlin.reflect.KProperty
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.GeneratedValue
@@ -44,10 +45,25 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+class Name(var localName: String, var parent: Name? = null, private val delimiter: String = ".") {
+    override fun toString() =
+        localName + (if (parent != null) delimiter + parent.toString() else "")
+    override fun equals(other: Any?): Boolean = TODO("Add checks for both Name objects and Strings")
+    override fun hashCode() = toString().hashCode()
+    operator fun getValue(node: Node, property: KProperty<*>) = toString()
+    operator fun setValue(node: Node, property: KProperty<*>, s: String) {
+        parent = null
+        localName = s
+        // maybe analyze [s] to generate parents too
+    }
+}
+
 /** The base class for all graph objects that are going to be persisted in the database. */
 open class Node : IVisitable<Node>, Persistable {
+    val fullName: Name = Name(EMPTY_NAME)
+
     /** A human readable name. */
-    open var name = EMPTY_NAME // initialize it with an empty string
+    open var name by fullName
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
