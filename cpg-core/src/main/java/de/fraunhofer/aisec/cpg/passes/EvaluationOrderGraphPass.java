@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn;
 import de.fraunhofer.aisec.cpg.passes.scopes.*;
 import java.util.*;
 import java.util.stream.Collectors;
