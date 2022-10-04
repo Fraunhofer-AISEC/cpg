@@ -251,7 +251,7 @@ internal class DFGTest {
         assertTrue(aPrintln.prevDFG.contains(a12))
     }
 
-    // Test DFG when ReadWrite access occurs, such as compoundoperators or unaryoperators
+    // Test DFG when ReadWrite access occurs, such as compound operators or unary operators
     @Test
     @Throws(Exception::class)
     fun testCompoundOperatorDFG() {
@@ -287,7 +287,8 @@ internal class DFGTest {
         val prevDFGOperator: Set<Node> = rwUnaryOperator.prevDFG
         val nextDFGOperator: Set<Node> = rwUnaryOperator.nextDFG
         assertTrue(prevDFGOperator.contains(expression))
-        assertTrue(nextDFGOperator.contains(expression))
+        assertTrue(nextDFGOperator.isEmpty())
+        // assertTrue(nextDFGOperator.contains(expression))
     }
 
     /**
@@ -357,13 +358,14 @@ internal class DFGTest {
     }
 
     /**
-     * Tests that there are no outgoing DFG edges from a VariableDeclaration
+     * Tests that the outgoing DFG edges from a VariableDeclaration go to references with a path
+     * without a new assignment to the variable.
      *
      * @throws Exception
      */
     @Test
     @Throws(Exception::class)
-    fun testNoOutgoingDFGFromVariableDeclaration() {
+    fun testOutgoingDFGFromVariableDeclaration() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result = analyze(listOf(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true)
         val varA = findByUniqueName(result.variables, "a")
@@ -396,9 +398,9 @@ internal class DFGTest {
     }
 
     /**
-     * Gets Integer Literal from the List of nodes to simplify testsyntax. The Literal is expected
-     * to be contained in the list and the function will throw an [IndexOutOfBoundsException]
-     * otherwise.
+     * Gets Integer Literal from the List of nodes to simplify the test syntax. The Literal is
+     * expected to be contained in the list and the function will throw an
+     * [IndexOutOfBoundsException] otherwise.
      *
      * @param nodes
      * - The list of nodes to filter for the Literal.

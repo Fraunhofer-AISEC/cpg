@@ -53,7 +53,7 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
 
   /** Required for compound BinaryOperators. This should not be stored in the graph */
   @Transient
-  private final List<String> compoundOperators =
+  public static final List<String> compoundOperators =
       List.of("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=");
 
   public Expression getLhs() {
@@ -103,10 +103,8 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
 
   private void disconnectOldLhs() {
     this.lhs.unregisterTypeListener(this);
-    if ("=".equals(operatorCode)) {
-      if (this.lhs instanceof TypeListener) {
-        unregisterTypeListener((TypeListener) this.lhs);
-      }
+    if ("=".equals(operatorCode) && this.lhs instanceof TypeListener) {
+      unregisterTypeListener((TypeListener) this.lhs);
     }
   }
 
@@ -130,10 +128,8 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
 
   private void connectNewRhs(Expression rhs) {
     rhs.registerTypeListener(this);
-    if ("=".equals(operatorCode)) {
-      if (rhs instanceof TypeListener) {
-        this.registerTypeListener((TypeListener) rhs);
-      }
+    if ("=".equals(operatorCode) && rhs instanceof TypeListener) {
+      this.registerTypeListener((TypeListener) rhs);
     }
     // this.addPrevDFG(rhs);
     // in C++ we can have a + (b = 1) so the rhs has to connected to the BinOp in all
@@ -142,10 +138,8 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
 
   private void disconnectOldRhs() {
     this.rhs.unregisterTypeListener(this);
-    if ("=".equals(operatorCode)) {
-      if (this.rhs instanceof TypeListener) {
-        unregisterTypeListener((TypeListener) this.rhs);
-      }
+    if ("=".equals(operatorCode) && this.rhs instanceof TypeListener) {
+      unregisterTypeListener((TypeListener) this.rhs);
     }
   }
 
