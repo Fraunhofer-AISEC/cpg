@@ -502,7 +502,7 @@ public class TranslationConfiguration {
     private void registerExtraFrontendPasses() throws ConfigurationException {
 
       for (Class<? extends LanguageFrontend> frontend : frontends.keySet()) {
-        if (frontend.isAnnotationPresent(RegisterExtraPass.class)) {
+        if (frontend.getAnnotationsByType(RegisterExtraPass.class).length != 0) {
           RegisterExtraPass[] extraPasses = frontend.getAnnotationsByType(RegisterExtraPass.class);
           for (RegisterExtraPass p : extraPasses) {
             try {

@@ -299,7 +299,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val dummyCall =
             newCallExpression(
-                "llvm.catchswitch",
+                llvmInternalRef("llvm.catchswitch"),
                 "llvm.catchswitch",
                 lang.getCodeFromRawNode(instr),
                 false
@@ -331,7 +331,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
             val matchesCatchpad =
                 newCallExpression(
-                    "llvm.matchesCatchpad",
+                    llvmInternalRef("llvm.matchesCatchpad"),
                     "llvm.matchesCatchpad",
                     lang.getCodeFromRawNode(instr),
                     false
@@ -387,7 +387,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val dummyCall =
             newCallExpression(
-                "llvm.cleanuppad",
+                llvmInternalRef("llvm.cleanuppad"),
                 "llvm.cleanuppad",
                 lang.getCodeFromRawNode(instr),
                 false
@@ -414,7 +414,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val dummyCall =
             newCallExpression(
-                "llvm.catchpad",
+                llvmInternalRef("llvm.catchpad"),
                 "llvm.catchpad",
                 lang.getCodeFromRawNode(instr),
                 false
@@ -436,7 +436,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     @FunctionReplacement(["llvm.va_arg"], "va_arg")
     private fun handleVaArg(instr: LLVMValueRef): Statement {
         val callExpr =
-            newCallExpression("llvm.va_arg", "llvm.va_arg", lang.getCodeFromRawNode(instr), false)
+            newCallExpression(
+                llvmInternalRef("llvm.va_arg"),
+                "llvm.va_arg",
+                lang.getCodeFromRawNode(instr),
+                false
+            )
         val operandName = lang.getOperandValueAtIndex(instr, 0)
         callExpr.addArgument(operandName)
         val expectedType = lang.typeOf(instr)
@@ -770,7 +775,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         // randomly.
         // The implementation of this function would depend on the data type (e.g. for integers, it
         // could be rand())
-        val callExpression = newCallExpression("llvm.freeze", "llvm.freeze", instrCode, false)
+        val callExpression =
+            newCallExpression(llvmInternalRef("llvm.freeze"), "llvm.freeze", instrCode, false)
         callExpression.addArgument(operand)
 
         // res = (arg != undef && arg != poison) ? arg : llvm.freeze(in)
@@ -789,7 +795,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     @FunctionReplacement(["llvm.fence"], "fence")
     private fun handleFence(instr: LLVMValueRef): Statement {
         val instrString = lang.getCodeFromRawNode(instr)
-        val callExpression = newCallExpression("llvm.fence", "llvm.fence", instrString, false)
+        val callExpression =
+            newCallExpression(llvmInternalRef("llvm.fence"), "llvm.fence", instrString, false)
         val ordering =
             newLiteral(
                 LLVMGetOrdering(instr),
@@ -1148,7 +1155,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             )
         }
 
-        val callExpr = newCallExpression(calledFuncName, calledFuncName, instrStr, false)
+        val callee =
+            newDeclaredReferenceExpression(
+                calledFuncName,
+                lang.typeOf(calledFunc),
+                lang.getCodeFromRawNode(calledFunc)
+            )
+
+        val callExpr = newCallExpression(callee, calledFuncName, instrStr, false)
 
         while (idx < max) {
             val operandName = lang.getOperandValueAtIndex(instr, idx)
@@ -1549,7 +1563,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Resulting statement: i1 lhs = isordered(op1, op2)
             binaryOperator =
                 newCallExpression(
-                    "isunordered",
+                    llvmInternalRef("isunordered"),
                     "isunordered",
                     LLVMPrintValueToString(instr).string,
                     false
@@ -1561,7 +1575,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Resulting statement: i1 lhs = !isordered(op1, op2)
             val unorderedCall =
                 newCallExpression(
-                    "isunordered",
+                    llvmInternalRef("isunordered"),
                     "isunordered",
                     LLVMPrintValueToString(instr).string,
                     false
@@ -1600,7 +1614,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 binOpUnordered.rhs = binaryOperator
                 val unorderedCall =
                     newCallExpression(
-                        "isunordered",
+                        llvmInternalRef("isunordered"),
                         "isunordered",
                         LLVMPrintValueToString(instr).string,
                         false
@@ -1671,5 +1685,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
         }
         return labelName
+    }
+
+    /**
+     * This functions creates a new [DeclaredReferenceExpression] to an internal LLVM function. This
+     * would allow us to handle them all in the same way.
+     */
+    private fun llvmInternalRef(name: String): DeclaredReferenceExpression {
+        return newDeclaredReferenceExpression(name, lang = lang)
     }
 }

@@ -468,8 +468,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 )
         } else if (reference is UnaryOperator && reference.operatorCode == "*") {
             // Classic C-style function pointer call -> let's extract the target
-            callExpression =
-                NodeBuilder.newCallExpression(reference.input.name, "", reference.code, false)
+            callExpression = NodeBuilder.newCallExpression(reference, "", reference.code, false)
         } else if (
             ctx.functionNameExpression is IASTIdExpression &&
                 (ctx.functionNameExpression as IASTIdExpression).name is CPPASTTemplateId
@@ -478,7 +477,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 ((ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId)
                     .templateName
                     .toString()
-            callExpression = NodeBuilder.newCallExpression(name, name, ctx.rawSignature, true)
+            val ref = NodeBuilder.newDeclaredReferenceExpression(name)
+            callExpression = NodeBuilder.newCallExpression(ref, name, ctx.rawSignature, true)
             getTemplateArguments(
                     (ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId
                 )
@@ -506,7 +506,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // if (!fullNamePrefix.isEmpty()) {
             //  fqn = fullNamePrefix + "." + fqn;
             // }
-            callExpression = NodeBuilder.newCallExpression(name, fqn, ctx.rawSignature, false)
+            callExpression = NodeBuilder.newCallExpression(reference, fqn, ctx.rawSignature, false)
         }
 
         for ((i, argument) in ctx.arguments.withIndex()) {

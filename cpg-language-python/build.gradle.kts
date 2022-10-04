@@ -86,12 +86,6 @@ tasks.named<Test>("test") {
     maxHeapSize = "4048m"
 }
 
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
 signing {
     val signingKey: String? by project
     val signingPassword: String? by project

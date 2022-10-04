@@ -130,7 +130,13 @@ internal class ScopeManagerTest : BaseTest() {
         assertEquals(scopeA, final.lookupScope(namespaceA2))
 
         // resolve symbol
-        val call = NodeBuilder.newCallExpression("func1", "A::func1", null, false)
+        val call =
+            NodeBuilder.newCallExpression(
+                NodeBuilder.newDeclaredReferenceExpression("func1"),
+                "A::func1",
+                null,
+                false
+            )
         val func = final.resolveFunction(call).firstOrNull()
 
         assertEquals(func1, func)
