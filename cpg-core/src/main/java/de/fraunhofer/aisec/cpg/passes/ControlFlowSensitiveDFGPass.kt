@@ -122,21 +122,20 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             } else if (isIncOrDec(currentNode)) {
                 // Increment or decrement => Add the prevWrite of the input to the input. After the
                 // operation, the prevWrite of the input's variable is this node.
-                val input = (currentNode as UnaryOperator).input as? DeclaredReferenceExpression
+                val input = (currentNode as UnaryOperator).input as DeclaredReferenceExpression
                 // We write to the variable in the input
-                writtenDecl = input?.refersTo
-                if (input != null && writtenDecl != null) {
-                    previousWrites[writtenDecl]?.lastOrNull()?.let { input.addPrevDFG(it) }
+                writtenDecl = input.refersTo!!
 
-                    // TODO: Do we want to have a flow from the input back to the input? One test
-                    // says yes but I think this will only cause problems. If we really want it,
-                    // comment out the following line:
-                    currentNode.removeNextDFG(input)
+                previousWrites[writtenDecl]?.lastOrNull()?.let { input.addPrevDFG(it) }
 
-                    // Add the whole node to the list of previous write nodes in this path. This
-                    // prevents some weird circular dependencies.
-                    previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
-                }
+                // TODO: Do we want to have a flow from the input back to the input? One test
+                // says yes but I think this will only cause problems. If we really want it,
+                // comment out the following line:
+                currentNode.removeNextDFG(input)
+
+                // Add the whole node to the list of previous write nodes in this path. This
+                // prevents some weird circular dependencies.
+                previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
             } else if (isSimpleAssignment(currentNode)) {
                 // We write to the target => the rhs flows to the lhs
                 (currentNode as BinaryOperator).rhs?.let { currentNode.lhs.addPrevDFG(it) }
@@ -180,9 +179,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             // Check for loops: No loop statement with the same state as before and no write which
             // is already in the current chain of writes too often (=twice).
             if (
-                !loopDetection(currentNode, previousWrites, loopPoints) &&
-                    (writtenDecl == null ||
-                        previousWrites[writtenDecl]!!.filter { it == currentWritten }.size < 2)
+                !loopDetection(currentNode, writtenDecl, currentWritten, previousWrites, loopPoints)
             ) {
                 // We add all the next steps in the eog to the worklist unless the exact same thing
                 // is already included in the list.
@@ -212,7 +209,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
     /** Checks if the node is an increment or decrement operator (e.g. i++, i--, ++i, --i) */
     private fun isIncOrDec(currentNode: Node) =
         currentNode is UnaryOperator &&
-            (currentNode.operatorCode == "++" || currentNode.operatorCode == "--")
+            (currentNode.operatorCode == "++" || currentNode.operatorCode == "--") &&
+            (currentNode.input as? DeclaredReferenceExpression)?.refersTo != null
 
     /**
      * Determines if the [currentNode] is a loop point has already been visited with the exact same
@@ -223,6 +221,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      */
     private fun loopDetection(
         currentNode: Node,
+        writtenDecl: Declaration?,
+        currentWritten: Node,
         previousWrites: MutableMap<Declaration, MutableList<Node>>,
         loopPoints: MutableMap<Node, MutableSet<Map<Declaration, MutableList<Node>>>>
     ): Boolean {
@@ -244,7 +244,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             // Add the current state for future loop detections.
             state.add(previousWrites)
         }
-        return false
+        return writtenDecl != null &&
+            previousWrites[writtenDecl]!!.filter { it == currentWritten }.size >= 2
     }
 
     /** Copies the map */

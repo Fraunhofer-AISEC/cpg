@@ -131,9 +131,6 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
     if ("=".equals(operatorCode) && rhs instanceof TypeListener) {
       this.registerTypeListener((TypeListener) rhs);
     }
-    // this.addPrevDFG(rhs);
-    // in C++ we can have a + (b = 1) so the rhs has to connected to the BinOp in all
-    // cases
   }
 
   private void disconnectOldRhs() {
