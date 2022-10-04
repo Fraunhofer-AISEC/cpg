@@ -36,8 +36,10 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsL
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.CallResolver
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -95,6 +97,34 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             field?.unregisterTypeListener(this)
             field = value
             value?.registerTypeListener(this)
+        }
+
+    /**
+     * The expression that is being "called". This is currently not yet used in the [CallResolver]
+     * but will be in the future. In most cases, this is a [DeclaredReferenceExpression] and its
+     * [DeclaredReferenceExpression.refersTo] is intentionally left empty. It is not filled by the
+     * [VariableUsageResolver].
+     */
+    @field:SubGraph("AST")
+    var callee: Expression? = null
+        set(value) {
+            field?.unregisterTypeListener(this)
+
+            field = value
+            // We also want to update this node's name, based on the callee. This is purely for
+            // readability reasons. We have a special handling for function pointers, where we want
+            // to have the name of the variable. This might change in the future.
+            this.name =
+                if (value is UnaryOperator && value.input.type is FunctionPointerType) {
+                    value.input.name
+                } else {
+                    value?.name ?: ""
+                }
+
+            // Register the callee as a type listener for this call expressions. Once we re-design
+            // call resolution, we need to probably do this in the opposite way so that the call
+            // expressions listens for the type of the callee.
+            field?.registerTypeListener(this)
         }
 
     var fqn: String? = null

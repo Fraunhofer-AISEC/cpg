@@ -58,8 +58,8 @@ dependencies {
 
     api("org.neo4j:neo4j-ogm-core:3.2.37")
 
-    api("org.slf4j:jul-to-slf4j:2.0.1")
-    api("org.slf4j:slf4j-api:2.0.1")
+    api("org.slf4j:jul-to-slf4j:2.0.3")
+    api("org.slf4j:slf4j-api:2.0.3")
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.18.0")
 
     api("com.github.javaparser:javaparser-symbol-solver-core:3.24.4")
@@ -76,10 +76,6 @@ dependencies {
     // CDT
     api("org.eclipse.cdt:core:7.2.100.202105180159")
 
-    // openCypher
-    api("org.opencypher:parser-9.0:9.0.20210312")
-    api("org.scala-lang:scala-library:2.12.15") // Dependency of opencypher manually upgraded due to vulnerability
-
     api("commons-io:commons-io:2.11.0")
 
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
@@ -90,11 +86,11 @@ dependencies {
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.9.0")
+    testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.9.1")
     testFixturesApi("org.jetbrains.kotlin:kotlin-test")
     testFixturesApi("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.1")
     testFixturesApi("org.mockito:mockito-core:4.8.0")
     
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.1")
 }

@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression;
@@ -209,6 +210,13 @@ public class VariableUsageResolver extends Pass {
         return;
       }
 
+      // For now, we need to ignore reference expressions that are directly embedded into call
+      // expressions, because they are the "callee" property. In the future, we will use this
+      // property to actually resolve the function call.
+      if (parent instanceof CallExpression && ((CallExpression) parent).getCallee() == current) {
+        return;
+      }
+
       // only consider resolving, if the language frontend did not specify a resolution
       Optional<? extends Declaration> refersTo =
           ref.getRefersTo() == null
@@ -267,7 +275,7 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  protected void resolveFieldUsages(Node current, RecordDeclaration curClass) {
+  protected void resolveFieldUsages(RecordDeclaration curClass, Node parent, Node current) {
     if (current instanceof MemberExpression) {
       MemberExpression memberExpression = (MemberExpression) current;
       Declaration baseTarget = null;
