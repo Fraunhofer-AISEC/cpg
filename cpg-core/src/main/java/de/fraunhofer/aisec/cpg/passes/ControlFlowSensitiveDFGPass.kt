@@ -119,13 +119,10 @@ open class ControlFlowSensitiveDFGPass : Pass() {
 
                 // Add the node to the list of previous write nodes in this path
                 previousWrites[currentNode] = mutableListOf(currentNode)
-            } else if (
-                currentNode is UnaryOperator &&
-                    (currentNode.operatorCode == "++" || currentNode.operatorCode == "--")
-            ) {
+            } else if (isIncOrDec(currentNode)) {
                 // Increment or decrement => Add the prevWrite of the input to the input. After the
                 // operation, the prevWrite of the input's variable is this node.
-                val input = currentNode.input as? DeclaredReferenceExpression
+                val input = (currentNode as UnaryOperator).input as? DeclaredReferenceExpression
                 // We write to the variable in the input
                 writtenDecl = input?.refersTo
                 if (input != null && writtenDecl != null) {
@@ -140,29 +137,23 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     // prevents some weird circular dependencies.
                     previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
                 }
-            } else if (
-                currentNode is BinaryOperator &&
-                    currentNode.operatorCode == "=" &&
-                    (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
-            ) {
+            } else if (isSimpleAssignment(currentNode)) {
                 // We write to the target => the rhs flows to the lhs
-                currentNode.rhs?.let { currentNode.lhs.addPrevDFG(it) }
+                (currentNode as BinaryOperator).rhs?.let { currentNode.lhs.addPrevDFG(it) }
 
                 // Only the lhs is the last write statement here and the variable which is written
                 // to.
                 writtenDecl = (currentNode.lhs as DeclaredReferenceExpression).refersTo!!
                 previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode.lhs)
                 currentWritten = currentNode.lhs
-            } else if (
-                currentNode is BinaryOperator &&
-                    currentNode.operatorCode in BinaryOperator.compoundOperators &&
-                    (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
-            ) {
+            } else if (isCompoundAssignment(currentNode)) {
                 // We write to the lhs, but it also serves as an input => We first get all previous
                 // writes to the lhs and then add the flow from lhs and rhs to the current node.
 
                 // The write operation goes to the variable in the lhs
-                writtenDecl = (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo!!
+                writtenDecl =
+                    ((currentNode as BinaryOperator).lhs as? DeclaredReferenceExpression)
+                        ?.refersTo!!
 
                 // Data flows from the last writes to the lhs variable to this node
                 previousWrites[writtenDecl]?.lastOrNull()?.let { currentNode.lhs.addPrevDFG(it) }
@@ -186,31 +177,13 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 }
             }
 
+            // Check for loops: No loop statement with the same state as before and no write which
+            // is already in the current chain of writes too often (=twice).
             if (
-                currentNode is ForStatement ||
-                    currentNode is WhileStatement ||
-                    currentNode is ForEachStatement ||
-                    currentNode is DoStatement ||
-                    currentNode is GotoStatement
+                !loopDetection(currentNode, previousWrites, loopPoints) &&
+                    (writtenDecl == null ||
+                        previousWrites[writtenDecl]!!.filter { it == currentWritten }.size < 2)
             ) {
-                // Loop detection: This is a point which could serve as a loop, so we check all
-                // states which we have seen before in this place.
-                val state = loopPoints.computeIfAbsent(currentNode) { mutableSetOf() }
-                if (previousWrites in state) {
-                    // The current state of last write operations has already been seen before =>
-                    // Nothing new => Do not add the next eog steps!
-                    continue
-                }
-                // Add the current state for future loop detections.
-                state.add(previousWrites)
-            }
-
-            if (
-                writtenDecl == null ||
-                    previousWrites[writtenDecl]!!.filter { it == currentWritten }.size < 2
-            ) {
-                // If we wrote something, we want to make sure that we haven't seen this instruction
-                // too often before otherwise there's a loop.
                 // We add all the next steps in the eog to the worklist unless the exact same thing
                 // is already included in the list.
                 currentNode.nextEOG.forEach {
@@ -219,6 +192,59 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 }
             }
         }
+    }
+
+    /**
+     * Checks if the node performs an operation and an assignment at the same time e.g. with the
+     * operators +=, -=, *=, ...
+     */
+    private fun isCompoundAssignment(currentNode: Node) =
+        currentNode is BinaryOperator &&
+            currentNode.operatorCode in BinaryOperator.compoundOperators &&
+            (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
+
+    /** Checks if the node is a simple assignment of the form `var = ...` */
+    private fun isSimpleAssignment(currentNode: Node) =
+        currentNode is BinaryOperator &&
+            currentNode.operatorCode == "=" &&
+            (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
+
+    /** Checks if the node is an increment or decrement operator (e.g. i++, i--, ++i, --i) */
+    private fun isIncOrDec(currentNode: Node) =
+        currentNode is UnaryOperator &&
+            (currentNode.operatorCode == "++" || currentNode.operatorCode == "--")
+
+    /**
+     * Determines if the [currentNode] is a loop point has already been visited with the exact same
+     * state before. Changes the state saved in the [loopPoints] by adding the current
+     * [previousWrites].
+     *
+     * @return true if a loop was detected, false otherwise
+     */
+    private fun loopDetection(
+        currentNode: Node,
+        previousWrites: MutableMap<Declaration, MutableList<Node>>,
+        loopPoints: MutableMap<Node, MutableSet<Map<Declaration, MutableList<Node>>>>
+    ): Boolean {
+        if (
+            currentNode is ForStatement ||
+                currentNode is WhileStatement ||
+                currentNode is ForEachStatement ||
+                currentNode is DoStatement ||
+                currentNode is GotoStatement
+        ) {
+            // Loop detection: This is a point which could serve as a loop, so we check all
+            // states which we have seen before in this place.
+            val state = loopPoints.computeIfAbsent(currentNode) { mutableSetOf() }
+            if (previousWrites in state) {
+                // The current state of last write operations has already been seen before =>
+                // Nothing new => Do not add the next eog steps!
+                return true
+            }
+            // Add the current state for future loop detections.
+            state.add(previousWrites)
+        }
+        return false
     }
 
     /** Copies the map */
