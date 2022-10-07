@@ -23,29 +23,26 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.jetbrains.annotations.NotNull;
-
-public class FunctionScope extends ValueDeclarationScope {
-  @NotNull private Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
-
-  public FunctionScope(FunctionDeclaration astNode) {
-    super(astNode);
-  }
-
-  @NotNull
-  public Map<Type, List<Node>> getCatchesOrRelays() {
-    return catchesOrRelays;
-  }
-
-  public void setCatchesOrRelays(@NotNull Map<Type, List<Node>> catchesOrRelays) {
-    this.catchesOrRelays = catchesOrRelays;
-  }
+class GlobalScope : StructureDeclarationScope(null) {
+    /**
+     * This should ideally only be called once. It constructs a new global scope, which is not
+     * associated to any AST node. However, depending on the language, a language frontend can
+     * explicitly set the ast node using [ ][ScopeManager.resetToGlobal] if the language needs a
+     * global scope that is restricted to a translation unit, i.e. C++ while still maintaing a
+     * unique list of global variables.
+     */
+    fun mergeFrom(others: Collection<GlobalScope>) {
+        for (other in others) {
+            structureDeclarations.addAll(other.structureDeclarations)
+            valueDeclarations.addAll(other.valueDeclarations)
+            typedefs.putAll(other.typedefs)
+            // TODO what to do with astNode?
+            for (child in other.children) {
+                child.parent = this
+                children.add(child)
+            }
+        }
+    }
 }

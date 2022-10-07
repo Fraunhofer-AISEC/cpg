@@ -23,13 +23,9 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.Node
 
-public class RecordScope extends NameScope {
-
-  public RecordScope(Node node, String currentPrefix, String delimiter) {
-    super(node, currentPrefix, delimiter);
-  }
-}
+class RecordScope(node: Node, currentPrefix: String, delimiter: String) :
+    NameScope(node, currentPrefix, delimiter)

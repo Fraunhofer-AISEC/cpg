@@ -23,36 +23,30 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import de.fraunhofer.aisec.cpg.graph.Node
 
-public class TryScope extends ValueDeclarationScope implements Breakable {
+open class NameScope(node: Node, currentPrefix: String, var delimiter: String) :
+    StructureDeclarationScope(node) {
+    var namePrefix: String = ""
 
-  private final Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
-  private final List<BreakStatement> breaks = new ArrayList<>();
+    init {
+        if (currentPrefix.isNotEmpty()) {
+            var nodeName = node.name
+            // If the name already contains some form of prefix we have to remove it.
+            nodeName =
+                if (nodeName.contains(delimiter))
+                    nodeName.substring(nodeName.lastIndexOf(delimiter) + delimiter.length)
+                else nodeName
+            namePrefix = currentPrefix + delimiter + nodeName
+        } else {
+            namePrefix = node.name
+        }
+        astNode = node
+    }
 
-  public TryScope(Node astNode) {
-    super(astNode);
-  }
-
-  public Map<Type, List<Node>> getCatchesOrRelays() {
-    return catchesOrRelays;
-  }
-
-  @Override
-  public void addBreakStatement(BreakStatement breakStatement) {
-    this.breaks.add(breakStatement);
-  }
-
-  @Override
-  public List<BreakStatement> getBreakStatements() {
-    return this.breaks;
-  }
+    // Split scoped named by delimiter
+    val simpleName: String?
+        get() = scopedName?.split(delimiter)?.lastOrNull { it.isNotEmpty() }
 }

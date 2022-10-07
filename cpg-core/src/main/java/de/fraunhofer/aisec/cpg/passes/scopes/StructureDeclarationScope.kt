@@ -25,18 +25,31 @@
  */
 package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 
-/** Represents scopes that can be interrupted by a [BreakStatement]. */
-interface Breakable {
-    fun addBreakStatement(breakStatement: BreakStatement)
-    val breakStatements: List<BreakStatement>
-}
+open class StructureDeclarationScope(override var astNode: Node?) : ValueDeclarationScope(astNode) {
+    var structureDeclarations = mutableListOf<Declaration>()
 
-/** Represents scopes that can be interrupted by a [ContinueStatement]. */
-interface Continuable {
-    fun addContinueStatement(continueStatement: ContinueStatement)
+    private fun addStructureDeclaration(declaration: Declaration) {
+        structureDeclarations.add(declaration)
+        if (astNode is DeclarationHolder) {
+            val holder = astNode as DeclarationHolder
+            holder.addDeclaration(declaration)
+        } else {
+            log.error(
+                "Trying to add a value declaration to a scope which does not have a declaration holder AST node"
+            )
+        }
+    }
 
-    val continueStatements: List<ContinueStatement>
+    override fun addDeclaration(declaration: Declaration, addToAST: Boolean) {
+        if (declaration is ValueDeclaration) {
+            addValueDeclaration(declaration, addToAST)
+        } else {
+            addStructureDeclaration(declaration)
+        }
+    }
 }

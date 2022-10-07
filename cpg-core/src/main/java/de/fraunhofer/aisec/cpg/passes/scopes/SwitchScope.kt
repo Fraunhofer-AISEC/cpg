@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 
-public class TemplateScope extends NameScope {
+class SwitchScope(switchStatement: SwitchStatement) :
+    ValueDeclarationScope(switchStatement), Breakable {
+    private val breaks = mutableListOf<BreakStatement>()
+    override fun addBreakStatement(breakStatement: BreakStatement) {
+        breaks.add(breakStatement)
+    }
 
-  public TemplateScope(Node node, String currentPrefix, String delimiter) {
-    super(node, currentPrefix, delimiter);
-    this.setNamePrefix(currentPrefix);
-  }
+    override val breakStatements: List<BreakStatement>
+        get() = breaks
 }

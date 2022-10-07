@@ -23,27 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
-import java.util.ArrayList;
-import java.util.List;
-import org.jetbrains.annotations.NotNull;
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.Type
 
-public class SwitchScope extends ValueDeclarationScope implements Breakable {
-
-  @NotNull private final List<BreakStatement> breaks = new ArrayList<>();
-
-  public SwitchScope(SwitchStatement switchStatement) {
-    super(switchStatement);
-  }
-
-  public void addBreakStatement(BreakStatement breakStatement) {
-    this.breaks.add(breakStatement);
-  }
-
-  public List<BreakStatement> getBreakStatements() {
-    return this.breaks;
-  }
+class FunctionScope(astNode: FunctionDeclaration) : ValueDeclarationScope(astNode) {
+    var catchesOrRelays: Map<Type, List<Node>> = HashMap()
 }
