@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class FunctionScope(astNode: FunctionDeclaration) : ValueDeclarationScope(astNode) {
-    var catchesOrRelays: Map<Type, List<Node>> = HashMap()
+    var catchesOrRelays = mutableMapOf<Type, MutableList<Node>>()
 }

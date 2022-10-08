@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class TryScope(astNode: Node?) : ValueDeclarationScope(astNode), Breakable {
-    val catchesOrRelays: Map<Type, List<Node>> = HashMap()
+    val catchesOrRelays = mutableMapOf<Type, MutableList<Node>>()
 
     private val breaks = mutableListOf<BreakStatement>()
 

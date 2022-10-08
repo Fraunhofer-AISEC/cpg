@@ -32,13 +32,15 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn;
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteFirst;
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteLast;
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.function.Consumer;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Represents an abstract class that enhances the graph before it is persisted.
@@ -85,6 +87,8 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
 
   @JsonIgnore @Nullable protected LanguageFrontend lang;
 
+  protected @Nullable ScopeManager scopeManager;
+
   /**
    * @return May be null
    */
@@ -104,6 +108,7 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
    */
   public void setLang(@Nullable LanguageFrontend lang) {
     this.lang = lang;
+    this.scopeManager = scopeManager;
   }
 
   public abstract void cleanup();
