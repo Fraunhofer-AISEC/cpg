@@ -50,7 +50,8 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
 
     /**
      * Compute the ε-closure for this ε-NFA and then use the
-     * [powerset construction](https://en.wikipedia.org/wiki/Powerset_construction) algorithm ([example](https://www.javatpoint.com/automata-conversion-from-nfa-with-null-to-dfa)) to
+     * [powerset construction](https://en.wikipedia.org/wiki/Powerset_construction) algorithm (
+     * [example](https://www.javatpoint.com/automata-conversion-from-nfa-with-null-to-dfa)) to
      * convert it to a [DFA]
      */
     fun toDfa(): DFA {
