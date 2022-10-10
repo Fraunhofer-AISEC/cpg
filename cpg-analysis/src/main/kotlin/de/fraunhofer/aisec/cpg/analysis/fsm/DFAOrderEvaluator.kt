@@ -79,7 +79,7 @@ open class DFAOrderEvaluator(
         }
         log.error(
             fsm.executionTrace
-                .fold("") { r, t -> "$r${t.first}${t.third} (node id: ${t.second.id})\n" }
+                .fold("") { r, t -> "$r${t.state}${t.edge} (node id: ${t.cpgNode.id})\n" }
                 .toString()
         )
     }
@@ -93,7 +93,7 @@ open class DFAOrderEvaluator(
         log.error("Base $base did not terminate in an accepting state")
         log.error(
             fsm.executionTrace.fold("") { r, t ->
-                "$r${t.first}${t.third} (node id: ${t.second.id})\n"
+                "$r${t.state}${t.edge} (node id: ${t.cpgNode.id})\n"
             }
         )
     }
@@ -107,22 +107,20 @@ open class DFAOrderEvaluator(
         log.debug("Base $base terminated in an accepting state")
         log.debug(
             fsm.executionTrace.fold("") { r, t ->
-                "$r${t.first}${t.third} (node id: ${t.second.id})\n"
+                "$r${t.state}${t.edge} (node id: ${t.cpgNode.id})\n"
             }
         )
     }
 
     /**
-     * Checks if a sequence of [Node]s/statemets starting from [startNode] follows the sequence
+     * Checks if a sequence of [Node]s/statements starting from [startNode] follows the sequence
      * given by the [dfa]. If the sequence of statements violates the rules, the method returns
      * `false`, if it is correct, the method returns `true`. The flag [stopOnWrongBase] makes the
      * FSM stop evaluation of a base if an unexpected operation was observed for that base.
      */
     fun evaluateOrder(dfa: DFA, startNode: Node, stopOnWrongBase: Boolean = true): Boolean {
         // First dummy edge to simulate that we are in the start state.
-        dfa.executionTrace.add(
-            Triple(dfa.currentState!!, startNode, BaseOpEdge(DFA.EPSILON, "", dfa.currentState!!))
-        )
+        dfa.initializeOrderEvaluation(startNode)
 
         // Stores the current markings in the FSM (i.e., which base is at which FSM-node).
         val baseToFSM = mutableMapOf<String, DFA>()
@@ -177,13 +175,13 @@ open class DFAOrderEvaluator(
                         // start the analysis for that base from scratch.
                         val allOk =
                             baseToFSM
-                                .computeIfAbsent(baseAndOp.first) { dfa.clone() }
+                                .computeIfAbsent(baseAndOp.first) { dfa.deepCopy() }
                                 .makeTransitionWithOp(baseAndOp.second, node)
 
                         if (!allOk) {
                             actionMissingTransitionForNode(
                                 node,
-                                baseToFSM.computeIfAbsent(baseAndOp.first) { dfa.clone() },
+                                baseToFSM.computeIfAbsent(baseAndOp.first) { dfa.deepCopy() },
                                 interproceduralFlows[baseAndOp.first] == true
                             )
                             wrongBases.add(baseAndOp.first)
@@ -221,7 +219,7 @@ open class DFAOrderEvaluator(
         // Check if all the FSM are in an accepting state
         for (e in baseToFSM.entries) {
             log.info("Checking fsm in current state ${e.value.currentState}")
-            if (!e.value.isAccepted()) {
+            if (!e.value.isAccepted) {
                 actionNonAcceptingTermination(e.key, e.value, interproceduralFlows[e.key] == true)
                 isValidOrder = false
             } else {
@@ -449,7 +447,7 @@ open class DFAOrderEvaluator(
                     // Clone the FSM for each of the paths in the baseToFSM map.
                     // Also, copy the value in interproceduralFlows
                     newBases.forEach { (k: String, v: DFA) ->
-                        baseToFSM[newEOGPath + k] = v.clone()
+                        baseToFSM[newEOGPath + k] = v.deepCopy()
                         interproceduralFlows[newEOGPath + k] =
                             interproceduralFlows.computeIfAbsent(eogPath) { false }
                     }
@@ -471,7 +469,7 @@ open class DFAOrderEvaluator(
             baseToFSM.entries
                 .groupBy { e -> e.key.split("|")[1] }
                 .map { x ->
-                    "${x.key}(${x.value.map({ y -> y.value.currentState!! }).toSet().joinToString(",")})"
+                    "${x.key}(${x.value.map { y -> y.value.currentState!! }.toSet().joinToString(",")})"
                 }
                 .sorted()
                 .joinToString(",")

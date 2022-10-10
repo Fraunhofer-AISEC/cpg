@@ -59,8 +59,8 @@ class SimpleDFAOrderEvaluationTest {
         val q1 = dfa.addState(isStart = true)
         val q2 = dfa.addState()
         val q3 = dfa.addState(isAcceptingState = true)
-        dfa.addEdge(q1, q2, "start()", "cm")
-        dfa.addEdge(q2, q3, "finish()", "cm")
+        dfa.addEdge(q1, Edge("start()", "cm", q2))
+        dfa.addEdge(q2, Edge("finish()", "cm", q3))
     }
 
     @BeforeAll

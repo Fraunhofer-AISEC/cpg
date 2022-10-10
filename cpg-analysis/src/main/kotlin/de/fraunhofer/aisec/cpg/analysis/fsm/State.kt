@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,64 +32,117 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
  * - [isAcceptingState] indicates if this State accepts the FSM (in our case, this means that the
  * order of statements was correct).
  */
-class State(val name: String, val isStart: Boolean = false, var isAcceptingState: Boolean = false) :
-    Cloneable {
+sealed class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = false) {
+    /** Must only be changed through [FSM.changeStateProperty] as soon as they part of a [FSM]. */
+    internal var _name = name
+    val name
+        get() = _name
 
-    val outgoingEdges = mutableSetOf<BaseOpEdge>()
+    /** Must only be changed through [FSM.changeStateProperty] as soon as they part of a [FSM]. */
+    internal var _isStart = isStart
+    val isStart
+        get() = _isStart
 
-    fun addOutgoingEdge(edge: BaseOpEdge) {
-        outgoingEdges.add(edge)
+    /** Must only be changed through [FSM.changeStateProperty] as soon as they part of a [FSM]. */
+    internal var _isAcceptingState = isAcceptingState
+    val isAcceptingState
+        get() = _isAcceptingState
+
+    protected val _outgoingEdges: MutableSet<Edge> = mutableSetOf()
+    val outgoingEdges: Set<Edge>
+        get() = _outgoingEdges
+
+    open fun addEdge(edge: Edge) {
+        _outgoingEdges.add(edge)
     }
 
-    /**
-     * Returns a [Pair] holding the next [State] when the edge with the operation [op] is executed
-     * and the [BaseOpEdge] which is executed. If no matching edge exists for this State, returns
-     * `null`.
-     */
-    fun nextNodeWithLabelOp(op: String): Pair<State, BaseOpEdge>? {
-        val nextStates = outgoingEdges.filter { e -> e.op == op }
-        if (nextStates.isNotEmpty()) {
-            return Pair(nextStates[0].nextState, nextStates[0])
-        }
-        return null
-    }
-
+    // equals method using only the name property
     override fun equals(other: Any?): Boolean {
         return (other as? State)?.name?.equals(name) == true
     }
 
+    // hashCode method using only the name property
+    override fun hashCode() = name.hashCode()
+
     override fun toString(): String {
-        return (if (isStart) "(S) " else "") + name + (if (isAcceptingState) " (A)" else "")
+        return (if (isStart) "(S) q$name" else "q$name") + (if (isAcceptingState) " (A)" else "")
     }
 
-    public override fun clone(): State {
-        val newState = State(name, isStart, isAcceptingState)
-        newState.outgoingEdges.addAll(outgoingEdges)
-        return newState
-    }
+    /** Create a shallow copy */
+    protected abstract fun copy(
+        name: Int = this.name,
+        isStart: Boolean = this.isStart,
+        isAcceptingState: Boolean = this.isAcceptingState
+    ): State
 
-    fun cloneRecursively(currentStates: MutableSet<State> = mutableSetOf()): MutableSet<State> {
-        if (currentStates.any { it.name == name }) {
+    fun deepCopy(currentStates: MutableSet<State> = mutableSetOf()): MutableSet<State> {
+        if (currentStates.contains(this)) {
             return currentStates
         }
 
-        val newState = State(name, isStart, isAcceptingState)
+        val newState =
+            copy(
+                name = name,
+                isStart = isStart,
+                isAcceptingState = isAcceptingState
+            ) // get a shallow copy
+        newState._outgoingEdges
+            .clear() // and then get rid of the shallowly copied edges -> when doing a deepCopy, we
+        // must also create new edge objects
         currentStates.add(newState)
 
-        for (outE in outgoingEdges) {
-            outE.nextState.cloneRecursively(currentStates)
-            newState.outgoingEdges.add(
-                BaseOpEdge(
-                    outE.op,
-                    outE.base,
-                    currentStates.first { it.name == outE.nextState.name }
+        for (edge in outgoingEdges) {
+            edge.nextState.deepCopy(currentStates)
+            newState.addEdge(
+                Edge(
+                    op = edge.op,
+                    base = edge.base,
+                    nextState = currentStates.first { it.name == edge.nextState.name }
                 )
             )
         }
         return currentStates
     }
+}
 
-    override fun hashCode(): Int {
-        return name.hashCode()
+/**
+ * A simple class representing a state in a DFA.
+ * - [name] is the name of the State and must be unique for the FSM.
+ * - [isStart] indicates if it is the starting state.
+ * - [isAcceptingState] indicates if this State accepts the FSM (in our case, this means that the
+ * order of statements was correct).
+ */
+class DfaState
+internal constructor(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = false) :
+    State(name = name, isStart = isStart, isAcceptingState = isAcceptingState) {
+    override fun addEdge(edge: Edge) {
+        check(edge.op != NFA.EPSILON) { "A DFA must not contain EPSILON edges!" }
+        check(outgoingEdges.none { e -> e.matches(edge) && e.nextState != edge.nextState }) {
+            "State already has an outgoing edge with the same label but a different target!"
+        }
+        _outgoingEdges.add(edge)
     }
+
+    /** Create a shallow copy */
+    override fun copy(name: Int, isStart: Boolean, isAcceptingState: Boolean) =
+        DfaState(name = name, isStart = isStart, isAcceptingState = isAcceptingState).apply {
+            this@DfaState.outgoingEdges.forEach { addEdge(it) }
+        }
+}
+
+/**
+ * A simple class representing a state in a NFA.
+ * - [name] is the name of the State and must be unique for the FSM.
+ * - [isStart] indicates if it is the starting state.
+ * - [isAcceptingState] indicates if this State accepts the FSM (in our case, this means that the
+ * order of statements was correct).
+ */
+class NfaState
+internal constructor(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = false) :
+    State(name = name, isStart = isStart, isAcceptingState = isAcceptingState) {
+    /** Create a shallow copy */
+    override fun copy(name: Int, isStart: Boolean, isAcceptingState: Boolean) =
+        NfaState(name = name, isStart = isStart, isAcceptingState = isAcceptingState).apply {
+            this@NfaState.outgoingEdges.forEach { addEdge(it) }
+        }
 }

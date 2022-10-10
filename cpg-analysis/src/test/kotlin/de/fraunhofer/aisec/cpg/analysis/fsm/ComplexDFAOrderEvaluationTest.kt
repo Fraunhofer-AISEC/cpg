@@ -65,14 +65,15 @@ class ComplexDFAOrderEvaluationTest {
         val q5 = dfa.addState()
         val q6 = dfa.addState(isAcceptingState = true)
         val q7 = dfa.addState(isAcceptingState = true)
-        dfa.addEdge(q1, q2, "create()", "cm")
-        dfa.addEdge(q2, q3, "init()", "cm")
-        dfa.addEdge(q3, q4, "start()", "cm")
-        dfa.addEdge(q4, q5, DFA.EPSILON, "cm")
-        dfa.addEdge(q5, q5, "process()", "cm")
-        dfa.addEdge(q5, q6, "finish()", "cm")
-        dfa.addEdge(q6, q4, "start()", "cm")
-        dfa.addEdge(q6, q7, "reset()", "cm")
+        dfa.addEdge(q1, Edge("create()", "cm", q2))
+        dfa.addEdge(q2, Edge("init()", "cm", q3))
+        dfa.addEdge(q3, Edge("start()", "cm", q4))
+        dfa.addEdge(q4, Edge("process()", "cm", q5))
+        dfa.addEdge(q4, Edge("finish()", "cm", q6))
+        dfa.addEdge(q5, Edge("process()", "cm", q5))
+        dfa.addEdge(q5, Edge("finish()", "cm", q6))
+        dfa.addEdge(q6, Edge("start()", "cm", q4))
+        dfa.addEdge(q6, Edge("reset()", "cm", q7))
     }
 
     @BeforeAll
@@ -683,7 +684,7 @@ class ComplexDFAOrderEvaluationTest {
             fsm: DFA,
             interproceduralFlow: Boolean
         ) {
-            val lastNode = fsm.executionTrace[fsm.executionTrace.size - 1].second as CallExpression
+            val lastNode = fsm.executionTrace.last().cpgNode as CallExpression
             var baseOfLastNode = getBaseOfNode(lastNode)
             if (baseOfLastNode is DeclaredReferenceExpression) {
                 baseOfLastNode = baseOfLastNode.refersTo

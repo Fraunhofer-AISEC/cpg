@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,4 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-class FSMBuilderException(s: String) : Exception(s)
+/**
+ * Represents an edge of the automaton. The edge label consists of an operation (typically a method
+ * name) and a base which allows us to differentiate between multiple objects.
+ */
+data class Edge(val op: String, val base: String? = null, val nextState: State) {
+    fun matches(edge: Edge): Boolean {
+        return base == edge.base && op == edge.op
+    }
+
+    override fun toString(): String {
+        return if (base != null) "-- $base.$op --> $nextState" else "-- $op --> $nextState"
+    }
+
+    fun toDotLabel(): String {
+        return if (base != null) "$base.$op" else op
+    }
+}

@@ -51,54 +51,73 @@ class FSMTest {
             "}"
 
     @Test
-    fun testFSMDotFile() {
-        val fsm = DFA()
-        val q1 = fsm.addState(isStart = true)
-        val q2 = fsm.addState(isAcceptingState = true)
-        val q3 = fsm.addState(isAcceptingState = true)
-        val q4 = fsm.addState()
-        val q5 = fsm.addState(isAcceptingState = true)
-        fsm.addEdge(q1, q2, "create()", "v")
-        fsm.addEdge(q2, q3, "check_whole_msg()", "v")
-        fsm.addEdge(q2, q4, "update()", "v")
-        fsm.addEdge(q2, q5, "check_after_update()", "v")
-        fsm.addEdge(q3, q3, "check_whole_msg()", "v")
-        fsm.addEdge(q4, q4, "update()", "v")
-        fsm.addEdge(q4, q5, "check_after_update()", "v")
-        fsm.addEdge(q5, q5, "check_after_update()", "v")
-        fsm.addEdge(q5, q4, "update()", "v")
+    fun `test toDotString method`() {
+        val dfa = DFA()
+        val q1 = dfa.addState(isStart = true)
+        val q2 = dfa.addState(isAcceptingState = true)
+        val q3 = dfa.addState(isAcceptingState = true)
+        val q4 = dfa.addState()
+        val q5 = dfa.addState(isAcceptingState = true)
+        dfa.addEdge(q1, Edge("create()", "v", q2))
+        dfa.addEdge(q2, Edge("check_whole_msg()", "v", q3))
+        dfa.addEdge(q2, Edge("update()", "v", q4))
+        dfa.addEdge(q2, Edge("check_after_update()", "v", q5))
+        dfa.addEdge(q3, Edge("check_whole_msg()", "v", q3))
+        dfa.addEdge(q4, Edge("update()", "v", q4))
+        dfa.addEdge(q4, Edge("check_after_update()", "v", q5))
+        dfa.addEdge(q5, Edge("check_after_update()", "v", q5))
+        dfa.addEdge(q5, Edge("update()", "v", q4))
 
-        assertEquals(simpleStringRepresentation, fsm.toDotString())
-
-        val oldFsm = fsm.clone()
-
-        val emptyNode = NodeBuilder.newEmptyStatement()
-        fsm.makeTransitionWithOp("create()", emptyNode)
-
-        assertTrue(fsm.isAccepted())
-        assertNotEquals(oldFsm, fsm)
-
-        oldFsm.makeTransitionWithOp("create()", emptyNode)
-        assertEquals(oldFsm, fsm)
-
-        oldFsm.addEdge(
-            oldFsm.states.first { it.name == "q1" },
-            oldFsm.states.first { it.name == "q3" },
-            "create2()",
-            "v"
-        )
-        assertNotEquals(oldFsm, fsm)
+        assertEquals(simpleStringRepresentation, dfa.toDotString())
     }
 
     @Test
-    fun testFSMFailure() {
-        val fsm = DFA()
-        val q1 = fsm.addState(isStart = true)
-        val q2 = fsm.addState(isAcceptingState = true)
-        val q3 = fsm.addState()
-        fsm.addEdge(q1, q2, "create()", "v")
-        fsm.addEdge(q2, q3, "check_whole_msg()", "v")
-        assertThrows<FSMBuilderException> { fsm.addEdge(q1, q3, "create()", "v") }
-        assertFalse(fsm.isAccepted())
+    fun `test deepcopy`() {
+        val dfa = DFA()
+        val q1 = dfa.addState(isStart = true)
+        val q2 = dfa.addState(isAcceptingState = true)
+        val q3 = dfa.addState(isAcceptingState = true)
+        val q4 = dfa.addState()
+        val q5 = dfa.addState(isAcceptingState = true)
+        dfa.addEdge(q1, Edge("create()", "v", q2))
+        dfa.addEdge(q2, Edge("check_whole_msg()", "v", q3))
+        dfa.addEdge(q2, Edge("update()", "v", q4))
+        dfa.addEdge(q2, Edge("check_after_update()", "v", q5))
+        dfa.addEdge(q3, Edge("check_whole_msg()", "v", q3))
+        dfa.addEdge(q4, Edge("update()", "v", q4))
+        dfa.addEdge(q4, Edge("check_after_update()", "v", q5))
+        dfa.addEdge(q5, Edge("check_after_update()", "v", q5))
+        dfa.addEdge(q5, Edge("update()", "v", q4))
+
+        val dfaCopy = dfa.deepCopy()
+
+        assertEquals(dfa, dfaCopy)
+        assertFalse { dfa.currentState!! === dfaCopy.currentState!! }
+
+        val createEdge =
+            dfa.states.single { it.name == 1 }.outgoingEdges.single { it.op == "create()" }
+        val createEdgeCopy =
+            dfaCopy.states.single { it.name == 1 }.outgoingEdges.single { it.op == "create()" }
+        assertFalse { createEdge === createEdgeCopy }
+        assertFalse { createEdge.nextState === createEdgeCopy.nextState }
+
+        val emptyNode = NodeBuilder.newEmptyStatement()
+        dfa.initializeOrderEvaluation(emptyNode)
+        dfa.makeTransitionWithOp("create()", emptyNode)
+
+        assertNotEquals(dfa, dfaCopy)
+        assertEquals(dfa.executionTrace, dfa.deepCopy().executionTrace)
+    }
+
+    @Test
+    fun `test deterministic checks in DFA addEdge`() {
+        val dfa = DFA()
+        val q1 = dfa.addState(isStart = true)
+        val q2 = dfa.addState(isAcceptingState = true)
+        val q3 = dfa.addState()
+        dfa.addEdge(q1, Edge("create()", "v", q2))
+        dfa.addEdge(q2, Edge("check_whole_msg()", "v", q3))
+        assertThrows<IllegalStateException> { dfa.addEdge(q1, Edge("create()", "v", q3)) }
+        assertFalse(dfa.isAccepted)
     }
 }
