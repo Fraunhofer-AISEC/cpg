@@ -30,11 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -105,7 +101,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         // Different points which could be the cause of a loop (in a non-broken program). We
         // consider ForStatements, WhileStatements, ForEachStatements, DoStatements and
         // GotoStatements
-        val loopPoints = mutableMapOf<Node, MutableSet<Map<Declaration, MutableList<Node>>>>()
+        val loopPoints = mutableMapOf<Node, MutableMap<Declaration, MutableSet<Node>>>()
 
         // Iterate through the worklist
         while (worklist.isNotEmpty()) {
@@ -230,25 +226,32 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         writtenDecl: Declaration?,
         currentWritten: Node,
         previousWrites: MutableMap<Declaration, MutableList<Node>>,
-        loopPoints: MutableMap<Node, MutableSet<Map<Declaration, MutableList<Node>>>>
+        loopPoints: MutableMap<Node, MutableMap<Declaration, MutableSet<Node>>>
     ): Boolean {
         if (
             currentNode is ForStatement ||
                 currentNode is WhileStatement ||
                 currentNode is ForEachStatement ||
                 currentNode is DoStatement ||
-                currentNode is GotoStatement
+                currentNode is GotoStatement ||
+                currentNode is ContinueStatement
         ) {
             // Loop detection: This is a point which could serve as a loop, so we check all
             // states which we have seen before in this place.
-            val state = loopPoints.computeIfAbsent(currentNode) { mutableSetOf() }
-            if (previousWrites in state) {
+            val state = loopPoints.computeIfAbsent(currentNode) { mutableMapOf() }
+            if (
+                previousWrites.all { (decl, prevs) ->
+                    decl in state && prevs.last() in state[decl]!!
+                }
+            ) {
                 // The current state of last write operations has already been seen before =>
                 // Nothing new => Do not add the next eog steps!
                 return true
             }
             // Add the current state for future loop detections.
-            state.add(previousWrites)
+            previousWrites.forEach { (decl, prevs) ->
+                state.computeIfAbsent(decl, ::mutableSetOf).add(prevs.last())
+            }
         }
         return writtenDecl != null &&
             previousWrites[writtenDecl]!!.filter { it == currentWritten }.size >= 2
