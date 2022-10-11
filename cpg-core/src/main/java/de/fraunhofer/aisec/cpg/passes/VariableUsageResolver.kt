@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
@@ -33,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -76,14 +78,15 @@ open class VariableUsageResolver : Pass() {
     }
 
     override fun accept(result: TranslationResult) {
-        walker = ScopedWalker(lang)
+        scopeManager = lang!!.scopeManager
+        config = lang!!.config
+
+        walker = ScopedWalker(scopeManager)
         for (tu in result.translationUnits) {
             currTu = tu
             walker.clearCallbacks()
             walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }
-            walker.registerHandler { node: Node, curClass: RecordDeclaration? ->
-                findRecordsAndEnums(node, curClass)
-            }
+            walker.registerHandler { node, _ -> findRecordsAndEnums(node) }
             walker.iterate(currTu)
         }
 
@@ -101,7 +104,7 @@ open class VariableUsageResolver : Pass() {
         }
     }
 
-    protected fun findRecordsAndEnums(node: Node, curClass: RecordDeclaration?) {
+    protected fun findRecordsAndEnums(node: Node) {
         if (node is RecordDeclaration) {
             val type = TypeParser.createFrom(node.name, true)
             recordMap.putIfAbsent(type, node)
@@ -114,16 +117,11 @@ open class VariableUsageResolver : Pass() {
     protected fun resolveFunctionPtr(
         containingClassArg: Type?,
         reference: DeclaredReferenceExpression
-    ): Optional<out ValueDeclaration> {
+    ): ValueDeclaration? {
         var containingClass = containingClassArg
-        val fptrType =
-            if (reference.type is FunctionPointerType) {
-                reference.type as FunctionPointerType
-            } else {
-                log.error("Can't resolve a function pointer without a function pointer type!")
-                return Optional.empty()
-            }
-        var target = Optional.empty<FunctionDeclaration>()
+        // Without FunctionPointerType, we cannot resolve function pointers
+        val fptrType = reference.type as? FunctionPointerType ?: return null
+
         var functionName = reference.name
         val matcher =
             Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.name)
@@ -136,50 +134,36 @@ open class VariableUsageResolver : Pass() {
                 )
             } else {
                 containingClass = TypeParser.createFrom(cls, true)
-                if (recordMap.containsKey(containingClass)) {
-                    target =
-                        recordMap[containingClass]!!
-                            .methods
-                            .stream()
-                            .map { obj: MethodDeclaration? ->
-                                FunctionDeclaration::class.java.cast(obj)
-                            }
-                            .filter { f: FunctionDeclaration ->
-                                // TODO(oxisto): there is the same logic in the CallResolver.. why
-                                val returnType =
-                                    if (f.returnTypes.isEmpty()) {
-                                        IncompleteType()
-                                    } else {
-                                        // TODO(oxisto): support multiple return types
-                                        f.returnTypes[0]
-                                    }
-                                f.name == functionName &&
-                                    returnType == fptrType.returnType &&
-                                    f.hasSignature(fptrType.parameters)
-                            }
-                            .findFirst()
+                if (containingClass in recordMap) {
+                    val target =
+                        recordMap[containingClass]!!.methods.firstOrNull { f ->
+                            // TODO(oxisto): there is the same logic in the CallResolver.. why
+                            val returnType =
+                                if (f.returnTypes.isEmpty()) {
+                                    IncompleteType()
+                                } else {
+                                    // TODO(oxisto): support multiple return types
+                                    f.returnTypes[0]
+                                }
+                            f.name == functionName &&
+                                returnType == fptrType.returnType &&
+                                f.hasSignature(fptrType.parameters)
+                        }
+                    if (target != null) return target
                 }
             }
         }
-        if (target.isPresent) {
-            return target
+
+        return if (containingClass == null) {
+            handleUnknownMethod(functionName, fptrType.returnType, fptrType.parameters)
+        } else {
+            handleUnknownClassMethod(
+                containingClass,
+                functionName,
+                fptrType.returnType,
+                fptrType.parameters
+            )
         }
-        target =
-            if (containingClass == null) {
-                Optional.of(
-                    handleUnknownMethod(functionName, fptrType.returnType, fptrType.parameters)
-                )
-            } else {
-                Optional.ofNullable(
-                    handleUnknownClassMethod(
-                        containingClass,
-                        functionName,
-                        fptrType.returnType,
-                        fptrType.parameters
-                    )
-                )
-            }
-        return target
     }
 
     protected fun resolveLocalVarUsage(
@@ -187,14 +171,6 @@ open class VariableUsageResolver : Pass() {
         parent: Node?,
         current: Node
     ) {
-        if (lang == null) {
-            Util.errorWithFileLocation(
-                current,
-                log,
-                "Could not resolve local variable usage: language frontend is null"
-            )
-            return
-        }
         if (current is DeclaredReferenceExpression && current !is MemberExpression) {
             if (
                 parent is MemberCallExpression &&
@@ -202,8 +178,7 @@ open class VariableUsageResolver : Pass() {
                     current.type !is FunctionPointerType
             ) {
                 // members of a MemberCallExpression are no variables to be resolved, unless we have
-                // a
-                // function pointer call
+                // a function pointer call
                 return
             }
 
@@ -215,36 +190,35 @@ open class VariableUsageResolver : Pass() {
             }
 
             // only consider resolving, if the language frontend did not specify a resolution
-            var refersTo =
-                if (current.refersTo == null)
-                    Optional.ofNullable(lang!!.scopeManager.resolveReference(current))
-                else Optional.of(current.refersTo!!)
+            var refersTo = // current.refersTo ?: scopeManager?.resolveReference(current)
+                if (current.refersTo == null) scopeManager?.resolveReference(current)
+                else current.refersTo!!
             var recordDeclType: Type? = null
             if (currentClass != null) {
                 recordDeclType = TypeParser.createFrom(currentClass.name, true)
             }
-            if (current.type is FunctionPointerType && refersTo.isEmpty) {
+            if (current.type is FunctionPointerType && refersTo == null) {
                 refersTo = resolveFunctionPtr(recordDeclType, current)
             }
 
             // only add new nodes for non-static unknown
             if (
-                (refersTo.isEmpty && !current.isStaticAccess && recordDeclType != null) &&
-                    recordMap.containsKey(recordDeclType)
+                (refersTo == null && !current.isStaticAccess && recordDeclType != null) &&
+                    recordDeclType in recordMap
             ) {
                 // Maybe we are referring to a field instead of a local var
-                if (current.name.contains(lang!!.namespaceDelimiter)) {
+                if (current.delimiter in current.name) {
                     val path =
                         listOf(
                             *current.name
-                                .split(Pattern.quote(lang!!.namespaceDelimiter).toRegex())
+                                .split(Pattern.quote(current.delimiter).toRegex())
                                 .dropLastWhile { it.isEmpty() }
                                 .toTypedArray()
                         )
                     recordDeclType =
                         TypeParser.createFrom(
                             java.lang.String.join(
-                                lang!!.namespaceDelimiter,
+                                current.delimiter,
                                 path.subList(0, path.size - 1)
                             ),
                             true
@@ -252,35 +226,32 @@ open class VariableUsageResolver : Pass() {
                 }
                 val field = resolveMember(recordDeclType, current)
                 if (field != null) {
-                    refersTo = Optional.of(field)
+                    refersTo = field
                 }
             }
 
             // TODO: we need to do proper scoping (and merge it with the code above), but for now
             // this just enables CXX static fields
-            if (refersTo.isEmpty && current.name.contains(lang!!.namespaceDelimiter)) {
+            if (refersTo == null && current.delimiter in current.name) {
                 val path =
                     listOf(
                         *current.name
-                            .split(Pattern.quote(lang!!.namespaceDelimiter).toRegex())
+                            .split(Pattern.quote(current.delimiter).toRegex())
                             .dropLastWhile { it.isEmpty() }
                             .toTypedArray()
                     )
                 recordDeclType =
                     TypeParser.createFrom(
-                        java.lang.String.join(
-                            lang!!.namespaceDelimiter,
-                            path.subList(0, path.size - 1)
-                        ),
+                        java.lang.String.join(current.delimiter, path.subList(0, path.size - 1)),
                         true
                     )
                 val field = resolveMember(recordDeclType, current)
                 if (field != null) {
-                    refersTo = Optional.of(field)
+                    refersTo = field
                 }
             }
-            if (refersTo.isPresent) {
-                current.refersTo = refersTo.get()
+            if (refersTo != null) {
+                current.refersTo = refersTo
             } else {
                 Util.warnWithFileLocation(
                     current,
@@ -292,90 +263,81 @@ open class VariableUsageResolver : Pass() {
     }
 
     protected fun resolveFieldUsages(curClass: RecordDeclaration?, parent: Node?, current: Node) {
-        if (current is MemberExpression) {
-            var baseTarget: Declaration? = null
-            if (current.base is DeclaredReferenceExpression) {
-                val base = current.base as DeclaredReferenceExpression
-                if (lang is JavaLanguageFrontend && base.name == "super") {
-                    if (curClass != null && curClass.superClasses.isNotEmpty()) {
-                        val superType = curClass.superClasses[0]
-                        val superRecord = recordMap[superType]
-                        if (superRecord == null) {
-                            log.error(
-                                "Could not find referring super type ${superType.typeName} for ${curClass.name} in the record map. Will set the super type to java.lang.Object"
-                            )
-                            base.type = TypeParser.createFrom(Any::class.java.name, true)
-                        } else {
-                            // We need to connect this super reference to the receiver of this
-                            // method
-                            val func = (lang as JavaLanguageFrontend).scopeManager.currentFunction
-                            if (func is MethodDeclaration) {
-                                baseTarget = func.receiver
-                            }
-                            if (baseTarget != null) {
-                                base.refersTo = baseTarget
-                                // Explicitly set the type of the call's base to the super type
-                                base.type = superType
-                                // And set the possible subtypes, to ensure, that really only our
-                                // super type is in there
-                                base.updatePossibleSubtypes(listOf(superType))
-                            }
-                        }
+        if (current !is MemberExpression) return
+
+        var baseTarget: Declaration? = null
+        if (current.base is DeclaredReferenceExpression) {
+            val base = current.base as DeclaredReferenceExpression
+            if (current.language is JavaLanguageFrontend && base.name == "super") {
+                if (curClass != null && curClass.superClasses.isNotEmpty()) {
+                    val superType = curClass.superClasses[0]
+                    val superRecord = recordMap[superType]
+                    if (superRecord == null) {
+                        log.error(
+                            "Could not find referring super type ${superType.typeName} for ${curClass.name} in the record map. Will set the super type to java.lang.Object"
+                        )
+                        base.type = TypeParser.createFrom(Any::class.java.name, true)
                     } else {
-                        // no explicit super type -> java.lang.Object
-                        val objectType = TypeParser.createFrom(Any::class.java.name, true)
-                        base.type = objectType
+                        // We need to connect this super reference to the receiver of this
+                        // method
+                        val func = scopeManager?.currentFunction
+                        if (func is MethodDeclaration) {
+                            baseTarget = func.receiver
+                        }
+                        if (baseTarget != null) {
+                            base.refersTo = baseTarget
+                            // Explicitly set the type of the call's base to the super type
+                            base.type = superType
+                            // And set the possible subtypes, to ensure, that really only our
+                            // super type is in there
+                            base.updatePossibleSubtypes(listOf(superType))
+                        }
                     }
                 } else {
-                    baseTarget = resolveBase(current.base as DeclaredReferenceExpression)
-                    base.refersTo = baseTarget
+                    // no explicit super type -> java.lang.Object
+                    val objectType = TypeParser.createFrom(Any::class.java.name, true)
+                    base.type = objectType
                 }
-                if (baseTarget is EnumDeclaration) {
-                    val name = current.name
-                    val memberTarget = baseTarget.entries.firstOrNull { it.name == name }
-                    if (memberTarget != null) {
-                        current.refersTo = memberTarget
-                        return
-                    }
-                } else if (baseTarget is RecordDeclaration) {
-                    var baseType = TypeParser.createFrom(baseTarget.name, true)
-                    if (!recordMap.containsKey(baseType)) {
-                        val containingT = baseType
-                        val fqnResolvedType =
-                            recordMap.keys.firstOrNull {
-                                it.name.endsWith("." + containingT.name)
-                            } // TODO: Is the "." correct here for all languages?
-                        if (fqnResolvedType != null) {
-                            baseType = fqnResolvedType
-                        }
-                    }
-                    current.refersTo = resolveMember(baseType, current)
+            } else {
+                baseTarget = resolveBase(current.base as DeclaredReferenceExpression)
+                base.refersTo = baseTarget
+            }
+            if (baseTarget is EnumDeclaration) {
+                val name = current.name
+                val memberTarget = baseTarget.entries.firstOrNull { it.name == name }
+                if (memberTarget != null) {
+                    current.refersTo = memberTarget
                     return
                 }
-            }
-            var baseType: Type = current.base.type
-            if (!recordMap.containsKey(baseType)) {
-                val containingT = baseType
-                val fqnResolvedType =
-                    recordMap.keys.firstOrNull { it.name.endsWith("." + containingT.name) }
-                if (fqnResolvedType != null) {
-                    baseType = fqnResolvedType
+            } else if (baseTarget is RecordDeclaration) {
+                var baseType = TypeParser.createFrom(baseTarget.name, true)
+                if (baseType !in recordMap) {
+                    val containingT = baseType
+                    val fqnResolvedType =
+                        recordMap.keys.firstOrNull {
+                            it.name.endsWith("." + containingT.name)
+                        } // TODO: Is the "." correct here for all languages?
+                    if (fqnResolvedType != null) {
+                        baseType = fqnResolvedType
+                    }
                 }
+                current.refersTo = resolveMember(baseType, current)
+                return
             }
-            current.refersTo = resolveMember(baseType, current)
         }
+        var baseType = current.base.type
+        if (baseType !in recordMap) {
+            val fqnResolvedType =
+                recordMap.keys.firstOrNull { it.name.endsWith("." + baseType.name) }
+            if (fqnResolvedType != null) {
+                baseType = fqnResolvedType
+            }
+        }
+        current.refersTo = resolveMember(baseType, current)
     }
 
     protected fun resolveBase(reference: DeclaredReferenceExpression): Declaration? {
-        if (lang == null) {
-            Util.errorWithFileLocation(
-                reference,
-                log,
-                "Could not resolve base: language frontend is null"
-            )
-            return null
-        }
-        val declaration = lang!!.scopeManager.resolveReference(reference)
+        val declaration = scopeManager?.resolveReference(reference)
         if (declaration != null) {
             return declaration
         }
@@ -394,19 +356,17 @@ open class VariableUsageResolver : Pass() {
         containingClass: Type,
         reference: DeclaredReferenceExpression
     ): ValueDeclaration? {
-        if (lang == null) {
-            return null
-        }
         if (
-            lang is JavaLanguageFrontend && reference.name.matches(Regex("(?<class>.+\\.)?super"))
+            reference.language is JavaLanguageFrontend &&
+                reference.name.matches(Regex("(?<class>.+\\.)?super"))
         ) {
             // if we have a "super" on the member side, this is a member call. We need to resolve
             // this in the call resolver instead
             return null
         }
-        val simpleName = Util.getSimpleName(lang!!.namespaceDelimiter, reference.name)
+        val simpleName = Util.getSimpleName(reference.delimiter, reference.name)
         var member: FieldDeclaration? = null
-        if (containingClass !is UnknownType && recordMap.containsKey(containingClass)) {
+        if (containingClass !is UnknownType && containingClass in recordMap) {
             member =
                 recordMap[containingClass]!!
                     .fields
@@ -435,7 +395,7 @@ open class VariableUsageResolver : Pass() {
             return handleUnknownField(base.elementType, name, type)
         }
         if (base !in recordMap) {
-            if (lang != null && lang!!.config.inferenceConfiguration.inferRecords) {
+            if (config?.inferenceConfiguration?.inferRecords == true) {
                 // we have an access to an unknown field of an unknown record. so we need to handle
                 // that
                 val inferredRecord = inferRecordDeclaration(base)
@@ -475,13 +435,9 @@ open class VariableUsageResolver : Pass() {
         returnType: Type,
         signature: List<Type?>
     ): MethodDeclaration? {
-        if (base !in recordMap) {
-            return null
-        }
-
-        val containingRecord = recordMap[base]
+        val containingRecord = recordMap[base] ?: return null
         val target =
-            containingRecord!!.methods.firstOrNull { f ->
+            containingRecord.methods.firstOrNull { f ->
                 f.name == name && f.type == returnType && f.hasSignature(signature)
             }
         return if (target == null) {
@@ -502,10 +458,8 @@ open class VariableUsageResolver : Pass() {
         signature: List<Type?>
     ): FunctionDeclaration {
         // TODO(oxisto): This is actually the fourth place where we resolve function pointers :(
-        // TODO: Why currTu!!.declarations.filterIsInstance<FunctionDeclaration>() instead of
-        // currTu.functions ??
         val target =
-            currTu!!.declarations.filterIsInstance<FunctionDeclaration>().firstOrNull { f ->
+            currTu!!.functions.firstOrNull { f ->
                 val type =
                     if (f.returnTypes.isEmpty()) {
                         IncompleteType()
@@ -532,6 +486,7 @@ open class VariableUsageResolver : Pass() {
         if (lang == null) {
             return null
         }
+
         if (type is ObjectType) {
             log.debug(
                 "Encountered an unknown record type ${type.getTypeName()} during a field access. We are going to infer that record"
@@ -558,6 +513,12 @@ open class VariableUsageResolver : Pass() {
         }
         return null
     }
+
+    private val Node.delimiter: String
+        get() = lang!!.namespaceDelimiter
+
+    private val Node.language: LanguageFrontend
+        get() = lang!!
 
     companion object {
         private val log = LoggerFactory.getLogger(VariableUsageResolver::class.java)
