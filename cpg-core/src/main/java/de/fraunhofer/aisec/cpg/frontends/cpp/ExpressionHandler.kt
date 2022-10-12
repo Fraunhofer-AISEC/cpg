@@ -206,9 +206,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             } else {
                 // in C++, it is possible to omit the `()` part, when creating an object, such as
                 // `new A`.
-                // Therefore CDT does not have an explicit construct expression, so we need create
-                // an
-                // implicit one
+                // Therefore, CDT does not have an explicit construct expression, so we need create
+                // an implicit one
                 initializer = NodeBuilder.newConstructExpression("()")
                 initializer.isImplicit = true
             }
@@ -220,8 +219,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     newExpression.templateParameters.isNotEmpty()
             ) {
                 CallResolver.addImplicitTemplateParametersToCall(
-                    newExpression.templateParameters,
-                    initializer as ConstructExpression?
+                    newExpression.templateParameters!!,
+                    initializer as ConstructExpression
                 )
             }
 
