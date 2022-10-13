@@ -35,8 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.duplicateLiteral
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.duplicateTypeExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -156,8 +154,7 @@ open class CallResolver : SymbolResolverPass() {
             is CallExpression -> {
                 // We might have call expressions inside our arguments, so in order to correctly
                 // resolve this call's signature, we need to make sure any call expression arguments
-                // are
-                // fully resolved
+                // are fully resolved
                 resolveArguments(node)
                 handleCallExpression(scopeManager!!.currentRecord, node)
             }
@@ -231,24 +228,25 @@ open class CallResolver : SymbolResolverPass() {
                 handleNormalCallCXX(call)
             } else {
                 val invocationCandidates = scopeManager!!.resolveFunction(call).toMutableList()
-                createInferredFunction(invocationCandidates, call)
+
+                if (invocationCandidates.isEmpty()) {
+                    // If we have no candidates, we create an inferred FunctionDeclaration
+                    invocationCandidates.add(
+                        createInferredFunctionDeclaration(
+                            null,
+                            call.name,
+                            call.code,
+                            false,
+                            call.signature,
+                            call.type // TODO: Is the call's type the return type?
+                        )
+                    )
+                }
+
                 call.invokes = invocationCandidates
             }
         } else if (!handlePossibleStaticImport(call, curClass)) {
             handleMethodCall(curClass, call)
-        }
-    }
-
-    fun createInferredFunction(
-        invocationCandidates: MutableList<FunctionDeclaration>,
-        call: CallExpression
-    ) {
-        if (invocationCandidates.isEmpty()) {
-            // If we still have no candidates and our current language is c++ we create an inferred
-            // FunctionDeclaration
-            invocationCandidates.add(
-                createInferredFunctionDeclaration(null, call.name, call.code, false, call.signature)
-            )
         }
     }
 
@@ -326,7 +324,8 @@ open class CallResolver : SymbolResolverPass() {
                         call.name,
                         call.code,
                         false,
-                        call.signature
+                        call.signature,
+                        call.type // TODO: Is this correct?
                     )
                 }
                 .forEach { invocationCandidates.add(it) }
@@ -408,12 +407,9 @@ open class CallResolver : SymbolResolverPass() {
     }
 
     protected fun handlePossibleStaticImport(
-        call: CallExpression?,
-        curClass: RecordDeclaration?
+        call: CallExpression,
+        curClass: RecordDeclaration
     ): Boolean {
-        if (call == null || curClass == null) {
-            return false
-        }
         val name = call.name.substring(call.name.lastIndexOf('.') + 1)
         val nameMatches =
             curClass.staticImports.filterIsInstance<FunctionDeclaration>().filter {
@@ -451,52 +447,19 @@ open class CallResolver : SymbolResolverPass() {
                 .filter { it.endsWith(".$name") }
                 .map { it.substring(0, it.lastIndexOf('.')) }
                 .mapNotNull { recordMap[it] }
+
         for (recordDeclaration in containingRecords) {
-            val inferredMethod = newMethodDeclaration(name, "", true, recordDeclaration)
-            inferredMethod.isInferred = true
-            val params = Util.createInferredParameters(call.signature)
-            inferredMethod.parameters = params
-            recordDeclaration.addMethod(inferredMethod)
-            curClass.staticImports.add(inferredMethod)
-            invokes.add(inferredMethod)
-        }
-    }
+            val inferred =
+                createInferredFunctionDeclaration(
+                    recordDeclaration,
+                    name,
+                    "",
+                    true,
+                    call.signature,
+                    call.type // TODO: Is this correct?
+                )
 
-    fun createInferredFunctionDeclaration(
-        containingRecord: RecordDeclaration?,
-        name: String?,
-        code: String?,
-        isStatic: Boolean,
-        signature: List<Type?>?
-    ): FunctionDeclaration {
-        val parameters = Util.createInferredParameters(signature)
-        return if (containingRecord != null) {
-            val inferred = newMethodDeclaration(name, code, isStatic, containingRecord)
-            inferred.isInferred = true
-            inferred.parameters = parameters
-            containingRecord.addMethod(inferred)
-
-            // "upgrade" our struct to a class, if it was inferred by us, since we are calling
-            // methods on
-            // it
-            if (
-                config?.inferenceConfiguration?.inferRecords == true &&
-                    containingRecord.isInferred &&
-                    containingRecord.kind == "struct"
-            ) {
-                containingRecord.kind = "class"
-            }
-            log.debug(
-                "Inferring a new method declaration ${inferred.name} with parameter types ${inferred.parameters.map { it.type.name }}"
-            )
-            inferred
-        } else {
-            // function declaration, not inside a class
-            val inferred = newFunctionDeclaration(name!!, code)
-            inferred.parameters = parameters
-            inferred.isInferred = true
-            currentTU.addDeclaration(inferred)
-            inferred
+            invokes.add(inferred)
         }
     }
 

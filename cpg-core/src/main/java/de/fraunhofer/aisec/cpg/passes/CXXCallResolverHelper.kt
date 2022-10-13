@@ -78,7 +78,22 @@ fun CallResolver.handleNormalCallCXX(call: CallExpression) {
         // a candidate with an implicit cast
         invocationCandidates.addAll(resolveWithImplicitCastFunc(call))
     }
-    createInferredFunction(invocationCandidates, call)
+
+    if (invocationCandidates.isEmpty()) {
+        // If we still have no candidates and our current language is c++ we create an inferred
+        // FunctionDeclaration
+        invocationCandidates.add(
+            createInferredFunctionDeclaration(
+                null,
+                call.name,
+                call.code,
+                false,
+                call.signature,
+                call.type // TODO: Is the call's type the return type?
+            )
+        )
+    }
+
     call.invokes = invocationCandidates
 }
 
@@ -565,7 +580,14 @@ fun CallResolver.createInferredFunctionTemplate(
         currentTU.addDeclaration(inferred)
     }
     val inferredRealization =
-        createInferredFunctionDeclaration(containingRecord, name, code, false, call.signature)
+        createInferredFunctionDeclaration(
+            containingRecord,
+            name,
+            code,
+            false,
+            call.signature,
+            call.type // TODO: Is the call's type the return value's type?
+        )
     inferred.addRealization(inferredRealization)
     var typeCounter = 0
     var nonTypeCounter = 0

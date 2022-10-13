@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.Util
 
 abstract class SymbolResolverPass : Pass() {
     protected lateinit var walker: SubgraphWalker.ScopedWalker
@@ -96,6 +98,50 @@ abstract class SymbolResolverPass : Pass() {
     protected fun collectSupertypes() {
         val currSuperTypes = recordMap.mapValues { (_, value) -> value.superTypes }
         superTypesMap.putAll(currSuperTypes)
+    }
+
+    fun createInferredFunctionDeclaration(
+        containingRecord: RecordDeclaration?,
+        name: String?,
+        code: String?,
+        isStatic: Boolean,
+        signature: List<Type?>,
+        returnType: Type?
+    ): FunctionDeclaration {
+        log.debug(
+            "Inferring a new method declaration $name with parameter types ${signature.map { it?.name }}"
+        )
+        if (containingRecord?.isInferred == true && containingRecord.kind == "struct") {
+            // "upgrade" our struct to a class, if it was inferred by us, since we are calling
+            // methods on it
+            containingRecord.kind = "class"
+        }
+
+        val parameters = Util.createInferredParameters(signature)
+        val declarationHolder: DeclarationHolder = containingRecord ?: currentTU
+        val inferred: FunctionDeclaration =
+            if (containingRecord != null) {
+                NodeBuilder.newMethodDeclaration(name, code, isStatic, containingRecord)
+            } else {
+                NodeBuilder.newFunctionDeclaration(name!!, code)
+            }
+        inferred.isInferred = true
+        inferred.parameters = parameters
+        // TODO: Once, we used inferred.type = returnType and once the two following statements:
+        // Why? What's the "right way"?
+        returnType?.let { inferred.returnTypes = listOf(it) }
+        inferred.type = returnType
+        // TODO: Handle multiple return values?
+        if (declarationHolder is RecordDeclaration) {
+            declarationHolder.addMethod(inferred as MethodDeclaration)
+            if (isStatic) {
+                declarationHolder.staticImports.add(inferred)
+            }
+        } else {
+            declarationHolder.addDeclaration(inferred)
+        }
+
+        return inferred
     }
 
     /**

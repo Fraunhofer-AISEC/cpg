@@ -29,8 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -38,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.regex.Pattern
@@ -116,27 +113,18 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 )
             } else {
                 containingClass = TypeParser.createFrom(cls, true)
-                if (containingClass.typeName in recordMap) {
-                    val target =
-                        recordMap[containingClass.typeName]!!.methods.firstOrNull { f ->
-                            // TODO(oxisto): there is the same logic in the CallResolver.. why
-                            f.matches(functionName, fptrType)
-                        }
-                    if (target != null) return target
-                }
             }
         }
 
-        return if (containingClass == null) {
-            handleUnknownMethod(functionName, fptrType.returnType, fptrType.parameters)
-        } else {
-            handleUnknownClassMethod(
-                containingClass,
-                functionName,
-                fptrType.returnType,
-                fptrType.parameters
-            )
-        }
+        return handleUnknownFunction(
+            if (containingClass != null) {
+                recordMap[containingClass.typeName]
+            } else {
+                null
+            },
+            functionName,
+            fptrType
+        )
     }
 
     protected fun resolveLocalVarUsage(
@@ -360,79 +348,68 @@ open class VariableUsageResolver : SymbolResolverPass() {
         if (base is PointerType) {
             return handleUnknownField(base.elementType, name, type)
         }
+
         if (base.typeName !in recordMap) {
-            if (config?.inferenceConfiguration?.inferRecords == true) {
-                // we access an unknown field of an unknown record. so we need to handle that
-                val inferredRecord = inferRecordDeclaration(base, base.typeName, "struct")
-                if (inferredRecord == null) {
-                    log.error(
-                        "Can not add inferred field declaration because the record type could not be inferred."
-                    )
-                    return null
-                }
-            } else {
-                return null
-            }
+            // No matching record in the map? If we should infer it, we do so, otherwise we stop.
+            if (config?.inferenceConfiguration?.inferRecords != true) return null
+
+            // We access an unknown field of an unknown record. so we need to handle that
+            inferRecordDeclaration(base, base.typeName, "struct")
         }
 
         val recordDeclaration = recordMap[base.typeName]
         if (recordDeclaration == null) {
-            log.error("This should not happen. Inferred record is not in the record map.")
+            log.error(
+                "There is no matching record in the record map. Can't identify which field is used."
+            )
             return null
         }
-        val declarations = recordDeclaration.fields
-        val target = declarations.firstOrNull { it.name == name }
 
-        return if (target == null) {
+        val target = recordDeclaration.fields.firstOrNull { it.name == name }
+
+        return if (target != null) {
+            target
+        } else {
             val declaration =
                 newFieldDeclaration(name, type, listOf<String>(), "", null, null, false)
             recordDeclaration.addField(declaration)
             declaration.isInferred = true
             declaration
-        } else {
-            target
         }
     }
 
-    protected fun handleUnknownClassMethod(
-        base: Type,
+    /**
+     * Generates a [MethodDeclaration] if the [declarationHolder] is a [RecordDeclaration] or a
+     * [FunctionDeclaration] if the [declarationHolder] is a [TranslationUnitDeclaration]. The
+     * resulting function/method has the signature and return type specified in [fctPtrType] and the
+     * specified [name].
+     */
+    protected fun handleUnknownFunction(
+        declarationHolder: RecordDeclaration?,
         name: String,
-        returnType: Type,
-        signature: List<Type?>
-    ): MethodDeclaration? {
-        val containingRecord = recordMap[base.typeName] ?: return null
-        val target =
-            containingRecord.methods.firstOrNull { f -> f.matches(name, returnType, signature) }
-        return if (target == null) {
-            val declaration = newMethodDeclaration(name, "", false, containingRecord)
-            declaration.type = returnType
-            declaration.parameters = Util.createInferredParameters(signature)
-            containingRecord.addMethod(declaration)
-            declaration.isInferred = true
-            declaration
-        } else {
-            target
-        }
-    }
-
-    protected fun handleUnknownMethod(
-        name: String,
-        returnType: Type,
-        signature: List<Type?>
+        fctPtrType: FunctionPointerType
     ): FunctionDeclaration {
-        // TODO(oxisto): This is actually the fourth place where we resolve function pointers :(
-        val target = currentTU.functions.firstOrNull { f -> f.matches(name, returnType, signature) }
-        return if (target == null) {
-            val declaration = newFunctionDeclaration(name, "")
-            declaration.parameters = Util.createInferredParameters(signature)
-            declaration.returnTypes = listOf(returnType)
-            declaration.type = computeType(declaration)
-            currentTU.addDeclaration(declaration)
-            declaration.isInferred = true
-            declaration
-        } else {
-            target
-        }
+        // Try to find the function or method in the list of existing functions.
+        val target =
+            if (declarationHolder != null) {
+                declarationHolder.methods.firstOrNull { f ->
+                    f.matches(name, fctPtrType.returnType, fctPtrType.parameters)
+                }
+            } else {
+                currentTU.functions.firstOrNull { f ->
+                    f.matches(name, fctPtrType.returnType, fctPtrType.parameters)
+                }
+            }
+        // If we didn't find anything, we create a new function or method declaration
+        return target
+            ?: createInferredFunctionDeclaration(
+                declarationHolder as? RecordDeclaration,
+                name,
+                null,
+                false,
+                fctPtrType.parameters,
+                fctPtrType.returnType
+            )
     }
 
     companion object {
