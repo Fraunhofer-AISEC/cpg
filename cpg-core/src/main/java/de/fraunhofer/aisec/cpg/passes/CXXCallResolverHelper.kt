@@ -88,10 +88,7 @@ fun CallResolver.handleNormalCallCXX(call: CallExpression) {
  * @return true if the CallExpression signature can be transformed into the FunctionDeclaration
  * signature by means of casting
  */
-fun CallResolver.compatibleSignatures(
-    callSignature: List<Type?>,
-    functionSignature: List<Type>
-): Boolean {
+fun compatibleSignatures(callSignature: List<Type?>, functionSignature: List<Type>): Boolean {
     return if (callSignature.size == functionSignature.size) {
         for (i in callSignature.indices) {
             if (
@@ -113,7 +110,7 @@ fun CallResolver.compatibleSignatures(
  * @return list containing the signature containing all argument types including the default
  * arguments
  */
-fun CallResolver.getCallSignatureWithDefaults(
+fun getCallSignatureWithDefaults(
     call: CallExpression,
     functionDeclaration: FunctionDeclaration
 ): List<Type?> {
@@ -135,7 +132,7 @@ fun CallResolver.getCallSignatureWithDefaults(
  * @param call we want to find invocation targets for by performing implicit casts
  * @return list of invocation candidates by applying implicit casts
  */
-fun CallResolver.resolveWithImplicitCast(
+fun resolveWithImplicitCast(
     call: CallExpression,
     initialInvocationCandidates: List<FunctionDeclaration>
 ): List<FunctionDeclaration> {
@@ -189,7 +186,7 @@ fun CallResolver.resolveWithImplicitCast(
  * @param implicitCasts current Cast
  * @param implicitCastTargets new Cast
  */
-fun CallResolver.checkMostCommonImplicitCast(
+fun checkMostCommonImplicitCast(
     implicitCasts: MutableList<CastExpression?>,
     implicitCastTargets: List<CastExpression?>
 ) {
@@ -217,10 +214,7 @@ fun CallResolver.checkMostCommonImplicitCast(
  * @param call CallExpression
  * @param implicitCasts Casts
  */
-fun CallResolver.applyImplicitCastToArguments(
-    call: CallExpression,
-    implicitCasts: List<CastExpression?>
-) {
+fun applyImplicitCastToArguments(call: CallExpression, implicitCasts: List<CastExpression?>) {
     for (i in implicitCasts.indices) {
         implicitCasts[i]?.let { call.setArgument(i, it) }
     }
@@ -275,7 +269,7 @@ fun CallResolver.resolveWithDefaultArgsFunc(call: CallExpression): List<Function
  * @return List of FunctionDeclarations that are the target of the CallExpression (will be connected
  * with an invokes edge)
  */
-fun CallResolver.resolveWithDefaultArgs(
+fun resolveWithDefaultArgs(
     call: CallExpression,
     initialInvocationCandidates: List<FunctionDeclaration>
 ): List<FunctionDeclaration> {
@@ -333,7 +327,7 @@ fun CallResolver.handleCXXMethodCall(
     return invocationCandidates
 }
 
-fun CallResolver.getInvocationCandidatesFromRecordCXX(
+fun getInvocationCandidatesFromRecordCXX(
     recordDeclaration: RecordDeclaration,
     call: CallExpression,
     namePattern: Pattern
@@ -380,7 +374,7 @@ fun CallResolver.getInvocationCandidatesFromRecordCXX(
  * added default arguments. The default arguments are added to the arguments edge of the
  * ConstructExpression
  */
-fun CallResolver.resolveConstructorWithDefaults(
+fun resolveConstructorWithDefaults(
     constructExpression: ConstructExpression,
     signature: List<Type?>,
     recordDeclaration: RecordDeclaration
@@ -405,10 +399,7 @@ fun CallResolver.resolveConstructorWithDefaults(
  * @return true if there is no method in the recordDeclaration where the name of the method matches
  * with the provided name. false otherwise
  */
-fun CallResolver.shouldContinueSearchInParent(
-    recordDeclaration: RecordDeclaration?,
-    name: String?
-): Boolean {
+fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: String?): Boolean {
     val namePattern =
         Pattern.compile(
             "(" + Pattern.quote(recordDeclaration!!.name) + "\\.)?" + Pattern.quote(name)
@@ -425,7 +416,7 @@ fun CallResolver.shouldContinueSearchInParent(
  * one or more implicit casts to the primitive type arguments of the ConstructExpressions. The
  * arguments are proxied through a CastExpression to the type required by the ConstructDeclaration.
  */
-fun CallResolver.resolveConstructorWithImplicitCast(
+fun resolveConstructorWithImplicitCast(
     constructExpression: ConstructExpression,
     recordDeclaration: RecordDeclaration
 ): ConstructorDeclaration? {
@@ -629,7 +620,7 @@ fun CallResolver.createInferredFunctionTemplate(
  * on resolution [TemplateDeclaration.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  */
-fun CallResolver.applyTemplateInstantiation(
+fun applyTemplateInstantiation(
     templateCall: CallExpression,
     functionTemplateDeclaration: FunctionTemplateDeclaration?,
     function: FunctionDeclaration,
@@ -698,7 +689,7 @@ fun CallResolver.applyTemplateInstantiation(
  * i-th position of the FunctionDeclaration). If the list is empty the signature of the
  * FunctionDeclaration cannot be reached through implicit casts
  */
-fun CallResolver.signatureWithImplicitCastTransformation(
+fun signatureWithImplicitCastTransformation(
     callSignature: List<Type?>,
     arguments: List<Expression?>,
     functionSignature: List<Type>
@@ -749,8 +740,8 @@ fun getParameterizedSignaturesFromInitialization(
  * Creates a Mapping between the Parameters of the TemplateDeclaration and the Values provided * for
  * the instantiation of the template.
  *
- * The difference to [CallResolver.constructTemplateInitializationSignatureFromTemplateParameters]
- * is that this one also takes into account defaults and auto deductions
+ * The difference to [constructTemplateInitializationSignatureFromTemplateParameters] is that this
+ * one also takes into account defaults and auto deductions
  *
  * Additionally, it fills the maps and lists mentioned below:
  *
@@ -766,7 +757,7 @@ fun getParameterizedSignaturesFromInitialization(
  * {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
  * initialization -&gt; initialization not possible
  */
-fun CallResolver.getTemplateInitializationSignature(
+fun getTemplateInitializationSignature(
     functionTemplateDeclaration: FunctionTemplateDeclaration,
     templateCall: CallExpression,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
@@ -824,7 +815,7 @@ fun CallResolver.getTemplateInitializationSignature(
  * {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
  * initialization -&gt; initialization not possible
  */
-fun CallResolver.constructTemplateInitializationSignatureFromTemplateParameters(
+fun constructTemplateInitializationSignatureFromTemplateParameters(
     functionTemplateDeclaration: FunctionTemplateDeclaration,
     templateCall: CallExpression,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
@@ -871,7 +862,7 @@ fun CallResolver.constructTemplateInitializationSignatureFromTemplateParameters(
  * callParameterArg must be an Expression and its type must match the type of the
  * ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
  */
-fun CallResolver.isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boolean {
+fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boolean {
     var callParameter = callParameterArg
     if (callParameter is TypeExpression) {
         callParameter = callParameter.type
@@ -898,7 +889,7 @@ fun CallResolver.isInstantiated(callParameterArg: Node, templateParameter: Decla
  * resolution [TemplateDeclaration.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  */
-fun CallResolver.handleImplicitTemplateParameter(
+fun handleImplicitTemplateParameter(
     functionTemplateDeclaration: FunctionTemplateDeclaration,
     index: Int,
     instantiationSignature: MutableMap<Declaration?, Node?>,
@@ -934,7 +925,7 @@ fun CallResolver.handleImplicitTemplateParameter(
  * ParameterizedTypes (which depend on the specific instantiation of the template) are resolved to
  * the values the Template is instantiated with.
  */
-fun CallResolver.getCallSignature(
+fun getCallSignature(
     function: FunctionDeclaration,
     parameterizedTypeResolution: Map<ParameterizedType, TypeParamDeclaration>,
     initializationSignature: Map<Declaration?, Node?>
@@ -967,7 +958,7 @@ fun CallResolver.getCallSignature(
  * @return true if the instantiation of the template is compatible with the template declaration,
  * false otherwise
  */
-fun CallResolver.checkArgumentValidity(
+fun checkArgumentValidity(
     functionDeclaration: FunctionDeclaration,
     functionDeclarationSignature: List<Type>,
     templateCallExpression: CallExpression,
