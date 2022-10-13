@@ -85,10 +85,7 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
         }
 
         val possibleEdges = currentState!!.outgoingEdges.filter { e -> e.op == op }
-        check(possibleEdges.size <= 1) {
-            "Transition $op is not deterministic for current state $currentState"
-        }
-        val edgeToFollow = possibleEdges.firstOrNull()
+        val edgeToFollow = possibleEdges.singleOrNull()
         return if (edgeToFollow != null) {
             _executionTrace.add(
                 Trace(state = currentState!!, cpgNode = cpgNode, edge = edgeToFollow)

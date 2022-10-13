@@ -94,11 +94,7 @@ sealed class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolea
         for (edge in outgoingEdges) {
             edge.nextState.deepCopy(currentStates)
             newState.addEdge(
-                Edge(
-                    op = edge.op,
-                    base = edge.base,
-                    nextState = currentStates.first { it.name == edge.nextState.name }
-                )
+                edge.copy(nextState = currentStates.first { it.name == edge.nextState.name })
             )
         }
         return currentStates

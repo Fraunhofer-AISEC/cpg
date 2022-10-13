@@ -131,7 +131,12 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
                 }
                 // either way, we must create an edge connecting the states
                 currentDfaState.addEdge(
-                    Edge(base = transitionBase, op = transitionOp, nextState = nextDfaState)
+                    Edge(
+                        base = transitionBase,
+                        op = transitionOp,
+                        nextState = nextDfaState,
+                        nodeGetter = { edges.first().correspondingNodes }
+                    )
                 )
             }
         }
