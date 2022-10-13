@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
@@ -193,6 +194,11 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         }
     }
 
+    private fun branchReadsVariable(variable: VariableDeclaration) {
+        val allReadsOfVariable =
+            variable.usageEdges.filter { it.getProperty(Properties.ACCESS) != AccessValues.WRITE }
+    }
+
     /**
      * Checks if the node performs an operation and an assignment at the same time e.g. with the
      * operators +=, -=, *=, ...
@@ -234,7 +240,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 currentNode is ForEachStatement ||
                 currentNode is DoStatement ||
                 currentNode is GotoStatement ||
-                currentNode is ContinueStatement
+                currentNode is ContinueStatement ||
+                currentNode is IfStatement
         ) {
             // Loop detection: This is a point which could serve as a loop, so we check all
             // states which we have seen before in this place.
