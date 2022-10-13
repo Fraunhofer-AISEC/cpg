@@ -27,23 +27,21 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 
 abstract class SymbolResolverPass : Pass() {
     protected lateinit var walker: SubgraphWalker.ScopedWalker
-    protected lateinit var currentTU: TranslationUnitDeclaration
+    lateinit var currentTU: TranslationUnitDeclaration
 
-    protected val recordMap = mutableMapOf<String, RecordDeclaration>()
+    val recordMap = mutableMapOf<String, RecordDeclaration>()
     protected val enumMap = mutableMapOf<Type, EnumDeclaration>()
     protected val templateList = mutableListOf<TemplateDeclaration>()
     protected val superTypesMap = mutableMapOf<String, List<Type>>()
 
+    /** Maps the name of the type of record declarations to its declaration. */
     protected fun findRecords(node: Node) {
         if (node is RecordDeclaration) {
             // The type name is not the same as the node's name! So, we have to be careful when
@@ -53,6 +51,7 @@ abstract class SymbolResolverPass : Pass() {
         }
     }
 
+    /** Maps the type of enums to its declaration. */
     protected fun findEnums(node: Node) {
         if (node is EnumDeclaration) {
             val type = TypeParser.createFrom(node.name, true)
@@ -60,16 +59,82 @@ abstract class SymbolResolverPass : Pass() {
         }
     }
 
-    /** Caches all TemplateDeclarations in [CallResolver.templateList] */
+    /** Caches all TemplateDeclarations in [templateList] */
     protected fun findTemplates(node: Node) {
         if (node is TemplateDeclaration) {
             templateList.add(node)
         }
     }
 
+    /**
+     * Checks if the function has the given [name], and returnType and signature specified in
+     * [fctPtrType].
+     */
+    protected fun FunctionDeclaration.matches(
+        name: String,
+        fctPtrType: FunctionPointerType
+    ): Boolean {
+        return this.matches(name, fctPtrType.returnType, fctPtrType.parameters)
+    }
+
+    /** Checks if the function has the given [name], [returnType] and [signature] */
+    protected fun FunctionDeclaration.matches(
+        name: String,
+        returnType: Type,
+        signature: List<Type?>
+    ): Boolean {
+        val thisReturnType =
+            if (this.returnTypes.isEmpty()) {
+                IncompleteType()
+            } else {
+                // TODO(oxisto): support multiple return types
+                this.returnTypes[0]
+            }
+        return this.name == name && thisReturnType == returnType && this.hasSignature(signature)
+    }
+
     protected fun collectSupertypes() {
         val currSuperTypes = recordMap.mapValues { (_, value) -> value.superTypes }
         superTypesMap.putAll(currSuperTypes)
+    }
+
+    /**
+     * Infers a record declaration for the given type. [type] is the object type representing a
+     * record that we want to infer, the [recordToUpdate] is either the type's name or the type's
+     * root name. The [kind] specifies if we create a class or a struct.
+     */
+    protected fun inferRecordDeclaration(
+        type: Type,
+        recordToUpdate: String,
+        kind: String = "class"
+    ): RecordDeclaration? {
+        if (type !is ObjectType) {
+            log.error(
+                "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?"
+            )
+            return null
+        }
+        log.debug(
+            "Encountered an unknown record type ${type.typeName} during a call. We are going to infer that record"
+        )
+
+        // This could be a class or a struct. We start with a class and may have to fine-tune this
+        // later.
+        // TODO: used to be a struct in the VariableUsageResolver and a class in the
+        // CallResolver. Both said that the kind could have been wrong and should be updated
+        // later. However, I don't know where/if this ever happened.
+        val declaration = NodeBuilder.newRecordDeclaration(type.typeName, kind, "")
+        declaration.isInferred = true
+
+        // update the type
+        type.recordDeclaration = declaration
+
+        // update the record map
+        recordMap[recordToUpdate] = declaration
+
+        // add this record declaration to the current TU (this bypasses the scope manager)
+        currentTU.addDeclaration(declaration)
+        return declaration
     }
 
     override fun cleanup() {
@@ -79,9 +144,9 @@ abstract class SymbolResolverPass : Pass() {
         templateList.clear()
     }
 
-    protected val Node.delimiter: String
+    val Node.delimiter: String
         get() = lang!!.namespaceDelimiter
 
-    protected val Node.language: LanguageFrontend
+    val Node.language: LanguageFrontend
         get() = lang!!
 }
