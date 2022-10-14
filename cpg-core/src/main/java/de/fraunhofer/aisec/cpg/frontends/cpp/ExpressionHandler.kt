@@ -834,6 +834,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // strip the prefix
         strippedValue = strippedValue.substring(offset)
 
+        // remove single quotes inside integer literal, used as a separator (C++14)
+        strippedValue = strippedValue.replace("'", "")
+
         // basically we parse everything as BigInteger and then decide what to do
         bigValue = BigInteger(strippedValue, radix)
         val numberValue: Number

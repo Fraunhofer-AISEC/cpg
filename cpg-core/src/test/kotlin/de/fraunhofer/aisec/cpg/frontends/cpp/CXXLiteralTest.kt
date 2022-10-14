@@ -79,6 +79,7 @@ internal class CXXLiteralTest : BaseTest() {
         val funcDecl = decimal.iterator().next()
         assertEquals("decimal", funcDecl.name)
         assertLiteral(42, TypeParser.createFrom("int", true), funcDecl, "i")
+        assertLiteral(1000, TypeParser.createFrom("int", true), funcDecl, "i_with_literal")
         assertLiteral(9223372036854775807L, TypeParser.createFrom("long", true), funcDecl, "l")
         assertLiteral(
             9223372036854775807L,
