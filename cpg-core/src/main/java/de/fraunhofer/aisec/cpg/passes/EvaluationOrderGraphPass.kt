@@ -516,7 +516,9 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleUnaryOperator(node: UnaryOperator) {
         val input = node.input
-        createEOG(input)
+        if (input != null) {
+            createEOG(input)
+        }
         if (node.operatorCode == "throw") {
             val catchingScope =
                 lang!!.scopeManager.firstScopeOrNull { scope ->
