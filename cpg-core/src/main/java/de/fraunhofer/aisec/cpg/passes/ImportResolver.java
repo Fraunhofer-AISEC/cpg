@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn;
 import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.util.*;

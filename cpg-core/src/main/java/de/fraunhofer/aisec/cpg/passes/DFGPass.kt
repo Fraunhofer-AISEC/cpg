@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(VariableUsageResolver::class)

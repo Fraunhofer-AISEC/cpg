@@ -33,6 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.order.ExecuteFirst
+import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 import java.util.*
 
 @ExecuteFirst

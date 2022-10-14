@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn;
 import java.util.*;
 
 @DependsOn(CallResolver.class)

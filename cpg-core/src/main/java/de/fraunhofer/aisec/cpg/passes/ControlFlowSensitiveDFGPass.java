@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn;
 import java.util.*;
 
 /**

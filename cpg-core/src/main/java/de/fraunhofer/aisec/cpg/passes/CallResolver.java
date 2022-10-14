@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.util.*;
 import java.util.regex.Pattern;
