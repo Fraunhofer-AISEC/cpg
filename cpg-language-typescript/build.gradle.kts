@@ -28,7 +28,7 @@ import com.github.gradle.node.yarn.task.YarnTask
 plugins {
     `java-library`
 
-    id("com.github.node-gradle.node") version "3.4.0"
+    id("com.github.node-gradle.node") version "3.5.0"
 }
 
 publishing {
