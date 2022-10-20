@@ -70,7 +70,7 @@ dependencies {
         exclude("org.osgi.service", "org.osgi.service.prefs")
     }
     api("org.osgi", "org.osgi.service.prefs", "1.1.2")
-    api("com.ibm.icu:icu4j:71.1")
+    api("com.ibm.icu:icu4j:72.1")
 
     // CDT
     api("org.eclipse.cdt:core:7.2.100.202105180159")
