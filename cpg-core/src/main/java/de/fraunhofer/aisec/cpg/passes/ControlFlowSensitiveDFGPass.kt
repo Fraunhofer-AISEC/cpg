@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
@@ -194,11 +193,6 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         }
     }
 
-    private fun branchReadsVariable(variable: VariableDeclaration) {
-        val allReadsOfVariable =
-            variable.usageEdges.filter { it.getProperty(Properties.ACCESS) != AccessValues.WRITE }
-    }
-
     /**
      * Checks if the node performs an operation and an assignment at the same time e.g. with the
      * operators +=, -=, *=, ...
@@ -247,9 +241,10 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             // states which we have seen before in this place.
             val state = loopPoints.computeIfAbsent(currentNode) { mutableMapOf() }
             if (
-                previousWrites.all { (decl, prevs) ->
-                    decl in state && prevs.last() in state[decl]!!
-                }
+                previousWrites.isNotEmpty() &&
+                    previousWrites.all { (decl, prevs) ->
+                        decl in state && prevs.last() in state[decl]!!
+                    }
             ) {
                 // The current state of last write operations has already been seen before =>
                 // Nothing new => Do not add the next eog steps!
