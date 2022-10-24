@@ -23,9 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes
+package de.fraunhofer.aisec.cpg.passes.order
 
 import de.fraunhofer.aisec.cpg.ConfigurationException
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.log
 import java.lang.reflect.InvocationTargetException
 import java.util.*

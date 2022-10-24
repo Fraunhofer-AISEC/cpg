@@ -23,12 +23,9 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes
+package de.fraunhofer.aisec.cpg.passes.order
 
-import kotlin.reflect.KClass
+import de.fraunhofer.aisec.cpg.passes.Pass
 
-/** Register a new pass required by a fronted. */
-@Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.CLASS)
-@Repeatable
-annotation class RegisterExtraPass(val value: KClass<out Pass>)
+/** A simple helper class to match a pass with dependencies. */
+data class PassWithDependencies(val pass: Pass, val dependencies: MutableSet<Class<out Pass>>)

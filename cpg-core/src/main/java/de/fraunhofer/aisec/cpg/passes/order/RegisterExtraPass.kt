@@ -23,13 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes
+package de.fraunhofer.aisec.cpg.passes.order
 
-/**
- * Indicates whether this pass should be executed as the first pass. Note: setting this flag for
- * more than one active pass will yield an error. Note: setting this flag will not activate the
- * pass. You must register the pass manually.
- */
+import de.fraunhofer.aisec.cpg.passes.Pass
+import kotlin.reflect.KClass
+
+/** Register a new pass required by a fronted. */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-annotation class ExecuteFirst
+@Repeatable
+annotation class RegisterExtraPass(val value: KClass<out Pass>)

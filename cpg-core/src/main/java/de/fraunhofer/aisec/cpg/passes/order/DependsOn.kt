@@ -23,7 +23,20 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes
+package de.fraunhofer.aisec.cpg.passes.order
 
-/** A simple helper class to match a pass with dependencies. */
-data class PassWithDependencies(val pass: Pass, val dependencies: MutableSet<Class<out Pass>>)
+import de.fraunhofer.aisec.cpg.passes.Pass
+import kotlin.reflect.KClass
+
+/**
+ * Register a dependency for the annotated pass. This ensures that:
+ * - the annotated pass is executed after its dependency when `softDependency` is `false`:
+ * - the dependency is added to the list of active passes even if not manually specified by the user
+ * when `softDependency`is true:
+ * - the dependency is not added to the list of active passes - the order is only enforced if the
+ * user manually adds the pass
+ */
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
+@Repeatable
+annotation class DependsOn(val value: KClass<out Pass>, val softDependency: Boolean = false)

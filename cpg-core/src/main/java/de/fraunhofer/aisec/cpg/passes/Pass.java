@@ -28,6 +28,10 @@ package de.fraunhofer.aisec.cpg.passes;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn;
+import de.fraunhofer.aisec.cpg.passes.order.ExecuteFirst;
+import de.fraunhofer.aisec.cpg.passes.order.ExecuteLast;
+import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -45,7 +49,7 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
 
   protected String name;
 
-  protected static final Logger log = LoggerFactory.getLogger(Pass.class);
+  public static final Logger log = LoggerFactory.getLogger(Pass.class);
 
   /**
    * Dependencies which - if present - have to be executed before this pass. Note: Dependencies
