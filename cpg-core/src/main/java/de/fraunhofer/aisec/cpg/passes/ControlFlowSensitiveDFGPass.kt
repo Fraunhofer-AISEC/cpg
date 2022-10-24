@@ -59,7 +59,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
     }
 
     /**
-     * We perform the actions for each function.
+     * We perform the actions for each [FunctionDeclaration].
      *
      * @param node every node in the TranslationResult
      */
@@ -112,10 +112,11 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             var writtenDecl: Declaration? = null
             var currentWritten = currentNode
 
-            if ((currentNode as? VariableDeclaration)?.initializer != null) {
+            val initializer = (currentNode as? VariableDeclaration)?.initializer
+            if (initializer != null) {
                 // A variable declaration with an initializer => The initializer flows to the
                 // declaration.
-                currentNode.addPrevDFG(currentNode.initializer!!)
+                currentNode.addPrevDFG(initializer)
 
                 // We wrote something to this variable declaration
                 writtenDecl = currentNode
@@ -127,50 +128,60 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 // operation, the prevWrite of the input's variable is this node.
                 val input = (currentNode as UnaryOperator).input as DeclaredReferenceExpression
                 // We write to the variable in the input
-                writtenDecl = input.refersTo!!
+                writtenDecl = input.refersTo
 
-                previousWrites[writtenDecl]?.lastOrNull()?.let { input.addPrevDFG(it) }
+                if (writtenDecl != null) {
+                    previousWrites[writtenDecl]?.lastOrNull()?.let { input.addPrevDFG(it) }
 
-                // TODO: Do we want to have a flow from the input back to the input? One test
-                // says yes but I think this will only cause problems. If we really want it,
-                // comment out the following line:
-                currentNode.removeNextDFG(input)
+                    // TODO: Do we want to have a flow from the input back to the input? One test
+                    // says yes but I think this will only cause problems. If we really want it,
+                    // comment out the following line:
+                    currentNode.removeNextDFG(input)
 
-                // Add the whole node to the list of previous write nodes in this path. This
-                // prevents some weird circular dependencies.
-                previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
+                    // Add the whole node to the list of previous write nodes in this path. This
+                    // prevents some weird circular dependencies.
+                    previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
+                }
             } else if (isSimpleAssignment(currentNode)) {
                 // We write to the target => the rhs flows to the lhs
                 (currentNode as BinaryOperator).rhs?.let { currentNode.lhs.addPrevDFG(it) }
 
                 // Only the lhs is the last write statement here and the variable which is written
                 // to.
-                writtenDecl = (currentNode.lhs as DeclaredReferenceExpression).refersTo!!
-                previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode.lhs)
-                currentWritten = currentNode.lhs
+                writtenDecl = (currentNode.lhs as DeclaredReferenceExpression).refersTo
+
+                if (writtenDecl != null) {
+                    previousWrites
+                        .computeIfAbsent(writtenDecl, ::mutableListOf)
+                        .add(currentNode.lhs)
+                    currentWritten = currentNode.lhs
+                }
             } else if (isCompoundAssignment(currentNode)) {
                 // We write to the lhs, but it also serves as an input => We first get all previous
                 // writes to the lhs and then add the flow from lhs and rhs to the current node.
 
                 // The write operation goes to the variable in the lhs
                 writtenDecl =
-                    ((currentNode as BinaryOperator).lhs as? DeclaredReferenceExpression)
-                        ?.refersTo!!
+                    ((currentNode as BinaryOperator).lhs as? DeclaredReferenceExpression)?.refersTo
 
-                // Data flows from the last writes to the lhs variable to this node
-                previousWrites[writtenDecl]?.lastOrNull()?.let { currentNode.lhs.addPrevDFG(it) }
-                currentNode.addPrevDFG(currentNode.lhs)
+                if (writtenDecl != null) {
+                    // Data flows from the last writes to the lhs variable to this node
+                    previousWrites[writtenDecl]?.lastOrNull()?.let {
+                        currentNode.lhs.addPrevDFG(it)
+                    }
+                    currentNode.addPrevDFG(currentNode.lhs)
 
-                // Data flows from whatever is the rhs to this node
-                currentNode.rhs?.let { currentNode.addPrevDFG(it) }
+                    // Data flows from whatever is the rhs to this node
+                    currentNode.rhs?.let { currentNode.addPrevDFG(it) }
 
-                // TODO: Similar to the ++ case: Should the DFG edge go back to the reference? I
-                // think it shouldn't. If it should, add the following statement:
-                // currentNode.lhs.addPrevDFG(currentNode)
+                    // TODO: Similar to the ++ case: Should the DFG edge go back to the reference? I
+                    // think it shouldn't. If it should, add the following statement:
+                    // currentNode.lhs.addPrevDFG(currentNode)
 
-                // The whole current node is the place of the last update, not (only) the lhs!
-                previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
-                currentWritten = currentNode
+                    // The whole current node is the place of the last update, not (only) the lhs!
+                    previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
+                    currentWritten = currentNode
+                }
             } else if ((currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ) {
                 // We only read the variable => Get previous write which have been collected in the
                 // other steps
@@ -235,17 +246,17 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 currentNode is ForEachStatement ||
                 currentNode is DoStatement ||
                 currentNode is GotoStatement ||
-                currentNode is ContinueStatement ||
-                currentNode is IfStatement
+                currentNode is ContinueStatement // ||
+        // TODO(oxisto): why was this added?
+        // currentNode is IfStatement
         ) {
             // Loop detection: This is a point which could serve as a loop, so we check all
             // states which we have seen before in this place.
             val state = loopPoints.computeIfAbsent(currentNode) { mutableMapOf() }
             if (
-                previousWrites.isNotEmpty() &&
-                    previousWrites.all { (decl, prevs) ->
-                        decl in state && prevs.last() in state[decl]!!
-                    }
+                previousWrites.all { (decl, prevs) ->
+                    decl in state && prevs.last() in state[decl]!!
+                }
             ) {
                 // The current state of last write operations has already been seen before =>
                 // Nothing new => Do not add the next eog steps!
