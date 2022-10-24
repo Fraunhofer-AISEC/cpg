@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 /**
  * This pass determines the data flows of DeclaredReferenceExpressions which refer to a
