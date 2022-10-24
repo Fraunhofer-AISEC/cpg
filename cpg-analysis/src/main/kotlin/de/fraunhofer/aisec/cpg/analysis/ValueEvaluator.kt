@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -105,10 +106,11 @@ open class ValueEvaluator(
      * or less language-independent.
      */
     protected open fun handleBinaryOperator(expr: BinaryOperator, depth: Int): Any? {
-        // Resolve lhs
-        val lhsValue = evaluateInternal(expr.lhs, depth + 1)
         // Resolve rhs
         val rhsValue = evaluateInternal(expr.rhs, depth + 1)
+
+        // Resolve lhs
+        val lhsValue = evaluateInternal(expr.lhs, depth + 1)
 
         return computeBinaryOpEffect(lhsValue, rhsValue, expr)
     }
@@ -119,10 +121,14 @@ open class ValueEvaluator(
         expr: BinaryOperator
     ): Any? {
         return when (expr.operatorCode) {
-            "+" -> handlePlus(lhsValue, rhsValue, expr)
-            "-" -> handleMinus(lhsValue, rhsValue, expr)
-            "/" -> handleDiv(lhsValue, rhsValue, expr)
-            "*" -> handleTimes(lhsValue, rhsValue, expr)
+            "+",
+            "+=" -> handlePlus(lhsValue, rhsValue, expr)
+            "-",
+            "-=" -> handleMinus(lhsValue, rhsValue, expr)
+            "/",
+            "/=" -> handleDiv(lhsValue, rhsValue, expr)
+            "*",
+            "*=" -> handleTimes(lhsValue, rhsValue, expr)
             ">" -> handleGreater(lhsValue, rhsValue, expr)
             ">=" -> handleGEq(lhsValue, rhsValue, expr)
             "<" -> handleLess(lhsValue, rhsValue, expr)
@@ -350,7 +356,27 @@ open class ValueEvaluator(
     ): Any? {
         // For a reference, we are interested into its last assignment into the reference
         // denoted by the previous DFG edge
-        val prevDFG = expr.prevDFG
+        var prevDFG = expr.prevDFG.toList()
+
+        // If this has READWRITE access, ignore any "self-references", e.g. from a
+        // plus/minus/div/times assign
+        if (expr.access == AccessValues.READWRITE) {
+            prevDFG = prevDFG.filter { !(it is BinaryOperator && it.lhs == expr) }
+        }
+
+        /*
+        // We need to take a slightly different approach if the operator is a plus/minus/div/times
+        // assign. In this case, resolving the lhs (whose DFG points to itself) will result in a
+        // stack overflow.
+        if (
+            expr.operatorCode.equals("+=") ||
+                expr.operatorCode.equals("-=") ||
+                expr.operatorCode.equals("/=") ||
+                expr.operatorCode.equals("*=")
+        ) {
+            lhsValue = ""
+        } else {
+         */
 
         return if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.

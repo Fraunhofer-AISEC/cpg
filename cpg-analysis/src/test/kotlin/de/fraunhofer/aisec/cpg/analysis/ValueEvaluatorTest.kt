@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.query.value
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -138,6 +139,36 @@ class ValueEvaluatorTest {
         assertNotNull(m)
         value = m.evaluate()
         assertFalse(value as Boolean)
+
+        m.fields
+    }
+
+    @Test
+    fun testComplex() {
+        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("complex.java").toFile()),
+                topLevel,
+                true
+            )
+
+        assertNotNull(tu)
+
+        val mainClass = tu.records["MainClass"]
+        assertNotNull(mainClass)
+
+        val main = mainClass.functions["main"]
+        assertNotNull(main)
+
+        val s = main.refs("s").last()
+        assertNotNull(s)
+
+        var value = s.evaluate()
+        assertEquals("{s}!?", value)
+
+        value = s.evaluate(MultiValueEvaluator())
+        assertEquals(listOf("big!?", "small!?"), value)
     }
 
     @Test
