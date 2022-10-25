@@ -133,10 +133,11 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 if (writtenDecl != null) {
                     previousWrites[writtenDecl]?.lastOrNull()?.let { input.addPrevDFG(it) }
 
-                    // TODO: Do we want to have a flow from the input back to the input? One test
-                    // says yes but I think this will only cause problems. If we really want it,
-                    // comment out the following line:
-                    currentNode.removeNextDFG(input)
+                    // TODO: Do we want to have a flow from the input back to the input? This can
+                    //  cause problems if the DFG is not iterated through appropriately. The
+                    // following
+                    //  line would remove it:
+                    // currentNode.removeNextDFG(input)
 
                     // Add the whole node to the list of previous write nodes in this path. This
                     // prevents some weird circular dependencies.
@@ -174,9 +175,9 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     // Data flows from whatever is the rhs to this node
                     currentNode.rhs?.let { currentNode.addPrevDFG(it) }
 
-                    // TODO: Similar to the ++ case: Should the DFG edge go back to the reference? I
-                    // think it shouldn't. If it should, add the following statement:
-                    // currentNode.lhs.addPrevDFG(currentNode)
+                    // TODO: Similar to the ++ case: Should the DFG edge go back to the reference?
+                    //  If it shouldn't, remove the following statement:
+                    currentNode.lhs.addPrevDFG(currentNode)
 
                     // The whole current node is the place of the last update, not (only) the lhs!
                     previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
