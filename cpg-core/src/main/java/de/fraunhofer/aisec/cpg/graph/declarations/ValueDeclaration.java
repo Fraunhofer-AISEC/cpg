@@ -113,7 +113,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   /** Adds a usage of the variable/field and assembles the access property. */
-  public void addUsageEdge(DeclaredReferenceExpression reference) {
+  public void addUsage(DeclaredReferenceExpression reference) {
     PropertyEdge<DeclaredReferenceExpression> usageEdge = new PropertyEdge<>(this, reference);
     usageEdge.addProperty(Properties.ACCESS, reference.getAccess());
     this.usageEdges.add(usageEdge);
