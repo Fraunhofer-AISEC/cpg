@@ -44,7 +44,7 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 class DFGPass : Pass() {
     override fun accept(tr: TranslationResult) {
         val inferDfgForUnresolvedCalls =
-            tr.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedCalls
+            tr.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit2 { node, parent ->
             handle(node, parent, inferDfgForUnresolvedCalls)
@@ -58,16 +58,16 @@ class DFGPass : Pass() {
         // Nothing to do
     }
 
-    private fun handle(node: Node?, parent: Node?, inferDfgForUnresolvedCalls: Boolean) {
+    private fun handle(node: Node?, parent: Node?, inferDfgForUnresolvedSymbols: Boolean) {
         when (node) {
             // Expressions
-            is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedCalls)
+            is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
             is ArrayCreationExpression -> handleArrayCreationExpression(node)
             is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
-            is MemberExpression -> handleMemberExpression(node)
+            is MemberExpression -> handleMemberExpression(node, inferDfgForUnresolvedSymbols)
             is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
             is ExpressionList -> handleExpressionList(node)
             // We keep the logic for the InitializerListExpression in that class because the
@@ -91,8 +91,11 @@ class DFGPass : Pass() {
      * For a [MemberExpression], the base flows to the expression if the field is not implemented in
      * the code under analysis. Otherwise, it's handled as a [DeclaredReferenceExpression].
      */
-    private fun handleMemberExpression(node: MemberExpression) {
-        if (node.refersTo == null) {
+    private fun handleMemberExpression(
+        node: MemberExpression,
+        inferDfgForUnresolvedCalls: Boolean
+    ) {
+        if (node.refersTo == null && inferDfgForUnresolvedCalls) {
             node.addPrevDFG(node.base)
         } else {
             handleDeclaredReferenceExpression(node)
@@ -283,13 +286,13 @@ class DFGPass : Pass() {
     }
 
     /** Adds the DFG edges to a [CallExpression]. */
-    fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedCalls: Boolean) {
+    fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedSymbols: Boolean) {
         // Remove existing DFG edges since they are no longer valid (e.g. after updating the
         // CallExpression with the invokes edges to the called functions)
         call.prevDFG.forEach { it.nextDFG.remove(call) }
         call.prevDFG.clear()
 
-        if (call.invokes.isEmpty() && inferDfgForUnresolvedCalls) {
+        if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
             // Unresolved call expression
             handleUnresolvedCalls(call)
         } else if (call.invokes.isNotEmpty()) {

@@ -64,7 +64,7 @@ class FunctionPointerCallResolver : Pass() {
     private var inferDfgForUnresolvedCalls = false
 
     override fun accept(t: TranslationResult) {
-        inferDfgForUnresolvedCalls = t.config.inferenceConfiguration.inferDfgForUnresolvedCalls
+        inferDfgForUnresolvedCalls = t.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         walker = ScopedWalker(lang)
         walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
             walker.collectDeclarations(currNode)

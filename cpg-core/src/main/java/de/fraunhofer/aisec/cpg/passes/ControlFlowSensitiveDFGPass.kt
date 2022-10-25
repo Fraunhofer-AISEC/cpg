@@ -276,9 +276,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 currentNode is ForEachStatement ||
                 currentNode is DoStatement ||
                 currentNode is GotoStatement ||
-                currentNode is ContinueStatement // ||
-        // TODO(oxisto): why was this added?
-        // currentNode is IfStatement
+                currentNode is ContinueStatement
         ) {
             // Loop detection: This is a point which could serve as a loop, so we check all
             // states which we have seen before in this place.
