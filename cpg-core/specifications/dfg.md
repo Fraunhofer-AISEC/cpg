@@ -16,16 +16,23 @@ A call expressions calls another function. We differentiate two types of call ex
 For each function in the `invokes` list, the arguments of the call expression flow to the function's parameters. The value of the function declaration flows to the call.
 
 Scheme:
-* `argument[i]` -- DFG --> `invokes[j].parameter[i]` for all i, j
-* `invokes[j]` -- DFG --> `CallExpression` for all j
+  ```mermaid
+  flowchart LR
+    A["forall i: argument[i]"] -- DFG --> B["forall j: invokes[j].parameter[i]"];
+    B --> C;
+    C["forall j: invokes[j]"] -- DFG --> callExpression;
+  ```
 
 ### Case 2: Unknown function
 
 The base and all arguments flow to the call expression.
 
 Scheme:
-* `argument[i]` -- DFG --> `CallExpression` for all i
-* `base` -- DFG --> `CallExpression`
+  ```mermaid
+  flowchart LR
+    A["for all i: argument[i]"] -- DFG --> B[callExpression];
+    C[base] -- DFG --> B;
+  ```
 
 ## CastExpression
 
@@ -33,7 +40,11 @@ Interesting fields:
 * `expression: Expression`: The inner expression which has to be casted
 
 The value of the `expression` flows to the cast expression.
-
+Scheme:
+  ```mermaid
+  flowchart LR
+    castExpr.expression -- DFG --> castExpr;
+  ```
 
 ## BinaryOperator
 
@@ -50,17 +61,28 @@ The `rhs` flows to `lhs`. In some languages, it is possible to have an assignmen
 For this reason, if the assignment's ast parent is not a `CompoundStatement` (i.e., a block of statements), we also add a DFG edge to the whole operator.
 
 Scheme:
-* `rhs` -- DFG --> `lhs`
-* `rhs` -- DFG --> `lhs = rhs` if the ast parent is not a CompoundStatement
+  ```mermaid
+  flowchart LR
+    A[binaryOperator.rhs] -- DFG --> binaryOperator.lhs;
+    subgraph S[If the ast parent is not a CompoundStatement]
+      direction LR
+      binaryOperator.rhs -- DFG --> binaryOperator;
+    end
+    A --> S;
+  ```
+     
 
 ### Case 2: Assignment with a Computation (`operatorCode: *=, /=, %=, +=, -=, <<=, >>=, &=, ^=, |=` )
 
 The `lhs` and the `rhs` flow to the binary operator expression, the binary operator flows to the `lhs`.
 
 Scheme:
-* `lhs` -- DFG --> `(lhs operatorCode rhs)`
-* `rhs` -- DFG --> `(lhs operatorCode rhs)`
-* `(lhs operatorCode rhs)` -- DFG --> `lhs`
+  ```mermaid
+  flowchart LR
+    binaryOperator.lhs -- DFG 1 --> binaryOperator;
+    binaryOperator.rhs -- DFG 1 --> binaryOperator;
+    binaryOperator -- DFG 2 --> binaryOperator.lhs;
+  ```
 
 *Dangerous: We have to ensure that the first two operations are performed before the last one*
 
@@ -70,9 +92,11 @@ Scheme:
 The `lhs` and the `rhs` flow to the binary operator expression.
 
 Scheme:
-* `lhs` -- DFG --> `(lhs operatorCode rhs)`
-* `rhs` -- DFG --> `(lhs operatorCode rhs)`
-
+  ```mermaid
+  flowchart LR
+    binaryOperator.lhs -- DFG --> binaryOperator;
+    binaryOperator.rhs -- DFG --> binaryOperator;
+  ```
 
 ## ArrayCreationExpression
 
@@ -82,7 +106,10 @@ Interesting fields:
 The `initializer` flows to the array creation expression.
 
 Scheme:
-* `initializer` -- DFG --> `ArrayCreationExpression`
+  ```mermaid
+  flowchart LR
+    initializer -- DFG --> ArrayCreationExpression
+  ```
 
 
 ## ArraySubscriptionExpression
@@ -94,7 +121,10 @@ Interesting fields:
 The `arrayExpression` flows to the subscription expression. This means, we do not differentiate between the field which is accessed.
 
 Scheme:
-* `arrayExpression` -- DFG --> `ArraySubscriptionExpression`
+  ```mermaid
+  flowchart LR
+    arrayExpression -- DFG --> ArraySubscriptionExpression;
+  ```
 
 
 ## ConditionalExpression
@@ -107,8 +137,11 @@ Interesting fields:
 The `thenExpr` and the `elseExpr` flow to the `ConditionalExpression`. This means that implicit data flows are not considered.
 
 Scheme:
-* `thenExpr` -- DFG --> `ConditionalExpression`
-* `elseExpr` -- DFG --> `ConditionalExpression`
+  ```mermaid
+  flowchart LR
+    thenExpr -- DFG --> ConditionalExpression;
+    elseExpr` -- DFG --> ConditionalExpression;
+   ```
 
 ## DeclaredReferenceExpression
 
@@ -120,33 +153,58 @@ This is the most tricky concept for the DFG edges. We have to differentiate betw
 
 The `DFGPass` generates very simple edges based on the access to the variable as follows:
 * The value flows from the declaration to the expression for read access. Scheme:
-  - `refersTo` -- DFG --> `DeclaredReferenceExpression`
+  ```mermaid
+  flowchart LR
+    refersTo -- DFG --> DeclaredReferenceExpression;
+  ```
 * For write access, data flow from the expression to the declaration. Scheme:
-  - `DeclaredReferenceExpression` -- DFG --> `refersTo`
+  ```mermaid
+  flowchart LR
+    DeclaredReferenceExpression` -- DFG --> refersTo;
+  ```
 * For readwrite access, both flows are present. Scheme:
-  - `refersTo` -- DFG --> `DeclaredReferenceExpression`
-  - `DeclaredReferenceExpression` -- DFG --> `refersTo`
+  ```mermaid
+  flowchart LR
+    refersTo -- DFG 1 --> DeclaredReferenceExpression;
+    DeclaredReferenceExpression -- DFG 2 --> refersTo;
+  ```
 
 This mostly serves one purpose: The current function pointer resolution requires such flows. Once the respective passes are redesigned, we may want to update this.
 
 The `ControlFlowSensitiveDFGPass` completely changes this behavior and accounts for the data flows which differ depending on the program's control flow (e.g., different assignments to a variable in an if and else branch, ...). The pass performs the following actions:
 * First, it clears all the edges between a `VariableDeclaration` and its `DeclaredReferenceExpression`. Actually, it clears all incoming and outgoing DFG edges of all VariableDeclarations in a function. This includes the initializer but this edge is restored right away. Scheme:
-  - `variableDeclaration.initializer` -- DFG --> `variableDeclaration`
+  ```mermaid
+  flowchart LR
+    variableDeclaration.initializer -- DFG --> variableDeclaration;
+  ```
 * For each read access to a DeclaredReferenceExpression, it collects all potential previous assignments to the variable and adds these to the incoming DFG edges. You can imagine that this is done by traversing the EOG backwards until finding the first assignment to the variable for each possible path. Scheme:
-  - last writes to `var` (either in the `VariableDeclaration` or as `DeclaredReferenceExpression`) -- DFG --> `var` (the `DeclaredReferenceExpression`)
-* If we increment or decrement a variable with "++" or "--", the data of this statement flows from the previous writes of the variable to the input of the statement (= the DeclaredReferenceExpression). We do not write back to this reference but consider the whole statement as a "write" to the variable! Scheme:
-  - last writes to `var` (either in the `VariableDeclaration` or as `DeclaredReferenceExpression`) -- DFG --> `expr.input`
-  - `expr.input` -- DFG --> `expr` (`var++` or `var--`)
-  - `expr` -- DFG --> next reads of `var` (the `DeclaredReferenceExpression`s)
-* For compound operators such as `+=, -=, *=, /=`, we have an incoming flow from the last writes to reference on the left hand side of the expression to the lhs. The lhs then flows to the whole expression. Also, the right hand side flows to the whole expression (if it's a read, this is processed separately). The expression is marked as last write to the variable used on the lhs but the DFG edge does not go back to the lhs!
-  - last writes to `expr.lhs` -- DFG --> `expr.lhs`
-  - `expr.lhs` -- DFG --> `expr`
-  - `expr.rhs` -- DFG --> `expr`
-  - `expr` -- DFG --> next reads of the variable used in `expr.lhs`
+  ```mermaid
+  flowchart LR
+    A[last writes to var] -- DFG --> var;
+  ```
+* If we increment or decrement a variable with "++" or "--", the data of this statement flows from the previous writes of the variable to the input of the statement (= the DeclaredReferenceExpression). We write back to this reference and consider the lhs as a "write" to the variable! *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!* Scheme:
+  ```mermaid
+  flowchart LR
+    Z[last writes to the variable in expr.input] -- DFG 1 --> A;
+    A[expr.input] -- DFG 2 --> B[expr];
+    B -- DFG 3 --> A;
+    A -- DFG 4 --> C[next reads of var];
+  ```
+* For compound operators such as `+=, -=, *=, /=`, we have an incoming flow from the last writes to reference on the left hand side of the expression to the lhs. The lhs then flows to the whole expression. Also, the right hand side flows to the whole expression (if it's a read, this is processed separately). The data flows back to the lhs which is marked as the last write to the variable. *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!*
+  ```mermaid
+  flowchart LR
+    A[last writes to the variable in expr.lhs] -- DFG 1 --> B[expr.lhs];
+    D[expr.rhs] -- DFG 2 --> C;
+    B -- DFG 2 --> C[expr];
+    C -- DFG 3 --> B;
+    B -- DFG 4 --> E[next reads of the variable used in expr.lhs];
+  ```
 * If the variable is assigned a value (a binary operator `var = rhs`), the right hand side flows to the variable. This is considered as a write operation.
-  - `rhs` -- DFG --> `var` (the `DeclaredReferenceExpression`)
-  - `var` -- DFG --> next reads of `var` (the `DeclaredReferenceExpression`s)
-
+  ```mermaid
+  flowchart LR
+    A[expr.rhs] -- DFG --> B[expr.lhs];
+    B -- DFG --> C[next reads of the variable in expr.lhs];
+  ```
 
 ## MemberExpression
 
