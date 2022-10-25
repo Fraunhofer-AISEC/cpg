@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 @DependsOn(CallResolver::class)
 open class TypeResolver : Pass() {

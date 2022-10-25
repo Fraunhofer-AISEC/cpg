@@ -38,8 +38,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
-import java.util.regex.Pattern
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import org.slf4j.LoggerFactory
+import java.util.regex.Pattern
 
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
