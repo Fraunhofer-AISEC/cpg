@@ -43,7 +43,7 @@ The value of the `expression` flows to the cast expression.
 Scheme:
 ```mermaid
   flowchart LR
-    node([CastExpression]) -- AST --> expression(expression);
+    node([CastExpression]) -.- expression(expression);
     expression -- DFG --> node;
   ```
 
@@ -64,16 +64,16 @@ For this reason, if the assignment's ast parent is not a `CompoundStatement` (i.
 Scheme:
 ```mermaid
 flowchart LR
-    node([BinaryOperator]) -- AST --> rhs(rhs);
+    node([BinaryOperator]) -.- rhs(rhs);
       rhs -- DFG --> lhs;
-    node([BinaryOperator]) -- AST --> lhs(lhs);
+    node([BinaryOperator]) -.- lhs(lhs);
 
 ```
 
 ```mermaid
 flowchart LR
-  node([BinaryOperator]) -- AST --> lhs(lhs);
-  node([BinaryOperator]) -- AST --> rhs(rhs);
+  node([BinaryOperator]) -.- lhs(lhs);
+  node([BinaryOperator]) -.- rhs(rhs);
   rhs -- DFG --> lhs;
   rhs -- DFG --> node;
 ```
@@ -96,9 +96,11 @@ The `lhs` and the `rhs` flow to the binary operator expression, the binary opera
 Scheme:
   ```mermaid
   flowchart LR
-    binaryOperator.lhs -- DFG 1 --> binaryOperator;
-    binaryOperator.rhs -- DFG 1 --> binaryOperator;
-    binaryOperator -- DFG 2 --> binaryOperator.lhs;
+    node([BinaryOperator]) -.- lhs(lhs);
+    node([BinaryOperator]) -.- rhs(rhs);
+    lhs -- DFG --> node;
+    rhs -- DFG --> node;
+    node == DFG ==> lhs;
   ```
 
 *Dangerous: We have to ensure that the first two operations are performed before the last one*
@@ -110,9 +112,11 @@ The `lhs` and the `rhs` flow to the binary operator expression.
 
 Scheme:
   ```mermaid
-  flowchart LR
-    binaryOperator.lhs -- DFG --> binaryOperator;
-    binaryOperator.rhs -- DFG --> binaryOperator;
+  flowchart
+    node([BinaryOperator]) -.- lhs(lhs);
+    node([BinaryOperator]) -.- rhs(rhs);
+    rhs -- DFG --> node;
+    lhs -- DFG --> node;
   ```
 
 ## ArrayCreationExpression
@@ -125,7 +129,7 @@ The `initializer` flows to the array creation expression.
 Scheme:
   ```mermaid
   flowchart LR
-    node([ArrayCreationExpression]) -- AST --> initializer(initializer)
+    node([ArrayCreationExpression]) -.- initializer(initializer)
     initializer -- DFG --> node
   ```
 
