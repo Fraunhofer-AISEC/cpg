@@ -199,10 +199,40 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 // is already included in the list.
                 currentNode.nextEOG.forEach {
                     val newPair = Pair(it, copyMap(previousWrites))
-                    if (newPair !in worklist) worklist.add(newPair)
+                    if (!worklistHasSimilarPair(worklist, newPair)) worklist.add(newPair)
+                    // if (newPair !in worklist) worklist.add(newPair)
                 }
             }
         }
+    }
+
+    /**
+     * Determines if there's an item in the [worklist] which has the same last write for each
+     * declaration in the [newPair]. If this is the case, we can ignore it because all that changed
+     * was the path through the EOG to reach this state but apparently, all the writes in the
+     * different branches are obsoleted by one common write access which happens afterwards.
+     */
+    private fun worklistHasSimilarPair(
+        worklist: MutableList<Pair<Node, MutableMap<Declaration, MutableList<Node>>>>,
+        newPair: Pair<Node, MutableMap<Declaration, MutableList<Node>>>
+    ): Boolean {
+        for (existingPair in worklist) {
+            if (existingPair.first == newPair.first) {
+                // The next nodes match. Now check the last writes for each declaration.
+                var allWritesMatch = true
+                for ((lastWriteDecl, lastWriteList) in newPair.second) {
+                    // We will generate the same "prev DFG" with the item that is already in the
+                    // list
+                    allWritesMatch =
+                        allWritesMatch &&
+                            existingPair.second[lastWriteDecl]?.last() == lastWriteList.last()
+                }
+                // We found a matching pair in the worklist? Done. Otherwise, maybe there's another
+                // pair...
+                if (allWritesMatch) return true
+            }
+        }
+        return false
     }
 
     /**
