@@ -41,9 +41,10 @@ Interesting fields:
 
 The value of the `expression` flows to the cast expression.
 Scheme:
-  ```mermaid
+```mermaid
   flowchart LR
-    castExpr.expression -- DFG --> castExpr;
+    node([CastExpression]) -- AST --> expression(expression);
+    expression -- DFG --> node;
   ```
 
 ## BinaryOperator
@@ -61,6 +62,22 @@ The `rhs` flows to `lhs`. In some languages, it is possible to have an assignmen
 For this reason, if the assignment's ast parent is not a `CompoundStatement` (i.e., a block of statements), we also add a DFG edge to the whole operator.
 
 Scheme:
+```mermaid
+flowchart LR
+    node([BinaryOperator]) -- AST --> rhs(rhs);
+      rhs -- DFG --> lhs;
+    node([BinaryOperator]) -- AST --> lhs(lhs);
+
+```
+
+```mermaid
+flowchart LR
+  node([BinaryOperator]) -- AST --> lhs(lhs);
+  node([BinaryOperator]) -- AST --> rhs(rhs);
+  rhs -- DFG --> lhs;
+  rhs -- DFG --> node;
+```
+
   ```mermaid
   flowchart LR
     A[binaryOperator.rhs] -- DFG --> binaryOperator.lhs;
@@ -108,7 +125,8 @@ The `initializer` flows to the array creation expression.
 Scheme:
   ```mermaid
   flowchart LR
-    initializer -- DFG --> ArrayCreationExpression
+    node([ArrayCreationExpression]) -- AST --> initializer(initializer)
+    initializer -- DFG --> node
   ```
 
 
