@@ -44,9 +44,11 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 class DFGPass : Pass() {
     override fun accept(tr: TranslationResult) {
         val inferDfgForUnresolvedCalls =
-            tr.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedCalls
+            tr.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         val walker = IterativeGraphWalker()
-        walker.registerOnNodeVisit { handle(it, inferDfgForUnresolvedCalls) }
+        walker.registerOnNodeVisit2 { node, parent ->
+            handle(node, parent, inferDfgForUnresolvedCalls)
+        }
         for (tu in tr.translationUnits) {
             walker.iterate(tu)
         }
@@ -56,15 +58,16 @@ class DFGPass : Pass() {
         // Nothing to do
     }
 
-    private fun handle(node: Node?, inferDfgForUnresolvedCalls: Boolean) {
+    private fun handle(node: Node?, parent: Node?, inferDfgForUnresolvedSymbols: Boolean) {
         when (node) {
             // Expressions
-            is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedCalls)
+            is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
-            is BinaryOperator -> handleBinaryOp(node)
+            is BinaryOperator -> handleBinaryOp(node, parent)
             is ArrayCreationExpression -> handleArrayCreationExpression(node)
             is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
+            is MemberExpression -> handleMemberExpression(node, inferDfgForUnresolvedSymbols)
             is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
             is ExpressionList -> handleExpressionList(node)
             // We keep the logic for the InitializerListExpression in that class because the
@@ -85,7 +88,22 @@ class DFGPass : Pass() {
     }
 
     /**
-     * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
+     * For a [MemberExpression], the base flows to the expression if the field is not implemented in
+     * the code under analysis. Otherwise, it's handled as a [DeclaredReferenceExpression].
+     */
+    private fun handleMemberExpression(
+        node: MemberExpression,
+        inferDfgForUnresolvedCalls: Boolean
+    ) {
+        if (node.refersTo == null && inferDfgForUnresolvedCalls) {
+            node.addPrevDFG(node.base)
+        } else {
+            handleDeclaredReferenceExpression(node)
+        }
+    }
+
+    /**
+     * Adds the DFG edge for a [VariableDeclaration]. The data flows from the return statement(s) to
      * the function.
      */
     private fun handleVariableDeclaration(node: VariableDeclaration) {
@@ -219,9 +237,19 @@ class DFGPass : Pass() {
      * Adds the DFG edge to an [BinaryOperator]. The value flows to the target of an assignment or
      * to the whole expression.
      */
-    private fun handleBinaryOp(node: BinaryOperator) {
+    private fun handleBinaryOp(node: BinaryOperator, parent: Node?) {
         when (node.operatorCode) {
-            "=" -> node.rhs?.let { node.lhs.addPrevDFG(it) }
+            "=" -> {
+                node.rhs?.let { node.lhs.addPrevDFG(it) }
+                // There are cases where we explicitly want to connect the rhs to the =.
+                // E.g., this is the case in C++ where subexpressions can make the assignment.
+                // Examples: a + (b = 1)  or  a = a == b ? b = 2: b = 3
+                // When the parent is a compound statement (or similar block of code), we can safely
+                // assume that we're not in such a sub-expression
+                if (parent == null || parent !is CompoundStatement) {
+                    node.rhs?.addNextDFG(node)
+                }
+            }
             "*=",
             "/=",
             "%=",
@@ -258,13 +286,13 @@ class DFGPass : Pass() {
     }
 
     /** Adds the DFG edges to a [CallExpression]. */
-    fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedCalls: Boolean) {
+    fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedSymbols: Boolean) {
         // Remove existing DFG edges since they are no longer valid (e.g. after updating the
         // CallExpression with the invokes edges to the called functions)
         call.prevDFG.forEach { it.nextDFG.remove(call) }
         call.prevDFG.clear()
 
-        if (call.invokes.isEmpty() && inferDfgForUnresolvedCalls) {
+        if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
             // Unresolved call expression
             handleUnresolvedCalls(call)
         } else if (call.invokes.isNotEmpty()) {

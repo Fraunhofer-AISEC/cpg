@@ -72,6 +72,7 @@ import org.slf4j.LoggerFactory;
  * </ul>
  */
 @DependsOn(CallResolver.class)
+@DependsOn(FunctionPointerCallResolver.class)
 public class EvaluationOrderGraphPass extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass.class);
@@ -330,8 +331,7 @@ public class EvaluationOrderGraphPass extends Pass {
 
   protected void handleStatementHolder(StatementHolder statementHolder) {
     // separate code into static and non-static parts as they are executed in different moments
-    // although they can be
-    // be placed in the same enclosing declaration.
+    // although they can be placed in the same enclosing declaration.
     List<Statement> code =
         statementHolder.getStatementsPropertyEdge().stream()
             .map(PropertyEdge.class::cast)

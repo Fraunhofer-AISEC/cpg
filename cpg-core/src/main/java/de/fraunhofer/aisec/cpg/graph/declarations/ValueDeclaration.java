@@ -25,9 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -37,6 +42,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.Transient;
 
 /** A declaration who has a type. */
@@ -45,6 +51,13 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   protected Type type = UnknownType.getUnknownType();
 
   protected List<Type> possibleSubTypes = new ArrayList<>();
+
+  /**
+   * Links to all the [DeclaredReferenceExpression]s accessing the variable and the respective
+   * access value (read, write, readwrite).
+   */
+  @Relationship(value = "USAGE")
+  protected List<PropertyEdge<DeclaredReferenceExpression>> usageEdges = new ArrayList<>();
 
   @Transient private final Set<TypeListener> typeListeners = new HashSet<>();
 
@@ -66,6 +79,44 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     }
 
     return result;
+  }
+
+  /** All usages of the variable/field. */
+  public List<DeclaredReferenceExpression> getUsages() {
+    return unwrap(usageEdges, false);
+  }
+  /** All usages of the variable/field with the access value. */
+  public List<PropertyEdge<DeclaredReferenceExpression>> getUsageEdges() {
+    return usageEdges;
+  }
+
+  /** Set all usages of the variable/field and assembles the access properties. */
+  public void setUsages(List<DeclaredReferenceExpression> usages) {
+    usageEdges =
+        usages.stream()
+            .map(
+                ref -> {
+                  PropertyEdge<DeclaredReferenceExpression> edge = new PropertyEdge<>(this, ref);
+                  edge.addProperty(Properties.ACCESS, ref.getAccess());
+                  return edge;
+                })
+            .collect(Collectors.toList());
+  }
+
+  /** Set all usages of the variable/field. */
+  public void setUsageEdges(List<PropertyEdge<DeclaredReferenceExpression>> usageEdges) {
+    this.usageEdges = usageEdges;
+  }
+  /** Adds the usage of the variable/field. */
+  public void addUsageEdge(PropertyEdge<DeclaredReferenceExpression> usageEdge) {
+    this.usageEdges.add(usageEdge);
+  }
+
+  /** Adds a usage of the variable/field and assembles the access property. */
+  public void addUsage(DeclaredReferenceExpression reference) {
+    PropertyEdge<DeclaredReferenceExpression> usageEdge = new PropertyEdge<>(this, reference);
+    usageEdge.addProperty(Properties.ACCESS, reference.getAccess());
+    this.usageEdges.add(usageEdge);
   }
 
   /**

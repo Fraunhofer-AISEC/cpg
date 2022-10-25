@@ -68,7 +68,7 @@ class ValueEvaluatorTest {
         assertEquals(2L, value)
 
         val path = evaluator.path
-        assertEquals(4, path.size)
+        assertEquals(5, path.size)
 
         val printA = main.bodyOrNull<CallExpression>(1)
         assertNotNull(printA)

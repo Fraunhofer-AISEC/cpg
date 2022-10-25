@@ -281,7 +281,7 @@ public class SubgraphWalker {
 
   public static class IterativeGraphWalker {
 
-    private Deque<Node> todo;
+    private Deque<kotlin.Pair<Node, Node>> todo;
     private Deque<Node> backlog;
 
     /**
@@ -290,6 +290,8 @@ public class SubgraphWalker {
      * passed to the function
      */
     private final List<Consumer<Node>> onNodeVisit = new ArrayList<>();
+
+    private final List<BiConsumer<Node, Node>> onNodeVisit2 = new ArrayList<>();
 
     /**
      * The callback that is designed to tell the user when we leave the current scope. The exited
@@ -325,24 +327,28 @@ public class SubgraphWalker {
       backlog = new ArrayDeque<>();
       Set<Node> seen = new LinkedHashSet<>();
 
-      todo.push(root);
+      todo.push(new kotlin.Pair<>(root, null));
       while (!todo.isEmpty()) {
-        Node current = todo.pop();
+        kotlin.Pair<Node, Node> pair = todo.pop();
+        Node current = pair.getFirst();
+        Node parent = pair.getSecond();
         if (!backlog.isEmpty() && backlog.peek().equals(current)) {
           Node exiting = backlog.pop();
           onScopeExit.forEach(c -> c.accept(exiting));
         } else {
           // re-place the current node as a marker for the above check to find out when we need to
           // exit a scope
-          todo.push(current);
+          todo.push(new kotlin.Pair<>(current, parent));
           onNodeVisit.forEach(c -> c.accept(current));
+          onNodeVisit2.forEach(c -> c.accept(current, parent));
 
           var unseenChildren =
               SubgraphWalker.getAstChildren(current).stream()
                   .filter(Predicate.not(seen::contains))
                   .collect(Collectors.toList());
           seen.addAll(unseenChildren);
-          Util.reverse(unseenChildren.stream()).forEach(todo::push);
+          Util.reverse(unseenChildren.stream())
+              .forEach(child -> todo.push(new kotlin.Pair<>(child, current)));
           backlog.push(current);
         }
       }
@@ -350,6 +356,10 @@ public class SubgraphWalker {
 
     public void registerOnNodeVisit(Consumer<Node> callback) {
       onNodeVisit.add(callback);
+    }
+
+    public void registerOnNodeVisit2(BiConsumer<Node, Node> callback) {
+      onNodeVisit2.add(callback);
     }
 
     public void registerOnScopeExit(Consumer<Node> callback) {
@@ -362,7 +372,8 @@ public class SubgraphWalker {
     }
 
     public Deque<Node> getTodo() {
-      return todo;
+      return new ArrayDeque<>(
+          todo.stream().map(kotlin.Pair<Node, Node>::getFirst).collect(Collectors.toList()));
     }
 
     public Deque<Node> getBacklog() {

@@ -352,37 +352,21 @@ open class ValueEvaluator(
         // denoted by the previous DFG edge
         val prevDFG = expr.prevDFG
 
-        if (prevDFG.size == 1)
-        // There's only one incoming DFG edge, so we follow this one.
-        return evaluateInternal(prevDFG.first(), depth + 1)
-
-        // We are only interested in expressions
-        val expressions = prevDFG.filterIsInstance<Expression>()
-
-        if (expressions.size > 1) {
+        return if (prevDFG.size == 1) {
+            // There's only one incoming DFG edge, so we follow this one.
+            evaluateInternal(prevDFG.first(), depth + 1)
+        } else if (prevDFG.size > 1) {
             // We cannot have more than ONE valid solution, so we need to abort
             log.warn(
-                "We cannot evaluate {}: It has more than more previous DFG edges, meaning that the value is probably affected by a branch.",
+                "We cannot evaluate {}: It has more than 1 previous DFG edges, meaning that the value is probably affected by a branch.",
                 expr
             )
-            return cannotEvaluate(expr, this)
+            cannotEvaluate(expr, this)
+        } else {
+            // No previous DFG node
+            log.warn("We cannot evaluate {}: It has no previous DFG edges.", expr)
+            cannotEvaluate(expr, this)
         }
-
-        if (expressions.isEmpty()) {
-            // No previous expression?? Let's try with a variable declaration and its initialization
-            val decl = prevDFG.filterIsInstance<VariableDeclaration>()
-            if (decl.size > 1) {
-                // We cannot have more than ONE valid solution, so we need to abort
-                log.warn(
-                    "We cannot evaluate {}: It has more than more previous DFG edges, meaning that the value is probably affected by a branch.",
-                    expr
-                )
-                return cannotEvaluate(expr, this)
-            }
-            return evaluateInternal(decl.firstOrNull(), depth + 1)
-        }
-
-        return evaluateInternal(expressions.firstOrNull(), depth + 1)
     }
 }
 

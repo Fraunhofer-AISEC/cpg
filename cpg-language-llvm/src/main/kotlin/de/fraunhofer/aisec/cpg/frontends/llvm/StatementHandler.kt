@@ -834,11 +834,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val cmp = lang.getOperandValueAtIndex(instr, 1)
         val value = lang.getOperandValueAtIndex(instr, 2)
 
-        val ptrDeref = newUnaryOperator("*", false, true, instrStr)
-        ptrDeref.input = ptr
+        val ptrDerefCmp = newUnaryOperator("*", false, true, instrStr)
+        ptrDerefCmp.input = ptr
 
         val cmpExpr = newBinaryOperator("==", instrStr)
-        cmpExpr.lhs = ptrDeref
+        cmpExpr.lhs = ptrDerefCmp
         cmpExpr.rhs = cmp
 
         val lhs = LLVMGetValueName(instr).string
@@ -850,14 +850,28 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val construct = newConstructExpression("")
             construct.instantiates = (targetType as? ObjectType)?.recordDeclaration
 
-            construct.addArgument(ptrDeref)
-            construct.addArgument(cmpExpr)
+            val ptrDerefConstruct = newUnaryOperator("*", false, true, instrStr)
+            ptrDerefConstruct.input = lang.getOperandValueAtIndex(instr, 0)
+
+            val ptrDerefCmpConstruct = newUnaryOperator("*", false, true, instrStr)
+            ptrDerefCmpConstruct.input = lang.getOperandValueAtIndex(instr, 0)
+
+            val cmpExprConstruct = newBinaryOperator("==", instrStr)
+            cmpExprConstruct.lhs = ptrDerefCmpConstruct
+            cmpExprConstruct.rhs = lang.getOperandValueAtIndex(instr, 1)
+
+            construct.addArgument(ptrDerefConstruct)
+            construct.addArgument(cmpExprConstruct)
 
             val decl = declarationOrNot(construct, instr)
             compoundStatement.addStatement(decl)
         }
+
+        val ptrDerefAssign = newUnaryOperator("*", false, true, instrStr)
+        ptrDerefAssign.input = lang.getOperandValueAtIndex(instr, 0)
+
         val assignment = newBinaryOperator("=", instrStr)
-        assignment.lhs = ptrDeref
+        assignment.lhs = ptrDerefAssign
         assignment.rhs = value
 
         val ifStatement = newIfStatement(instrStr)
@@ -871,8 +885,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Parses the `atomicrmw` instruction. It returns either a single [Statement] or a
-     * [CompoundStatement] if the value is assigned to another variable. >>>>>>> Start with cmpxchg
-     * instruction
+     * [CompoundStatement] if the value is assigned to another variable.
      */
     private fun handleAtomicrmw(instr: LLVMValueRef): Statement {
         val lhs = LLVMGetValueName(instr).string
@@ -886,7 +899,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val ptrDeref = newUnaryOperator("*", false, true, instrStr)
         ptrDeref.input = ptr
-        exchOp.lhs = ptrDeref
+
+        val ptrDerefExch = newUnaryOperator("*", false, true, instrStr)
+        ptrDerefExch.input = lang.getOperandValueAtIndex(instr, 0)
+        exchOp.lhs = ptrDerefExch
 
         when (operation) {
             LLVMAtomicRMWBinOpXchg -> {
@@ -943,7 +959,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val condition = newBinaryOperator(operatorCode, instrStr)
                 condition.lhs = ptrDeref
                 condition.rhs = value
-                val conditional = newConditionalExpression(condition, ptrDeref, value, ty)
+
+                val ptrDerefConditional = newUnaryOperator("*", false, true, instrStr)
+                ptrDerefConditional.input = lang.getOperandValueAtIndex(instr, 0)
+                val conditional =
+                    newConditionalExpression(condition, ptrDerefConditional, value, ty)
                 exchOp.rhs = conditional
             }
             LLVMAtomicRMWBinOpUMax,
@@ -964,7 +984,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 castExprRhs.castType = TypeParser.createFrom("u${ty.name}", true)
                 castExprRhs.expression = value
                 condition.rhs = castExprRhs
-                val conditional = newConditionalExpression(condition, ptrDeref, value, ty)
+
+                val ptrDerefConditional = newUnaryOperator("*", false, true, instrStr)
+                ptrDerefConditional.input = lang.getOperandValueAtIndex(instr, 0)
+                val conditional =
+                    newConditionalExpression(condition, ptrDerefConditional, value, ty)
                 exchOp.rhs = conditional
             }
             else -> {
@@ -975,7 +999,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return if (lhs != "") {
             // set lhs = *ptr, then perform the replacement
             val compoundStatement = newCompoundStatement(instrStr)
-            compoundStatement.statements = listOf(declarationOrNot(ptrDeref, instr), exchOp)
+
+            val ptrDerefAssignment = newUnaryOperator("*", false, true, instrStr)
+            ptrDerefAssignment.input = lang.getOperandValueAtIndex(instr, 0)
+
+            compoundStatement.statements =
+                listOf(declarationOrNot(ptrDerefAssignment, instr), exchOp)
             compoundStatement
         } else {
             // only perform the replacement
@@ -1310,7 +1339,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     initializers += newLiteral(null, elementType, instrStr)
                 } else {
                     val arrayExpr = newArraySubscriptionExpression(instrStr)
-                    arrayExpr.arrayExpression = array1
+                    arrayExpr.arrayExpression = lang.getOperandValueAtIndex(instr, 0)
                     arrayExpr.subscriptExpression =
                         newLiteral(idxInt, TypeParser.createFrom("i32", true), instrStr)
                     initializers += arrayExpr
@@ -1322,7 +1351,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     initializers += newLiteral(null, elementType, instrStr)
                 } else {
                     val arrayExpr = newArraySubscriptionExpression(instrStr)
-                    arrayExpr.arrayExpression = array2
+                    arrayExpr.arrayExpression = lang.getOperandValueAtIndex(instr, 1)
                     arrayExpr.subscriptExpression =
                         newLiteral(
                             idxInt - array1Length,
