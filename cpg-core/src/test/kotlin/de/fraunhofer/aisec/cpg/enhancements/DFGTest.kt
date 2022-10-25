@@ -287,8 +287,7 @@ internal class DFGTest {
         val prevDFGOperator: Set<Node> = rwUnaryOperator.prevDFG
         val nextDFGOperator: Set<Node> = rwUnaryOperator.nextDFG
         assertTrue(prevDFGOperator.contains(expression))
-        assertTrue(nextDFGOperator.isEmpty())
-        // assertTrue(nextDFGOperator.contains(expression))
+        assertTrue(nextDFGOperator.contains(expression))
     }
 
     /**
