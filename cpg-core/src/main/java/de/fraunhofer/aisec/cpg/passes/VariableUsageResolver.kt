@@ -39,8 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import org.slf4j.LoggerFactory
 import java.util.regex.Pattern
+import org.slf4j.LoggerFactory
 
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
@@ -94,7 +94,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun resolveFunctionPtr(
+    private fun resolveFunctionPtr(
         containingClassArg: Type?,
         reference: DeclaredReferenceExpression
     ): ValueDeclaration? {
@@ -128,7 +128,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         )
     }
 
-    protected fun resolveLocalVarUsage(
+    private fun resolveLocalVarUsage(
         currentClass: RecordDeclaration?,
         parent: Node?,
         current: Node
@@ -204,7 +204,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
      * We get the type of the "scope" this node is in. (e.g. for a field, we drop the field's name
      * and have the class)
      */
-    protected fun getEnclosingTypeOf(current: Node): Type {
+    private fun getEnclosingTypeOf(current: Node): Type {
         val path =
             listOf(
                 *current.name
@@ -218,7 +218,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         )
     }
 
-    protected fun resolveFieldUsages(curClass: RecordDeclaration?, current: Node) {
+    private fun resolveFieldUsages(curClass: RecordDeclaration?, current: Node) {
         if (current !is MemberExpression) return
 
         var baseTarget: Declaration? = null
@@ -291,7 +291,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         current.refersTo = resolveMember(baseType, current)
     }
 
-    protected fun resolveBase(reference: DeclaredReferenceExpression): Declaration? {
+    private fun resolveBase(reference: DeclaredReferenceExpression): Declaration? {
         val declaration = scopeManager?.resolveReference(reference)
         if (declaration != null) {
             return declaration
@@ -307,7 +307,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun resolveMember(
+    private fun resolveMember(
         containingClass: Type,
         reference: DeclaredReferenceExpression
     ): ValueDeclaration? {
@@ -344,7 +344,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         return member ?: handleUnknownField(containingClass, reference.name, reference.type)
     }
 
-    protected fun handleUnknownField(base: Type, name: String, type: Type): FieldDeclaration? {
+    private fun handleUnknownField(base: Type, name: String, type: Type): FieldDeclaration? {
         // unwrap a potential pointer-type
         if (base is PointerType) {
             return handleUnknownField(base.elementType, name, type)
@@ -385,7 +385,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
      * resulting function/method has the signature and return type specified in [fctPtrType] and the
      * specified [name].
      */
-    protected fun handleUnknownFunction(
+    private fun handleUnknownFunction(
         declarationHolder: RecordDeclaration?,
         name: String,
         fctPtrType: FunctionPointerType

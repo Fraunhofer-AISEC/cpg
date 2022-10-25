@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.regex.Pattern
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
@@ -64,7 +65,12 @@ import org.slf4j.LoggerFactory
  */
 @DependsOn(VariableUsageResolver::class)
 open class CallResolver : SymbolResolverPass() {
-    protected val containingType = mutableMapOf<FunctionDeclaration, Type>()
+    /**
+     * This seems to be a map between function declarations (more likely method declarations) and
+     * their parent record (more accurately their type). Seems to be only used by
+     * [getOverridingCandidates] and should probably be replaced through a scope manager call.
+     */
+    private val containingType = mutableMapOf<FunctionDeclaration, Type>()
 
     override fun cleanup() {
         containingType.clear()
@@ -102,13 +108,13 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node) {
+    private fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node) {
         if (currentNode is MethodDeclaration && currentClass != null) {
             containingType[currentNode] = TypeParser.createFrom(currentClass.name, true)
         }
     }
 
-    protected fun fixInitializers(node: Node) {
+    private fun fixInitializers(node: Node) {
         if (node is VariableDeclaration) {
             // check if we have the corresponding class for this type
             val typeString = node.type.root.name
@@ -162,7 +168,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun handleCallExpression(curClass: RecordDeclaration?, call: CallExpression) {
+    private fun handleCallExpression(curClass: RecordDeclaration?, call: CallExpression) {
         if (
             call.language is JavaLanguageFrontend &&
                 (call.base as? DeclaredReferenceExpression)
@@ -199,7 +205,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun resolveArguments(call: CallExpression) {
+    private fun resolveArguments(call: CallExpression) {
         val worklist: Deque<Node> = ArrayDeque()
         call.arguments.forEach { worklist.push(it) }
         while (!worklist.isEmpty()) {
@@ -286,7 +292,7 @@ open class CallResolver : SymbolResolverPass() {
         call.invokes = invocationCandidates
     }
 
-    protected fun retrieveInvocationCandidatesFromCall(
+    private fun retrieveInvocationCandidatesFromCall(
         call: CallExpression,
         curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>
@@ -305,7 +311,7 @@ open class CallResolver : SymbolResolverPass() {
      * @param possibleContainingTypes
      * @param call
      */
-    protected fun createMethodDummies(
+    private fun createMethodDummies(
         invocationCandidates: MutableList<FunctionDeclaration>,
         possibleContainingTypes: Set<Type>,
         call: CallExpression
@@ -340,7 +346,7 @@ open class CallResolver : SymbolResolverPass() {
      * @param call
      * @return true if we should stop searching parent, false otherwise
      */
-    protected fun shouldSearchForInvokesInParent(call: CallExpression): Boolean {
+    private fun shouldSearchForInvokesInParent(call: CallExpression): Boolean {
         if (scopeManager == null) {
             Util.errorWithFileLocation(
                 call,
@@ -352,7 +358,7 @@ open class CallResolver : SymbolResolverPass() {
         return scopeManager!!.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
     }
 
-    protected fun resolveConstructExpression(constructExpression: ConstructExpression) {
+    private fun resolveConstructExpression(constructExpression: ConstructExpression) {
         val typeName = constructExpression.type.typeName
         val recordDeclaration = recordMap[typeName]
         constructExpression.instantiates = recordDeclaration
@@ -393,7 +399,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun resolveExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
+    private fun resolveExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
         if (eci.containingClass != null) {
             val recordDeclaration = recordMap[eci.containingClass]
             val signature = eci.arguments.map { it.type }
@@ -407,7 +413,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun handlePossibleStaticImport(
+    private fun handlePossibleStaticImport(
         call: CallExpression,
         curClass: RecordDeclaration
     ): Boolean {
@@ -431,7 +437,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun generateInferredStaticallyImportedMethods(
+    private fun generateInferredStaticallyImportedMethods(
         call: CallExpression,
         name: String,
         invokes: MutableList<FunctionDeclaration>,
@@ -464,7 +470,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    fun createInferredConstructor(
+    private fun createInferredConstructor(
         containingRecord: RecordDeclaration,
         signature: List<Type?>
     ): ConstructorDeclaration {
@@ -475,7 +481,7 @@ open class CallResolver : SymbolResolverPass() {
         return inferred
     }
 
-    protected fun getPossibleContainingTypes(node: Node?, curClass: RecordDeclaration?): Set<Type> {
+    private fun getPossibleContainingTypes(node: Node?, curClass: RecordDeclaration?): Set<Type> {
         val possibleTypes = mutableSetOf<Type>()
         if (node is MemberCallExpression) {
             val base = node.base!!
@@ -511,7 +517,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun getInvocationCandidatesFromParents(
+    private fun getInvocationCandidatesFromParents(
         name: String?,
         call: CallExpression,
         possibleTypes: Set<RecordDeclaration>
@@ -541,7 +547,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun getOverridingCandidates(
+    private fun getOverridingCandidates(
         possibleSubTypes: Set<Type?>,
         declaration: FunctionDeclaration
     ): Set<FunctionDeclaration> {
@@ -555,7 +561,7 @@ open class CallResolver : SymbolResolverPass() {
      * @param recordDeclaration matching the class the ConstructExpression wants to construct
      * @return ConstructorDeclaration that matches the provided signature
      */
-    fun getConstructorDeclarationDirectMatch(
+    private fun getConstructorDeclarationDirectMatch(
         signature: List<Type?>,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration? {
@@ -574,7 +580,7 @@ open class CallResolver : SymbolResolverPass() {
      * there is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
      * matches the ConstructExpression.
      */
-    protected fun getConstructorDeclaration(
+    private fun getConstructorDeclaration(
         constructExpression: ConstructExpression,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
@@ -597,7 +603,7 @@ open class CallResolver : SymbolResolverPass() {
             ?: createInferredConstructor(recordDeclaration, constructExpression.signature)
     }
 
-    protected fun getConstructorDeclarationForExplicitInvocation(
+    private fun getConstructorDeclarationForExplicitInvocation(
         signature: List<Type?>,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
@@ -606,7 +612,7 @@ open class CallResolver : SymbolResolverPass() {
     }
 
     companion object {
-        val LOGGER = LoggerFactory.getLogger(CallResolver::class.java)
+        val LOGGER: Logger = LoggerFactory.getLogger(CallResolver::class.java)
 
         /**
          * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression
@@ -616,7 +622,7 @@ open class CallResolver : SymbolResolverPass() {
          * ConstructExpression uses AST as well as the VariableDeclaration/NewExpression
          */
         fun addImplicitTemplateParametersToCall(
-            templateParams: List<Node?>,
+            templateParams: List<Node>,
             constructExpression: ConstructExpression
         ) {
             for (node in templateParams) {

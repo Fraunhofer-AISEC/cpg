@@ -27,6 +27,10 @@ package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
+/**
+ * A scope which acts as a namespace with a certain prefix. This could be a package or other
+ * structural elements, like a class. In the latter case, the derived [RecordScope] should be used.
+ */
 open class NameScope(node: Node, currentPrefix: String, var delimiter: String) :
     StructureDeclarationScope(node) {
     var namePrefix: String = ""
@@ -43,6 +47,7 @@ open class NameScope(node: Node, currentPrefix: String, var delimiter: String) :
         } else {
             namePrefix = node.name
         }
+
         astNode = node
     }
 

@@ -29,9 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 
 /**
- * Represent semantic scopes in the language and only saves information, such as relevant
- * statements. Pre and Postprocessing is done by the passes. Only the passes themselves know the
- * semantics of used edges, but different passes can use the same scope stack concept.
+ * Represent semantic scopes in the language. Depending on the language scopes can have visibility
+ * restriction and can act as namespaces to avoid name collisions.
  */
 abstract class Scope(open var astNode: Node?) {
 

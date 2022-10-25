@@ -30,7 +30,7 @@ import kotlin.reflect.KClass
 
 /**
  * This annotation can only enable a pass for a given [LanguageFrontend]. The pass's accept function
- * will not be executed when the current language does not match the required langauge.
+ * will not be executed when the current language does not match the required language.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)

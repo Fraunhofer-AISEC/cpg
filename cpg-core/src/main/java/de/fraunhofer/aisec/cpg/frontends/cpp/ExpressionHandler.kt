@@ -219,7 +219,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     newExpression.templateParameters.isNotEmpty()
             ) {
                 CallResolver.addImplicitTemplateParametersToCall(
-                    newExpression.templateParameters!!,
+                    newExpression.templateParameters,
                     initializer as ConstructExpression
                 )
             }
