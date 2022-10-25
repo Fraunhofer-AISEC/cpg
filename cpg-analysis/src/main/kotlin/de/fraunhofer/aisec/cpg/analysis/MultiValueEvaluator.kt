@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
-import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -170,14 +169,9 @@ class MultiValueEvaluator : ValueEvaluator() {
         depth: Int
     ): List<Any?> {
         // For a reference, we are interested in its last assignment into the reference
-        // denoted by the previous DFG edge
-        var prevDFG = expr.prevDFG.toList()
-
-        // If this has READWRITE access, ignore any "self-references", e.g. from a
-        // plus/minus/div/times assign
-        if (expr.access == AccessValues.READWRITE) {
-            prevDFG = prevDFG.filter { !(it is BinaryOperator && it.lhs == expr) }
-        }
+        // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
+        // references.
+        val prevDFG = filterSelfReferences(expr, expr.prevDFG.toList())
 
         if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.

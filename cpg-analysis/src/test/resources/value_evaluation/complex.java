@@ -12,6 +12,10 @@ public class MainClass {
 
         s += "!";
         s = s + "?";
+
+        i++;
+
         System.out.println(s);
+        System.out.println(i);
     }
 }

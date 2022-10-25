@@ -276,7 +276,9 @@ open class ValueEvaluator(
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
                     is Double -> input - 1
                     is Float -> input - 1
-                    is Number -> input.toLong() - 1
+                    is Int -> input - 1
+                    is Long -> input - 1
+                    is Short -> input - 1
                     else -> cannotEvaluate(expr, this)
                 }
             }
@@ -284,7 +286,9 @@ open class ValueEvaluator(
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
                     is Double -> input + 1
                     is Float -> input + 1
-                    is Number -> input.toLong() + 1
+                    is Int -> input + 1
+                    is Long -> input + 1
+                    is Short -> input + 1
                     else -> cannotEvaluate(expr, this)
                 }
             }
@@ -355,28 +359,9 @@ open class ValueEvaluator(
         depth: Int
     ): Any? {
         // For a reference, we are interested into its last assignment into the reference
-        // denoted by the previous DFG edge
-        var prevDFG = expr.prevDFG.toList()
-
-        // If this has READWRITE access, ignore any "self-references", e.g. from a
-        // plus/minus/div/times assign
-        if (expr.access == AccessValues.READWRITE) {
-            prevDFG = prevDFG.filter { !(it is BinaryOperator && it.lhs == expr) }
-        }
-
-        /*
-        // We need to take a slightly different approach if the operator is a plus/minus/div/times
-        // assign. In this case, resolving the lhs (whose DFG points to itself) will result in a
-        // stack overflow.
-        if (
-            expr.operatorCode.equals("+=") ||
-                expr.operatorCode.equals("-=") ||
-                expr.operatorCode.equals("/=") ||
-                expr.operatorCode.equals("*=")
-        ) {
-            lhsValue = ""
-        } else {
-         */
+        // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
+        // references.
+        val prevDFG = filterSelfReferences(expr, expr.prevDFG.toList())
 
         return if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.
@@ -393,6 +378,27 @@ open class ValueEvaluator(
             log.warn("We cannot evaluate {}: It has no previous DFG edges.", expr)
             cannotEvaluate(expr, this)
         }
+    }
+
+    /**
+     * If a reference has READWRITE access, ignore any "self-references", e.g. from a
+     * plus/minus/div/times-assign or a plusplus/minusminus, etc.
+     */
+    protected fun filterSelfReferences(
+        ref: DeclaredReferenceExpression,
+        inDFG: List<Node>
+    ): List<Node> {
+        var list = inDFG
+
+        if (ref.access == AccessValues.READWRITE) {
+            list =
+                list.filter {
+                    !((it is BinaryOperator && it.lhs == ref) ||
+                        (it is UnaryOperator && it.input == ref))
+                }
+        }
+
+        return list
     }
 }
 

@@ -168,7 +168,13 @@ class ValueEvaluatorTest {
         assertEquals("{s}!?", value)
 
         value = s.evaluate(MultiValueEvaluator())
-        assertEquals(listOf("big!?", "small!?"), value)
+        assertEquals(setOf("big!?", "small!?"), (value as List<*>).toSet())
+
+        val i = main.refs("i").last()
+        assertNotNull(i)
+
+        value = i.evaluate()
+        assertEquals(4, value)
     }
 
     @Test
