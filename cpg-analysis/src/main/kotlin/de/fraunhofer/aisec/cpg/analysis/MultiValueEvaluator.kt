@@ -50,7 +50,7 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     override fun evaluate(node: Any?): Any? {
         val result = evaluateInternal(node as? Node, 0)
-        return if (result is List<*> && result.all { r -> r is Number })
+        return if (result is Collection<*> && result.all { r -> r is Number })
             ConcreteNumberSet(result.map { r -> (r as Number).toLong() }.toMutableSet())
         else result
     }
@@ -101,14 +101,14 @@ class MultiValueEvaluator : ValueEvaluator() {
         // Resolve rhs
         val rhsValue = evaluateInternal(expr.rhs, depth + 1)
 
-        if (lhsValue !is List<*> && rhsValue !is List<*>) {
+        if (lhsValue !is Collection<*> && rhsValue !is Collection<*>) {
             return computeBinaryOpEffect(lhsValue, rhsValue, expr)
         }
 
-        val result = mutableListOf<Any?>()
-        if (lhsValue is List<*>) {
+        val result = mutableSetOf<Any?>()
+        if (lhsValue is Collection<*>) {
             for (lhs in lhsValue) {
-                if (rhsValue is List<*>) {
+                if (rhsValue is Collection<*>) {
                     result.addAll(rhsValue.map { r -> computeBinaryOpEffect(lhs, r, expr) })
                 } else {
                     result.add(computeBinaryOpEffect(lhs, rhsValue, expr))
@@ -116,7 +116,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             }
         } else {
             result.addAll(
-                (rhsValue as List<*>).map { r -> computeBinaryOpEffect(lhsValue, r, expr) }
+                (rhsValue as Collection<*>).map { r -> computeBinaryOpEffect(lhsValue, r, expr) }
             )
         }
 
@@ -124,11 +124,11 @@ class MultiValueEvaluator : ValueEvaluator() {
     }
 
     override fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any? {
-        val result = mutableListOf<Any?>()
+        val result = mutableSetOf<Any?>()
         val elseResult = evaluateInternal(expr.elseExpr, depth + 1)
         val thenResult = evaluateInternal(expr.thenExpr, depth + 1)
-        if (thenResult is List<*>) result.addAll(thenResult) else result.add(thenResult)
-        if (elseResult is List<*>) result.addAll(elseResult) else result.add(elseResult)
+        if (thenResult is Collection<*>) result.addAll(thenResult) else result.add(thenResult)
+        if (elseResult is Collection<*>) result.addAll(elseResult) else result.add(elseResult)
         return result
     }
 
@@ -136,7 +136,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         return when (expr.operatorCode) {
             "-" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is List<*> -> input.map { n -> (n as? Number)?.negate() }
+                    is Collection<*> -> input.map { n -> (n as? Number)?.negate() }
                     is Number -> input.negate()
                     else -> cannotEvaluate(expr, this)
                 }
@@ -147,7 +147,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
                         is Number -> input.toLong() + 1
-                        is List<*> -> input.map { n -> (n as? Number)?.toLong()?.plus(1) }
+                        is Collection<*> -> input.map { n -> (n as? Number)?.toLong()?.plus(1) }
                         else -> cannotEvaluate(expr, this)
                     }
                 }
@@ -167,7 +167,7 @@ class MultiValueEvaluator : ValueEvaluator() {
     override fun handleDeclaredReferenceExpression(
         expr: DeclaredReferenceExpression,
         depth: Int
-    ): List<Any?> {
+    ): Collection<Any?> {
         // For a reference, we are interested in its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.
@@ -176,14 +176,14 @@ class MultiValueEvaluator : ValueEvaluator() {
         if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.
             val internalRes = evaluateInternal(prevDFG.first(), depth + 1)
-            return if (internalRes is List<*>) internalRes else mutableListOf(internalRes)
+            return if (internalRes is Collection<*>) internalRes else mutableSetOf(internalRes)
         }
 
         if (prevDFG.size == 2 && prevDFG.all(::isSimpleForLoop)) {
             return handleSimpleLoopVariable(expr, depth)
         }
 
-        val result = mutableListOf<Any?>()
+        val result = mutableSetOf<Any?>()
         if (prevDFG.isEmpty()) {
             // No previous expression?? Let's try with a variable declaration and its initialization
             val decl = prevDFG.filterIsInstance<VariableDeclaration>()
@@ -232,18 +232,18 @@ class MultiValueEvaluator : ValueEvaluator() {
     private fun handleSimpleLoopVariable(
         expr: DeclaredReferenceExpression,
         depth: Int
-    ): List<Any?> {
+    ): Collection<Any?> {
         val loop =
             expr.prevDFG.firstOrNull { e -> e.astParent is ForStatement }?.astParent
                 as? ForStatement
-        if (loop == null || loop.condition !is BinaryOperator) return listOf()
+        if (loop == null || loop.condition !is BinaryOperator) return setOf()
 
         var loopVar: Number? =
             evaluateInternal(loop.initializerStatement.declarations.first(), depth) as? Number
-                ?: return listOf()
+                ?: return setOf()
 
         val cond = loop.condition as BinaryOperator
-        val result = mutableListOf<Any?>()
+        val result = mutableSetOf<Any?>()
         var lhs =
             if ((cond.lhs as? DeclaredReferenceExpression)?.refersTo == expr.refersTo) {
                 loopVar
@@ -359,7 +359,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         return when (expr.operatorCode) {
             "-" -> {
                 when (input) {
-                    is List<*> -> input.map { n -> (n as? Number)?.negate() }
+                    is Collection<*> -> input.map { n -> (n as? Number)?.negate() }
                     is Number -> input.negate()
                     else -> cannotEvaluate(expr, this)
                 }
@@ -367,7 +367,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             "++" -> {
                 when (input) {
                     is Number -> input.toLong() + 1
-                    is List<*> -> input.map { n -> (n as? Number)?.toLong()?.plus(1) }
+                    is Collection<*> -> input.map { n -> (n as? Number)?.toLong()?.plus(1) }
                     else -> cannotEvaluate(expr, this)
                 }
             }
