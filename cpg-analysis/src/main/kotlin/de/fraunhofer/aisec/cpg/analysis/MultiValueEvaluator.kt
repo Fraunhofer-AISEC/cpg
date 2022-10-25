@@ -238,10 +238,9 @@ class MultiValueEvaluator : ValueEvaluator() {
                 as? ForStatement
         if (loop == null || loop.condition !is BinaryOperator) return listOf()
 
-        var loopVar =
+        var loopVar: Number? =
             evaluateInternal(loop.initializerStatement.declarations.first(), depth) as? Number
-
-        if (loopVar == null) return listOf()
+                ?: return listOf()
 
         val cond = loop.condition as BinaryOperator
         val result = mutableListOf<Any?>()

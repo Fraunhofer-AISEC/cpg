@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.query.value
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -420,7 +419,7 @@ class ValueEvaluatorTest {
 
         val plusplus = NodeBuilder.newUnaryOperator("++", true, false)
         plusplus.input = NodeBuilder.newLiteral(3, TypeParser.createFrom("int", true))
-        assertEquals(4L, ValueEvaluator().evaluate(plusplus))
+        assertEquals(4, ValueEvaluator().evaluate(plusplus))
 
         plusplus.input = NodeBuilder.newLiteral(3.5, TypeParser.createFrom("double", true))
         assertEquals(4.5, ValueEvaluator().evaluate(plusplus))
@@ -430,7 +429,7 @@ class ValueEvaluatorTest {
 
         val minusminus = NodeBuilder.newUnaryOperator("--", true, false)
         minusminus.input = NodeBuilder.newLiteral(3, TypeParser.createFrom("int", true))
-        assertEquals(2L, ValueEvaluator().evaluate(minusminus))
+        assertEquals(2, ValueEvaluator().evaluate(minusminus))
 
         minusminus.input = NodeBuilder.newLiteral(3.5, TypeParser.createFrom("double", true))
         assertEquals(2.5, ValueEvaluator().evaluate(minusminus))

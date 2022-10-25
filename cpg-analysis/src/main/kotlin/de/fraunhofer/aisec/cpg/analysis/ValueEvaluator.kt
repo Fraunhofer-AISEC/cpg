@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import kotlin.UnsupportedOperationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -274,21 +275,13 @@ open class ValueEvaluator(
             }
             "--" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Double -> input - 1
-                    is Float -> input - 1
-                    is Int -> input - 1
-                    is Long -> input - 1
-                    is Short -> input - 1
+                    is Number -> input.decrement()
                     else -> cannotEvaluate(expr, this)
                 }
             }
             "++" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Double -> input + 1
-                    is Float -> input + 1
-                    is Int -> input + 1
-                    is Long -> input + 1
-                    is Short -> input + 1
+                    is Number -> input.increment()
                     else -> cannotEvaluate(expr, this)
                 }
             }
@@ -410,7 +403,29 @@ internal fun Number.negate(): Number {
         is Byte -> -this
         is Double -> -this
         is Float -> -this
-        else -> 0
+        else -> throw UnsupportedOperationException()
+    }
+}
+
+fun Number.increment(): Number {
+    return when (this) {
+        is Double -> this + 1
+        is Float -> this + 1
+        is Int -> this + 1
+        is Long -> this + 1
+        is Short -> this + 1
+        else -> throw UnsupportedOperationException()
+    }
+}
+
+fun Number.decrement(): Number {
+    return when (this) {
+        is Double -> this - 1
+        is Float -> this - 1
+        is Int -> this - 1
+        is Long -> this - 1
+        is Short -> this - 1
+        else -> throw UnsupportedOperationException()
     }
 }
 
