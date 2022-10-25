@@ -169,8 +169,9 @@ class MultiValueEvaluator : ValueEvaluator() {
         depth: Int
     ): List<Any?> {
         // For a reference, we are interested in its last assignment into the reference
-        // denoted by the previous DFG edge
-        val prevDFG = expr.prevDFG
+        // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
+        // references.
+        val prevDFG = filterSelfReferences(expr, expr.prevDFG.toList())
 
         if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.
@@ -237,10 +238,9 @@ class MultiValueEvaluator : ValueEvaluator() {
                 as? ForStatement
         if (loop == null || loop.condition !is BinaryOperator) return listOf()
 
-        var loopVar =
+        var loopVar: Number? =
             evaluateInternal(loop.initializerStatement.declarations.first(), depth) as? Number
-
-        if (loopVar == null) return listOf()
+                ?: return listOf()
 
         val cond = loop.condition as BinaryOperator
         val result = mutableListOf<Any?>()

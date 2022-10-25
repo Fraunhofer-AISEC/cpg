@@ -138,6 +138,42 @@ class ValueEvaluatorTest {
         assertNotNull(m)
         value = m.evaluate()
         assertFalse(value as Boolean)
+
+        m.fields
+    }
+
+    @Test
+    fun testComplex() {
+        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("complex.java").toFile()),
+                topLevel,
+                true
+            )
+
+        assertNotNull(tu)
+
+        val mainClass = tu.records["MainClass"]
+        assertNotNull(mainClass)
+
+        val main = mainClass.functions["main"]
+        assertNotNull(main)
+
+        val s = main.refs("s").last()
+        assertNotNull(s)
+
+        var value = s.evaluate()
+        assertEquals("{s}!?", value)
+
+        value = s.evaluate(MultiValueEvaluator())
+        assertEquals(setOf("big!?", "small!?"), (value as List<*>).toSet())
+
+        val i = main.refs("i").last()
+        assertNotNull(i)
+
+        value = i.evaluate()
+        assertEquals(4, value)
     }
 
     @Test
@@ -383,7 +419,7 @@ class ValueEvaluatorTest {
 
         val plusplus = NodeBuilder.newUnaryOperator("++", true, false)
         plusplus.input = NodeBuilder.newLiteral(3, TypeParser.createFrom("int", true))
-        assertEquals(4L, ValueEvaluator().evaluate(plusplus))
+        assertEquals(4, ValueEvaluator().evaluate(plusplus))
 
         plusplus.input = NodeBuilder.newLiteral(3.5, TypeParser.createFrom("double", true))
         assertEquals(4.5, ValueEvaluator().evaluate(plusplus))
@@ -393,7 +429,7 @@ class ValueEvaluatorTest {
 
         val minusminus = NodeBuilder.newUnaryOperator("--", true, false)
         minusminus.input = NodeBuilder.newLiteral(3, TypeParser.createFrom("int", true))
-        assertEquals(2L, ValueEvaluator().evaluate(minusminus))
+        assertEquals(2, ValueEvaluator().evaluate(minusminus))
 
         minusminus.input = NodeBuilder.newLiteral(3.5, TypeParser.createFrom("double", true))
         assertEquals(2.5, ValueEvaluator().evaluate(minusminus))

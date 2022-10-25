@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import kotlin.UnsupportedOperationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -105,10 +107,11 @@ open class ValueEvaluator(
      * or less language-independent.
      */
     protected open fun handleBinaryOperator(expr: BinaryOperator, depth: Int): Any? {
-        // Resolve lhs
-        val lhsValue = evaluateInternal(expr.lhs, depth + 1)
         // Resolve rhs
         val rhsValue = evaluateInternal(expr.rhs, depth + 1)
+
+        // Resolve lhs
+        val lhsValue = evaluateInternal(expr.lhs, depth + 1)
 
         return computeBinaryOpEffect(lhsValue, rhsValue, expr)
     }
@@ -119,10 +122,14 @@ open class ValueEvaluator(
         expr: BinaryOperator
     ): Any? {
         return when (expr.operatorCode) {
-            "+" -> handlePlus(lhsValue, rhsValue, expr)
-            "-" -> handleMinus(lhsValue, rhsValue, expr)
-            "/" -> handleDiv(lhsValue, rhsValue, expr)
-            "*" -> handleTimes(lhsValue, rhsValue, expr)
+            "+",
+            "+=" -> handlePlus(lhsValue, rhsValue, expr)
+            "-",
+            "-=" -> handleMinus(lhsValue, rhsValue, expr)
+            "/",
+            "/=" -> handleDiv(lhsValue, rhsValue, expr)
+            "*",
+            "*=" -> handleTimes(lhsValue, rhsValue, expr)
             ">" -> handleGreater(lhsValue, rhsValue, expr)
             ">=" -> handleGEq(lhsValue, rhsValue, expr)
             "<" -> handleLess(lhsValue, rhsValue, expr)
@@ -268,17 +275,13 @@ open class ValueEvaluator(
             }
             "--" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Double -> input - 1
-                    is Float -> input - 1
-                    is Number -> input.toLong() - 1
+                    is Number -> input.decrement()
                     else -> cannotEvaluate(expr, this)
                 }
             }
             "++" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Double -> input + 1
-                    is Float -> input + 1
-                    is Number -> input.toLong() + 1
+                    is Number -> input.increment()
                     else -> cannotEvaluate(expr, this)
                 }
             }
@@ -349,8 +352,9 @@ open class ValueEvaluator(
         depth: Int
     ): Any? {
         // For a reference, we are interested into its last assignment into the reference
-        // denoted by the previous DFG edge
-        val prevDFG = expr.prevDFG
+        // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
+        // references.
+        val prevDFG = filterSelfReferences(expr, expr.prevDFG.toList())
 
         return if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.
@@ -368,6 +372,27 @@ open class ValueEvaluator(
             cannotEvaluate(expr, this)
         }
     }
+
+    /**
+     * If a reference has READWRITE access, ignore any "self-references", e.g. from a
+     * plus/minus/div/times-assign or a plusplus/minusminus, etc.
+     */
+    protected fun filterSelfReferences(
+        ref: DeclaredReferenceExpression,
+        inDFG: List<Node>
+    ): List<Node> {
+        var list = inDFG
+
+        if (ref.access == AccessValues.READWRITE) {
+            list =
+                list.filter {
+                    !((it is BinaryOperator && it.lhs == ref) ||
+                        (it is UnaryOperator && it.input == ref))
+                }
+        }
+
+        return list
+    }
 }
 
 internal fun Number.negate(): Number {
@@ -378,7 +403,29 @@ internal fun Number.negate(): Number {
         is Byte -> -this
         is Double -> -this
         is Float -> -this
-        else -> 0
+        else -> throw UnsupportedOperationException()
+    }
+}
+
+fun Number.increment(): Number {
+    return when (this) {
+        is Double -> this + 1
+        is Float -> this + 1
+        is Int -> this + 1
+        is Long -> this + 1
+        is Short -> this + 1
+        else -> throw UnsupportedOperationException()
+    }
+}
+
+fun Number.decrement(): Number {
+    return when (this) {
+        is Double -> this - 1
+        is Float -> this - 1
+        is Int -> this - 1
+        is Long -> this - 1
+        is Short -> this - 1
+        else -> throw UnsupportedOperationException()
     }
 }
 
