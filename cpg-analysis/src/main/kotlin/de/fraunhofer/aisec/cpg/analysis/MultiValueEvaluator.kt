@@ -178,26 +178,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             return if (internalRes is List<*>) internalRes else mutableListOf(internalRes)
         }
 
-        // We are only interested in expressions
-        // val expressions = prevDFG.filterIsInstance<Expression>()
-
-        if (
-            prevDFG.size == 2 &&
-                prevDFG.all { e ->
-                    var forStatement = e.astParent as? ForStatement
-                    if (forStatement == null) forStatement = e.astParent?.astParent as? ForStatement
-                    forStatement != null &&
-                        ((forStatement.initializerStatement as? DeclarationStatement)
-                            ?.singleDeclaration == e ||
-                            forStatement.initializerStatement == e ||
-                            ((forStatement.initializerStatement as? DeclarationStatement)
-                                ?.singleDeclaration != null &&
-                                (forStatement.initializerStatement as? DeclarationStatement)
-                                    ?.singleDeclaration == e.astParent) ||
-                            forStatement.iterationStatement == e ||
-                            forStatement.iterationStatement == e.astParent)
-                }
-        ) {
+        if (prevDFG.size == 2 && prevDFG.all(::isSimpleForLoop)) {
             return handleSimpleLoopVariable(expr, depth)
         }
 
@@ -224,6 +205,27 @@ class MultiValueEvaluator : ValueEvaluator() {
             }
         }
         return result
+    }
+
+    private fun isSimpleForLoop(node: Node): Boolean {
+        // Are we in the for statement somehow?
+        var forStatement = node.astParent as? ForStatement
+        if (forStatement == null) forStatement = node.astParent?.astParent as? ForStatement
+
+        if (forStatement == null) return false // ...no, we're not.
+
+        val initializerDecl =
+            (forStatement.initializerStatement as? DeclarationStatement)?.singleDeclaration
+
+        return initializerDecl == node || // The node is the declaration of the loop variable
+        forStatement.initializerStatement == node || // The node is the initialization
+            (initializerDecl != null &&
+                initializerDecl ==
+                    node.astParent) || // The parent of the node is the initializer of the loop
+            // variable
+            forStatement.iterationStatement ==
+                node || // The node or its parent are the iteration statement of the loop
+            forStatement.iterationStatement == node.astParent
     }
 
     private fun handleSimpleLoopVariable(
