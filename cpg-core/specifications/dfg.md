@@ -48,7 +48,7 @@ The value of the `expression` flows to the cast expression.
 Scheme:
 ```mermaid
   flowchart LR
-    node([CastExpression]) -.- expression(expression);
+    node([CastExpression]) -.- expression;
     expression -- DFG --> node;
   ```
 

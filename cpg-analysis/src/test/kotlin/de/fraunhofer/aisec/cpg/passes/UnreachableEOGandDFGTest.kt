@@ -29,10 +29,7 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import java.nio.file.Path
 import kotlin.test.assertEquals
@@ -66,15 +63,10 @@ class UnreachableEOGandDFGTest {
 
     @Test
     fun testIfTrue() {
-        val method =
-            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "ifTrue" } as FunctionDeclaration?
-
+        val method = tu.functions["ifTrue"]
         assertNotNull(method)
 
-        val ifStatement = (method.body as CompoundStatement).statements[2] as? IfStatement
+        val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
         val thenY = ifStatement.thenStatement.refs["y"]
         assertNotNull(thenY)
@@ -87,15 +79,10 @@ class UnreachableEOGandDFGTest {
 
     @Test
     fun testIfFalse() {
-        val method =
-            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "ifFalse" } as FunctionDeclaration?
-
+        val method = tu.functions["ifFalse"]
         assertNotNull(method)
 
-        val ifStatement = (method.body as CompoundStatement).statements[2] as? IfStatement
+        val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
         val elseY = ifStatement.elseStatement.refs["y"]
         assertNotNull(elseY)
@@ -108,15 +95,10 @@ class UnreachableEOGandDFGTest {
 
     @Test
     fun testIfTrueComputed() {
-        val method =
-            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "ifTrueComputed" } as FunctionDeclaration?
-
+        val method = tu.functions["ifTrueComputed"]
         assertNotNull(method)
 
-        val ifStatement = (method.body as CompoundStatement).statements[2] as? IfStatement
+        val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
         val thenY = ifStatement.thenStatement.refs["y"]
         assertNotNull(thenY)
@@ -129,15 +111,10 @@ class UnreachableEOGandDFGTest {
 
     @Test
     fun testIfFalseComputed() {
-        val method =
-            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "ifFalseComputed" } as FunctionDeclaration?
-
+        val method = tu.functions["ifFalseComputed"]
         assertNotNull(method)
 
-        val ifStatement = (method.body as CompoundStatement).statements[2] as? IfStatement
+        val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
         val elseY = ifStatement.elseStatement.refs["y"]
         assertNotNull(elseY)
@@ -150,15 +127,10 @@ class UnreachableEOGandDFGTest {
 
     @Test
     fun testIfTrueComputedHard() {
-        val method =
-            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "ifTrueComputedHard" } as FunctionDeclaration?
-
+        val method = tu.functions["ifTrueComputedHard"]
         assertNotNull(method)
 
-        val ifStatement = (method.body as CompoundStatement).statements[3] as? IfStatement
+        val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
         val thenY = ifStatement.thenStatement.refs["y"]
         assertNotNull(thenY)
@@ -171,15 +143,10 @@ class UnreachableEOGandDFGTest {
 
     @Test
     fun testIfFalseComputedHard() {
-        val method =
-            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "ifFalseComputedHard" } as FunctionDeclaration?
-
+        val method = tu.functions["ifFalseComputedHard"]
         assertNotNull(method)
 
-        val ifStatement = (method.body as CompoundStatement).statements[3] as? IfStatement
+        val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
         val elseY = ifStatement.elseStatement.refs["y"]
         assertNotNull(elseY)
@@ -192,15 +159,10 @@ class UnreachableEOGandDFGTest {
 
     @Test
     fun testIfBothPossible() {
-        val method =
-            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "ifBothPossible" } as FunctionDeclaration?
-
+        val method = tu.functions["ifBothPossible"]
         assertNotNull(method)
 
-        val ifStatement = (method.body as CompoundStatement).statements[2] as? IfStatement
+        val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
         val thenY = ifStatement.thenStatement.refs["y"]
         assertNotNull(thenY)
