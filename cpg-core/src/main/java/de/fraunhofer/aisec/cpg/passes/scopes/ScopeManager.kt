@@ -51,8 +51,8 @@ import org.slf4j.LoggerFactory
  * Afterwards the currently valid "stack" of scopes within the tree can be accessed.
  *
  * If a language frontend encounters a [Declaration] node, it MUST call [addDeclaration], rather
- * then adding the declaration to the node itself. This ensures that all declarations are properly
- * registred in the scope map and can be resolved later.
+ * than adding the declaration to the node itself. This ensures that all declarations are properly
+ * registered in the scope map and can be resolved later.
  */
 class ScopeManager {
     /**
@@ -70,7 +70,7 @@ class ScopeManager {
         private set
 
     /**
-     * The language frontend tied to the scope manager. Can be used to implement language specifics
+     * The language frontend tied to the scope manager. Can be used to implement language specific
      * scope resolution or lookup.
      */
     var lang: LanguageFrontend? = null
@@ -207,11 +207,11 @@ class ScopeManager {
         if (scope is NameScope) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
             // nodes have a FQN as their name.
-            fqnScopeMap[scope.astNode.name] = scope
+            fqnScopeMap[scope.astNode!!.name] = scope
         }
         currentScope?.let {
-            it.getChildren().add(scope)
-            scope.setParent(it)
+            it.children.add(scope)
+            scope.parent = it
         }
         currentScope = scope
     }
@@ -264,7 +264,7 @@ class ScopeManager {
         // push the new scope
         if (newScope != null) {
             pushScope(newScope)
-            newScope.setScopedName(currentNamePrefix)
+            newScope.scopedName = currentNamePrefix
         } else {
             currentScope = scopeMap[nodeToScope]
         }
@@ -370,7 +370,7 @@ class ScopeManager {
     /**
      * This function MUST be called when a language frontend first handles a [Declaration]. It adds
      * a declaration to the scope manager, taking into account the currently active scope.
-     * Furthermore it adds the declaration to the [de.fraunhofer.aisec.cpg.graph.DeclarationHolder]
+     * Furthermore, it adds the declaration to the [de.fraunhofer.aisec.cpg.graph.DeclarationHolder]
      * that is associated with the current scope through [ValueDeclarationScope.addValueDeclaration]
      * and [StructureDeclarationScope.addStructureDeclaration].
      *
@@ -537,14 +537,14 @@ class ScopeManager {
     }
 
     /**
-     * This function is internal to the scoep manager and primarily used by [addBreakStatement] and
+     * This function is internal to the scope manager and primarily used by [addBreakStatement] and
      * [addContinueStatement]. It retrieves the [LabelStatement] associated with the [labelString].
      */
     private fun getLabelStatement(labelString: String): LabelStatement? {
         var labelStatement: LabelStatement?
         var searchScope = currentScope
         while (searchScope != null) {
-            labelStatement = searchScope.getLabelStatements()[labelString]
+            labelStatement = searchScope.labelStatements[labelString]
             if (labelStatement != null) {
                 return labelStatement
             }
@@ -567,7 +567,7 @@ class ScopeManager {
     }
 
     /**
-     * Soley used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
+     * Only used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
      * [ValueDeclarationScope].
      */
     fun addTypedef(typedef: TypedefDeclaration) {
@@ -582,7 +582,7 @@ class ScopeManager {
         if (scope.astNode == null) {
             lang!!.currentTU.addTypedef(typedef)
         } else {
-            scope.astNode.addTypedef(typedef)
+            scope.astNode?.addTypedef(typedef)
         }
     }
 
@@ -698,7 +698,7 @@ class ScopeManager {
     }
 
     /**
-     * Traverses the scope up-wards and looks for declarations of type [T] which matches the
+     * Traverses the scope upwards and looks for declarations of type [T] which matches the
      * condition [predicate].
      *
      * It returns a list of all declarations that match the predicate, ordered by reachability in
@@ -745,8 +745,8 @@ class ScopeManager {
                 return declarations
             }
 
-            // go up-wards in the scope tree
-            scope = scope.getParent()
+            // go upwards in the scope tree
+            scope = scope.parent
         }
 
         return declarations

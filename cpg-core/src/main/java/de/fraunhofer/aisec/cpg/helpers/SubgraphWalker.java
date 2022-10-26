@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.lang.annotation.AnnotationFormatError;
@@ -398,10 +399,14 @@ public class SubgraphWalker {
     private final Deque<RecordDeclaration> currentClass = new ArrayDeque<>();
     private IterativeGraphWalker walker;
 
-    private final LanguageFrontend lang;
+    private final ScopeManager scopeManager;
 
     public ScopedWalker(LanguageFrontend lang) {
-      this.lang = lang;
+      this.scopeManager = lang.getScopeManager();
+    }
+
+    public ScopedWalker(ScopeManager scopeManager) {
+      this.scopeManager = scopeManager;
     }
 
     /**
@@ -437,7 +442,7 @@ public class SubgraphWalker {
     }
 
     private void handleNode(Node current, TriConsumer<RecordDeclaration, Node, Node> handler) {
-      lang.getScopeManager().enterScopeIfExists(current);
+      scopeManager.enterScopeIfExists(current);
 
       Node parent = walker.getBacklog().peek();
 
@@ -466,7 +471,7 @@ public class SubgraphWalker {
         currentClass.pop();
       }
 
-      lang.getScopeManager().leaveScope(exiting);
+      scopeManager.leaveScope(exiting);
     }
 
     /**

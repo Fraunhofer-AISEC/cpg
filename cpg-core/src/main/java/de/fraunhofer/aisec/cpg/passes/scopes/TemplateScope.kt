@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,29 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.jetbrains.annotations.NotNull;
+import de.fraunhofer.aisec.cpg.graph.Node
 
-public class FunctionScope extends ValueDeclarationScope {
-  @NotNull private Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
-
-  public FunctionScope(FunctionDeclaration astNode) {
-    super(astNode);
-  }
-
-  @NotNull
-  public Map<Type, List<Node>> getCatchesOrRelays() {
-    return catchesOrRelays;
-  }
-
-  public void setCatchesOrRelays(@NotNull Map<Type, List<Node>> catchesOrRelays) {
-    this.catchesOrRelays = catchesOrRelays;
-  }
+class TemplateScope(node: Node, currentPrefix: String, delimiter: String) :
+    NameScope(node, currentPrefix, delimiter) {
+    init {
+        namePrefix = currentPrefix
+    }
 }

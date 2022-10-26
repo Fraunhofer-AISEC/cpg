@@ -26,12 +26,14 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn;
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteFirst;
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteLast;
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -85,6 +87,9 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
 
   @JsonIgnore @Nullable protected LanguageFrontend lang;
 
+  protected @Nullable ScopeManager scopeManager;
+  protected @Nullable TranslationConfiguration config;
+
   /**
    * @return May be null
    */
@@ -104,6 +109,13 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
    */
   public void setLang(@Nullable LanguageFrontend lang) {
     this.lang = lang;
+    if (lang != null) {
+      this.scopeManager = lang.getScopeManager();
+      this.config = lang.getConfig();
+    } else {
+      this.scopeManager = null;
+      this.config = null;
+    }
   }
 
   public abstract void cleanup();

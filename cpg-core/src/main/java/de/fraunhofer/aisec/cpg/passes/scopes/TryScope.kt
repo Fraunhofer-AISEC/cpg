@@ -23,13 +23,21 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.types.Type
 
-public class RecordScope extends NameScope {
+class TryScope(astNode: Node?) : ValueDeclarationScope(astNode), Breakable {
+    val catchesOrRelays = mutableMapOf<Type, MutableList<Node>>()
 
-  public RecordScope(Node node, String currentPrefix, String delimiter) {
-    super(node, currentPrefix, delimiter);
-  }
+    private val breaks = mutableListOf<BreakStatement>()
+
+    override fun addBreakStatement(breakStatement: BreakStatement) {
+        breaks.add(breakStatement)
+    }
+
+    override val breakStatements: List<BreakStatement>
+        get() = breaks
 }
