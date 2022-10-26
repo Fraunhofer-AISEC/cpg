@@ -114,5 +114,5 @@ dependencies {
     testImplementation(testFixtures(project(":cpg-core")))
 
     // jep for python support
-    api("black.ninia:jep:4.0.3")
+    api("black.ninia:jep:4.1.0")
 }
