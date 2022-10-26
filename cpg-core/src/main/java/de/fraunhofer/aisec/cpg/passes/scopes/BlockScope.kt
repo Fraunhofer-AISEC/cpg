@@ -23,28 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
-import java.util.ArrayList;
-import java.util.List;
-import org.jetbrains.annotations.NotNull;
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 
-public class BlockScope extends ValueDeclarationScope implements Breakable {
-  @NotNull private final List<BreakStatement> breaks = new ArrayList<>();
+class BlockScope(blockStatement: CompoundStatement) :
+    ValueDeclarationScope(blockStatement), Breakable {
+    private val breaks: MutableList<BreakStatement> = ArrayList()
+    override fun addBreakStatement(breakStatement: BreakStatement) {
+        breaks.add(breakStatement)
+    }
 
-  public BlockScope(CompoundStatement blockStatement) {
-    super(blockStatement);
-  }
-
-  @Override
-  public void addBreakStatement(BreakStatement breakStatement) {
-    this.breaks.add(breakStatement);
-  }
-
-  @Override
-  public List<BreakStatement> getBreakStatements() {
-    return this.breaks;
-  }
+    override val breakStatements: List<BreakStatement>
+        get() = breaks
 }

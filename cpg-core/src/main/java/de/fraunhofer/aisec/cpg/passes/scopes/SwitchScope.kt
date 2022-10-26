@@ -23,36 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 
-public class TryScope extends ValueDeclarationScope implements Breakable {
+class SwitchScope(switchStatement: SwitchStatement) :
+    ValueDeclarationScope(switchStatement), Breakable {
+    private val breaks = mutableListOf<BreakStatement>()
+    override fun addBreakStatement(breakStatement: BreakStatement) {
+        breaks.add(breakStatement)
+    }
 
-  private final Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
-  private final List<BreakStatement> breaks = new ArrayList<>();
-
-  public TryScope(Node astNode) {
-    super(astNode);
-  }
-
-  public Map<Type, List<Node>> getCatchesOrRelays() {
-    return catchesOrRelays;
-  }
-
-  @Override
-  public void addBreakStatement(BreakStatement breakStatement) {
-    this.breaks.add(breakStatement);
-  }
-
-  @Override
-  public List<BreakStatement> getBreakStatements() {
-    return this.breaks;
-  }
+    override val breakStatements: List<BreakStatement>
+        get() = breaks
 }

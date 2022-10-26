@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 
-/** Represents scopes that can be interrupted by a [BreakStatement]. */
-interface Breakable {
-    fun addBreakStatement(breakStatement: BreakStatement)
-    val breakStatements: List<BreakStatement>
-}
-
-/** Represents scopes that can be interrupted by a [ContinueStatement]. */
-interface Continuable {
-    fun addContinueStatement(continueStatement: ContinueStatement)
-
-    val continueStatements: List<ContinueStatement>
-}
+/** Represents the scope of a record or class, most likely created by a [RecordDeclaration]. */
+class RecordScope(node: Node, currentPrefix: String, delimiter: String) :
+    NameScope(node, currentPrefix, delimiter)
