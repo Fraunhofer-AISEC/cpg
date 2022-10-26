@@ -67,7 +67,7 @@ internal class ScopeManagerTest : BaseTest() {
 
         methods.forEach {
             val scope = scopeManager.lookupScope(it)
-            assertSame(it, scope!!.getAstNode())
+            assertSame(it, scope!!.astNode)
         }
 
         val constructors = tu.allChildren<ConstructorDeclaration>()
@@ -78,7 +78,7 @@ internal class ScopeManagerTest : BaseTest() {
         // which later gets 'upgraded' to a constructor declaration.
         constructors.forEach {
             val scope = scopeManager.lookupScope(it)
-            assertSame(it, scope!!.getAstNode())
+            assertSame(it, scope!!.astNode)
         }
     }
 
