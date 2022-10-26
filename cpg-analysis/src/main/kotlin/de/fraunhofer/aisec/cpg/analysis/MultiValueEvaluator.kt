@@ -141,13 +141,24 @@ class MultiValueEvaluator : ValueEvaluator() {
                     else -> cannotEvaluate(expr, this)
                 }
             }
+            "--" -> {
+                if (expr.astParent is ForStatement) {
+                    evaluateInternal(expr.input, depth + 1)
+                } else {
+                    when (val input = evaluateInternal(expr.input, depth + 1)) {
+                        is Number -> input.decrement()
+                        is Collection<*> -> input.map { n -> (n as? Number)?.decrement() }
+                        else -> cannotEvaluate(expr, this)
+                    }
+                }
+            }
             "++" -> {
                 if (expr.astParent is ForStatement) {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
-                        is Number -> input.toLong() + 1
-                        is Collection<*> -> input.map { n -> (n as? Number)?.toLong()?.plus(1) }
+                        is Number -> input.increment()
+                        is Collection<*> -> input.map { n -> (n as? Number)?.increment() }
                         else -> cannotEvaluate(expr, this)
                     }
                 }
@@ -364,10 +375,17 @@ class MultiValueEvaluator : ValueEvaluator() {
                     else -> cannotEvaluate(expr, this)
                 }
             }
+            "--" -> {
+                when (input) {
+                    is Number -> input.decrement()
+                    is Collection<*> -> input.map { n -> (n as? Number)?.decrement() }
+                    else -> cannotEvaluate(expr, this)
+                }
+            }
             "++" -> {
                 when (input) {
-                    is Number -> input.toLong() + 1
-                    is Collection<*> -> input.map { n -> (n as? Number)?.toLong()?.plus(1) }
+                    is Number -> input.increment()
+                    is Collection<*> -> input.map { n -> (n as? Number)?.increment() }
                     else -> cannotEvaluate(expr, this)
                 }
             }
