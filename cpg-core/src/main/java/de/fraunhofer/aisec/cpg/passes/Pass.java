@@ -28,10 +28,7 @@ package de.fraunhofer.aisec.cpg.passes;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn;
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteFirst;
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteLast;
-import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend;
+import de.fraunhofer.aisec.cpg.passes.order.*;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -65,10 +62,21 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
    */
   private final Set<Class<? extends Pass>> hardDependencies;
 
+  private final Set<Class<? extends Pass>> executeBefore;
+
+  public Set<Class<? extends Pass>> getExecuteBefore() {
+    return executeBefore;
+  }
+
+  public void addSoftDependency(Class<? extends Pass> toAdd) {
+    softDependencies.add(toAdd);
+  }
+
   protected Pass() {
     name = this.getClass().getName();
     hardDependencies = new HashSet<>();
     softDependencies = new HashSet<>();
+    executeBefore = new HashSet<>();
 
     // collect all dependencies added by [DependsOn] annotations.
     if (this.getClass().getAnnotationsByType(DependsOn.class).length != 0) {
@@ -79,6 +87,13 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
         } else {
           hardDependencies.add(d.value());
         }
+      }
+    }
+
+    if (this.getClass().getAnnotationsByType(ExecuteBefore.class).length != 0) {
+      ExecuteBefore[] dependencies = this.getClass().getAnnotationsByType(ExecuteBefore.class);
+      for (ExecuteBefore d : dependencies) {
+        executeBefore.add(d.other());
       }
     }
   }

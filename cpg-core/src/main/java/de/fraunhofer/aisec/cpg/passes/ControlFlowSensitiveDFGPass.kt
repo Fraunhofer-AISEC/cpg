@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
@@ -202,11 +203,15 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             ) {
                 // We add all the next steps in the eog to the worklist unless the exact same thing
                 // is already included in the list.
-                currentNode.nextEOG.forEach {
-                    val newPair = Pair(it, copyMap(previousWrites))
-                    if (!worklistHasSimilarPair(worklist, newPair)) worklist.add(newPair)
-                    // if (newPair !in worklist) worklist.add(newPair)
-                }
+                currentNode.nextEOGEdges
+                    .filter { it.getProperty(Properties.UNREACHABLE) != true }
+                    .map { it.end }
+                    .forEach {
+                        // currentNode.nextEOG.forEach {
+                        val newPair = Pair(it, copyMap(previousWrites))
+                        if (!worklistHasSimilarPair(worklist, newPair)) worklist.add(newPair)
+                        // if (newPair !in worklist) worklist.add(newPair)
+                    }
             }
         }
     }
