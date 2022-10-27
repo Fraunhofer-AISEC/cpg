@@ -16,16 +16,28 @@ A call expressions calls another function. We differentiate two types of call ex
 For each function in the `invokes` list, the arguments of the call expression flow to the function's parameters. The value of the function declaration flows to the call.
 
 Scheme:
-* `argument[i]` -- DFG --> `invokes[j].parameter[i]` for all i, j
-* `invokes[j]` -- DFG --> `CallExpression` for all j
+  ```mermaid
+  flowchart LR
+    node([CallExpression]) -.- invokes["invokes[j]"];
+    node -.- arguments["arguments[i]"];
+    invokes ==> decl([FunctionDeclaration])
+    decl -.- parameters["parameters[i]"]
+    arguments -- "for all i: DFG" --> parameters
+    invokes -- "forall j: DFG" --> node
+  ```
 
 ### Case 2: Unknown function
 
 The base and all arguments flow to the call expression.
 
 Scheme:
-* `argument[i]` -- DFG --> `CallExpression` for all i
-* `base` -- DFG --> `CallExpression`
+  ```mermaid
+  flowchart LR
+    arguments["arguments[i]"] -- "for all i: DFG" --> node([CallExpression]);
+    base -- DFG --> node;
+    arguments -.- node;
+    node -.- base;
+  ```
 
 ## CastExpression
 
@@ -33,7 +45,12 @@ Interesting fields:
 * `expression: Expression`: The inner expression which has to be casted
 
 The value of the `expression` flows to the cast expression.
-
+Scheme:
+```mermaid
+  flowchart LR
+    node([CastExpression]) -.- expression;
+    expression -- DFG --> node;
+  ```
 
 ## BinaryOperator
 
@@ -50,17 +67,46 @@ The `rhs` flows to `lhs`. In some languages, it is possible to have an assignmen
 For this reason, if the assignment's ast parent is not a `CompoundStatement` (i.e., a block of statements), we also add a DFG edge to the whole operator.
 
 Scheme:
-* `rhs` -- DFG --> `lhs`
-* `rhs` -- DFG --> `lhs = rhs` if the ast parent is not a CompoundStatement
+```mermaid
+flowchart LR
+    node([BinaryOperator]) -.- rhs(rhs);
+      rhs -- DFG --> lhs;
+    node([BinaryOperator]) -.- lhs(lhs);
+
+```
+
+```mermaid
+flowchart LR
+  node([BinaryOperator]) -.- lhs(lhs);
+  node([BinaryOperator]) -.- rhs(rhs);
+  rhs -- DFG --> lhs;
+  rhs -- DFG --> node;
+```
+
+  ```mermaid
+  flowchart LR
+    A[binaryOperator.rhs] -- DFG --> binaryOperator.lhs;
+    subgraph S[If the ast parent is not a CompoundStatement]
+      direction LR
+      binaryOperator.rhs -- DFG --> binaryOperator;
+    end
+    A --> S;
+  ```
+     
 
 ### Case 2: Assignment with a Computation (`operatorCode: *=, /=, %=, +=, -=, <<=, >>=, &=, ^=, |=` )
 
 The `lhs` and the `rhs` flow to the binary operator expression, the binary operator flows to the `lhs`.
 
 Scheme:
-* `lhs` -- DFG --> `(lhs operatorCode rhs)`
-* `rhs` -- DFG --> `(lhs operatorCode rhs)`
-* `(lhs operatorCode rhs)` -- DFG --> `lhs`
+  ```mermaid
+  flowchart LR
+    node([BinaryOperator]) -.- lhs(lhs);
+    node([BinaryOperator]) -.- rhs(rhs);
+    lhs -- DFG --> node;
+    rhs -- DFG --> node;
+    node == DFG ==> lhs;
+  ```
 
 *Dangerous: We have to ensure that the first two operations are performed before the last one*
 
@@ -70,9 +116,13 @@ Scheme:
 The `lhs` and the `rhs` flow to the binary operator expression.
 
 Scheme:
-* `lhs` -- DFG --> `(lhs operatorCode rhs)`
-* `rhs` -- DFG --> `(lhs operatorCode rhs)`
-
+  ```mermaid
+  flowchart
+    node([BinaryOperator]) -.- lhs(lhs);
+    node([BinaryOperator]) -.- rhs(rhs);
+    rhs -- DFG --> node;
+    lhs -- DFG --> node;
+  ```
 
 ## ArrayCreationExpression
 
@@ -82,7 +132,11 @@ Interesting fields:
 The `initializer` flows to the array creation expression.
 
 Scheme:
-* `initializer` -- DFG --> `ArrayCreationExpression`
+  ```mermaid
+  flowchart LR
+    node([ArrayCreationExpression]) -.- initializer(initializer)
+    initializer -- DFG --> node
+  ```
 
 
 ## ArraySubscriptionExpression
@@ -94,7 +148,11 @@ Interesting fields:
 The `arrayExpression` flows to the subscription expression. This means, we do not differentiate between the field which is accessed.
 
 Scheme:
-* `arrayExpression` -- DFG --> `ArraySubscriptionExpression`
+  ```mermaid
+  flowchart LR
+    arrayExpression -- DFG --> node([ArraySubscriptionExpression]);
+    arrayExpression -.- node;
+  ```
 
 
 ## ConditionalExpression
@@ -107,8 +165,13 @@ Interesting fields:
 The `thenExpr` and the `elseExpr` flow to the `ConditionalExpression`. This means that implicit data flows are not considered.
 
 Scheme:
-* `thenExpr` -- DFG --> `ConditionalExpression`
-* `elseExpr` -- DFG --> `ConditionalExpression`
+  ```mermaid
+  flowchart LR
+    thenExpr -- DFG --> node([ConditionalExpression]);
+    thenExpr -.- node;
+    elseExpr -.- node;
+    elseExpr -- DFG --> node;
+   ```
 
 ## DeclaredReferenceExpression
 
@@ -120,33 +183,78 @@ This is the most tricky concept for the DFG edges. We have to differentiate betw
 
 The `DFGPass` generates very simple edges based on the access to the variable as follows:
 * The value flows from the declaration to the expression for read access. Scheme:
-  - `refersTo` -- DFG --> `DeclaredReferenceExpression`
+  ```mermaid
+  flowchart LR
+    refersTo -- DFG --> node([DeclaredReferenceExpression]);
+    refersTo -.- node;
+  ```
 * For write access, data flow from the expression to the declaration. Scheme:
-  - `DeclaredReferenceExpression` -- DFG --> `refersTo`
+  ```mermaid
+  flowchart LR
+    node([DeclaredReferenceExpression]) -- DFG --> refersTo;
+    node -.- refersTo;
+  ```
 * For readwrite access, both flows are present. Scheme:
-  - `refersTo` -- DFG --> `DeclaredReferenceExpression`
-  - `DeclaredReferenceExpression` -- DFG --> `refersTo`
+  ```mermaid
+  flowchart LR
+    refersTo -- DFG 1 --> node([DeclaredReferenceExpression]);
+    refersTo -.- node;
+    node -- DFG 2 --> refersTo;
+  ```
 
 This mostly serves one purpose: The current function pointer resolution requires such flows. Once the respective passes are redesigned, we may want to update this.
 
 The `ControlFlowSensitiveDFGPass` completely changes this behavior and accounts for the data flows which differ depending on the program's control flow (e.g., different assignments to a variable in an if and else branch, ...). The pass performs the following actions:
 * First, it clears all the edges between a `VariableDeclaration` and its `DeclaredReferenceExpression`. Actually, it clears all incoming and outgoing DFG edges of all VariableDeclarations in a function. This includes the initializer but this edge is restored right away. Scheme:
-  - `variableDeclaration.initializer` -- DFG --> `variableDeclaration`
+  ```mermaid
+  flowchart LR
+    node([VariableDeclaration]) -.- initializer;
+    initializer -- DFG --> node;
+  ```
 * For each read access to a DeclaredReferenceExpression, it collects all potential previous assignments to the variable and adds these to the incoming DFG edges. You can imagine that this is done by traversing the EOG backwards until finding the first assignment to the variable for each possible path. Scheme:
-  - last writes to `var` (either in the `VariableDeclaration` or as `DeclaredReferenceExpression`) -- DFG --> `var` (the `DeclaredReferenceExpression`)
-* If we increment or decrement a variable with "++" or "--", the data of this statement flows from the previous writes of the variable to the input of the statement (= the DeclaredReferenceExpression). We do not write back to this reference but consider the whole statement as a "write" to the variable! Scheme:
-  - last writes to `var` (either in the `VariableDeclaration` or as `DeclaredReferenceExpression`) -- DFG --> `expr.input`
-  - `expr.input` -- DFG --> `expr` (`var++` or `var--`)
-  - `expr` -- DFG --> next reads of `var` (the `DeclaredReferenceExpression`s)
-* For compound operators such as `+=, -=, *=, /=`, we have an incoming flow from the last writes to reference on the left hand side of the expression to the lhs. The lhs then flows to the whole expression. Also, the right hand side flows to the whole expression (if it's a read, this is processed separately). The expression is marked as last write to the variable used on the lhs but the DFG edge does not go back to the lhs!
-  - last writes to `expr.lhs` -- DFG --> `expr.lhs`
-  - `expr.lhs` -- DFG --> `expr`
-  - `expr.rhs` -- DFG --> `expr`
-  - `expr` -- DFG --> next reads of the variable used in `expr.lhs`
+  ```mermaid
+  flowchart LR
+    node([DeclaredReferenceExpression]) -.- refersTo;
+    A == last write to ==> refersTo;
+    A[/Node/] -- DFG --> node;
+  ```
+* If we increment or decrement a variable with "++" or "--", the data of this statement flows from the previous writes of the variable to the input of the statement (= the DeclaredReferenceExpression). We write back to this reference and consider the lhs as a "write" to the variable! *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!* Scheme:
+  ```mermaid
+  flowchart LR
+    node([UnaryOperator]) -.- input;
+    input -.- |"(optional)"| refersTo;
+    W -- DFG 1 --> input;
+    W[/Node/] == last write to ==> refersTo;
+    input -- DFG 2 --> node;
+    node -- DFG 3 --> input;
+    input -- DFG 4 --> R[/Node/];
+    R == next read of ==> refersTo;
+  ```
+* For compound operators such as `+=, -=, *=, /=`, we have an incoming flow from the last writes to reference on the left hand side of the expression to the lhs. The lhs then flows to the whole expression. Also, the right hand side flows to the whole expression (if it's a read, this is processed separately). The data flows back to the lhs which is marked as the last write to the variable. *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!*
+  ```mermaid
+  flowchart LR
+    node -.- rhs;
+    node -.- lhs;
+    lhs -.- refersTo;
+    W -- DFG 1 --> lhs;
+    W[/Node/] == last write to ==> refersTo;
+    rhs -- DFG 2 --> node;
+    lhs -- DFG 4 --> R;
+    lhs -- DFG 2 --> node([BinaryOperator]);
+    node -- DFG 3 --> lhs;
+    R[/Node/] == next read of ==> refersTo;
+  ```
 * If the variable is assigned a value (a binary operator `var = rhs`), the right hand side flows to the variable. This is considered as a write operation.
-  - `rhs` -- DFG --> `var` (the `DeclaredReferenceExpression`)
-  - `var` -- DFG --> next reads of `var` (the `DeclaredReferenceExpression`s)
-
+  ```mermaid
+  flowchart LR
+    node -.- rhs;
+    node -.- lhs;
+    lhs -.- refersTo;
+    lhs -- DFG 2 --> node([BinaryOperator]);
+    R[/Node/] == next read of ==> refersTo;
+    rhs -- DFG --> lhs;
+    lhs -- DFG --> refersTo
+  ```
 
 ## MemberExpression
 
@@ -174,8 +282,11 @@ Interesting fields:
 The data of all initializers flow to this expression.
 
 Scheme:
-* `initializers[i]` -- DFG --> `ConditionalExpression` for all i
-
+```mermaid
+  flowchart LR
+    inits["for all i: initializers[i]"] -- DFG --> node([InitializerListExpression]);
+    node -.- inits;
+```
 
 ## KeyValueExpression
 
@@ -185,7 +296,11 @@ Interesting fields:
 The value flows to this expression.
 
 Scheme:
-* `value` -- DFG --> `KeyValueExpression`
+```mermaid
+  flowchart LR
+    value -- DFG --> node([KeyValueExpression]);
+    value -.- node;
+```
 
 
 ## LambdaExpression
@@ -196,8 +311,11 @@ Interesting fields:
 The data flow from the function representing the lambda to the expression.
 
 Scheme:
-* `function` -- DFG --> `LambdaExpression`
-
+```mermaid
+  flowchart LR
+    function -- DFG --> node([LambdaExpression]);
+    function -.- node;
+```
 
 ## UnaryOperator
 
@@ -206,6 +324,37 @@ Interesting fields:
 * `operatorCode: String`: A string representation of the operation
 
 The data flow from the input to this node and, in case of the operatorCodes ++ and -- also back from the node to the input.
+
+```mermaid
+  flowchart TD
+    node1([UnaryOperator]) -.- operator
+    operator ==> cmp
+    
+    cmp == "operator == '++' ||
+     operator == '--'" ==> incdec;
+    
+    cmp == "operator != '++' &&
+     operator != '--'" ==> finish[ ];
+    
+    subgraph finish[ ]
+      node2([UnaryOperator]) -.- input2;
+      input2 -.- |"(optional)"| refersTo2;
+      W2[/Node/] == last write to ==> refersTo2;
+      W2 -- DFG 1 --> input2[input];
+      input2 -- DFG 2 --> node2;
+    end
+     
+    subgraph incdec[ ]
+      node([UnaryOperator]) -.- input;
+      input -.- |"(optional)"| refersTo;
+      W[/Node/] == last write to ==> refersTo;
+      W -- DFG 1 --> input;
+      input -- DFG 2 --> node;
+      node -- DFG 3 --> input;
+      input -- DFG 4 --> R[/Node/];
+      R == next read of ==> refersTo;
+    end
+  ```
 
 *Dangerous: We have to ensure that the first operation is performed before the last one (if applicable)*
 
@@ -217,6 +366,12 @@ Interesting fields:
 
 The return value flows to the whole statement.
 
+Scheme:
+```mermaid
+  flowchart LR
+    returnValue -- DFG --> node([ReturnStatement]);
+    returnValue -.- node;
+```
 
 ## FunctionDeclaration
 
@@ -226,7 +381,12 @@ Interesting fields:
 The values of all return expressions in the body flow to the function declaration.
 
 Scheme:
-* `ReturnExpression` -- DFG --> `FieldDeclaration` for all returns
+```mermaid
+  flowchart LR
+    returns -- DFG --> node([FunctionDeclaration]);
+    body -.- node;
+    body -.- |in all statements| returns["returns: ReturnStatement"]
+```
 
 
 ## FieldDeclaration
@@ -239,7 +399,13 @@ The value of the initializer flows to the whole field.
 In addition, all writes to a reference to the field (via a `DeclaredReferenceExpression`) flow to the field, for all reads, data flow to the reference.
 
 Scheme:
-* `initializer` -- DFG --> field
+```mermaid
+  flowchart LR
+    initializer -- DFG --> node([FieldDeclaration]);
+    initializer -.- node;
+    node -- DFG --> R[/Node/];
+    R == next read of ==> node;
+```
 
 ## VariableDeclaration
 
@@ -249,9 +415,13 @@ Interesting fields:
 The value of the initializer flows to the variable declaration. The value of the variable declarations flows to all `DeclaredReferenceExpressions` which read the value before the value of the variable is written to through another reference to the variable.
 
 Scheme:
-* `initializer` -- DFG --> `VariableDeclaration`
-* `VariableDeclaration` -- DFG -->  `ref` where `ref.access == AccessValues.READ` and if there is a path between `ref` and `VariableDeclaration` where no write access to the variable takes place
-
+```mermaid
+  flowchart LR
+    initializer -- DFG --> node([VariableDeclaration]);
+    initializer -.- node;
+    node -- DFG --> R[/Node/];
+    R == next read of ==> node;
+```
 
 ## Assignment
 
@@ -261,3 +431,10 @@ Interesting fields:
 
 This should already be covered by the declarations and binary operator "=". If not, the `value` flows to the `target`
 
+Scheme:
+```mermaid
+  flowchart LR
+    value -.- node([Assignment]);
+    target -.- node;
+    value -- DFG --> target;
+```

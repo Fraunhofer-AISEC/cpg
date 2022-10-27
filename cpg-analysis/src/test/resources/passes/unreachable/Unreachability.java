@@ -45,6 +45,32 @@ public class TestClass {
         System.out.println(y);
     }
 
+    public void ifTrueComputedHard() {
+        int z = 2;
+        int y = z;
+        int x = URandomKt.nextUInt();
+        if(y + z < 10) {
+            y++;
+        } else {
+            y--;
+        }
+        z = 10;
+        System.out.println(y);
+    }
+
+    public void ifFalseComputedHard() {
+        int z = 5;
+        int y = z;
+        int x = URandomKt.nextUInt();
+        if(y + z < 10) {
+            y++;
+        } else {
+            y--;
+        }
+        z = 3;
+        System.out.println(y);
+    }
+
     public void ifFalseComputed() {
         int y = 6;
         int x = URandomKt.nextUInt();

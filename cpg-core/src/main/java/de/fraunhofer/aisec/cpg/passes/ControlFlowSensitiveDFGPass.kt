@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
@@ -135,13 +136,15 @@ open class ControlFlowSensitiveDFGPass : Pass() {
 
                     // TODO: Do we want to have a flow from the input back to the input? This can
                     //  cause problems if the DFG is not iterated through appropriately. The
-                    // following
-                    //  line would remove it:
+                    //  following line would remove it:
                     // currentNode.removeNextDFG(input)
 
                     // Add the whole node to the list of previous write nodes in this path. This
                     // prevents some weird circular dependencies.
-                    previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
+                    previousWrites
+                        .computeIfAbsent(writtenDecl, ::mutableListOf)
+                        .add(currentNode.input)
+                    currentWritten = currentNode.input
                 }
             } else if (isSimpleAssignment(currentNode)) {
                 // We write to the target => the rhs flows to the lhs
@@ -180,8 +183,10 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     currentNode.lhs.addPrevDFG(currentNode)
 
                     // The whole current node is the place of the last update, not (only) the lhs!
-                    previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(currentNode)
-                    currentWritten = currentNode
+                    previousWrites
+                        .computeIfAbsent(writtenDecl, ::mutableListOf)
+                        .add(currentNode.lhs)
+                    currentWritten = currentNode.lhs
                 }
             } else if ((currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ) {
                 // We only read the variable => Get previous write which have been collected in the
@@ -198,11 +203,15 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             ) {
                 // We add all the next steps in the eog to the worklist unless the exact same thing
                 // is already included in the list.
-                currentNode.nextEOG.forEach {
-                    val newPair = Pair(it, copyMap(previousWrites))
-                    if (!worklistHasSimilarPair(worklist, newPair)) worklist.add(newPair)
-                    // if (newPair !in worklist) worklist.add(newPair)
-                }
+                currentNode.nextEOGEdges
+                    .filter { it.getProperty(Properties.UNREACHABLE) != true }
+                    .map { it.end }
+                    .forEach {
+                        // currentNode.nextEOG.forEach {
+                        val newPair = Pair(it, copyMap(previousWrites))
+                        if (!worklistHasSimilarPair(worklist, newPair)) worklist.add(newPair)
+                        // if (newPair !in worklist) worklist.add(newPair)
+                    }
             }
         }
     }

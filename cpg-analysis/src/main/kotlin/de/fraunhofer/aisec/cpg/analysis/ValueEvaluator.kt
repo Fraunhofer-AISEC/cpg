@@ -383,10 +383,31 @@ open class ValueEvaluator(
     ): List<Node> {
         var list = inDFG
 
-        if (ref.access == AccessValues.READWRITE) {
+        // The ops +=, -=, ... and ++, -- have in common that we see the ref twice: Once to reach
+        // the operator and once to leave it. We have to differentiate between these two cases.
+        // Example: i = 3 -- DFG --> i++ -- DFG --> print(i)
+        // - We want to get i in the print, so we go backwards to "i" in "i++".
+        // - We now have to evaluate the whole statement (one more DFG edge back). Here, we only
+        // consider the statement where we already are (case 1)
+        // - To evaluate i++, we go one DFG edge back again and reach "i" for a second time
+        // - We now remove the statement where we already are (the "selfReference") to continue
+        // before it (case 2)
+
+        // Determines if we are in case 2
+        val isCase2 = path.size > 2 && ref in path.subList(0, path.size - 2)
+
+        if (ref.access == AccessValues.READWRITE && isCase2) {
+            // Remove the self reference
             list =
                 list.filter {
                     !((it is BinaryOperator && it.lhs == ref) ||
+                        (it is UnaryOperator && it.input == ref))
+                }
+        } else if (ref.access == AccessValues.READWRITE && !isCase2) {
+            // Consider only the self reference
+            list =
+                list.filter {
+                    ((it is BinaryOperator && it.lhs == ref) ||
                         (it is UnaryOperator && it.input == ref))
                 }
         }

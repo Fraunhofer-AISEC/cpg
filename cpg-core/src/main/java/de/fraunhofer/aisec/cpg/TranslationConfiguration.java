@@ -646,6 +646,19 @@ public class TranslationConfiguration {
      */
     private PassWithDepsContainer collectInitialPasses() {
       PassWithDepsContainer workingList = new PassWithDepsContainer();
+
+      // Add the "execute before" dependencies.
+      for (Pass p : passes) {
+        Set<Class<? extends Pass>> executeBefore = p.getExecuteBefore();
+        for (Class<? extends Pass> eb : executeBefore) {
+          for (Pass p2 : passes) {
+            if (eb.isInstance(p2)) {
+              p2.addSoftDependency(p.getClass());
+            }
+          }
+        }
+      }
+
       for (Pass p : passes) {
         boolean passFound = false;
         for (PassWithDependencies wl : workingList.getWorkingList()) {
