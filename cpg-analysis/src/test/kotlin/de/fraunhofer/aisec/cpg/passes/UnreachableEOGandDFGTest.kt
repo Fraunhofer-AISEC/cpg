@@ -57,7 +57,7 @@ class UnreachableEOGandDFGTest {
                         JavaLanguageFrontend::class.java,
                         JavaLanguageFrontend.JAVA_EXTENSIONS
                     )
-                    .registerPass(UnreachableEOGPassBeforeDFG())
+                    .registerPass(UnreachableEOGPass())
             }
     }
 

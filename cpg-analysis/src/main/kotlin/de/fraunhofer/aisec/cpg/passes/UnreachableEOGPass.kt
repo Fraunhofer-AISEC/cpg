@@ -39,7 +39,8 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
  * by setting the [Properties.UNREACHABLE] property of an eog-edge to true.
  */
-open class UnreachableEOGPass : Pass() {
+@ExecuteBefore(ControlFlowSensitiveDFGPass::class)
+class UnreachableEOGPass : Pass() {
     override fun accept(t: TranslationResult) {
         for (tu in t.translationUnits) {
             tu.accept(
@@ -96,6 +97,3 @@ open class UnreachableEOGPass : Pass() {
         // nothing to do
     }
 }
-
-@ExecuteBefore(ControlFlowSensitiveDFGPass::class)
-class UnreachableEOGPassBeforeDFG() : UnreachableEOGPass()
