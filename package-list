@@ -24,6 +24,7 @@ de.fraunhofer.aisec.cpg.graph.types
 de.fraunhofer.aisec.cpg.helpers
 de.fraunhofer.aisec.cpg.helpers.annotations
 de.fraunhofer.aisec.cpg.passes
+de.fraunhofer.aisec.cpg.passes.order
 de.fraunhofer.aisec.cpg.passes.scopes
 de.fraunhofer.aisec.cpg.processing
 de.fraunhofer.aisec.cpg.processing.strategy

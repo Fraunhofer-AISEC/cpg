@@ -4,10 +4,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
     <title>de.fraunhofer.aisec.cpg.graph.declarations</title>
 <link href="../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
-const savedDarkMode = storage ? JSON.parse(storage) : false
-if(savedDarkMode === true){
-    document.getElementsByTagName("html")[0].classList.add("theme-dark")
-}</script>
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
 <script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
 <link href="../../styles/style.css" rel="Stylesheet">
 <link href="../../styles/jetbrains-mono.css" rel="Stylesheet">
@@ -18,14 +26,15 @@ if(savedDarkMode === true){
 <script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
 <script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
 <script type="text/javascript" src="../../scripts/main.js" defer></script>
-<script type="text/javascript" src="../../scripts/prism.js" async></script></head>
+<script type="text/javascript" src="../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../scripts/symbol-parameters-wrapper_deferred.js" defer></script></head>
 <body>
 <div class="navigation-wrapper" id="navigation-wrapper">
     <div id="leftToggler"><span class="icon-toggler"></span></div>
     <div class="library-name">
 <a href="../../index.html">
 <span>cpg</span>            </a>    </div>
-    <div>5.0.0
+    <div>5.1.0
     </div>
     <div class="pull-right d-flex">
         <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
@@ -38,9 +47,9 @@ if(savedDarkMode === true){
     </div>
     <div id="main">
 <div class="main-content" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.graph.declarations////PointingToDeclaration//1556141526">
-  <div class="breadcrumbs"><a href="../index.html">cpg-core</a><span class="delimiter">/</span><a href="index.html">de.fraunhofer.aisec.cpg.graph.declarations</a></div>
+  <div class="breadcrumbs"><a href="../index.html">cpg-core</a><span class="delimiter">/</span><span class="current">de.fraunhofer.aisec.cpg.graph.declarations</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>Package de.</span><wbr><span>fraunhofer.</span><wbr><span>aisec.</span><wbr><span>cpg.</span><wbr><span>graph.</span><wbr><span><span>declarations</span></span></h1>
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Types">Types</button></div>
@@ -56,7 +65,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-class-template-declaration/index.html">ClassTemplateDeclaration</a> : <a href="-template-declaration/index.html">TemplateDeclaration</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Node representing a declaration of a ClassTemplate</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-class-template-declaration/index.html">ClassTemplateDeclaration</a> : <a href="-template-declaration/index.html">TemplateDeclaration</a></div><div class="brief ">Node representing a declaration of a ClassTemplate</div></div></div>
               </div>
             </div>
           </div>
@@ -71,7 +80,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-constructor-declaration/index.html">ConstructorDeclaration</a> : <a href="-method-declaration/index.html">MethodDeclaration</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">The declaration of a constructor within a <a href="-record-declaration/index.html">RecordDeclaration</a>. Is it essentially a special case of a <a href="-method-declaration/index.html">MethodDeclaration</a>.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-constructor-declaration/index.html">ConstructorDeclaration</a> : <a href="-method-declaration/index.html">MethodDeclaration</a></div><div class="brief "><p class="paragraph">The declaration of a constructor within a <a href="-record-declaration/index.html">RecordDeclaration</a>. Is it essentially a special case of a <a href="-method-declaration/index.html">MethodDeclaration</a>.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -86,7 +95,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-declaration/index.html">Declaration</a> : <a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Represents a single declaration or definition, i.e. of a variable (<a href="-variable-declaration/index.html">VariableDeclaration</a>) or function (<a href="-function-declaration/index.html">FunctionDeclaration</a>).</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-declaration/index.html">Declaration</a> : <a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></div><div class="brief "><p class="paragraph">Represents a single declaration or definition, i.e. of a variable (<a href="-variable-declaration/index.html">VariableDeclaration</a>) or function (<a href="-function-declaration/index.html">FunctionDeclaration</a>).</p></div></div></div>
               </div>
             </div>
           </div>
@@ -101,7 +110,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-declaration-sequence/index.html">DeclarationSequence</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">This represents a sequence of one or more declaration(s). The purpose of this node is primarily to bridge between a single declaration and a list of declarations in the front-end handlers. It will be converted into a list-structure and all its children will be added to the parent, i.e. the translation unit. It should NOT end up in the final graph.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-declaration-sequence/index.html">DeclarationSequence</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a></div><div class="brief "><p class="paragraph">This represents a sequence of one or more declaration(s). The purpose of this node is primarily to bridge between a single declaration and a list of declarations in the front-end handlers. It will be converted into a list-structure and all its children will be added to the parent, i.e. the translation unit. It should NOT end up in the final graph.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -116,7 +125,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-enum-constant-declaration/index.html">EnumConstantDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-initializer/index.html">HasInitializer</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Represents a constant within an <a href="-enum-declaration/index.html">EnumDeclaration</a>. Depending on the language, this might have an explicit initializer value.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-enum-constant-declaration/index.html">EnumConstantDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-initializer/index.html">HasInitializer</a></div><div class="brief "><p class="paragraph">Represents a constant within an <a href="-enum-declaration/index.html">EnumDeclaration</a>. Depending on the language, this might have an explicit initializer value.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -131,7 +140,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-enum-declaration/index.html">EnumDeclaration</a> : <a href="-declaration/index.html">Declaration</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-enum-declaration/index.html">EnumDeclaration</a> : <a href="-declaration/index.html">Declaration</a></div></div></div>
               </div>
             </div>
           </div>
@@ -146,7 +155,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-field-declaration/index.html">FieldDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-initializer/index.html">HasInitializer</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Declaration of a field within a <a href="-record-declaration/index.html">RecordDeclaration</a>.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-field-declaration/index.html">FieldDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-initializer/index.html">HasInitializer</a></div><div class="brief ">Declaration of a field within a <a href="-record-declaration/index.html">RecordDeclaration</a>.</div></div></div>
               </div>
             </div>
           </div>
@@ -161,7 +170,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-function-declaration/index.html">FunctionDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Represents the declaration or definition of a function.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-function-declaration/index.html">FunctionDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a></div><div class="brief "><p class="paragraph">Represents the declaration or definition of a function.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -176,7 +185,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-function-template-declaration/index.html">FunctionTemplateDeclaration</a> : <a href="-template-declaration/index.html">TemplateDeclaration</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Node representing a declaration of a FunctionTemplate</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-function-template-declaration/index.html">FunctionTemplateDeclaration</a> : <a href="-template-declaration/index.html">TemplateDeclaration</a></div><div class="brief ">Node representing a declaration of a FunctionTemplate</div></div></div>
               </div>
             </div>
           </div>
@@ -191,7 +200,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-include-declaration/index.html">IncludeDeclaration</a> : <a href="-declaration/index.html">Declaration</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-include-declaration/index.html">IncludeDeclaration</a> : <a href="-declaration/index.html">Declaration</a></div></div></div>
               </div>
             </div>
           </div>
@@ -206,7 +215,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-method-declaration/index.html">MethodDeclaration</a> : <a href="-function-declaration/index.html">FunctionDeclaration</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">A method declaration is a <a href="-function-declaration/index.html">FunctionDeclaration</a> that is part of to a specific <a href="-record-declaration/index.html">RecordDeclaration</a> .</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-method-declaration/index.html">MethodDeclaration</a> : <a href="-function-declaration/index.html">FunctionDeclaration</a></div><div class="brief "><p class="paragraph">A method declaration is a <a href="-function-declaration/index.html">FunctionDeclaration</a> that is part of to a specific <a href="-record-declaration/index.html">RecordDeclaration</a> .</p></div></div></div>
               </div>
             </div>
           </div>
@@ -221,7 +230,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-namespace-declaration/index.html">NamespaceDeclaration</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-statement-holder/index.html">StatementHolder</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Declares the scope of a namespace and appends its own name to the current namespace-prefix to form a new namespace prefix.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-namespace-declaration/index.html">NamespaceDeclaration</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-statement-holder/index.html">StatementHolder</a></div><div class="brief ">Declares the scope of a namespace and appends its own name to the current namespace-prefix to form a new namespace prefix.</div></div></div>
               </div>
             </div>
           </div>
@@ -236,7 +245,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-param-variable-declaration/index.html">ParamVariableDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-default/index.html">HasDefault</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-has-default/index.html">T</a><span class="token operator">&gt; </span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">A declaration of a function or nontype template parameter.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-param-variable-declaration/index.html">ParamVariableDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-default/index.html">HasDefault</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-has-default/index.html">T</a><span class="token operator">&gt; </span></div><div class="brief ">A declaration of a function or nontype template parameter.</div></div></div>
               </div>
             </div>
           </div>
@@ -251,7 +260,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-problem-declaration/index.html">ProblemDeclaration</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>problem<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">""</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>type<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/-problem-type/index.html">ProblemNode.ProblemType</a><span class="token operator"> = </span>ProblemNode.ProblemType.TRANSLATION</span></span><span class="token punctuation">)</span> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/index.html">ProblemNode</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">A node where the statement could not be translated by the graph. We use ProblemExpressions whenever the CPG library requires an <a href="-declaration/index.html">Declaration</a>.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-problem-declaration/index.html">ProblemDeclaration</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>problem<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">""</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>type<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/-problem-type/index.html">ProblemNode.ProblemType</a><span class="token operator"> = </span>ProblemNode.ProblemType.TRANSLATION</span></span><span class="token punctuation">)</span> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/index.html">ProblemNode</a></div><div class="brief "><p class="paragraph">A node where the statement could not be translated by the graph. We use ProblemExpressions whenever the CPG library requires an <a href="-declaration/index.html">Declaration</a>.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -266,7 +275,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-record-declaration/index.html">RecordDeclaration</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-statement-holder/index.html">StatementHolder</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represents a C++ union/struct/class or Java class</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-record-declaration/index.html">RecordDeclaration</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-statement-holder/index.html">StatementHolder</a></div><div class="brief ">Represents a C++ union/struct/class or Java class</div></div></div>
               </div>
             </div>
           </div>
@@ -281,7 +290,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-template-declaration/index.html">TemplateDeclaration</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Abstract class representing the template concept</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-template-declaration/index.html">TemplateDeclaration</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a></div><div class="brief ">Abstract class representing the template concept</div></div></div>
               </div>
             </div>
           </div>
@@ -296,7 +305,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-translation-unit-declaration/index.html">TranslationUnitDeclaration</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-statement-holder/index.html">StatementHolder</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">The top most declaration, representing a translation unit, for example a file.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-translation-unit-declaration/index.html">TranslationUnitDeclaration</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-declaration-holder/index.html">DeclarationHolder</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-statement-holder/index.html">StatementHolder</a></div><div class="brief ">The top most declaration, representing a translation unit, for example a file.</div></div></div>
               </div>
             </div>
           </div>
@@ -311,7 +320,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-typedef-declaration/index.html">TypedefDeclaration</a> : <a href="-declaration/index.html">Declaration</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represents a type alias definition as found in C/C++: <code class="lang-kotlin">typedef unsigned long ulong;</code></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-typedef-declaration/index.html">TypedefDeclaration</a> : <a href="-declaration/index.html">Declaration</a></div><div class="brief ">Represents a type alias definition as found in C/C++: <code class="lang-kotlin">typedef unsigned long ulong;</code></div></div></div>
               </div>
             </div>
           </div>
@@ -326,7 +335,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-type-param-declaration/index.html">TypeParamDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-secondary-type-edge/index.html">HasType.SecondaryTypeEdge</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-default/index.html">HasDefault</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-has-default/index.html">T</a><span class="token operator">&gt; </span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">A declaration of a type template parameter</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-type-param-declaration/index.html">TypeParamDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-secondary-type-edge/index.html">HasType.SecondaryTypeEdge</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-default/index.html">HasDefault</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-has-default/index.html">T</a><span class="token operator">&gt; </span></div><div class="brief ">A declaration of a type template parameter</div></div></div>
               </div>
             </div>
           </div>
@@ -341,7 +350,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-using-directive/index.html">UsingDirective</a> : <a href="-declaration/index.html">Declaration</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-using-directive/index.html">UsingDirective</a> : <a href="-declaration/index.html">Declaration</a></div></div></div>
               </div>
             </div>
           </div>
@@ -356,7 +365,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-value-declaration/index.html">ValueDeclaration</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/index.html">HasType</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">A declaration who has a type.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-value-declaration/index.html">ValueDeclaration</a> : <a href="-declaration/index.html">Declaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/index.html">HasType</a></div><div class="brief ">A declaration who has a type.</div></div></div>
               </div>
             </div>
           </div>
@@ -371,7 +380,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-variable-declaration/index.html">VariableDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-initializer/index.html">HasInitializer</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment/index.html">Assignment</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment-target/index.html">AssignmentTarget</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represents the declaration of a variable.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-variable-declaration/index.html">VariableDeclaration</a> : <a href="-value-declaration/index.html">ValueDeclaration</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-initializer/index.html">HasInitializer</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment/index.html">Assignment</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment-target/index.html">AssignmentTarget</a></div><div class="brief ">Represents the declaration of a variable.</div></div></div>
               </div>
             </div>
           </div>

@@ -4,10 +4,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
     <title>de.fraunhofer.aisec.cpg.graph.statements.expressions</title>
 <link href="../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
-const savedDarkMode = storage ? JSON.parse(storage) : false
-if(savedDarkMode === true){
-    document.getElementsByTagName("html")[0].classList.add("theme-dark")
-}</script>
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
 <script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
 <link href="../../styles/style.css" rel="Stylesheet">
 <link href="../../styles/jetbrains-mono.css" rel="Stylesheet">
@@ -18,14 +26,15 @@ if(savedDarkMode === true){
 <script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
 <script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
 <script type="text/javascript" src="../../scripts/main.js" defer></script>
-<script type="text/javascript" src="../../scripts/prism.js" async></script></head>
+<script type="text/javascript" src="../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../scripts/symbol-parameters-wrapper_deferred.js" defer></script></head>
 <body>
 <div class="navigation-wrapper" id="navigation-wrapper">
     <div id="leftToggler"><span class="icon-toggler"></span></div>
     <div class="library-name">
 <a href="../../index.html">
 <span>cpg</span>            </a>    </div>
-    <div>5.0.0
+    <div>5.1.0
     </div>
     <div class="pull-right d-flex">
         <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
@@ -38,9 +47,9 @@ if(savedDarkMode === true){
     </div>
     <div id="main">
 <div class="main-content" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.graph.statements.expressions////PointingToDeclaration//1556141526">
-  <div class="breadcrumbs"><a href="../index.html">cpg-core</a><span class="delimiter">/</span><a href="index.html">de.fraunhofer.aisec.cpg.graph.statements.expressions</a></div>
+  <div class="breadcrumbs"><a href="../index.html">cpg-core</a><span class="delimiter">/</span><span class="current">de.fraunhofer.aisec.cpg.graph.statements.expressions</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>Package de.</span><wbr><span>fraunhofer.</span><wbr><span>aisec.</span><wbr><span>cpg.</span><wbr><span>graph.</span><wbr><span>statements.</span><wbr><span><span>expressions</span></span></h1>
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Types">Types</button></div>
@@ -56,7 +65,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-array-creation-expression/index.html">ArrayCreationExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Expressions of the form <code class="lang-kotlin">new Type[]</code> that represents the creation of an array, mostly used in combination with a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a>.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-array-creation-expression/index.html">ArrayCreationExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div><div class="brief ">Expressions of the form <code class="lang-kotlin">new Type[]</code> that represents the creation of an array, mostly used in combination with a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a>.</div></div></div>
               </div>
             </div>
           </div>
@@ -71,7 +80,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-array-range-expression/index.html">ArrayRangeExpression</a> : <a href="-expression/index.html">Expression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Expressions of the form floor ...</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-array-range-expression/index.html">ArrayRangeExpression</a> : <a href="-expression/index.html">Expression</a></div><div class="brief ">Expressions of the form floor ...</div></div></div>
               </div>
             </div>
           </div>
@@ -86,7 +95,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-array-subscription-expression/index.html">ArraySubscriptionExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-base/index.html">HasBase</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represents the Subscription or access of an array of the form <code class="lang-kotlin">array[index]</code>, where both <code class="lang-kotlin">array</code> and <code class="lang-kotlin">index</code> are of type <a href="-expression/index.html">Expression</a>.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-array-subscription-expression/index.html">ArraySubscriptionExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-base/index.html">HasBase</a></div><div class="brief ">Represents the Subscription or access of an array of the form <code class="lang-kotlin">array[index]</code>, where both <code class="lang-kotlin">array</code> and <code class="lang-kotlin">index</code> are of type <a href="-expression/index.html">Expression</a>.</div></div></div>
               </div>
             </div>
           </div>
@@ -101,7 +110,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-binary-operator/index.html">BinaryOperator</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment/index.html">Assignment</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">A binary operation expression, such as "a + b".</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-binary-operator/index.html">BinaryOperator</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment/index.html">Assignment</a></div><div class="brief ">A binary operation expression, such as "a + b".</div></div></div>
               </div>
             </div>
           </div>
@@ -116,7 +125,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-call-expression/index.html">CallExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-base/index.html">HasBase</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-secondary-type-edge/index.html">HasType.SecondaryTypeEdge</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">An expression, which calls another function. It has a list of arguments (list of <a href="-expression/index.html">Expression</a>s) and is connected via the INVOKES edge to its <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a>.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-call-expression/index.html">CallExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-base/index.html">HasBase</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-secondary-type-edge/index.html">HasType.SecondaryTypeEdge</a></div><div class="brief "><p class="paragraph">An expression, which calls another function. It has a list of arguments (list of <a href="-expression/index.html">Expression</a>s) and is connected via the INVOKES edge to its <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a>.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -131,7 +140,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-cast-expression/index.html">CastExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-cast-expression/index.html">CastExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div></div></div>
               </div>
             </div>
           </div>
@@ -146,7 +155,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-compound-statement-expression/index.html">CompoundStatementExpression</a> : <a href="-expression/index.html">Expression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">An expression, which calls another function.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-compound-statement-expression/index.html">CompoundStatementExpression</a> : <a href="-expression/index.html">Expression</a></div><div class="brief ">An expression, which calls another function.</div></div></div>
               </div>
             </div>
           </div>
@@ -161,7 +170,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-conditional-expression/index.html">ConditionalExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represents an expression containing a ternary operator: var x = condition ?</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-conditional-expression/index.html">ConditionalExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div><div class="brief ">Represents an expression containing a ternary operator: var x = condition ?</div></div></div>
               </div>
             </div>
           </div>
@@ -176,7 +185,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-construct-expression/index.html">ConstructExpression</a> : <a href="-call-expression/index.html">CallExpression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Represents a call to a constructor, usually as an initializer.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-construct-expression/index.html">ConstructExpression</a> : <a href="-call-expression/index.html">CallExpression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div><div class="brief "><p class="paragraph">Represents a call to a constructor, usually as an initializer.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -191,7 +200,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-declared-reference-expression/index.html">DeclaredReferenceExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment-target/index.html">AssignmentTarget</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">An expression, which refers to something which is declared, e.g.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-declared-reference-expression/index.html">DeclaredReferenceExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment-target/index.html">AssignmentTarget</a></div><div class="brief ">An expression, which refers to something which is declared, e.g.</div></div></div>
               </div>
             </div>
           </div>
@@ -206,7 +215,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-delete-expression/index.html">DeleteExpression</a> : <a href="-expression/index.html">Expression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-delete-expression/index.html">DeleteExpression</a> : <a href="-expression/index.html">Expression</a></div></div></div>
               </div>
             </div>
           </div>
@@ -221,7 +230,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-designated-initializer-expression/index.html">DesignatedInitializerExpression</a> : <a href="-expression/index.html">Expression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-designated-initializer-expression/index.html">DesignatedInitializerExpression</a> : <a href="-expression/index.html">Expression</a></div></div></div>
               </div>
             </div>
           </div>
@@ -236,7 +245,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-explicit-constructor-invocation/index.html">ExplicitConstructorInvocation</a> : <a href="-call-expression/index.html">CallExpression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-explicit-constructor-invocation/index.html">ExplicitConstructorInvocation</a> : <a href="-call-expression/index.html">CallExpression</a></div></div></div>
               </div>
             </div>
           </div>
@@ -251,7 +260,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-expression/index.html">Expression</a> : <a href="../de.fraunhofer.aisec.cpg.graph.statements/-statement/index.html">Statement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/index.html">HasType</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represents one expression.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-expression/index.html">Expression</a> : <a href="../de.fraunhofer.aisec.cpg.graph.statements/-statement/index.html">Statement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/index.html">HasType</a></div><div class="brief ">Represents one expression.</div></div></div>
               </div>
             </div>
           </div>
@@ -266,7 +275,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-expression-list/index.html">ExpressionList</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-expression-list/index.html">ExpressionList</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div></div></div>
               </div>
             </div>
           </div>
@@ -281,7 +290,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-initializer-list-expression/index.html">InitializerListExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">A list of initializer expressions.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-initializer-list-expression/index.html">InitializerListExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div><div class="brief ">A list of initializer expressions.</div></div></div>
               </div>
             </div>
           </div>
@@ -296,7 +305,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-key-value-expression/index.html">KeyValueExpression</a> : <a href="-expression/index.html">Expression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Represents a key / value pair, often found in languages that allow associative arrays or objects, such as Python, Golang or JavaScript.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-key-value-expression/index.html">KeyValueExpression</a> : <a href="-expression/index.html">Expression</a></div><div class="brief "><p class="paragraph">Represents a key / value pair, often found in languages that allow associative arrays or objects, such as Python, Golang or JavaScript.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -311,7 +320,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-lambda-expression/index.html">LambdaExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">This expression denotes the usage of an anonymous / lambda function. It connects the inner anonymous function to the user of a lambda function with an expression.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-lambda-expression/index.html">LambdaExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div><div class="brief "><p class="paragraph">This expression denotes the usage of an anonymous / lambda function. It connects the inner anonymous function to the user of a lambda function with an expression.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -326,7 +335,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-literal/index.html">Literal</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-literal/index.html">T</a><span class="token operator">&gt;</span> : <a href="-expression/index.html">Expression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represents a literal value, meaning the value is fixed and not depending on the runtime evaluation of the expression.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-literal/index.html">Literal</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-literal/index.html">T</a><span class="token operator">&gt;</span> : <a href="-expression/index.html">Expression</a></div><div class="brief ">Represents a literal value, meaning the value is fixed and not depending on the runtime evaluation of the expression.</div></div></div>
               </div>
             </div>
           </div>
@@ -341,7 +350,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-member-call-expression/index.html">MemberCallExpression</a> : <a href="-call-expression/index.html">CallExpression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represents a <a href="-call-expression/index.html">CallExpression</a> to a function, which is a member of an object.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-member-call-expression/index.html">MemberCallExpression</a> : <a href="-call-expression/index.html">CallExpression</a></div><div class="brief ">Represents a <a href="-call-expression/index.html">CallExpression</a> to a function, which is a member of an object.</div></div></div>
               </div>
             </div>
           </div>
@@ -356,7 +365,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-member-expression/index.html">MemberExpression</a> : <a href="-declared-reference-expression/index.html">DeclaredReferenceExpression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-base/index.html">HasBase</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represents access to a field of a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a>, such as <code class="lang-kotlin">obj.property</code>.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-member-expression/index.html">MemberExpression</a> : <a href="-declared-reference-expression/index.html">DeclaredReferenceExpression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-base/index.html">HasBase</a></div><div class="brief ">Represents access to a field of a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a>, such as <code class="lang-kotlin">obj.property</code>.</div></div></div>
               </div>
             </div>
           </div>
@@ -371,7 +380,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-new-expression/index.html">NewExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-initializer/index.html">HasInitializer</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represents the creation of a new object through the <code class="lang-kotlin">new</code> keyword.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-new-expression/index.html">NewExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-initializer/index.html">HasInitializer</a></div><div class="brief ">Represents the creation of a new object through the <code class="lang-kotlin">new</code> keyword.</div></div></div>
               </div>
             </div>
           </div>
@@ -386,7 +395,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-problem-expression/index.html">ProblemExpression</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>problem<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">""</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>type<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/-problem-type/index.html">ProblemNode.ProblemType</a><span class="token operator"> = </span>ProblemNode.ProblemType.TRANSLATION</span></span><span class="token punctuation">)</span> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/index.html">ProblemNode</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">A node where the statement could not be translated by the graph. We use ProblemExpressions whenever the CPG library requires an <a href="-expression/index.html">Expression</a>.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-problem-expression/index.html">ProblemExpression</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>problem<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">""</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>type<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/-problem-type/index.html">ProblemNode.ProblemType</a><span class="token operator"> = </span>ProblemNode.ProblemType.TRANSLATION</span></span><span class="token punctuation">)</span> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/index.html">ProblemNode</a></div><div class="brief "><p class="paragraph">A node where the statement could not be translated by the graph. We use ProblemExpressions whenever the CPG library requires an <a href="-expression/index.html">Expression</a>.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -401,7 +410,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-static-call-expression/index.html">StaticCallExpression</a> : <a href="-call-expression/index.html">CallExpression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">A <a href="-call-expression/index.html">CallExpression</a> that targets a static function of a different <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a>, without using a static import: <code class="lang-kotlin">SomeClass.invoke()</code></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-static-call-expression/index.html">StaticCallExpression</a> : <a href="-call-expression/index.html">CallExpression</a></div><div class="brief ">A <a href="-call-expression/index.html">CallExpression</a> that targets a static function of a different <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a>, without using a static import: <code class="lang-kotlin">SomeClass.invoke()</code></div></div></div>
               </div>
             </div>
           </div>
@@ -416,7 +425,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-type-expression/index.html">TypeExpression</a> : <a href="-expression/index.html">Expression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Represets a Type used as an expression for instance when instantiating templates Note: This Expression is required since we cannot have ASTChilds directly connected to a Type since they are merged.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-type-expression/index.html">TypeExpression</a> : <a href="-expression/index.html">Expression</a></div><div class="brief ">Represets a Type used as an expression for instance when instantiating templates Note: This Expression is required since we cannot have ASTChilds directly connected to a Type since they are merged.</div></div></div>
               </div>
             </div>
           </div>
@@ -431,7 +440,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-type-id-expression/index.html">TypeIdExpression</a> : <a href="-expression/index.html">Expression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">Modells C++ operations that inspect types.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-type-id-expression/index.html">TypeIdExpression</a> : <a href="-expression/index.html">Expression</a></div><div class="brief ">Modells C++ operations that inspect types.</div></div></div>
               </div>
             </div>
           </div>
@@ -446,7 +455,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-unary-operator/index.html">UnaryOperator</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief ">A unary operator expression, involving one expression and an operator, such as <code class="lang-kotlin">a++</code>.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-unary-operator/index.html">UnaryOperator</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div><div class="brief ">A unary operator expression, involving one expression and an operator, such as <code class="lang-kotlin">a++</code>.</div></div></div>
               </div>
             </div>
           </div>
@@ -461,7 +470,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-uninitialized-value/index.html">UninitializedValue</a> : <a href="-expression/index.html">Expression</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-uninitialized-value/index.html">UninitializedValue</a> : <a href="-expression/index.html">Expression</a></div></div></div>
               </div>
             </div>
           </div>
