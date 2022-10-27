@@ -26,8 +26,9 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 /**
- * A language trait is a feature or trait that is common to a group of programming languages.
- * Examples could be the support of pointers, support for templates or generics.
+ * A language trait is a feature or trait that is common to a group of programming languages. Any
+ * [Language] that supports them should implement the desired trait interface. Examples could be the
+ * support of pointers, support for templates or generics.
  *
  * Currently, this interface has no methods. However, in the future, this could be used to execute
  * language/frontend-specific code for the particular trait. This could help to fine-tune the
@@ -43,3 +44,12 @@ interface HasTemplates : LanguageTrait
  * functions.
  */
 interface HasDefaultArguments : LanguageTrait
+
+/**
+ * A language trait that specifies that this language has a complex call resolution that we need to
+ * fine-tune in the language implementation.
+ */
+interface HasComplexCallResolution : LanguageTrait {
+    // TODO: better name?
+    fun doBetterCallResolution()
+}
