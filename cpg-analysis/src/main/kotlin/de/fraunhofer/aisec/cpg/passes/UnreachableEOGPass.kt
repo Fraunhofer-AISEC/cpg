@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
  * by setting the [Properties.UNREACHABLE] property of an eog-edge to true.
  */
-@ExecuteBefore(ControlFlowSensitiveDFGPass::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class)
 class UnreachableEOGPass : Pass() {
     override fun accept(t: TranslationResult) {
         for (tu in t.translationUnits) {
