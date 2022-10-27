@@ -32,9 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
-/**
- * The C++ language.
- */
+/** The C++ language. */
 class CPPLanguage :
     Language<CXXLanguageFrontend>, HasDefaultArguments, HasTemplates, HasComplexCallResolution {
     override val fileExtensions: List<String>

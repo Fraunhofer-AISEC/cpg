@@ -29,9 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
-/**
- * The C language.
- */
+/** The C language. */
 class CLanguage : Language<CXXLanguageFrontend> {
     override val fileExtensions: List<String>
         get() = listOf(".c")

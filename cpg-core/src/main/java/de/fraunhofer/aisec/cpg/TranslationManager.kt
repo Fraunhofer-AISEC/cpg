@@ -50,7 +50,6 @@ import java.util.stream.Collectors
 import org.slf4j.LoggerFactory
 
 /** Main entry point for all source code translation for all language front-ends. */
-@OptIn(ExperimentalGolang::class)
 class TranslationManager
 private constructor(
     /**
@@ -70,11 +69,10 @@ private constructor(
      * @return a [CompletableFuture] with the [TranslationResult].
      */
     fun analyze(): CompletableFuture<TranslationResult> {
-        val result = TranslationResult(this)
+        val result = TranslationResult(this, ScopeManager())
 
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
         return CompletableFuture.supplyAsync {
-            val scopesBuildForAnalysis = ScopeManager()
             val outerBench =
                 Benchmark(
                     TranslationManager::class.java,
@@ -88,7 +86,7 @@ private constructor(
             try {
                 // Parse Java/C/CPP files
                 var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
-                frontendsNeedCleanup = runFrontends(result, config, scopesBuildForAnalysis)
+                frontendsNeedCleanup = runFrontends(result, config)
                 bench.addMeasurement()
 
                 // TODO: Find a way to identify the right language during the execution of a pass
@@ -146,7 +144,6 @@ private constructor(
     private fun runFrontends(
         result: TranslationResult,
         config: TranslationConfiguration,
-        scopeManager: ScopeManager
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
         for (sc in this.config.softwareComponents.keys) {
@@ -216,9 +213,9 @@ private constructor(
 
             usedFrontends.addAll(
                 if (useParallelFrontends) {
-                    parseParallel(component, result, scopeManager, sourceLocations)
+                    parseParallel(component, result, sourceLocations)
                 } else {
-                    parseSequentially(component, result, scopeManager, sourceLocations)
+                    parseSequentially(component, result, sourceLocations)
                 }
             )
 
@@ -242,7 +239,6 @@ private constructor(
     private fun parseParallel(
         component: Component,
         result: TranslationResult,
-        originalScopeManager: ScopeManager,
         sourceLocations: Collection<File>
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
@@ -285,8 +281,11 @@ private constructor(
             }
         }
 
-        originalScopeManager.mergeFrom(parallelScopeManagers)
-        usedFrontends.forEach { it.scopeManager = originalScopeManager }
+        // We want to merge everything into the final scope manager of the result
+        result.scopeManager.mergeFrom(parallelScopeManagers)
+
+        // TODO: remove once we got rid of all legacy stuff
+        usedFrontends.forEach { it.scopeManager = result.scopeManager }
 
         log.info("Parallel parsing completed")
 
@@ -297,7 +296,6 @@ private constructor(
     private fun parseSequentially(
         component: Component,
         result: TranslationResult,
-        scopeManager: ScopeManager,
         sourceLocations: Collection<File>
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
@@ -305,7 +303,7 @@ private constructor(
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
 
-            parse(component, scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
+            parse(component, result.scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
         }
