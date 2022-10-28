@@ -38,7 +38,7 @@ import (
 type Node jnigi.ObjectRef
 
 func (n *Node) SetName(s string) error {
-	return (*jnigi.ObjectRef)(n).SetField(env, "name", NewString(s))
+	return (*jnigi.ObjectRef)(n).CallMethod(env, "setName", nil, NewString(s))
 }
 
 func (n *Node) SetCode(s string) error {
