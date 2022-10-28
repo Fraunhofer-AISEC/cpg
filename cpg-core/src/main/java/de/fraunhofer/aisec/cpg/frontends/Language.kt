@@ -26,18 +26,22 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
 
-interface Language<T : LanguageFrontend> {
+abstract class Language<T : LanguageFrontend> : Node {
+    constructor() {
+        this.language = this
+    }
     /** The file extensions without the dot */
-    val fileExtensions: List<String>
+    abstract val fileExtensions: List<String>
 
-    val namespaceDelimiter: String
+    abstract val namespaceDelimiter: String
 
-    val frontend: Class<T>
+    abstract val frontend: Class<out T>
 
-    fun newFrontend(
+    abstract fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager = ScopeManager()
     ): T

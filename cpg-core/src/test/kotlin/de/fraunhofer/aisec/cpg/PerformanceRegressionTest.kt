@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -99,6 +100,7 @@ class PerformanceRegressionTest {
                             ObjectType.Modifier.UNSIGNED,
                             true
                         ),
+                        JavaLanguage(), // It doesn't matter
                         null
                     )
                 )

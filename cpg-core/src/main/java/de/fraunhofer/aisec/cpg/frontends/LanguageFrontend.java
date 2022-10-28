@@ -49,6 +49,8 @@ public abstract class LanguageFrontend {
   // Allow non-Java frontends to access the logger (i.e. jep)
   public static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
 
+  public Language<? extends LanguageFrontend> language;
+
   protected final TranslationConfiguration config;
 
   protected ScopeManager scopeManager;
@@ -74,9 +76,11 @@ public abstract class LanguageFrontend {
   // Todo Moving this to scope manager and add listeners and processedMappings to specified scopes.
 
   public LanguageFrontend(
+      @NotNull Language<? extends LanguageFrontend> language,
       @NotNull TranslationConfiguration config,
       ScopeManager scopeManager,
       String namespaceDelimiter) {
+    this.language = language;
     this.config = config;
     this.namespaceDelimiter = namespaceDelimiter;
     this.scopeManager = scopeManager;

@@ -26,9 +26,10 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
+import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
 import de.fraunhofer.aisec.cpg.frontends.HasTemplates
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.duplicateLiteral
@@ -121,7 +122,7 @@ open class CallResolver : SymbolResolverPass() {
             if (typeString in recordMap) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
-                    val initializer = newConstructExpression("()")
+                    val initializer = newConstructExpression(node.language, "()")
                     initializer.isImplicit = true
                     node.initializer = initializer
                     node.templateParameters?.let {
@@ -133,7 +134,7 @@ open class CallResolver : SymbolResolverPass() {
                     // This should actually be a construct expression, not a call!
                     val arguments = currInitializer.arguments
                     val signature = arguments.map(Node::code).joinToString(", ")
-                    val initializer = newConstructExpression("($signature)")
+                    val initializer = newConstructExpression(node.language, "($signature)")
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
                     initializer.isImplicit = true
                     node.initializer = initializer
@@ -170,10 +171,8 @@ open class CallResolver : SymbolResolverPass() {
 
     private fun handleCallExpression(curClass: RecordDeclaration?, call: CallExpression) {
         if (
-            call.language is JavaLanguageFrontend &&
-                (call.base as? DeclaredReferenceExpression)
-                    ?.name
-                    ?.matches(Regex("(?<class>.+\\.)?super")) == true
+            call.base is DeclaredReferenceExpression &&
+                isSuperclassReference(call.base as DeclaredReferenceExpression)
         ) {
             handleSuperCall(curClass!!, call)
             return
@@ -229,9 +228,10 @@ open class CallResolver : SymbolResolverPass() {
             // Handle function (not method) calls
             // C++ allows function overloading. Make sure we have at least the same number of
             // arguments
-            if (call.language is CXXLanguageFrontend) {
+            if (call.language is HasComplexCallResolution) {
                 // Handle CXX normal call resolution externally, otherwise it leads to increased
                 // complexity
+                // TODO: Move this to doBetterCallResolution()
                 handleNormalCallCXX(call)
             } else {
                 val invocationCandidates = scopeManager!!.resolveFunction(call).toMutableList()
@@ -276,7 +276,7 @@ open class CallResolver : SymbolResolverPass() {
         // Find invokes by supertypes
         if (
             invocationCandidates.isEmpty() &&
-                (call.language !is CXXLanguageFrontend || shouldSearchForInvokesInParent(call))
+                (call.language !is CPPLanguage || shouldSearchForInvokesInParent(call))
         ) {
             val nameParts =
                 call.name.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
@@ -297,7 +297,8 @@ open class CallResolver : SymbolResolverPass() {
         curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>
     ): MutableList<FunctionDeclaration> {
-        return if (call.language is CXXLanguageFrontend) {
+        return if (call.language is HasComplexCallResolution) {
+            // TODO: Move logic to the doBetterCallResolution
             handleCXXMethodCall(curClass, possibleContainingTypes, call).toMutableList()
         } else {
             scopeManager!!.resolveFunction(call).toMutableList()
@@ -474,9 +475,15 @@ open class CallResolver : SymbolResolverPass() {
         containingRecord: RecordDeclaration,
         signature: List<Type?>
     ): ConstructorDeclaration {
-        val inferred = newConstructorDeclaration(containingRecord.name, "", containingRecord)
+        val inferred =
+            newConstructorDeclaration(
+                containingRecord.name,
+                "",
+                containingRecord,
+                containingRecord.language
+            )
         inferred.isInferred = true
-        inferred.parameters = Util.createInferredParameters(signature)
+        inferred.parameters = Util.createInferredParameters(signature, containingRecord.language)
         containingRecord.addConstructor(inferred)
         return inferred
     }
@@ -508,7 +515,9 @@ open class CallResolver : SymbolResolverPass() {
             Pattern.compile(
                 "(" + Pattern.quote(recordDeclaration.name) + "\\.)?" + Pattern.quote(name)
             )
-        return if (call.language is CXXLanguageFrontend) {
+        return if (
+            call.language is HasComplexCallResolution
+        ) { // TODO Move to doBetterCallResolution
             getInvocationCandidatesFromRecordCXX(recordDeclaration, call, namePattern)
         } else {
             recordDeclaration.methods.filter {
@@ -533,7 +542,7 @@ open class CallResolver : SymbolResolverPass() {
             // FunctionDeclaration with the same name as the function in the CallExpression we have
             // to stop the search in the parent even if the FunctionDeclaration does not match with
             // the signature of the CallExpression
-            if (call.language is CXXLanguageFrontend) {
+            if (call.language is CPPLanguage) { // TODO: Needs a special trait?
                 workingPossibleTypes.removeIf { recordDeclaration ->
                     !shouldContinueSearchInParent(recordDeclaration, name)
                 }
@@ -587,12 +596,14 @@ open class CallResolver : SymbolResolverPass() {
         val signature: List<Type?> = constructExpression.signature
         var constructorCandidate =
             getConstructorDeclarationDirectMatch(signature, recordDeclaration)
-        if (constructorCandidate == null && constructExpression.language is CXXLanguageFrontend) {
+        if (constructorCandidate == null && constructExpression.language is HasDefaultArguments) {
             // Check for usage of default args
             constructorCandidate =
                 resolveConstructorWithDefaults(constructExpression, signature, recordDeclaration)
         }
-        if (constructorCandidate == null && constructExpression.language is CXXLanguageFrontend) {
+        if (
+            constructorCandidate == null && constructExpression.language is CPPLanguage
+        ) { // TODO: Fix this
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
             constructorCandidate =

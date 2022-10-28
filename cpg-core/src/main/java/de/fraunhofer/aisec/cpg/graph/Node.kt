@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -65,6 +68,10 @@ open class Node : IVisitable<Node>, Persistable {
      * where nodes are created artificially, it may be null.
      */
     var code: String? = null
+
+    @field:Relationship(value = "Language", direction = "OUTGOING")
+    @JsonBackReference
+    lateinit var language: Language<out LanguageFrontend>
 
     /** Optional comment of this node. */
     var comment: String? = null

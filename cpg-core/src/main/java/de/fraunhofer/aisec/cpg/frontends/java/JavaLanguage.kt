@@ -31,12 +31,12 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
 /** The Java language TODO: Shouldn't it have HasTemplates as well? */
 open class JavaLanguage :
-    Language<JavaLanguageFrontend>, HasComplexCallResolution, HasClasses, HasSuperclasses {
+    Language<JavaLanguageFrontend>(), HasComplexCallResolution, HasClasses, HasSuperclasses {
     override val fileExtensions: List<String>
         get() = listOf("java")
     override val namespaceDelimiter: String
         get() = "."
-    override val frontend: Class<JavaLanguageFrontend>
+    override val frontend: Class<out JavaLanguageFrontend>
         get() = JavaLanguageFrontend::class.java
     override val superclassKeyword: String
         get() = "super"
@@ -45,7 +45,7 @@ open class JavaLanguage :
         config: TranslationConfiguration,
         scopeManager: ScopeManager
     ): JavaLanguageFrontend {
-        return JavaLanguageFrontend(config, scopeManager)
+        return JavaLanguageFrontend(this, config, scopeManager)
     }
 
     // TODO: Remove if not needed.

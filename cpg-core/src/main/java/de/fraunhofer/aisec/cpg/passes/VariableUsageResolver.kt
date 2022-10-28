@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.HasSuperclasses
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -171,7 +171,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 recordDeclType.typeName in recordMap
         ) {
             // Maybe we are referring to a field instead of a local var
-            if (current.delimiter in current.name) {
+            if (current.language.namespaceDelimiter in current.name) {
                 recordDeclType = getEnclosingTypeOf(current)
             }
             val field = resolveMember(recordDeclType, current)
@@ -182,7 +182,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         // TODO: we need to do proper scoping (and merge it with the code above), but for now
         // this just enables CXX static fields
-        if (refersTo == null && current.delimiter in current.name) {
+        if (refersTo == null && current.language.namespaceDelimiter in current.name) {
             recordDeclType = getEnclosingTypeOf(current)
             val field = resolveMember(recordDeclType, current)
             if (field != null) {
@@ -208,12 +208,15 @@ open class VariableUsageResolver : SymbolResolverPass() {
         val path =
             listOf(
                 *current.name
-                    .split(Pattern.quote(current.delimiter).toRegex())
+                    .split(Pattern.quote(current.language.namespaceDelimiter).toRegex())
                     .dropLastWhile { it.isEmpty() }
                     .toTypedArray()
             )
         return TypeParser.createFrom(
-            java.lang.String.join(current.delimiter, path.subList(0, path.size - 1)),
+            java.lang.String.join(
+                current.language.namespaceDelimiter,
+                path.subList(0, path.size - 1)
+            ),
             true
         )
     }
@@ -224,7 +227,10 @@ open class VariableUsageResolver : SymbolResolverPass() {
         var baseTarget: Declaration? = null
         if (current.base is DeclaredReferenceExpression) {
             val base = current.base as DeclaredReferenceExpression
-            if (current.language is JavaLanguageFrontend && base.name == "super") {
+            if (
+                current.language is HasSuperclasses &&
+                    base.name == (current.language as HasSuperclasses).superclassKeyword
+            ) {
                 if (curClass != null && curClass.superClasses.isNotEmpty()) {
                     val superType = curClass.superClasses[0]
                     val superRecord = recordMap[superType.typeName]
@@ -232,6 +238,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                         log.error(
                             "Could not find referring super type ${superType.typeName} for ${curClass.name} in the record map. Will set the super type to java.lang.Object"
                         )
+                        // TODO: Should be more generic!
                         base.type = TypeParser.createFrom(Any::class.java.name, true)
                     } else {
                         // We need to connect this super reference to the receiver of this
@@ -251,6 +258,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                     }
                 } else {
                     // no explicit super type -> java.lang.Object
+                    // TODO: Should be more generic
                     val objectType = TypeParser.createFrom(Any::class.java.name, true)
                     base.type = objectType
                 }
@@ -311,15 +319,12 @@ open class VariableUsageResolver : SymbolResolverPass() {
         containingClass: Type,
         reference: DeclaredReferenceExpression
     ): ValueDeclaration? {
-        if (
-            reference.language is JavaLanguageFrontend &&
-                reference.name.matches(Regex("(?<class>.+\\.)?super"))
-        ) {
+        if (isSuperclassReference(reference)) {
             // if we have a "super" on the member side, this is a member call. We need to resolve
             // this in the call resolver instead
             return null
         }
-        val simpleName = Util.getSimpleName(reference.delimiter, reference.name)
+        val simpleName = Util.getSimpleName(reference.language.namespaceDelimiter, reference.name)
         var member: FieldDeclaration? = null
         if (containingClass !is UnknownType && containingClass.typeName in recordMap) {
             member =
@@ -372,7 +377,16 @@ open class VariableUsageResolver : SymbolResolverPass() {
             target
         } else {
             val declaration =
-                newFieldDeclaration(name, type, listOf<String>(), "", null, null, false)
+                newFieldDeclaration(
+                    name,
+                    type,
+                    listOf<String>(),
+                    "",
+                    null,
+                    null,
+                    false,
+                    recordDeclaration.language
+                )
             recordDeclaration.addField(declaration)
             declaration.isInferred = true
             declaration

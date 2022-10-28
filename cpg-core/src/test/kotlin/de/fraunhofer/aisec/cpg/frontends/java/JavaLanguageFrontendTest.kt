@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.HasSuperclasses
-import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -589,8 +588,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testOverrideHandler() {
         /** A simple extension of the [JavaLanguageFrontend] to demonstrate handler overriding. */
-        class MyJavaLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager) :
-            JavaLanguageFrontend(config, scopeManager) {
+        class MyJavaLanguageFrontend(
+            language: JavaLanguage,
+            config: TranslationConfiguration,
+            scopeManager: ScopeManager
+        ) : JavaLanguageFrontend(language, config, scopeManager) {
             init {
                 this.declarationHandler =
                     object : DeclarationHandler(this) {
@@ -608,20 +610,20 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         }
 
-        class MyJavaLanguage : Language<MyJavaLanguageFrontend>, HasClasses, HasSuperclasses {
+        class MyJavaLanguage : JavaLanguage(), HasClasses, HasSuperclasses {
             override val fileExtensions: List<String>
                 get() = listOf("java")
             override val namespaceDelimiter: String
                 get() = "."
             override val superclassKeyword: String
                 get() = "super"
-            override val frontend: Class<MyJavaLanguageFrontend>
+            override val frontend: Class<out MyJavaLanguageFrontend>
                 get() = MyJavaLanguageFrontend::class.java
             override fun newFrontend(
                 config: TranslationConfiguration,
                 scopeManager: ScopeManager
             ): MyJavaLanguageFrontend {
-                return MyJavaLanguageFrontend(config, scopeManager)
+                return MyJavaLanguageFrontend(this, config, scopeManager)
             }
         }
 

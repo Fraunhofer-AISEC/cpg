@@ -58,6 +58,7 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
                 ctx.declarator.name.toString(),
                 type,
                 false,
+                lang.language,
                 ctx.rawSignature
             )
 

@@ -94,7 +94,7 @@ public class StatementHandler
   private de.fraunhofer.aisec.cpg.graph.statements.Statement handleThrowStmt(Statement stmt) {
     ThrowStmt throwStmt = (ThrowStmt) stmt;
     UnaryOperator throwOperation =
-        NodeBuilder.newUnaryOperator("throw", false, true, throwStmt.toString());
+        NodeBuilder.newUnaryOperator("throw", false, true, lang.language, throwStmt.toString());
     throwOperation.setInput(
         (Expression) lang.getExpressionHandler().handle(throwStmt.getExpression()));
     return throwOperation;
@@ -114,7 +114,8 @@ public class StatementHandler
       expression = (Expression) lang.getExpressionHandler().handle(expr);
     }
 
-    ReturnStatement returnStatement = NodeBuilder.newReturnStatement(returnStmt.toString());
+    ReturnStatement returnStatement =
+        NodeBuilder.newReturnStatement(lang.language, returnStmt.toString());
 
     // expressionRefersToDeclaration to arguments, if there are any
     if (expression != null) {
@@ -131,7 +132,7 @@ public class StatementHandler
     Statement thenStatement = ifStmt.getThenStmt();
     Optional<Statement> optionalElseStatement = ifStmt.getElseStmt();
 
-    IfStatement ifStatement = NodeBuilder.newIfStatement(ifStmt.toString());
+    IfStatement ifStatement = NodeBuilder.newIfStatement(lang.language, ifStmt.toString());
     lang.getScopeManager().enterScope(ifStatement);
 
     ifStatement.setThenStatement(handle(thenStatement));
@@ -149,7 +150,8 @@ public class StatementHandler
     com.github.javaparser.ast.expr.Expression conditionExpression = assertStmt.getCheck();
     Optional<com.github.javaparser.ast.expr.Expression> thenStatement = assertStmt.getMessage();
 
-    AssertStatement assertStatement = NodeBuilder.newAssertStatement(stmt.toString());
+    AssertStatement assertStatement =
+        NodeBuilder.newAssertStatement(lang.language, stmt.toString());
 
     assertStatement.setCondition(
         (Expression) lang.getExpressionHandler().handle(conditionExpression));
@@ -167,7 +169,8 @@ public class StatementHandler
     com.github.javaparser.ast.expr.Expression conditionExpression = whileStmt.getCondition();
     Statement statement = whileStmt.getBody();
 
-    WhileStatement whileStatement = NodeBuilder.newWhileStatement(whileStmt.toString());
+    WhileStatement whileStatement =
+        NodeBuilder.newWhileStatement(lang.language, whileStmt.toString());
     lang.getScopeManager().enterScope(whileStatement);
 
     whileStatement.setStatement(handle(statement));
@@ -179,7 +182,7 @@ public class StatementHandler
   }
 
   private ForEachStatement handleForEachStatement(Statement stmt) {
-    ForEachStatement statement = NodeBuilder.newForEachStatement(stmt.toString());
+    ForEachStatement statement = NodeBuilder.newForEachStatement(lang.language, stmt.toString());
     lang.getScopeManager().enterScope(statement);
 
     ForEachStmt forEachStmt = stmt.asForEachStmt();
@@ -211,7 +214,7 @@ public class StatementHandler
       code = stmt.toString();
     }
 
-    ForStatement statement = NodeBuilder.newForStatement(code);
+    ForStatement statement = NodeBuilder.newForStatement(lang.language, code);
     lang.setCodeAndRegion(statement, stmt);
     lang.getScopeManager().enterScope(statement);
 
@@ -219,7 +222,7 @@ public class StatementHandler
       PhysicalLocation ofExprList = null;
 
       // code will be set later
-      ExpressionList initExprList = NodeBuilder.newExpressionList(null);
+      ExpressionList initExprList = NodeBuilder.newExpressionList(lang.language, null);
 
       for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getInitialization()) {
         de.fraunhofer.aisec.cpg.graph.statements.Statement s =
@@ -266,7 +269,8 @@ public class StatementHandler
     // cpp StatementHandler
     if (statement.getCondition() == null) {
       Literal<?> literal =
-          NodeBuilder.newLiteral(true, TypeParser.createFrom("boolean", true), "true");
+          NodeBuilder.newLiteral(
+              true, TypeParser.createFrom("boolean", true), lang.language, "true");
       statement.setCondition(literal);
     }
 
@@ -274,7 +278,7 @@ public class StatementHandler
       PhysicalLocation ofExprList = statement.getLocation();
 
       // code will be set later
-      ExpressionList iterationExprList = NodeBuilder.newExpressionList(null);
+      ExpressionList iterationExprList = NodeBuilder.newExpressionList(lang.language, null);
 
       for (com.github.javaparser.ast.expr.Expression updateExpr : forStmt.getUpdate()) {
         de.fraunhofer.aisec.cpg.graph.statements.Statement s =
@@ -322,7 +326,7 @@ public class StatementHandler
     com.github.javaparser.ast.expr.Expression conditionExpression = doStmt.getCondition();
     Statement statement = doStmt.getBody();
 
-    DoStatement doStatement = NodeBuilder.newDoStatement(doStmt.toString());
+    DoStatement doStatement = NodeBuilder.newDoStatement(lang.language, doStmt.toString());
     lang.getScopeManager().enterScope(doStatement);
 
     doStatement.setStatement(handle(statement));
@@ -333,12 +337,13 @@ public class StatementHandler
 
   private EmptyStatement handleEmptyStatement(Statement stmt) {
     EmptyStmt emptyStmt = stmt.asEmptyStmt();
-    return NodeBuilder.newEmptyStatement(emptyStmt.toString());
+    return NodeBuilder.newEmptyStatement(lang.language, emptyStmt.toString());
   }
 
   private SynchronizedStatement handleSynchronizedStatement(Statement stmt) {
     SynchronizedStmt synchronizedJava = stmt.asSynchronizedStmt();
-    SynchronizedStatement synchronizedCPG = NodeBuilder.newSynchronizedStatement(stmt.toString());
+    SynchronizedStatement synchronizedCPG =
+        NodeBuilder.newSynchronizedStatement(lang.language, stmt.toString());
     synchronizedCPG.setExpression(
         (Expression) lang.getExpressionHandler().handle(synchronizedJava.getExpression()));
     synchronizedCPG.setBlockStatement((CompoundStatement) handle(synchronizedJava.getBody()));
@@ -351,7 +356,8 @@ public class StatementHandler
     String label = labelStmt.getLabel().getIdentifier();
     Statement statement = labelStmt.getStatement();
 
-    LabelStatement labelStatement = NodeBuilder.newLabelStatement(labelStmt.toString());
+    LabelStatement labelStatement =
+        NodeBuilder.newLabelStatement(lang.language, labelStmt.toString());
 
     labelStatement.setSubStatement(handle(statement));
     labelStatement.setLabel(label);
@@ -379,7 +385,8 @@ public class StatementHandler
     BlockStmt blockStmt = stmt.asBlockStmt();
 
     // first of, all we need a compound statement
-    CompoundStatement compoundStatement = NodeBuilder.newCompoundStatement(stmt.toString());
+    CompoundStatement compoundStatement =
+        NodeBuilder.newCompoundStatement(lang.language, stmt.toString());
 
     lang.getScopeManager().enterScope(compoundStatement);
 
@@ -420,7 +427,8 @@ public class StatementHandler
                 getNextTokenWith(":", optionalTokenRange.get().getBegin()));
       }
       DefaultStatement defaultStatement =
-          NodeBuilder.newDefaultStatement(getCodeBetweenTokens(caseTokens.a, caseTokens.b));
+          NodeBuilder.newDefaultStatement(
+              lang.language, getCodeBetweenTokens(caseTokens.a, caseTokens.b));
       defaultStatement.setLocation(
           getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b));
       return defaultStatement;
@@ -436,7 +444,8 @@ public class StatementHandler
     }
 
     CaseStatement caseStatement =
-        NodeBuilder.newCaseStatement(getCodeBetweenTokens(caseTokens.a, caseTokens.b));
+        NodeBuilder.newCaseStatement(
+            lang.language, getCodeBetweenTokens(caseTokens.a, caseTokens.b));
     caseStatement.setCaseExpression(
         (Expression) lang.getExpressionHandler().handle(caseExpression));
 
@@ -506,7 +515,8 @@ public class StatementHandler
 
   public SwitchStatement handleSwitchStatement(Statement stmt) {
     SwitchStmt switchStmt = stmt.asSwitchStmt();
-    SwitchStatement switchStatement = NodeBuilder.newSwitchStatement(stmt.toString());
+    SwitchStatement switchStatement =
+        NodeBuilder.newSwitchStatement(lang.language, stmt.toString());
 
     // make sure location is set
     lang.setCodeAndRegion(switchStatement, switchStmt);
@@ -527,7 +537,7 @@ public class StatementHandler
     }
 
     CompoundStatement compoundStatement =
-        NodeBuilder.newCompoundStatement(getCodeBetweenTokens(start, end));
+        NodeBuilder.newCompoundStatement(lang.language, getCodeBetweenTokens(start, end));
     compoundStatement.setLocation(
         getLocationsFromTokens(switchStatement.getLocation(), start, end));
 
@@ -561,7 +571,8 @@ public class StatementHandler
     }
 
     ExplicitConstructorInvocation node =
-        NodeBuilder.newExplicitConstructorInvocation(containingClass, eciStatement.toString());
+        NodeBuilder.newExplicitConstructorInvocation(
+            containingClass, lang.language, eciStatement.toString());
 
     List<Expression> arguments =
         eciStatement.getArguments().stream()
@@ -575,7 +586,7 @@ public class StatementHandler
 
   private TryStatement handleTryStatement(Statement stmt) {
     TryStmt tryStmt = stmt.asTryStmt();
-    TryStatement tryStatement = NodeBuilder.newTryStatement(stmt.toString());
+    TryStatement tryStatement = NodeBuilder.newTryStatement(lang.language, stmt.toString());
     lang.getScopeManager().enterScope(tryStatement);
     List<de.fraunhofer.aisec.cpg.graph.statements.Statement> resources =
         tryStmt.getResources().stream()
@@ -607,7 +618,7 @@ public class StatementHandler
   }
 
   private CatchClause handleCatchClause(com.github.javaparser.ast.stmt.CatchClause catchCls) {
-    CatchClause cClause = NodeBuilder.newCatchClause(catchCls.toString());
+    CatchClause cClause = NodeBuilder.newCatchClause(lang.language, catchCls.toString());
     lang.getScopeManager().enterScope(cClause);
 
     List<Type> possibleTypes = new ArrayList<>();
@@ -629,7 +640,8 @@ public class StatementHandler
             catchCls.getParameter().getName().toString(),
             concreteType,
             catchCls.getParameter().toString(),
-            false);
+            false,
+            lang.language);
     parameter.setPossibleSubTypes(possibleTypes);
     CompoundStatement body = handleBlockStatement(catchCls.getBody());
 

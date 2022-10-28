@@ -572,7 +572,7 @@ fun CallResolver.createInferredFunctionTemplate(
 ): FunctionTemplateDeclaration {
     val name = call.name
     val code = call.code
-    val inferred = NodeBuilder.newFunctionTemplateDeclaration(name, code)
+    val inferred = NodeBuilder.newFunctionTemplateDeclaration(name, call.language, code)
     inferred.isInferred = true
     if (containingRecord != null) {
         containingRecord.addDeclaration(inferred)
@@ -596,7 +596,11 @@ fun CallResolver.createInferredFunctionTemplate(
             // Template Parameter
             val inferredTypeIdentifier = "T$typeCounter"
             val typeParamDeclaration =
-                NodeBuilder.newTypeParamDeclaration(inferredTypeIdentifier, inferredTypeIdentifier)
+                NodeBuilder.newTypeParamDeclaration(
+                    inferredTypeIdentifier,
+                    call.language,
+                    inferredTypeIdentifier
+                )
             typeParamDeclaration.isInferred = true
             val parameterizedType = ParameterizedType(inferredTypeIdentifier)
             parameterizedType.isInferred = true
@@ -612,6 +616,7 @@ fun CallResolver.createInferredFunctionTemplate(
                     inferredNonTypeIdentifier,
                     node.type,
                     false,
+                    call.language,
                     inferredNonTypeIdentifier
                 )
             paramVariableDeclaration.isInferred = true
@@ -803,7 +808,8 @@ fun getTemplateInitializationSignature(
         val functionDeclaration = functionTemplateDeclaration.realization[0]
         val currentArgumentType = functionDeclaration.parameters[i].type
         val deducedType = templateCall.arguments[i].type
-        val typeExpression = NodeBuilder.newTypeExpression(deducedType.name, deducedType)
+        val typeExpression =
+            NodeBuilder.newTypeExpression(deducedType.name, deducedType, templateCall.language)
         typeExpression.isImplicit = true
         if (
             currentArgumentType is ParameterizedType &&
@@ -922,7 +928,12 @@ fun handleImplicitTemplateParameter(
         // If we have a default we fill it in
         var defaultNode = (functionTemplateDeclaration.parameters[index] as HasDefault<*>).default
         if (defaultNode is Type) {
-            defaultNode = NodeBuilder.newTypeExpression(defaultNode.name, defaultNode)
+            defaultNode =
+                NodeBuilder.newTypeExpression(
+                    defaultNode.name,
+                    defaultNode,
+                    functionTemplateDeclaration.language
+                )
             defaultNode.isImplicit = true
         }
         instantiationSignature[functionTemplateDeclaration.parameters[index]] = defaultNode

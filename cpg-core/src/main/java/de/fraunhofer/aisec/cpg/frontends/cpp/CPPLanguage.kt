@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
 /** The C++ language. */
 class CPPLanguage :
-    Language<CXXLanguageFrontend>,
+    Language<CXXLanguageFrontend>(),
     HasDefaultArguments,
     HasTemplates,
     HasComplexCallResolution,
@@ -49,7 +49,7 @@ class CPPLanguage :
         config: TranslationConfiguration,
         scopeManager: ScopeManager
     ): CXXLanguageFrontend {
-        return CXXLanguageFrontend(config, scopeManager)
+        return CXXLanguageFrontend(this, config, scopeManager)
     }
 
     override fun doBetterCallResolution() {

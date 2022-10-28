@@ -145,10 +145,11 @@ open class ImportResolver : Pass() {
                     "",
                     null,
                     null,
-                    false
+                    false,
+                    base.language
                 )
             targetField.isInferred = true
-            val targetMethod = newMethodDeclaration(name, "", true, base)
+            val targetMethod = newMethodDeclaration(name, "", true, base, base.language)
             targetMethod.isInferred = true
             base.addField(targetField)
             base.addMethod(targetMethod)

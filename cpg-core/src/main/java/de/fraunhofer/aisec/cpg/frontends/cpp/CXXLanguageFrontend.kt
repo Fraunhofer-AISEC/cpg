@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
@@ -75,8 +76,11 @@ import org.slf4j.LoggerFactory
  * ad [GPPLanguage]). This enables us (to some degree) to deal with the finer difference between C
  * and C++ code.
  */
-class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, "::") {
+class CXXLanguageFrontend(
+    language: Language<CXXLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager?
+) : LanguageFrontend(language, config, scopeManager, "::") {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
@@ -368,7 +372,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         val list: MutableList<Annotation> = ArrayList()
         for (attribute in owner.attributes) {
             val annotation =
-                NodeBuilder.newAnnotation(String(attribute.name), attribute.rawSignature)
+                NodeBuilder.newAnnotation(String(attribute.name), language, attribute.rawSignature)
 
             // go over the parameters
             if (attribute.argumentClause is IASTTokenList) {
@@ -397,19 +401,35 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                NodeBuilder.newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code)
+                NodeBuilder.newDeclaredReferenceExpression(
+                        code,
+                        language,
+                        UnknownType.getUnknownType(),
+                        code
+                    )
                 2 -> // an integer
-                NodeBuilder.newLiteral(code.toInt(), TypeParser.createFrom("int", true), code)
+                NodeBuilder.newLiteral(
+                        code.toInt(),
+                        TypeParser.createFrom("int", true),
+                        language,
+                        code
+                    )
                 130 -> // a string
                 NodeBuilder.newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
                         TypeParser.createFrom("const char*", false),
+                        language,
                         code
                     )
                 else ->
-                    NodeBuilder.newLiteral(code, TypeParser.createFrom("const char*", false), code)
+                    NodeBuilder.newLiteral(
+                        code,
+                        TypeParser.createFrom("const char*", false),
+                        language,
+                        code
+                    )
             }
-        return NodeBuilder.newAnnotationMember("", expression, code)
+        return NodeBuilder.newAnnotationMember("", expression, language, code)
     }
 
     @Throws(NoSuchFieldException::class)

@@ -734,7 +734,8 @@ public class TypeManager {
       alias = alias.getRoot();
     }
 
-    TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(currTarget, alias, rawCode);
+    TypedefDeclaration typedef =
+        NodeBuilder.newTypedefDeclaration(currTarget, alias, frontend.language, rawCode);
 
     if (frontend == null) {
       if (!noFrontendWarningIssued) {

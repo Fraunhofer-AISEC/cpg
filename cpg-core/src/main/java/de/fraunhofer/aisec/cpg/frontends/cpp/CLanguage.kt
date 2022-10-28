@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
 /** The C language. */
-class CLanguage : Language<CXXLanguageFrontend>, HasStructs, HasFunctionPointers {
+class CLanguage : Language<CXXLanguageFrontend>(), HasStructs, HasFunctionPointers {
     // TODO: Shouldn't there also be the "h" ending?
     override val fileExtensions: List<String>
         get() = listOf("c")
@@ -45,6 +45,6 @@ class CLanguage : Language<CXXLanguageFrontend>, HasStructs, HasFunctionPointers
         config: TranslationConfiguration,
         scopeManager: ScopeManager
     ): CXXLanguageFrontend {
-        return CXXLanguageFrontend(config, scopeManager)
+        return CXXLanguageFrontend(this, config, scopeManager)
     }
 }

@@ -52,7 +52,8 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
-        val constructExpression = NodeBuilder.newConstructExpression(ctx.rawSignature)
+        val constructExpression =
+            NodeBuilder.newConstructExpression(lang.language, ctx.rawSignature)
 
         for ((i, argument) in ctx.arguments.withIndex()) {
             val arg = lang.expressionHandler.handle(argument)
@@ -65,6 +66,9 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
 
     private fun handleEqualsInitializer(ctx: IASTEqualsInitializer): Expression {
         return lang.expressionHandler.handle(ctx.initializerClause)
-            ?: return NodeBuilder.newProblemExpression("could not parse initializer clause")
+            ?: return NodeBuilder.newProblemExpression(
+                lang.language,
+                "could not parse initializer clause"
+            )
     }
 }

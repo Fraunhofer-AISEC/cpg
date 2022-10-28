@@ -110,7 +110,10 @@ public class DeclarationHandler
     var currentRecordDecl = lang.getScopeManager().getCurrentRecord();
     de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration declaration =
         newConstructorDeclaration(
-            resolvedConstructor.getName(), constructorDecl.toString(), currentRecordDecl);
+            resolvedConstructor.getName(),
+            constructorDecl.toString(),
+            currentRecordDecl,
+            lang.language);
     lang.getScopeManager().addDeclaration(declaration);
 
     lang.getScopeManager().enterScope(declaration);
@@ -128,6 +131,7 @@ public class DeclarationHandler
               parameter.getNameAsString(),
               this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
               parameter.isVarArgs(),
+              lang.language,
               parameter.toString());
 
       declaration.addParameter(param);
@@ -169,7 +173,8 @@ public class DeclarationHandler
             resolvedMethod.getName(),
             methodDecl.toString(),
             methodDecl.isStatic(),
-            currentRecordDecl);
+            currentRecordDecl,
+            lang.language);
 
     lang.getScopeManager().enterScope(functionDeclaration);
 
@@ -194,6 +199,7 @@ public class DeclarationHandler
               parameter.getNameAsString(),
               resolvedType,
               parameter.isVarArgs(),
+              lang.language,
               parameter.toString());
 
       functionDeclaration.addParameter(param);
@@ -240,7 +246,8 @@ public class DeclarationHandler
                 ? TypeParser.createFrom(recordDecl.getName(), false)
                 : UnknownType.getUnknownType(),
             "this",
-            false);
+            false,
+            lang.language);
 
     functionDeclaration.setReceiver(receiver);
 
@@ -260,7 +267,7 @@ public class DeclarationHandler
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
-        newRecordDeclaration(fqn, "class", null, lang, classInterDecl);
+        newRecordDeclaration(fqn, "class", lang.language, null, lang, classInterDecl);
     recordDeclaration.setSuperClasses(
         classInterDecl.getExtendedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)
@@ -329,7 +336,10 @@ public class DeclarationHandler
     if (recordDeclaration.getConstructors().isEmpty()) {
       de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
           newConstructorDeclaration(
-              recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
+              recordDeclaration.getName(),
+              recordDeclaration.getName(),
+              recordDeclaration,
+              lang.language);
       recordDeclaration.addConstructor(constructorDeclaration);
       lang.getScopeManager().addDeclaration(constructorDeclaration);
     }
@@ -352,7 +362,8 @@ public class DeclarationHandler
               null,
               null,
               null,
-              false);
+              false,
+              lang.language);
       field.setImplicit(true);
 
       lang.getScopeManager().enterScope(recordDeclaration);
@@ -410,7 +421,8 @@ public class DeclarationHandler
             variable.toString(),
             location,
             initializer,
-            false);
+            false,
+            lang.language);
     lang.getScopeManager().addDeclaration(fieldDeclaration);
 
     this.lang.processAnnotations(fieldDeclaration, fieldDecl);
@@ -424,7 +436,7 @@ public class DeclarationHandler
     PhysicalLocation location = this.lang.getLocationFromRawNode(enumDecl);
 
     de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration enumDeclaration =
-        newEnumDeclaration(name, enumDecl.toString(), location);
+        newEnumDeclaration(name, enumDecl.toString(), location, lang.language);
     List<de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration> entries =
         enumDecl.getEntries().stream()
             .map(
@@ -450,7 +462,8 @@ public class DeclarationHandler
     return newEnumConstantDeclaration(
         enumConstDecl.getNameAsString(),
         enumConstDecl.toString(),
-        this.lang.getLocationFromRawNode(enumConstDecl));
+        this.lang.getLocationFromRawNode(enumConstDecl),
+        lang.language);
   }
 
   public Declaration /* TODO refine return type*/ handleAnnotationDeclaration(

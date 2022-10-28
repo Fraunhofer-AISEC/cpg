@@ -81,7 +81,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * done yet.
      */
     private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
-        return NodeBuilder.newUsingDirective(using.rawSignature, using.qualifiedName.toString())
+        return NodeBuilder.newUsingDirective(
+            lang.language,
+            using.rawSignature,
+            using.qualifiedName.toString()
+        )
     }
 
     /**
@@ -91,7 +95,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
         // Build a FQN out of the current scope prefix
         val fqn = lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString()
-        val declaration = NodeBuilder.newNamespaceDeclaration(fqn, lang.getCodeFromRawNode(ctx))
+        val declaration =
+            NodeBuilder.newNamespaceDeclaration(fqn, lang.language, lang.getCodeFromRawNode(ctx))
 
         lang.scopeManager.addDeclaration(declaration)
 
@@ -109,7 +114,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleProblem(ctx: IASTProblemDeclaration): Declaration {
-        val problem = NodeBuilder.newProblemDeclaration(ctx.problem.message)
+        val problem = NodeBuilder.newProblemDeclaration(lang.language, ctx.problem.message)
 
         lang.scopeManager.addDeclaration(problem)
 
@@ -207,7 +212,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 // add an implicit return statement, if there is none
                 if (lastStatement !is ReturnStatement) {
-                    val returnStatement = NodeBuilder.newReturnStatement("return;")
+                    val returnStatement = NodeBuilder.newReturnStatement(lang.language, "return;")
                     returnStatement.isImplicit = true
                     bodyStatement.addStatement(returnStatement)
                 }
@@ -269,9 +274,17 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         val templateDeclaration: TemplateDeclaration =
             if (ctx.declaration is CPPASTFunctionDefinition) {
-                NodeBuilder.newFunctionTemplateDeclaration(name, lang.getCodeFromRawNode(ctx))
+                NodeBuilder.newFunctionTemplateDeclaration(
+                    name,
+                    lang.language,
+                    lang.getCodeFromRawNode(ctx)
+                )
             } else {
-                NodeBuilder.newClassTemplateDeclaration(name, lang.getCodeFromRawNode(ctx))
+                NodeBuilder.newClassTemplateDeclaration(
+                    name,
+                    lang.language,
+                    lang.getCodeFromRawNode(ctx)
+                )
             }
 
         templateDeclaration.location = lang.getLocationFromRawNode(ctx)
@@ -552,7 +565,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             NodeBuilder.newEnumDeclaration(
                 name = declSpecifier.name.toString(),
                 location = lang.getLocationFromRawNode(ctx),
-                lang = lang
+                lang = lang,
+                language = lang.language
             )
 
         // Loop through its members
@@ -562,6 +576,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     enumerator.name.toString(),
                     lang.getCodeFromRawNode(enumerator),
                     lang.getLocationFromRawNode(enumerator),
+                    lang.language,
                     lang = lang
                 )
 
@@ -624,7 +639,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     TypeParser.createFrom(templateArgument.getRawSignature(), true)
                 objectType.addGeneric(genericInstantiation)
                 templateParams.add(
-                    NodeBuilder.newTypeExpression(genericInstantiation.name, genericInstantiation)
+                    NodeBuilder.newTypeExpression(
+                        genericInstantiation.name,
+                        genericInstantiation,
+                        lang.language
+                    )
                 )
             } else if (templateArgument is IASTExpression) {
                 val expression = lang.expressionHandler.handle(templateArgument)
@@ -666,6 +685,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val node =
             NodeBuilder.newTranslationUnitDeclaration(
                 translationUnit.filePath,
+                lang.language,
                 translationUnit.rawSignature
             )
 
@@ -727,7 +747,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 }
 
                 val problems = problematicIncludes[includeString]
-                val includeDeclaration = NodeBuilder.newIncludeDeclaration(includeString ?: "")
+                val includeDeclaration =
+                    NodeBuilder.newIncludeDeclaration(includeString ?: "", lang.language)
                 if (problems != null) {
                     includeDeclaration.addProblems(problems)
                 }

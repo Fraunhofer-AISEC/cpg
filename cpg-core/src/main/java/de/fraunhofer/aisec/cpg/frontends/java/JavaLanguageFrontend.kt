@@ -46,6 +46,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSol
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -73,8 +74,11 @@ import java.io.IOException
 import java.util.function.Consumer
 
 /** Main parser for ONE Java files. */
-open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    LanguageFrontend(config, scopeManager, ".") {
+open class JavaLanguageFrontend(
+    language: Language<JavaLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager
+) : LanguageFrontend(language, config, scopeManager, ".") {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
@@ -113,14 +117,19 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
             context!!.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
-            val fileDeclaration = newTranslationUnitDeclaration(file.toString(), context.toString())
+            val fileDeclaration =
+                newTranslationUnitDeclaration(file.toString(), language, context.toString())
             setCurrentTU(fileDeclaration)
             scopeManager.resetToGlobal(fileDeclaration)
             val packDecl = context!!.packageDeclaration.orElse(null)
             var namespaceDeclaration: NamespaceDeclaration? = null
             if (packDecl != null) {
                 namespaceDeclaration =
-                    newNamespaceDeclaration(packDecl.name.asString(), getCodeFromRawNode(packDecl))
+                    newNamespaceDeclaration(
+                        packDecl.name.asString(),
+                        language,
+                        getCodeFromRawNode(packDecl)
+                    )
                 setCodeAndRegion(namespaceDeclaration, packDecl)
                 scopeManager.addDeclaration(namespaceDeclaration)
                 scopeManager.enterScope(namespaceDeclaration)
@@ -135,7 +144,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
             }
 
             for (anImport in context!!.imports) {
-                val incl = newIncludeDeclaration(anImport.nameAsString)
+                val incl = newIncludeDeclaration(anImport.nameAsString, language)
                 scopeManager.addDeclaration(incl)
             }
 
@@ -450,7 +459,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
     private fun handleAnnotations(owner: NodeWithAnnotations<*>): List<Annotation> {
         val list = ArrayList<Annotation>()
         for (expr in owner.annotations) {
-            val annotation = newAnnotation(expr.nameAsString, getCodeFromRawNode(expr))
+            val annotation = newAnnotation(expr.nameAsString, language, getCodeFromRawNode(expr))
             val members = ArrayList<AnnotationMember>()
 
             // annotations can be specified as member / value pairs
@@ -460,6 +469,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                         newAnnotationMember(
                             pair.nameAsString,
                             expressionHandler.handle(pair.value) as Expression,
+                            language,
                             getCodeFromRawNode(pair)
                         )
                     members.add(member)
@@ -472,6 +482,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
                             expressionHandler.handle(value.asLiteralExpr()) as Expression,
+                            language,
                             getCodeFromRawNode(value)
                         )
                     members.add(member)

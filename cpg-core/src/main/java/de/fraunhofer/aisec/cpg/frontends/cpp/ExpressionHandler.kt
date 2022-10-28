@@ -111,7 +111,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleCompoundStatementExpression(
         ctx: CPPASTCompoundStatementExpression
     ): Expression {
-        val cse = NodeBuilder.newCompoundStatementExpression(ctx.rawSignature)
+        val cse = NodeBuilder.newCompoundStatementExpression(lang.language, ctx.rawSignature)
         cse.statement = lang.statementHandler.handle(ctx.compoundStatement)
         return cse
     }
@@ -150,11 +150,18 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         // TODO: proper type resolve
         val referencedType = TypeParser.createFrom(ctx.typeId.declSpecifier.toString(), true, lang)
-        return NodeBuilder.newTypeIdExpression(operatorCode, type, referencedType, ctx.rawSignature)
+        return NodeBuilder.newTypeIdExpression(
+            operatorCode,
+            type,
+            referencedType,
+            lang.language,
+            ctx.rawSignature
+        )
     }
 
     private fun handleArraySubscriptExpression(ctx: IASTArraySubscriptExpression): Expression {
-        val arraySubsExpression = NodeBuilder.newArraySubscriptionExpression(ctx.rawSignature)
+        val arraySubsExpression =
+            NodeBuilder.newArraySubscriptionExpression(lang.language, ctx.rawSignature)
         arraySubsExpression.arrayExpression = handle(ctx.arrayExpression)
         arraySubsExpression.subscriptExpression = handle(ctx.argument)
         return arraySubsExpression
@@ -170,7 +177,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return if (ctx.isArrayAllocation) {
             t.reference(PointerOrigin.ARRAY)
             val arrayMods = (ctx.typeId.abstractDeclarator as IASTArrayDeclarator).arrayModifiers
-            val arrayCreate = NodeBuilder.newArrayCreationExpression(code)
+            val arrayCreate = NodeBuilder.newArrayCreationExpression(lang.language, code)
             arrayCreate.type = t
             for (arrayMod in arrayMods) {
                 arrayCreate.addDimension(handle(arrayMod.constantExpression))
@@ -198,7 +205,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             // new returns a pointer, so we need to reference the type by pointer
             val newExpression =
-                NodeBuilder.newNewExpression(code, t.reference(PointerOrigin.POINTER))
+                NodeBuilder.newNewExpression(
+                    code,
+                    t.reference(PointerOrigin.POINTER),
+                    lang.language
+                )
             newExpression.templateParameters = templateParameters
             val initializer: Expression?
             if (init != null) {
@@ -208,7 +219,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // `new A`.
                 // Therefore, CDT does not have an explicit construct expression, so we need create
                 // an implicit one
-                initializer = NodeBuilder.newConstructExpression("()")
+                initializer = NodeBuilder.newConstructExpression(lang.language, "()")
                 initializer.isImplicit = true
             }
 
@@ -243,7 +254,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         for (argument in template.templateArguments) {
             if (argument is IASTTypeId) {
                 val type = TypeParser.createFrom(argument.declSpecifier.toString(), true)
-                templateArguments.add(NodeBuilder.newTypeExpression(type.name, type))
+                templateArguments.add(NodeBuilder.newTypeExpression(type.name, type, lang.language))
             } else if (argument is IASTLiteralExpression) {
                 lang.expressionHandler.handle(argument as IASTInitializerClause)?.let {
                     templateArguments.add(it)
@@ -260,12 +271,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression)
             else condition,
             handle(ctx.negativeResultExpression),
-            TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang)
+            TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang),
+            lang.language
         )
     }
 
     private fun handleDeleteExpression(ctx: CPPASTDeleteExpression): DeleteExpression {
-        val deleteExpression = NodeBuilder.newDeleteExpression(ctx.rawSignature)
+        val deleteExpression = NodeBuilder.newDeleteExpression(lang.language, ctx.rawSignature)
         for (name in ctx.implicitDestructorNames) {
             log.debug("Implicit constructor name {}", name)
         }
@@ -274,7 +286,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleCastExpression(ctx: IASTCastExpression): Expression {
-        val castExpression = NodeBuilder.newCastExpression(ctx.rawSignature)
+        val castExpression = NodeBuilder.newCastExpression(lang.language, ctx.rawSignature)
         castExpression.expression = handle(ctx.operand)
         castExpression.setCastOperator(ctx.operator)
         val castType: Type
@@ -307,7 +319,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleSimpleTypeConstructorExpression(
         ctx: CPPASTSimpleTypeConstructorExpression
     ): Expression {
-        val castExpression = NodeBuilder.newCastExpression(ctx.rawSignature)
+        val castExpression = NodeBuilder.newCastExpression(lang.language, ctx.rawSignature)
         castExpression.expression = lang.initializerHandler.handle(ctx.initializer)
         castExpression.setCastOperator(0) // cast
 
@@ -341,7 +353,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // https://en.cppreference.com/w/cpp/language/overload_resolution#Implicit_object_parameter). It is sufficient to have the refers, it will be connected by the resolver later.
         if (base is Literal<*> && base.value == "this") {
             val location = base.location
-            base = NodeBuilder.newDeclaredReferenceExpression("this", base.type, base.code)
+            base =
+                NodeBuilder.newDeclaredReferenceExpression(
+                    "this",
+                    lang.language,
+                    base.type,
+                    base.code
+                )
             base.location = location
         }
 
@@ -349,6 +367,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             base,
             UnknownType.getUnknownType(),
             ctx.fieldName.toString(),
+            lang.language,
             if (ctx.isPointerDereference) "->" else ".",
             ctx.rawSignature
         )
@@ -380,7 +399,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     // this can either be just a meaningless bracket or it can be a cast expression
                     val typeName = (ctx.operand as IASTIdExpression).name.toString()
                     if (TypeManager.getInstance().typeExists(typeName)) {
-                        val cast = NodeBuilder.newCastExpression(lang.getCodeFromRawNode<Any>(ctx))
+                        val cast =
+                            NodeBuilder.newCastExpression(
+                                lang.language,
+                                lang.getCodeFromRawNode<Any>(ctx)
+                            )
                         cast.castType = TypeParser.createFrom(typeName, false)
                         cast.expression = input
                         cast.location = lang.getLocationFromRawNode<Any>(ctx)
@@ -404,6 +427,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 operatorCode,
                 ctx.isPostfixOperator,
                 !ctx.isPostfixOperator,
+                lang.language,
                 ctx.rawSignature
             )
         if (input != null) {
@@ -424,6 +448,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             val member =
                 NodeBuilder.newDeclaredReferenceExpression(
                     reference.name,
+                    lang.language,
                     UnknownType.getUnknownType(),
                     reference.name
                 )
@@ -435,6 +460,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     reference.base,
                     member,
                     reference.operatorCode,
+                    lang.language,
                     ctx.rawSignature
                 )
             if (
@@ -463,11 +489,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     reference.lhs,
                     reference.rhs,
                     reference.operatorCode,
+                    lang.language,
                     ctx.rawSignature
                 )
         } else if (reference is UnaryOperator && reference.operatorCode == "*") {
             // Classic C-style function pointer call -> let's extract the target
-            callExpression = NodeBuilder.newCallExpression(reference, "", reference.code, false)
+            callExpression =
+                NodeBuilder.newCallExpression(reference, "", lang.language, reference.code, false)
         } else if (
             ctx.functionNameExpression is IASTIdExpression &&
                 (ctx.functionNameExpression as IASTIdExpression).name is CPPASTTemplateId
@@ -476,8 +504,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 ((ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId)
                     .templateName
                     .toString()
-            val ref = NodeBuilder.newDeclaredReferenceExpression(name)
-            callExpression = NodeBuilder.newCallExpression(ref, name, ctx.rawSignature, true)
+            val ref = NodeBuilder.newDeclaredReferenceExpression(name, lang.language)
+            callExpression =
+                NodeBuilder.newCallExpression(ref, name, lang.language, ctx.rawSignature, true)
             getTemplateArguments(
                     (ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId
                 )
@@ -505,7 +534,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // if (!fullNamePrefix.isEmpty()) {
             //  fqn = fullNamePrefix + "." + fqn;
             // }
-            callExpression = NodeBuilder.newCallExpression(reference, fqn, ctx.rawSignature, false)
+            callExpression =
+                NodeBuilder.newCallExpression(
+                    reference,
+                    fqn,
+                    lang.language,
+                    ctx.rawSignature,
+                    false
+                )
         }
 
         for ((i, argument) in ctx.arguments.withIndex()) {
@@ -524,6 +560,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val declaredReferenceExpression =
             NodeBuilder.newDeclaredReferenceExpression(
                 ctx.name.toString(),
+                lang.language,
                 UnknownType.getUnknownType(),
                 ctx.rawSignature
             )
@@ -564,7 +601,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleExpressionList(exprList: IASTExpressionList): ExpressionList {
-        val expressionList = NodeBuilder.newExpressionList(exprList.rawSignature)
+        val expressionList = NodeBuilder.newExpressionList(lang.language, exprList.rawSignature)
         for (expr in exprList.expressions) {
             expressionList.addExpression(handle(expr))
         }
@@ -610,7 +647,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             IASTBinaryExpression.op_ellipses -> operatorCode = "..."
             else -> Util.errorWithFileLocation(lang, ctx, log, "unknown operator {}", ctx.operator)
         }
-        val binaryOperator = NodeBuilder.newBinaryOperator(operatorCode, ctx.rawSignature)
+        val binaryOperator =
+            NodeBuilder.newBinaryOperator(operatorCode, lang.language, ctx.rawSignature)
         val lhs = handle(ctx.operand1)
         val rhs =
             if (ctx.operand2 != null) {
@@ -653,7 +691,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             value.numberValue() == null // e.g. for 0x1p-52
             && value !is CStringValue
         ) {
-            return NodeBuilder.newLiteral(value.toString(), generatedType, ctx.rawSignature)
+            return NodeBuilder.newLiteral(
+                value.toString(),
+                generatedType,
+                lang.language,
+                ctx.rawSignature
+            )
         }
         if (type is IBasicType && type.kind == IBasicType.Kind.eInt) {
             return handleIntegerLiteral(ctx)
@@ -661,34 +704,48 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             return NodeBuilder.newLiteral(
                 value.numberValue().toInt() == 1,
                 generatedType,
+                lang.language,
                 ctx.rawSignature
             )
         } else if (value is CStringValue) {
-            return NodeBuilder.newLiteral(value.cStringValue(), generatedType, ctx.rawSignature)
+            return NodeBuilder.newLiteral(
+                value.cStringValue(),
+                generatedType,
+                lang.language,
+                ctx.rawSignature
+            )
         } else if (type is CPPBasicType && type.kind == IBasicType.Kind.eFloat) {
             return NodeBuilder.newLiteral(
                 value.numberValue().toFloat(),
                 generatedType,
+                lang.language,
                 ctx.rawSignature
             )
         } else if (type is CPPBasicType && type.kind == IBasicType.Kind.eDouble) {
             return NodeBuilder.newLiteral(
                 value.numberValue().toDouble(),
                 generatedType,
+                lang.language,
                 ctx.rawSignature
             )
         } else if (type is CPPBasicType && type.kind == IBasicType.Kind.eChar) {
             return NodeBuilder.newLiteral(
                 value.numberValue().toInt().toChar(),
                 generatedType,
+                lang.language,
                 ctx.rawSignature
             )
         }
-        return NodeBuilder.newLiteral(value.toString(), generatedType, ctx.rawSignature)
+        return NodeBuilder.newLiteral(
+            value.toString(),
+            generatedType,
+            lang.language,
+            ctx.rawSignature
+        )
     }
 
     private fun handleInitializerList(ctx: IASTInitializerList): InitializerListExpression {
-        val expression = NodeBuilder.newInitializerListExpression(ctx.rawSignature)
+        val expression = NodeBuilder.newInitializerListExpression(lang.language, ctx.rawSignature)
 
         for (clause in ctx.clauses) {
             handle(clause)?.let {
@@ -720,6 +777,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         oneLhs =
                             NodeBuilder.newDeclaredReferenceExpression(
                                 des.name.toString(),
+                                lang.language,
                                 UnknownType.getUnknownType(),
                                 des.getRawSignature()
                             )
@@ -729,6 +787,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                             NodeBuilder.newArrayRangeExpression(
                                 handle(des.rangeFloor),
                                 handle(des.rangeCeiling),
+                                lang.language,
                                 des.getRawSignature()
                             )
                     }
@@ -748,7 +807,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        val die = NodeBuilder.newDesignatedInitializerExpression(ctx.rawSignature)
+        val die = NodeBuilder.newDesignatedInitializerExpression(lang.language, ctx.rawSignature)
         die.lhs = lhs
         die.rhs = rhs
 
@@ -773,6 +832,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         oneLhs =
                             NodeBuilder.newDeclaredReferenceExpression(
                                 des.name.toString(),
+                                lang.language,
                                 UnknownType.getUnknownType(),
                                 des.getRawSignature()
                             )
@@ -782,6 +842,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                             NodeBuilder.newArrayRangeExpression(
                                 handle(des.rangeFloor),
                                 handle(des.rangeCeiling),
+                                lang.language,
                                 des.getRawSignature()
                             )
                     }
@@ -801,7 +862,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        val die = NodeBuilder.newDesignatedInitializerExpression(ctx.rawSignature)
+        val die = NodeBuilder.newDesignatedInitializerExpression(lang.language, ctx.rawSignature)
         die.lhs = lhs
         die.rhs = rhs
 
@@ -894,7 +955,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 TypeParser.createFrom("int", true)
             }
 
-        return NodeBuilder.newLiteral(numberValue, type, ctx.rawSignature)
+        return NodeBuilder.newLiteral(numberValue, type, lang.language, ctx.rawSignature)
     }
 
     private val String.suffix: String
