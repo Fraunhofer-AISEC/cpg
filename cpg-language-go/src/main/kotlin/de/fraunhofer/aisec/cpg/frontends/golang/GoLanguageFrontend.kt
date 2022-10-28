@@ -82,7 +82,11 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
     override fun parse(file: File): TranslationUnitDeclaration {
         TypeManager.getInstance().setLanguageFrontend(this)
 
-        return parseInternal(file.readText(Charsets.UTF_8), file.path, config.topLevel.absolutePath)
+        return parseInternal(
+            file.readText(Charsets.UTF_8),
+            file.path,
+            config.topLevel?.absolutePath ?: file.parent
+        )
     }
 
     override fun <T> getCodeFromRawNode(astNode: T): String? {

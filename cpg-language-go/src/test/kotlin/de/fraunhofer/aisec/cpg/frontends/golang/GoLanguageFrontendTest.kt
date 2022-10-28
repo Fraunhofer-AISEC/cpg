@@ -49,10 +49,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("values.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
 
@@ -86,10 +83,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("dfg.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
 
@@ -120,12 +114,7 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("construct.go").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<GoLanguage>() }
 
         assertNotNull(tu)
 
@@ -205,10 +194,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -253,10 +239,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("function.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -360,10 +343,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -433,10 +413,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -476,10 +453,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("field.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -516,10 +490,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("if.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -560,10 +531,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("switch.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -629,12 +597,7 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<GoLanguage>() }
 
         assertNotNull(result)
         val tus = result.translationUnits
@@ -688,12 +651,7 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<GoLanguage>() }
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
 
@@ -723,12 +681,7 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<GoLanguage>() }
 
         assertNotNull(result)
         val tus = result.translationUnits
@@ -774,10 +727,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("comment.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -819,10 +769,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("ref.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         val mainPackage = tu.byNameOrNull<NamespaceDeclaration>("main")

@@ -23,37 +23,25 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.java
+package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
-/** The Java language. */
-open class JavaLanguage :
-    Language<JavaLanguageFrontend>(),
-    HasComplexCallResolution,
-    HasClasses,
-    HasSuperclasses,
-    HasTemplates {
-    override val fileExtensions: List<String>
-        get() = listOf("java")
-    override val namespaceDelimiter: String
-        get() = "."
-    override val frontend: Class<out JavaLanguageFrontend>
-        get() = JavaLanguageFrontend::class.java
-    override val superclassKeyword: String
-        get() = "super"
-
+/** The Python language. */
+@OptIn(ExperimentalPython::class)
+class PythonLanguage
+constructor(
+    override val fileExtensions: List<String> = listOf(".ll"),
+    override val namespaceDelimiter: String = ".",
+    override val frontend: Class<PythonLanguageFrontend>
+) : Language<PythonLanguageFrontend> {
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager
-    ): JavaLanguageFrontend {
-        return JavaLanguageFrontend(this, config, scopeManager)
-    }
-
-    // TODO: Remove if not needed.
-    override fun doBetterCallResolution() {
-        println("i know it better")
+    ): PythonLanguageFrontend {
+        return PythonLanguageFrontend(config, scopeManager)
     }
 }

@@ -45,8 +45,6 @@ import java.io.File
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.nio.file.Path
-import java.util.*
-import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
 import org.eclipse.cdt.core.dom.ast.gnu.c.GCCLanguage
@@ -153,11 +151,8 @@ class CXXLanguageFrontend(
                 if (topLevel != null) {
                     includeLocations.add(topLevel.toPath().toAbsolutePath())
                 }
-                includeLocations.addAll(
-                    Arrays.stream(config.includePaths)
-                        .map { Path.of(it).toAbsolutePath() }
-                        .collect(Collectors.toList())
-                )
+                includeLocations.addAll(config.includePaths.map { Path.of(it).toAbsolutePath() })
+
                 for (includeLocation in includeLocations) {
                     // try to resolve path relatively
                     val includeFile = Path.of(path)
@@ -210,7 +205,7 @@ class CXXLanguageFrontend(
 
         val symbols: HashMap<String, String> = HashMap()
         symbols.putAll(config.symbols)
-        includePaths.addAll(listOf(*config.includePaths))
+        includePaths.addAll(config.includePaths)
 
         config.compilationDatabase?.getIncludePaths(file)?.let { includePaths.addAll(it) }
         config.compilationDatabase?.getSymbols(file)?.let { symbols.putAll(it) }

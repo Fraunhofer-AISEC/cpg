@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
@@ -73,10 +73,7 @@ class SimpleDFAOrderEvaluationTest {
                 topLevel,
                 true
             ) {
-                it.registerLanguage(
-                        JavaLanguageFrontend::class.java,
-                        JavaLanguageFrontend.JAVA_EXTENSIONS
-                    )
+                it.registerLanguage<JavaLanguage>()
                     .registerPass(UnreachableEOGPass())
                     .registerPass(IdentifierPass())
                     .registerPass(EdgeCachePass())

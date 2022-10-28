@@ -81,7 +81,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
     }
 
     // If we do not want to load includes into the CPG and the current fileLocation was included
-    if (!this.lang.config.loadIncludes && ctx instanceof ASTNode) {
+    if (!this.lang.config.getLoadIncludes() && ctx instanceof ASTNode) {
       ASTNode astNode = (ASTNode) ctx;
 
       if (astNode.getFileLocation() != null

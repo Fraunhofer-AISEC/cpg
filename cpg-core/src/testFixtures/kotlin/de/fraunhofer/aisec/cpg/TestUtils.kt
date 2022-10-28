@@ -126,7 +126,7 @@ object TestUtils {
     @JvmOverloads
     @Throws(Exception::class)
     fun analyze(
-        files: List<File>?,
+        files: List<File>,
         topLevel: Path,
         usePasses: Boolean,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
@@ -170,7 +170,7 @@ object TestUtils {
     @JvmOverloads
     @Throws(Exception::class)
     fun analyzeAndGetFirstTU(
-        files: List<File>?,
+        files: List<File>,
         topLevel: Path,
         usePasses: Boolean,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
@@ -189,7 +189,7 @@ object TestUtils {
             val db = CompilationDatabase.fromFile(jsonCompilationDatabase)
             if (db.isNotEmpty()) {
                 it.useCompilationDatabase(db)
-                it.softwareComponents(db.components)
+                it.softwareComponents(db.components as MutableMap<String, List<File>>)
                 configModifier?.accept(it)
             }
             configModifier?.accept(it)
