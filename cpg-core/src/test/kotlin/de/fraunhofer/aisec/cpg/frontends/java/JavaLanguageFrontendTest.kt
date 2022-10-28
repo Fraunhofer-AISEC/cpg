@@ -33,6 +33,9 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
+import de.fraunhofer.aisec.cpg.frontends.HasClasses
+import de.fraunhofer.aisec.cpg.frontends.HasSuperclasses
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -605,14 +608,28 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         }
 
+        class MyJavaLanguage : Language<MyJavaLanguageFrontend>, HasClasses, HasSuperclasses {
+            override val fileExtensions: List<String>
+                get() = listOf("java")
+            override val namespaceDelimiter: String
+                get() = "."
+            override val superclassKeyword: String
+                get() = "super"
+            override val frontend: Class<MyJavaLanguageFrontend>
+                get() = MyJavaLanguageFrontend::class.java
+            override fun newFrontend(
+                config: TranslationConfiguration,
+                scopeManager: ScopeManager
+            ): MyJavaLanguageFrontend {
+                return MyJavaLanguageFrontend(config, scopeManager)
+            }
+        }
+
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.unregisterLanguage(JavaLanguageFrontend::class.java)
-                it.registerLanguage(
-                    MyJavaLanguageFrontend::class.java,
-                    JavaLanguageFrontend.JAVA_EXTENSIONS
-                )
+                it.unregisterLanguage(JavaLanguage::class.java)
+                it.registerLanguage(MyJavaLanguage())
             }
 
         assertNotNull(tu)

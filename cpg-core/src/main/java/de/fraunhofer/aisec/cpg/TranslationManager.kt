@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
@@ -170,8 +171,8 @@ private constructor(
                     } else {
                         if (
                             useParallelFrontends &&
-                                Util.getExtension(file).frontendClass?.simpleName ==
-                                    "GoLanguageFrontend"
+                                // TODO: This shouldn't happen in the future!
+                                file.frontendClass?.frontend?.simpleName == "GoLanguageFrontend"
                         ) {
                             log.warn("Parallel frontends are not yet supported for Go")
                             useParallelFrontends = false
@@ -340,14 +341,14 @@ private constructor(
     ): Optional<LanguageFrontend> {
         var frontend: LanguageFrontend? = null
         try {
-            frontend = getFrontend(Util.getExtension(sourceLocation), scopeManager)
+            frontend = getFrontend(sourceLocation, scopeManager)
 
             if (frontend == null) {
-                log.error("Found no parser frontend for {}", sourceLocation.name)
+                log.error("Found no parser frontend for ${sourceLocation.name}")
 
                 if (config.failOnError) {
                     throw TranslationException(
-                        "Found no parser frontend for " + sourceLocation.name
+                        "Found no parser frontend for ${sourceLocation.name}"
                     )
                 }
                 return Optional.empty()
@@ -362,36 +363,31 @@ private constructor(
         return Optional.ofNullable(frontend)
     }
 
-    private fun getFrontend(extension: String, scopeManager: ScopeManager): LanguageFrontend? {
-        val clazz = extension.frontendClass
+    private fun getFrontend(file: File, scopeManager: ScopeManager): LanguageFrontend? {
+        val language = file.frontendClass
 
-        return if (clazz != null) {
+        return if (language != null) {
             try {
-                clazz
-                    .getConstructor(TranslationConfiguration::class.java, ScopeManager::class.java)
-                    .newInstance(config, scopeManager)
+                language.newFrontend(config, scopeManager)
             } catch (e: InstantiationException) {
-                log.error("Could not instantiate language frontend {}", clazz.name, e)
+                log.error("Could not instantiate language frontend {}", language.frontend.name, e)
                 null
             } catch (e: IllegalAccessException) {
-                log.error("Could not instantiate language frontend {}", clazz.name, e)
+                log.error("Could not instantiate language frontend {}", language.frontend.name, e)
                 null
             } catch (e: InvocationTargetException) {
-                log.error("Could not instantiate language frontend {}", clazz.name, e)
+                log.error("Could not instantiate language frontend {}", language.frontend.name, e)
                 null
             } catch (e: NoSuchMethodException) {
-                log.error("Could not instantiate language frontend {}", clazz.name, e)
+                log.error("Could not instantiate language frontend {}", language.frontend.name, e)
                 null
             }
         } else null
     }
 
-    private val String.frontendClass: Class<out LanguageFrontend>?
+    private val File.frontendClass: Language<*>?
         get() {
-            return config.frontends.entries
-                .filter { it.value.contains(this) }
-                .map { it.key }
-                .firstOrNull()
+            return config.languages.firstOrNull { it.handlesFile(this) }
         }
 
     class Builder {

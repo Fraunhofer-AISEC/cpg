@@ -53,3 +53,34 @@ interface HasComplexCallResolution : LanguageTrait {
     // TODO: better name?
     fun doBetterCallResolution()
 }
+
+/** A language trait that specifies if the language supports function pointers. */
+interface HasFunctionPointers : LanguageTrait
+
+/**
+ * A language trait that specifies if the language has the concept of "structs". The alternative is
+ * to use classes. Note that some languages can have both and that in some languages structs and
+ * classes are essentially the same. This is mostly used to determine if an inferred record
+ * declaration *can be* a struct or *must be* a class.
+ */
+interface HasStructs : LanguageTrait
+
+/**
+ * A language trait that specifies if the language has the concept of "classes". The alternative is
+ * to use structs. Note that some languages can have both and that in some languages structs and
+ * classes are essentially the same. This is mostly used to determine if an inferred record
+ * declaration *can be* a class or *must be* a struct.
+ */
+interface HasClasses : LanguageTrait
+
+/**
+ * A language trait, that specifies that this language has support for superclasses. If so, we
+ * should consider the specified superclass keyword to resolve calls etc.
+ */
+interface HasSuperclasses : LanguageTrait {
+    /**
+     * Determines which keyword is used to access functions, etc. of the superclass of an object
+     * (often "super).
+     */
+    val superclassKeyword: String
+}

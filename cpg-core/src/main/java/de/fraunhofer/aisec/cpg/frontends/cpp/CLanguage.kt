@@ -26,17 +26,25 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.HasFunctionPointers
+import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
 /** The C language. */
-class CLanguage : Language<CXXLanguageFrontend> {
+class CLanguage : Language<CXXLanguageFrontend>, HasStructs, HasFunctionPointers {
+    // TODO: Shouldn't there also be the "h" ending?
     override val fileExtensions: List<String>
-        get() = listOf(".c")
+        get() = listOf("c")
     override val namespaceDelimiter: String
         get() = "::"
+    override val frontend: Class<CXXLanguageFrontend>
+        get() = CXXLanguageFrontend::class.java
 
-    override fun newFrontend(config: TranslationConfiguration): CXXLanguageFrontend {
-        return CXXLanguageFrontend(config, ScopeManager())
+    override fun newFrontend(
+        config: TranslationConfiguration,
+        scopeManager: ScopeManager
+    ): CXXLanguageFrontend {
+        return CXXLanguageFrontend(config, scopeManager)
     }
 }

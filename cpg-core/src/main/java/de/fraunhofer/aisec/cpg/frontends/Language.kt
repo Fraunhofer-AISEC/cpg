@@ -26,17 +26,23 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import java.io.File
 
 interface Language<T : LanguageFrontend> {
-
+    /** The file extensions without the dot */
     val fileExtensions: List<String>
 
     val namespaceDelimiter: String
 
-    fun newFrontend(config: TranslationConfiguration): T
+    val frontend: Class<T>
 
-    // TODO: find better name
-    fun doBetterCallResolution() {
-        // default empty
+    fun newFrontend(
+        config: TranslationConfiguration,
+        scopeManager: ScopeManager = ScopeManager()
+    ): T
+
+    fun handlesFile(file: File): Boolean {
+        return file.extension in fileExtensions
     }
 }

@@ -101,7 +101,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 }
 
                 // check, if the file is on the blacklist
-                if (absoluteOrRelativePathIsInList(path, config.includeBlacklist)) {
+                if (absoluteOrRelativePathIsInList(path, config.includeBlocklist)) {
                     LOGGER.debug("Blacklisting include file: {}", path)
                     return null
                 }

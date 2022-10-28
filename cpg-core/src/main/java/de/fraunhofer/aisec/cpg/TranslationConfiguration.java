@@ -25,18 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg;
 
-import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_EXTENSIONS;
-import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_HEADER_EXTENSIONS;
-
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIdentityReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase;
+import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage;
 import de.fraunhofer.aisec.cpg.passes.*;
 import de.fraunhofer.aisec.cpg.passes.order.PassWithDependencies;
 import de.fraunhofer.aisec.cpg.passes.order.PassWithDepsContainer;
@@ -44,6 +42,7 @@ import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.jetbrains.annotations.NotNull;
@@ -90,17 +89,14 @@ public class TranslationConfiguration {
   public final List<String> includeWhitelist;
 
   /**
-   * This acts as a black list for include files, if the array is not empty. The specified includes
-   * files will excluded from being parsed and processed in the CPG. The blacklist entries always
+   * This acts as a block list for include files, if the array is not empty. The specified include
+   * files will be excluded from being parsed and processed in the CPG. The blocklist entries always
    * take priority over those in the whitelist.
    */
-  public final List<String> includeBlacklist;
+  public final List<String> includeBlocklist;
 
-  /**
-   * This map contains a list of language frontends classes and the file types they are registered
-   * for.
-   */
-  private final Map<Class<? extends LanguageFrontend>, List<String>> frontends;
+  /** This list contains all languages which we want to translate. */
+  private final List<Language<? extends LanguageFrontend>> languages;
 
   /**
    * Switch off cleaning up TypeManager memory after analysis.
@@ -183,9 +179,9 @@ public class TranslationConfiguration {
       boolean loadIncludes,
       String[] includePaths,
       List<String> includeWhitelist,
-      List<String> includeBlacklist,
+      List<String> includeBlocklist,
       List<Pass> passes,
-      Map<Class<? extends LanguageFrontend>, List<String>> frontends,
+      List<Language<? extends LanguageFrontend>> languages,
       boolean codeInNodes,
       boolean processAnnotations,
       boolean disableCleanup,
@@ -204,9 +200,9 @@ public class TranslationConfiguration {
     this.loadIncludes = loadIncludes;
     this.includePaths = includePaths;
     this.includeWhitelist = includeWhitelist;
-    this.includeBlacklist = includeBlacklist;
+    this.includeBlocklist = includeBlocklist;
     this.passes = passes != null ? passes : new ArrayList<>();
-    this.frontends = frontends;
+    this.languages = languages;
     // Make sure to init this AFTER sourceLocations has been set
     this.codeInNodes = codeInNodes;
     this.processAnnotations = processAnnotations;
@@ -256,8 +252,8 @@ public class TranslationConfiguration {
     return this.passes;
   }
 
-  public Map<Class<? extends LanguageFrontend>, List<String>> getFrontends() {
-    return this.frontends;
+  public List<Language<? extends LanguageFrontend>> getLanguages() {
+    return this.languages;
   }
 
   public InferenceConfiguration getInferenceConfiguration() {
@@ -281,7 +277,7 @@ public class TranslationConfiguration {
    */
   public static class Builder {
     private Map<String, List<File>> softwareComponents = new HashMap<>();
-    private final Map<Class<? extends LanguageFrontend>, List<String>> frontends = new HashMap<>();
+    private final List<Language<? extends LanguageFrontend>> languages = new ArrayList<>();
     private File topLevel = null;
     private boolean debugParser = false;
     private boolean failOnError = false;
@@ -289,7 +285,7 @@ public class TranslationConfiguration {
     private Map<String, String> symbols = new HashMap<>();
     private final List<String> includePaths = new ArrayList<>();
     private final List<String> includeWhitelist = new ArrayList<>();
-    private final List<String> includeBlacklist = new ArrayList<>();
+    private final List<String> includeBlocklist = new ArrayList<>();
     private final List<Pass> passes = new ArrayList<>();
     private boolean codeInNodes = true;
     private boolean processAnnotations = false;
@@ -353,23 +349,13 @@ public class TranslationConfiguration {
       return this;
     }
 
-    /**
-     * Dump parser debug output to the logs (Caution: this will generate a lot of output).
-     *
-     * @param debugParser
-     * @return
-     */
+    /** Dump parser debug output to the logs (Caution: this will generate a lot of output). */
     public Builder debugParser(boolean debugParser) {
       this.debugParser = debugParser;
       return this;
     }
 
-    /**
-     * Match comments found in source files to nodes according to a heuristic.
-     *
-     * @param matchCommentsToNodes
-     * @return
-     */
+    /** Match comments found in source files to nodes according to a heuristic. */
     public Builder matchCommentsToNodes(boolean matchCommentsToNodes) {
       this.matchCommentsToNodes = matchCommentsToNodes;
       return this;
@@ -381,12 +367,7 @@ public class TranslationConfiguration {
       return this;
     }
 
-    /**
-     * Fail analysis on first error. Try to continue otherwise.
-     *
-     * @param failOnError
-     * @return
-     */
+    /** Fail analysis on first error. Try to continue otherwise. */
     public Builder failOnError(boolean failOnError) {
       this.failOnError = failOnError;
       return this;
@@ -396,21 +377,13 @@ public class TranslationConfiguration {
      * Load C/C++ include headers before the analysis.
      *
      * <p>Required for macro expansion.
-     *
-     * @param loadIncludes
-     * @return
      */
     public Builder loadIncludes(boolean loadIncludes) {
       this.loadIncludes = loadIncludes;
       return this;
     }
 
-    /**
-     * Directory containing include headers.
-     *
-     * @param includePath
-     * @return
-     */
+    /** Directory containing include headers. */
     public Builder includePath(String includePath) {
       this.includePaths.add(includePath);
       return this;
@@ -418,9 +391,6 @@ public class TranslationConfiguration {
 
     /**
      * Adds the specified file to the include whitelist. Relative and absolute paths are supported.
-     *
-     * @param includeFile
-     * @return
      */
     public Builder includeWhitelist(String includeFile) {
       this.includeWhitelist.add(includeFile);
@@ -433,37 +403,29 @@ public class TranslationConfiguration {
     }
 
     /**
-     * Adds the specified file to the include blacklist. Relative and absolute paths are supported.
-     *
-     * @param includeFile
-     * @return
+     * Adds the specified file to the include blocklist. Relative and absolute paths are supported.
      */
-    public Builder includeBlacklist(String includeFile) {
-      this.includeBlacklist.add(includeFile);
+    public Builder includeBlocklist(String includeFile) {
+      this.includeBlocklist.add(includeFile);
       return this;
     }
 
-    /**
-     * Register an additional {@link Pass}.
-     *
-     * @param pass
-     * @return
-     */
+    /** Register an additional {@link Pass}. */
     public Builder registerPass(@NotNull Pass pass) {
       this.passes.add(pass);
       return this;
     }
 
-    /** Registers an additional {@link de.fraunhofer.aisec.cpg.frontends.LanguageFrontend}. */
-    public Builder registerLanguage(
-        @NotNull Class<? extends LanguageFrontend> frontend, List<String> fileTypes) {
-      this.frontends.put(frontend, fileTypes);
+    /** Registers an additional {@link de.fraunhofer.aisec.cpg.frontends.Language}. */
+    public Builder registerLanguage(@NotNull Language<? extends LanguageFrontend> language) {
+      this.languages.add(language);
       return this;
     }
 
-    /** Unregisters a registered {@link de.fraunhofer.aisec.cpg.frontends.LanguageFrontend}. */
-    public Builder unregisterLanguage(@NotNull Class<? extends LanguageFrontend> frontend) {
-      this.frontends.remove(frontend);
+    /** Unregisters a registered {@link de.fraunhofer.aisec.cpg.frontends.Language}. */
+    public Builder unregisterLanguage(
+        @NotNull Class<? extends Language<? extends LanguageFrontend>> language) {
+      this.languages.removeIf(language::isInstance);
       return this;
     }
 
@@ -483,8 +445,6 @@ public class TranslationConfiguration {
      * </ol>
      *
      * to be executed exactly in the specified order
-     *
-     * @return
      */
     public Builder defaultPasses() {
       registerPass(new TypeHierarchyResolver());
@@ -504,7 +464,13 @@ public class TranslationConfiguration {
     /** Register extra passes declared by a frontend with [RegisterExtraPass] */
     private void registerExtraFrontendPasses() throws ConfigurationException {
 
-      for (Class<? extends LanguageFrontend> frontend : frontends.keySet()) {
+      for (Class<? extends LanguageFrontend> frontend :
+          languages.stream()
+              .map(
+                  it -> {
+                    return it.getFrontend();
+                  })
+              .collect(Collectors.toList())) {
         if (frontend.getAnnotationsByType(RegisterExtraPass.class).length != 0) {
           RegisterExtraPass[] extraPasses = frontend.getAnnotationsByType(RegisterExtraPass.class);
           for (RegisterExtraPass p : extraPasses) {
@@ -525,19 +491,12 @@ public class TranslationConfiguration {
       }
     }
 
-    /**
-     * Register all default languages.
-     *
-     * @return
-     */
+    /** Register all default languages. */
     public Builder defaultLanguages() {
-      registerLanguage(
-          CXXLanguageFrontend.class,
-          Lists.newArrayList(Iterables.concat(CXX_EXTENSIONS, CXX_HEADER_EXTENSIONS)));
-      registerLanguage(JavaLanguageFrontend.class, JavaLanguageFrontend.JAVA_EXTENSIONS);
-
+      registerLanguage(new CLanguage());
+      registerLanguage(new CPPLanguage());
+      registerLanguage(new JavaLanguage());
       // do not register experimental languages by default until we have a release strategy
-      // registerLanguage(GoLanguageFrontend.class, GoLanguageFrontend.GOLANG_EXTENSIONS);
       return this;
     }
 
@@ -551,7 +510,6 @@ public class TranslationConfiguration {
      * since they might populate the graph too much.
      *
      * @param b the new value
-     * @return
      */
     public Builder processAnnotations(boolean b) {
       this.processAnnotations = b;
@@ -564,7 +522,6 @@ public class TranslationConfiguration {
      * adding far less duplicate nodes to the graph
      *
      * @param b the new value
-     * @return
      */
     public Builder useUnityBuild(boolean b) {
       this.useUnityBuild = b;
@@ -579,7 +536,6 @@ public class TranslationConfiguration {
      * depending on the parsing order.
      *
      * @param b the new value
-     * @return
      */
     public Builder useParallelFrontends(boolean b) {
       this.useParallelFrontends = b;
@@ -592,7 +548,6 @@ public class TranslationConfiguration {
      * the source files have been parsed.
      *
      * @param b the new value
-     * @return
      */
     public Builder typeSystemActiveInFrontend(boolean b) {
       this.typeSystemActiveInFrontend = b;
@@ -623,9 +578,9 @@ public class TranslationConfiguration {
           loadIncludes,
           includePaths.toArray(new String[] {}),
           includeWhitelist,
-          includeBlacklist,
+          includeBlocklist,
           orderPasses(),
-          frontends,
+          languages,
           codeInNodes,
           processAnnotations,
           disableCleanup,

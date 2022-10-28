@@ -108,7 +108,7 @@ internal class CXXIncludeTest : BaseTest() {
                     .loadIncludes(true)
                     .debugParser(true)
                     .defaultLanguages()
-                    .includeBlacklist(File("src/test/resources/include.h").absolutePath)
+                    .includeBlocklist(File("src/test/resources/include.h").absolutePath)
                     .failOnError(true)
             )
         val next = translationUnitDeclarations.iterator().next()
@@ -135,7 +135,7 @@ internal class CXXIncludeTest : BaseTest() {
                     .loadIncludes(true)
                     .debugParser(true)
                     .defaultLanguages()
-                    .includeBlacklist("include.h")
+                    .includeBlocklist("include.h")
                     .failOnError(true)
             )
         val next = translationUnitDeclarations.iterator().next()
@@ -216,7 +216,7 @@ internal class CXXIncludeTest : BaseTest() {
                     .loadIncludes(true)
                     .debugParser(true)
                     .defaultLanguages()
-                    .includeBlacklist("include.h") // blacklist entries take priority
+                    .includeBlocklist("include.h") // blacklist entries take priority
                     .includeWhitelist("include.h")
                     .includeWhitelist("another-include.h")
                     .failOnError(true)

@@ -23,35 +23,32 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.cpp
+package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
-/** The C++ language. */
-class CPPLanguage :
-    Language<CXXLanguageFrontend>,
-    HasDefaultArguments,
-    HasTemplates,
-    HasComplexCallResolution,
-    HasStructs,
-    HasClasses,
-    HasFunctionPointers {
+/** The Java language TODO: Shouldn't it have HasTemplates as well? */
+open class JavaLanguage :
+    Language<JavaLanguageFrontend>, HasComplexCallResolution, HasClasses, HasSuperclasses {
     override val fileExtensions: List<String>
-        get() = listOf("cpp", "c", "h", "hpp")
+        get() = listOf("java")
     override val namespaceDelimiter: String
-        get() = "::"
-    override val frontend: Class<CXXLanguageFrontend>
-        get() = CXXLanguageFrontend::class.java
+        get() = "."
+    override val frontend: Class<JavaLanguageFrontend>
+        get() = JavaLanguageFrontend::class.java
+    override val superclassKeyword: String
+        get() = "super"
 
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager
-    ): CXXLanguageFrontend {
-        return CXXLanguageFrontend(config, scopeManager)
+    ): JavaLanguageFrontend {
+        return JavaLanguageFrontend(config, scopeManager)
     }
 
+    // TODO: Remove if not needed.
     override fun doBetterCallResolution() {
         println("i know it better")
     }
