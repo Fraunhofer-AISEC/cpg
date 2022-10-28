@@ -51,27 +51,27 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         ctx: IASTParameterDeclaration
     ): ParamVariableDeclaration {
         // Parse the type
-        val type = lang.typeOf(ctx.declarator, ctx.declSpecifier)
+        val type = frontend.typeOf(ctx.declarator, ctx.declSpecifier)
 
         val paramVariableDeclaration =
             NodeBuilder.newMethodParameterIn(
                 ctx.declarator.name.toString(),
                 type,
                 false,
-                lang.language,
+                frontend.language,
                 ctx.rawSignature
             )
 
         // Add default values
         if (ctx.declarator.initializer != null) {
             paramVariableDeclaration.default =
-                lang.initializerHandler.handle(ctx.declarator.initializer)
+                frontend.initializerHandler.handle(ctx.declarator.initializer)
         }
 
         // Add default values
         if (ctx.declarator.initializer != null) {
             paramVariableDeclaration.default =
-                lang.initializerHandler.handle(ctx.declarator.initializer)
+                frontend.initializerHandler.handle(ctx.declarator.initializer)
         }
 
         return paramVariableDeclaration

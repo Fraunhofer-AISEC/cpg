@@ -735,7 +735,7 @@ public class TypeManager {
     }
 
     TypedefDeclaration typedef =
-        NodeBuilder.newTypedefDeclaration(currTarget, alias, frontend.language, rawCode);
+        NodeBuilder.newTypedefDeclaration(currTarget, alias, frontend.getLanguage(), rawCode);
 
     if (frontend == null) {
       if (!noFrontendWarningIssued) {

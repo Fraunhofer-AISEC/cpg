@@ -43,7 +43,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
             // TODO: Initializer List is handled in ExpressionsHandler that actually handles
             // InitializerClauses often used where
             //  one expects an expression.
-            is IASTInitializerList -> lang.expressionHandler.handle(node) as Expression
+            is IASTInitializerList -> frontend.expressionHandler.handle(node) as Expression
             is CPPASTConstructorInitializer -> handleConstructorInitializer(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)
@@ -53,10 +53,10 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
         val constructExpression =
-            NodeBuilder.newConstructExpression(lang.language, ctx.rawSignature)
+            NodeBuilder.newConstructExpression(frontend.language, ctx.rawSignature)
 
         for ((i, argument) in ctx.arguments.withIndex()) {
-            val arg = lang.expressionHandler.handle(argument)
+            val arg = frontend.expressionHandler.handle(argument)
             arg!!.argumentIndex = i
             constructExpression.addArgument(arg)
         }
@@ -65,9 +65,9 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleEqualsInitializer(ctx: IASTEqualsInitializer): Expression {
-        return lang.expressionHandler.handle(ctx.initializerClause)
+        return frontend.expressionHandler.handle(ctx.initializerClause)
             ?: return NodeBuilder.newProblemExpression(
-                lang.language,
+                frontend.language,
                 "could not parse initializer clause"
             )
     }

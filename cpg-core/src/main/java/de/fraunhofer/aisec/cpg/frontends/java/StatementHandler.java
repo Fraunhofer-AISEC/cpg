@@ -82,11 +82,12 @@ public class StatementHandler
 
   public de.fraunhofer.aisec.cpg.graph.statements.Statement handleExpressionStatement(
       Statement stmt) {
-    var expression = lang.getExpressionHandler().handle(stmt.asExpressionStmt().getExpression());
+    var expression =
+        frontend.getExpressionHandler().handle(stmt.asExpressionStmt().getExpression());
 
     // update expression's code and location to match the statement
 
-    lang.setCodeAndRegion(expression, stmt);
+    frontend.setCodeAndRegion(expression, stmt);
 
     return expression;
   }
@@ -94,9 +95,10 @@ public class StatementHandler
   private de.fraunhofer.aisec.cpg.graph.statements.Statement handleThrowStmt(Statement stmt) {
     ThrowStmt throwStmt = (ThrowStmt) stmt;
     UnaryOperator throwOperation =
-        NodeBuilder.newUnaryOperator("throw", false, true, lang.language, throwStmt.toString());
+        NodeBuilder.newUnaryOperator(
+            "throw", false, true, frontend.getLanguage(), throwStmt.toString());
     throwOperation.setInput(
-        (Expression) lang.getExpressionHandler().handle(throwStmt.getExpression()));
+        (Expression) frontend.getExpressionHandler().handle(throwStmt.getExpression()));
     return throwOperation;
   }
 
@@ -111,17 +113,17 @@ public class StatementHandler
       com.github.javaparser.ast.expr.Expression expr = optionalExpression.get();
 
       // handle the expression as the first argument
-      expression = (Expression) lang.getExpressionHandler().handle(expr);
+      expression = (Expression) frontend.getExpressionHandler().handle(expr);
     }
 
-    ReturnStatement returnStatement =
-        NodeBuilder.newReturnStatement(lang.language, returnStmt.toString());
+    var returnStatement = NodeBuilderKt.newReturnStatement(frontend, returnStmt.toString());
 
     // expressionRefersToDeclaration to arguments, if there are any
     if (expression != null) {
       returnStatement.setReturnValue(expression);
     }
-    lang.setCodeAndRegion(returnStatement, stmt);
+
+    frontend.setCodeAndRegion(returnStatement, stmt);
     return returnStatement;
   }
 
@@ -132,15 +134,16 @@ public class StatementHandler
     Statement thenStatement = ifStmt.getThenStmt();
     Optional<Statement> optionalElseStatement = ifStmt.getElseStmt();
 
-    IfStatement ifStatement = NodeBuilder.newIfStatement(lang.language, ifStmt.toString());
-    lang.getScopeManager().enterScope(ifStatement);
+    IfStatement ifStatement = NodeBuilder.newIfStatement(frontend.getLanguage(), ifStmt.toString());
+    frontend.getScopeManager().enterScope(ifStatement);
 
     ifStatement.setThenStatement(handle(thenStatement));
-    ifStatement.setCondition((Expression) lang.getExpressionHandler().handle(conditionExpression));
+    ifStatement.setCondition(
+        (Expression) frontend.getExpressionHandler().handle(conditionExpression));
 
     optionalElseStatement.ifPresent(statement -> ifStatement.setElseStatement(handle(statement)));
 
-    lang.getScopeManager().leaveScope(ifStatement);
+    frontend.getScopeManager().leaveScope(ifStatement);
     return ifStatement;
   }
 
@@ -151,14 +154,15 @@ public class StatementHandler
     Optional<com.github.javaparser.ast.expr.Expression> thenStatement = assertStmt.getMessage();
 
     AssertStatement assertStatement =
-        NodeBuilder.newAssertStatement(lang.language, stmt.toString());
+        NodeBuilder.newAssertStatement(frontend.getLanguage(), stmt.toString());
 
     assertStatement.setCondition(
-        (Expression) lang.getExpressionHandler().handle(conditionExpression));
+        (Expression) frontend.getExpressionHandler().handle(conditionExpression));
 
     thenStatement.ifPresent(
         statement ->
-            assertStatement.setMessage(lang.getExpressionHandler().handle(thenStatement.get())));
+            assertStatement.setMessage(
+                frontend.getExpressionHandler().handle(thenStatement.get())));
 
     return assertStatement;
   }
@@ -170,26 +174,27 @@ public class StatementHandler
     Statement statement = whileStmt.getBody();
 
     WhileStatement whileStatement =
-        NodeBuilder.newWhileStatement(lang.language, whileStmt.toString());
-    lang.getScopeManager().enterScope(whileStatement);
+        NodeBuilder.newWhileStatement(frontend.getLanguage(), whileStmt.toString());
+    frontend.getScopeManager().enterScope(whileStatement);
 
     whileStatement.setStatement(handle(statement));
     whileStatement.setCondition(
-        (Expression) lang.getExpressionHandler().handle(conditionExpression));
-    lang.getScopeManager().leaveScope(whileStatement);
+        (Expression) frontend.getExpressionHandler().handle(conditionExpression));
+    frontend.getScopeManager().leaveScope(whileStatement);
 
     return whileStatement;
   }
 
   private ForEachStatement handleForEachStatement(Statement stmt) {
-    ForEachStatement statement = NodeBuilder.newForEachStatement(lang.language, stmt.toString());
-    lang.getScopeManager().enterScope(statement);
+    ForEachStatement statement =
+        NodeBuilder.newForEachStatement(frontend.getLanguage(), stmt.toString());
+    frontend.getScopeManager().enterScope(statement);
 
     ForEachStmt forEachStmt = stmt.asForEachStmt();
     de.fraunhofer.aisec.cpg.graph.statements.Statement variable =
-        lang.getExpressionHandler().handle(forEachStmt.getVariable());
+        frontend.getExpressionHandler().handle(forEachStmt.getVariable());
     de.fraunhofer.aisec.cpg.graph.statements.Statement iterable =
-        lang.getExpressionHandler().handle(forEachStmt.getIterable());
+        frontend.getExpressionHandler().handle(forEachStmt.getIterable());
 
     if (!(variable instanceof DeclarationStatement)) {
       log.error("Expected a DeclarationStatement but received: {}", variable.getName());
@@ -199,7 +204,7 @@ public class StatementHandler
 
     statement.setIterable(iterable);
     statement.setStatement(handle(forEachStmt.getBody()));
-    lang.getScopeManager().leaveScope(statement);
+    frontend.getScopeManager().leaveScope(statement);
     return statement;
   }
 
@@ -214,22 +219,22 @@ public class StatementHandler
       code = stmt.toString();
     }
 
-    ForStatement statement = NodeBuilder.newForStatement(lang.language, code);
-    lang.setCodeAndRegion(statement, stmt);
-    lang.getScopeManager().enterScope(statement);
+    ForStatement statement = NodeBuilder.newForStatement(frontend.getLanguage(), code);
+    frontend.setCodeAndRegion(statement, stmt);
+    frontend.getScopeManager().enterScope(statement);
 
     if (forStmt.getInitialization().size() > 1) {
       PhysicalLocation ofExprList = null;
 
       // code will be set later
-      ExpressionList initExprList = NodeBuilder.newExpressionList(lang.language, null);
+      ExpressionList initExprList = NodeBuilder.newExpressionList(frontend.getLanguage(), null);
 
       for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getInitialization()) {
         de.fraunhofer.aisec.cpg.graph.statements.Statement s =
-            lang.getExpressionHandler().handle(initExpr);
+            frontend.getExpressionHandler().handle(initExpr);
 
         // make sure location is set
-        lang.setCodeAndRegion(s, initExpr);
+        frontend.setCodeAndRegion(s, initExpr);
         initExprList.addExpression(s);
 
         // can not update location
@@ -242,13 +247,13 @@ public class StatementHandler
         }
 
         ofExprList.setRegion(
-            lang.mergeRegions(ofExprList.getRegion(), s.getLocation().getRegion()));
+            frontend.mergeRegions(ofExprList.getRegion(), s.getLocation().getRegion()));
       }
 
       // set code and location of init list
       if (statement.getLocation() != null && ofExprList != null) {
         String initCode =
-            lang.getCodeOfSubregion(
+            frontend.getCodeOfSubregion(
                 statement, statement.getLocation().getRegion(), ofExprList.getRegion());
         initExprList.setLocation(ofExprList);
         initExprList.setCode(initCode);
@@ -256,21 +261,22 @@ public class StatementHandler
       statement.setInitializerStatement(initExprList);
     } else if (forStmt.getInitialization().size() == 1) {
       statement.setInitializerStatement(
-          lang.getExpressionHandler().handle(forStmt.getInitialization().get(0)));
+          frontend.getExpressionHandler().handle(forStmt.getInitialization().get(0)));
     }
 
     forStmt
         .getCompare()
         .ifPresent(
             condition ->
-                statement.setCondition((Expression) lang.getExpressionHandler().handle(condition)));
+                statement.setCondition(
+                    (Expression) frontend.getExpressionHandler().handle(condition)));
 
     // Adds true expression node where default empty condition evaluates to true, remove here and in
     // cpp StatementHandler
     if (statement.getCondition() == null) {
       Literal<?> literal =
           NodeBuilder.newLiteral(
-              true, TypeParser.createFrom("boolean", true), lang.language, "true");
+              true, TypeParser.createFrom("boolean", true), frontend.getLanguage(), "true");
       statement.setCondition(literal);
     }
 
@@ -278,14 +284,15 @@ public class StatementHandler
       PhysicalLocation ofExprList = statement.getLocation();
 
       // code will be set later
-      ExpressionList iterationExprList = NodeBuilder.newExpressionList(lang.language, null);
+      ExpressionList iterationExprList =
+          NodeBuilder.newExpressionList(frontend.getLanguage(), null);
 
       for (com.github.javaparser.ast.expr.Expression updateExpr : forStmt.getUpdate()) {
         de.fraunhofer.aisec.cpg.graph.statements.Statement s =
-            lang.getExpressionHandler().handle(updateExpr);
+            frontend.getExpressionHandler().handle(updateExpr);
 
         // make sure location is set
-        lang.setCodeAndRegion(s, updateExpr);
+        frontend.setCodeAndRegion(s, updateExpr);
         iterationExprList.addExpression(s);
 
         // can not update location
@@ -298,13 +305,13 @@ public class StatementHandler
         }
 
         ofExprList.setRegion(
-            lang.mergeRegions(ofExprList.getRegion(), s.getLocation().getRegion()));
+            frontend.mergeRegions(ofExprList.getRegion(), s.getLocation().getRegion()));
       }
 
       // set code and location of init list
       if (statement.getLocation() != null && ofExprList != null) {
         String updateCode =
-            lang.getCodeOfSubregion(
+            frontend.getCodeOfSubregion(
                 statement, statement.getLocation().getRegion(), ofExprList.getRegion());
         iterationExprList.setLocation(ofExprList);
         iterationExprList.setCode(updateCode);
@@ -312,11 +319,11 @@ public class StatementHandler
       statement.setIterationStatement(iterationExprList);
     } else if (forStmt.getUpdate().size() == 1) {
       statement.setIterationStatement(
-          lang.getExpressionHandler().handle(forStmt.getUpdate().get(0)));
+          frontend.getExpressionHandler().handle(forStmt.getUpdate().get(0)));
     }
 
     statement.setStatement(handle(forStmt.getBody()));
-    lang.getScopeManager().leaveScope(statement);
+    frontend.getScopeManager().leaveScope(statement);
     return statement;
   }
 
@@ -326,26 +333,27 @@ public class StatementHandler
     com.github.javaparser.ast.expr.Expression conditionExpression = doStmt.getCondition();
     Statement statement = doStmt.getBody();
 
-    DoStatement doStatement = NodeBuilder.newDoStatement(lang.language, doStmt.toString());
-    lang.getScopeManager().enterScope(doStatement);
+    DoStatement doStatement = NodeBuilder.newDoStatement(frontend.getLanguage(), doStmt.toString());
+    frontend.getScopeManager().enterScope(doStatement);
 
     doStatement.setStatement(handle(statement));
-    doStatement.setCondition((Expression) lang.getExpressionHandler().handle(conditionExpression));
-    lang.getScopeManager().leaveScope(doStatement);
+    doStatement.setCondition(
+        (Expression) frontend.getExpressionHandler().handle(conditionExpression));
+    frontend.getScopeManager().leaveScope(doStatement);
     return doStatement;
   }
 
   private EmptyStatement handleEmptyStatement(Statement stmt) {
     EmptyStmt emptyStmt = stmt.asEmptyStmt();
-    return NodeBuilder.newEmptyStatement(lang.language, emptyStmt.toString());
+    return NodeBuilder.newEmptyStatement(frontend.getLanguage(), emptyStmt.toString());
   }
 
   private SynchronizedStatement handleSynchronizedStatement(Statement stmt) {
     SynchronizedStmt synchronizedJava = stmt.asSynchronizedStmt();
     SynchronizedStatement synchronizedCPG =
-        NodeBuilder.newSynchronizedStatement(lang.language, stmt.toString());
+        NodeBuilder.newSynchronizedStatement(frontend.getLanguage(), stmt.toString());
     synchronizedCPG.setExpression(
-        (Expression) lang.getExpressionHandler().handle(synchronizedJava.getExpression()));
+        (Expression) frontend.getExpressionHandler().handle(synchronizedJava.getExpression()));
     synchronizedCPG.setBlockStatement((CompoundStatement) handle(synchronizedJava.getBody()));
     return synchronizedCPG;
   }
@@ -357,7 +365,7 @@ public class StatementHandler
     Statement statement = labelStmt.getStatement();
 
     LabelStatement labelStatement =
-        NodeBuilder.newLabelStatement(lang.language, labelStmt.toString());
+        NodeBuilder.newLabelStatement(frontend.getLanguage(), labelStmt.toString());
 
     labelStatement.setSubStatement(handle(statement));
     labelStatement.setLabel(label);
@@ -386,25 +394,25 @@ public class StatementHandler
 
     // first of, all we need a compound statement
     CompoundStatement compoundStatement =
-        NodeBuilder.newCompoundStatement(lang.language, stmt.toString());
+        NodeBuilder.newCompoundStatement(frontend.getLanguage(), stmt.toString());
 
-    lang.getScopeManager().enterScope(compoundStatement);
+    frontend.getScopeManager().enterScope(compoundStatement);
 
     for (Statement child : blockStmt.getStatements()) {
       de.fraunhofer.aisec.cpg.graph.statements.Statement statement = handle(child);
 
       compoundStatement.addStatement(statement);
     }
-    lang.setCodeAndRegion(compoundStatement, stmt);
+    frontend.setCodeAndRegion(compoundStatement, stmt);
 
-    lang.getScopeManager().leaveScope(compoundStatement);
+    frontend.getScopeManager().leaveScope(compoundStatement);
     return compoundStatement;
   }
 
   public de.fraunhofer.aisec.cpg.graph.statements.Statement handleCaseDefaultStatement(
       com.github.javaparser.ast.expr.Expression caseExpression, SwitchEntry sEntry) {
 
-    PhysicalLocation parentLocation = lang.getLocationFromRawNode(sEntry);
+    PhysicalLocation parentLocation = frontend.getLocationFromRawNode(sEntry);
 
     Optional<TokenRange> optionalTokenRange = sEntry.getTokenRange();
     Pair<JavaToken, JavaToken> caseTokens = new Pair<>(null, null);
@@ -428,7 +436,7 @@ public class StatementHandler
       }
       DefaultStatement defaultStatement =
           NodeBuilder.newDefaultStatement(
-              lang.language, getCodeBetweenTokens(caseTokens.a, caseTokens.b));
+              frontend.getLanguage(), getCodeBetweenTokens(caseTokens.a, caseTokens.b));
       defaultStatement.setLocation(
           getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b));
       return defaultStatement;
@@ -445,9 +453,9 @@ public class StatementHandler
 
     CaseStatement caseStatement =
         NodeBuilder.newCaseStatement(
-            lang.language, getCodeBetweenTokens(caseTokens.a, caseTokens.b));
+            frontend.getLanguage(), getCodeBetweenTokens(caseTokens.a, caseTokens.b));
     caseStatement.setCaseExpression(
-        (Expression) lang.getExpressionHandler().handle(caseExpression));
+        (Expression) frontend.getExpressionHandler().handle(caseExpression));
 
     caseStatement.setLocation(getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b));
 
@@ -516,15 +524,15 @@ public class StatementHandler
   public SwitchStatement handleSwitchStatement(Statement stmt) {
     SwitchStmt switchStmt = stmt.asSwitchStmt();
     SwitchStatement switchStatement =
-        NodeBuilder.newSwitchStatement(lang.language, stmt.toString());
+        NodeBuilder.newSwitchStatement(frontend.getLanguage(), stmt.toString());
 
     // make sure location is set
-    lang.setCodeAndRegion(switchStatement, switchStmt);
+    frontend.setCodeAndRegion(switchStatement, switchStmt);
 
-    lang.getScopeManager().enterScope(switchStatement);
+    frontend.getScopeManager().enterScope(switchStatement);
 
     switchStatement.setSelector(
-        (Expression) lang.getExpressionHandler().handle(switchStmt.getSelector()));
+        (Expression) frontend.getExpressionHandler().handle(switchStmt.getSelector()));
 
     // Compute region and code for self generated compound statement to match the c++ versions
     JavaToken start = null;
@@ -537,7 +545,7 @@ public class StatementHandler
     }
 
     CompoundStatement compoundStatement =
-        NodeBuilder.newCompoundStatement(lang.language, getCodeBetweenTokens(start, end));
+        NodeBuilder.newCompoundStatement(frontend.getLanguage(), getCodeBetweenTokens(start, end));
     compoundStatement.setLocation(
         getLocationsFromTokens(switchStatement.getLocation(), start, end));
 
@@ -556,14 +564,14 @@ public class StatementHandler
       }
     }
     switchStatement.setStatement(compoundStatement);
-    lang.getScopeManager().leaveScope(switchStatement);
+    frontend.getScopeManager().leaveScope(switchStatement);
     return switchStatement;
   }
 
   private ExplicitConstructorInvocation handleExplicitConstructorInvocation(Statement stmt) {
     ExplicitConstructorInvocationStmt eciStatement = stmt.asExplicitConstructorInvocationStmt();
     String containingClass = "";
-    RecordDeclaration currentRecord = lang.getScopeManager().getCurrentRecord();
+    RecordDeclaration currentRecord = frontend.getScopeManager().getCurrentRecord();
     if (currentRecord == null) {
       log.error("Explicit constructor invocation has to be located inside a record declaration!");
     } else {
@@ -572,11 +580,11 @@ public class StatementHandler
 
     ExplicitConstructorInvocation node =
         NodeBuilder.newExplicitConstructorInvocation(
-            containingClass, lang.language, eciStatement.toString());
+            containingClass, frontend.getLanguage(), eciStatement.toString());
 
     List<Expression> arguments =
         eciStatement.getArguments().stream()
-            .map(lang.getExpressionHandler()::handle)
+            .map(frontend.getExpressionHandler()::handle)
             .map(Expression.class::cast)
             .collect(Collectors.toList());
     node.setArguments(arguments);
@@ -586,11 +594,12 @@ public class StatementHandler
 
   private TryStatement handleTryStatement(Statement stmt) {
     TryStmt tryStmt = stmt.asTryStmt();
-    TryStatement tryStatement = NodeBuilder.newTryStatement(lang.language, stmt.toString());
-    lang.getScopeManager().enterScope(tryStatement);
+    TryStatement tryStatement =
+        NodeBuilder.newTryStatement(frontend.getLanguage(), stmt.toString());
+    frontend.getScopeManager().enterScope(tryStatement);
     List<de.fraunhofer.aisec.cpg.graph.statements.Statement> resources =
         tryStmt.getResources().stream()
-            .map(lang.getExpressionHandler()::handle)
+            .map(frontend.getExpressionHandler()::handle)
             .collect(Collectors.toList());
     CompoundStatement tryBlock = handleBlockStatement(tryStmt.getTryBlock());
     List<CatchClause> catchClauses =
@@ -599,7 +608,7 @@ public class StatementHandler
             .collect(Collectors.toList());
     CompoundStatement finallyBlock =
         tryStmt.getFinallyBlock().map(this::handleBlockStatement).orElse(null);
-    lang.getScopeManager().leaveScope(tryStatement);
+    frontend.getScopeManager().leaveScope(tryStatement);
     tryStatement.setResources(resources);
     tryStatement.setTryBlock(tryBlock);
     tryStatement.setFinallyBlock(finallyBlock);
@@ -609,7 +618,7 @@ public class StatementHandler
       if (r instanceof DeclarationStatement) {
         for (Declaration d : r.getDeclarations()) {
           if (d instanceof VariableDeclaration) {
-            lang.getScopeManager().addDeclaration(d);
+            frontend.getScopeManager().addDeclaration(d);
           }
         }
       }
@@ -618,20 +627,20 @@ public class StatementHandler
   }
 
   private CatchClause handleCatchClause(com.github.javaparser.ast.stmt.CatchClause catchCls) {
-    CatchClause cClause = NodeBuilder.newCatchClause(lang.language, catchCls.toString());
-    lang.getScopeManager().enterScope(cClause);
+    CatchClause cClause = NodeBuilder.newCatchClause(frontend.getLanguage(), catchCls.toString());
+    frontend.getScopeManager().enterScope(cClause);
 
     List<Type> possibleTypes = new ArrayList<>();
     Type concreteType;
     if (catchCls.getParameter().getType() instanceof UnionType) {
       for (ReferenceType t : ((UnionType) catchCls.getParameter().getType()).getElements()) {
-        possibleTypes.add(lang.getTypeAsGoodAsPossible(t));
+        possibleTypes.add(frontend.getTypeAsGoodAsPossible(t));
       }
       // we do not know which of the exceptions was actually thrown, so we assume this might be any
       concreteType = TypeParser.createFrom("java.lang.Throwable", true);
       concreteType.setTypeOrigin(Type.Origin.GUESSED);
     } else {
-      concreteType = lang.getTypeAsGoodAsPossible(catchCls.getParameter().getType());
+      concreteType = frontend.getTypeAsGoodAsPossible(catchCls.getParameter().getType());
       possibleTypes.add(concreteType);
     }
 
@@ -641,15 +650,15 @@ public class StatementHandler
             concreteType,
             catchCls.getParameter().toString(),
             false,
-            lang.language);
+            frontend.getLanguage());
     parameter.setPossibleSubTypes(possibleTypes);
     CompoundStatement body = handleBlockStatement(catchCls.getBody());
 
     cClause.setBody(body);
     cClause.setParameter(parameter);
 
-    lang.getScopeManager().addDeclaration(parameter);
-    lang.getScopeManager().leaveScope(cClause);
+    frontend.getScopeManager().addDeclaration(parameter);
+    frontend.getScopeManager().leaveScope(cClause);
     return cClause;
   }
 }

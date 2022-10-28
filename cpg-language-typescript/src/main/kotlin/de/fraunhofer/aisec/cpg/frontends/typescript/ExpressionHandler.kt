@@ -76,8 +76,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             NodeBuilder.newKeyValueExpression(
                 key,
                 value,
-                lang.language,
-                this.lang.getCodeFromRawNode(node)
+                frontend.language,
+                this.frontend.getCodeFromRawNode(node)
             )
 
         return keyValue
@@ -85,10 +85,11 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleJsxClosingElement(node: TypeScriptNode): Expression {
         // this basically represents an HTML tag with attributes
-        val tag = NodeBuilder.newExpressionList(lang.language, this.lang.getCodeFromRawNode(node))
+        val tag =
+            NodeBuilder.newExpressionList(frontend.language, this.frontend.getCodeFromRawNode(node))
 
         // it contains an Identifier node, we map this into the name
-        this.lang.getIdentifierName(node).let { tag.name = "</$it>" }
+        this.frontend.getIdentifierName(node).let { tag.name = "</$it>" }
 
         return tag
     }
@@ -100,10 +101,11 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleJsxOpeningElement(node: TypeScriptNode): ExpressionList {
         // this basically represents an HTML tag with attributes
-        val tag = NodeBuilder.newExpressionList(lang.language, this.lang.getCodeFromRawNode(node))
+        val tag =
+            NodeBuilder.newExpressionList(frontend.language, this.frontend.getCodeFromRawNode(node))
 
         // it contains an Identifier node, we map this into the name
-        this.lang.getIdentifierName(node).let { tag.name = "<$it>" }
+        this.frontend.getIdentifierName(node).let { tag.name = "<$it>" }
 
         // and a container named JsxAttributes, with JsxAttribute nodes
         tag.expressions =
@@ -113,7 +115,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handeJsxElement(node: TypeScriptNode): ExpressionList {
-        val jsx = NodeBuilder.newExpressionList(lang.language, this.lang.getCodeFromRawNode(node))
+        val jsx =
+            NodeBuilder.newExpressionList(frontend.language, this.frontend.getCodeFromRawNode(node))
 
         jsx.expressions = node.children?.map { this.handle(it) }
 
@@ -122,7 +125,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleArrowFunction(node: TypeScriptNode): Expression {
         // parse as a function
-        val func = lang.declarationHandler.handle(node) as? FunctionDeclaration
+        val func = frontend.declarationHandler.handle(node) as? FunctionDeclaration
 
         // the function will (probably) not have a defined return type, so we try to deduce this
         // from a return statement
@@ -142,7 +145,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // we cannot directly return a function declaration as an expression, so we
         // wrap it into a lambda expression
-        val lambda = newLambdaExpression(lang.language, lang.getCodeFromRawNode(node))
+        val lambda = newLambdaExpression(frontend.language, frontend.getCodeFromRawNode(node))
         lambda.function = func
 
         return lambda
@@ -156,8 +159,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             NodeBuilder.newKeyValueExpression(
                 key,
                 value,
-                lang.language,
-                this.lang.getCodeFromRawNode(node)
+                frontend.language,
+                this.frontend.getCodeFromRawNode(node)
             )
 
         return keyValue
@@ -166,8 +169,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
         val ile =
             NodeBuilder.newInitializerListExpression(
-                lang.language,
-                this.lang.getCodeFromRawNode(node)
+                frontend.language,
+                this.frontend.getCodeFromRawNode(node)
             )
 
         ile.initializers = node.children?.map { this.handle(it) } ?: emptyList()
@@ -180,7 +183,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         // might need a special literal type for that in the future. See
         // https://github.com/Fraunhofer-AISEC/cpg/issues/463
         val value =
-            this.lang
+            this.frontend
                 .getCodeFromRawNode(node)
                 ?.trim()
                 ?.replace("\"", "")
@@ -191,20 +194,20 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         return newLiteral(
             value,
             TypeParser.createFrom("String", false),
-            lang.language,
-            lang.getCodeFromRawNode(node)
+            frontend.language,
+            frontend.getCodeFromRawNode(node)
         )
     }
 
     private fun handleIdentifier(node: TypeScriptNode): Expression {
-        val name = this.lang.getCodeFromRawNode(node)?.trim()
+        val name = this.frontend.getCodeFromRawNode(node)?.trim()
 
         val ref =
             NodeBuilder.newDeclaredReferenceExpression(
                 name,
-                lang.language,
+                frontend.language,
                 UnknownType.getUnknownType(),
-                this.lang.getCodeFromRawNode(node)
+                this.frontend.getCodeFromRawNode(node)
             )
 
         return ref
@@ -213,16 +216,16 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handlePropertyAccessExpression(node: TypeScriptNode): Expression {
         val base = this.handle(node.children?.first())
 
-        val name = this.lang.getCodeFromRawNode(node.children?.last())
+        val name = this.frontend.getCodeFromRawNode(node.children?.last())
 
         val memberExpression =
             NodeBuilder.newMemberExpression(
                 base,
                 UnknownType.getUnknownType(),
                 name,
-                lang.language,
+                frontend.language,
                 ".",
-                this.lang.getCodeFromRawNode(node)
+                this.frontend.getCodeFromRawNode(node)
             )
 
         return memberExpression
@@ -243,7 +246,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             val member =
                 NodeBuilder.newDeclaredReferenceExpression(
                     memberExpression.name,
-                    lang.language,
+                    frontend.language,
                     memberExpression.type,
                     memberExpression.name
                 )
@@ -257,24 +260,24 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                     memberExpression.base,
                     member,
                     ".",
-                    lang.language,
-                    this.lang.getCodeFromRawNode(node)
+                    frontend.language,
+                    this.frontend.getCodeFromRawNode(node)
                 )
         } else {
-            val name = this.lang.getIdentifierName(node)
+            val name = this.frontend.getIdentifierName(node)
 
             // TODO: fqn - how?
             val fqn = name
             // regular function call
 
-            val ref = NodeBuilder.newDeclaredReferenceExpression(name, lang.language)
+            val ref = NodeBuilder.newDeclaredReferenceExpression(name, frontend.language)
 
             call =
                 NodeBuilder.newCallExpression(
                     ref,
                     fqn,
-                    lang.language,
-                    this.lang.getCodeFromRawNode(node),
+                    frontend.language,
+                    this.frontend.getCodeFromRawNode(node),
                     false
                 )
         }

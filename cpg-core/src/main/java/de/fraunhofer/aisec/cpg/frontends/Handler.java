@@ -53,12 +53,12 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
 
   protected final HashMap<Class<? extends T>, HandlerInterface<S, T>> map = new HashMap<>();
   protected final Supplier<S> configConstructor;
-  protected @NotNull L lang;
+  protected @NotNull L frontend;
   @Nullable private final Class<?> typeOfT;
 
-  public Handler(Supplier<S> configConstructor, @NotNull L lang) {
+  public Handler(Supplier<S> configConstructor, @NotNull L frontend) {
     this.configConstructor = configConstructor;
-    this.lang = lang;
+    this.frontend = frontend;
     this.typeOfT = retrieveTypeParameter();
   }
 
@@ -81,7 +81,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
     }
 
     // If we do not want to load includes into the CPG and the current fileLocation was included
-    if (!this.lang.config.getLoadIncludes() && ctx instanceof ASTNode) {
+    if (!this.frontend.config.getLoadIncludes() && ctx instanceof ASTNode) {
       ASTNode astNode = (ASTNode) ctx;
 
       if (astNode.getFileLocation() != null
@@ -101,7 +101,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
           // always ok to handle as generic literal expr
           !ctx.getClass().getSimpleName().contains("LiteralExpr")) {
         errorWithFileLocation(
-            lang,
+            frontend,
             ctx,
             log,
             "No handler for type {}, resolving for its superclass {}.",
@@ -119,16 +119,16 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
         // The language frontend might set a location, which we should respect. Otherwise, we will
         // set the location here.
         if (((Node) s).getLocation() == null) {
-          lang.setCodeAndRegion(s, ctx);
+          frontend.setCodeAndRegion(s, ctx);
         }
 
-        lang.setComment(s, ctx);
+        frontend.setComment(s, ctx);
       }
 
       ret = s;
     } else {
       errorWithFileLocation(
-          lang, ctx, log, "Parsing of type {} is not supported (yet)", ctx.getClass());
+          frontend, ctx, log, "Parsing of type {} is not supported (yet)", ctx.getClass());
       ret = this.configConstructor.get();
       if (ret instanceof ProblemNode) {
         ProblemNode problem = (ProblemNode) ret;
@@ -137,7 +137,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       }
     }
 
-    lang.process(ctx, ret);
+    frontend.process(ctx, ret);
     return ret;
   }
 

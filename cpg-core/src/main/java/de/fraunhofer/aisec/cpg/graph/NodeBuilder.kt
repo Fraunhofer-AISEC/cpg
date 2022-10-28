@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.setCodeAndRegion
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -272,22 +273,6 @@ object NodeBuilder {
 
     fun log(node: Node?) {
         LOGGER.trace("Creating {}", node)
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newReturnStatement(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        lang: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): ReturnStatement {
-        val node = ReturnStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
-        node.language = language
-
-        log(node)
-        return node
     }
 
     @JvmStatic
@@ -558,7 +543,7 @@ object NodeBuilder {
      * [LanguageFrontend.setCodeAndRegion]. Additionally, if [code] is specified, the supplied code
      * is used to override it.
      */
-    private fun Node.setCodeAndRegion(lang: LanguageFrontend?, rawNode: Any?, code: String?) {
+    fun Node.setCodeAndRegion(lang: LanguageFrontend?, rawNode: Any?, code: String?) {
         lang?.setCodeAndRegion(this, rawNode)
         if (code != null) {
             this.code = code
@@ -1317,4 +1302,17 @@ object NodeBuilder {
         node.language = language
         return node
     }
+}
+
+@JvmOverloads
+fun LanguageFrontend.newReturnStatement(
+    code: String? = null,
+    rawNode: Any? = null
+): ReturnStatement {
+    val node = ReturnStatement()
+    node.language = this.language
+    node.setCodeAndRegion(this, rawNode, code)
+
+    NodeBuilder.log(node)
+    return node
 }

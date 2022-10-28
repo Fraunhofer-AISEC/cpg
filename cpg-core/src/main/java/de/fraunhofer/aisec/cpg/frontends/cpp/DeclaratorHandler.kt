@@ -96,8 +96,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // Check, if the name is qualified or if we are within a record scope
         return if (
-            (lang.scopeManager.currentScope is RecordScope ||
-                name.contains(lang.namespaceDelimiter))
+            (frontend.scopeManager.currentScope is RecordScope ||
+                name.contains(frontend.namespaceDelimiter))
         ) {
             // If yes, treat this like a field declaration
             this.handleFieldDeclarator(ctx)
@@ -105,7 +105,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // If not, this is a normal variable declaration. First, we need to check if this
             // declaration allows to have an implicit constructor initializer. Only C++ has
             // constructors and thus implicit (constructor) initialization calls
-            val implicitInitializerAllowed = lang.dialect is GPPLanguage
+            val implicitInitializerAllowed = frontend.dialect is GPPLanguage
 
             val declaration =
                 newVariableDeclaration(
@@ -114,17 +114,17 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     // handleSimpleDeclaration
                     ctx.rawSignature,
                     implicitInitializerAllowed,
-                    lang.language
+                    frontend.language
                 )
 
             // Parse the initializer, if we have one
             val init = ctx.initializer
             if (init != null) {
-                declaration.initializer = lang.initializerHandler.handle(init)
+                declaration.initializer = frontend.initializerHandler.handle(init)
             }
 
             // Add this declaration to the current scope
-            lang.scopeManager.addDeclaration(declaration)
+            frontend.scopeManager.addDeclaration(declaration)
 
             declaration
         }
@@ -135,23 +135,23 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
      * class or C/C++ struct into a [FieldDeclaration].
      */
     private fun handleFieldDeclarator(ctx: IASTDeclarator): FieldDeclaration {
-        val initializer = ctx.initializer?.let { lang.initializerHandler.handle(it) }
+        val initializer = ctx.initializer?.let { frontend.initializerHandler.handle(it) }
 
         val name = ctx.name.toString()
 
         val declaration =
-            if (name.contains(lang.namespaceDelimiter)) {
-                val rr = name.split(lang.namespaceDelimiter).toTypedArray()
+            if (name.contains(frontend.namespaceDelimiter)) {
+                val rr = name.split(frontend.namespaceDelimiter).toTypedArray()
                 val fieldName = rr[rr.size - 1]
                 newFieldDeclaration(
                     fieldName,
                     UnknownType.getUnknownType(),
                     emptyList(),
                     ctx.rawSignature,
-                    lang.getLocationFromRawNode(ctx),
+                    frontend.getLocationFromRawNode(ctx),
                     initializer,
                     true,
-                    lang.language
+                    frontend.language
                 )
             } else {
                 newFieldDeclaration(
@@ -159,14 +159,14 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     UnknownType.getUnknownType(),
                     emptyList(),
                     ctx.rawSignature,
-                    lang.getLocationFromRawNode(ctx),
+                    frontend.getLocationFromRawNode(ctx),
                     initializer,
                     true,
-                    lang.language
+                    frontend.language
                 )
             }
 
-        lang.scopeManager.addDeclaration(declaration)
+        frontend.scopeManager.addDeclaration(declaration)
 
         return declaration
     }
@@ -214,27 +214,40 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // remember, if this is a method declaration outside the record
         val outsideOfRecord =
-            !(lang.scopeManager.currentRecord != null ||
-                lang.scopeManager.currentScope is TemplateScope)
+            !(frontend.scopeManager.currentRecord != null ||
+                frontend.scopeManager.currentScope is TemplateScope)
 
         // check for function definitions that are really methods and constructors, i.e. if they
         // contain a scope operator
-        if (name.contains(lang.namespaceDelimiter)) {
-            val rr = name.split(lang.namespaceDelimiter).toTypedArray()
+        if (name.contains(frontend.namespaceDelimiter)) {
+            val rr = name.split(frontend.namespaceDelimiter).toTypedArray()
             val recordName =
-                java.lang.String.join(lang.namespaceDelimiter, listOf(*rr).subList(0, rr.size - 1))
+                java.lang.String.join(
+                    frontend.namespaceDelimiter,
+                    listOf(*rr).subList(0, rr.size - 1)
+                )
             val methodName = rr[rr.size - 1]
             recordDeclaration =
-                lang.scopeManager.getRecordForName(lang.scopeManager.currentScope!!, recordName)
-            declaration = createMethodOrConstructor(methodName, recordDeclaration, lang, ctx.parent)
-        } else if (lang.scopeManager.isInRecord) {
+                frontend.scopeManager.getRecordForName(
+                    frontend.scopeManager.currentScope!!,
+                    recordName
+                )
+            declaration =
+                createMethodOrConstructor(methodName, recordDeclaration, frontend, ctx.parent)
+        } else if (frontend.scopeManager.isInRecord) {
             // if it is inside a record scope, it is a method
-            recordDeclaration = lang.scopeManager.currentRecord
-            declaration = createMethodOrConstructor(name, recordDeclaration, lang, ctx.parent)
+            recordDeclaration = frontend.scopeManager.currentRecord
+            declaration = createMethodOrConstructor(name, recordDeclaration, frontend, ctx.parent)
         } else {
             // a plain old function, outside any record scope
             declaration =
-                newFunctionDeclaration(name, lang.language, ctx.rawSignature, lang, ctx.parent)
+                newFunctionDeclaration(
+                    name,
+                    frontend.language,
+                    ctx.rawSignature,
+                    frontend,
+                    ctx.parent
+                )
         }
 
         // If we know our record declaration, but are outside the actual record, we
@@ -246,13 +259,13 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // system.
         if (recordDeclaration != null && outsideOfRecord) {
             // Bypass the scope manager and manually add it to the AST parent
-            val parent = lang.scopeManager.currentScope?.astNode
+            val parent = frontend.scopeManager.currentScope?.astNode
             if (parent != null && parent is DeclarationHolder) {
                 parent.addDeclaration(declaration)
             }
 
             // Enter the record scope
-            lang.scopeManager.enterScope(recordDeclaration)
+            frontend.scopeManager.enterScope(recordDeclaration)
 
             // We also need to by-pass the scope manager for this, because it will
             // otherwise add the declaration to the AST element of the record scope (the record
@@ -260,14 +273,16 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // AST field, (for now) we only want those methods in  there, that were actual AST
             // parents. This is also something that we need to figure out how we want to handle
             // this.
-            (lang.scopeManager.currentScope as? RecordScope)?.valueDeclarations?.add(declaration)
+            (frontend.scopeManager.currentScope as? RecordScope)
+                ?.valueDeclarations
+                ?.add(declaration)
         } else {
             // Add the declaration via the scope manager
-            lang.scopeManager.addDeclaration(declaration)
+            frontend.scopeManager.addDeclaration(declaration)
         }
 
         // Enter the scope of the function itself
-        lang.scopeManager.enterScope(declaration)
+        frontend.scopeManager.enterScope(declaration)
 
         // Create the method receiver (if this is a method)
         if (declaration is MethodDeclaration) {
@@ -276,7 +291,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         var i = 0
         for (param in ctx.parameters) {
-            val arg = lang.parameterDeclarationHandler.handle(param)
+            val arg = frontend.parameterDeclarationHandler.handle(param)
 
             if (arg is ParamVariableDeclaration) {
                 // check for void type parameters
@@ -308,7 +323,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // Note that this .addValueDeclaration call already adds arg to the function's
             // parameters.
             // This is why the following line has been commented out by @KW
-            lang.scopeManager.addDeclaration(arg)
+            frontend.scopeManager.addDeclaration(arg)
             // declaration.getParameters().add(arg);
             i++
         }
@@ -323,19 +338,19 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     "va_args",
                     UnknownType.getUnknownType(),
                     true,
-                    lang.language,
+                    frontend.language,
                     ""
                 )
             varargs.isImplicit = true
             varargs.argumentIndex = i
-            lang.scopeManager.addDeclaration(varargs)
+            frontend.scopeManager.addDeclaration(varargs)
         }
-        lang.scopeManager.leaveScope(declaration)
+        frontend.scopeManager.leaveScope(declaration)
 
         // if we know our record declaration, but are outside the actual record, we
         // need to leave the record scope again afterwards
         if (recordDeclaration != null && outsideOfRecord) {
-            lang.scopeManager.leaveScope(recordDeclaration)
+            frontend.scopeManager.leaveScope(recordDeclaration)
         }
 
         // We recognize an ambiguity here, but cannot solve it at the moment
@@ -343,15 +358,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             name != "" &&
                 ctx.parent is CPPASTDeclarator &&
                 declaration.body == null &&
-                lang.scopeManager.currentFunction != null
+                frontend.scopeManager.currentFunction != null
         ) {
             val problem =
                 newProblemDeclaration(
-                    lang.language,
+                    frontend.language,
                     "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently."
                 )
 
-            Util.warnWithFileLocation(lang, ctx, log, problem.problem)
+            Util.warnWithFileLocation(frontend, ctx, log, problem.problem)
 
             return problem
         }
@@ -381,15 +396,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             newVariableDeclaration(
                 "this",
                 type = type,
-                language = lang.language,
-                lang = lang,
+                language = frontend.language,
+                lang = frontend,
                 implicitInitializerAllowed = false
             )
         // Yes, this is implicit
         thisDeclaration.isImplicit = true
 
         // Add it to the scope of the method
-        lang.scopeManager.addDeclaration(thisDeclaration)
+        frontend.scopeManager.addDeclaration(thisDeclaration)
 
         // We need to manually set the receiver, since the scope manager cannot figure this out
         declaration.receiver = thisDeclaration
@@ -397,11 +412,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     private fun handleFunctionPointer(ctx: IASTFunctionDeclarator, name: String): ValueDeclaration {
         val initializer =
-            if (ctx.initializer == null) null else lang.initializerHandler.handle(ctx.initializer)
+            if (ctx.initializer == null) null
+            else frontend.initializerHandler.handle(ctx.initializer)
         // unfortunately we are not told whether this is a field or not, so we have to find it out
         // ourselves
         val result: ValueDeclaration
-        val recordDeclaration = lang.scopeManager.currentRecord
+        val recordDeclaration = frontend.scopeManager.currentRecord
         if (recordDeclaration == null) {
             // variable
             result =
@@ -410,7 +426,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     UnknownType.getUnknownType(),
                     ctx.rawSignature,
                     true,
-                    lang.language
+                    frontend.language
                 )
             result.initializer = initializer
         } else {
@@ -428,15 +444,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     UnknownType.getUnknownType(),
                     emptyList(),
                     code,
-                    lang.getLocationFromRawNode(ctx),
+                    frontend.getLocationFromRawNode(ctx),
                     initializer,
                     true,
-                    lang.language
+                    frontend.language
                 )
         }
 
-        result.location = lang.getLocationFromRawNode(ctx)
-        lang.scopeManager.addDeclaration(result)
+        result.location = frontend.getLocationFromRawNode(ctx)
+        frontend.scopeManager.addDeclaration(result)
         return result
     }
 
@@ -451,11 +467,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         val recordDeclaration =
             newRecordDeclaration(
-                lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString(),
+                frontend.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString(),
                 kind,
-                lang.language,
+                frontend.language,
                 ctx.rawSignature,
-                lang
+                frontend
             )
 
         // Handle c++ classes
@@ -463,14 +479,14 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             recordDeclaration.superClasses =
                 Arrays.stream(ctx.baseSpecifiers)
                     .map { b: ICPPASTBaseSpecifier ->
-                        TypeParser.createFrom(b.nameSpecifier.toString(), true, lang)
+                        TypeParser.createFrom(b.nameSpecifier.toString(), true, frontend)
                     }
                     .collect(Collectors.toList())
         }
 
-        lang.scopeManager.addDeclaration(recordDeclaration)
+        frontend.scopeManager.addDeclaration(recordDeclaration)
 
-        lang.scopeManager.enterScope(recordDeclaration)
+        frontend.scopeManager.enterScope(recordDeclaration)
 
         processMembers(ctx)
 
@@ -480,7 +496,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     recordDeclaration.name,
                     recordDeclaration.name,
                     recordDeclaration,
-                    lang.language
+                    frontend.language
                 )
 
             createMethodReceiver(constructorDeclaration)
@@ -491,10 +507,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // and set the type, constructors always have implicitly the return type of their class
             constructorDeclaration.type = FunctionType.computeType(constructorDeclaration)
             recordDeclaration.addConstructor(constructorDeclaration)
-            lang.scopeManager.addDeclaration(constructorDeclaration)
+            frontend.scopeManager.addDeclaration(constructorDeclaration)
         }
 
-        lang.scopeManager.leaveScope(recordDeclaration)
+        frontend.scopeManager.leaveScope(recordDeclaration)
 
         return recordDeclaration
     }
@@ -508,7 +524,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun handleTemplateTypeParameter(
         ctx: CPPASTSimpleTypeTemplateParameter
     ): TypeParamDeclaration {
-        return newTypeParamDeclaration(ctx.rawSignature, lang.language, ctx.rawSignature)
+        return newTypeParamDeclaration(ctx.rawSignature, frontend.language, ctx.rawSignature)
     }
 
     private fun processMembers(ctx: IASTCompositeTypeSpecifier) {
@@ -518,7 +534,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 continue
             }
 
-            lang.declarationHandler.handle(member)
+            frontend.declarationHandler.handle(member)
         }
     }
 }
