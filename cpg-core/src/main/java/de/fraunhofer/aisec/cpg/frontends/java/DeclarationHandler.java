@@ -113,7 +113,7 @@ public class DeclarationHandler
             resolvedConstructor.getName(),
             constructorDecl.toString(),
             currentRecordDecl,
-            lang.language);
+            lang.getLanguage());
     lang.getScopeManager().addDeclaration(declaration);
 
     lang.getScopeManager().enterScope(declaration);
@@ -131,7 +131,7 @@ public class DeclarationHandler
               parameter.getNameAsString(),
               this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
               parameter.isVarArgs(),
-              lang.language,
+              lang.getLanguage(),
               parameter.toString());
 
       declaration.addParameter(param);
