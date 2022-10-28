@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.newTypedefDeclaration;
+
+import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.LanguageProvider;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
@@ -49,7 +51,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TypeManager {
+public class TypeManager implements LanguageProvider {
 
   private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
@@ -110,16 +112,6 @@ public class TypeManager {
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
   @NotNull private static TypeManager instance = new TypeManager();
   private static boolean typeSystemActive = true;
-
-  public enum Language {
-    JAVA,
-    CXX,
-    GO,
-    PYTHON,
-    TYPESCRIPT,
-    LLVM_IR,
-    UNKNOWN
-  }
 
   @NotNull
   private final Map<HasType, List<Type>> typeCache =
@@ -592,33 +584,8 @@ public class TypeManager {
   }
 
   @NotNull
-  public Language getLanguage() {
-    if (frontend instanceof JavaLanguageFrontend) {
-      return Language.JAVA;
-    } else if (frontend instanceof CXXLanguageFrontend) {
-      return Language.CXX;
-    } else if (frontend != null
-        && goClass != null
-        && goClass.isAssignableFrom(frontend.getClass())) {
-      return Language.GO;
-    } else if (frontend != null
-        && pythonClass != null
-        && pythonClass.isAssignableFrom(frontend.getClass())) {
-      return Language.PYTHON;
-    } else if (frontend != null
-        && typescriptClass != null
-        && typescriptClass.isAssignableFrom(frontend.getClass())) {
-      return Language.TYPESCRIPT;
-    } else if (frontend != null
-        && llvmClass != null
-        && llvmClass.isAssignableFrom(frontend.getClass())) {
-      return Language.LLVM_IR;
-    }
-
-    log.error(
-        "Unknown language (frontend: {})",
-        frontend != null ? frontend.getClass().getSimpleName() : null);
-    return Language.UNKNOWN;
+  public Language<? extends LanguageFrontend> getLanguage() {
+    return frontend.getLanguage();
   }
 
   @Nullable
@@ -734,8 +701,7 @@ public class TypeManager {
       alias = alias.getRoot();
     }
 
-    TypedefDeclaration typedef =
-        NodeBuilder.newTypedefDeclaration(currTarget, alias, frontend.getLanguage(), rawCode);
+    TypedefDeclaration typedef = newTypedefDeclaration(this, currTarget, alias, rawCode);
 
     if (frontend == null) {
       if (!noFrontendWarningIssued) {

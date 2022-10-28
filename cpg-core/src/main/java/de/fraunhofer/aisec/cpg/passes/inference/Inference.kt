@@ -202,7 +202,6 @@ interface IsInferredProvider : MetadataProvider {
     val isInferred: Boolean
 }
 
-
 /** Returns a new [Inference] object starting from this node. */
 fun Node.startInference() = Inference(this)
 

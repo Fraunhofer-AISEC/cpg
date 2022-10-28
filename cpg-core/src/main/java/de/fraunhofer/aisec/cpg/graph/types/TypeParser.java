@@ -25,9 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage;
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.TypeManager.Language;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -72,7 +75,7 @@ public class TypeParser {
       Pattern.compile(
           "(?:(?<functionptr>[\\h(]+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*[\\h)]+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
 
-  private static Supplier<TypeManager.Language> languageSupplier =
+  private static Supplier<Language<? extends LanguageFrontend>> languageSupplier =
       () -> TypeManager.getInstance().getLanguage();
   private static final String VOLATILE_QUALIFIER = "volatile";
   private static final String FINAL_QUALIFIER = "final";
@@ -106,11 +109,12 @@ public class TypeParser {
    *
    * @param languageSupplier frontend language Java or CPP
    */
-  public static void setLanguageSupplier(Supplier<TypeManager.Language> languageSupplier) {
+  public static void setLanguageSupplier(
+      Supplier<Language<? extends LanguageFrontend>> languageSupplier) {
     TypeParser.languageSupplier = languageSupplier;
   }
 
-  public static TypeManager.Language getLanguage() {
+  public static Language<? extends LanguageFrontend> getLanguage() {
     return TypeParser.languageSupplier.get();
   }
 
@@ -178,7 +182,8 @@ public class TypeParser {
   }
 
   public static boolean isStorageSpecifier(String specifier) {
-    if (getLanguage() == TypeManager.Language.CXX) {
+    // TODO: Convert to language trait
+    if (getLanguage() instanceof CLanguage || getLanguage() instanceof CPPLanguage) {
       return specifier.equalsIgnoreCase("STATIC");
     } else {
       try {
@@ -191,7 +196,8 @@ public class TypeParser {
   }
 
   protected static boolean isQualifierSpecifier(String qualifier) {
-    if (getLanguage() == TypeManager.Language.JAVA) {
+    // TODO: Convert to language trait
+    if (getLanguage() instanceof JavaLanguage) {
       return qualifier.equals(FINAL_QUALIFIER) || qualifier.equals(VOLATILE_QUALIFIER);
     } else {
       return qualifier.equals(CONST_QUALIFIER)
@@ -210,7 +216,7 @@ public class TypeParser {
    * @return true, if it is part of an elaborated type. false, otherwise
    */
   public static boolean isElaboratedTypeSpecifier(String specifier) {
-    if (getLanguage() == TypeManager.Language.CXX) {
+    if (getLanguage() instanceof CLanguage || getLanguage() instanceof CPPLanguage) {
       return specifier.equals(ELABORATED_TYPE_CLASS)
           || specifier.equals(ELABORATED_TYPE_STRUCT)
           || specifier.equals(ELABORATED_TYPE_UNION)
@@ -289,7 +295,7 @@ public class TypeParser {
 
   private static boolean isUnknownType(String typeName) {
     return typeName.equals(UNKNOWN_TYPE_STRING)
-        || (languageSupplier.get() == Language.JAVA && typeName.equals("var"));
+        || (languageSupplier.get() instanceof JavaLanguage && typeName.equals("var"));
   }
 
   /**
@@ -301,7 +307,7 @@ public class TypeParser {
    */
   @NotNull
   private static String fixGenerics(@NotNull String type) {
-    if (type.contains("<") && type.contains(">") && getLanguage() == TypeManager.Language.CXX) {
+    if (type.contains("<") && type.contains(">") && getLanguage() instanceof CPPLanguage) {
       String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
 
       /* Explanation from @vfsrfs:
@@ -555,9 +561,11 @@ public class TypeParser {
    *
    * @param type provided typeString
    * @return typeString which uses . instead of the substring :: if CPP is the current language
+   *     <p>TODO: Remove this function, this is not a good idea!
    */
+  @Deprecated
   private static String replaceScopeResolutionOperator(@NotNull String type) {
-    return (getLanguage() == TypeManager.Language.CXX) ? type.replace("::", ".").trim() : type;
+    return (getLanguage() instanceof CPPLanguage) ? type.replace("::", ".").trim() : type;
   }
 
   /**

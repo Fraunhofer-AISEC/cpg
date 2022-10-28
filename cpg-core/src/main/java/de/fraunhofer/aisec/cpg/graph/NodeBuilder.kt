@@ -139,26 +139,6 @@ object NodeBuilder {
 
     @JvmStatic
     @JvmOverloads
-    fun newTypedefDeclaration(
-        targetType: Type?,
-        alias: Type,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): TypedefDeclaration {
-        val node = TypedefDeclaration()
-        node.type = targetType
-        node.alias = alias
-        node.name = alias.typeName
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
     fun newArraySubscriptionExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
@@ -1128,7 +1108,7 @@ fun MetadataProvider.newBinaryOperator(
     node.name = operatorCode
     node.operatorCode = operatorCode
 
-    NodeBuilder.log(node)
+    log(node)
 
     return node
 }
@@ -1149,7 +1129,7 @@ fun MetadataProvider.newUnaryOperator(
     node.isPostfix = postfix
     node.isPrefix = prefix
 
-    NodeBuilder.log(node)
+    log(node)
 
     return node
 }
@@ -1163,7 +1143,7 @@ fun Handler<*, *, *>.newReturnStatement(
     node.language = this.frontend.language
     node.applyMetadata(this.frontend, rawNode, code)
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -1189,7 +1169,7 @@ fun <T> LanguageFrontend.newLiteral(
     node.applyMetadata(this, rawNode, code)
     node.language = this.language
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -1239,7 +1219,7 @@ fun MetadataProvider.newTranslationUnitDeclaration(
 
     node.name = name
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -1258,7 +1238,7 @@ fun MetadataProvider.newFunctionDeclaration(
 
     node.name = name
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -1281,7 +1261,7 @@ fun MetadataProvider.newMethodDeclaration(
     node.isStatic = isStatic
     node.recordDeclaration = recordDeclaration
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -1325,6 +1305,24 @@ fun MetadataProvider.newConstructorDeclaration(
 
     node.name = name
     node.recordDeclaration = recordDeclaration
+
+    log(node)
+    return node
+}
+
+@JvmOverloads
+fun MetadataProvider.newTypedefDeclaration(
+    targetType: Type?,
+    alias: Type,
+    code: String? = null,
+    rawNode: Any? = null
+): TypedefDeclaration {
+    val node = TypedefDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = alias.typeName
+    node.type = targetType
+    node.alias = alias
 
     log(node)
     return node

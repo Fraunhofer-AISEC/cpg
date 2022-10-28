@@ -31,6 +31,8 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.disableTypeManagerCleanup
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
+import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import java.nio.file.Path
 import java.util.*
@@ -39,7 +41,7 @@ import kotlin.test.*
 internal class TypeTests : BaseTest() {
     @Test
     fun reference() {
-        TypeParser.setLanguageSupplier { TypeManager.Language.CXX }
+        TypeParser.setLanguageSupplier { CPPLanguage() }
         val objectType: Type =
             ObjectType(
                 "int",
@@ -101,7 +103,7 @@ internal class TypeTests : BaseTest() {
 
     @Test
     fun dereference() {
-        TypeParser.setLanguageSupplier { TypeManager.Language.CXX }
+        TypeParser.setLanguageSupplier { CPPLanguage() }
         val objectType: Type =
             ObjectType(
                 "int",
@@ -155,7 +157,7 @@ internal class TypeTests : BaseTest() {
     fun createFromJava() {
         var result: Type
         var expected: Type
-        TypeParser.setLanguageSupplier { TypeManager.Language.JAVA }
+        TypeParser.setLanguageSupplier { JavaLanguage() }
 
         // Test 1: Ignore Access Modifier Keyword (public, private, protected)
         var typeString = "private int a"
@@ -346,7 +348,7 @@ internal class TypeTests : BaseTest() {
     @Test
     fun createFromC() {
         var result: Type
-        TypeParser.setLanguageSupplier { TypeManager.Language.CXX }
+        TypeParser.setLanguageSupplier { CPPLanguage() }
 
         // Test 1: Function pointer
         var typeString = "void (*single_param)(int)"
