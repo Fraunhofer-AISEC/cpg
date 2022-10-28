@@ -30,7 +30,7 @@ import ast
 class PythonASTToCPG(ast.NodeVisitor):
     def __init__(self, fname, frontend, code):
         self.sourcecode = CodeExtractor(fname)
-        self.tud = NodeBuilder.newTranslationUnitDeclaration(fname, code)
+        self.tud = NodeBuilder.newTranslationUnitDeclaration(fname, self.frontend.language, code)
         self.tud.setName(fname)
         self.fname = fname
         self.frontend = frontend
@@ -71,7 +71,7 @@ class PythonASTToCPG(ast.NodeVisitor):
             # TODO how to name the namespace?
             # TODO improve readability
             nsd_name = ".".join(self.fname.split("/")[-1].split(".")[:-1])
-            nsd = NodeBuilder.newNamespaceDeclaration(nsd_name, "")
+            nsd = NodeBuilder.newNamespaceDeclaration(nsd_name, self.frontend.language, "")
             self.tud.addDeclaration(nsd)
             self.scopemanager.enterScope(nsd)
 

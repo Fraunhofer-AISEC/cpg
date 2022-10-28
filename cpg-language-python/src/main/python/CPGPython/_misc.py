@@ -150,9 +150,9 @@ def wrap_declaration_to_stmt(self, stmt):
         self.log_with_loc(
             "Expected a declaration but got \"%s\". Using a dummy." %
             (stmt.java_name), loglevel="ERROR")
-        return NodeBuilder.newDeclarationStatement("DUMMY")
+        return NodeBuilder.newDeclarationStatement(self.frontend.language, "DUMMY")
     decl_stmt = NodeBuilder.newDeclarationStatement(
-        stmt.getCode())
+        self.frontend.language, stmt.getCode())
     decl_stmt.setLocation(stmt.getLocation())
     decl_stmt.setSingleDeclaration(stmt)
     return decl_stmt
