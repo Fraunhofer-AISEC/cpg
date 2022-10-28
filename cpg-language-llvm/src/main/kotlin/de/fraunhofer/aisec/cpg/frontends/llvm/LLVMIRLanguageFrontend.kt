@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.TypeManager
@@ -49,8 +50,11 @@ import org.bytedeco.llvm.LLVM.*
 import org.bytedeco.llvm.global.LLVM.*
 
 @RegisterExtraPass(CompressLLVMPass::class)
-class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, "::") {
+class LLVMIRLanguageFrontend(
+    language: Language<LLVMIRLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager?
+) : LanguageFrontend(language, config, scopeManager, "::") {
 
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
@@ -116,6 +120,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
         val tu = TranslationUnitDeclaration()
+        tu.language = language
 
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)

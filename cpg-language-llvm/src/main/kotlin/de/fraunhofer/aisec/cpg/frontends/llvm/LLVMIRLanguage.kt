@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
 /** The LLVM IR language. */
-class LLVMIRLanguage : Language<LLVMIRLanguageFrontend> {
+class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val fileExtensions = listOf("ll")
     override val namespaceDelimiter = "."
     override val frontend = LLVMIRLanguageFrontend::class.java
@@ -39,6 +39,6 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend> {
         config: TranslationConfiguration,
         scopeManager: ScopeManager
     ): LLVMIRLanguageFrontend {
-        return LLVMIRLanguageFrontend(config, scopeManager)
+        return LLVMIRLanguageFrontend(this, config, scopeManager)
     }
 }

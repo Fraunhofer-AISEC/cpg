@@ -63,6 +63,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             else -> {
                 log.error("Not handling declaration kind {} yet", kind)
                 NodeBuilder.newProblemDeclaration(
+                    lang.language,
                     "Not handling declaration kind ${kind} yet.",
                     ProblemNode.ProblemType.TRANSLATION,
                     lang.getCodeFromRawNode(value)
@@ -82,7 +83,13 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         val type = lang.typeOf(valueRef)
 
         val variableDeclaration =
-            newVariableDeclaration(name, type, lang.getCodeFromRawNode(valueRef), false)
+            newVariableDeclaration(
+                name,
+                type,
+                lang.getCodeFromRawNode(valueRef),
+                false,
+                lang.language
+            )
 
         // cache binding
         lang.bindingsCache[valueRef.symbolName] = variableDeclaration
@@ -105,7 +112,8 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
-        val functionDeclaration = newFunctionDeclaration(name.string, lang.getCodeFromRawNode(func))
+        val functionDeclaration =
+            newFunctionDeclaration(name.string, lang.language, lang.getCodeFromRawNode(func))
 
         // return types are a bit tricky, because the type of the function is a pointer to the
         // function type, which then has the return type in it
@@ -126,7 +134,14 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val type = lang.typeOf(param)
 
             // TODO: support variardic
-            val decl = newMethodParameterIn(paramName, type, false, lang.getCodeFromRawNode(param))
+            val decl =
+                newMethodParameterIn(
+                    paramName,
+                    type,
+                    false,
+                    lang.language,
+                    lang.getCodeFromRawNode(param)
+                )
 
             lang.scopeManager.addDeclaration(decl)
             lang.bindingsCache[paramSymbolName] = decl
@@ -158,7 +173,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             if (LLVMGetEntryBasicBlock(func) == bb && stmt is CompoundStatement) {
                 functionDeclaration.body = stmt
             } else if (LLVMGetEntryBasicBlock(func) == bb) {
-                functionDeclaration.body = newCompoundStatement()
+                functionDeclaration.body = newCompoundStatement(lang.language)
                 (functionDeclaration.body as CompoundStatement).addStatement(stmt)
             } else {
                 // add the label statement, containing this basic block as a compound statement to
@@ -208,7 +223,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             return record
         }
 
-        record = newRecordDeclaration(name, "struct", "")
+        record = newRecordDeclaration(name, "struct", lang.language, "")
 
         lang.scopeManager.enterScope(record)
 
@@ -221,7 +236,17 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // there are no names, so we need to invent some dummy ones for easier reading
             val fieldName = "field_$i"
 
-            val field = newFieldDeclaration(fieldName, fieldType, listOf(), "", null, null, false)
+            val field =
+                newFieldDeclaration(
+                    fieldName,
+                    fieldType,
+                    listOf(),
+                    "",
+                    null,
+                    null,
+                    false,
+                    lang.language
+                )
 
             lang.scopeManager.addDeclaration(field)
         }

@@ -47,7 +47,11 @@ class LLVMIRLanguageFrontendTest {
         val topLevel = Path.of("src", "test", "resources", "llvm")
 
         val frontend =
-            LLVMIRLanguageFrontend(TranslationConfiguration.builder().build(), ScopeManager())
+            LLVMIRLanguageFrontend(
+                LLVMIRLanguage(),
+                TranslationConfiguration.builder().build(),
+                ScopeManager()
+            )
         frontend.parse(topLevel.resolve("main.ll").toFile())
     }
 

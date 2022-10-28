@@ -187,13 +187,15 @@ class CompressLLVMPass : Pass() {
                         "e_${catch.name}",
                         UnknownType.getUnknownType(),
                         "",
-                        true
+                        true,
+                        catch.language
                     )
                 catch.setParameter(error)
             }
             val exceptionReference =
                 NodeBuilder.newDeclaredReferenceExpression(
                     catch.parameter!!.name,
+                    catch.language,
                     catch.parameter!!.type,
                     ""
                 )
