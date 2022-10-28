@@ -25,9 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -427,11 +425,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
         }
         val unaryOperator =
-            NodeBuilder.newUnaryOperator(
+            newUnaryOperator(
                 operatorCode,
                 ctx.isPostfixOperator,
                 !ctx.isPostfixOperator,
-                frontend.language,
                 ctx.rawSignature
             )
         if (input != null) {
@@ -658,8 +655,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             else ->
                 Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
         }
-        val binaryOperator =
-            NodeBuilder.newBinaryOperator(operatorCode, frontend.language, ctx.rawSignature)
+        val binaryOperator = newBinaryOperator(operatorCode, ctx.rawSignature)
         val lhs = handle(ctx.operand1)
         val rhs =
             if (ctx.operand2 != null) {
@@ -702,57 +698,22 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             value.numberValue() == null // e.g. for 0x1p-52
             && value !is CStringValue
         ) {
-            return NodeBuilder.newLiteral(
-                value.toString(),
-                generatedType,
-                frontend.language,
-                ctx.rawSignature
-            )
+            return newLiteral(value.toString(), generatedType, ctx.rawSignature)
         }
         if (type is IBasicType && type.kind == IBasicType.Kind.eInt) {
             return handleIntegerLiteral(ctx)
         } else if (type.isSameType(CPPBasicType.BOOLEAN)) {
-            return NodeBuilder.newLiteral(
-                value.numberValue().toInt() == 1,
-                generatedType,
-                frontend.language,
-                ctx.rawSignature
-            )
+            return newLiteral(value.numberValue().toInt() == 1, generatedType, ctx.rawSignature)
         } else if (value is CStringValue) {
-            return NodeBuilder.newLiteral(
-                value.cStringValue(),
-                generatedType,
-                frontend.language,
-                ctx.rawSignature
-            )
+            return newLiteral(value.cStringValue(), generatedType, ctx.rawSignature)
         } else if (type is CPPBasicType && type.kind == IBasicType.Kind.eFloat) {
-            return NodeBuilder.newLiteral(
-                value.numberValue().toFloat(),
-                generatedType,
-                frontend.language,
-                ctx.rawSignature
-            )
+            return newLiteral(value.numberValue().toFloat(), generatedType, ctx.rawSignature)
         } else if (type is CPPBasicType && type.kind == IBasicType.Kind.eDouble) {
-            return NodeBuilder.newLiteral(
-                value.numberValue().toDouble(),
-                generatedType,
-                frontend.language,
-                ctx.rawSignature
-            )
+            return newLiteral(value.numberValue().toDouble(), generatedType, ctx.rawSignature)
         } else if (type is CPPBasicType && type.kind == IBasicType.Kind.eChar) {
-            return NodeBuilder.newLiteral(
-                value.numberValue().toInt().toChar(),
-                generatedType,
-                frontend.language,
-                ctx.rawSignature
-            )
+            return newLiteral(value.numberValue().toInt().toChar(), generatedType, ctx.rawSignature)
         }
-        return NodeBuilder.newLiteral(
-            value.toString(),
-            generatedType,
-            frontend.language,
-            ctx.rawSignature
-        )
+        return newLiteral(value.toString(), generatedType, ctx.rawSignature)
     }
 
     private fun handleInitializerList(ctx: IASTInitializerList): InitializerListExpression {
@@ -969,7 +930,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 TypeParser.createFrom("int", true)
             }
 
-        return NodeBuilder.newLiteral(numberValue, type, frontend.language, ctx.rawSignature)
+        return newLiteral(numberValue, type, ctx.rawSignature)
     }
 
     private val String.suffix: String

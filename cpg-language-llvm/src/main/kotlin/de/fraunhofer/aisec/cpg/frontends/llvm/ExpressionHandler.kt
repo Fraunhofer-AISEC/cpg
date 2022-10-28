@@ -26,20 +26,16 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCastExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newInitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberExpression
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newUnaryOperator
-import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -81,12 +77,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 )
             }
             LLVMConstantTokenNoneValueKind ->
-                newLiteral(
-                    null,
-                    UnknownType.getUnknownType(),
-                    frontend.language,
-                    frontend.getCodeFromRawNode(value)
-                )
+                newLiteral(null, UnknownType.getUnknownType(), frontend.getCodeFromRawNode(value))
             LLVMUndefValueValueKind ->
                 initializeAsUndef(frontend.typeOf(value), frontend.getCodeFromRawNode(value)!!)
             LLVMConstantAggregateZeroValueKind ->
@@ -139,7 +130,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                             // representation
                             LLVMPrintValueToString(value).string
                         }
-                    return newLiteral(operandName, cpgType, frontend.language, operandName)
+                    return newLiteral(operandName, cpgType, operandName)
                 } else if (LLVMIsUndef(value) == 1) {
                     return newDeclaredReferenceExpression(
                         "undef",
@@ -225,7 +216,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 LLVMConstIntGetSExtValue(valueRef)
             }
 
-        val literal = newLiteral(value, type, frontend.language, value.toString())
+        val literal = newLiteral(value, type, value.toString())
         literal.name = value.toString()
         return literal
     }
@@ -239,8 +230,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val losesInfo = IntArray(1)
         val value = LLVMConstRealGetDouble(valueRef, losesInfo)
 
-        val literal =
-            newLiteral(value, frontend.typeOf(valueRef), frontend.language, value.toString())
+        val literal = newLiteral(value, frontend.typeOf(valueRef), value.toString())
         literal.name = value.toString()
         return literal
     }
@@ -358,7 +348,6 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             return newLiteral(
                 string,
                 frontend.typeOf(valueRef),
-                frontend.language,
                 frontend.getCodeFromRawNode(valueRef)
             )
         }
@@ -401,7 +390,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun initializeAsUndef(type: Type, code: String): Expression {
         if (!frontend.isKnownStructTypeName(type.name) && !type.name.contains("{")) {
-            return newLiteral(null, type, frontend.language, code)
+            return newLiteral(null, type, code)
         } else {
             val expr: ConstructExpression = newConstructExpression(frontend.language, code)
             // map the construct expression to the record declaration of the type
@@ -426,7 +415,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun initializeAsZero(type: Type, code: String): Expression {
         if (!frontend.isKnownStructTypeName(type.name) && !type.name.contains("{")) {
-            return newLiteral(0, type, frontend.language, code)
+            return newLiteral(0, type, code)
         } else {
             val expr: ConstructExpression = newConstructExpression(frontend.language, code)
             // map the construct expression to the record declaration of the type
@@ -447,7 +436,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     /** Returns a literal with the type of [value] and value `null`. */
     private fun handleNullPointer(value: LLVMValueRef): Expression {
         val type = frontend.typeOf(value)
-        return newLiteral(null, type, frontend.language, frontend.getCodeFromRawNode(value))
+        return newLiteral(null, type, frontend.getCodeFromRawNode(value))
     }
 
     /**
@@ -586,7 +575,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // since getelementpr returns the *address*, whereas extractvalue returns a *value*, we need
         // to do a final unary & operation
         if (isGetElementPtr) {
-            val ref = newUnaryOperator("&", false, true, frontend.language, "")
+            val ref = newUnaryOperator("&", postfix = false, prefix = true, code = "")
             ref.input = expr
             expr = ref
         }

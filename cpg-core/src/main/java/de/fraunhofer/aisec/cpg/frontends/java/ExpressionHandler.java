@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.*;
+
 import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.ArrayCreationLevel;
 import com.github.javaparser.ast.NodeList;
@@ -215,8 +217,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             handle(assignExpr.getValue());
 
     BinaryOperator binaryOperator =
-        NodeBuilder.newBinaryOperator(
-            assignExpr.getOperator().asString(), frontend.getLanguage(), assignExpr.toString());
+        newBinaryOperator(this, assignExpr.getOperator().asString(), assignExpr.toString());
 
     binaryOperator.setLhs(lhs);
     binaryOperator.setRhs(rhs);
@@ -270,7 +271,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             new UninitializedValue();
         declaration.setInitializer(uninitialzedInitializer);
       }
-      frontend.setCodeAndRegion(declaration, variable);
+      frontend.setCodeAndLocation(declaration, variable);
       declarationStatement.addToPropertyEdgeDeclaration(declaration);
 
       frontend.processAnnotations(declaration, variableDeclarationExpr);
@@ -330,7 +331,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
               scope.toString());
       ((DeclaredReferenceExpression) base).setStaticAccess(isStaticAccess);
 
-      frontend.setCodeAndRegion(base, fieldAccessExpr.getScope());
+      frontend.setCodeAndLocation(base, fieldAccessExpr.getScope());
     } else if (scope.isFieldAccessExpr()) {
       base = (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
       de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression tester = base;
@@ -365,7 +366,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
                 scope.toString());
         ((DeclaredReferenceExpression) base).setStaticAccess(true);
       }
-      frontend.setCodeAndRegion(base, fieldAccessExpr.getScope());
+      frontend.setCodeAndLocation(base, fieldAccessExpr.getScope());
     } else {
       base = (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
     }
@@ -422,44 +423,43 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     String value = literalExpr.toString();
     if (literalExpr instanceof IntegerLiteralExpr) {
-      return NodeBuilder.newLiteral(
+      return newLiteral(
+          this,
           literalExpr.asIntegerLiteralExpr().asNumber(),
           TypeParser.createFrom("int", true),
-          frontend.getLanguage(),
           value);
     } else if (literalExpr instanceof StringLiteralExpr) {
-      return NodeBuilder.newLiteral(
+      return newLiteral(
+          this,
           literalExpr.asStringLiteralExpr().asString(),
           TypeParser.createFrom("java.lang.String", true),
-          frontend.getLanguage(),
           value);
     } else if (literalExpr instanceof BooleanLiteralExpr) {
-      return NodeBuilder.newLiteral(
+      return newLiteral(
+          this,
           literalExpr.asBooleanLiteralExpr().getValue(),
           TypeParser.createFrom("boolean", true),
-          frontend.getLanguage(),
           value);
     } else if (literalExpr instanceof CharLiteralExpr) {
-      return NodeBuilder.newLiteral(
+      return newLiteral(
+          this,
           literalExpr.asCharLiteralExpr().asChar(),
           TypeParser.createFrom("char", true),
-          frontend.getLanguage(),
           value);
     } else if (literalExpr instanceof DoubleLiteralExpr) {
-      return NodeBuilder.newLiteral(
+      return newLiteral(
+          this,
           literalExpr.asDoubleLiteralExpr().asDouble(),
           TypeParser.createFrom("double", true),
-          frontend.getLanguage(),
           value);
     } else if (literalExpr instanceof LongLiteralExpr) {
-      return NodeBuilder.newLiteral(
+      return newLiteral(
+          this,
           literalExpr.asLongLiteralExpr().asNumber(),
           TypeParser.createFrom("long", true),
-          frontend.getLanguage(),
           value);
     } else if (literalExpr instanceof NullLiteralExpr) {
-      return NodeBuilder.newLiteral(
-          null, TypeParser.createFrom("null", true), frontend.getLanguage(), value);
+      return newLiteral(this, null, TypeParser.createFrom("null", true), value);
     }
 
     return null;
@@ -477,7 +477,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             type,
             classExpr.toString());
     thisExpression.setStaticAccess(true);
-    frontend.setCodeAndRegion(thisExpression, classExpr);
+    frontend.setCodeAndLocation(thisExpression, classExpr);
 
     return thisExpression;
   }
@@ -491,7 +491,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     DeclaredReferenceExpression thisExpression =
         NodeBuilder.newDeclaredReferenceExpression(
             thisExpr.toString(), frontend.getLanguage(), type, thisExpr.toString());
-    frontend.setCodeAndRegion(thisExpression, thisExpr);
+    frontend.setCodeAndLocation(thisExpression, thisExpr);
 
     return thisExpression;
   }
@@ -503,7 +503,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     DeclaredReferenceExpression superExpression =
         NodeBuilder.newDeclaredReferenceExpression(
             expr.toString(), frontend.getLanguage(), UnknownType.getUnknownType(), expr.toString());
-    frontend.setCodeAndRegion(superExpression, expr);
+    frontend.setCodeAndLocation(superExpression, expr);
 
     return superExpression;
   }
@@ -628,14 +628,13 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     // second, handle the value. this is the second argument of the operator call
     de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression rhs =
-        NodeBuilder.newLiteral(
+        newLiteral(
+            this,
             typeAsGoodAsPossible.getTypeName(),
             TypeParser.createFrom("class", true),
-            frontend.getLanguage(),
             binaryExpr.getTypeAsString());
 
-    BinaryOperator binaryOperator =
-        NodeBuilder.newBinaryOperator("instanceof", frontend.getLanguage(), binaryExpr.toString());
+    BinaryOperator binaryOperator = newBinaryOperator(this, "instanceof", binaryExpr.toString());
 
     binaryOperator.setLhs(lhs);
     binaryOperator.setRhs(rhs);
@@ -652,11 +651,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             handle(unaryExpr.getExpression());
 
     UnaryOperator unaryOperator =
-        NodeBuilder.newUnaryOperator(
+        newUnaryOperator(
+            this,
             unaryExpr.getOperator().asString(),
             unaryExpr.isPostfix(),
             unaryExpr.isPrefix(),
-            frontend.getLanguage(),
             unaryExpr.toString());
 
     unaryOperator.setInput(expression);
@@ -678,8 +677,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             handle(binaryExpr.getRight());
 
     BinaryOperator binaryOperator =
-        NodeBuilder.newBinaryOperator(
-            binaryExpr.getOperator().asString(), frontend.getLanguage(), binaryExpr.toString());
+        newBinaryOperator(this, binaryExpr.getOperator().asString(), binaryExpr.toString());
 
     binaryOperator.setLhs(lhs);
     binaryOperator.setRhs(rhs);
@@ -746,7 +744,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             NodeBuilder.newDeclaredReferenceExpression(
                 name, frontend.getLanguage(), UnknownType.getUnknownType(), "");
 
-        frontend.setCodeAndRegion(
+        frontend.setCodeAndLocation(
             member,
             methodCallExpr
                 .getName()); // This will also overwrite the code set to the empty string set above
@@ -829,7 +827,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     ConstructExpression ctor = NodeBuilder.newConstructExpression(frontend.getLanguage(), code);
     ctor.setType(t);
-    frontend.setCodeAndRegion(ctor, expr);
+    frontend.setCodeAndLocation(ctor, expr);
 
     // handle the arguments
     for (int i = 0; i < arguments.size(); i++) {

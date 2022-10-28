@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -122,22 +122,15 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 ?: UnknownType.getUnknownType()
 
         val param =
-            NodeBuilder.newMethodParameterIn(
-                name,
-                type,
-                false,
-                frontend.language,
-                this.frontend.getCodeFromRawNode(node)
-            )
+            newParamVariableDeclaration(name, type, false, this.frontend.getCodeFromRawNode(node))
 
         return param
     }
 
     fun handleSourceFile(node: TypeScriptNode): TranslationUnitDeclaration {
         val tu =
-            NodeBuilder.newTranslationUnitDeclaration(
+            newTranslationUnitDeclaration(
                 node.location.file,
-                frontend.language,
                 this.frontend.getCodeFromRawNode(node)
             )
 
@@ -168,30 +161,23 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 "MethodDeclaration" -> {
                     val record = this.frontend.scopeManager.currentRecord
 
-                    NodeBuilder.newMethodDeclaration(
+                    newMethodDeclaration(
                         name,
                         this.frontend.getCodeFromRawNode(node),
                         false,
-                        record,
-                        frontend.language
+                        record
                     )
                 }
                 "Constructor" -> {
                     val record = this.frontend.scopeManager.currentRecord
 
-                    NodeBuilder.newConstructorDeclaration(
+                    newConstructorDeclaration(
                         record?.name ?: "",
                         this.frontend.getCodeFromRawNode(node),
                         record,
-                        frontend.language
                     )
                 }
-                else ->
-                    NodeBuilder.newFunctionDeclaration(
-                        name,
-                        frontend.language,
-                        this.frontend.getCodeFromRawNode(node)
-                    )
+                else -> newFunctionDeclaration(name, this.frontend.getCodeFromRawNode(node))
             }
 
         node.typeChildNode?.let { func.type = this.frontend.typeHandler.handle(it) }

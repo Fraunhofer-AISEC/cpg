@@ -55,10 +55,10 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotationMember
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newIncludeDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newNamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -117,8 +117,7 @@ open class JavaLanguageFrontend(
             context!!.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
-            val fileDeclaration =
-                newTranslationUnitDeclaration(file.toString(), language, context.toString())
+            val fileDeclaration = newTranslationUnitDeclaration(file.toString(), context.toString())
             setCurrentTU(fileDeclaration)
             scopeManager.resetToGlobal(fileDeclaration)
             val packDecl = context!!.packageDeclaration.orElse(null)
@@ -130,7 +129,7 @@ open class JavaLanguageFrontend(
                         language,
                         getCodeFromRawNode(packDecl)
                     )
-                setCodeAndRegion(namespaceDeclaration, packDecl)
+                setCodeAndLocation(namespaceDeclaration, packDecl)
                 scopeManager.addDeclaration(namespaceDeclaration)
                 scopeManager.enterScope(namespaceDeclaration)
             }

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.*;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.*;
 
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.NodeList;
@@ -110,10 +111,7 @@ public class DeclarationHandler
     var currentRecordDecl = frontend.getScopeManager().getCurrentRecord();
     de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration declaration =
         newConstructorDeclaration(
-            resolvedConstructor.getName(),
-            constructorDecl.toString(),
-            currentRecordDecl,
-            frontend.getLanguage());
+            this, resolvedConstructor.getName(), constructorDecl.toString(), currentRecordDecl);
     frontend.getScopeManager().addDeclaration(declaration);
 
     frontend.getScopeManager().enterScope(declaration);
@@ -127,16 +125,16 @@ public class DeclarationHandler
 
     for (Parameter parameter : constructorDecl.getParameters()) {
       ParamVariableDeclaration param =
-          newMethodParameterIn(
+          newParamVariableDeclaration(
+              this,
               parameter.getNameAsString(),
               this.frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
               parameter.isVarArgs(),
-              frontend.getLanguage(),
               parameter.toString());
 
       declaration.addParameter(param);
 
-      frontend.setCodeAndRegion(param, parameter);
+      frontend.setCodeAndLocation(param, parameter);
       frontend.getScopeManager().addDeclaration(param);
     }
 
@@ -171,11 +169,11 @@ public class DeclarationHandler
 
     de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
         newMethodDeclaration(
+            this,
             resolvedMethod.getName(),
             methodDecl.toString(),
             methodDecl.isStatic(),
-            currentRecordDecl,
-            frontend.getLanguage());
+            currentRecordDecl);
 
     frontend.getScopeManager().enterScope(functionDeclaration);
 
@@ -196,15 +194,15 @@ public class DeclarationHandler
       }
 
       ParamVariableDeclaration param =
-          newMethodParameterIn(
+          newParamVariableDeclaration(
+              this,
               parameter.getNameAsString(),
               resolvedType,
               parameter.isVarArgs(),
-              frontend.getLanguage(),
               parameter.toString());
 
       functionDeclaration.addParameter(param);
-      frontend.setCodeAndRegion(param, parameter);
+      frontend.setCodeAndLocation(param, parameter);
 
       frontend.processAnnotations(param, parameter);
 
@@ -339,10 +337,7 @@ public class DeclarationHandler
     if (recordDeclaration.getConstructors().isEmpty()) {
       de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
           newConstructorDeclaration(
-              recordDeclaration.getName(),
-              recordDeclaration.getName(),
-              recordDeclaration,
-              frontend.getLanguage());
+              this, recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
       recordDeclaration.addConstructor(constructorDeclaration);
       frontend.getScopeManager().addDeclaration(constructorDeclaration);
     }

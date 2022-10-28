@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.newParamVariableDeclaration
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
@@ -54,11 +54,10 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         val type = frontend.typeOf(ctx.declarator, ctx.declSpecifier)
 
         val paramVariableDeclaration =
-            NodeBuilder.newMethodParameterIn(
+            newParamVariableDeclaration(
                 ctx.declarator.name.toString(),
                 type,
                 false,
-                frontend.language,
                 ctx.rawSignature
             )
 

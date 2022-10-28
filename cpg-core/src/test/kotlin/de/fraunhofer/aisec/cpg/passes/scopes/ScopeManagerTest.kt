@@ -37,6 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
 import java.io.File
 import kotlin.test.*
 
@@ -88,24 +90,26 @@ internal class ScopeManagerTest : BaseTest() {
     @Test
     fun testMerge() {
         val s1 = ScopeManager()
-        CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s1)
-        s1.resetToGlobal(NodeBuilder.newTranslationUnitDeclaration("f1.cpp", CPPLanguage(), null))
+        val frontend1 =
+            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s1)
+        s1.resetToGlobal(frontend1.newTranslationUnitDeclaration("f1.cpp", null))
 
         // build a namespace declaration in f1.cpp with the namespace A
         val namespaceA1 = NodeBuilder.newNamespaceDeclaration("A", CPPLanguage(), null)
         s1.enterScope(namespaceA1)
-        val func1 = NodeBuilder.newFunctionDeclaration("func1", CPPLanguage(), null)
+        val func1 = frontend1.newFunctionDeclaration("func1", null)
         s1.addDeclaration(func1)
         s1.leaveScope(namespaceA1)
 
         val s2 = ScopeManager()
-        CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s2)
-        s2.resetToGlobal(NodeBuilder.newTranslationUnitDeclaration("f1.cpp", CPPLanguage(), null))
+        val frontend2 =
+            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s2)
+        s2.resetToGlobal(frontend2.newTranslationUnitDeclaration("f1.cpp", null))
 
         // and do the same in the other file
         val namespaceA2 = NodeBuilder.newNamespaceDeclaration("A", CPPLanguage(), null)
         s2.enterScope(namespaceA2)
-        val func2 = NodeBuilder.newFunctionDeclaration("func2", CPPLanguage(), null)
+        val func2 = frontend2.newFunctionDeclaration("func2", null)
         s2.addDeclaration(func2)
         s2.leaveScope(namespaceA2)
 
@@ -149,8 +153,9 @@ internal class ScopeManagerTest : BaseTest() {
     @Test
     fun testScopeFQN() {
         val s = ScopeManager()
-        CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s)
-        s.resetToGlobal(NodeBuilder.newTranslationUnitDeclaration("file.cpp", CPPLanguage(), null))
+        val frontend =
+            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s)
+        s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
 
         assertEquals("", s.currentNamePrefix)
 
@@ -165,7 +170,7 @@ internal class ScopeManagerTest : BaseTest() {
 
         assertEquals("A::B", s.currentNamePrefix)
 
-        val func = NodeBuilder.newFunctionDeclaration("func", CPPLanguage(), null)
+        val func = frontend.newFunctionDeclaration("func", null)
         s.addDeclaration(func)
 
         s.leaveScope(namespaceB)

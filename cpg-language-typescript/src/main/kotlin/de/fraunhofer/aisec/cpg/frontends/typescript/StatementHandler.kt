@@ -75,10 +75,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleReturnStatement(node: TypeScriptNode): ReturnStatement {
-        val returnStmt =
-            frontend.newReturnStatement(
-                this.frontend.getCodeFromRawNode(node)
-            )
+        val returnStmt = newReturnStatement(this.frontend.getCodeFromRawNode(node))
 
         node.children?.first()?.let {
             returnStmt.returnValue = this.frontend.expressionHandler.handle(it)

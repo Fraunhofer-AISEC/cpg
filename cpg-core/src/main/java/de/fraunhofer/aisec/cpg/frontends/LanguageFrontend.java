@@ -44,7 +44,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class LanguageFrontend {
+public abstract class LanguageFrontend implements CodeAndLocationProvider {
 
   // Allow non-Java frontends to access the logger (i.e. jep)
   public static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
@@ -197,7 +197,7 @@ public abstract class LanguageFrontend {
   @Nullable
   public abstract <T> PhysicalLocation getLocationFromRawNode(T astNode);
 
-  public <N, S> void setCodeAndRegion(@NotNull N cpgNode, @Nullable S astNode) {
+  public <N, S> void setCodeAndLocation(@NotNull N cpgNode, @Nullable S astNode) {
     if (cpgNode instanceof Node && astNode != null) {
       if (config.codeInNodes) {
         // only set code, if its not already set or empty

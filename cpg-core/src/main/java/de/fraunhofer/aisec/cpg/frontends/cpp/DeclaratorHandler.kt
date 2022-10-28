@@ -25,13 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTypeParamDeclaration
@@ -174,15 +169,14 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun createMethodOrConstructor(
         name: String,
         recordDeclaration: RecordDeclaration?,
-        lang: LanguageFrontend,
         ctx: IASTNode,
     ): MethodDeclaration {
         // Check, if it's a constructor
         val method =
             if (name == recordDeclaration?.name) {
-                newConstructorDeclaration(name, null, recordDeclaration, lang.language, lang, ctx)
+                newConstructorDeclaration(name, null, recordDeclaration, ctx)
             } else {
-                newMethodDeclaration(name, null, false, recordDeclaration, lang.language, lang, ctx)
+                newMethodDeclaration(name, null, false, recordDeclaration, ctx)
             }
 
         return method
@@ -232,22 +226,14 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     frontend.scopeManager.currentScope!!,
                     recordName
                 )
-            declaration =
-                createMethodOrConstructor(methodName, recordDeclaration, frontend, ctx.parent)
+            declaration = createMethodOrConstructor(methodName, recordDeclaration, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {
             // if it is inside a record scope, it is a method
             recordDeclaration = frontend.scopeManager.currentRecord
-            declaration = createMethodOrConstructor(name, recordDeclaration, frontend, ctx.parent)
+            declaration = createMethodOrConstructor(name, recordDeclaration, ctx.parent)
         } else {
             // a plain old function, outside any record scope
-            declaration =
-                newFunctionDeclaration(
-                    name,
-                    frontend.language,
-                    ctx.rawSignature,
-                    frontend,
-                    ctx.parent
-                )
+            declaration = newFunctionDeclaration(name, ctx.rawSignature, ctx.parent)
         }
 
         // If we know our record declaration, but are outside the actual record, we
@@ -334,13 +320,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // declaration that wraps this list
         if (ctx.takesVarArgs()) {
             val varargs =
-                newMethodParameterIn(
-                    "va_args",
-                    UnknownType.getUnknownType(),
-                    true,
-                    frontend.language,
-                    ""
-                )
+                newParamVariableDeclaration("va_args", UnknownType.getUnknownType(), true, "")
             varargs.isImplicit = true
             varargs.argumentIndex = i
             frontend.scopeManager.addDeclaration(varargs)
@@ -397,7 +377,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 "this",
                 type = type,
                 language = frontend.language,
-                lang = frontend,
+                frontend = frontend,
                 implicitInitializerAllowed = false
             )
         // Yes, this is implicit

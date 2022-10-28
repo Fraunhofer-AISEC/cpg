@@ -403,26 +403,14 @@ class CXXLanguageFrontend(
                         code
                     )
                 2 -> // an integer
-                NodeBuilder.newLiteral(
-                        code.toInt(),
-                        TypeParser.createFrom("int", true),
-                        language,
-                        code
-                    )
+                newLiteral(code.toInt(), TypeParser.createFrom("int", true), code)
                 130 -> // a string
-                NodeBuilder.newLiteral(
+                newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
                         TypeParser.createFrom("const char*", false),
-                        language,
                         code
                     )
-                else ->
-                    NodeBuilder.newLiteral(
-                        code,
-                        TypeParser.createFrom("const char*", false),
-                        language,
-                        code
-                    )
+                else -> newLiteral(code, TypeParser.createFrom("const char*", false), code)
             }
         return NodeBuilder.newAnnotationMember("", expression, language, code)
     }

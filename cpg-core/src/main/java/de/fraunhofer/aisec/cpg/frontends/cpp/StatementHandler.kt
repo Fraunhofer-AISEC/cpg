@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -81,7 +82,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return NodeBuilder.newProblemExpression(
             frontend.language,
             problemStmt.problem.message,
-            lang = frontend
+            frontend = frontend
         )
     }
 
@@ -237,13 +238,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         // Adds true expression node where default empty condition evaluates to true, remove here
         // and in java StatementAnalyzer
         if (statement.conditionDeclaration == null && statement.condition == null) {
-            val literal: Literal<*> =
-                NodeBuilder.newLiteral(
-                    true,
-                    TypeParser.createFrom("bool", true),
-                    frontend.language,
-                    "true"
-                )
+            val literal: Literal<*> = newLiteral(true, TypeParser.createFrom("bool", true), "true")
             statement.condition = literal
         }
 
@@ -288,7 +283,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
         // update the code and region to include the whole statement
         if (expression != null) {
-            frontend.setCodeAndRegion(expression, ctx)
+            frontend.setCodeAndLocation(expression, ctx)
         }
 
         return expression
@@ -311,7 +306,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleReturnStatement(ctx: IASTReturnStatement): ReturnStatement {
-        val returnStatement = frontend.newReturnStatement(ctx.rawSignature)
+        val returnStatement = newReturnStatement(ctx.rawSignature)
 
         // Parse the return value
         if (ctx.returnValue != null) {

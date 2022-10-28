@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import java.util.regex.Pattern
 import org.slf4j.LoggerFactory
@@ -417,14 +418,15 @@ open class VariableUsageResolver : SymbolResolverPass() {
             }
         // If we didn't find anything, we create a new function or method declaration
         return target
-            ?: createInferredFunctionDeclaration(
-                declarationHolder as? RecordDeclaration,
-                name,
-                null,
-                false,
-                fctPtrType.parameters,
-                fctPtrType.returnType
-            )
+            ?: (declarationHolder ?: currentTU)
+                .startInference()
+                .createInferredFunctionDeclaration(
+                    name,
+                    null,
+                    false,
+                    fctPtrType.parameters,
+                    fctPtrType.returnType
+                )
     }
 
     companion object {

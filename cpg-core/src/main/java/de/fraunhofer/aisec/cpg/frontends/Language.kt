@@ -30,10 +30,15 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
 
-abstract class Language<T : LanguageFrontend> : Node {
-    constructor() {
-        this.language = this
-    }
+/**
+ * Represents a programming language. When creating new languages in the CPG, one must derive custom
+ * class from this and override the necessary fields and methods.
+ *
+ * Furthermore, since this also implements [Node], one node for each programming language used is
+ * persisted in the final graph (database) and each node links to its corresponding language using
+ * the [Node.language] property.
+ */
+abstract class Language<T : LanguageFrontend> : Node() {
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
 
@@ -49,4 +54,26 @@ abstract class Language<T : LanguageFrontend> : Node {
     fun handlesFile(file: File): Boolean {
         return file.extension in fileExtensions
     }
+
+    init {
+        this.also { this.language = it }
+    }
+}
+
+/**
+ * A simple interface that everything, that supplies a language, should implement. Examples include
+ * each [Node], but also transformation steps, such as [Handler].
+ */
+interface LanguageProvider : MetadataProvider {
+    val language: Language<out LanguageFrontend>
+}
+
+/**
+ * This interfaces serves as base for different entities that provide some kind of meta-data for a
+ * [Node], such as its language, code or location.
+ */
+interface MetadataProvider
+
+interface CodeAndLocationProvider : MetadataProvider {
+    fun <N, S> setCodeAndLocation(cpgNode: N, astNode: S?)
 }

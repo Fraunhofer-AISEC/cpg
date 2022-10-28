@@ -25,10 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.graph.HasDefault
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -38,6 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
+import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
+import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
+import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import java.util.HashMap
 import java.util.regex.Pattern
 
@@ -82,16 +82,7 @@ fun CallResolver.handleNormalCallCXX(call: CallExpression) {
     if (invocationCandidates.isEmpty()) {
         // If we still have no candidates and our current language is c++ we create an inferred
         // FunctionDeclaration
-        invocationCandidates.add(
-            createInferredFunctionDeclaration(
-                null,
-                call.name,
-                call.code,
-                false,
-                call.signature,
-                call.type // TODO: Is the call's type the return type?
-            )
-        )
+        invocationCandidates.add(currentTU.inferFunction(call))
     }
 
     call.invokes = invocationCandidates
@@ -574,21 +565,18 @@ fun CallResolver.createInferredFunctionTemplate(
     val code = call.code
     val inferred = NodeBuilder.newFunctionTemplateDeclaration(name, call.language, code)
     inferred.isInferred = true
-    if (containingRecord != null) {
-        containingRecord.addDeclaration(inferred)
-    } else {
-        currentTU.addDeclaration(inferred)
-    }
-    val inferredRealization =
-        createInferredFunctionDeclaration(
-            containingRecord,
-            name,
-            code,
-            false,
-            call.signature,
-            call.type // TODO: Is the call's type the return value's type?
-        )
+
+    val inferredRealization: FunctionDeclaration? =
+        if (containingRecord != null) {
+            containingRecord.addDeclaration(inferred)
+            containingRecord.inferMethod(call)
+        } else {
+            currentTU.addDeclaration(inferred)
+            currentTU.inferFunction(call)
+        }
+
     inferred.addRealization(inferredRealization)
+
     var typeCounter = 0
     var nonTypeCounter = 0
     for (node in call.templateParameters) {
@@ -609,17 +597,10 @@ fun CallResolver.createInferredFunctionTemplate(
             typeCounter++
             inferred.addParameter(typeParamDeclaration)
         } else if (node is Expression) {
-            // Non-Type Template Parameter
             val inferredNonTypeIdentifier = "N$nonTypeCounter"
-            val paramVariableDeclaration =
-                NodeBuilder.newMethodParameterIn(
-                    inferredNonTypeIdentifier,
-                    node.type,
-                    false,
-                    call.language,
-                    inferredNonTypeIdentifier
-                )
-            paramVariableDeclaration.isInferred = true
+            var paramVariableDeclaration =
+                node.startInference().inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
+
             paramVariableDeclaration.addPrevDFG(node)
             node.addNextDFG(paramVariableDeclaration)
             nonTypeCounter++

@@ -25,11 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -217,7 +214,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 // add an implicit return statement, if there is none
                 if (lastStatement !is ReturnStatement) {
-                    val returnStatement = frontend.newReturnStatement("return;")
+                    val returnStatement = newReturnStatement("return;")
                     returnStatement.isImplicit = true
                     bodyStatement.addStatement(returnStatement)
                 }
@@ -580,7 +577,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             NodeBuilder.newEnumDeclaration(
                 name = declSpecifier.name.toString(),
                 location = frontend.getLocationFromRawNode(ctx),
-                lang = frontend,
+                frontend = frontend,
                 language = frontend.language
             )
 
@@ -592,7 +589,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     frontend.getCodeFromRawNode(enumerator),
                     frontend.getLocationFromRawNode(enumerator),
                     frontend.language,
-                    lang = frontend
+                    frontend = frontend
                 )
 
             // In C/C++, default enums are of type int
@@ -698,10 +695,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     fun handleTranslationUnit(translationUnit: IASTTranslationUnit): TranslationUnitDeclaration {
         val node =
-            NodeBuilder.newTranslationUnitDeclaration(
+            newTranslationUnitDeclaration(
                 translationUnit.filePath,
-                frontend.language,
-                translationUnit.rawSignature
+                translationUnit.rawSignature,
+                translationUnit
             )
 
         // There might have been errors in the previous translation unit and in any case

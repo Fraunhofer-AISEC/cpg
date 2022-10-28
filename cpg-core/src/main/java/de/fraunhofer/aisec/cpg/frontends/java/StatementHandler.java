@@ -25,6 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.newLiteral;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.newUnaryOperator;
+
 import com.github.javaparser.JavaToken;
 import com.github.javaparser.Range;
 import com.github.javaparser.TokenRange;
@@ -87,7 +90,7 @@ public class StatementHandler
 
     // update expression's code and location to match the statement
 
-    frontend.setCodeAndRegion(expression, stmt);
+    frontend.setCodeAndLocation(expression, stmt);
 
     return expression;
   }
@@ -95,8 +98,7 @@ public class StatementHandler
   private de.fraunhofer.aisec.cpg.graph.statements.Statement handleThrowStmt(Statement stmt) {
     ThrowStmt throwStmt = (ThrowStmt) stmt;
     UnaryOperator throwOperation =
-        NodeBuilder.newUnaryOperator(
-            "throw", false, true, frontend.getLanguage(), throwStmt.toString());
+        newUnaryOperator(this, "throw", false, true, throwStmt.toString());
     throwOperation.setInput(
         (Expression) frontend.getExpressionHandler().handle(throwStmt.getExpression()));
     return throwOperation;
@@ -116,14 +118,14 @@ public class StatementHandler
       expression = (Expression) frontend.getExpressionHandler().handle(expr);
     }
 
-    var returnStatement = NodeBuilderKt.newReturnStatement(frontend, returnStmt.toString());
+    var returnStatement = NodeBuilderKt.newReturnStatement(this, returnStmt.toString());
 
     // expressionRefersToDeclaration to arguments, if there are any
     if (expression != null) {
       returnStatement.setReturnValue(expression);
     }
 
-    frontend.setCodeAndRegion(returnStatement, stmt);
+    frontend.setCodeAndLocation(returnStatement, stmt);
     return returnStatement;
   }
 
@@ -220,7 +222,7 @@ public class StatementHandler
     }
 
     ForStatement statement = NodeBuilder.newForStatement(frontend.getLanguage(), code);
-    frontend.setCodeAndRegion(statement, stmt);
+    frontend.setCodeAndLocation(statement, stmt);
     frontend.getScopeManager().enterScope(statement);
 
     if (forStmt.getInitialization().size() > 1) {
@@ -234,7 +236,7 @@ public class StatementHandler
             frontend.getExpressionHandler().handle(initExpr);
 
         // make sure location is set
-        frontend.setCodeAndRegion(s, initExpr);
+        frontend.setCodeAndLocation(s, initExpr);
         initExprList.addExpression(s);
 
         // can not update location
@@ -274,9 +276,7 @@ public class StatementHandler
     // Adds true expression node where default empty condition evaluates to true, remove here and in
     // cpp StatementHandler
     if (statement.getCondition() == null) {
-      Literal<?> literal =
-          NodeBuilder.newLiteral(
-              true, TypeParser.createFrom("boolean", true), frontend.getLanguage(), "true");
+      Literal<?> literal = newLiteral(this, true, TypeParser.createFrom("boolean", true), "true");
       statement.setCondition(literal);
     }
 
@@ -292,7 +292,7 @@ public class StatementHandler
             frontend.getExpressionHandler().handle(updateExpr);
 
         // make sure location is set
-        frontend.setCodeAndRegion(s, updateExpr);
+        frontend.setCodeAndLocation(s, updateExpr);
         iterationExprList.addExpression(s);
 
         // can not update location
@@ -403,7 +403,7 @@ public class StatementHandler
 
       compoundStatement.addStatement(statement);
     }
-    frontend.setCodeAndRegion(compoundStatement, stmt);
+    frontend.setCodeAndLocation(compoundStatement, stmt);
 
     frontend.getScopeManager().leaveScope(compoundStatement);
     return compoundStatement;
@@ -527,7 +527,7 @@ public class StatementHandler
         NodeBuilder.newSwitchStatement(frontend.getLanguage(), stmt.toString());
 
     // make sure location is set
-    frontend.setCodeAndRegion(switchStatement, switchStmt);
+    frontend.setCodeAndLocation(switchStatement, switchStmt);
 
     frontend.getScopeManager().enterScope(switchStatement);
 

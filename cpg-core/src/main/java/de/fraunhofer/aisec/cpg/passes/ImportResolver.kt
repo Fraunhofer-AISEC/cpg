@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -149,7 +149,7 @@ open class ImportResolver : Pass() {
                     base.language
                 )
             targetField.isInferred = true
-            val targetMethod = newMethodDeclaration(name, "", true, base, base.language)
+            val targetMethod = base.newMethodDeclaration(name, "", true, base)
             targetMethod.isInferred = true
             base.addField(targetField)
             base.addMethod(targetMethod)

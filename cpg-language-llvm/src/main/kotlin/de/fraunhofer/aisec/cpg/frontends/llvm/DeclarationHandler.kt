@@ -29,8 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCompoundStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
@@ -38,6 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.bytedeco.javacpp.Pointer
@@ -113,11 +113,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
         val functionDeclaration =
-            newFunctionDeclaration(
-                name.string,
-                frontend.language,
-                frontend.getCodeFromRawNode(func)
-            )
+            newFunctionDeclaration(name.string, frontend.getCodeFromRawNode(func))
 
         // return types are a bit tricky, because the type of the function is a pointer to the
         // function type, which then has the return type in it
@@ -139,11 +135,10 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
             // TODO: support variardic
             val decl =
-                newMethodParameterIn(
+                newParamVariableDeclaration(
                     paramName,
                     type,
                     false,
-                    frontend.language,
                     frontend.getCodeFromRawNode(param)
                 )
 

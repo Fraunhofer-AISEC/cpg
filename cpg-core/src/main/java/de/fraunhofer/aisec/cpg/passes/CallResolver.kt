@@ -32,16 +32,17 @@ import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.duplicateLiteral
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.duplicateTypeExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
+import de.fraunhofer.aisec.cpg.graph.duplicate
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
+import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
+import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
@@ -238,16 +239,7 @@ open class CallResolver : SymbolResolverPass() {
 
                 if (invocationCandidates.isEmpty()) {
                     // If we have no candidates, we create an inferred FunctionDeclaration
-                    invocationCandidates.add(
-                        createInferredFunctionDeclaration(
-                            null,
-                            call.name,
-                            call.code,
-                            false,
-                            call.signature,
-                            call.type // TODO: Is the call's type the return type?
-                        )
-                    )
+                    invocationCandidates.add(currentTU.inferFunction(call))
                 }
 
                 call.invokes = invocationCandidates
@@ -326,16 +318,7 @@ open class CallResolver : SymbolResolverPass() {
                     }
                     record
                 }
-                .map {
-                    createInferredFunctionDeclaration(
-                        it,
-                        call.name,
-                        call.code,
-                        false,
-                        call.signature,
-                        call.type // TODO: Is this correct?
-                    )
-                }
+                .map { record -> record.inferMethod(call) }
                 .forEach { invocationCandidates.add(it) }
         }
     }
@@ -458,34 +441,18 @@ open class CallResolver : SymbolResolverPass() {
 
         for (recordDeclaration in containingRecords) {
             val inferred =
-                createInferredFunctionDeclaration(
-                    recordDeclaration,
-                    name,
-                    "",
-                    true,
-                    call.signature,
-                    call.type // TODO: Is this correct?
-                )
+                recordDeclaration
+                    .startInference()
+                    .createInferredFunctionDeclaration(
+                        name,
+                        "",
+                        true,
+                        call.signature,
+                        call.type // TODO: Is this correct?
+                    )
 
             invokes.add(inferred)
         }
-    }
-
-    private fun createInferredConstructor(
-        containingRecord: RecordDeclaration,
-        signature: List<Type?>
-    ): ConstructorDeclaration {
-        val inferred =
-            newConstructorDeclaration(
-                containingRecord.name,
-                "",
-                containingRecord,
-                containingRecord.language
-            )
-        inferred.isInferred = true
-        inferred.parameters = Util.createInferredParameters(signature, containingRecord.language)
-        containingRecord.addConstructor(inferred)
-        return inferred
     }
 
     private fun getPossibleContainingTypes(node: Node?, curClass: RecordDeclaration?): Set<Type> {
@@ -611,7 +578,9 @@ open class CallResolver : SymbolResolverPass() {
         }
 
         return constructorCandidate
-            ?: createInferredConstructor(recordDeclaration, constructExpression.signature)
+            ?: recordDeclaration
+                .startInference()
+                .createInferredConstructor(constructExpression.signature)
     }
 
     private fun getConstructorDeclarationForExplicitInvocation(
@@ -619,7 +588,7 @@ open class CallResolver : SymbolResolverPass() {
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
         return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
-            ?: createInferredConstructor(recordDeclaration, signature)
+            ?: recordDeclaration.startInference().createInferredConstructor(signature)
     }
 
     companion object {
@@ -638,9 +607,9 @@ open class CallResolver : SymbolResolverPass() {
         ) {
             for (node in templateParams) {
                 if (node is TypeExpression) {
-                    constructExpression.addTemplateParameter(duplicateTypeExpression(node, true))
+                    constructExpression.addTemplateParameter(node.duplicate(true))
                 } else if (node is Literal<*>) {
-                    constructExpression.addTemplateParameter(duplicateLiteral(node, true))
+                    constructExpression.addTemplateParameter(node.duplicate(true))
                 }
             }
         }

@@ -25,14 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.setCodeAndRegion
+import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import org.slf4j.LoggerFactory
 
@@ -46,12 +46,12 @@ object NodeBuilder {
         language: Language<out LanguageFrontend>,
         code: String? = null,
         qualifiedName: String?,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): UsingDirective {
         val node = UsingDirective()
         node.qualifiedName = qualifiedName
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         log(node)
@@ -66,12 +66,12 @@ object NodeBuilder {
         language: Language<out LanguageFrontend>,
         code: String? = null,
         template: Boolean,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): CallExpression {
         val node = CallExpression()
         node.callee = callee
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.fqn = fqn
         node.template = template
         node.language = language
@@ -87,12 +87,12 @@ object NodeBuilder {
         code: String? = null,
         targetRecord: String?,
         language: Language<out LanguageFrontend>,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): StaticCallExpression {
         val node = StaticCallExpression()
         node.setName(name!!)
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.fqn = fqn
         node.targetRecord = targetRecord
         node.language = language
@@ -105,11 +105,11 @@ object NodeBuilder {
     fun newCastExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): CastExpression {
         val node = CastExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -123,11 +123,11 @@ object NodeBuilder {
         referencedType: Type?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): TypeIdExpression {
         val node = TypeIdExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.operatorCode = operatorCode
         node.name = operatorCode!!
         node.type = type
@@ -144,14 +144,14 @@ object NodeBuilder {
         alias: Type,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): TypedefDeclaration {
         val node = TypedefDeclaration()
         node.type = targetType
         node.alias = alias
         node.name = alias.typeName
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -162,54 +162,15 @@ object NodeBuilder {
     fun newArraySubscriptionExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ArraySubscriptionExpression {
         val node = ArraySubscriptionExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         log(node)
         return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun <T> newLiteral(
-        value: T,
-        type: Type?,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        lang: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): Literal<T> {
-        val node = Literal<T>()
-        node.value = value
-        node.type = type
-        node.setCodeAndRegion(lang, rawNode, code)
-        node.language = language
-
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    fun <T> duplicateLiteral(original: Literal<T>, implicit: Boolean): Literal<T> {
-        val duplicate = newLiteral(original.value, original.type, original.language, original.code)
-        duplicate.location = original.location
-        duplicate.locals = original.locals
-        duplicate.possibleSubTypes = original.possibleSubTypes
-        duplicate.argumentIndex = original.argumentIndex
-        duplicate.annotations = original.annotations
-        duplicate.comment = original.comment
-        duplicate.file = original.file
-        duplicate.name = original.name
-        duplicate.nextDFG = original.nextDFG
-        duplicate.prevDFG = original.prevDFG
-        duplicate.nextEOG = original.nextEOG
-        duplicate.prevEOG = original.prevEOG
-        duplicate.isImplicit = implicit
-        return duplicate
     }
 
     @JvmStatic
@@ -219,13 +180,13 @@ object NodeBuilder {
         language: Language<out LanguageFrontend>,
         type: Type? = UnknownType.getUnknownType(),
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): DeclaredReferenceExpression {
         val node = DeclaredReferenceExpression()
         node.name = name!!
         node.type = type
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         log(node)
@@ -239,35 +200,16 @@ object NodeBuilder {
         ceil: Expression?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ArrayRangeExpression {
         val node = ArrayRangeExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         node.floor = floor
         node.ceiling = ceil
         log(node)
-        return node
-    }
-
-    @JvmOverloads
-    @JvmStatic
-    fun newFunctionDeclaration(
-        name: String,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        lang: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): FunctionDeclaration {
-        val node = FunctionDeclaration()
-        node.name = name
-        node.setCodeAndRegion(lang, rawNode, code)
-        node.language = language
-
-        log(node)
-
         return node
     }
 
@@ -280,11 +222,11 @@ object NodeBuilder {
     fun newSynchronizedStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): SynchronizedStatement {
         val node = SynchronizedStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         log(node)
@@ -296,11 +238,11 @@ object NodeBuilder {
     fun newDeleteExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): DeleteExpression {
         val node = DeleteExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         log(node)
@@ -312,34 +254,13 @@ object NodeBuilder {
     fun newEmptyStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): EmptyStatement {
         val node = EmptyStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newMethodParameterIn(
-        name: String?,
-        type: Type?,
-        variadic: Boolean,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        lang: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): ParamVariableDeclaration {
-        val node = ParamVariableDeclaration()
-        node.name = name!!
-        node.type = type
-        node.setCodeAndRegion(lang, rawNode, code)
-        node.language = language
-
-        node.isVariadic = variadic
         return node
     }
 
@@ -349,12 +270,12 @@ object NodeBuilder {
         name: String?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): TypeParamDeclaration {
         val node = TypeParamDeclaration()
         node.name = name!!
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         log(node)
@@ -366,11 +287,11 @@ object NodeBuilder {
     fun newCompoundStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): CompoundStatement {
         val node = CompoundStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         log(node)
@@ -382,11 +303,11 @@ object NodeBuilder {
     fun newExpressionList(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ExpressionList {
         val node = ExpressionList()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         log(node)
@@ -403,7 +324,7 @@ object NodeBuilder {
         operatorCode: String?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): CallExpression {
         val node = MemberCallExpression()
@@ -411,7 +332,7 @@ object NodeBuilder {
         node.base = base
         node.member = member
         node.operatorCode = operatorCode
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         node.fqn = fqn
@@ -425,43 +346,13 @@ object NodeBuilder {
         name: String?,
         type: Type?,
         language: Language<out LanguageFrontend>,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): TypeExpression {
         val node = TypeExpression()
         node.name = name!!
         node.type = type
-        node.setCodeAndRegion(lang, rawNode, null)
-        node.language = language
-
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    fun duplicateTypeExpression(original: TypeExpression, implicit: Boolean): TypeExpression {
-        val duplicate = newTypeExpression(original.name, original.type, original.language)
-        duplicate.isImplicit = implicit
-        return duplicate
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newUnaryOperator(
-        operatorType: String?,
-        postfix: Boolean,
-        prefix: Boolean,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        lang: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): UnaryOperator {
-        val node = UnaryOperator()
-        node.operatorCode = operatorType
-        node.name = operatorType!!
-        node.isPostfix = postfix
-        node.isPrefix = prefix
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, null)
         node.language = language
 
         log(node)
@@ -476,13 +367,13 @@ object NodeBuilder {
         code: String? = null,
         implicitInitializerAllowed: Boolean,
         language: Language<out LanguageFrontend>,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): VariableDeclaration {
         val node = VariableDeclaration()
         node.name = name!!
         node.type = type
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         node.isImplicitInitializerAllowed = implicitInitializerAllowed
@@ -496,11 +387,11 @@ object NodeBuilder {
     fun newDeclarationStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): DeclarationStatement {
         val node = DeclarationStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         return node
@@ -511,11 +402,11 @@ object NodeBuilder {
     fun newIfStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): IfStatement {
         val node = IfStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         log(node)
@@ -527,27 +418,15 @@ object NodeBuilder {
     fun newLabelStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): LabelStatement {
         val node = LabelStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
         log(node)
         return node
-    }
-
-    /**
-     * Sets the code and region, if a language frontend is specified in [lang] using
-     * [LanguageFrontend.setCodeAndRegion]. Additionally, if [code] is specified, the supplied code
-     * is used to override it.
-     */
-    fun Node.setCodeAndRegion(lang: LanguageFrontend?, rawNode: Any?, code: String?) {
-        lang?.setCodeAndRegion(this, rawNode)
-        if (code != null) {
-            this.code = code
-        }
     }
 
     @JvmStatic
@@ -555,11 +434,11 @@ object NodeBuilder {
     fun newGotoStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): GotoStatement {
         val node = GotoStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -570,11 +449,11 @@ object NodeBuilder {
     fun newWhileStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): WhileStatement {
         val node = WhileStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -585,11 +464,11 @@ object NodeBuilder {
     fun newDoStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): DoStatement {
         val node = DoStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -600,11 +479,11 @@ object NodeBuilder {
     fun newForEachStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ForEachStatement {
         val node = ForEachStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -615,11 +494,11 @@ object NodeBuilder {
     fun newForStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ForStatement {
         val node = ForStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -630,11 +509,11 @@ object NodeBuilder {
     fun newContinueStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ContinueStatement {
         val node = ContinueStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -645,53 +524,12 @@ object NodeBuilder {
     fun newBreakStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): BreakStatement {
         val node = BreakStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newBinaryOperator(
-        operatorCode: String,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        lang: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): BinaryOperator {
-        val node = BinaryOperator()
-        node.operatorCode = operatorCode
-        node.name = operatorCode
-        node.setCodeAndRegion(lang, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newTranslationUnitDeclaration(
-        name: String?,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        lang: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): TranslationUnitDeclaration {
-        val node = TranslationUnitDeclaration()
-        node.name = name!!
-        node.language = language
-
-        node.setCodeAndRegion(lang, rawNode, code)
-
-        if (code != null) {
-            node.code = code
-        }
-
         log(node)
         return node
     }
@@ -703,7 +541,7 @@ object NodeBuilder {
         kind: String,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): RecordDeclaration {
         val node = RecordDeclaration()
@@ -711,7 +549,7 @@ object NodeBuilder {
         node.kind = kind
         node.language = language
 
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
 
         if (code != null) {
             node.code = code
@@ -729,12 +567,12 @@ object NodeBuilder {
         code: String? = null,
         location: PhysicalLocation?,
         language: Language<out LanguageFrontend>,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): EnumDeclaration {
         val node = EnumDeclaration()
         node.name = name!!
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.location = location
         node.language = language
         log(node)
@@ -747,12 +585,12 @@ object NodeBuilder {
         name: String?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): FunctionTemplateDeclaration {
         val node = FunctionTemplateDeclaration()
         node.name = name!!
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -764,12 +602,12 @@ object NodeBuilder {
         name: String?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ClassTemplateDeclaration {
         val node = ClassTemplateDeclaration()
         node.name = name!!
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -782,12 +620,12 @@ object NodeBuilder {
         code: String? = null,
         location: PhysicalLocation?,
         language: Language<out LanguageFrontend>,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): EnumConstantDeclaration {
         val node = EnumConstantDeclaration()
         node.name = name!!
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.location = location
         node.language = language
         log(node)
@@ -805,14 +643,14 @@ object NodeBuilder {
         initializer: Expression?,
         implicitInitializerAllowed: Boolean,
         language: Language<out LanguageFrontend>,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): FieldDeclaration {
         val node = FieldDeclaration()
         node.name = name!!
         node.type = type
         node.modifiers = modifiers
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.location = location
         node.isImplicitInitializerAllowed = implicitInitializerAllowed
         if (initializer != null) {
@@ -835,13 +673,13 @@ object NodeBuilder {
         language: Language<out LanguageFrontend>,
         operatorCode: String?,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): MemberExpression {
         val node = MemberExpression()
         node.setBase(base!!)
         node.operatorCode = operatorCode
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.name = name!!
         node.type = memberType
         node.language = language
@@ -854,11 +692,11 @@ object NodeBuilder {
     fun newStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): Statement {
         val node = ProblemExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -869,11 +707,11 @@ object NodeBuilder {
     fun newExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): Expression {
         val node = ProblemExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -884,11 +722,11 @@ object NodeBuilder {
     fun newInitializerListExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): InitializerListExpression {
         val node = InitializerListExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -899,11 +737,11 @@ object NodeBuilder {
     fun newDesignatedInitializerExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): DesignatedInitializerExpression {
         val node = DesignatedInitializerExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -914,11 +752,11 @@ object NodeBuilder {
     fun newArrayCreationExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ArrayCreationExpression {
         val node = ArrayCreationExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -929,66 +767,13 @@ object NodeBuilder {
     fun newConstructExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ConstructExpression {
         val node = ConstructExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
-        return node
-    }
-
-    @JvmOverloads
-    @JvmStatic
-    fun newMethodDeclaration(
-        name: String?,
-        code: String? = null,
-        isStatic: Boolean,
-        recordDeclaration: RecordDeclaration?,
-        language: Language<out LanguageFrontend>,
-        lang: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): MethodDeclaration {
-        val node = MethodDeclaration()
-        node.name = name!!
-        node.isStatic = isStatic
-        node.recordDeclaration = recordDeclaration
-
-        node.setCodeAndRegion(lang, rawNode, code)
-
-        if (code != null) {
-            node.code = code
-        }
-        node.language = language
-
-        log(node)
-        return node
-    }
-
-    @JvmOverloads
-    @JvmStatic
-    fun newConstructorDeclaration(
-        name: String?,
-        code: String? = null,
-        recordDeclaration: RecordDeclaration?,
-        language: Language<out LanguageFrontend>,
-        lang: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): ConstructorDeclaration {
-        val node = ConstructorDeclaration()
-        node.name = name!!
-        node.recordDeclaration = recordDeclaration
-
-        node.setCodeAndRegion(lang, rawNode, code)
-
-        if (code != null) {
-            node.code = code
-        }
-        node.language = language
-
-        log(node)
-
         return node
     }
 
@@ -999,12 +784,12 @@ object NodeBuilder {
         problem: String = "",
         type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ProblemDeclaration {
         val node = ProblemDeclaration()
         node.problem = problem
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -1017,11 +802,11 @@ object NodeBuilder {
         problem: String = "",
         type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ProblemExpression {
         val node = ProblemExpression(problem, type)
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -1033,14 +818,14 @@ object NodeBuilder {
         includeFilename: String,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): IncludeDeclaration {
         val node = IncludeDeclaration()
         val name = includeFilename.substring(includeFilename.lastIndexOf('/') + 1)
         node.name = name
         node.filename = includeFilename
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -1052,11 +837,11 @@ object NodeBuilder {
         code: String? = null,
         type: Type?,
         language: Language<out LanguageFrontend>,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): NewExpression {
         val node = NewExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.type = type
         node.language = language
         log(node)
@@ -1068,11 +853,11 @@ object NodeBuilder {
     fun newSwitchStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): SwitchStatement {
         val node = SwitchStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -1083,11 +868,11 @@ object NodeBuilder {
     fun newCaseStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): CaseStatement {
         val node = CaseStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -1098,11 +883,11 @@ object NodeBuilder {
     fun newDefaultStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): DefaultStatement {
         val node = DefaultStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -1117,7 +902,7 @@ object NodeBuilder {
         type: Type?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ConditionalExpression {
         val node = ConditionalExpression()
@@ -1125,7 +910,7 @@ object NodeBuilder {
         node.thenExpr = thenExpr
         node.elseExpr = elseExpr
         node.type = type
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -1137,12 +922,12 @@ object NodeBuilder {
         containingClass: String?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ExplicitConstructorInvocation {
         val node = ExplicitConstructorInvocation()
         node.containingClass = containingClass
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -1155,12 +940,12 @@ object NodeBuilder {
         fqn: String,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): NamespaceDeclaration {
         val node = NamespaceDeclaration()
         node.name = fqn
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
         return node
@@ -1171,11 +956,11 @@ object NodeBuilder {
     fun newCatchClause(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): CatchClause {
         val node = CatchClause()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         return node
     }
@@ -1185,11 +970,11 @@ object NodeBuilder {
     fun newTryStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): TryStatement {
         val node = TryStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         return node
     }
@@ -1199,11 +984,11 @@ object NodeBuilder {
     fun newAssertStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): AssertStatement {
         val node = AssertStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         return node
     }
 
@@ -1212,11 +997,11 @@ object NodeBuilder {
     fun newASMDeclarationStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ASMDeclarationStatement {
         val node = ASMDeclarationStatement()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         return node
     }
 
@@ -1225,11 +1010,11 @@ object NodeBuilder {
     fun newCompoundStatementExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): CompoundStatementExpression {
         val cse = CompoundStatementExpression()
-        lang?.setCodeAndRegion(cse, rawNode)
+        frontend?.setCodeAndLocation(cse, rawNode)
         if (code != null) {
             cse.code = code
         }
@@ -1243,12 +1028,12 @@ object NodeBuilder {
         name: String?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): Annotation {
         val node = Annotation()
         node.name = name!!
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         return node
     }
@@ -1260,13 +1045,13 @@ object NodeBuilder {
         value: Expression?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): AnnotationMember {
         val node = AnnotationMember()
         node.name = name!!
         node.value = value
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         return node
     }
@@ -1278,13 +1063,13 @@ object NodeBuilder {
         value: Expression?,
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): KeyValueExpression {
         val node = KeyValueExpression()
         node.key = key
         node.value = value
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         return node
     }
@@ -1294,25 +1079,253 @@ object NodeBuilder {
     fun newLambdaExpression(
         language: Language<out LanguageFrontend>,
         code: String? = null,
-        lang: LanguageFrontend? = null,
+        frontend: LanguageFrontend? = null,
         rawNode: Any? = null
     ): LambdaExpression {
         val node = LambdaExpression()
-        node.setCodeAndRegion(lang, rawNode, code)
+        node.applyMetadata(frontend, rawNode, code)
         node.language = language
         return node
     }
 }
 
+/**
+ * Applies various metadata on this [Node], based on the kind of provider in [provider]. This can
+ * include:
+ * - Setting code and location, if a [CodeAndLocationProvider] is given
+ * - Setting the language of a node, if a [LanguageProvider] is given
+ *
+ * Additionally, if [codeOverride] is specified, the supplied source code is used to override
+ * anything from the provider.
+ */
+fun Node.applyMetadata(provider: MetadataProvider?, rawNode: Any?, codeOverride: String?) {
+    if (provider is CodeAndLocationProvider) {
+        provider.setCodeAndLocation(this, rawNode)
+    }
+
+    if (provider is LanguageProvider) {
+        this.language = provider.language
+    }
+
+    if (provider is IsInferredProvider) {
+        this.isInferred = provider.isInferred
+    }
+
+    if (codeOverride != null) {
+        this.code = codeOverride
+    }
+}
+
 @JvmOverloads
-fun LanguageFrontend.newReturnStatement(
+fun MetadataProvider.newBinaryOperator(
+    operatorCode: String,
+    code: String? = null,
+    rawNode: Any? = null
+): BinaryOperator {
+    val node = BinaryOperator()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = operatorCode
+    node.operatorCode = operatorCode
+
+    NodeBuilder.log(node)
+
+    return node
+}
+
+@JvmOverloads
+fun MetadataProvider.newUnaryOperator(
+    operatorType: String,
+    postfix: Boolean,
+    prefix: Boolean,
+    code: String? = null,
+    rawNode: Any? = null
+): UnaryOperator {
+    val node = UnaryOperator()
+    node.applyMetadata(this, rawNode, code)
+
+    node.operatorCode = operatorType
+    node.name = operatorType
+    node.isPostfix = postfix
+    node.isPrefix = prefix
+
+    NodeBuilder.log(node)
+
+    return node
+}
+
+@JvmOverloads
+fun Handler<*, *, *>.newReturnStatement(
     code: String? = null,
     rawNode: Any? = null
 ): ReturnStatement {
     val node = ReturnStatement()
-    node.language = this.language
-    node.setCodeAndRegion(this, rawNode, code)
+    node.language = this.frontend.language
+    node.applyMetadata(this.frontend, rawNode, code)
 
     NodeBuilder.log(node)
+    return node
+}
+
+@JvmOverloads
+fun <T> Handler<*, *, *>.newLiteral(
+    value: T,
+    type: Type?,
+    code: String? = null,
+    rawNode: Any? = null
+): Literal<T> {
+    return this.frontend.newLiteral(value, type, code, rawNode)
+}
+
+fun <T> LanguageFrontend.newLiteral(
+    value: T,
+    type: Type?,
+    code: String? = null,
+    rawNode: Any? = null,
+): Literal<T> {
+    val node = Literal<T>()
+    node.value = value
+    node.type = type
+    node.applyMetadata(this, rawNode, code)
+    node.language = this.language
+
+    NodeBuilder.log(node)
+    return node
+}
+
+fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
+    val duplicate = Literal<T>()
+    duplicate.language = this.language
+    duplicate.value = this.value
+    duplicate.type = this.type
+    duplicate.code = this.code
+    duplicate.location = this.location
+    duplicate.locals = this.locals
+    duplicate.possibleSubTypes = this.possibleSubTypes
+    duplicate.argumentIndex = this.argumentIndex
+    duplicate.annotations = this.annotations
+    duplicate.comment = this.comment
+    duplicate.file = this.file
+    duplicate.name = this.name
+    duplicate.nextDFG = this.nextDFG
+    duplicate.prevDFG = this.prevDFG
+    duplicate.nextEOG = this.nextEOG
+    duplicate.prevEOG = this.prevEOG
+    duplicate.isImplicit = implicit
+    return duplicate
+}
+
+fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
+    val duplicate = TypeExpression()
+    duplicate.name = this.name
+    duplicate.type = this.type
+    duplicate.language = this.language
+    duplicate.isImplicit = implicit
+    return duplicate
+}
+
+/**
+ * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
+ * or [Handler] should create. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata].
+ */
+fun MetadataProvider.newTranslationUnitDeclaration(
+    name: String,
+    code: String? = null,
+    rawNode: Any? = null
+): TranslationUnitDeclaration {
+    val node = TranslationUnitDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name
+
+    NodeBuilder.log(node)
+    return node
+}
+
+/**
+ * Creates a new [FunctionDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata].
+ */
+@JvmOverloads
+fun MetadataProvider.newFunctionDeclaration(
+    name: String,
+    code: String? = null,
+    rawNode: Any? = null
+): FunctionDeclaration {
+    val node = FunctionDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name
+
+    NodeBuilder.log(node)
+    return node
+}
+
+/**
+ * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata].
+ */
+@JvmOverloads
+fun MetadataProvider.newMethodDeclaration(
+    name: String,
+    code: String? = null,
+    isStatic: Boolean,
+    recordDeclaration: RecordDeclaration?,
+    rawNode: Any? = null
+): MethodDeclaration {
+    val node = MethodDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name
+    node.isStatic = isStatic
+    node.recordDeclaration = recordDeclaration
+
+    NodeBuilder.log(node)
+    return node
+}
+
+/**
+ * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata].
+ */
+@JvmOverloads
+fun MetadataProvider.newParamVariableDeclaration(
+    name: String,
+    type: Type?,
+    variadic: Boolean,
+    code: String? = null,
+    frontend: LanguageFrontend? = null,
+    rawNode: Any? = null
+): ParamVariableDeclaration {
+    val node = ParamVariableDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name
+    node.type = type
+    node.isVariadic = variadic
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ConstructorDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata].
+ */
+@JvmOverloads
+fun MetadataProvider.newConstructorDeclaration(
+    name: String,
+    code: String? = null,
+    recordDeclaration: RecordDeclaration?,
+    rawNode: Any? = null
+): ConstructorDeclaration {
+    val node = ConstructorDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name
+    node.recordDeclaration = recordDeclaration
+
+    log(node)
     return node
 }

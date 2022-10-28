@@ -56,7 +56,7 @@ abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CX
         // The language frontend might set a location, which we should respect. Otherwise, we will
         // set the location here.
         if (node != null && node.location == null) {
-            frontend.setCodeAndRegion<S, T>(node, ctx)
+            frontend.setCodeAndLocation<S, T>(node, ctx)
         }
 
         frontend.setComment(node, ctx)

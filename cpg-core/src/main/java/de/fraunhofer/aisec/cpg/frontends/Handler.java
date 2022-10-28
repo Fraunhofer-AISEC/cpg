@@ -47,7 +47,8 @@ import org.slf4j.LoggerFactory;
  * @param <T> the raw ast node specific to the parser
  * @param <L> the language frontend
  */
-public abstract class Handler<S, T, L extends LanguageFrontend> {
+public abstract class Handler<S, T, L extends LanguageFrontend>
+    implements LanguageProvider, CodeAndLocationProvider {
 
   protected static final Logger log = LoggerFactory.getLogger(Handler.class);
 
@@ -119,7 +120,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
         // The language frontend might set a location, which we should respect. Otherwise, we will
         // set the location here.
         if (((Node) s).getLocation() == null) {
-          frontend.setCodeAndRegion(s, ctx);
+          frontend.setCodeAndLocation(s, ctx);
         }
 
         frontend.setComment(s, ctx);
@@ -170,5 +171,18 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
     }
 
     return null;
+  }
+
+  public @NotNull L getFrontend() {
+    return frontend;
+  }
+
+  public @NotNull Language<L> getLanguage() {
+    return (Language<L>) frontend.getLanguage();
+  }
+
+  @Override
+  public <N, S> void setCodeAndLocation(N cpgNode, @Nullable S astNode) {
+    this.frontend.setCodeAndLocation(cpgNode, astNode);
   }
 }

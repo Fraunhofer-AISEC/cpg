@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
 import kotlin.test.*
 import org.junit.jupiter.api.assertThrows
 
@@ -72,7 +72,7 @@ class FSMTest {
 
         val oldFsm = fsm.clone()
 
-        val emptyNode = NodeBuilder.newEmptyStatement()
+        val emptyNode = EmptyStatement()
         fsm.makeTransitionWithOp("create()", emptyNode)
 
         assertTrue(fsm.isAccepted())

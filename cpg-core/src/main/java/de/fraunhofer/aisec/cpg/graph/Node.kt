@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -49,7 +50,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-open class Node : IVisitable<Node>, Persistable {
+open class Node : IVisitable<Node>, Persistable, LanguageProvider {
     /**
      * This property holds the full name using our new [Name] class. In the future, we might migrate
      * this to the [name] field. It is currently not persisted in the graph database.
@@ -57,7 +58,7 @@ open class Node : IVisitable<Node>, Persistable {
     @Transient val fullName: Name = Name(EMPTY_NAME)
 
     /**
-     * A human readable name. It is backed by the [fullName] and is set to [Name.localName]
+     * A human-readable name. It is backed by the [fullName] and is set to [Name.localName]
      * automatically using a kotlin property delegator. We need to exclude the delegated field from
      * graph database persistence.
      */
@@ -71,7 +72,7 @@ open class Node : IVisitable<Node>, Persistable {
 
     @field:Relationship(value = "Language", direction = "OUTGOING")
     @JsonBackReference
-    lateinit var language: Language<out LanguageFrontend>
+    override lateinit var language: Language<out LanguageFrontend>
 
     /** Optional comment of this node. */
     var comment: String? = null

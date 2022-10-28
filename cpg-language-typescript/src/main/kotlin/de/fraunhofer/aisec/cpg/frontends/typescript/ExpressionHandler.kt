@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLambdaExpression
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -194,7 +194,6 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         return newLiteral(
             value,
             TypeParser.createFrom("String", false),
-            frontend.language,
             frontend.getCodeFromRawNode(node)
         )
     }
