@@ -26,18 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCompoundStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.newParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.bytedeco.javacpp.Pointer
@@ -83,13 +79,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         val type = frontend.typeOf(valueRef)
 
         val variableDeclaration =
-            newVariableDeclaration(
-                name,
-                type,
-                frontend.getCodeFromRawNode(valueRef),
-                false,
-                frontend.language
-            )
+            newVariableDeclaration(name, type, frontend.getCodeFromRawNode(valueRef), false)
 
         // cache binding
         frontend.bindingsCache[valueRef.symbolName] = variableDeclaration

@@ -33,10 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -191,6 +188,17 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
 
         // Non-Type Template Parameter
         return newParamVariableDeclaration(name, expr.type, false, name)
+    }
+
+    fun inferTemplateParameter(name: String): TypeParamDeclaration {
+        val parameterizedType = ParameterizedType(name)
+        TypeManager.getInstance()
+            .addTypeParameter(start as? FunctionTemplateDeclaration, parameterizedType)
+
+        val decl = newTypeParamDeclaration(name, name)
+        decl.type = parameterizedType
+
+        return decl
     }
 
     override val isInferred: Boolean

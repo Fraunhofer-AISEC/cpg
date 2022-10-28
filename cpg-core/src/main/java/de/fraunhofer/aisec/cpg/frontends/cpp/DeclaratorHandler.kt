@@ -29,8 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTypeParamDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -373,13 +371,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // Create the receiver.
         val thisDeclaration =
-            newVariableDeclaration(
-                "this",
-                type = type,
-                language = frontend.language,
-                frontend = frontend,
-                implicitInitializerAllowed = false
-            )
+            newVariableDeclaration("this", type = type, implicitInitializerAllowed = false)
         // Yes, this is implicit
         thisDeclaration.isImplicit = true
 
@@ -504,7 +496,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun handleTemplateTypeParameter(
         ctx: CPPASTSimpleTypeTemplateParameter
     ): TypeParamDeclaration {
-        return newTypeParamDeclaration(ctx.rawSignature, frontend.language, ctx.rawSignature)
+        return newTypeParamDeclaration(ctx.rawSignature, ctx.rawSignature, ctx)
     }
 
     private fun processMembers(ctx: IASTCompositeTypeSpecifier) {

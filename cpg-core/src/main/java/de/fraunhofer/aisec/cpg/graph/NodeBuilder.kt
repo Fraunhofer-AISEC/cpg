@@ -246,24 +246,6 @@ object NodeBuilder {
 
     @JvmStatic
     @JvmOverloads
-    fun newTypeParamDeclaration(
-        name: String?,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): TypeParamDeclaration {
-        val node = TypeParamDeclaration()
-        node.name = name!!
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
     fun newCompoundStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
@@ -336,29 +318,6 @@ object NodeBuilder {
         node.language = language
 
         log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newVariableDeclaration(
-        name: String?,
-        type: Type?,
-        code: String? = null,
-        implicitInitializerAllowed: Boolean,
-        language: Language<out LanguageFrontend>,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): VariableDeclaration {
-        val node = VariableDeclaration()
-        node.name = name!!
-        node.type = type
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-
-        node.isImplicitInitializerAllowed = implicitInitializerAllowed
-        log(node)
-
         return node
     }
 
@@ -1072,11 +1031,13 @@ object NodeBuilder {
 /**
  * Applies various metadata on this [Node], based on the kind of provider in [provider]. This can
  * include:
- * - Setting code and location, if a [CodeAndLocationProvider] is given
- * - Setting the language of a node, if a [LanguageProvider] is given
+ * - Setting [Node.code] and [Node.location], if a [CodeAndLocationProvider] is given
+ * - Setting [Node.location], if a [LanguageProvider] is given
+ * - Setting [Node.isInferred], if an [IsInferredProvider] is given
  *
- * Additionally, if [codeOverride] is specified, the supplied source code is used to override
- * anything from the provider.
+ * Note, that one provider can implement multiple provider interfaces. Additionally, if
+ * [codeOverride] is specified, the supplied source code is used to override anything from the
+ * provider.
  */
 fun Node.applyMetadata(provider: MetadataProvider?, rawNode: Any?, codeOverride: String?) {
     if (provider is CodeAndLocationProvider) {
@@ -1207,7 +1168,9 @@ fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
 /**
  * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
  * or [Handler] should create. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata].
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 fun MetadataProvider.newTranslationUnitDeclaration(
     name: String,
@@ -1225,7 +1188,9 @@ fun MetadataProvider.newTranslationUnitDeclaration(
 
 /**
  * Creates a new [FunctionDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata].
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newFunctionDeclaration(
@@ -1244,7 +1209,9 @@ fun MetadataProvider.newFunctionDeclaration(
 
 /**
  * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata].
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
 fun MetadataProvider.newMethodDeclaration(
@@ -1266,8 +1233,33 @@ fun MetadataProvider.newMethodDeclaration(
 }
 
 /**
+ * Creates a new [ConstructorDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newConstructorDeclaration(
+    name: String,
+    code: String? = null,
+    recordDeclaration: RecordDeclaration?,
+    rawNode: Any? = null
+): ConstructorDeclaration {
+    val node = ConstructorDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name
+    node.recordDeclaration = recordDeclaration
+
+    log(node)
+    return node
+}
+
+/**
  * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata].
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
 fun MetadataProvider.newParamVariableDeclaration(
@@ -1290,26 +1282,36 @@ fun MetadataProvider.newParamVariableDeclaration(
 }
 
 /**
- * Creates a new [ConstructorDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata].
+ * Creates a new [VariableDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newConstructorDeclaration(
+fun MetadataProvider.newVariableDeclaration(
     name: String,
+    type: Type?,
     code: String? = null,
-    recordDeclaration: RecordDeclaration?,
+    implicitInitializerAllowed: Boolean,
     rawNode: Any? = null
-): ConstructorDeclaration {
-    val node = ConstructorDeclaration()
+): VariableDeclaration {
+    val node = VariableDeclaration()
     node.applyMetadata(this, rawNode, code)
 
     node.name = name
-    node.recordDeclaration = recordDeclaration
+    node.type = type
+    node.isImplicitInitializerAllowed = implicitInitializerAllowed
 
     log(node)
     return node
 }
 
+/**
+ * Creates a new [TypedefDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
 @JvmOverloads
 fun MetadataProvider.newTypedefDeclaration(
     targetType: Type?,
@@ -1323,6 +1325,27 @@ fun MetadataProvider.newTypedefDeclaration(
     node.name = alias.typeName
     node.type = targetType
     node.alias = alias
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [TypeParamDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newTypeParamDeclaration(
+    name: String,
+    code: String? = null,
+    rawNode: Any? = null
+): TypeParamDeclaration {
+    val node = TypeParamDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name
 
     log(node)
     return node

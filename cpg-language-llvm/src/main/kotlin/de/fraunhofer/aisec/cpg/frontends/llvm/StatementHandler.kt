@@ -48,7 +48,6 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLabelStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newSwitchStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTryStatement
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration

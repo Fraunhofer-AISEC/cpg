@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -183,12 +184,11 @@ class CompressLLVMPass : Pass() {
         if (reachableThrowNodes.isNotEmpty()) {
             if (catch.parameter == null) {
                 val error =
-                    NodeBuilder.newVariableDeclaration(
+                    catch.newVariableDeclaration(
                         "e_${catch.name}",
                         UnknownType.getUnknownType(),
                         "",
                         true,
-                        catch.language
                     )
                 catch.setParameter(error)
             }

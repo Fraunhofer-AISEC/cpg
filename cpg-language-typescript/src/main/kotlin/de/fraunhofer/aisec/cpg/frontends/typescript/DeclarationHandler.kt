@@ -220,12 +220,11 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         // TODO: support ObjectBindingPattern (whatever it is). seems to be multiple assignment
 
         val `var` =
-            NodeBuilder.newVariableDeclaration(
+            newVariableDeclaration(
                 name,
                 UnknownType.getUnknownType(),
                 this.frontend.getCodeFromRawNode(node),
-                false,
-                frontend.language
+                false
             )
         `var`.location = this.frontend.getLocationFromRawNode(node)
 

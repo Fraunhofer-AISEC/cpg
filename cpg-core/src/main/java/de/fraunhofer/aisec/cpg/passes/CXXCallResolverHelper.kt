@@ -584,16 +584,7 @@ fun CallResolver.createInferredFunctionTemplate(
             // Template Parameter
             val inferredTypeIdentifier = "T$typeCounter"
             val typeParamDeclaration =
-                NodeBuilder.newTypeParamDeclaration(
-                    inferredTypeIdentifier,
-                    call.language,
-                    inferredTypeIdentifier
-                )
-            typeParamDeclaration.isInferred = true
-            val parameterizedType = ParameterizedType(inferredTypeIdentifier)
-            parameterizedType.isInferred = true
-            typeParamDeclaration.type = parameterizedType
-            TypeManager.getInstance().addTypeParameter(inferred, parameterizedType)
+                inferred.startInference().inferTemplateParameter(inferredTypeIdentifier)
             typeCounter++
             inferred.addParameter(typeParamDeclaration)
         } else if (node is Expression) {

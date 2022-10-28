@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.newLiteral;
-import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.newUnaryOperator;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.*;
 
 import com.github.javaparser.JavaToken;
 import com.github.javaparser.Range;
@@ -645,12 +644,12 @@ public class StatementHandler
     }
 
     VariableDeclaration parameter =
-        NodeBuilder.newVariableDeclaration(
+        newVariableDeclaration(
+            this,
             catchCls.getParameter().getName().toString(),
             concreteType,
             catchCls.getParameter().toString(),
-            false,
-            frontend.getLanguage());
+            false);
     parameter.setPossibleSubTypes(possibleTypes);
     CompoundStatement body = handleBlockStatement(catchCls.getBody());
 

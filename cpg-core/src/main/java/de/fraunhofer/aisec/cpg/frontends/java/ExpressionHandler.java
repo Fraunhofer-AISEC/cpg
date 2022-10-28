@@ -243,14 +243,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
               .collect(Collectors.joining(" ")));
 
       VariableDeclaration declaration =
-          NodeBuilder.newVariableDeclaration(
-              resolved.getName(),
-              declarationType,
-              variable.toString(),
-              false,
-              frontend.getLanguage(),
-              frontend,
-              variable);
+          newVariableDeclaration(
+              this, resolved.getName(), declarationType, variable.toString(), false, variable);
 
       if (declarationType instanceof PointerType && ((PointerType) declarationType).isArray()) {
         declaration.setIsArray(true);

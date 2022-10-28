@@ -241,13 +241,13 @@ public class DeclarationHandler
     // create the receiver
     var receiver =
         newVariableDeclaration(
+            this,
             "this",
             recordDecl != null
                 ? TypeParser.createFrom(recordDecl.getName(), false)
                 : UnknownType.getUnknownType(),
             "this",
-            false,
-            frontend.getLanguage());
+            false);
     ;
 
     functionDeclaration.setReceiver(receiver);
