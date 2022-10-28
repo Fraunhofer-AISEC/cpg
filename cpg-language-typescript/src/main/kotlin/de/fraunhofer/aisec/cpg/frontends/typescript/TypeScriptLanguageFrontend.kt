@@ -29,6 +29,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -59,8 +60,11 @@ import java.nio.file.StandardCopyOption
  * also has built-in support for React dialects TSX and JSX.
  */
 @ExperimentalTypeScript
-class TypeScriptLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, ".") {
+class TypeScriptLanguageFrontend(
+    language: Language<TypeScriptLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager?
+) : LanguageFrontend(language, config, scopeManager, ".") {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
@@ -229,10 +233,12 @@ class TypeScriptLanguageFrontend(config: TranslationConfiguration, scopeManager:
             val call = this.expressionHandler.handle(call) as CallExpression
 
             val annotation =
-                NodeBuilder.newAnnotation(call.name, this.getCodeFromRawNode(node) ?: "")
+                NodeBuilder.newAnnotation(call.name, language, this.getCodeFromRawNode(node) ?: "")
 
             annotation.members =
-                call.arguments.map { NodeBuilder.newAnnotationMember("", it, it.code ?: "") }
+                call.arguments.map {
+                    NodeBuilder.newAnnotationMember("", it, language, it.code ?: "")
+                }
 
             call.disconnectFromGraph()
 
@@ -241,7 +247,8 @@ class TypeScriptLanguageFrontend(config: TranslationConfiguration, scopeManager:
             // or a decorator just has a simple identifier
             val name = this.getIdentifierName(node)
 
-            val annotation = NodeBuilder.newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
+            val annotation =
+                NodeBuilder.newAnnotation(name, language, this.getCodeFromRawNode(node) ?: "")
 
             return annotation
         }

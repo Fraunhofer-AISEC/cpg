@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.TypeManager
@@ -37,8 +38,11 @@ import java.io.File
 import java.io.FileOutputStream
 
 @ExperimentalGolang
-class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, ".") {
+class GoLanguageFrontend(
+    language: Language<GoLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager?
+) : LanguageFrontend(language, config, scopeManager, ".") {
     companion object {
         @kotlin.jvm.JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
 

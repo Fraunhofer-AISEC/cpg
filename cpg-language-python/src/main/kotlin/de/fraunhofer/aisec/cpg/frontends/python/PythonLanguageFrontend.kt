@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.TypeManager
@@ -39,8 +40,11 @@ import jep.JepException
 import jep.SubInterpreter
 
 @ExperimentalPython
-class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, ".") {
+class PythonLanguageFrontend(
+    language: Language<PythonLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager?
+) : LanguageFrontend(language, config, scopeManager, ".") {
     companion object {
         @kotlin.jvm.JvmField var PY_EXTENSIONS: List<String> = listOf(".py")
     }

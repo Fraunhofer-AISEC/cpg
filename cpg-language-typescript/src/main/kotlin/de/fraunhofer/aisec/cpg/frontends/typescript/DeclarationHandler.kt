@@ -72,7 +72,8 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 this.lang.getCodeFromRawNode(node),
                 this.lang.getLocationFromRawNode(node),
                 null,
-                false
+                false,
+                lang.language
             )
 
         this.lang.processAnnotations(field, node)
@@ -91,6 +92,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 } else {
                     "class"
                 },
+                lang.language,
                 this.lang.getCodeFromRawNode(node)
             )
 
@@ -120,7 +122,13 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 ?: UnknownType.getUnknownType()
 
         val param =
-            NodeBuilder.newMethodParameterIn(name, type, false, this.lang.getCodeFromRawNode(node))
+            NodeBuilder.newMethodParameterIn(
+                name,
+                type,
+                false,
+                lang.language,
+                this.lang.getCodeFromRawNode(node)
+            )
 
         return param
     }
@@ -129,6 +137,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val tu =
             NodeBuilder.newTranslationUnitDeclaration(
                 node.location.file,
+                lang.language,
                 this.lang.getCodeFromRawNode(node)
             )
 
@@ -163,7 +172,8 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                         name,
                         this.lang.getCodeFromRawNode(node),
                         false,
-                        record
+                        record,
+                        lang.language
                     )
                 }
                 "Constructor" -> {
@@ -172,10 +182,16 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     NodeBuilder.newConstructorDeclaration(
                         record?.name ?: "",
                         this.lang.getCodeFromRawNode(node),
-                        record
+                        record,
+                        lang.language
                     )
                 }
-                else -> NodeBuilder.newFunctionDeclaration(name, this.lang.getCodeFromRawNode(node))
+                else ->
+                    NodeBuilder.newFunctionDeclaration(
+                        name,
+                        lang.language,
+                        this.lang.getCodeFromRawNode(node)
+                    )
             }
 
         node.typeChildNode?.let { func.type = this.lang.typeHandler.handle(it) }
@@ -220,7 +236,8 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 name,
                 UnknownType.getUnknownType(),
                 this.lang.getCodeFromRawNode(node),
-                false
+                false,
+                lang.language
             )
         `var`.location = this.lang.getLocationFromRawNode(node)
 

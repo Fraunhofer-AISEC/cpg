@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
 /** The Python language. */
 @OptIn(ExperimentalPython::class)
-class PythonLanguage : Language<PythonLanguageFrontend> {
+class PythonLanguage : Language<PythonLanguageFrontend>() {
     override val fileExtensions = listOf("py")
     override val namespaceDelimiter = "."
     override val frontend = PythonLanguageFrontend::class.java
@@ -41,6 +41,6 @@ class PythonLanguage : Language<PythonLanguageFrontend> {
         config: TranslationConfiguration,
         scopeManager: ScopeManager
     ): PythonLanguageFrontend {
-        return PythonLanguageFrontend(config, scopeManager)
+        return PythonLanguageFrontend(this, config, scopeManager)
     }
 }

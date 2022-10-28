@@ -58,7 +58,8 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
         // typescript allows to declare function on a statement level, e.g. within a compound
         // statement. We can wrap it into a declaration statement
-        val statement = NodeBuilder.newDeclarationStatement(this.lang.getCodeFromRawNode(node))
+        val statement =
+            NodeBuilder.newDeclarationStatement(lang.language, this.lang.getCodeFromRawNode(node))
 
         val decl = this.lang.declarationHandler.handle(node)
 
@@ -70,7 +71,8 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleReturnStatement(node: TypeScriptNode): ReturnStatement {
-        val returnStmt = NodeBuilder.newReturnStatement(this.lang.getCodeFromRawNode(node))
+        val returnStmt =
+            NodeBuilder.newReturnStatement(lang.language, this.lang.getCodeFromRawNode(node))
 
         node.children?.first()?.let {
             returnStmt.returnValue = this.lang.expressionHandler.handle(it)
@@ -80,7 +82,8 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleBlock(node: TypeScriptNode): CompoundStatement {
-        val block = NodeBuilder.newCompoundStatement(this.lang.getCodeFromRawNode(node))
+        val block =
+            NodeBuilder.newCompoundStatement(lang.language, this.lang.getCodeFromRawNode(node))
 
         node.children?.forEach { block.addStatement(this.handle(it)) }
 
@@ -95,7 +98,8 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
-        val statement = NodeBuilder.newDeclarationStatement(this.lang.getCodeFromRawNode(node))
+        val statement =
+            NodeBuilder.newDeclarationStatement(lang.language, this.lang.getCodeFromRawNode(node))
 
         // the declarations are contained in a VariableDeclarationList
         val nodes = node.firstChild("VariableDeclarationList")?.children
