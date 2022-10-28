@@ -32,12 +32,11 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
 /** The Go language. */
 @OptIn(ExperimentalGolang::class)
-class GoLanguage
-constructor(
-    override val fileExtensions: List<String> = listOf(".go"),
-    override val namespaceDelimiter: String = ".",
-    override val frontend: Class<GoLanguageFrontend>
-) : Language<GoLanguageFrontend> {
+class GoLanguage : Language<GoLanguageFrontend> {
+    override val fileExtensions = listOf("go")
+    override val namespaceDelimiter = "."
+    override val frontend = GoLanguageFrontend::class.java
+
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager
