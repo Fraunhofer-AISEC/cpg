@@ -32,12 +32,11 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
 /** The JavaScript language. */
 @OptIn(ExperimentalTypeScript::class)
-class JavaScriptLanguage
-constructor(
-    override val fileExtensions: List<String> = listOf(".js"),
-    override val namespaceDelimiter: String = ".",
-    override val frontend: Class<TypeScriptLanguageFrontend>
-) : Language<TypeScriptLanguageFrontend> {
+class JavaScriptLanguage : Language<TypeScriptLanguageFrontend> {
+    override val fileExtensions = listOf("js")
+    override val namespaceDelimiter = "."
+    override val frontend = TypeScriptLanguageFrontend::class.java
+
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager
