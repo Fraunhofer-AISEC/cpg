@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 /**
  * Creates a new [Literal]. This is the top-most [Node] that a [LanguageFrontend] or [Handler]
@@ -56,10 +57,10 @@ fun <T> MetadataProvider.newLiteral(
 }
 
 /**
- * Creates a new [BinaryOperator]. This is the top-most [Node] that a [LanguageFrontend] or
- * [Handler] should create. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [BinaryOperator]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
 fun MetadataProvider.newBinaryOperator(
@@ -127,10 +128,28 @@ fun MetadataProvider.newNewExpression(
 }
 
 /**
- * Creates a new [ConditionalExpression]. This is the top-most [Node] that a [LanguageFrontend] or
- * [Handler] should create. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [ConstructExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newConstructExpression(
+    code: String? = null,
+    rawNode: Any? = null
+): ConstructExpression {
+    val node = ConstructExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ConditionalExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newConditionalExpression(
@@ -154,10 +173,10 @@ fun MetadataProvider.newConditionalExpression(
 }
 
 /**
- * Creates a new [KeyValueExpression]. This is the top-most [Node] that a [LanguageFrontend] or
- * [Handler] should create. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [KeyValueExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newKeyValueExpression(
@@ -177,10 +196,10 @@ fun MetadataProvider.newKeyValueExpression(
 }
 
 /**
- * Creates a new [LambdaExpression]. This is the top-most [Node] that a [LanguageFrontend] or
- * [Handler] should create. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [LambdaExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
 fun MetadataProvider.newLambdaExpression(
@@ -194,12 +213,359 @@ fun MetadataProvider.newLambdaExpression(
     return node
 }
 
+/**
+ * Creates a new [CompoundStatementExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
 @JvmOverloads
 fun MetadataProvider.newCompoundStatementExpression(
     code: String? = null,
     rawNode: Any? = null
 ): CompoundStatementExpression {
     val node = CompoundStatementExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [CallExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newCallExpression(
+    callee: Expression?,
+    fqn: String?,
+    code: String? = null,
+    template: Boolean,
+    rawNode: Any? = null
+): CallExpression {
+    val node = CallExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    node.callee = callee
+    node.fqn = fqn
+    node.template = template
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [CallExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newMemberCallExpression(
+    name: String?,
+    fqn: String?,
+    base: Expression?,
+    member: Node?,
+    operatorCode: String?,
+    code: String? = null,
+    rawNode: Any? = null
+): CallExpression {
+    val node = MemberCallExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name ?: Node.EMPTY_NAME
+    node.fqn = fqn
+    node.base = base
+    node.member = member
+    node.operatorCode = operatorCode
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [MemberExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newMemberExpression(
+    base: Expression,
+    memberType: Type?,
+    name: String?,
+    operatorCode: String?,
+    code: String? = null,
+    rawNode: Any? = null
+): MemberExpression {
+    val node = MemberExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name ?: Node.EMPTY_NAME
+    node.setBase(base)
+    node.operatorCode = operatorCode
+    node.type = memberType
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [StaticCallExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newStaticCallExpression(
+    name: String?,
+    fqn: String?,
+    code: String? = null,
+    targetRecord: String?,
+    rawNode: Any? = null
+): StaticCallExpression {
+    val node = StaticCallExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name ?: Node.EMPTY_NAME
+    node.fqn = fqn
+    node.targetRecord = targetRecord
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [CastExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newCastExpression(code: String? = null, rawNode: Any? = null): CastExpression {
+    val node = CastExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [TypeIdExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newTypeIdExpression(
+    operatorCode: String,
+    type: Type?,
+    referencedType: Type?,
+    code: String? = null,
+    rawNode: Any? = null
+): TypeIdExpression {
+    val node = TypeIdExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = operatorCode
+    node.operatorCode = operatorCode
+    node.type = type
+    node.referencedType = referencedType
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ArraySubscriptionExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newArraySubscriptionExpression(
+    code: String? = null,
+    rawNode: Any? = null
+): ArraySubscriptionExpression {
+    val node = ArraySubscriptionExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ArrayCreationExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newArrayCreationExpression(
+    code: String? = null,
+    rawNode: Any? = null
+): ArrayCreationExpression {
+    val node = ArrayCreationExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [DeclaredReferenceExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newDeclaredReferenceExpression(
+    name: String?,
+    type: Type? = UnknownType.getUnknownType(),
+    code: String? = null,
+    rawNode: Any? = null
+): DeclaredReferenceExpression {
+    val node = DeclaredReferenceExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name ?: Node.EMPTY_NAME
+    node.type = type
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ArrayRangeExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newArrayRangeExpression(
+    floor: Expression?,
+    ceil: Expression?,
+    code: String? = null,
+    rawNode: Any? = null
+): ArrayRangeExpression {
+    val node = ArrayRangeExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    node.floor = floor
+    node.ceiling = ceil
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [DeleteExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newDeleteExpression(
+    code: String? = null,
+    rawNode: Any? = null
+): DeleteExpression {
+    val node = DeleteExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ExpressionList]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newExpressionList(code: String? = null, rawNode: Any? = null): ExpressionList {
+    val node = ExpressionList()
+    node.applyMetadata(this, rawNode, code)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [InitializerListExpression]. This is the top-most [Node] that a [LanguageFrontend]
+ * or [Handler] should create. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newInitializerListExpression(
+    code: String? = null,
+    rawNode: Any? = null
+): InitializerListExpression {
+    val node = InitializerListExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [DesignatedInitializerExpression]. The [MetadataProvider] receiver will be used to
+ * fill different meta-data using [Node.applyMetadata]. Calling this extension function outside of
+ * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newDesignatedInitializerExpression(
+    code: String? = null,
+    rawNode: Any? = null
+): DesignatedInitializerExpression {
+    val node = DesignatedInitializerExpression()
+    node.applyMetadata(this, rawNode, code)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [TypeExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newTypeExpression(
+    name: String?,
+    type: Type?,
+    rawNode: Any? = null
+): TypeExpression {
+    val node = TypeExpression()
+    node.applyMetadata(this, rawNode, null)
+
+    node.name = name ?: Node.EMPTY_NAME
+    node.type = type
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ProblemExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newProblemExpression(
+    problem: String = "",
+    type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
+    code: String? = null,
+    rawNode: Any? = null
+): ProblemExpression {
+    val node = ProblemExpression(problem, type)
     node.applyMetadata(this, rawNode, code)
 
     log(node)

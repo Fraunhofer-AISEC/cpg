@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import org.slf4j.LoggerFactory
@@ -58,141 +57,6 @@ object NodeBuilder {
         return node
     }
 
-    @JvmStatic
-    @JvmOverloads
-    fun newCallExpression(
-        callee: Expression?,
-        fqn: String?,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        template: Boolean,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): CallExpression {
-        val node = CallExpression()
-        node.callee = callee
-        node.applyMetadata(frontend, rawNode, code)
-        node.fqn = fqn
-        node.template = template
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newStaticCallExpression(
-        name: String?,
-        fqn: String?,
-        code: String? = null,
-        targetRecord: String?,
-        language: Language<out LanguageFrontend>,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): StaticCallExpression {
-        val node = StaticCallExpression()
-        node.setName(name!!)
-        node.applyMetadata(frontend, rawNode, code)
-        node.fqn = fqn
-        node.targetRecord = targetRecord
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newCastExpression(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): CastExpression {
-        val node = CastExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newTypeIdExpression(
-        operatorCode: String?,
-        type: Type?,
-        referencedType: Type?,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): TypeIdExpression {
-        val node = TypeIdExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.operatorCode = operatorCode
-        node.name = operatorCode!!
-        node.type = type
-        node.referencedType = referencedType
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newArraySubscriptionExpression(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): ArraySubscriptionExpression {
-        val node = ArraySubscriptionExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newDeclaredReferenceExpression(
-        name: String?,
-        language: Language<out LanguageFrontend>,
-        type: Type? = UnknownType.getUnknownType(),
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): DeclaredReferenceExpression {
-        val node = DeclaredReferenceExpression()
-        node.name = name!!
-        node.type = type
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newArrayRangeExpression(
-        floor: Expression?,
-        ceil: Expression?,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): ArrayRangeExpression {
-        val node = ArrayRangeExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-
-        node.floor = floor
-        node.ceiling = ceil
-        log(node)
-        return node
-    }
-
     fun log(node: Node?) {
         LOGGER.trace("Creating {}", node)
     }
@@ -206,22 +70,6 @@ object NodeBuilder {
         rawNode: Any? = null
     ): SynchronizedStatement {
         val node = SynchronizedStatement()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newDeleteExpression(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): DeleteExpression {
-        val node = DeleteExpression()
         node.applyMetadata(frontend, rawNode, code)
         node.language = language
 
@@ -254,67 +102,6 @@ object NodeBuilder {
     ): CompoundStatement {
         val node = CompoundStatement()
         node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newExpressionList(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): ExpressionList {
-        val node = ExpressionList()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newMemberCallExpression(
-        name: String?,
-        fqn: String?,
-        base: Expression?,
-        member: Node?,
-        operatorCode: String?,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): CallExpression {
-        val node = MemberCallExpression()
-        node.name = name!!
-        node.base = base
-        node.member = member
-        node.operatorCode = operatorCode
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-
-        node.fqn = fqn
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newTypeExpression(
-        name: String?,
-        type: Type?,
-        language: Language<out LanguageFrontend>,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): TypeExpression {
-        val node = TypeExpression()
-        node.name = name!!
-        node.type = type
-        node.applyMetadata(frontend, rawNode, null)
         node.language = language
 
         log(node)
@@ -605,119 +392,6 @@ object NodeBuilder {
 
     @JvmStatic
     @JvmOverloads
-    fun newMemberExpression(
-        base: Expression?,
-        memberType: Type?,
-        name: String?,
-        language: Language<out LanguageFrontend>,
-        operatorCode: String?,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): MemberExpression {
-        val node = MemberExpression()
-        node.setBase(base!!)
-        node.operatorCode = operatorCode
-        node.applyMetadata(frontend, rawNode, code)
-        node.name = name!!
-        node.type = memberType
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newStatement(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): Statement {
-        val node = ProblemExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newExpression(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): Expression {
-        val node = ProblemExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newInitializerListExpression(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): InitializerListExpression {
-        val node = InitializerListExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newDesignatedInitializerExpression(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): DesignatedInitializerExpression {
-        val node = DesignatedInitializerExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newArrayCreationExpression(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): ArrayCreationExpression {
-        val node = ArrayCreationExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newConstructExpression(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): ConstructExpression {
-        val node = ConstructExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
     fun newProblemDeclaration(
         language: Language<out LanguageFrontend>,
         problem: String = "",
@@ -728,23 +402,6 @@ object NodeBuilder {
     ): ProblemDeclaration {
         val node = ProblemDeclaration()
         node.problem = problem
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newProblemExpression(
-        language: Language<out LanguageFrontend>,
-        problem: String = "",
-        type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): ProblemExpression {
-        val node = ProblemExpression(problem, type)
         node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)

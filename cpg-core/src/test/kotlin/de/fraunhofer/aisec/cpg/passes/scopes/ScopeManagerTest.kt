@@ -33,12 +33,9 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
 import java.io.File
 import kotlin.test.*
 
@@ -115,7 +112,8 @@ internal class ScopeManagerTest : BaseTest() {
 
         // merge the two scopes. this replicates the behaviour of parseParallel
         val final = ScopeManager()
-        CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), final)
+        val frontend =
+            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), final)
         final.mergeFrom(listOf(s1, s2))
 
         // in the final scope manager, the should only be one NameScope "A"
@@ -138,10 +136,9 @@ internal class ScopeManagerTest : BaseTest() {
 
         // resolve symbol
         val call =
-            NodeBuilder.newCallExpression(
-                NodeBuilder.newDeclaredReferenceExpression("func1", CPPLanguage()),
+            frontend.newCallExpression(
+                frontend.newDeclaredReferenceExpression("func1"),
                 "A::func1",
-                CPPLanguage(),
                 null,
                 false
             )

@@ -32,10 +32,10 @@ import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
 import de.fraunhofer.aisec.cpg.graph.duplicate
+import de.fraunhofer.aisec.cpg.graph.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
@@ -123,7 +123,7 @@ open class CallResolver : SymbolResolverPass() {
             if (typeString in recordMap) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
-                    val initializer = newConstructExpression(node.language, "()")
+                    val initializer = node.newConstructExpression("()")
                     initializer.isImplicit = true
                     node.initializer = initializer
                     node.templateParameters?.let {
@@ -135,7 +135,7 @@ open class CallResolver : SymbolResolverPass() {
                     // This should actually be a construct expression, not a call!
                     val arguments = currInitializer.arguments
                     val signature = arguments.map(Node::code).joinToString(", ")
-                    val initializer = newConstructExpression(node.language, "($signature)")
+                    val initializer = node.newConstructExpression("($signature)")
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
                     initializer.isImplicit = true
                     node.initializer = initializer

@@ -29,6 +29,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.ProblemNode;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -42,6 +43,11 @@ import org.slf4j.LoggerFactory;
 /**
  * A {@link Handler} is an abstract base class for a class that translates AST nodes from a raw ast
  * type, usually supplied by a language parser into our generic CPG nodes.
+ *
+ * <p>It implements at least one {@link MetadataProvider}, so that node builder extension functions
+ * (e.g., {@link
+ * de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt#newCallExpression(MetadataProvider, Expression,
+ * String, boolean)} can be used directly to create appropriate nodes.
  *
  * @param <S> the result node or a collection of nodes
  * @param <T> the raw ast node specific to the parser

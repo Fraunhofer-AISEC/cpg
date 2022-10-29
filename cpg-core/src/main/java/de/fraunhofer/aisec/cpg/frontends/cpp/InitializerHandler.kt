@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.newConstructExpression
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import java.util.function.Supplier
@@ -52,8 +53,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
-        val constructExpression =
-            NodeBuilder.newConstructExpression(frontend.language, ctx.rawSignature)
+        val constructExpression = newConstructExpression(ctx.rawSignature)
 
         for ((i, argument) in ctx.arguments.withIndex()) {
             val arg = frontend.expressionHandler.handle(argument)
@@ -66,9 +66,6 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
 
     private fun handleEqualsInitializer(ctx: IASTEqualsInitializer): Expression {
         return frontend.expressionHandler.handle(ctx.initializerClause)
-            ?: return NodeBuilder.newProblemExpression(
-                frontend.language,
-                "could not parse initializer clause"
-            )
+            ?: return newProblemExpression("could not parse initializer clause")
     }
 }

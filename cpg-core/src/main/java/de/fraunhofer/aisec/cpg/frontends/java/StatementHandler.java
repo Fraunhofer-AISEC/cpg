@@ -26,8 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newVariableDeclaration;
-import static de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt.newLiteral;
-import static de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt.newUnaryOperator;
+import static de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt.*;
 
 import com.github.javaparser.JavaToken;
 import com.github.javaparser.Range;
@@ -233,7 +232,7 @@ public class StatementHandler
       PhysicalLocation ofExprList = null;
 
       // code will be set later
-      ExpressionList initExprList = NodeBuilder.newExpressionList(frontend.getLanguage(), null);
+      ExpressionList initExprList = newExpressionList(this);
 
       for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getInitialization()) {
         de.fraunhofer.aisec.cpg.graph.statements.Statement s =
@@ -288,8 +287,7 @@ public class StatementHandler
       PhysicalLocation ofExprList = statement.getLocation();
 
       // code will be set later
-      ExpressionList iterationExprList =
-          NodeBuilder.newExpressionList(frontend.getLanguage(), null);
+      ExpressionList iterationExprList = newExpressionList(this);
 
       for (com.github.javaparser.ast.expr.Expression updateExpr : forStmt.getUpdate()) {
         de.fraunhofer.aisec.cpg.graph.statements.Statement s =

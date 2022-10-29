@@ -780,8 +780,7 @@ fun getTemplateInitializationSignature(
         val functionDeclaration = functionTemplateDeclaration.realization[0]
         val currentArgumentType = functionDeclaration.parameters[i].type
         val deducedType = templateCall.arguments[i].type
-        val typeExpression =
-            NodeBuilder.newTypeExpression(deducedType.name, deducedType, templateCall.language)
+        val typeExpression = templateCall.newTypeExpression(deducedType.name, deducedType)
         typeExpression.isImplicit = true
         if (
             currentArgumentType is ParameterizedType &&
@@ -901,10 +900,9 @@ fun handleImplicitTemplateParameter(
         var defaultNode = (functionTemplateDeclaration.parameters[index] as HasDefault<*>).default
         if (defaultNode is Type) {
             defaultNode =
-                NodeBuilder.newTypeExpression(
+                functionTemplateDeclaration.newTypeExpression(
                     defaultNode.name,
                     defaultNode,
-                    functionTemplateDeclaration.language
                 )
             defaultNode.isImplicit = true
         }

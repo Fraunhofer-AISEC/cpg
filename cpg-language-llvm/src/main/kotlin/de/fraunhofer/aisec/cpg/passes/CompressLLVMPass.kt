@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.newDeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -193,10 +193,9 @@ class CompressLLVMPass : Pass() {
                 catch.setParameter(error)
             }
             val exceptionReference =
-                NodeBuilder.newDeclaredReferenceExpression(
-                    catch.parameter!!.name,
-                    catch.language,
-                    catch.parameter!!.type,
+                catch.newDeclaredReferenceExpression(
+                    catch.parameter?.name,
+                    catch.parameter?.type,
                     ""
                 )
             exceptionReference.refersTo = catch.parameter

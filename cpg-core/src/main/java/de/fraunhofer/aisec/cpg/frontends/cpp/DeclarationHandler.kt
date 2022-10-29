@@ -651,10 +651,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     TypeParser.createFrom(templateArgument.getRawSignature(), true)
                 objectType.addGeneric(genericInstantiation)
                 templateParams.add(
-                    NodeBuilder.newTypeExpression(
+                    newTypeExpression(
                         genericInstantiation.name,
                         genericInstantiation,
-                        frontend.language
                     )
                 )
             } else if (templateArgument is IASTExpression) {

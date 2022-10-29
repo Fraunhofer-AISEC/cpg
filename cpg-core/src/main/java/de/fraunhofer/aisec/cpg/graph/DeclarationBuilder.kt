@@ -39,14 +39,14 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  * argument.
  */
 fun MetadataProvider.newTranslationUnitDeclaration(
-    name: String,
+    name: String?,
     code: String? = null,
     rawNode: Any? = null
 ): TranslationUnitDeclaration {
     val node = TranslationUnitDeclaration()
     node.applyMetadata(this, rawNode, code)
 
-    node.name = name
+    node.name = name ?: Node.EMPTY_NAME
 
     NodeBuilder.log(node)
     return node
@@ -60,14 +60,14 @@ fun MetadataProvider.newTranslationUnitDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newFunctionDeclaration(
-    name: String,
+    name: String?,
     code: String? = null,
     rawNode: Any? = null
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
     node.applyMetadata(this, rawNode, code)
 
-    node.name = name
+    node.name = name ?: Node.EMPTY_NAME
 
     NodeBuilder.log(node)
     return node
@@ -81,7 +81,7 @@ fun MetadataProvider.newFunctionDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newMethodDeclaration(
-    name: String,
+    name: String?,
     code: String? = null,
     isStatic: Boolean,
     recordDeclaration: RecordDeclaration?,
@@ -90,7 +90,7 @@ fun MetadataProvider.newMethodDeclaration(
     val node = MethodDeclaration()
     node.applyMetadata(this, rawNode, code)
 
-    node.name = name
+    node.name = name ?: Node.EMPTY_NAME
     node.isStatic = isStatic
     node.recordDeclaration = recordDeclaration
 
@@ -106,7 +106,7 @@ fun MetadataProvider.newMethodDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newConstructorDeclaration(
-    name: String,
+    name: String?,
     code: String? = null,
     recordDeclaration: RecordDeclaration?,
     rawNode: Any? = null
@@ -114,7 +114,7 @@ fun MetadataProvider.newConstructorDeclaration(
     val node = ConstructorDeclaration()
     node.applyMetadata(this, rawNode, code)
 
-    node.name = name
+    node.name = name ?: Node.EMPTY_NAME
     node.recordDeclaration = recordDeclaration
 
     NodeBuilder.log(node)
@@ -129,7 +129,7 @@ fun MetadataProvider.newConstructorDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newParamVariableDeclaration(
-    name: String,
+    name: String?,
     type: Type?,
     variadic: Boolean,
     code: String? = null,
@@ -138,7 +138,7 @@ fun MetadataProvider.newParamVariableDeclaration(
     val node = ParamVariableDeclaration()
     node.applyMetadata(this, rawNode, code)
 
-    node.name = name
+    node.name = name ?: Node.EMPTY_NAME
     node.type = type
     node.isVariadic = variadic
 
@@ -154,7 +154,7 @@ fun MetadataProvider.newParamVariableDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newVariableDeclaration(
-    name: String,
+    name: String?,
     type: Type?,
     code: String? = null,
     implicitInitializerAllowed: Boolean,
@@ -163,7 +163,7 @@ fun MetadataProvider.newVariableDeclaration(
     val node = VariableDeclaration()
     node.applyMetadata(this, rawNode, code)
 
-    node.name = name
+    node.name = name ?: Node.EMPTY_NAME
     node.type = type
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
 
@@ -203,14 +203,14 @@ fun MetadataProvider.newTypedefDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newTypeParamDeclaration(
-    name: String,
+    name: String?,
     code: String? = null,
     rawNode: Any? = null
 ): TypeParamDeclaration {
     val node = TypeParamDeclaration()
     node.applyMetadata(this, rawNode, code)
 
-    node.name = name
+    node.name = name ?: Node.EMPTY_NAME
 
     NodeBuilder.log(node)
     return node

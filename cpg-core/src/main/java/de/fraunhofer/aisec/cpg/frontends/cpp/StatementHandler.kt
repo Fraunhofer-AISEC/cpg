@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.newLiteral
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -79,10 +80,8 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     private fun handleProblemStatement(problemStmt: IASTProblemStatement): ProblemExpression {
         Util.errorWithFileLocation(frontend, problemStmt, log, problemStmt.problem.message)
 
-        return NodeBuilder.newProblemExpression(
-            frontend.language,
+        return newProblemExpression(
             problemStmt.problem.message,
-            frontend = frontend
         )
     }
 

@@ -90,8 +90,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
   private Statement handleCastExpr(Expression expr) {
     CastExpr castExpr = expr.asCastExpr();
-    CastExpression castExpression =
-        NodeBuilder.newCastExpression(frontend.getLanguage(), expr.toString());
+    CastExpression castExpression = newCastExpression(this, expr.toString());
 
     de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression expression =
         (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
@@ -123,7 +122,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
   private Statement handleArrayCreationExpr(Expression expr) {
     ArrayCreationExpr arrayCreationExpr = (ArrayCreationExpr) expr;
     ArrayCreationExpression creationExpression =
-        NodeBuilder.newArrayCreationExpression(frontend.getLanguage(), expr.toString());
+        newArrayCreationExpression(frontend.getLanguage(), expr.toString());
 
     // in Java, an array creation expression either specifies an initializer or dimensions
 
@@ -150,8 +149,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     ArrayInitializerExpr arrayInitializerExpr = (ArrayInitializerExpr) expr;
     // ArrayInitializerExpressions are converted into InitializerListExpressions to reduce the
     // syntactic distance a CPP and JAVA CPG
-    InitializerListExpression initList =
-        NodeBuilder.newInitializerListExpression(frontend.getLanguage(), expr.toString());
+    InitializerListExpression initList = newInitializerListExpression(this, expr.toString());
     List<de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression> initializers =
         arrayInitializerExpr.getValues().stream()
             .map(this::handle)
@@ -164,7 +162,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
   private ArraySubscriptionExpression handleArrayAccessExpr(Expression expr) {
     ArrayAccessExpr arrayAccessExpr = (ArrayAccessExpr) expr;
     ArraySubscriptionExpression arraySubsExpression =
-        NodeBuilder.newArraySubscriptionExpression(frontend.getLanguage(), expr.toString());
+        newArraySubscriptionExpression(this, expr.toString());
     arraySubsExpression.setArrayExpression(
         (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(arrayAccessExpr.getName()));
@@ -319,11 +317,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         }
       }
       base =
-          NodeBuilder.newDeclaredReferenceExpression(
-              scope.asNameExpr().getNameAsString(),
-              frontend.getLanguage(),
-              baseType,
-              scope.toString());
+          newDeclaredReferenceExpression(
+              this, scope.asNameExpr().getNameAsString(), baseType, scope.toString());
       ((DeclaredReferenceExpression) base).setStaticAccess(isStaticAccess);
 
       frontend.setCodeAndLocation(base, fieldAccessExpr.getScope());
@@ -354,11 +349,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
           baseType = UnknownType.getUnknownType();
         }
         base =
-            NodeBuilder.newDeclaredReferenceExpression(
-                scope.asFieldAccessExpr().getNameAsString(),
-                frontend.getLanguage(),
-                baseType,
-                scope.toString());
+            newDeclaredReferenceExpression(
+                this, scope.asFieldAccessExpr().getNameAsString(), baseType, scope.toString());
         ((DeclaredReferenceExpression) base).setStaticAccess(true);
       }
       frontend.setCodeAndLocation(base, fieldAccessExpr.getScope());
@@ -389,11 +381,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       }
 
       MemberExpression memberExpression =
-          NodeBuilder.newMemberExpression(
+          newMemberExpression(
+              this,
               base,
               fieldType,
               fieldAccessExpr.getName().getIdentifier(),
-              frontend.getLanguage(),
               ".", // there is only "." in java
               fieldAccessExpr.toString());
       memberExpression.setStaticAccess(true);
@@ -404,11 +396,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       base.setLocation(frontend.getLocationFromRawNode(fieldAccessExpr));
     }
 
-    return NodeBuilder.newMemberExpression(
+    return newMemberExpression(
+        this,
         base,
         fieldType,
         fieldAccessExpr.getName().getIdentifier(),
-        frontend.getLanguage(),
         ".",
         fieldAccessExpr.toString());
   }
@@ -466,9 +458,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     Type type = TypeParser.createFrom(classExpr.getType().asString(), true);
 
     DeclaredReferenceExpression thisExpression =
-        NodeBuilder.newDeclaredReferenceExpression(
+        newDeclaredReferenceExpression(
+            this,
             classExpr.toString().substring(classExpr.toString().lastIndexOf('.') + 1),
-            frontend.getLanguage(),
             type,
             classExpr.toString());
     thisExpression.setStaticAccess(true);
@@ -484,8 +476,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     Type type = TypeParser.createFrom(resolvedValueDeclaration.getQualifiedName(), true);
 
     DeclaredReferenceExpression thisExpression =
-        NodeBuilder.newDeclaredReferenceExpression(
-            thisExpr.toString(), frontend.getLanguage(), type, thisExpr.toString());
+        newDeclaredReferenceExpression(this, thisExpr.toString(), type, thisExpr.toString());
     frontend.setCodeAndLocation(thisExpression, thisExpr);
 
     return thisExpression;
@@ -496,8 +487,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     // about the inheritance structure. Thus, we delay the resolving to the variable resolving
     // process
     DeclaredReferenceExpression superExpression =
-        NodeBuilder.newDeclaredReferenceExpression(
-            expr.toString(), frontend.getLanguage(), UnknownType.getUnknownType(), expr.toString());
+        newDeclaredReferenceExpression(
+            this, expr.toString(), UnknownType.getUnknownType(), expr.toString());
     frontend.setCodeAndLocation(superExpression, expr);
 
     return superExpression;
@@ -513,7 +504,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     //    try {
     //      ResolvedType resolvedType = nameExpr.calculateResolvedType();
     //      if (resolvedType.isReferenceType()) {
-    //        return NodeBuilder.newDeclaredReferenceExpression(
+    //        return newDeclaredReferenceExpression(
     //            nameExpr.getNameAsString(),
     //            new Type(((ReferenceTypeImpl) resolvedType).getQualifiedName()),
     //            nameExpr.toString());
@@ -522,7 +513,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     //        UnsolvedSymbolException
     //            e) { // this might throw, e.g. if the type is simply not defined (i.e., syntax
     // error)
-    //      return NodeBuilder.newDeclaredReferenceExpression(
+    //      return newDeclaredReferenceExpression(
     //          nameExpr.getNameAsString(), new Type(UNKNOWN_TYPE), nameExpr.toString());
     //    }
 
@@ -570,8 +561,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
           type = TypeParser.createFrom(symbol.getType().describe(), true);
         }
 
-        return NodeBuilder.newDeclaredReferenceExpression(
-            symbol.getName(), frontend.getLanguage(), type, nameExpr.toString());
+        return newDeclaredReferenceExpression(this, symbol.getName(), type, nameExpr.toString());
       }
     } catch (UnsolvedSymbolException ex) {
       String typeString;
@@ -592,8 +582,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       var name = nameExpr.getNameAsString();
 
       DeclaredReferenceExpression declaredReferenceExpression =
-          NodeBuilder.newDeclaredReferenceExpression(
-              name, frontend.getLanguage(), t, nameExpr.toString());
+          newDeclaredReferenceExpression(this, name, t, nameExpr.toString());
 
       var recordDeclaration = this.frontend.getScopeManager().getCurrentRecord();
 
@@ -606,8 +595,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       Type t = TypeParser.createFrom("UNKNOWN4", true);
       log.info("Unresolved symbol: {}", nameExpr.getNameAsString());
 
-      return NodeBuilder.newDeclaredReferenceExpression(
-          nameExpr.getNameAsString(), frontend.getLanguage(), t, nameExpr.toString());
+      return newDeclaredReferenceExpression(
+          this, nameExpr.getNameAsString(), t, nameExpr.toString());
     }
   }
 
@@ -736,22 +725,15 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       if (!isStatic) {
         DeclaredReferenceExpression member =
-            NodeBuilder.newDeclaredReferenceExpression(
-                name, frontend.getLanguage(), UnknownType.getUnknownType(), "");
+            newDeclaredReferenceExpression(this, name, UnknownType.getUnknownType(), "");
 
         frontend.setCodeAndLocation(
             member,
             methodCallExpr
                 .getName()); // This will also overwrite the code set to the empty string set above
         callExpression =
-            NodeBuilder.newMemberCallExpression(
-                name,
-                qualifiedName,
-                base,
-                member,
-                ".",
-                frontend.getLanguage(),
-                methodCallExpr.toString());
+            newMemberCallExpression(
+                this, name, qualifiedName, base, member, ".", methodCallExpr.toString());
       } else {
         String targetClass;
         if (resolved != null) {
@@ -765,18 +747,13 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         }
 
         callExpression =
-            NodeBuilder.newStaticCallExpression(
-                name,
-                qualifiedName,
-                methodCallExpr.toString(),
-                targetClass,
-                frontend.getLanguage());
+            newStaticCallExpression(
+                this, name, qualifiedName, methodCallExpr.toString(), targetClass);
       }
     } else {
-      var ref = NodeBuilder.newDeclaredReferenceExpression(name, frontend.getLanguage());
+      var ref = newDeclaredReferenceExpression(this, name);
       callExpression =
-          NodeBuilder.newCallExpression(
-              ref, qualifiedName, frontend.getLanguage(), methodCallExpr.toString(), false);
+          newCallExpression(this, ref, qualifiedName, methodCallExpr.toString(), false);
     }
 
     callExpression.setType(TypeParser.createFrom(typeString, true));
@@ -819,7 +796,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       code = code.substring(4); // remove "new "
     }
 
-    ConstructExpression ctor = NodeBuilder.newConstructExpression(frontend.getLanguage(), code);
+    ConstructExpression ctor = newConstructExpression(frontend.getLanguage(), code);
     ctor.setType(t);
     frontend.setCodeAndLocation(ctor, expr);
 
