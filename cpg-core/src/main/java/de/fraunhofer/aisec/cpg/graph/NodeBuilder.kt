@@ -904,7 +904,6 @@ object NodeBuilder {
         return node
     }
 
-
     @JvmStatic
     @JvmOverloads
     fun newAnnotation(
@@ -968,7 +967,6 @@ fun Node.applyMetadata(provider: MetadataProvider?, rawNode: Any?, codeOverride:
         this.code = codeOverride
     }
 }
-
 
 @JvmOverloads
 fun Handler<*, *, *>.newReturnStatement(

@@ -109,7 +109,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleCompoundStatementExpression(
         ctx: CPPASTCompoundStatementExpression
     ): Expression {
-        val cse = NodeBuilder.newCompoundStatementExpression(frontend.language, ctx.rawSignature)
+        val cse = newCompoundStatementExpression(ctx.rawSignature)
         cse.statement = frontend.statementHandler.handle(ctx.compoundStatement)
         return cse
     }
@@ -204,11 +204,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             // new returns a pointer, so we need to reference the type by pointer
             val newExpression =
-                NodeBuilder.newNewExpression(
-                    code,
-                    t.reference(PointerOrigin.POINTER),
-                    frontend.language
-                )
+                newNewExpression(code, t.reference(PointerOrigin.POINTER), frontend.language)
             newExpression.templateParameters = templateParameters
             val initializer: Expression?
             if (init != null) {
@@ -267,13 +263,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleConditionalExpression(ctx: IASTConditionalExpression): ConditionalExpression {
         val condition = handle(ctx.logicalConditionExpression)
-        return NodeBuilder.newConditionalExpression(
+        return newConditionalExpression(
             condition,
             if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression)
             else condition,
             handle(ctx.negativeResultExpression),
             TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, frontend),
-            frontend.language
         )
     }
 

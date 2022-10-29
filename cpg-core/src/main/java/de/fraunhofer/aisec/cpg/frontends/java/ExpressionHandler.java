@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newVariableDeclaration;
-import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.*;
+import static de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt.*;
 
 import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.ArrayCreationLevel;
@@ -40,7 +40,8 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
@@ -200,8 +201,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression elseExpr =
         (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(conditionalExpr.getElseExpr());
-    return NodeBuilder.newConditionalExpression(
-        condition, thenExpr, elseExpr, superType, frontend.getLanguage());
+    return newConditionalExpression(this, condition, thenExpr, elseExpr, superType);
   }
 
   private BinaryOperator handleAssignmentExpression(Expression expr) {
@@ -810,8 +810,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     // todo can we merge newNewExpression and newConstructExpression?
     Type t = this.frontend.getTypeAsGoodAsPossible(objectCreationExpr.getType());
 
-    NewExpression newExpression =
-        NodeBuilder.newNewExpression(expr.toString(), t, frontend.getLanguage());
+    NewExpression newExpression = newNewExpression(this, expr.toString(), t);
 
     NodeList<Expression> arguments = objectCreationExpr.getArguments();
 

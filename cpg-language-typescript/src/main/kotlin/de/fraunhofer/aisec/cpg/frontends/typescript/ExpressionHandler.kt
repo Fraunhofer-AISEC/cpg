@@ -27,11 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLambdaExpression
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -72,13 +69,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val key = this.handle(node.children?.first())
         val value = this.handle(node.children?.last())
 
-        val keyValue =
-            NodeBuilder.newKeyValueExpression(
-                key,
-                value,
-                frontend.language,
-                this.frontend.getCodeFromRawNode(node)
-            )
+        val keyValue = newKeyValueExpression(key, value, this.frontend.getCodeFromRawNode(node))
 
         return keyValue
     }
@@ -145,7 +136,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // we cannot directly return a function declaration as an expression, so we
         // wrap it into a lambda expression
-        val lambda = newLambdaExpression(frontend.language, frontend.getCodeFromRawNode(node))
+        val lambda = newLambdaExpression(frontend.getCodeFromRawNode(node))
         lambda.function = func
 
         return lambda
@@ -155,13 +146,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val key = this.handle(node.children?.first())
         val value = this.handle(node.children?.last())
 
-        val keyValue =
-            NodeBuilder.newKeyValueExpression(
-                key,
-                value,
-                frontend.language,
-                this.frontend.getCodeFromRawNode(node)
-            )
+        val keyValue = newKeyValueExpression(key, value, this.frontend.getCodeFromRawNode(node))
 
         return keyValue
     }

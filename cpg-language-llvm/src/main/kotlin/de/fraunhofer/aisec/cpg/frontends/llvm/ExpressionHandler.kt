@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCastExpression
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newInitializerListExpression
@@ -592,7 +591,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val value1 = frontend.getOperandValueAtIndex(instr, 1)
         val value2 = frontend.getOperandValueAtIndex(instr, 2)
 
-        return newConditionalExpression(cond, value1, value2, value1.type, frontend.language)
+        return newConditionalExpression(cond, value1, value2, value1.type)
     }
 
     /**

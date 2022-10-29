@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCaseStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCastExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCatchClause
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCompoundStatement
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression
@@ -805,7 +804,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 operand,
                 callExpression,
                 operand.type,
-                frontend.language
             )
         return declarationOrNot(conditional, instr)
     }
@@ -1000,7 +998,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                         ptrDerefConditional,
                         value,
                         ty,
-                        frontend.language
                     )
                 exchOp.rhs = conditional
             }
@@ -1033,7 +1030,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                         ptrDerefConditional,
                         value,
                         ty,
-                        frontend.language
                     )
                 exchOp.rhs = conditional
             }
