@@ -37,12 +37,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import org.junit.jupiter.api.Tag
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
-import org.junit.jupiter.api.Tag
 
 @Tag("experimentalTypeScript")
 @ExperimentalTypeScript
@@ -91,7 +91,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("function.js").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<TypeScriptLanguage>() }
+            ) { it.registerLanguage<JavaScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -126,7 +126,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("simple.jsx").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<TypeScriptLanguage>() }
+            ) { it.registerLanguage<JavaScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -377,7 +377,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("lambda.js").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<TypeScriptLanguage>() }
+            ) { it.registerLanguage<JavaScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -437,7 +437,7 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(variableDeclaration)
         assertEquals("Comment on a variable", variableDeclaration.comment)
 
-        function = functionTu.byNameOrNull<FunctionDeclaration>("someOtherFunction")
+        function = functionTu.byNameOrNull("someOtherFunction")
         assertNotNull(function)
         assertEquals("Comment on a Function", function.comment)
     }

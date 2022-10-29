@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 /** The TypeScript language. */
 @OptIn(ExperimentalTypeScript::class)
 class TypeScriptLanguage : Language<TypeScriptLanguageFrontend>() {
-    override val fileExtensions = listOf("ts")
+    override val fileExtensions = listOf("ts", "tsx")
     override val namespaceDelimiter = "."
     override val frontend = TypeScriptLanguageFrontend::class.java
 
