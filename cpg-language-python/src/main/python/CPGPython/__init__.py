@@ -31,8 +31,8 @@ class PythonASTToCPG(ast.NodeVisitor):
     def __init__(self, fname, frontend, code):
         self.sourcecode = CodeExtractor(fname)
         self.frontend = frontend
-        self.tud = DeclarationBuilderKt.newTranslationUnitDeclaration(self.frontend,
-                                                                      fname,  code)
+        self.tud = DeclarationBuilderKt.newTranslationUnitDeclaration(
+            self.frontend, fname, code)
         self.tud.setName(fname)
         self.fname = fname
         self.scopemanager = frontend.getScopeManager()

@@ -55,8 +55,8 @@ def handle_statement_impl(self, stmt):
         # "class" would automagically create a "this" receiver field.
         # However, the receiver can have any name in python (and even different
         # names per method).
-        cls = DeclarationBuilderKt.newRecordDeclaration(self.frontend, stmt.name, "",
-                                                        self.get_src_code(stmt))
+        cls = DeclarationBuilderKt.newRecordDeclaration(
+            self.frontend, stmt.name, "", self.get_src_code(stmt))
         self.scopemanager.enterScope(cls)
         bases = []
         for base in stmt.bases:
@@ -110,7 +110,8 @@ def handle_statement_impl(self, stmt):
     elif isinstance(stmt, ast.While):
         # While(expr test, stmt* body, stmt* orelse)
         whl_stmt = StatementBuilderKt.newWhileStatement(self.frontend,
-                                                        self.get_src_code(stmt))
+                                                        self.get_src_code(stmt)
+                                                        )
         expr = self.handle_expression(stmt.test)
         if self.is_declaration(expr):
             whl_stmt.setConditionDeclaration(expr)
@@ -162,8 +163,8 @@ def handle_statement_impl(self, stmt):
          Example: import Foo, Bar as Baz, Blub
         """
 
-        decl_stmt = StatementBuilderKt.newDeclarationStatement(self.frontend,
-                                                               self.get_src_code(stmt))
+        decl_stmt = StatementBuilderKt.newDeclarationStatement(
+            self.frontend, self.get_src_code(stmt))
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
@@ -173,7 +174,8 @@ def handle_statement_impl(self, stmt):
                 src = name
             tpe = UnknownType.getUnknownType()
             v = StatementBuilderKt.newVariableDeclaration(self.frontend,
-                                                          name, tpe, src, False)
+                                                          name, tpe, src,
+                                                          False)
             # inacurate but ast.alias does not hold location information
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
@@ -191,8 +193,8 @@ def handle_statement_impl(self, stmt):
             "Cannot correctly handle \"import from\". Using an approximation.",
             loglevel="ERROR")
 
-        decl_stmt = DeclarationBuilderKt.newDeclarationStatement(self.frontend,
-                                                                 self.get_src_code(stmt))
+        decl_stmt = DeclarationBuilderKt.newDeclarationStatement(
+            self.frontend, self.get_src_code(stmt))
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
@@ -201,8 +203,8 @@ def handle_statement_impl(self, stmt):
                 name = s.name
                 src = name
             tpe = UnknownType.getUnknownType()
-            v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
-                                                            name, tpe, src, False)
+            v = DeclarationBuilderKt.newVariableDeclaration(
+                self.frontend, name, tpe, src, False)
             # inacurate but ast.alias does not hold location information
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
@@ -282,15 +284,15 @@ def handle_function_or_method(self, node, record=None):
 
     if record is not None:
         if name == "__init__":
-            f = DeclarationBuilderKt.newConstructorDeclaration(self.frontend,
-                                                               name, self.get_src_code(node), record)
+            f = DeclarationBuilderKt.newConstructorDeclaration(
+                self.frontend, name, self.get_src_code(node), record)
         else:
             # TODO handle static
-            f = DeclarationBuilderKt.newMethodDeclaration(self.frontend,
-                                                          name, self.get_src_code(node), False, record)
+            f = DeclarationBuilderKt.newMethodDeclaration(
+                self.frontend, name, self.get_src_code(node), False, record)
     else:
-        f = DeclarationBuilderKt.newFunctionDeclaration(self.frontend,
-                                                        name,  self.get_src_code(node))
+        f = DeclarationBuilderKt.newFunctionDeclaration(
+            self.frontend, name, self.get_src_code(node))
 
     self.scopemanager.enterScope(f)
 
@@ -302,8 +304,10 @@ def handle_function_or_method(self, node, record=None):
         if len(node.args.args) > 0:
             recv_node = node.args.args[0]
             tpe = TypeParser.createFrom(record.getName(), False)
-            recv = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
-                                                               recv_node.arg, tpe, self.get_src_code(recv_node), False)
+            recv = DeclarationBuilderKt.newVariableDeclaration(
+                self.frontend,
+                recv_node.arg, tpe, self.get_src_code(recv_node),
+                False)
             f.setReceiver(recv)
             self.scopemanager.addDeclaration(recv)
         else:
@@ -398,8 +402,8 @@ def handle_argument(self, arg: ast.arg):
     else:
         tpe = UnknownType.getUnknownType()
     # TODO variadic
-    pvd = DeclarationBuilderKt.newParamVariableDeclaration(self.frontend,
-                                                           arg.arg, tpe, False,  self.get_src_code(arg))
+    pvd = DeclarationBuilderKt.newParamVariableDeclaration(
+        self.frontend, arg.arg, tpe, False, self.get_src_code(arg))
     self.add_loc_info(arg, pvd)
     self.scopemanager.addDeclaration(pvd)
     return pvd
@@ -449,8 +453,8 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
             s = self.wrap_declaration_to_stmt(s)
         return s
     else:
-        compound_statement = StatementBuilderKt.newCompoundStatement(self.frontend,
-                                                                     "")
+        compound_statement = StatementBuilderKt.newCompoundStatement(
+            self.frontend, "")
         for s in stmts:
             s = self.handle_statement(s)
             if self.is_declaration(s):
@@ -490,7 +494,8 @@ def handle_assign_impl(self, stmt):
     if isinstance(stmt, ast.Assign) and len(stmt.targets) != 1:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
-                                                  "=",  self.get_src_code(stmt))
+                                                  "=",  self.get_src_code(stmt)
+                                                  )
         return r
     if isinstance(stmt, ast.Assign):
         target = stmt.targets[0]
@@ -511,7 +516,8 @@ def handle_assign_impl(self, stmt):
             "but got \"%s\". Skipping." %
             (lhs.java_name), loglevel="ERROR")
         r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
-                                                  "=",  self.get_src_code(stmt))
+                                                  "=",
+                                                  self.get_src_code(stmt))
         return r
 
     resolved_lhs = self.scopemanager.resolveReference(lhs)
@@ -520,8 +526,8 @@ def handle_assign_impl(self, stmt):
 
     if resolved_lhs is not None:
         # found var => BinaryOperator "="
-        binop = ExpressionBuilderKt.newBinaryOperator(self.frontend,
-                                                      "=",  self.get_src_code(stmt))
+        binop = ExpressionBuilderKt.newBinaryOperator(
+            self.frontend, "=", self.get_src_code(stmt))
         binop.setLhs(lhs)
         if rhs is not None:
             binop.setRhs(rhs)
@@ -545,25 +551,15 @@ def handle_assign_impl(self, stmt):
                 "Could not resolve -> creating a new field for: %s" %
                 (name))
             if rhs is not None:
-                v = DeclarationBuilderKt.newFieldDeclaration(self.frontend,
-                                                             name,
-                                                             rhs.getType(),
-                                                             None,
-                                                             self.get_src_code(
-                                                                 stmt),
-                                                             None,
-                                                             rhs,
-                                                             False)  # TODO None -> infos eintragen
+                v = DeclarationBuilderKt.newFieldDeclaration(
+                    self.frontend, name, rhs.getType(),
+                    None, self.get_src_code(stmt),
+                    None, rhs, False)  # TODO None -> infos eintragen
             else:
-                v = DeclarationBuilderKt.newFieldDeclaration(self.frontend,
-                                                             name,
-                                                             UnknownType.getUnknownType(),
-                                                             None,
-                                                             self.get_src_code(
-                                                                 stmt),
-                                                             None,
-                                                             None,
-                                                             False)  # TODO None -> infos eintragen
+                v = DeclarationBuilderKt.newFieldDeclaration(
+                    self.frontend, name, UnknownType.getUnknownType(),
+                    None, self.get_src_code(stmt),
+                    None, None, False)  # TODO None -> infos eintragen
             self.scopemanager.addDeclaration(v)
             return v
         elif inRecord and inFunction:
@@ -578,13 +574,17 @@ def handle_assign_impl(self, stmt):
                     "Could not resolve -> creating a new variable for: %s"
                     % (lhs.getName()))
                 if rhs is not None:
-                    v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
-                                                                    lhs.getName(), rhs.getType(),
-                                                                    self.get_src_code(stmt), False)
+                    v = DeclarationBuilderKt.newVariableDeclaration(
+                        self.frontend, lhs.getName(),
+                        rhs.getType(),
+                        self.get_src_code(stmt),
+                        False)
                 else:
-                    v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
-                                                                    lhs.getName(), UnknownType.getUnknownType(),
-                                                                    self.get_src_code(stmt), False)
+                    v = DeclarationBuilderKt.newVariableDeclaration(
+                        self.frontend, lhs.getName(),
+                        UnknownType.getUnknownType(),
+                        self.get_src_code(stmt),
+                        False)
                 if rhs is not None:
                     v.setInitializer(rhs)
                 self.scopemanager.addDeclaration(v)
@@ -605,19 +605,24 @@ def handle_assign_impl(self, stmt):
                     mem_base_is_receiver = base.getName() == recv_name
                 if not mem_base_is_receiver:
                     self.log_with_loc("I'm confused.", loglevel="ERROR")
-                    return StatementBuilderKt.newStatement(self.frontend, "DUMMY")
+                    return StatementBuilderKt.newStatement(
+                        self.frontend, "DUMMY")
                 if rhs is not None and self.is_declared_reference(rhs):
                     # TODO figure out why the cpg pass fails to do this...
                     rhs.setRefersTo(
                         self.scopemanager.resolveReference(rhs))
                 if rhs is not None:
-                    v = DeclarationBuilderKt.newFieldDeclaration(self.frontend,
-                                                                 lhs.getName(), rhs.getType(), None,
-                                                                 self.get_src_code(stmt), None, rhs, False)
+                    v = DeclarationBuilderKt.newFieldDeclaration(
+                        self.frontend, lhs.getName(),
+                        rhs.getType(),
+                        None, self.get_src_code(stmt),
+                        None, rhs, False)
                 else:
-                    v = DeclarationBuilderKt.newFieldDeclaration(self.frontend,
-                                                                 lhs.getName(), UnknownType.getUnknownType(), None,
-                                                                 self.get_src_code(stmt), None, None, False)
+                    v = DeclarationBuilderKt.newFieldDeclaration(
+                        self.frontend, lhs.getName(),
+                        UnknownType.getUnknownType(),
+                        None, self.get_src_code(stmt),
+                        None, None, False)
                 self.scopemanager.addDeclaration(v)
                 self.scopemanager.getCurrentRecord().addField(v)
                 return v
@@ -629,13 +634,17 @@ def handle_assign_impl(self, stmt):
                 "Could not resolve -> creating a new variable for: %s" %
                 (lhs.getName()))
             if rhs is not None:
-                v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
-                                                                lhs.getName(), rhs.getType(),
-                                                                self.get_src_code(stmt), False)
+                v = DeclarationBuilderKt.newVariableDeclaration(
+                    self.frontend, lhs.getName(),
+                    rhs.getType(),
+                    self.get_src_code(stmt),
+                    False)
             else:
-                v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
-                                                                lhs.getName(), UnknownType.getUnknownType(),
-                                                                self.get_src_code(stmt), False)
+                v = DeclarationBuilderKt.newVariableDeclaration(
+                    self.frontend, lhs.getName(),
+                    UnknownType.getUnknownType(),
+                    self.get_src_code(stmt),
+                    False)
             if rhs is not None:
                 v.setInitializer(rhs)
             self.scopemanager.addDeclaration(v)

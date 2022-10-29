@@ -53,9 +53,8 @@ def handle_expression_impl(self, expr):
         return r
     elif isinstance(expr, ast.BinOp):
         opcode = self.handle_operator_code(expr.op)
-        binop = ExpressionBuilderKt.newBinaryOperator(self.frontend, opcode,
-
-                                                      self.get_src_code(expr))
+        binop = ExpressionBuilderKt.newBinaryOperator(
+            self.frontend, opcode, self.get_src_code(expr))
         binop.setLhs(self.handle_expression(expr.left))
         binop.setRhs(self.handle_expression(expr.right))
         return binop
@@ -71,13 +70,14 @@ def handle_expression_impl(self, expr):
         test = self.handle_expression(expr.test)
         body = self.handle_expression(expr.body)
         orelse = self.handle_expression(expr.orelse)
-        r = ExpressionBuilderKt.newConditionalExpression(self.frontend,
-                                                         test, body, orelse, UnknownType.getUnknownType())
+        r = ExpressionBuilderKt.newConditionalExpression(
+            self.frontend, test, body, orelse, UnknownType.getUnknownType())
         return r
     elif isinstance(expr, ast.Dict):
-        self.log_with_loc("Handling a \"dict\": %s" % (ast.dump(expr)))
-        ile = ExpressionBuilderKt.newInitializerListExpression(self.frontend,
-                                                               self.get_src_code(expr))
+        self.log_with_loc("Handling a \"dict\": %s" %
+                          (ast.dump(expr)))
+        ile = ExpressionBuilderKt.newInitializerListExpression(
+            self.frontend, self.get_src_code(expr))
 
         lst = []
 
@@ -96,9 +96,8 @@ def handle_expression_impl(self, expr):
                 value_expr = None
 
             # construct a key value expression
-            key_value = ExpressionBuilderKt.newKeyValueExpression(self.frontend,
-                                                                  key_expr, value_expr,
-                                                                  self.get_src_code(expr))
+            key_value = ExpressionBuilderKt.newKeyValueExpression(
+                self.frontend, key_expr, value_expr, self.get_src_code(expr))
             if key is not None and value is not None:
                 self.add_mul_loc_infos(key, value, key_value)
 
@@ -145,8 +144,8 @@ def handle_expression_impl(self, expr):
         # Compare(expr left, cmpop* ops, expr* comparators)
         if len(expr.ops) != 1 or len(expr.comparators) != 1:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
-                                                      "DUMMY",  self.get_src_code(expr))
+            r = ExpressionBuilderKt.newBinaryOperator(
+                self.frontend, "DUMMY", self.get_src_code(expr))
             return r
         op = expr.ops[0]
         if isinstance(op, ast.Eq):
@@ -171,11 +170,11 @@ def handle_expression_impl(self, expr):
             op_code = "not in"
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
-                                                      "DUMMY",  self.get_src_code(expr))
+            r = ExpressionBuilderKt.newBinaryOperator(
+                self.frontend, "DUMMY", self.get_src_code(expr))
             return r
-        comp = ExpressionBuilderKt.newBinaryOperator(self.frontend, op_code,
-                                                     self.get_src_code(expr))
+        comp = ExpressionBuilderKt.newBinaryOperator(
+            self.frontend, op_code, self.get_src_code(expr))
         comp.setLhs(self.handle_expression(expr.left))
         comp.setRhs(self.handle_expression(expr.comparators[0]))
         return comp
@@ -199,41 +198,49 @@ def handle_expression_impl(self, expr):
 
             fqn = "%s.%s" % (base_name, name)
 
-            member = ExpressionBuilderKt.newDeclaredReferenceExpression(self.frontend,
-                                                                        name,  UnknownType.getUnknownType(), self.get_src_code(expr))
-            call = ExpressionBuilderKt.newMemberCallExpression(self.frontend,
-                                                               name, fqn, ref.getBase(), member, ".",  self.get_src_code(expr))
+            member = ExpressionBuilderKt.newDeclaredReferenceExpression(
+                self.frontend,
+                name, UnknownType.getUnknownType(), self.get_src_code(expr))
+            call = ExpressionBuilderKt.newMemberCallExpression(
+                self.frontend,
+                name, fqn, ref.getBase(),
+                member, ".", self.get_src_code(expr))
         else:
             # this can be a simple function call or a ctor
             record = self.scopemanager.getRecordForName(
                 self.scopemanager.getCurrentScope(), name)
             if record is not None:
                 self.log_with_loc("Received a record: %s" % (record))
-                call = ExpressionBuilderKt.newConstructExpression(self.frontend,
-                                                                  self.get_src_code(expr))
+                call = ExpressionBuilderKt.newConstructExpression(
+                    self.frontend, self.get_src_code(expr))
                 call.setName(expr.func.id)
                 tpe = TypeParser.createFrom(record.getName(), False)
                 call.setType(tpe)
             else:
                 # TODO int, float, ...
                 if name == "str" and len(expr.args) == 1:
-                    cast = ExpressionBuilderKt.newCastExpression(self.frontend,
-                                                                 self.get_src_code(expr))
-                    cast.setCastType(TypeParser.createFrom("str", False))
-                    cast.setExpression(self.handle_expression(expr.args[0]))
+                    cast = ExpressionBuilderKt.newCastExpression(
+                        self.frontend, self.get_src_code(expr))
+                    cast.setCastType(
+                        TypeParser.createFrom("str", False))
+                    cast.setExpression(
+                        self.handle_expression(expr.args[0]))
                     return cast
                 else:
-                    call = ExpressionBuilderKt.newCallExpression(self.frontend,
-                                                                 ref, name,  self.get_src_code(expr), False)
+                    call = ExpressionBuilderKt.newCallExpression(
+                        self.frontend,
+                        ref, name, self.get_src_code(expr), False)
         for a in expr.args:
             call.addArgument(self.handle_expression(a))
         for keyword in expr.keywords:
             if keyword.arg is not None:
-                call.addArgument(self.handle_expression(keyword.value),
-                                 keyword.arg)
+                call.addArgument(
+                    self.handle_expression(keyword.value),
+                    keyword.arg)
             else:
                 # TODO: keywords without args, aka **arg
-                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+                self.log_with_loc(
+                    NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         self.log_with_loc("Parsed call: %s" % (call))
         return call
 
@@ -261,11 +268,14 @@ def handle_expression_impl(self, expr):
         elif isinstance(expr.value, bytes):
             tpe = TypeParser.createFrom("byte[]", False)
         else:
-            self.log_with_loc("Found unexpected type - using a dummy: %s" %
-                              (type(expr.value)), loglevel="ERROR")
+            self.log_with_loc(
+                "Found unexpected type - using a dummy: %s" %
+                (type(expr.value)),
+                loglevel="ERROR")
             tpe = UnknownType.getUnknownType()
-        lit = ExpressionBuilderKt.newLiteral(self.frontend,
-                                             expr.value, tpe,  self.get_src_code(expr))
+        lit = ExpressionBuilderKt.newLiteral(
+            self.frontend,
+            expr.value, tpe, self.get_src_code(expr))
         lit.setName(str(expr.value))
         return lit
 
@@ -277,20 +287,19 @@ def handle_expression_impl(self, expr):
                 ("Found a new declaration. "
                  "Wrapping it in a DeclaredReferenceExpression."),
                 loglevel="DEBUG")
-            value = ExpressionBuilderKt.newDeclaredReferenceExpression(self.frontend, value.getName(),
-
-                                                                       value.getType(),
-                                                                       value.getCode())
-        mem = ExpressionBuilderKt.newMemberExpression(self.frontend,
-                                                      value, UnknownType.getUnknownType(), expr.attr,
-                                                      ".", self.get_src_code(expr))
+            value = ExpressionBuilderKt.newDeclaredReferenceExpression(
+                self.frontend,
+                value.getName(), value.getType(), value.getCode())
+        mem = ExpressionBuilderKt.newMemberExpression(
+            self.frontend, value, UnknownType.getUnknownType(),
+            expr.attr, ".", self.get_src_code(expr))
         return mem
 
     elif isinstance(expr, ast.Subscript):
         value = self.handle_expression(expr.value)
         slc = self.handle_expression(expr.slice)
-        exp = ExpressionBuilderKt.newArraySubscriptionExpression(self.frontend,
-                                                                 self.get_src_code(expr))
+        exp = ExpressionBuilderKt.newArraySubscriptionExpression(
+            self.frontend, self.get_src_code(expr))
         exp.setArrayExpression(value)
         exp.setSubscriptExpression(slc)
         return exp
@@ -299,12 +308,13 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
     elif isinstance(expr, ast.Name):
-        r = ExpressionBuilderKt.newDeclaredReferenceExpression(self.frontend,
-                                                               expr.id,  UnknownType.getUnknownType(), self.get_src_code(expr))
+        r = ExpressionBuilderKt.newDeclaredReferenceExpression(
+            self.frontend, expr.id, UnknownType.getUnknownType(),
+            self.get_src_code(expr))
         return r
     elif isinstance(expr, ast.List):
-        ile = ExpressionBuilderKt.newInitializerListExpression(self.frontend,
-                                                               self.get_src_code(expr))
+        ile = ExpressionBuilderKt.newInitializerListExpression(
+            self.frontend, self.get_src_code(expr))
 
         lst = []
 
@@ -316,8 +326,8 @@ def handle_expression_impl(self, expr):
 
         return ile
     elif isinstance(expr, ast.Tuple):
-        ile = ExpressionBuilderKt.newInitializerListExpression(self.frontend,
-                                                               self.get_src_code(expr))
+        ile = ExpressionBuilderKt.newInitializerListExpression(
+            self.frontend, self.get_src_code(expr))
 
         lst = []
 
