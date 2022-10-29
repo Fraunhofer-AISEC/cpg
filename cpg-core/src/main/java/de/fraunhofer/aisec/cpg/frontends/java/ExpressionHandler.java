@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newVariableDeclaration;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.*;
 
 import com.github.javaparser.TokenRange;

@@ -772,23 +772,6 @@ object NodeBuilder {
 
     @JvmStatic
     @JvmOverloads
-    fun newNewExpression(
-        code: String? = null,
-        type: Type?,
-        language: Language<out LanguageFrontend>,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): NewExpression {
-        val node = NewExpression()
-        node.applyMetadata(frontend, rawNode, code)
-        node.type = type
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
     fun newSwitchStatement(
         language: Language<out LanguageFrontend>,
         code: String? = null,
@@ -826,29 +809,6 @@ object NodeBuilder {
         rawNode: Any? = null
     ): DefaultStatement {
         val node = DefaultStatement()
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        log(node)
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newConditionalExpression(
-        condition: Expression?,
-        thenExpr: Expression?,
-        elseExpr: Expression?,
-        type: Type?,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): ConditionalExpression {
-        val node = ConditionalExpression()
-        node.condition = condition
-        node.thenExpr = thenExpr
-        node.elseExpr = elseExpr
-        node.type = type
         node.applyMetadata(frontend, rawNode, code)
         node.language = language
         log(node)
@@ -944,22 +904,6 @@ object NodeBuilder {
         return node
     }
 
-    @JvmStatic
-    @JvmOverloads
-    fun newCompoundStatementExpression(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): CompoundStatementExpression {
-        val cse = CompoundStatementExpression()
-        frontend?.setCodeAndLocation(cse, rawNode)
-        if (code != null) {
-            cse.code = code
-        }
-        cse.language = language
-        return cse
-    }
 
     @JvmStatic
     @JvmOverloads
@@ -990,38 +934,6 @@ object NodeBuilder {
         val node = AnnotationMember()
         node.name = name!!
         node.value = value
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newKeyValueExpression(
-        key: Expression?,
-        value: Expression?,
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): KeyValueExpression {
-        val node = KeyValueExpression()
-        node.key = key
-        node.value = value
-        node.applyMetadata(frontend, rawNode, code)
-        node.language = language
-        return node
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun newLambdaExpression(
-        language: Language<out LanguageFrontend>,
-        code: String? = null,
-        frontend: LanguageFrontend? = null,
-        rawNode: Any? = null
-    ): LambdaExpression {
-        val node = LambdaExpression()
         node.applyMetadata(frontend, rawNode, code)
         node.language = language
         return node
@@ -1057,43 +969,6 @@ fun Node.applyMetadata(provider: MetadataProvider?, rawNode: Any?, codeOverride:
     }
 }
 
-@JvmOverloads
-fun MetadataProvider.newBinaryOperator(
-    operatorCode: String,
-    code: String? = null,
-    rawNode: Any? = null
-): BinaryOperator {
-    val node = BinaryOperator()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = operatorCode
-    node.operatorCode = operatorCode
-
-    log(node)
-
-    return node
-}
-
-@JvmOverloads
-fun MetadataProvider.newUnaryOperator(
-    operatorType: String,
-    postfix: Boolean,
-    prefix: Boolean,
-    code: String? = null,
-    rawNode: Any? = null
-): UnaryOperator {
-    val node = UnaryOperator()
-    node.applyMetadata(this, rawNode, code)
-
-    node.operatorCode = operatorType
-    node.name = operatorType
-    node.isPostfix = postfix
-    node.isPrefix = prefix
-
-    log(node)
-
-    return node
-}
 
 @JvmOverloads
 fun Handler<*, *, *>.newReturnStatement(
@@ -1103,249 +978,6 @@ fun Handler<*, *, *>.newReturnStatement(
     val node = ReturnStatement()
     node.language = this.frontend.language
     node.applyMetadata(this.frontend, rawNode, code)
-
-    log(node)
-    return node
-}
-
-@JvmOverloads
-fun <T> Handler<*, *, *>.newLiteral(
-    value: T,
-    type: Type?,
-    code: String? = null,
-    rawNode: Any? = null
-): Literal<T> {
-    return this.frontend.newLiteral(value, type, code, rawNode)
-}
-
-fun <T> LanguageFrontend.newLiteral(
-    value: T,
-    type: Type?,
-    code: String? = null,
-    rawNode: Any? = null,
-): Literal<T> {
-    val node = Literal<T>()
-    node.value = value
-    node.type = type
-    node.applyMetadata(this, rawNode, code)
-    node.language = this.language
-
-    log(node)
-    return node
-}
-
-fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
-    val duplicate = Literal<T>()
-    duplicate.language = this.language
-    duplicate.value = this.value
-    duplicate.type = this.type
-    duplicate.code = this.code
-    duplicate.location = this.location
-    duplicate.locals = this.locals
-    duplicate.possibleSubTypes = this.possibleSubTypes
-    duplicate.argumentIndex = this.argumentIndex
-    duplicate.annotations = this.annotations
-    duplicate.comment = this.comment
-    duplicate.file = this.file
-    duplicate.name = this.name
-    duplicate.nextDFG = this.nextDFG
-    duplicate.prevDFG = this.prevDFG
-    duplicate.nextEOG = this.nextEOG
-    duplicate.prevEOG = this.prevEOG
-    duplicate.isImplicit = implicit
-    return duplicate
-}
-
-fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
-    val duplicate = TypeExpression()
-    duplicate.name = this.name
-    duplicate.type = this.type
-    duplicate.language = this.language
-    duplicate.isImplicit = implicit
-    return duplicate
-}
-
-/**
- * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
- * or [Handler] should create. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
- */
-fun MetadataProvider.newTranslationUnitDeclaration(
-    name: String,
-    code: String? = null,
-    rawNode: Any? = null
-): TranslationUnitDeclaration {
-    val node = TranslationUnitDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [FunctionDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newFunctionDeclaration(
-    name: String,
-    code: String? = null,
-    rawNode: Any? = null
-): FunctionDeclaration {
-    val node = FunctionDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
- */
-@JvmOverloads
-fun MetadataProvider.newMethodDeclaration(
-    name: String,
-    code: String? = null,
-    isStatic: Boolean,
-    recordDeclaration: RecordDeclaration?,
-    rawNode: Any? = null
-): MethodDeclaration {
-    val node = MethodDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name
-    node.isStatic = isStatic
-    node.recordDeclaration = recordDeclaration
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [ConstructorDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newConstructorDeclaration(
-    name: String,
-    code: String? = null,
-    recordDeclaration: RecordDeclaration?,
-    rawNode: Any? = null
-): ConstructorDeclaration {
-    val node = ConstructorDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name
-    node.recordDeclaration = recordDeclaration
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
- */
-@JvmOverloads
-fun MetadataProvider.newParamVariableDeclaration(
-    name: String,
-    type: Type?,
-    variadic: Boolean,
-    code: String? = null,
-    frontend: LanguageFrontend? = null,
-    rawNode: Any? = null
-): ParamVariableDeclaration {
-    val node = ParamVariableDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name
-    node.type = type
-    node.isVariadic = variadic
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [VariableDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newVariableDeclaration(
-    name: String,
-    type: Type?,
-    code: String? = null,
-    implicitInitializerAllowed: Boolean,
-    rawNode: Any? = null
-): VariableDeclaration {
-    val node = VariableDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name
-    node.type = type
-    node.isImplicitInitializerAllowed = implicitInitializerAllowed
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [TypedefDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newTypedefDeclaration(
-    targetType: Type?,
-    alias: Type,
-    code: String? = null,
-    rawNode: Any? = null
-): TypedefDeclaration {
-    val node = TypedefDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = alias.typeName
-    node.type = targetType
-    node.alias = alias
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [TypeParamDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newTypeParamDeclaration(
-    name: String,
-    code: String? = null,
-    rawNode: Any? = null
-): TypeParamDeclaration {
-    val node = TypeParamDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name
 
     log(node)
     return node

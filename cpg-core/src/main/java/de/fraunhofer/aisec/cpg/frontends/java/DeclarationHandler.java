@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.*;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.*;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.*;
 
@@ -129,8 +130,7 @@ public class DeclarationHandler
               this,
               parameter.getNameAsString(),
               this.frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
-              parameter.isVarArgs(),
-              parameter.toString());
+              parameter.isVarArgs());
 
       declaration.addParameter(param);
 
@@ -195,11 +195,7 @@ public class DeclarationHandler
 
       ParamVariableDeclaration param =
           newParamVariableDeclaration(
-              this,
-              parameter.getNameAsString(),
-              resolvedType,
-              parameter.isVarArgs(),
-              parameter.toString());
+              this, parameter.getNameAsString(), resolvedType, parameter.isVarArgs());
 
       functionDeclaration.addParameter(param);
       frontend.setCodeAndLocation(param, parameter);

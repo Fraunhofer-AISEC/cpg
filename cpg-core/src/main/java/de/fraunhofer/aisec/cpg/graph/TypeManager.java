@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph;
 
-import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.newTypedefDeclaration;
+import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newTypedefDeclaration;
 
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;

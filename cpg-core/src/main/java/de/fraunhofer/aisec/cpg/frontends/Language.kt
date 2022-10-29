@@ -74,6 +74,9 @@ interface LanguageProvider : MetadataProvider {
  */
 interface MetadataProvider
 
+/**
+ * This interface denotes that the class is able to provide source code and location information for a specific node and set it using the [setCodeAndLocation] function.
+ */
 interface CodeAndLocationProvider : MetadataProvider {
     fun <N, S> setCodeAndLocation(cpgNode: N, astNode: S?)
 }
