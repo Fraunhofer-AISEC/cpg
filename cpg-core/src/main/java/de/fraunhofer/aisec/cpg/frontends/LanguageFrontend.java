@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.CodeAndLocationProvider;
+import de.fraunhofer.aisec.cpg.graph.LanguageProvider;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement;
@@ -45,7 +46,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class LanguageFrontend implements CodeAndLocationProvider {
+public abstract class LanguageFrontend implements CodeAndLocationProvider, LanguageProvider {
 
   // Allow non-Java frontends to access the logger (i.e. jep)
   public static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);

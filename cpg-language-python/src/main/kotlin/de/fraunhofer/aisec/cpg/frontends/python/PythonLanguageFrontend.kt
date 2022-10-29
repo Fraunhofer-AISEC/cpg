@@ -45,9 +45,6 @@ class PythonLanguageFrontend(
     config: TranslationConfiguration,
     scopeManager: ScopeManager?
 ) : LanguageFrontend(language, config, scopeManager, ".") {
-    companion object {
-        @kotlin.jvm.JvmField var PY_EXTENSIONS: List<String> = listOf(".py")
-    }
     private val jep = JepSingleton // configure Jep
 
     @Throws(TranslationException::class)

@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
+@JvmOverloads
 fun MetadataProvider.newTranslationUnitDeclaration(
     name: String?,
     code: String? = null,

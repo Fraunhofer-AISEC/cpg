@@ -25,7 +25,7 @@
 from ._spotless_dummy import *
 import inspect
 import ast
-from de.fraunhofer.aisec.cpg.graph import NodeBuilder
+from de.fraunhofer.aisec.cpg.graph import StatementBuilderKt
 from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.sarif import Region
 from java.net import URI
@@ -150,9 +150,9 @@ def wrap_declaration_to_stmt(self, stmt):
         self.log_with_loc(
             "Expected a declaration but got \"%s\". Using a dummy." %
             (stmt.java_name), loglevel="ERROR")
-        return NodeBuilder.newDeclarationStatement(self.frontend.language, "DUMMY")
-    decl_stmt = NodeBuilder.newDeclarationStatement(
-        self.frontend.language, stmt.getCode())
+        return StatementBuilderKt.newDeclarationStatement(self.frontend, "DUMMY")
+    decl_stmt = StatementBuilderKt.newDeclarationStatement(self.frontend,
+                                                           stmt.getCode())
     decl_stmt.setLocation(stmt.getLocation())
     decl_stmt.setSingleDeclaration(stmt)
     return decl_stmt

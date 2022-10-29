@@ -25,7 +25,9 @@
 from ._misc import NOT_IMPLEMENTED_MSG
 from ._misc import handle_operator_code
 from ._spotless_dummy import *
-from de.fraunhofer.aisec.cpg.graph import NodeBuilder
+from de.fraunhofer.aisec.cpg.graph import DeclarationBuilderKt
+from de.fraunhofer.aisec.cpg.graph import StatementBuilderKt
+from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
 from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
@@ -53,8 +55,8 @@ def handle_statement_impl(self, stmt):
         # "class" would automagically create a "this" receiver field.
         # However, the receiver can have any name in python (and even different
         # names per method).
-        cls = NodeBuilder.newRecordDeclaration(stmt.name, "", self.frontend.language,
-                                               self.get_src_code(stmt))
+        cls = DeclarationBuilderKt.newRecordDeclaration(self.frontend, stmt.name, "",
+                                                        self.get_src_code(stmt))
         self.scopemanager.enterScope(cls)
         bases = []
         for base in stmt.bases:
@@ -83,14 +85,16 @@ def handle_statement_impl(self, stmt):
         self.scopemanager.addDeclaration(cls)
         return cls
     elif isinstance(stmt, ast.Return):
-        r = NodeBuilder.newReturnStatement(self.frontend.language, self.get_src_code(stmt))
+        r = StatementBuilderKt.newReturnStatement(self.frontend,
+                                                  self.get_src_code(stmt))
         if stmt.value is not None:
             r.setReturnValue(self.handle_expression(stmt.value)
                              )
         return r
     elif isinstance(stmt, ast.Delete):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement(self.frontend.language, self.frontend.language, "")
+        r = StatementBuilderKt.newStatement(self.frontend,
+                                            "")
         return r
     elif isinstance(stmt, ast.Assign):
         return self.handle_assign(stmt)
@@ -105,7 +109,8 @@ def handle_statement_impl(self, stmt):
         return self.handle_for(stmt)
     elif isinstance(stmt, ast.While):
         # While(expr test, stmt* body, stmt* orelse)
-        whl_stmt = NodeBuilder.newWhileStatement(self.frontend.language, self.get_src_code(stmt))
+        whl_stmt = StatementBuilderKt.newWhileStatement(self.frontend,
+                                                        self.get_src_code(stmt))
         expr = self.handle_expression(stmt.test)
         if self.is_declaration(expr):
             whl_stmt.setConditionDeclaration(expr)
@@ -120,7 +125,8 @@ def handle_statement_impl(self, stmt):
                 loglevel="ERROR")
         return whl_stmt
     elif isinstance(stmt, ast.If):
-        if_stmt = NodeBuilder.newIfStatement(self.frontend.language, self.get_src_code(stmt))
+        if_stmt = StatementBuilderKt.newIfStatement(self.frontend,
+                                                    self.get_src_code(stmt))
         # Condition
         if_stmt.setCondition(self.handle_expression(stmt.test))
         # Then
@@ -134,19 +140,19 @@ def handle_statement_impl(self, stmt):
 
     elif isinstance(stmt, ast.With):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement(self.frontend.language, "")
+        r = StatementBuilderKt.newStatement(self.frontend, "")
         return r
     elif isinstance(stmt, ast.AsyncWith):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement(self.frontend.language, "")
+        r = StatementBuilderKt.newStatement(self.frontend, "")
         return r
     elif isinstance(stmt, ast.Raise):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement(self.frontend.language, "")
+        r = StatementBuilderKt.newStatement(self.frontend, "")
         return r
     elif isinstance(stmt, ast.Assert):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement(self.frontend.language, "")
+        r = StatementBuilderKt.newStatement(self.frontend, "")
         return r
     elif isinstance(stmt, ast.Import):
         """
@@ -156,8 +162,8 @@ def handle_statement_impl(self, stmt):
          Example: import Foo, Bar as Baz, Blub
         """
 
-        decl_stmt = NodeBuilder.newDeclarationStatement(
-            self.frontend.language, self.get_src_code(stmt))
+        decl_stmt = StatementBuilderKt.newDeclarationStatement(self.frontend,
+                                                               self.get_src_code(stmt))
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
@@ -166,8 +172,8 @@ def handle_statement_impl(self, stmt):
                 name = s.name
                 src = name
             tpe = UnknownType.getUnknownType()
-            v = NodeBuilder.newVariableDeclaration(
-                name, tpe, src, False, self.frontend.language)
+            v = StatementBuilderKt.newVariableDeclaration(self.frontend,
+                                                          name, tpe, src, False)
             # inacurate but ast.alias does not hold location information
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
@@ -185,8 +191,8 @@ def handle_statement_impl(self, stmt):
             "Cannot correctly handle \"import from\". Using an approximation.",
             loglevel="ERROR")
 
-        decl_stmt = NodeBuilder.newDeclarationStatement(
-            self.frontend.language, self.get_src_code(stmt))
+        decl_stmt = DeclarationBuilderKt.newDeclarationStatement(self.frontend,
+                                                                 self.get_src_code(stmt))
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
@@ -195,34 +201,36 @@ def handle_statement_impl(self, stmt):
                 name = s.name
                 src = name
             tpe = UnknownType.getUnknownType()
-            v = NodeBuilder.newVariableDeclaration(
-                name, tpe, src, False, self.frontend.language)
+            v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
+                                                            name, tpe, src, False)
             # inacurate but ast.alias does not hold location information
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
         return decl_stmt
     elif isinstance(stmt, ast.Global):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement(self.frontend.language, "")
+        r = StatementBuilderKt.newStatement(self.frontend, "")
         return r
     elif isinstance(stmt, ast.Nonlocal):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement(self.frontend.language, "")
+        r = StatementBuilderKt.newStatement(self.frontend, "")
         return r
     elif isinstance(stmt, ast.Expr):
         return self.handle_expression(stmt.value)
     elif isinstance(stmt, ast.Pass):
-        p = NodeBuilder.newEmptyStatement(self.frontend.language, "pass")
+        p = StatementBuilderKt.newEmptyStatement(self.frontend, "pass")
         return p
     elif isinstance(stmt, ast.Break):
-        brk = NodeBuilder.newBreakStatement(self.frontend.language, self.get_src_code(stmt))
+        brk = StatementBuilderKt.newBreakStatement(self.frontend,
+                                                   self.get_src_code(stmt))
         return brk
     elif isinstance(stmt, ast.Continue):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement(self.frontend.language, "")
+        r = StatementBuilderKt.newStatement(self.frontend, "")
         return r
     elif isinstance(stmt, ast.Try):
-        s = NodeBuilder.newTryStatement(self.frontend.language, self.get_src_code(stmt))
+        s = StatementBuilderKt.newTryStatement(self.frontend,
+                                               self.get_src_code(stmt))
         try_block = self.make_compound_statement(stmt.body)
         finally_block = self.make_compound_statement(stmt.finalbody)
         if stmt.orelse is not None and len(stmt.orelse) != 0:
@@ -240,7 +248,7 @@ def handle_statement_impl(self, stmt):
         self.log_with_loc(
             "Received unepxected stmt: %s with type %s" %
             (stmt, type(stmt)))
-        r = NodeBuilder.newStatement(self.frontend.language, "")
+        r = StatementBuilderKt.newStatement(self.frontend, "")
         return r
 
 
@@ -253,7 +261,8 @@ def handle_function_or_method(self, node, record=None):
         self.log_with_loc(
             "Expected either ast.FunctionDef or ast.AsyncFunctionDef",
             loglevel="ERROR")
-        r = NodeBuilder.newFunctionDeclaration("DUMMY", self.frontend.language, "DUMMY")
+        r = DeclarationBuilderKt.newFunctionDeclaration(self.frontend,
+                                                        "DUMMY",  "DUMMY")
         return r
 
     if isinstance(node, ast.AsyncFunctionDef):
@@ -273,14 +282,15 @@ def handle_function_or_method(self, node, record=None):
 
     if record is not None:
         if name == "__init__":
-            f = NodeBuilder.newConstructorDeclaration(
-                name, self.get_src_code(node), record, self.frontend.language)
+            f = DeclarationBuilderKt.newConstructorDeclaration(self.frontend,
+                                                               name, self.get_src_code(node), record)
         else:
             # TODO handle static
-            f = NodeBuilder.newMethodDeclaration(
-                name, self.get_src_code(node), False, record, self.frontend.language)
+            f = DeclarationBuilderKt.newMethodDeclaration(self.frontend,
+                                                          name, self.get_src_code(node), False, record)
     else:
-        f = NodeBuilder.newFunctionDeclaration(name, self.frontend.language, self.get_src_code(node))
+        f = DeclarationBuilderKt.newFunctionDeclaration(self.frontend,
+                                                        name,  self.get_src_code(node))
 
     self.scopemanager.enterScope(f)
 
@@ -292,8 +302,8 @@ def handle_function_or_method(self, node, record=None):
         if len(node.args.args) > 0:
             recv_node = node.args.args[0]
             tpe = TypeParser.createFrom(record.getName(), False)
-            recv = NodeBuilder.newVariableDeclaration(
-                recv_node.arg, tpe, self.get_src_code(recv_node), False, self.frontend.language)
+            recv = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
+                                                               recv_node.arg, tpe, self.get_src_code(recv_node), False)
             f.setReceiver(recv)
             self.scopemanager.addDeclaration(recv)
         else:
@@ -333,18 +343,18 @@ def handle_function_or_method(self, node, record=None):
 
         if isinstance(decorator.func, ast.Attribute):
             ref = self.handle_expression(decorator.func)
-            annotation = NodeBuilder.newAnnotation(
-                ref.getName(), self.frontend.language, self.get_src_code(decorator.func))
+            annotation = self.frontend.newAnnotation(
+                ref.getName(),  self.get_src_code(decorator.func))
 
             # add the base as a receiver annotation
-            member = NodeBuilder.newAnnotationMember(
-                "receiver", ref.getBase(), self.frontend.language, self.get_src_code(decorator.func))
+            member = self.frontend.newAnnotationMember(
+                "receiver", ref.getBase(),  self.get_src_code(decorator.func))
 
             members.append(member)
         elif isinstance(decorator.func, ast.Name):
             ref = self.handle_expression(decorator.func)
-            annotation = NodeBuilder.newAnnotation(
-                ref.getName(), self.frontend.language, self.get_src_code(decorator.func))
+            annotation = self.frontend.newAnnotation(
+                ref.getName(),  self.get_src_code(decorator.func))
 
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
@@ -354,16 +364,16 @@ def handle_function_or_method(self, node, record=None):
             arg0 = decorator.args[0]
             value = self.handle_expression(arg0)
 
-            member = NodeBuilder.newAnnotationMember(
-                "value", value, self.frontend.language, self.get_src_code(arg0))
+            member = self.frontend.newAnnotationMember(
+                "value", value,  self.get_src_code(arg0))
 
             members.append(member)
 
         # loop through keywords args
         for kw in decorator.keywords:
-            member = NodeBuilder.newAnnotationMember(
+            member = self.frontend.newAnnotationMember(
                 kw.arg, self.handle_expression(
-                    kw.value), self.frontend.language, self.get_src_code(kw))
+                    kw.value),  self.get_src_code(kw))
 
             members.append(member)
 
@@ -388,8 +398,8 @@ def handle_argument(self, arg: ast.arg):
     else:
         tpe = UnknownType.getUnknownType()
     # TODO variadic
-    pvd = NodeBuilder.newMethodParameterIn(arg.arg,
-                                           tpe, False, self.frontend.language, self.get_src_code(arg))
+    pvd = DeclarationBuilderKt.newParamVariableDeclaration(self.frontend,
+                                                           arg.arg, tpe, False,  self.get_src_code(arg))
     self.add_loc_info(arg, pvd)
     self.scopemanager.addDeclaration(pvd)
     return pvd
@@ -399,7 +409,7 @@ def handle_for(self, stmt):
     if not isinstance(stmt, ast.AsyncFor) and not isinstance(stmt, ast.For):
         self.log_with_loc(("Expected ast.AsyncFor or ast.For. Skipping"
                           " evaluation."), loglevel="ERROR")
-        r = NodeBuilder.newStatement(self.frontend.language, "")
+        r = StatementBuilderKt.newStatement(self.frontend, "")
         return r
     if isinstance(stmt, ast.AsyncFor):
         self.log_with_loc((
@@ -408,7 +418,8 @@ def handle_for(self, stmt):
             " graph."), loglevel="ERROR")
 
     # We can handle the AsyncFor / For statement now:
-    for_stmt = NodeBuilder.newForEachStatement(self.frontend.language, self.get_src_code(stmt))
+    for_stmt = StatementBuilderKt.newForEachStatement(self.frontend,
+                                                      self.get_src_code(stmt))
     target = self.handle_expression(stmt.target)
     if self.is_variable_declaration(target):
         target = self.wrap_declaration_to_stmt(target)
@@ -429,7 +440,7 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
         self.log_with_loc(
             "Expected at least one statement. Returning a dummy.",
             loglevel="WARN")
-        return NodeBuilder.newCompoundStatement(self.frontend.language, "")
+        return StatementBuilderKt.newCompoundStatement(self.frontend, "")
 
     if False and len(stmts) == 1:
         """ TODO decide how to handle this... """
@@ -438,7 +449,8 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
             s = self.wrap_declaration_to_stmt(s)
         return s
     else:
-        compound_statement = NodeBuilder.newCompoundStatement(self.frontend.language, "")
+        compound_statement = StatementBuilderKt.newCompoundStatement(self.frontend,
+                                                                     "")
         for s in stmts:
             s = self.handle_statement(s)
             if self.is_declaration(s):
@@ -470,13 +482,15 @@ def handle_assign_impl(self, stmt):
         target = self.handle_expression(stmt.target)
         op = self.handle_operator_code(stmt.op)
         value = self.handle_expression(stmt.value)
-        r = NodeBuilder.newBinaryOperator(op, self.frontend.language, self.get_src_code(stmt))
+        r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
+                                                  op,  self.get_src_code(stmt))
         r.setLhs(target)
         r.setRhs(value)
         return r
     if isinstance(stmt, ast.Assign) and len(stmt.targets) != 1:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newBinaryOperator("=", self.frontend.language, self.get_src_code(stmt))
+        r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
+                                                  "=",  self.get_src_code(stmt))
         return r
     if isinstance(stmt, ast.Assign):
         target = stmt.targets[0]
@@ -496,7 +510,8 @@ def handle_assign_impl(self, stmt):
             "Expected a DeclaredReferenceExpression or MemberExpression "
             "but got \"%s\". Skipping." %
             (lhs.java_name), loglevel="ERROR")
-        r = NodeBuilder.newBinaryOperator("=", self.frontend.language, self.get_src_code(stmt))
+        r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
+                                                  "=",  self.get_src_code(stmt))
         return r
 
     resolved_lhs = self.scopemanager.resolveReference(lhs)
@@ -505,7 +520,8 @@ def handle_assign_impl(self, stmt):
 
     if resolved_lhs is not None:
         # found var => BinaryOperator "="
-        binop = NodeBuilder.newBinaryOperator("=", self.frontend.language, self.get_src_code(stmt))
+        binop = ExpressionBuilderKt.newBinaryOperator(self.frontend,
+                                                      "=",  self.get_src_code(stmt))
         binop.setLhs(lhs)
         if rhs is not None:
             binop.setRhs(rhs)
@@ -529,25 +545,25 @@ def handle_assign_impl(self, stmt):
                 "Could not resolve -> creating a new field for: %s" %
                 (name))
             if rhs is not None:
-                v = NodeBuilder.newFieldDeclaration(
-                    name,
-                    rhs.getType(),
-                    None,
-                    self.get_src_code(stmt),
-                    None,
-                    rhs,
-                    False,
-                    self.frontend.language)  # TODO None -> infos eintragen
+                v = DeclarationBuilderKt.newFieldDeclaration(self.frontend,
+                                                             name,
+                                                             rhs.getType(),
+                                                             None,
+                                                             self.get_src_code(
+                                                                 stmt),
+                                                             None,
+                                                             rhs,
+                                                             False)  # TODO None -> infos eintragen
             else:
-                v = NodeBuilder.newFieldDeclaration(
-                    name,
-                    UnknownType.getUnknownType(),
-                    None,
-                    self.get_src_code(stmt),
-                    None,
-                    None,
-                    False,
-                    self.frontend.language)  # TODO None -> infos eintragen
+                v = DeclarationBuilderKt.newFieldDeclaration(self.frontend,
+                                                             name,
+                                                             UnknownType.getUnknownType(),
+                                                             None,
+                                                             self.get_src_code(
+                                                                 stmt),
+                                                             None,
+                                                             None,
+                                                             False)  # TODO None -> infos eintragen
             self.scopemanager.addDeclaration(v)
             return v
         elif inRecord and inFunction:
@@ -562,14 +578,13 @@ def handle_assign_impl(self, stmt):
                     "Could not resolve -> creating a new variable for: %s"
                     % (lhs.getName()))
                 if rhs is not None:
-                    v = NodeBuilder.newVariableDeclaration(
-                        lhs.getName(), rhs.getType(),
-                        self.get_src_code(stmt), False,
-                        self.frontend.language)
+                    v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
+                                                                    lhs.getName(), rhs.getType(),
+                                                                    self.get_src_code(stmt), False)
                 else:
-                    v = NodeBuilder.newVariableDeclaration(
-                        lhs.getName(), UnknownType.getUnknownType(),
-                        self.get_src_code(stmt), False, self.frontend.language)
+                    v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
+                                                                    lhs.getName(), UnknownType.getUnknownType(),
+                                                                    self.get_src_code(stmt), False)
                 if rhs is not None:
                     v.setInitializer(rhs)
                 self.scopemanager.addDeclaration(v)
@@ -590,21 +605,19 @@ def handle_assign_impl(self, stmt):
                     mem_base_is_receiver = base.getName() == recv_name
                 if not mem_base_is_receiver:
                     self.log_with_loc("I'm confused.", loglevel="ERROR")
-                    return NodeBuilder.newStatement(self.frontend.language, "DUMMY")
+                    return StatementBuilderKt.newStatement(self.frontend, "DUMMY")
                 if rhs is not None and self.is_declared_reference(rhs):
                     # TODO figure out why the cpg pass fails to do this...
                     rhs.setRefersTo(
                         self.scopemanager.resolveReference(rhs))
                 if rhs is not None:
-                    v = NodeBuilder.newFieldDeclaration(
-                        lhs.getName(), rhs.getType(), None,
-                        self.get_src_code(stmt), None, rhs, False,
-                        self.frontend.language)
+                    v = DeclarationBuilderKt.newFieldDeclaration(self.frontend,
+                                                                 lhs.getName(), rhs.getType(), None,
+                                                                 self.get_src_code(stmt), None, rhs, False)
                 else:
-                    v = NodeBuilder.newFieldDeclaration(
-                        lhs.getName(), UnknownType.getUnknownType(), None,
-                        self.get_src_code(stmt), None, None, False,
-                        self.frontend.language)
+                    v = DeclarationBuilderKt.newFieldDeclaration(self.frontend,
+                                                                 lhs.getName(), UnknownType.getUnknownType(), None,
+                                                                 self.get_src_code(stmt), None, None, False)
                 self.scopemanager.addDeclaration(v)
                 self.scopemanager.getCurrentRecord().addField(v)
                 return v
@@ -616,13 +629,13 @@ def handle_assign_impl(self, stmt):
                 "Could not resolve -> creating a new variable for: %s" %
                 (lhs.getName()))
             if rhs is not None:
-                v = NodeBuilder.newVariableDeclaration(
-                    lhs.getName(), rhs.getType(),
-                    self.get_src_code(stmt), False, self.frontend.language)
+                v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
+                                                                lhs.getName(), rhs.getType(),
+                                                                self.get_src_code(stmt), False)
             else:
-                v = NodeBuilder.newVariableDeclaration(
-                    lhs.getName(), UnknownType.getUnknownType(),
-                    self.get_src_code(stmt), False, self.frontend.language)
+                v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
+                                                                lhs.getName(), UnknownType.getUnknownType(),
+                                                                self.get_src_code(stmt), False)
             if rhs is not None:
                 v.setInitializer(rhs)
             self.scopemanager.addDeclaration(v)
