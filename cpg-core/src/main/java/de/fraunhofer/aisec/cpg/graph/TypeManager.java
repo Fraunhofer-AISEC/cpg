@@ -29,7 +29,6 @@ import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newTypedefDecla
 
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.LanguageProvider;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
@@ -54,38 +53,6 @@ import org.slf4j.LoggerFactory;
 public class TypeManager implements LanguageProvider {
 
   private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
-
-  private static Class<?> llvmClass = null;
-  private static Class<?> pythonClass = null;
-  private static Class<?> goClass = null;
-  private static Class<?> typescriptClass = null;
-
-  static {
-    try {
-      llvmClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
-    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("LLVM frontend not loaded.");
-    }
-    try {
-      pythonClass =
-          Class.forName("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend");
-    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("Python frontend not loaded.");
-    }
-    try {
-      goClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend");
-    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("Go frontend not loaded.");
-    } catch (LinkageError ex) {
-      log.error("Go frontend was found, but could not be loaded", ex);
-    }
-    try {
-      typescriptClass =
-          Class.forName("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend");
-    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("TypeScript frontend not loaded.");
-    }
-  }
 
   private static final List<String> primitiveTypeNames =
       List.of(

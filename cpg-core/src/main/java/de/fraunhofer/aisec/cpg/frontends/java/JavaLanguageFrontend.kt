@@ -49,16 +49,10 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.AnnotationMember
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotationMember
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newIncludeDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newNamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -124,11 +118,7 @@ open class JavaLanguageFrontend(
             var namespaceDeclaration: NamespaceDeclaration? = null
             if (packDecl != null) {
                 namespaceDeclaration =
-                    newNamespaceDeclaration(
-                        packDecl.name.asString(),
-                        language,
-                        getCodeFromRawNode(packDecl)
-                    )
+                    newNamespaceDeclaration(packDecl.name.asString(), getCodeFromRawNode(packDecl))
                 setCodeAndLocation(namespaceDeclaration, packDecl)
                 scopeManager.addDeclaration(namespaceDeclaration)
                 scopeManager.enterScope(namespaceDeclaration)
@@ -143,7 +133,7 @@ open class JavaLanguageFrontend(
             }
 
             for (anImport in context!!.imports) {
-                val incl = newIncludeDeclaration(anImport.nameAsString, language)
+                val incl = newIncludeDeclaration(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
             }
 
@@ -458,7 +448,7 @@ open class JavaLanguageFrontend(
     private fun handleAnnotations(owner: NodeWithAnnotations<*>): List<Annotation> {
         val list = ArrayList<Annotation>()
         for (expr in owner.annotations) {
-            val annotation = newAnnotation(expr.nameAsString, language, getCodeFromRawNode(expr))
+            val annotation = newAnnotation(expr.nameAsString, getCodeFromRawNode(expr))
             val members = ArrayList<AnnotationMember>()
 
             // annotations can be specified as member / value pairs
@@ -468,7 +458,6 @@ open class JavaLanguageFrontend(
                         newAnnotationMember(
                             pair.nameAsString,
                             expressionHandler.handle(pair.value) as Expression,
-                            language,
                             getCodeFromRawNode(pair)
                         )
                     members.add(member)
@@ -481,7 +470,6 @@ open class JavaLanguageFrontend(
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
                             expressionHandler.handle(value.asLiteralExpr()) as Expression,
-                            language,
                             getCodeFromRawNode(value)
                         )
                     members.add(member)

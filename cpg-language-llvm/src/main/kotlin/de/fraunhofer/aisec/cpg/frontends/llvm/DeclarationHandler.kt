@@ -27,9 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCompoundStatement
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
@@ -58,9 +55,8 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             LLVMGlobalVariableValueKind -> handleGlobal(value)
             else -> {
                 log.error("Not handling declaration kind {} yet", kind)
-                NodeBuilder.newProblemDeclaration(
-                    frontend.language,
-                    "Not handling declaration kind ${kind} yet.",
+                newProblemDeclaration(
+                    "Not handling declaration kind $kind yet.",
                     ProblemNode.ProblemType.TRANSLATION,
                     frontend.getCodeFromRawNode(value)
                 )
@@ -162,7 +158,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             if (LLVMGetEntryBasicBlock(func) == bb && stmt is CompoundStatement) {
                 functionDeclaration.body = stmt
             } else if (LLVMGetEntryBasicBlock(func) == bb) {
-                functionDeclaration.body = newCompoundStatement(frontend.language)
+                functionDeclaration.body = newCompoundStatement()
                 (functionDeclaration.body as CompoundStatement).addStatement(stmt)
             } else {
                 // add the label statement, containing this basic block as a compound statement to
@@ -214,7 +210,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             return record
         }
 
-        record = newRecordDeclaration(name, "struct", frontend.language, "")
+        record = newRecordDeclaration(name, "struct", "")
 
         frontend.scopeManager.enterScope(record)
 

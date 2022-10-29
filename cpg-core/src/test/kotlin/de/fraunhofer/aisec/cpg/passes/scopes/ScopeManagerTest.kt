@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import java.io.File
 import kotlin.test.*
 
+// TODO(oxisto): Use TestLanguage instead of CPPLanguage/JavaLanguage
 internal class ScopeManagerTest : BaseTest() {
     private lateinit var config: TranslationConfiguration
 
@@ -92,7 +93,7 @@ internal class ScopeManagerTest : BaseTest() {
         s1.resetToGlobal(frontend1.newTranslationUnitDeclaration("f1.cpp", null))
 
         // build a namespace declaration in f1.cpp with the namespace A
-        val namespaceA1 = NodeBuilder.newNamespaceDeclaration("A", CPPLanguage(), null)
+        val namespaceA1 = frontend1.newNamespaceDeclaration("A", null)
         s1.enterScope(namespaceA1)
         val func1 = frontend1.newFunctionDeclaration("func1", null)
         s1.addDeclaration(func1)
@@ -104,7 +105,7 @@ internal class ScopeManagerTest : BaseTest() {
         s2.resetToGlobal(frontend2.newTranslationUnitDeclaration("f1.cpp", null))
 
         // and do the same in the other file
-        val namespaceA2 = NodeBuilder.newNamespaceDeclaration("A", CPPLanguage(), null)
+        val namespaceA2 = frontend2.newNamespaceDeclaration("A", null)
         s2.enterScope(namespaceA2)
         val func2 = frontend2.newFunctionDeclaration("func2", null)
         s2.addDeclaration(func2)
@@ -156,13 +157,13 @@ internal class ScopeManagerTest : BaseTest() {
 
         assertEquals("", s.currentNamePrefix)
 
-        val namespaceA = NodeBuilder.newNamespaceDeclaration("A", CPPLanguage(), null)
+        val namespaceA = frontend.newNamespaceDeclaration("A", null)
         s.enterScope(namespaceA)
 
         assertEquals("A", s.currentNamePrefix)
 
         // nested namespace A::B. the name needs to be a FQN
-        val namespaceB = NodeBuilder.newNamespaceDeclaration("A::B", CPPLanguage(), null)
+        val namespaceB = frontend.newNamespaceDeclaration("A::B", null)
         s.enterScope(namespaceB)
 
         assertEquals("A::B", s.currentNamePrefix)

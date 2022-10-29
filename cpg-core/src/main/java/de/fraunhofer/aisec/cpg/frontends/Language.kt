@@ -59,25 +59,3 @@ abstract class Language<T : LanguageFrontend> : Node() {
         this.also { this.language = it }
     }
 }
-
-/**
- * A simple interface that everything, that supplies a language, should implement. Examples include
- * each [Node], but also transformation steps, such as [Handler].
- */
-interface LanguageProvider : MetadataProvider {
-    val language: Language<out LanguageFrontend>
-}
-
-/**
- * This interfaces serves as base for different entities that provide some kind of meta-data for a
- * [Node], such as its language, code or location.
- */
-interface MetadataProvider
-
-/**
- * This interface denotes that the class is able to provide source code and location information for
- * a specific node and set it using the [setCodeAndLocation] function.
- */
-interface CodeAndLocationProvider : MetadataProvider {
-    fun <N, S> setCodeAndLocation(cpgNode: N, astNode: S?)
-}

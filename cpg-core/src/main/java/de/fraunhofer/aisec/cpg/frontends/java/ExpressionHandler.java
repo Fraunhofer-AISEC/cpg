@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newVariableDeclaration;
 import static de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt.*;
+import static de.fraunhofer.aisec.cpg.graph.StatementBuilderKt.newDeclarationStatement;
 
 import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.ArrayCreationLevel;
@@ -40,7 +41,6 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
@@ -229,8 +229,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     VariableDeclarationExpr variableDeclarationExpr = expr.asVariableDeclarationExpr();
 
     DeclarationStatement declarationStatement =
-        NodeBuilder.newDeclarationStatement(
-            frontend.getLanguage(), variableDeclarationExpr.toString());
+        newDeclarationStatement(this, variableDeclarationExpr.toString());
 
     for (VariableDeclarator variable : variableDeclarationExpr.getVariables()) {
       ResolvedValueDeclaration resolved = variable.resolve();

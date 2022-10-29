@@ -27,12 +27,11 @@ package de.fraunhofer.aisec.cpg.passes.inference
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.LanguageProvider
-import de.fraunhofer.aisec.cpg.frontends.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.*
 import org.slf4j.Logger
@@ -199,6 +198,66 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
         decl.type = parameterizedType
 
         return decl
+    }
+
+    /**
+     * Create an inferred FunctionTemplateDeclaration if a call to an FunctionTemplate could not be
+     * resolved
+     *
+     * @param containingRecord
+     * @param call
+     * @return inferred FunctionTemplateDeclaration which can be invoked by the call
+     */
+    fun createInferredFunctionTemplate(call: CallExpression): FunctionTemplateDeclaration {
+        // We assume that the start is either a record or the translation unit
+        val record = start as? RecordDeclaration
+        val tu = start as? TranslationUnitDeclaration
+
+        // If both are null, we have the wrong type
+        if (record == null && tu == null) {
+            throw UnsupportedOperationException(
+                "Starting inference with the wrong type of start node"
+            )
+        }
+
+        val name = call.name
+        val code = call.code
+        val inferred = newFunctionTemplateDeclaration(name, code)
+        inferred.isInferred = true
+
+        val inferredRealization: FunctionDeclaration? =
+            if (record != null) {
+                record.addDeclaration(inferred)
+                record.inferMethod(call)
+            } else {
+                tu!!.addDeclaration(inferred)
+                tu.inferFunction(call)
+            }
+
+        inferred.addRealization(inferredRealization)
+
+        var typeCounter = 0
+        var nonTypeCounter = 0
+        for (node in call.templateParameters) {
+            if (node is TypeExpression) {
+                // Template Parameter
+                val inferredTypeIdentifier = "T$typeCounter"
+                val typeParamDeclaration =
+                    inferred.startInference().inferTemplateParameter(inferredTypeIdentifier)
+                typeCounter++
+                inferred.addParameter(typeParamDeclaration)
+            } else if (node is Expression) {
+                val inferredNonTypeIdentifier = "N$nonTypeCounter"
+                var paramVariableDeclaration =
+                    node.startInference().inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
+
+                paramVariableDeclaration.addPrevDFG(node)
+                node.addNextDFG(paramVariableDeclaration)
+                nonTypeCounter++
+                inferred.addParameter(paramVariableDeclaration)
+            }
+        }
+        return inferred
     }
 
     override val isInferred: Boolean

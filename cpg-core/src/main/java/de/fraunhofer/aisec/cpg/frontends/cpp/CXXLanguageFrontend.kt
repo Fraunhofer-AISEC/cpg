@@ -122,7 +122,7 @@ class CXXLanguageFrontend(
             }
 
             private fun hasIncludeWhitelist(): Boolean {
-                return config.includeWhitelist != null && config.includeWhitelist.isNotEmpty()
+                return config.includeWhitelist.isNotEmpty()
             }
 
             /**
@@ -136,7 +136,7 @@ class CXXLanguageFrontend(
              */
             private fun absoluteOrRelativePathIsInList(path: String, list: List<String>?): Boolean {
                 // path cannot be in the list if its empty or null
-                if (list == null || list.isEmpty()) {
+                if (list.isNullOrEmpty()) {
                     return false
                 }
 
@@ -366,8 +366,7 @@ class CXXLanguageFrontend(
     private fun handleAttributes(owner: IASTAttributeOwner): List<Annotation> {
         val list: MutableList<Annotation> = ArrayList()
         for (attribute in owner.attributes) {
-            val annotation =
-                NodeBuilder.newAnnotation(String(attribute.name), language, attribute.rawSignature)
+            val annotation = newAnnotation(String(attribute.name), attribute.rawSignature)
 
             // go over the parameters
             if (attribute.argumentClause is IASTTokenList) {
@@ -407,7 +406,7 @@ class CXXLanguageFrontend(
                     )
                 else -> newLiteral(code, TypeParser.createFrom("const char*", false), code)
             }
-        return NodeBuilder.newAnnotationMember("", expression, language, code)
+        return newAnnotationMember("", expression, code)
     }
 
     @Throws(NoSuchFieldException::class)

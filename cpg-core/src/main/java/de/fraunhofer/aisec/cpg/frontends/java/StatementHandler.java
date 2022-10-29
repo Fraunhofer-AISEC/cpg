@@ -37,8 +37,8 @@ import com.github.javaparser.ast.type.ReferenceType;
 import com.github.javaparser.ast.type.UnionType;
 import com.github.javaparser.utils.Pair;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilderKt;
+import de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt;
+import de.fraunhofer.aisec.cpg.graph.StatementBuilderKt;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
@@ -121,7 +121,7 @@ public class StatementHandler
       expression = (Expression) frontend.getExpressionHandler().handle(expr);
     }
 
-    var returnStatement = NodeBuilderKt.newReturnStatement(this, returnStmt.toString());
+    var returnStatement = StatementBuilderKt.newReturnStatement(this, returnStmt.toString());
 
     // expressionRefersToDeclaration to arguments, if there are any
     if (expression != null) {
@@ -139,7 +139,8 @@ public class StatementHandler
     Statement thenStatement = ifStmt.getThenStmt();
     Optional<Statement> optionalElseStatement = ifStmt.getElseStmt();
 
-    IfStatement ifStatement = NodeBuilder.newIfStatement(frontend.getLanguage(), ifStmt.toString());
+    IfStatement ifStatement =
+        StatementBuilderKt.newIfStatement(frontend.getLanguage(), ifStmt.toString());
     frontend.getScopeManager().enterScope(ifStatement);
 
     ifStatement.setThenStatement(handle(thenStatement));
@@ -159,7 +160,7 @@ public class StatementHandler
     Optional<com.github.javaparser.ast.expr.Expression> thenStatement = assertStmt.getMessage();
 
     AssertStatement assertStatement =
-        NodeBuilder.newAssertStatement(frontend.getLanguage(), stmt.toString());
+        StatementBuilderKt.newAssertStatement(frontend.getLanguage(), stmt.toString());
 
     assertStatement.setCondition(
         (Expression) frontend.getExpressionHandler().handle(conditionExpression));
@@ -179,7 +180,7 @@ public class StatementHandler
     Statement statement = whileStmt.getBody();
 
     WhileStatement whileStatement =
-        NodeBuilder.newWhileStatement(frontend.getLanguage(), whileStmt.toString());
+        StatementBuilderKt.newWhileStatement(frontend.getLanguage(), whileStmt.toString());
     frontend.getScopeManager().enterScope(whileStatement);
 
     whileStatement.setStatement(handle(statement));
@@ -192,7 +193,7 @@ public class StatementHandler
 
   private ForEachStatement handleForEachStatement(Statement stmt) {
     ForEachStatement statement =
-        NodeBuilder.newForEachStatement(frontend.getLanguage(), stmt.toString());
+        StatementBuilderKt.newForEachStatement(frontend.getLanguage(), stmt.toString());
     frontend.getScopeManager().enterScope(statement);
 
     ForEachStmt forEachStmt = stmt.asForEachStmt();
@@ -224,7 +225,7 @@ public class StatementHandler
       code = stmt.toString();
     }
 
-    ForStatement statement = NodeBuilder.newForStatement(frontend.getLanguage(), code);
+    ForStatement statement = StatementBuilderKt.newForStatement(frontend.getLanguage(), code);
     frontend.setCodeAndLocation(statement, stmt);
     frontend.getScopeManager().enterScope(statement);
 
@@ -335,7 +336,8 @@ public class StatementHandler
     com.github.javaparser.ast.expr.Expression conditionExpression = doStmt.getCondition();
     Statement statement = doStmt.getBody();
 
-    DoStatement doStatement = NodeBuilder.newDoStatement(frontend.getLanguage(), doStmt.toString());
+    DoStatement doStatement =
+        StatementBuilderKt.newDoStatement(frontend.getLanguage(), doStmt.toString());
     frontend.getScopeManager().enterScope(doStatement);
 
     doStatement.setStatement(handle(statement));
@@ -347,13 +349,13 @@ public class StatementHandler
 
   private EmptyStatement handleEmptyStatement(Statement stmt) {
     EmptyStmt emptyStmt = stmt.asEmptyStmt();
-    return NodeBuilder.newEmptyStatement(frontend.getLanguage(), emptyStmt.toString());
+    return StatementBuilderKt.newEmptyStatement(frontend.getLanguage(), emptyStmt.toString());
   }
 
   private SynchronizedStatement handleSynchronizedStatement(Statement stmt) {
     SynchronizedStmt synchronizedJava = stmt.asSynchronizedStmt();
     SynchronizedStatement synchronizedCPG =
-        NodeBuilder.newSynchronizedStatement(frontend.getLanguage(), stmt.toString());
+        StatementBuilderKt.newSynchronizedStatement(frontend.getLanguage(), stmt.toString());
     synchronizedCPG.setExpression(
         (Expression) frontend.getExpressionHandler().handle(synchronizedJava.getExpression()));
     synchronizedCPG.setBlockStatement((CompoundStatement) handle(synchronizedJava.getBody()));
@@ -367,7 +369,7 @@ public class StatementHandler
     Statement statement = labelStmt.getStatement();
 
     LabelStatement labelStatement =
-        NodeBuilder.newLabelStatement(frontend.getLanguage(), labelStmt.toString());
+        StatementBuilderKt.newLabelStatement(frontend.getLanguage(), labelStmt.toString());
 
     labelStatement.setSubStatement(handle(statement));
     labelStatement.setLabel(label);
@@ -396,7 +398,7 @@ public class StatementHandler
 
     // first of, all we need a compound statement
     CompoundStatement compoundStatement =
-        NodeBuilder.newCompoundStatement(frontend.getLanguage(), stmt.toString());
+        StatementBuilderKt.newCompoundStatement(frontend.getLanguage(), stmt.toString());
 
     frontend.getScopeManager().enterScope(compoundStatement);
 
@@ -437,7 +439,7 @@ public class StatementHandler
                 getNextTokenWith(":", optionalTokenRange.get().getBegin()));
       }
       DefaultStatement defaultStatement =
-          NodeBuilder.newDefaultStatement(
+          StatementBuilderKt.newDefaultStatement(
               frontend.getLanguage(), getCodeBetweenTokens(caseTokens.a, caseTokens.b));
       defaultStatement.setLocation(
           getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b));
@@ -454,7 +456,7 @@ public class StatementHandler
     }
 
     CaseStatement caseStatement =
-        NodeBuilder.newCaseStatement(
+        StatementBuilderKt.newCaseStatement(
             frontend.getLanguage(), getCodeBetweenTokens(caseTokens.a, caseTokens.b));
     caseStatement.setCaseExpression(
         (Expression) frontend.getExpressionHandler().handle(caseExpression));
@@ -526,7 +528,7 @@ public class StatementHandler
   public SwitchStatement handleSwitchStatement(Statement stmt) {
     SwitchStmt switchStmt = stmt.asSwitchStmt();
     SwitchStatement switchStatement =
-        NodeBuilder.newSwitchStatement(frontend.getLanguage(), stmt.toString());
+        StatementBuilderKt.newSwitchStatement(frontend.getLanguage(), stmt.toString());
 
     // make sure location is set
     frontend.setCodeAndLocation(switchStatement, switchStmt);
@@ -547,7 +549,8 @@ public class StatementHandler
     }
 
     CompoundStatement compoundStatement =
-        NodeBuilder.newCompoundStatement(frontend.getLanguage(), getCodeBetweenTokens(start, end));
+        StatementBuilderKt.newCompoundStatement(
+            frontend.getLanguage(), getCodeBetweenTokens(start, end));
     compoundStatement.setLocation(
         getLocationsFromTokens(switchStatement.getLocation(), start, end));
 
@@ -581,8 +584,8 @@ public class StatementHandler
     }
 
     ExplicitConstructorInvocation node =
-        NodeBuilder.newExplicitConstructorInvocation(
-            containingClass, frontend.getLanguage(), eciStatement.toString());
+        ExpressionBuilderKt.newExplicitConstructorInvocation(
+            this, containingClass, eciStatement.toString());
 
     List<Expression> arguments =
         eciStatement.getArguments().stream()
@@ -597,7 +600,7 @@ public class StatementHandler
   private TryStatement handleTryStatement(Statement stmt) {
     TryStmt tryStmt = stmt.asTryStmt();
     TryStatement tryStatement =
-        NodeBuilder.newTryStatement(frontend.getLanguage(), stmt.toString());
+        StatementBuilderKt.newTryStatement(frontend.getLanguage(), stmt.toString());
     frontend.getScopeManager().enterScope(tryStatement);
     List<de.fraunhofer.aisec.cpg.graph.statements.Statement> resources =
         tryStmt.getResources().stream()
@@ -629,7 +632,8 @@ public class StatementHandler
   }
 
   private CatchClause handleCatchClause(com.github.javaparser.ast.stmt.CatchClause catchCls) {
-    CatchClause cClause = NodeBuilder.newCatchClause(frontend.getLanguage(), catchCls.toString());
+    CatchClause cClause =
+        StatementBuilderKt.newCatchClause(frontend.getLanguage(), catchCls.toString());
     frontend.getScopeManager().enterScope(cClause);
 
     List<Type> possibleTypes = new ArrayList<>();

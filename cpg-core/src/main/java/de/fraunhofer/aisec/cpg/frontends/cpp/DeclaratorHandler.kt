@@ -26,9 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -340,7 +337,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         ) {
             val problem =
                 newProblemDeclaration(
-                    frontend.language,
                     "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently."
                 )
 
@@ -441,9 +437,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             newRecordDeclaration(
                 frontend.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString(),
                 kind,
-                frontend.language,
                 ctx.rawSignature,
-                frontend
             )
 
         // Handle c++ classes

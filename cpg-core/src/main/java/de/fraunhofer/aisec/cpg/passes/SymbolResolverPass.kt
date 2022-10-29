@@ -102,6 +102,8 @@ abstract class SymbolResolverPass : Pass() {
      * Infers a record declaration for the given type. [type] is the object type representing a
      * record that we want to infer, the [recordToUpdate] is either the type's name or the type's
      * root name. The [kind] specifies if we create a class or a struct.
+     *
+     * // TODO(oxisto): Move this to the Inference class
      */
     protected fun inferRecordDeclaration(
         type: Type,
@@ -123,8 +125,7 @@ abstract class SymbolResolverPass : Pass() {
         // TODO: used to be a struct in the VariableUsageResolver and a class in the
         // CallResolver. Both said that the kind could have been wrong and should be updated
         // later. However, I don't know where/if this ever happened.
-        val declaration =
-            NodeBuilder.newRecordDeclaration(type.typeName, kind, currentTU.language, "")
+        val declaration = currentTU.newRecordDeclaration(type.typeName, kind, "")
         declaration.isInferred = true
 
         // update the type

@@ -45,7 +45,6 @@ import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ProblemNode;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -264,7 +263,7 @@ public class DeclarationHandler
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
-        newRecordDeclaration(fqn, "class", frontend.getLanguage(), null, frontend, classInterDecl);
+        newRecordDeclaration(this, fqn, "class", null, classInterDecl);
     recordDeclaration.setSuperClasses(
         classInterDecl.getExtendedTypes().stream()
             .map(this.frontend::getTypeAsGoodAsPossible)
@@ -350,14 +349,14 @@ public class DeclarationHandler
       var scope = (RecordScope) frontend.getScopeManager().getCurrentScope();
 
       var field =
-          NodeBuilder.newFieldDeclaration(
+          newFieldDeclaration(
+              this,
               scope.getSimpleName() + ".this",
               TypeParser.createFrom(scope.getScopedName(), false),
               null,
               null,
               null,
-              false,
-              frontend.getLanguage());
+              false);
       field.setImplicit(true);
 
       frontend.getScopeManager().enterScope(recordDeclaration);
@@ -412,14 +411,14 @@ public class DeclarationHandler
     }
     de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration fieldDeclaration =
         newFieldDeclaration(
+            this,
             variable.getName().asString(),
             type,
             modifiers,
             variable.toString(),
             location,
             initializer,
-            false,
-            frontend.getLanguage());
+            false);
     frontend.getScopeManager().addDeclaration(fieldDeclaration);
 
     this.frontend.processAnnotations(fieldDeclaration, fieldDecl);
@@ -433,7 +432,7 @@ public class DeclarationHandler
     PhysicalLocation location = this.frontend.getLocationFromRawNode(enumDecl);
 
     de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration enumDeclaration =
-        newEnumDeclaration(name, enumDecl.toString(), location, frontend.getLanguage());
+        newEnumDeclaration(this, name, enumDecl.toString(), location);
     List<de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration> entries =
         enumDecl.getEntries().stream()
             .map(
@@ -457,10 +456,10 @@ public class DeclarationHandler
       handleEnumConstantDeclaration(
           com.github.javaparser.ast.body.EnumConstantDeclaration enumConstDecl) {
     return newEnumConstantDeclaration(
+        this,
         enumConstDecl.getNameAsString(),
         enumConstDecl.toString(),
-        this.frontend.getLocationFromRawNode(enumConstDecl),
-        frontend.getLanguage());
+        this.frontend.getLocationFromRawNode(enumConstDecl));
   }
 
   public Declaration /* TODO refine return type*/ handleAnnotationDeclaration(

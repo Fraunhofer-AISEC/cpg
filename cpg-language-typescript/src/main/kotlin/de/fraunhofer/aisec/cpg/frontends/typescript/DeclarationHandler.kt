@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
@@ -65,7 +64,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 ?: UnknownType.getUnknownType()
 
         val field =
-            NodeBuilder.newFieldDeclaration(
+            newFieldDeclaration(
                 name,
                 type,
                 listOf(),
@@ -73,7 +72,6 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 this.frontend.getLocationFromRawNode(node),
                 null,
                 false,
-                frontend.language
             )
 
         this.frontend.processAnnotations(field, node)
@@ -92,7 +90,6 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 } else {
                     "class"
                 },
-                frontend.language,
                 this.frontend.getCodeFromRawNode(node)
             )
 

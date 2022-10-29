@@ -79,11 +79,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * done yet.
      */
     private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
-        return NodeBuilder.newUsingDirective(
-            frontend.language,
-            using.rawSignature,
-            using.qualifiedName.toString()
-        )
+        return newUsingDirective(using.rawSignature, using.qualifiedName.toString())
     }
 
     /**
@@ -93,12 +89,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
         // Build a FQN out of the current scope prefix
         val fqn = frontend.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString()
-        val declaration =
-            NodeBuilder.newNamespaceDeclaration(
-                fqn,
-                frontend.language,
-                frontend.getCodeFromRawNode(ctx)
-            )
+        val declaration = newNamespaceDeclaration(fqn, frontend.getCodeFromRawNode(ctx))
 
         frontend.scopeManager.addDeclaration(declaration)
 
@@ -116,7 +107,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleProblem(ctx: IASTProblemDeclaration): Declaration {
-        val problem = NodeBuilder.newProblemDeclaration(frontend.language, ctx.problem.message)
+        val problem = newProblemDeclaration(ctx.problem.message)
 
         frontend.scopeManager.addDeclaration(problem)
 
@@ -276,17 +267,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         val templateDeclaration: TemplateDeclaration =
             if (ctx.declaration is CPPASTFunctionDefinition) {
-                NodeBuilder.newFunctionTemplateDeclaration(
-                    name,
-                    frontend.language,
-                    frontend.getCodeFromRawNode(ctx)
-                )
+                newFunctionTemplateDeclaration(name, frontend.getCodeFromRawNode(ctx))
             } else {
-                NodeBuilder.newClassTemplateDeclaration(
-                    name,
-                    frontend.language,
-                    frontend.getCodeFromRawNode(ctx)
-                )
+                newClassTemplateDeclaration(name, frontend.getCodeFromRawNode(ctx))
             }
 
         templateDeclaration.location = frontend.getLocationFromRawNode(ctx)
@@ -574,22 +557,18 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     ): EnumDeclaration {
         val entries = mutableListOf<EnumConstantDeclaration>()
         val enum =
-            NodeBuilder.newEnumDeclaration(
+            newEnumDeclaration(
                 name = declSpecifier.name.toString(),
                 location = frontend.getLocationFromRawNode(ctx),
-                frontend = frontend,
-                language = frontend.language
             )
 
         // Loop through its members
         for (enumerator in declSpecifier.enumerators) {
             val enumConst =
-                NodeBuilder.newEnumConstantDeclaration(
+                newEnumConstantDeclaration(
                     enumerator.name.toString(),
                     frontend.getCodeFromRawNode(enumerator),
                     frontend.getLocationFromRawNode(enumerator),
-                    frontend.language,
-                    frontend = frontend
                 )
 
             // In C/C++, default enums are of type int
@@ -758,8 +737,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 }
 
                 val problems = problematicIncludes[includeString]
-                val includeDeclaration =
-                    NodeBuilder.newIncludeDeclaration(includeString ?: "", frontend.language)
+                val includeDeclaration = newIncludeDeclaration(includeString ?: "")
                 if (problems != null) {
                     includeDeclaration.addProblems(problems)
                 }

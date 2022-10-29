@@ -27,7 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.newCompoundStatement
+import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -59,11 +60,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
         // typescript allows to declare function on a statement level, e.g. within a compound
         // statement. We can wrap it into a declaration statement
-        val statement =
-            NodeBuilder.newDeclarationStatement(
-                frontend.language,
-                this.frontend.getCodeFromRawNode(node)
-            )
+        val statement = newDeclarationStatement(this.frontend.getCodeFromRawNode(node))
 
         val decl = this.frontend.declarationHandler.handle(node)
 
@@ -85,11 +82,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleBlock(node: TypeScriptNode): CompoundStatement {
-        val block =
-            NodeBuilder.newCompoundStatement(
-                frontend.language,
-                this.frontend.getCodeFromRawNode(node)
-            )
+        val block = newCompoundStatement(this.frontend.getCodeFromRawNode(node))
 
         node.children?.forEach { block.addStatement(this.handle(it)) }
 
@@ -104,11 +97,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
-        val statement =
-            NodeBuilder.newDeclarationStatement(
-                frontend.language,
-                this.frontend.getCodeFromRawNode(node)
-            )
+        val statement = newDeclarationStatement(this.frontend.getCodeFromRawNode(node))
 
         // the declarations are contained in a VariableDeclarationList
         val nodes = node.firstChild("VariableDeclarationList")?.children

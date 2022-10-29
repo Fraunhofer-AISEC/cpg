@@ -27,9 +27,12 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.MetadataProvider
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 /**
  * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
@@ -48,7 +51,7 @@ fun MetadataProvider.newTranslationUnitDeclaration(
 
     node.name = name ?: Node.EMPTY_NAME
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -69,7 +72,7 @@ fun MetadataProvider.newFunctionDeclaration(
 
     node.name = name ?: Node.EMPTY_NAME
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -94,7 +97,7 @@ fun MetadataProvider.newMethodDeclaration(
     node.isStatic = isStatic
     node.recordDeclaration = recordDeclaration
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -117,7 +120,7 @@ fun MetadataProvider.newConstructorDeclaration(
     node.name = name ?: Node.EMPTY_NAME
     node.recordDeclaration = recordDeclaration
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -142,7 +145,7 @@ fun MetadataProvider.newParamVariableDeclaration(
     node.type = type
     node.isVariadic = variadic
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -167,7 +170,7 @@ fun MetadataProvider.newVariableDeclaration(
     node.type = type
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -191,7 +194,7 @@ fun MetadataProvider.newTypedefDeclaration(
     node.type = targetType
     node.alias = alias
 
-    NodeBuilder.log(node)
+    log(node)
     return node
 }
 
@@ -212,6 +215,241 @@ fun MetadataProvider.newTypeParamDeclaration(
 
     node.name = name ?: Node.EMPTY_NAME
 
-    NodeBuilder.log(node)
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [RecordDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newRecordDeclaration(
+    fqn: String,
+    kind: String,
+    code: String? = null,
+    rawNode: Any? = null
+): RecordDeclaration {
+    val node = RecordDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = fqn
+    node.kind = kind
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [EnumDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newEnumDeclaration(
+    name: String?,
+    code: String? = null,
+    location: PhysicalLocation?,
+    rawNode: Any? = null
+): EnumDeclaration {
+    val node = EnumDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name ?: Node.EMPTY_NAME
+    node.location = location
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [FunctionTemplateDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newFunctionTemplateDeclaration(
+    name: String?,
+    code: String? = null,
+    rawNode: Any? = null
+): FunctionTemplateDeclaration {
+    val node = FunctionTemplateDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name ?: Node.EMPTY_NAME
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ClassTemplateDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newClassTemplateDeclaration(
+    name: String?,
+    code: String? = null,
+    rawNode: Any? = null
+): ClassTemplateDeclaration {
+    val node = ClassTemplateDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name ?: Node.EMPTY_NAME
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [EnumConstantDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newEnumConstantDeclaration(
+    name: String?,
+    code: String? = null,
+    location: PhysicalLocation?,
+    rawNode: Any? = null
+): EnumConstantDeclaration {
+    val node = EnumConstantDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name ?: Node.EMPTY_NAME
+    node.location = location
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [FieldDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newFieldDeclaration(
+    name: String?,
+    type: Type?,
+    modifiers: List<String?>?,
+    code: String? = null,
+    location: PhysicalLocation?,
+    initializer: Expression?,
+    implicitInitializerAllowed: Boolean,
+    rawNode: Any? = null
+): FieldDeclaration {
+    val node = FieldDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = name ?: Node.EMPTY_NAME
+    node.type = type
+    node.modifiers = modifiers
+    node.location = location
+    node.isImplicitInitializerAllowed = implicitInitializerAllowed
+    if (initializer != null) {
+        if (initializer is ArrayCreationExpression) {
+            node.setIsArray(true)
+        }
+        node.initializer = initializer
+    }
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ProblemDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newProblemDeclaration(
+    problem: String = "",
+    type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
+    code: String? = null,
+    rawNode: Any? = null
+): ProblemDeclaration {
+    val node = ProblemDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.problem = problem
+    node.type = type
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [IncludeDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newIncludeDeclaration(
+    includeFilename: String,
+    code: String? = null,
+    rawNode: Any? = null
+): IncludeDeclaration {
+    val node = IncludeDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    val name = includeFilename.substring(includeFilename.lastIndexOf('/') + 1)
+    node.name = name
+    node.filename = includeFilename
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [NamespaceDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newNamespaceDeclaration(
+    fqn: String,
+    code: String? = null,
+    rawNode: Any? = null
+): NamespaceDeclaration {
+    val node = NamespaceDeclaration()
+    node.applyMetadata(this, rawNode, code)
+
+    node.name = fqn
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [UsingDirective]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newUsingDirective(
+    code: String? = null,
+    qualifiedName: String?,
+    rawNode: Any? = null
+): UsingDirective {
+    val node = UsingDirective()
+    node.applyMetadata(this, rawNode, code)
+
+    node.qualifiedName = qualifiedName
+
+    log(node)
     return node
 }

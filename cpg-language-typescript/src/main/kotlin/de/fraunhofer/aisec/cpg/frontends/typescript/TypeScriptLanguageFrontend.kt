@@ -32,10 +32,8 @@ import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -232,13 +230,9 @@ class TypeScriptLanguageFrontend(
         if (call != null) {
             val call = this.expressionHandler.handle(call) as CallExpression
 
-            val annotation =
-                NodeBuilder.newAnnotation(call.name, language, this.getCodeFromRawNode(node) ?: "")
+            val annotation = newAnnotation(call.name, this.getCodeFromRawNode(node) ?: "")
 
-            annotation.members =
-                call.arguments.map {
-                    NodeBuilder.newAnnotationMember("", it, language, it.code ?: "")
-                }
+            annotation.members = call.arguments.map { newAnnotationMember("", it, it.code ?: "") }
 
             call.disconnectFromGraph()
 
@@ -247,8 +241,7 @@ class TypeScriptLanguageFrontend(
             // or a decorator just has a simple identifier
             val name = this.getIdentifierName(node)
 
-            val annotation =
-                NodeBuilder.newAnnotation(name, language, this.getCodeFromRawNode(node) ?: "")
+            val annotation = newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
 
             return annotation
         }

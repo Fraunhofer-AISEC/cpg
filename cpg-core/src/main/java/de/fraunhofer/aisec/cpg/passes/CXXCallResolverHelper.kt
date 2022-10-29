@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
 import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
-import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import java.util.HashMap
 import java.util.regex.Pattern
@@ -531,9 +530,12 @@ fun CallResolver.handleTemplateFunctionCalls(
         }
     }
     if (applyInference) {
+        val holder = curClass ?: currentTU
+
         // If we want to use an inferred functionTemplateDeclaration, this needs to be provided.
         // Otherwise, we could not resolve to a template and no modifications are made
-        val functionTemplateDeclaration = createInferredFunctionTemplate(curClass, templateCall)
+        val functionTemplateDeclaration =
+            holder.startInference().createInferredFunctionTemplate(templateCall)
         templateCall.templateInstantiation = functionTemplateDeclaration
         templateCall.invokes = functionTemplateDeclaration.realization
         val edges = templateCall.templateParametersEdges ?: return false
@@ -547,58 +549,6 @@ fun CallResolver.handleTemplateFunctionCalls(
         return true
     }
     return false
-}
-
-/**
- * Create an inferred FunctionTemplateDeclaration if a call to an FunctionTemplate could not be
- * resolved
- *
- * @param containingRecord
- * @param call
- * @return inferred FunctionTemplateDeclaration which can be invoked by the call
- */
-fun CallResolver.createInferredFunctionTemplate(
-    containingRecord: RecordDeclaration?,
-    call: CallExpression
-): FunctionTemplateDeclaration {
-    val name = call.name
-    val code = call.code
-    val inferred = NodeBuilder.newFunctionTemplateDeclaration(name, call.language, code)
-    inferred.isInferred = true
-
-    val inferredRealization: FunctionDeclaration? =
-        if (containingRecord != null) {
-            containingRecord.addDeclaration(inferred)
-            containingRecord.inferMethod(call)
-        } else {
-            currentTU.addDeclaration(inferred)
-            currentTU.inferFunction(call)
-        }
-
-    inferred.addRealization(inferredRealization)
-
-    var typeCounter = 0
-    var nonTypeCounter = 0
-    for (node in call.templateParameters) {
-        if (node is TypeExpression) {
-            // Template Parameter
-            val inferredTypeIdentifier = "T$typeCounter"
-            val typeParamDeclaration =
-                inferred.startInference().inferTemplateParameter(inferredTypeIdentifier)
-            typeCounter++
-            inferred.addParameter(typeParamDeclaration)
-        } else if (node is Expression) {
-            val inferredNonTypeIdentifier = "N$nonTypeCounter"
-            var paramVariableDeclaration =
-                node.startInference().inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
-
-            paramVariableDeclaration.addPrevDFG(node)
-            node.addNextDFG(paramVariableDeclaration)
-            nonTypeCounter++
-            inferred.addParameter(paramVariableDeclaration)
-        }
-    }
-    return inferred
 }
 
 /**

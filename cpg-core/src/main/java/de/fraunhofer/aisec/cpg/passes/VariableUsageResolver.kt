@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.HasSuperclasses
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -350,6 +350,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         return member ?: handleUnknownField(containingClass, reference.name, reference.type)
     }
 
+    // TODO(oxisto): Move to inference class
     private fun handleUnknownField(base: Type, name: String, type: Type): FieldDeclaration? {
         // unwrap a potential pointer-type
         if (base is PointerType) {
@@ -378,7 +379,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             target
         } else {
             val declaration =
-                newFieldDeclaration(
+                recordDeclaration.newFieldDeclaration(
                     name,
                     type,
                     listOf<String>(),
@@ -386,7 +387,6 @@ open class VariableUsageResolver : SymbolResolverPass() {
                     null,
                     null,
                     false,
-                    recordDeclaration.language
                 )
             recordDeclaration.addField(declaration)
             declaration.isInferred = true

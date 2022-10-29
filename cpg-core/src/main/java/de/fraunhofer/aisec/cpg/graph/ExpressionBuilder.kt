@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -251,6 +250,27 @@ fun MetadataProvider.newCallExpression(
     node.callee = callee
     node.fqn = fqn
     node.template = template
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [CallExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newExplicitConstructorInvocation(
+    containingClass: String?,
+    code: String? = null,
+    rawNode: Any? = null
+): ExplicitConstructorInvocation {
+    val node = ExplicitConstructorInvocation()
+    node.applyMetadata(this, rawNode, code)
+
+    node.containingClass = containingClass
 
     log(node)
     return node
