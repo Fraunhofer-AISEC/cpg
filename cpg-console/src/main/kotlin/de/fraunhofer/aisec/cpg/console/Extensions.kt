@@ -252,7 +252,7 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
             fancyWord("new", node, list, styles.keyword)
 
             // check for primitive types
-            for (primitive in node.language.primitiveTypes) {
+            for (primitive in node.language.primitiveTypes.toMutableList()) {
                 fancyWord(primitive, node, list, styles.keyword)
             }
 
