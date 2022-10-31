@@ -1120,20 +1120,25 @@ func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.Bas
 	var value interface{}
 	var t *cpg.Type
 
+	lang, err := this.GetLanguage()
+	if err != nil {
+		panic(err)
+	}
+
 	switch lit.Kind {
 	case token.STRING:
 		// strip the "
 		value = cpg.NewString(lit.Value[1 : len(lit.Value)-1])
-		t = cpg.TypeParser_createFrom("string", false)
+		t = cpg.TypeParser_createFrom("string", false, lang)
 	case token.INT:
 		i, _ := strconv.ParseInt(lit.Value, 10, 64)
 		value = cpg.NewInteger(int(i))
-		t = cpg.TypeParser_createFrom("int", false)
+		t = cpg.TypeParser_createFrom("int", false, lang)
 	case token.FLOAT:
 		// default seems to be float64
 		f, _ := strconv.ParseFloat(lit.Value, 64)
 		value = cpg.NewDouble(f)
-		t = cpg.TypeParser_createFrom("float64", false)
+		t = cpg.TypeParser_createFrom("float64", false, lang)
 	case token.IMAG:
 	case token.CHAR:
 		value = cpg.NewString(lit.Value)
@@ -1229,18 +1234,23 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 
 	this.LogDebug("Parsing type %T: %+v", typeExpr, typeExpr)
 
+	lang, err := this.GetLanguage()
+	if err != nil {
+		panic(err)
+	}
+
 	switch v := typeExpr.(type) {
 	case *ast.Ident:
 		// make it a fqn according to the current package to make things easier
 		fqn := this.handleIdentAsName(v)
 
 		this.LogDebug("FQN type: %s", fqn)
-		return cpg.TypeParser_createFrom(fqn, false)
+		return cpg.TypeParser_createFrom(fqn, false, lang)
 	case *ast.SelectorExpr:
 		// small shortcut
 		fqn := fmt.Sprintf("%s.%s", v.X.(*ast.Ident).Name, v.Sel.Name)
 		this.LogDebug("FQN type: %s", fqn)
-		return cpg.TypeParser_createFrom(fqn, false)
+		return cpg.TypeParser_createFrom(fqn, false, lang)
 	case *ast.StarExpr:
 		t := this.handleType(v.X)
 
@@ -1268,7 +1278,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 	case *ast.MapType:
 		// we cannot properly represent Golangs built-in map types, yet so we have
 		// to make a shortcut here and represent it as a Java-like map<K, V> type.
-		t := cpg.TypeParser_createFrom("map", false)
+		t := cpg.TypeParser_createFrom("map", false, lang)
 		keyType := this.handleType(v.Key)
 		valueType := this.handleType(v.Value)
 
@@ -1279,7 +1289,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		return t
 	case *ast.ChanType:
 		// handle them similar to maps
-		t := cpg.TypeParser_createFrom("chan", false)
+		t := cpg.TypeParser_createFrom("chan", false, lang)
 		chanType := this.handleType(v.Value)
 
 		(&(cpg.ObjectType{Type: *t})).AddGeneric(chanType)
@@ -1318,7 +1328,8 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		var t, err = env.NewObject("de/fraunhofer/aisec/cpg/graph/types/FunctionType",
 			name,
 			parametersTypesList.Cast("java/util/List"),
-			returnTypesList.Cast("java/util/List"))
+			returnTypesList.Cast("java/util/List"),
+			lang)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -1326,7 +1337,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		return &cpg.Type{ObjectRef: t}
 	}
 
-	return &cpg.UnknownType_getUnknown().Type
+	return &cpg.UnknownType_getUnknown(lang).Type
 }
 
 func (this *GoLanguageFrontend) isBuiltinType(s string) bool {
