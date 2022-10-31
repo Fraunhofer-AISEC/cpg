@@ -205,8 +205,9 @@ fun checkMostCommonImplicitCast(
                 // ambiguous call, and we can't have a single cast
                 val contradictoryCast = CastExpression()
                 contradictoryCast.isImplicit = true
-                contradictoryCast.castType = UnknownType.getUnknownType()
+                contradictoryCast.castType = UnknownType.getUnknownType(currentCast.language)
                 contradictoryCast.expression = currentCast.expression
+                contradictoryCast.language = currentCast.language
                 implicitCasts[i] = contradictoryCast
             }
         }
@@ -653,6 +654,7 @@ fun signatureWithImplicitCastTransformation(
             val implicitCast = CastExpression()
             implicitCast.isImplicit = true
             implicitCast.castType = funcType
+            implicitCast.language = funcType.language
             implicitCast.expression = arguments[i]
             implicitCasts.add(implicitCast)
         } else {
@@ -886,7 +888,7 @@ fun getCallSignature(
     val templateCallSignature = mutableListOf<Type>()
     for (argument in function.parameters) {
         if (argument.type is ParameterizedType) {
-            var type: Type = UnknownType.getUnknownType()
+            var type: Type = UnknownType.getUnknownType(function.language)
             val typeParamDeclaration = parameterizedTypeResolution[argument.type]
             if (typeParamDeclaration != null) {
                 val node = initializationSignature[typeParamDeclaration]

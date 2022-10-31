@@ -33,10 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 @ExperimentalTypeScript
-class TypeHandler(lang: TypeScriptLanguageFrontend) :
+class TypeHandler(frontend: TypeScriptLanguageFrontend) :
     Handler<Type, TypeScriptNode, TypeScriptLanguageFrontend>(
-        { UnknownType.getUnknownType() },
-        lang,
+        { UnknownType.getUnknownType(frontend.language) },
+        frontend,
     ) {
 
     init {
@@ -52,13 +52,13 @@ class TypeHandler(lang: TypeScriptLanguageFrontend) :
             "ArrayType" -> return handleArrayType(node)
         }
 
-        return UnknownType.getUnknownType()
+        return UnknownType.getUnknownType(language)
     }
 
     private fun handleArrayType(node: TypeScriptNode): Type {
         val type =
             node.firstChild("TypeReference")?.let { this.handle(it) }
-                ?: UnknownType.getUnknownType()
+                ?: UnknownType.getUnknownType(language)
 
         return type.reference(PointerType.PointerOrigin.ARRAY)
     }
@@ -80,6 +80,6 @@ class TypeHandler(lang: TypeScriptLanguageFrontend) :
             return TypeParser.createFrom(this.frontend.getIdentifierName(node), false)
         }
 
-        return UnknownType.getUnknownType()
+        return UnknownType.getUnknownType(language)
     }
 }

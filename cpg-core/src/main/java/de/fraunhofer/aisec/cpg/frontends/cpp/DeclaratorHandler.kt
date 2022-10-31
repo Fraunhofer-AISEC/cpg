@@ -100,7 +100,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             val declaration =
                 newVariableDeclaration(
                     ctx.name.toString(),
-                    UnknownType.getUnknownType(), // Type will be filled out later by
+                    UnknownType.getUnknownType(language), // Type will be filled out later by
                     // handleSimpleDeclaration
                     ctx.rawSignature,
                     implicitInitializerAllowed,
@@ -135,7 +135,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 val fieldName = rr[rr.size - 1]
                 newFieldDeclaration(
                     fieldName,
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(language),
                     emptyList(),
                     ctx.rawSignature,
                     frontend.getLocationFromRawNode(ctx),
@@ -146,7 +146,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             } else {
                 newFieldDeclaration(
                     name,
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(language),
                     emptyList(),
                     ctx.rawSignature,
                     frontend.getLocationFromRawNode(ctx),
@@ -315,7 +315,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // declaration that wraps this list
         if (ctx.takesVarArgs()) {
             val varargs =
-                newParamVariableDeclaration("va_args", UnknownType.getUnknownType(), true, "")
+                newParamVariableDeclaration(
+                    "va_args",
+                    UnknownType.getUnknownType(language),
+                    true,
+                    ""
+                )
             varargs.isImplicit = true
             varargs.argumentIndex = i
             frontend.scopeManager.addDeclaration(varargs)
@@ -362,7 +367,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             if (recordDeclaration != null) {
                 recordDeclaration.toType().reference(PointerType.PointerOrigin.POINTER)
             } else {
-                UnknownType.getUnknownType()
+                UnknownType.getUnknownType(language)
             }
 
         // Create the receiver.
@@ -391,7 +396,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             result =
                 newVariableDeclaration(
                     name,
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(language),
                     ctx.rawSignature,
                     true,
                     frontend.language
@@ -409,7 +414,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             result =
                 newFieldDeclaration(
                     fieldName,
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(language),
                     emptyList(),
                     code,
                     frontend.getLocationFromRawNode(ctx),

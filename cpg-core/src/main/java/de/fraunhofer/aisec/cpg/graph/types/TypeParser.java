@@ -65,10 +65,6 @@ public class TypeParser {
     throw new IllegalStateException("Do not instantiate the TypeParser");
   }
 
-  public static void reset() {
-    TypeParser.languageSupplier = () -> TypeManager.getInstance().getLanguage();
-  }
-
   /**
    * WARNING: This is only intended for Test Purposes of the TypeParser itself without parsing
    * files. Do not use this.
@@ -147,9 +143,10 @@ public class TypeParser {
     return Type.Storage.AUTO;
   }
 
-  public static boolean isStorageSpecifier(String specifier) {
+  public static boolean isStorageSpecifier(
+      String specifier, Language<? extends LanguageFrontend> language) {
     // TODO: Convert to language trait
-    if (getLanguage() instanceof CLanguage || getLanguage() instanceof CPPLanguage) {
+    if (language instanceof CLanguage || language instanceof CPPLanguage) {
       return specifier.equalsIgnoreCase("STATIC");
     } else {
       try {
@@ -161,9 +158,10 @@ public class TypeParser {
     }
   }
 
-  protected static boolean isQualifierSpecifier(String qualifier) {
-    return getLanguage() instanceof HasQualifier
-        && ((HasQualifier) getLanguage()).getQualifiers().contains(qualifier);
+  protected static boolean isQualifierSpecifier(
+      String qualifier, Language<? extends LanguageFrontend> language) {
+    return language instanceof HasQualifier
+        && ((HasQualifier) language).getQualifiers().contains(qualifier);
   }
 
   /**
@@ -174,15 +172,15 @@ public class TypeParser {
    * @param specifier the specifier
    * @return true, if it is part of an elaborated type. false, otherwise
    */
-  public static boolean isElaboratedTypeSpecifier(String specifier) {
-    return getLanguage() instanceof HasElaboratedTypeSpecifier
-        && ((HasElaboratedTypeSpecifier) getLanguage())
-            .getElaboratedTypeSpecifier()
-            .contains(specifier);
+  public static boolean isElaboratedTypeSpecifier(
+      String specifier, Language<? extends LanguageFrontend> language) {
+    return language instanceof HasElaboratedTypeSpecifier
+        && ((HasElaboratedTypeSpecifier) language).getElaboratedTypeSpecifier().contains(specifier);
   }
 
-  public static boolean isKnownSpecifier(String specifier) {
-    return isQualifierSpecifier(specifier) || isStorageSpecifier(specifier);
+  public static boolean isKnownSpecifier(
+      String specifier, Language<? extends LanguageFrontend> language) {
+    return isQualifierSpecifier(specifier, language) || isStorageSpecifier(specifier, language);
   }
 
   /**
@@ -248,10 +246,11 @@ public class TypeParser {
     return typeName.trim().equals("void");
   }
 
-  private static boolean isUnknownType(String typeName) {
+  private static boolean isUnknownType(
+      String typeName, @NotNull Language<? extends LanguageFrontend> language) {
     return typeName.equals(UNKNOWN_TYPE_STRING)
-        || (languageSupplier.get() instanceof HasUnknownType
-            && ((HasUnknownType) languageSupplier.get()).getUnknownTypeString().contains(typeName));
+        || (language instanceof HasUnknownType
+            && ((HasUnknownType) language).getUnknownTypeString().contains(typeName));
   }
 
   /**
@@ -262,8 +261,9 @@ public class TypeParser {
    * @return typeString without spaces in the generic Expression
    */
   @NotNull
-  private static String fixGenerics(@NotNull String type) {
-    if (type.contains("<") && type.contains(">") && getLanguage() instanceof CPPLanguage) {
+  private static String fixGenerics(
+      @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
+    if (type.contains("<") && type.contains(">") && language instanceof CPPLanguage) {
       String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
 
       /* Explanation from @vfsrfs:
@@ -275,7 +275,7 @@ public class TypeParser {
        * by the elaborate type specifier and at least one more horizontal whitespace, which marks
        * that it is indeed an elaborate type and not something like structMy.
        */
-      for (String elaborate : ((CPPLanguage) getLanguage()).getElaboratedTypeSpecifier()) {
+      for (String elaborate : ((CPPLanguage) language).getElaboratedTypeSpecifier()) {
         generics = generics.replaceAll("(^|(?<=[\\h,<]))\\h*(?<main>" + elaborate + "\\h+)", "");
       }
       type =
@@ -445,7 +445,8 @@ public class TypeParser {
     return new ArrayList<>();
   }
 
-  private static Type performBracketContentAction(Type finalType, String part) {
+  private static Type performBracketContentAction(
+      Type finalType, String part, Language<? extends LanguageFrontend> language) {
     if (part.equals("*")) {
       return finalType.reference(PointerType.PointerOrigin.POINTER);
     }
@@ -460,17 +461,17 @@ public class TypeParser {
     if (part.startsWith("(") && part.endsWith(")")) {
       List<String> subBracketExpression = new ArrayList<>();
       subBracketExpression.add(part);
-      return resolveBracketExpression(finalType, subBracketExpression);
+      return resolveBracketExpression(finalType, subBracketExpression, language);
     }
 
-    if (isStorageSpecifier(part)) {
+    if (isStorageSpecifier(part, language)) {
       List<String> specifiers = new ArrayList<>();
       specifiers.add(part);
       finalType.setStorage(calcStorage(specifiers));
       return finalType;
     }
 
-    if (isQualifierSpecifier(part)) {
+    if (isQualifierSpecifier(part, language)) {
       List<String> qualifiers = new ArrayList<>();
       qualifiers.add(part);
       finalType.setQualifier(calcQualifier(qualifiers, finalType.getQualifier()));
@@ -490,12 +491,14 @@ public class TypeParser {
    * @return modified finalType performing the resolution of the bracket expressions
    */
   private static Type resolveBracketExpression(
-      @NotNull Type finalType, @NotNull List<String> bracketExpressions) {
+      @NotNull Type finalType,
+      @NotNull List<String> bracketExpressions,
+      @NotNull Language<? extends LanguageFrontend> language) {
     for (String bracketExpression : bracketExpressions) {
       List<String> splitExpression =
           separate(bracketExpression.substring(1, bracketExpression.length() - 1));
       for (String part : splitExpression) {
-        finalType = performBracketContentAction(finalType, part);
+        finalType = performBracketContentAction(finalType, part, language);
       }
     }
 
@@ -520,8 +523,9 @@ public class TypeParser {
    *     <p>TODO: Remove this function, this is not a good idea!
    */
   @Deprecated
-  private static String replaceScopeResolutionOperator(@NotNull String type) {
-    return (getLanguage() instanceof CPPLanguage) ? type.replace("::", ".").trim() : type;
+  private static String replaceScopeResolutionOperator(
+      @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
+    return (language instanceof CPPLanguage) ? type.replace("::", ".").trim() : type;
   }
 
   /**
@@ -531,9 +535,10 @@ public class TypeParser {
    * @param stringList
    * @return
    */
-  private static boolean isPrimitiveType(@NotNull List<String> stringList) {
+  private static boolean isPrimitiveType(
+      @NotNull List<String> stringList, @NotNull Language<? extends LanguageFrontend> language) {
     for (String s : stringList) {
-      if (getLanguage().getPrimitiveTypes().contains(s)) {
+      if (language.getPrimitiveTypes().contains(s)) {
         return true;
       }
     }
@@ -548,13 +553,14 @@ public class TypeParser {
    * @return separated words of compound types are joined into one string
    */
   @NotNull
-  private static List<String> joinPrimitive(@NotNull List<String> typeBlocks) {
+  private static List<String> joinPrimitive(
+      @NotNull List<String> typeBlocks, @NotNull Language<? extends LanguageFrontend> language) {
     List<String> joinedTypeBlocks = new ArrayList<>();
     StringBuilder primitiveType = new StringBuilder();
     boolean foundPrimitive = false;
 
     for (String s : typeBlocks) {
-      if (getLanguage().getPrimitiveTypes().contains(s)) {
+      if (language.getPrimitiveTypes().contains(s)) {
         if (primitiveType.length() > 0) {
           primitiveType.append(" ");
         }
@@ -563,11 +569,11 @@ public class TypeParser {
     }
 
     for (String s : typeBlocks) {
-      if (getLanguage().getPrimitiveTypes().contains(s) && !foundPrimitive) {
+      if (language.getPrimitiveTypes().contains(s) && !foundPrimitive) {
         joinedTypeBlocks.add(primitiveType.toString());
         foundPrimitive = true;
       } else {
-        if (!getLanguage().getPrimitiveTypes().contains(s)) {
+        if (!language.getPrimitiveTypes().contains(s)) {
           joinedTypeBlocks.add(s);
         }
       }
@@ -629,7 +635,8 @@ public class TypeParser {
   private static Type postTypeParsing(
       @NotNull List<String> subPart,
       @NotNull Type finalType,
-      @NotNull List<String> bracketExpressions) {
+      @NotNull List<String> bracketExpressions,
+      @NotNull Language<? extends LanguageFrontend> language) {
     for (String part : subPart) {
       if (part.equals("*")) {
         // Creates a Pointer to the finalType
@@ -660,13 +667,13 @@ public class TypeParser {
       }
 
       // Check storage and qualifiers specifierd that are defined after the typeName e.g. int const
-      if (isStorageSpecifier(part)) {
+      if (isStorageSpecifier(part, language)) {
         List<String> specifiers = new ArrayList<>();
         specifiers.add(part);
         finalType.setStorage(calcStorage(specifiers));
       }
 
-      if (isQualifierSpecifier(part)) {
+      if (isQualifierSpecifier(part, language)) {
         List<String> qualifiers = new ArrayList<>();
         qualifiers.add(part);
         finalType.setQualifier(calcQualifier(qualifiers, finalType.getQualifier()));
@@ -716,27 +723,30 @@ public class TypeParser {
    * @return new type representing the type string
    */
   @NotNull
-  private static Type createFromUnsafe(@NotNull String type, boolean resolveAlias) {
+  private static Type createFromUnsafe(
+      @NotNull String type,
+      boolean resolveAlias,
+      @NotNull Language<? extends LanguageFrontend> language) {
     // Check if Problems during Parsing
     if (!checkValidTypeString(type)) {
-      return UnknownType.getUnknownType();
+      return UnknownType.getUnknownType(language);
     }
 
     // Preprocessing of the typeString
     type = removeAccessModifier(type);
     // Remove CPP :: Operator
-    type = replaceScopeResolutionOperator(type);
+    type = replaceScopeResolutionOperator(type, language);
 
     // Determine if inner class
 
-    type = fixGenerics(type);
+    type = fixGenerics(type, language);
 
     // Separate typeString into a List containing each part of the typeString
     List<String> typeBlocks = separate(type);
 
     // Depending if the Type is primitive or not signed/unsigned must be set differently (only
     // relevant for ObjectTypes)
-    boolean primitiveType = isPrimitiveType(typeBlocks);
+    boolean primitiveType = isPrimitiveType(typeBlocks, language);
 
     // Default is signed, unless unsigned keyword is specified. For other classes that are not
     // primitive this is NOT_APPLICABLE
@@ -744,7 +754,7 @@ public class TypeParser {
 
     // Join compound primitive types into one block i.e. types consisting of more than one word e.g.
     // long long int (only primitive types)
-    typeBlocks = joinPrimitive(typeBlocks);
+    typeBlocks = joinPrimitive(typeBlocks, language);
 
     List<String> qualifierList = new ArrayList<>();
     List<String> storageList = new ArrayList<>();
@@ -752,13 +762,13 @@ public class TypeParser {
     // Handle preceding qualifier or storage specifier to the type name e.g. static const int
     int counter = 0;
     for (String part : typeBlocks) {
-      if (isQualifierSpecifier(part)) {
+      if (isQualifierSpecifier(part, language)) {
         qualifierList.add(part);
         counter++;
-      } else if (isStorageSpecifier(part)) {
+      } else if (isStorageSpecifier(part, language)) {
         storageList.add(part);
         counter++;
-      } else if (isElaboratedTypeSpecifier(part)) {
+      } else if (isElaboratedTypeSpecifier(part, language)) {
         // ignore elaborated types for now
         counter++;
       } else {
@@ -772,7 +782,7 @@ public class TypeParser {
     // Once all preceding known keywords (if any) are handled the next word must be the TypeName
     if (counter >= typeBlocks.size()) {
       // Note that "const auto ..." will end here with typeName="const" as auto is not supported.
-      return UnknownType.getUnknownType();
+      return UnknownType.getUnknownType(language);
     }
     String typeName = typeBlocks.get(counter);
     counter++;
@@ -788,11 +798,11 @@ public class TypeParser {
       List<Type> parameterList = getParameterList(funcptr.group("args"));
 
       return typeManager.registerType(
-          new FunctionPointerType(qualifier, storageValue, parameterList, returnType));
+          new FunctionPointerType(qualifier, storageValue, parameterList, returnType, language));
     } else if (isIncompleteType(typeName)) {
       // IncompleteType e.g. void
       finalType = new IncompleteType();
-    } else if (isUnknownType(typeName)) {
+    } else if (isUnknownType(typeName, language)) {
       // UnknownType -> no information on how to process this type
       finalType = new UnknownType(UNKNOWN_TYPE_STRING);
     } else {
@@ -801,14 +811,15 @@ public class TypeParser {
       List<Type> generics = getGenerics(typeName);
       typeName = removeGenerics(typeName);
       finalType =
-          new ObjectType(typeName, storageValue, qualifier, generics, modifier, primitiveType);
+          new ObjectType(
+              typeName, storageValue, qualifier, generics, modifier, primitiveType, language);
     }
 
     if (finalType.getTypeName().equals("auto") || (type.contains("auto") && !primitiveType)) {
       // In C++17 if auto keyword is used the compiler infers the type automatically, hence we
       // are not able to find out, which type this should be, it will be resolved due to
       // dataflow
-      return UnknownType.getUnknownType();
+      return UnknownType.getUnknownType(language);
     }
 
     // Process Keywords / Operators (*, &) after typeName
@@ -816,10 +827,10 @@ public class TypeParser {
 
     List<String> bracketExpressions = new ArrayList<>();
 
-    finalType = postTypeParsing(subPart, finalType, bracketExpressions);
+    finalType = postTypeParsing(subPart, finalType, bracketExpressions, language);
 
     // Resolve BracketExpressions that were identified previously
-    finalType = resolveBracketExpression(finalType, bracketExpressions);
+    finalType = resolveBracketExpression(finalType, bracketExpressions, language);
 
     // Make sure, that only one real instance exists for a type in order to have just one node in
     // the graph representing the type
@@ -866,11 +877,12 @@ public class TypeParser {
    */
   @NotNull
   public static Type createFrom(@NotNull String type, boolean resolveAlias) {
+    Language<? extends LanguageFrontend> language = getLanguage();
     try {
-      return createFromUnsafe(type, resolveAlias);
+      return createFromUnsafe(type, resolveAlias, language);
     } catch (Exception e) {
       log.error("Could not parse the type correctly", e);
-      return UnknownType.getUnknownType();
+      return UnknownType.getUnknownType(language);
     }
   }
 }

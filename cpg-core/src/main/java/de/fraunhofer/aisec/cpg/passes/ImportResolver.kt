@@ -132,7 +132,7 @@ open class ImportResolver : Pass() {
             val targetField =
                 base.newFieldDeclaration(
                     name,
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(base.language),
                     ArrayList(),
                     "",
                     null,

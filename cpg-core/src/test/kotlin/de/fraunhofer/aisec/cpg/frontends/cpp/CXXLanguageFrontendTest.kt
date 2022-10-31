@@ -78,7 +78,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val i = stmt.singleDeclaration as VariableDeclaration
         assertNotNull(i)
         assertEquals("i", i.name)
-        assertEquals(UnknownType.getUnknownType(), i.type)
+        assertEquals(UnknownType.getUnknownType(CPPLanguage()), i.type)
     }
 
     @Test
@@ -707,7 +707,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             FunctionType(
                 "(int)void*",
                 listOf(TypeParser.createFrom("int", true)),
-                listOf(TypeParser.createFrom("void*", true))
+                listOf(TypeParser.createFrom("void*", true)),
+                CPPLanguage()
             ),
             methodWithParam.type
         )
@@ -722,7 +723,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val inlineMethod = recordDeclaration.methods[2]
         assertEquals("inlineMethod", inlineMethod.name)
         assertEquals(
-            FunctionType("()void*", listOf(), listOf(TypeParser.createFrom("void*", true))),
+            FunctionType(
+                "()void*",
+                listOf(),
+                listOf(TypeParser.createFrom("void*", true)),
+                CPPLanguage()
+            ),
             inlineMethod.type
         )
         assertTrue(inlineMethod.hasBody())
@@ -730,7 +736,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val inlineConstructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration.name, inlineConstructor.name)
         assertEquals(
-            FunctionType("()SomeClass", listOf(), listOf(TypeParser.createFrom("SomeClass", true))),
+            FunctionType(
+                "()SomeClass",
+                listOf(),
+                listOf(TypeParser.createFrom("SomeClass", true)),
+                CPPLanguage()
+            ),
             inlineConstructor.type
         )
         assertTrue(inlineConstructor.hasBody())
@@ -744,7 +755,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             FunctionType(
                 "(int)SomeClass",
                 listOf(TypeParser.createFrom("int", false)),
-                listOf(TypeParser.createFrom("SomeClass", true))
+                listOf(TypeParser.createFrom("SomeClass", true)),
+                CPPLanguage()
             ),
             constructorDefinition.type
         )

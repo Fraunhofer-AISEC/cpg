@@ -216,7 +216,7 @@ open class JavaLanguageFrontend(
         return try {
             val type = nodeWithType.typeAsString
             if (type == "var") {
-                UnknownType.getUnknownType()
+                UnknownType.getUnknownType(language)
             } else TypeParser.createFrom(resolved.type.describe(), true)
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
@@ -228,7 +228,7 @@ open class JavaLanguageFrontend(
     fun getTypeAsGoodAsPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {
         return try {
             if (type.toString() == "var") {
-                UnknownType.getUnknownType()
+                UnknownType.getUnknownType(language)
             } else TypeParser.createFrom(type.resolve().describe(), true)
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(type)

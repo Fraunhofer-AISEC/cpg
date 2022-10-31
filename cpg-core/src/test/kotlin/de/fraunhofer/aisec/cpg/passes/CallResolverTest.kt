@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -261,7 +262,7 @@ class CallResolverTest : BaseTest() {
         assertTrue(ambiguousCall.arguments[0] is CastExpression)
 
         val castExpression = ambiguousCall.arguments[0] as CastExpression
-        assertEquals(UnknownType.getUnknownType(), castExpression.type)
+        assertEquals(UnknownType.getUnknownType(CPPLanguage()), castExpression.type)
         assertEquals("10.0", castExpression.expression.code)
     }
 

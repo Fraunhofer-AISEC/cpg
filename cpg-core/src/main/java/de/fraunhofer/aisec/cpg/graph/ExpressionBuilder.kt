@@ -617,8 +617,8 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
 fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
     val duplicate = TypeExpression()
     duplicate.name = this.name
-    duplicate.type = this.type
     duplicate.language = this.language
+    duplicate.type = this.type
     duplicate.isImplicit = implicit
     return duplicate
 }

@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
@@ -41,11 +43,13 @@ class FunctionType : Type {
         typeName: String,
         parameters: List<Type>,
         returnTypes: List<Type>,
+        language: Language<out LanguageFrontend>,
         qualifier: Qualifier = Qualifier(),
         storage: Storage = Storage.AUTO
     ) : super(typeName, storage, qualifier) {
         this.parameters = parameters
         this.returnTypes = returnTypes
+        this.language = language
     }
 
     constructor() : super()
@@ -56,15 +60,28 @@ class FunctionType : Type {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         // TODO(oxisto): In the future, we actually could just remove the FunctionPointerType
         //  and just have a regular PointerType here
-        return FunctionPointerType(qualifier, storage, parameters.toList(), returnTypes.first())
+        return FunctionPointerType(
+            qualifier,
+            storage,
+            parameters.toList(),
+            returnTypes.first(),
+            language
+        )
     }
 
     override fun dereference(): Type {
-        return UnknownType.getUnknownType()
+        return UnknownType.getUnknownType(language)
     }
 
     override fun duplicate(): Type {
-        return FunctionType(typeName, parameters.toList(), returnTypes.toList(), qualifier, storage)
+        return FunctionType(
+            typeName,
+            parameters.toList(),
+            returnTypes.toList(),
+            language,
+            qualifier,
+            storage
+        )
     }
 
     companion object {
@@ -79,7 +96,8 @@ class FunctionType : Type {
                 FunctionType(
                     func.signature,
                     func.parameters.map { it.type },
-                    func.returnTypes.toList()
+                    func.returnTypes.toList(),
+                    func.language
                 )
 
             return TypeManager.getInstance().registerType(type)

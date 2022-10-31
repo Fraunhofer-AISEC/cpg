@@ -61,7 +61,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.frontend.getIdentifierName(node)
         val type =
             node.typeChildNode?.let { this.frontend.typeHandler.handle(it) }
-                ?: UnknownType.getUnknownType()
+                ?: UnknownType.getUnknownType(language)
 
         val field =
             newFieldDeclaration(
@@ -116,7 +116,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.frontend.getIdentifierName(node)
         val type =
             node.typeChildNode?.let { this.frontend.typeHandler.handle(it) }
-                ?: UnknownType.getUnknownType()
+                ?: UnknownType.getUnknownType(language)
 
         val param =
             newParamVariableDeclaration(name, type, false, this.frontend.getCodeFromRawNode(node))
@@ -219,7 +219,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val `var` =
             newVariableDeclaration(
                 name,
-                UnknownType.getUnknownType(),
+                UnknownType.getUnknownType(language),
                 this.frontend.getCodeFromRawNode(node),
                 false
             )

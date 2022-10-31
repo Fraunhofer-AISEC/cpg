@@ -117,7 +117,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // the function will (probably) not have a defined return type, so we try to deduce this
         // from a return statement
-        if (func?.type == UnknownType.getUnknownType()) {
+        if (func?.type == UnknownType.getUnknownType(language)) {
             val returnValue = func.bodyOrNull<ReturnStatement>()?.returnValue
 
             /*if (returnValue == null) {
@@ -125,7 +125,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 func.type = TypeParser.createFrom("void", false)
             } else {*/
 
-            val returnType = returnValue?.type ?: UnknownType.getUnknownType()
+            val returnType = returnValue?.type ?: UnknownType.getUnknownType(language)
 
             func.type = returnType
             // }
@@ -182,7 +182,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val ref =
             newDeclaredReferenceExpression(
                 name,
-                UnknownType.getUnknownType(),
+                UnknownType.getUnknownType(language),
                 this.frontend.getCodeFromRawNode(node)
             )
 
@@ -197,7 +197,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val memberExpression =
             newMemberExpression(
                 base,
-                UnknownType.getUnknownType(),
+                UnknownType.getUnknownType(language),
                 name,
                 ".",
                 this.frontend.getCodeFromRawNode(node)

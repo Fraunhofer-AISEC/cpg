@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.frontends.Language;
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
@@ -88,22 +90,31 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
       Qualifier qualifier,
       List<Type> generics,
       Modifier modifier,
-      boolean primitive) {
+      boolean primitive,
+      Language<? extends LanguageFrontend> language) {
     super(typeName, storage, qualifier);
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;
+    this.language = language;
   }
 
-  public ObjectType(Type type, List<Type> generics, Modifier modifier, boolean primitive) {
+  public ObjectType(
+      Type type,
+      List<Type> generics,
+      Modifier modifier,
+      boolean primitive,
+      Language<? extends LanguageFrontend> language) {
     super(type);
+    this.language = language;
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;
   }
 
-  public ObjectType() {
+  public ObjectType(Language<? extends LanguageFrontend> language) {
     super();
+    this.language = language;
     this.generics = new ArrayList<>();
     this.modifier = Modifier.NOT_APPLICABLE;
     this.primitive = false;
@@ -143,12 +154,15 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
    */
   @Override
   public Type dereference() {
-    return UnknownType.getUnknownType();
+    return UnknownType.getUnknownType(language);
   }
 
   @Override
   public Type duplicate() {
-    return new ObjectType(this, this.getGenerics(), this.modifier, this.primitive);
+    ObjectType newObject =
+        new ObjectType(this, this.getGenerics(), this.modifier, this.primitive, this.language);
+    newObject.setLanguage(this.language);
+    return newObject;
   }
 
   public void setGenerics(List<Type> generics) {

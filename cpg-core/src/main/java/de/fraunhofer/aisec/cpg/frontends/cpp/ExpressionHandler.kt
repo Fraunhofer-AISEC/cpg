@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.passes.CallResolver
 import java.math.BigInteger
 import java.util.*
 import java.util.function.Supplier
-import java.util.stream.Collectors
 import kotlin.math.max
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.internal.core.dom.parser.CStringValue
@@ -125,7 +124,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // parsed as
         // type id expressions
         var operatorCode = ""
-        var type: Type = UnknownType.getUnknownType()
+        var type: Type = UnknownType.getUnknownType(language)
         when (ctx.operator) {
             IASTTypeIdExpression.op_sizeof -> {
                 operatorCode = "sizeof"
@@ -186,12 +185,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 templateParameters = getTemplateArguments(declSpecifier.name as CPPASTTemplateId)
                 assert(t.root is ObjectType)
                 val objectType = t.root as? ObjectType
-                val generics =
-                    templateParameters
-                        .stream()
-                        .filter { obj: Node? -> TypeExpression::class.java.isInstance(obj) }
-                        .map { e: Node? -> (e as TypeExpression?)!!.type }
-                        .collect(Collectors.toList())
+                val generics = templateParameters.filterIsInstance<TypeExpression>().map { it.type }
                 objectType?.generics = generics
             }
 
@@ -295,7 +289,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, frontend)
             }
         castExpression.castType = castType
-        if (TypeManager.getInstance().isPrimitive(castExpression.castType) || ctx.operator == 4) {
+        if (TypeManager.isPrimitive(castExpression.castType, language) || ctx.operator == 4) {
             castExpression.type = castExpression.castType
         } else {
             castExpression.expression.registerTypeListener(castExpression)
@@ -319,7 +313,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
 
         castExpression.castType = castType
-        if (TypeManager.getInstance().isPrimitive(castExpression.castType)) {
+        if (TypeManager.isPrimitive(castExpression.castType, language)) {
             castExpression.type = castExpression.castType
         } else {
             castExpression.expression.registerTypeListener(castExpression)
@@ -350,7 +344,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         return newMemberExpression(
             base,
-            UnknownType.getUnknownType(),
+            UnknownType.getUnknownType(language),
             ctx.fieldName.toString(),
             if (ctx.isPointerDereference) "->" else ".",
             ctx.rawSignature
@@ -428,7 +422,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             val member =
                 newDeclaredReferenceExpression(
                     reference.name,
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(language),
                     reference.name
                 )
             member.location = frontend.getLocationFromRawNode<Expression>(reference)
@@ -528,7 +522,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val declaredReferenceExpression =
             newDeclaredReferenceExpression(
                 ctx.name.toString(),
-                UnknownType.getUnknownType(),
+                UnknownType.getUnknownType(language),
                 ctx.rawSignature
             )
         val proxy = expressionTypeProxy(ctx)
@@ -632,7 +626,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
             is TypeOfDependentExpression -> {
                 log.debug("Type of Expression depends on the type the template is initialized with")
-                binaryOperator.type = UnknownType.getUnknownType()
+                binaryOperator.type = UnknownType.getUnknownType(language)
             }
             else -> {
                 binaryOperator.type =
@@ -709,7 +703,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         oneLhs =
                             newDeclaredReferenceExpression(
                                 des.name.toString(),
-                                UnknownType.getUnknownType(),
+                                UnknownType.getUnknownType(language),
                                 des.getRawSignature()
                             )
                     }
@@ -762,7 +756,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         oneLhs =
                             newDeclaredReferenceExpression(
                                 des.name.toString(),
-                                UnknownType.getUnknownType(),
+                                UnknownType.getUnknownType(language),
                                 des.getRawSignature()
                             )
                     }

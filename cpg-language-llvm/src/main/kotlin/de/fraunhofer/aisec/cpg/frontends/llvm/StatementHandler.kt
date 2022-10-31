@@ -700,7 +700,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val field = record.fields["field_$index"]
 
                 // our new base-type is the type of the field
-                baseType = field?.type ?: UnknownType.getUnknownType()
+                baseType = field?.type ?: UnknownType.getUnknownType(language)
 
                 // construct our member expression
                 expr = newMemberExpression(base, field?.type, field?.name, ".", "")
@@ -1182,7 +1182,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             catchClause.setParameter(
                 newVariableDeclaration(
                     "e_${gotoCatch.labelName}",
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(language),
                     instrStr,
                     true,
                     frontend.language

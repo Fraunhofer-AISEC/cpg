@@ -395,7 +395,7 @@ class CXXLanguageFrontend(
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code)
+                newDeclaredReferenceExpression(code, UnknownType.getUnknownType(language), code)
                 2 -> // an integer
                 newLiteral(code.toInt(), TypeParser.createFrom("int", true), code)
                 130 -> // a string
@@ -516,7 +516,7 @@ class CXXLanguageFrontend(
                     TypeParser.createFrom(name, true, this)
                 }
                 else -> {
-                    UnknownType.getUnknownType()
+                    UnknownType.getUnknownType(language)
                 }
             }
 
@@ -587,7 +587,8 @@ class CXXLanguageFrontend(
                     FunctionDeclaration.BRACKET_LEFT,
                     FunctionDeclaration.BRACKET_RIGHT
                 ) { it.typeName } + type.typeName
-            type = FunctionType(name, paramTypes, listOf(type), type.qualifier, type.storage)
+            type =
+                FunctionType(name, paramTypes, listOf(type), language, type.qualifier, type.storage)
         }
 
         // Lastly, there might be further nested declarators that adjust the type further.

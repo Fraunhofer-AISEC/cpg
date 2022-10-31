@@ -40,7 +40,6 @@ abstract class BaseTest {
      */
     @BeforeTest
     protected fun resetPersistentState() {
-        TypeParser.reset()
         TypeManager.reset()
     }
 }

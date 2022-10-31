@@ -186,7 +186,7 @@ class CompressLLVMPass : Pass() {
                 val error =
                     catch.newVariableDeclaration(
                         "e_${catch.name}",
-                        UnknownType.getUnknownType(),
+                        UnknownType.getUnknownType(catch.language),
                         "",
                         true,
                     )

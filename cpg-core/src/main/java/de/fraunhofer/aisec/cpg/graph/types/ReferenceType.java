@@ -41,12 +41,14 @@ public class ReferenceType extends Type implements SecondOrderType {
 
   public ReferenceType(Type reference) {
     super();
+    this.language = reference.language;
     this.setName(reference.getName() + "&");
     this.reference = reference;
   }
 
   public ReferenceType(Type type, Type reference) {
     super(type);
+    this.language = type.language;
     this.setName(reference.getName() + "&");
     this.reference = reference;
   }
@@ -54,6 +56,7 @@ public class ReferenceType extends Type implements SecondOrderType {
   public ReferenceType(Storage storage, Qualifier qualifier, Type reference) {
     super(reference.getName() + "&", storage, qualifier);
     this.reference = reference;
+    this.language = reference.language;
   }
 
   /**

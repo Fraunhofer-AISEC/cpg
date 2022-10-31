@@ -204,7 +204,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                 if (paramVariableDeclaration.default != null) {
                     signature.add(paramVariableDeclaration.getType())
                 } else {
-                    signature.add(UnknownType.getUnknownType())
+                    signature.add(UnknownType.getUnknownType(language))
                 }
             }
             return signature

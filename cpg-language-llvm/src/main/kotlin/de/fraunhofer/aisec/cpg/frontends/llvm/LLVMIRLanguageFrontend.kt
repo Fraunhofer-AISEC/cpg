@@ -192,7 +192,7 @@ class LLVMIRLanguageFrontend(
             return alreadyVisited[typeRef]!!
         } else if (typeRef in alreadyVisited) {
             // Recursive call but we can't resolve it.
-            return UnknownType.getUnknownType()
+            return UnknownType.getUnknownType(language)
         }
         alreadyVisited[typeRef] = null
         val res: Type =
@@ -209,7 +209,7 @@ class LLVMIRLanguageFrontend(
                 }
                 LLVMStructTypeKind -> {
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
-                    record.toType() ?: UnknownType.getUnknownType()
+                    record.toType() ?: UnknownType.getUnknownType(language)
                 }
                 else -> {
                     TypeParser.createFrom(typeStr, false)

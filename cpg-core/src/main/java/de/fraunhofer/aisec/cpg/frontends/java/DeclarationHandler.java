@@ -240,7 +240,7 @@ public class DeclarationHandler
             "this",
             recordDecl != null
                 ? TypeParser.createFrom(recordDecl.getName(), false)
-                : UnknownType.getUnknownType(),
+                : UnknownType.getUnknownType(getLanguage()),
             "this",
             false);
     ;
@@ -277,7 +277,7 @@ public class DeclarationHandler
         .addTypeParameter(
             recordDeclaration,
             classInterDecl.getTypeParameters().stream()
-                .map(t -> new ParameterizedType(t.getNameAsString()))
+                .map(t -> new ParameterizedType(t.getNameAsString(), getLanguage()))
                 .collect(Collectors.toList()));
 
     Map<Boolean, List<String>> partitioned =

@@ -192,7 +192,7 @@ public abstract class Expression extends Statement implements HasType {
 
     // Loop detected or only primitive types (which cannot have a subtype)
     if (root.contains(this)
-        || (possibleSubTypes.stream().allMatch(TypeManager.getInstance()::isPrimitive)
+        || (possibleSubTypes.stream().allMatch(it -> TypeManager.isPrimitive(it, language))
             && !this.possibleSubTypes.isEmpty())) {
       return;
     }

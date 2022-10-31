@@ -189,8 +189,11 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
         return newParamVariableDeclaration(name, expr.type, false, name)
     }
 
-    fun inferTemplateParameter(name: String): TypeParamDeclaration {
-        val parameterizedType = ParameterizedType(name)
+    fun inferTemplateParameter(
+        name: String,
+        language: Language<out LanguageFrontend>
+    ): TypeParamDeclaration {
+        val parameterizedType = ParameterizedType(name, language)
         TypeManager.getInstance()
             .addTypeParameter(start as? FunctionTemplateDeclaration, parameterizedType)
 
@@ -243,7 +246,9 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
                 // Template Parameter
                 val inferredTypeIdentifier = "T$typeCounter"
                 val typeParamDeclaration =
-                    inferred.startInference().inferTemplateParameter(inferredTypeIdentifier)
+                    inferred
+                        .startInference()
+                        .inferTemplateParameter(inferredTypeIdentifier, call.language)
                 typeCounter++
                 inferred.addParameter(typeParamDeclaration)
             } else if (node is Expression) {

@@ -311,7 +311,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             baseType = TypeParser.createFrom(qualifiedNameFromImports, true);
           } else {
             log.info("Unknown base type 1 for {}", fieldAccessExpr);
-            baseType = UnknownType.getUnknownType();
+            baseType = UnknownType.getUnknownType(getLanguage());
           }
         }
       }
@@ -345,7 +345,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
           baseType = TypeParser.createFrom(qualifiedNameFromImports, true);
         } else {
           log.info("Unknown base type 2 for {}", fieldAccessExpr);
-          baseType = UnknownType.getUnknownType();
+          baseType = UnknownType.getUnknownType(getLanguage());
         }
         base =
             newDeclaredReferenceExpression(
@@ -376,7 +376,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         fieldType = TypeParser.createFrom("int", true);
       } else {
         log.info("Unknown field type for {}", fieldAccessExpr);
-        fieldType = UnknownType.getUnknownType();
+        fieldType = UnknownType.getUnknownType(getLanguage());
       }
 
       MemberExpression memberExpression =
@@ -487,7 +487,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     // process
     DeclaredReferenceExpression superExpression =
         newDeclaredReferenceExpression(
-            this, expr.toString(), UnknownType.getUnknownType(), expr.toString());
+            this, expr.toString(), UnknownType.getUnknownType(getLanguage()), expr.toString());
     frontend.setCodeAndLocation(superExpression, expr);
 
     return superExpression;
@@ -724,7 +724,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       if (!isStatic) {
         DeclaredReferenceExpression member =
-            newDeclaredReferenceExpression(this, name, UnknownType.getUnknownType(), "");
+            newDeclaredReferenceExpression(
+                this, name, UnknownType.getUnknownType(getLanguage()), "");
 
         frontend.setCodeAndLocation(
             member,

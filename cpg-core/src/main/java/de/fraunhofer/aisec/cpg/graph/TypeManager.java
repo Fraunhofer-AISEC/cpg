@@ -225,12 +225,14 @@ public class TypeManager implements LanguageProvider {
    * @return
    */
   public ParameterizedType createOrGetTypeParameter(
-      TemplateDeclaration templateDeclaration, String typeName) {
+      TemplateDeclaration templateDeclaration,
+      String typeName,
+      Language<? extends LanguageFrontend> language) {
     ParameterizedType parameterizedType = getTypeParameter(templateDeclaration, typeName);
     if (parameterizedType != null) {
       return parameterizedType;
     } else {
-      parameterizedType = new ParameterizedType(typeName);
+      parameterizedType = new ParameterizedType(typeName, language);
       addTypeParameter(templateDeclaration, parameterizedType);
       return parameterizedType;
     }
@@ -295,8 +297,8 @@ public class TypeManager implements LanguageProvider {
     this.frontend = frontend;
   }
 
-  public boolean isPrimitive(Type type) {
-    return getLanguage().getPrimitiveTypes().contains(type.getTypeName());
+  public static boolean isPrimitive(Type type, Language<? extends LanguageFrontend> language) {
+    return language.getPrimitiveTypes().contains(type.getTypeName());
   }
 
   public boolean isUnknown(Type type) {
