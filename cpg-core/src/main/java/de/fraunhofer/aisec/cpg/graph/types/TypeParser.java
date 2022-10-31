@@ -65,17 +65,6 @@ public class TypeParser {
     throw new IllegalStateException("Do not instantiate the TypeParser");
   }
 
-  /**
-   * WARNING: This is only intended for Test Purposes of the TypeParser itself without parsing
-   * files. Do not use this.
-   *
-   * @param languageSupplier frontend language Java or CPP
-   */
-  public static void setLanguageSupplier(
-      Supplier<Language<? extends LanguageFrontend>> languageSupplier) {
-    TypeParser.languageSupplier = languageSupplier;
-  }
-
   public static Language<? extends LanguageFrontend> getLanguage() {
     return TypeParser.languageSupplier.get();
   }
@@ -431,13 +420,14 @@ public class TypeParser {
     return parameters;
   }
 
-  private static List<Type> getGenerics(String typeName) {
+  private static List<Type> getGenerics(
+      String typeName, Language<? extends LanguageFrontend> language) {
     if (typeName.contains("<") && typeName.contains(">")) {
       String generics = typeName.substring(typeName.indexOf('<') + 1, typeName.lastIndexOf('>'));
       List<Type> genericList = new ArrayList<>();
       String[] parametersSplit = generics.split(",");
       for (String parameter : parametersSplit) {
-        genericList.add(createFrom(parameter.trim(), true));
+        genericList.add(createFrom(parameter.trim(), true, language));
       }
 
       return genericList;
@@ -794,7 +784,7 @@ public class TypeParser {
     Matcher funcptr = getFunctionPtrMatcher(typeBlocks.subList(counter, typeBlocks.size()));
 
     if (funcptr != null) {
-      Type returnType = createFrom(typeName, false);
+      Type returnType = createFrom(typeName, false, language);
       List<Type> parameterList = getParameterList(funcptr.group("args"));
 
       return typeManager.registerType(
@@ -808,7 +798,7 @@ public class TypeParser {
     } else {
       // ObjectType
       // Obtain possible generic List from TypeString
-      List<Type> generics = getGenerics(typeName);
+      List<Type> generics = getGenerics(typeName, language);
       typeName = removeGenerics(typeName);
       finalType =
           new ObjectType(
@@ -878,6 +868,26 @@ public class TypeParser {
   @NotNull
   public static Type createFrom(@NotNull String type, boolean resolveAlias) {
     Language<? extends LanguageFrontend> language = getLanguage();
+    try {
+      return createFromUnsafe(type, resolveAlias, language);
+    } catch (Exception e) {
+      log.error("Could not parse the type correctly", e);
+      return UnknownType.getUnknownType(language);
+    }
+  }
+
+  /**
+   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from *
+   * the typeString
+   *
+   * @param type string with type information
+   * @param resolveAlias should replace with original type in typedefs
+   * @return new type representing the type string. If an exception occurs during the parsing,
+   *     UnknownType is returned
+   */
+  @NotNull
+  public static Type createFrom(
+      @NotNull String type, boolean resolveAlias, Language<? extends LanguageFrontend> language) {
     try {
       return createFromUnsafe(type, resolveAlias, language);
     } catch (Exception e) {

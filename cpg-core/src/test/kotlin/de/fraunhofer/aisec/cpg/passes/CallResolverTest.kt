@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -148,8 +149,8 @@ class CallResolverTest : BaseTest() {
     fun testJava() {
         val result = TestUtils.analyze("java", topLevel, true)
         val records = result.records
-        val intType = TypeParser.createFrom("int", true)
-        val stringType = TypeParser.createFrom("java.lang.String", true)
+        val intType = TypeParser.createFrom("int", true, JavaLanguage())
+        val stringType = TypeParser.createFrom("java.lang.String", true, JavaLanguage())
         testMethods(records, intType, stringType)
         testOverriding(records)
         ensureNoUnknownClassDummies(records)
@@ -165,8 +166,8 @@ class CallResolverTest : BaseTest() {
                 true
             )
         val records = result.records
-        val intType = TypeParser.createFrom("int", true)
-        val stringType = TypeParser.createFrom("char*", true)
+        val intType = TypeParser.createFrom("int", true, CPPLanguage())
+        val stringType = TypeParser.createFrom("char*", true, CPPLanguage())
         testMethods(records, intType, stringType)
         testOverriding(records)
 

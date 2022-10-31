@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.disableTypeManagerCleanup
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
+import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -41,7 +42,6 @@ import kotlin.test.*
 internal class TypeTests : BaseTest() {
     @Test
     fun reference() {
-        TypeParser.setLanguageSupplier { CPPLanguage() }
         val objectType: Type =
             ObjectType(
                 "int",
@@ -106,7 +106,6 @@ internal class TypeTests : BaseTest() {
 
     @Test
     fun dereference() {
-        TypeParser.setLanguageSupplier { CPPLanguage() }
         val objectType: Type =
             ObjectType(
                 "int",
@@ -163,11 +162,10 @@ internal class TypeTests : BaseTest() {
     fun createFromJava() {
         var result: Type
         var expected: Type
-        TypeParser.setLanguageSupplier { JavaLanguage() }
 
         // Test 1: Ignore Access Modifier Keyword (public, private, protected)
         var typeString = "private int a"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, JavaLanguage())
         expected =
             ObjectType(
                 "int",
@@ -182,7 +180,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 2: constant type using final
         typeString = "final int a"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, JavaLanguage())
         expected =
             ObjectType(
                 "int",
@@ -197,7 +195,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 3: static type
         typeString = "static int a"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, JavaLanguage())
         expected =
             ObjectType(
                 "int",
@@ -212,7 +210,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 4: volatile type
         typeString = "public volatile int a"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, JavaLanguage())
         expected =
             ObjectType(
                 "int",
@@ -227,7 +225,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 5: combining a storage type and a qualifier
         typeString = "private static final String a"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, JavaLanguage())
         expected =
             ObjectType(
                 "String",
@@ -242,7 +240,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 6: using two different qualifiers
         typeString = "public final volatile int a"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, JavaLanguage())
         expected =
             ObjectType(
                 "int",
@@ -257,7 +255,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 7: Reference level using arrays
         typeString = "int[] a"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, JavaLanguage())
         expected =
             PointerType(
                 ObjectType(
@@ -275,7 +273,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 8: generics
         typeString = "List<String> list"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, JavaLanguage())
         var generics: MutableList<Type?> = ArrayList()
         generics.add(
             ObjectType(
@@ -302,7 +300,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 9: more generics
         typeString = "List<List<List<String>>, List<String>> data"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, JavaLanguage())
         val genericStringType =
             ObjectType(
                 "String",
@@ -368,11 +366,10 @@ internal class TypeTests : BaseTest() {
     @Test
     fun createFromC() {
         var result: Type
-        TypeParser.setLanguageSupplier { CPPLanguage() }
 
         // Test 1: Function pointer
         var typeString = "void (*single_param)(int)"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         val parameterList =
             listOf<Type>(
                 ObjectType(
@@ -382,7 +379,7 @@ internal class TypeTests : BaseTest() {
                     emptyList(),
                     ObjectType.Modifier.SIGNED,
                     true,
-                    CPPLanguage()
+                    CLanguage()
                 )
             )
         var expected: Type =
@@ -391,18 +388,18 @@ internal class TypeTests : BaseTest() {
                 Type.Storage.AUTO,
                 parameterList,
                 IncompleteType(),
-                CPPLanguage()
+                CLanguage()
             )
         assertEquals(expected, result)
 
         // Test 1.1: interleaved brackets in function pointer
         typeString = "void ((*single_param)(int))"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         assertEquals(result, expected)
 
         // Test 2: Stronger binding of brackets and pointer
         typeString = "char (* const a)[]"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             PointerType(
                 PointerType(
@@ -413,7 +410,7 @@ internal class TypeTests : BaseTest() {
                         emptyList(),
                         ObjectType.Modifier.SIGNED,
                         true,
-                        CPPLanguage()
+                        CLanguage()
                     ),
                     PointerType.PointerOrigin.ARRAY
                 ),
@@ -424,7 +421,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 3: Mutable pointer to a mutable char
         typeString = "char *p"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             PointerType(
                 ObjectType(
@@ -434,7 +431,7 @@ internal class TypeTests : BaseTest() {
                     emptyList(),
                     ObjectType.Modifier.SIGNED,
                     true,
-                    CPPLanguage()
+                    CLanguage()
                 ),
                 PointerType.PointerOrigin.POINTER
             )
@@ -442,17 +439,17 @@ internal class TypeTests : BaseTest() {
 
         // Test 3.1: Different Whitespaces
         typeString = "char* p"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         assertEquals(expected, result)
 
         // Test 3.2: Different Whitespaces
         typeString = "char * p"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         assertEquals(expected, result)
 
         // Test 4: Mutable pointer to a constant char
         typeString = "const char *p;"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             PointerType(
                 ObjectType(
@@ -462,7 +459,7 @@ internal class TypeTests : BaseTest() {
                     emptyList(),
                     ObjectType.Modifier.SIGNED,
                     true,
-                    CPPLanguage()
+                    CLanguage()
                 ),
                 PointerType.PointerOrigin.POINTER
             )
@@ -470,7 +467,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 5: Constant pointer to a mutable char
         typeString = "char * const p;"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             PointerType(
                 ObjectType(
@@ -480,7 +477,7 @@ internal class TypeTests : BaseTest() {
                     emptyList(),
                     ObjectType.Modifier.SIGNED,
                     true,
-                    CPPLanguage()
+                    CLanguage()
                 ),
                 PointerType.PointerOrigin.POINTER
             )
@@ -489,7 +486,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 6: Constant pointer to a constant char
         typeString = "const char * const p;"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             PointerType(
                 ObjectType(
@@ -499,7 +496,7 @@ internal class TypeTests : BaseTest() {
                     emptyList(),
                     ObjectType.Modifier.SIGNED,
                     true,
-                    CPPLanguage()
+                    CLanguage()
                 ),
                 PointerType.PointerOrigin.POINTER
             )
@@ -508,7 +505,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 7: Array of const pointer to static const char
         typeString = "static const char * const somearray []"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             PointerType(
                 PointerType(
@@ -519,7 +516,7 @@ internal class TypeTests : BaseTest() {
                         emptyList(),
                         ObjectType.Modifier.SIGNED,
                         true,
-                        CPPLanguage()
+                        CLanguage()
                     ),
                     PointerType.PointerOrigin.POINTER
                 ),
@@ -530,7 +527,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 7.1: Array of array of pointer to static const char
         typeString = "static const char * somearray[][]"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             PointerType(
                 PointerType(
@@ -542,7 +539,7 @@ internal class TypeTests : BaseTest() {
                             emptyList(),
                             ObjectType.Modifier.SIGNED,
                             true,
-                            CPPLanguage()
+                            CLanguage()
                         ),
                         PointerType.PointerOrigin.POINTER
                     ),
@@ -554,7 +551,7 @@ internal class TypeTests : BaseTest() {
 
         // Test 8: Generics
         typeString = "Array<int> array"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         var generics: MutableList<Type?> = ArrayList()
         generics.add(
             ObjectType(
@@ -564,7 +561,7 @@ internal class TypeTests : BaseTest() {
                 emptyList(),
                 ObjectType.Modifier.SIGNED,
                 true,
-                CPPLanguage()
+                CLanguage()
             )
         )
         expected =
@@ -575,13 +572,13 @@ internal class TypeTests : BaseTest() {
                 generics,
                 ObjectType.Modifier.NOT_APPLICABLE,
                 false,
-                CPPLanguage()
+                CLanguage()
             )
         assertEquals(expected, result)
 
         // Test 9: Compound Primitive Types
         typeString = "long long int"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             ObjectType(
                 "long long int",
@@ -590,13 +587,13 @@ internal class TypeTests : BaseTest() {
                 ArrayList(),
                 ObjectType.Modifier.SIGNED,
                 true,
-                CPPLanguage()
+                CLanguage()
             )
         assertEquals(expected, result)
 
         // Test 10: Unsigned/Signed Types
         typeString = "unsigned int"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             ObjectType(
                 "int",
@@ -605,11 +602,11 @@ internal class TypeTests : BaseTest() {
                 ArrayList(),
                 ObjectType.Modifier.UNSIGNED,
                 true,
-                CPPLanguage()
+                CLanguage()
             )
         assertEquals(expected, result)
         typeString = "signed int"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             ObjectType(
                 "int",
@@ -618,11 +615,11 @@ internal class TypeTests : BaseTest() {
                 ArrayList(),
                 ObjectType.Modifier.SIGNED,
                 true,
-                CPPLanguage()
+                CLanguage()
             )
         assertEquals(expected, result)
         typeString = "A a"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             ObjectType(
                 "A",
@@ -631,7 +628,7 @@ internal class TypeTests : BaseTest() {
                 ArrayList(),
                 ObjectType.Modifier.NOT_APPLICABLE,
                 false,
-                CPPLanguage()
+                CLanguage()
             )
         assertEquals(expected, result)
 
@@ -644,31 +641,31 @@ internal class TypeTests : BaseTest() {
                 ArrayList(),
                 ObjectType.Modifier.UNSIGNED,
                 true,
-                CPPLanguage()
+                CLanguage()
             )
         typeString = "const unsigned long long int a = 1"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         assertEquals(expected, result)
 
         typeString = "unsigned const long long int b = 1"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         assertEquals(expected, result)
 
         typeString = "unsigned long const long int c = 1"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         assertEquals(expected, result)
 
         typeString = "unsigned long long const int d = 1"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         assertEquals(expected, result)
 
         typeString = "unsigned long long int const e = 1"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         assertEquals(expected, result)
 
         // Test 12: C++ Reference Types
         typeString = "const int& ref = a"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         expected =
             ReferenceType(
                 Type.Storage.AUTO,
@@ -680,17 +677,17 @@ internal class TypeTests : BaseTest() {
                     ArrayList(),
                     ObjectType.Modifier.SIGNED,
                     true,
-                    CPPLanguage()
+                    CLanguage()
                 )
             )
         assertEquals(expected, result)
 
         typeString = "int const &ref2 = a"
-        result = TypeParser.createFrom(typeString, true)
+        result = TypeParser.createFrom(typeString, true, CLanguage())
         assertEquals(expected, result)
 
         // Test 13: Elaborated Type in Generics
-        result = TypeParser.createFrom("Array<struct Node>", true)
+        result = TypeParser.createFrom("Array<struct Node>", true, CLanguage())
         generics = ArrayList()
         var generic =
             ObjectType(
@@ -700,7 +697,7 @@ internal class TypeTests : BaseTest() {
                 ArrayList(),
                 ObjectType.Modifier.NOT_APPLICABLE,
                 false,
-                CPPLanguage()
+                CLanguage()
             )
         generics.add(generic)
         expected =
@@ -711,11 +708,11 @@ internal class TypeTests : BaseTest() {
                 generics,
                 ObjectType.Modifier.NOT_APPLICABLE,
                 false,
-                CPPLanguage()
+                CLanguage()
             )
         assertEquals(expected, result)
 
-        result = TypeParser.createFrom("Array<myclass >", true)
+        result = TypeParser.createFrom("Array<myclass >", true, CLanguage())
         generics = ArrayList()
         generic =
             ObjectType(
@@ -725,7 +722,7 @@ internal class TypeTests : BaseTest() {
                 ArrayList(),
                 ObjectType.Modifier.NOT_APPLICABLE,
                 false,
-                CPPLanguage()
+                CLanguage()
             )
         generics.add(generic)
         expected =
@@ -736,7 +733,7 @@ internal class TypeTests : BaseTest() {
                 generics,
                 ObjectType.Modifier.NOT_APPLICABLE,
                 false,
-                CPPLanguage()
+                CLanguage()
             )
         assertEquals(expected, result)
     }
@@ -946,12 +943,12 @@ internal class TypeTests : BaseTest() {
         disableTypeManagerCleanup()
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy")
         analyze("java", topLevel, true)
-        val root = TypeParser.createFrom("multistep.Root", true)
-        val level0 = TypeParser.createFrom("multistep.Level0", true)
-        val level1 = TypeParser.createFrom("multistep.Level1", true)
-        val level1b = TypeParser.createFrom("multistep.Level1B", true)
-        val level2 = TypeParser.createFrom("multistep.Level2", true)
-        val unrelated = TypeParser.createFrom("multistep.Unrelated", true)
+        val root = TypeParser.createFrom("multistep.Root", true, JavaLanguage())
+        val level0 = TypeParser.createFrom("multistep.Level0", true, JavaLanguage())
+        val level1 = TypeParser.createFrom("multistep.Level1", true, JavaLanguage())
+        val level1b = TypeParser.createFrom("multistep.Level1B", true, JavaLanguage())
+        val level2 = TypeParser.createFrom("multistep.Level2", true, JavaLanguage())
+        val unrelated = TypeParser.createFrom("multistep.Unrelated", true, JavaLanguage())
         getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
     }
 
@@ -961,12 +958,12 @@ internal class TypeTests : BaseTest() {
         disableTypeManagerCleanup()
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
         analyze("simple_inheritance.cpp", topLevel, true)
-        val root = TypeParser.createFrom("Root", true)
-        val level0 = TypeParser.createFrom("Level0", true)
-        val level1 = TypeParser.createFrom("Level1", true)
-        val level1b = TypeParser.createFrom("Level1B", true)
-        val level2 = TypeParser.createFrom("Level2", true)
-        val unrelated = TypeParser.createFrom("Unrelated", true)
+        val root = TypeParser.createFrom("Root", true, CPPLanguage())
+        val level0 = TypeParser.createFrom("Level0", true, CPPLanguage())
+        val level1 = TypeParser.createFrom("Level1", true, CPPLanguage())
+        val level1b = TypeParser.createFrom("Level1B", true, CPPLanguage())
+        val level2 = TypeParser.createFrom("Level2", true, CPPLanguage())
+        val unrelated = TypeParser.createFrom("Unrelated", true, CPPLanguage())
         getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
     }
 
@@ -977,14 +974,14 @@ internal class TypeTests : BaseTest() {
         disableTypeManagerCleanup()
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
         analyze("multi_inheritance.cpp", topLevel, true)
-        val root = TypeParser.createFrom("Root", true)
-        val level0 = TypeParser.createFrom("Level0", true)
-        val level0b = TypeParser.createFrom("Level0B", true)
-        val level1 = TypeParser.createFrom("Level1", true)
-        val level1b = TypeParser.createFrom("Level1B", true)
-        val level1c = TypeParser.createFrom("Level1C", true)
-        val level2 = TypeParser.createFrom("Level2", true)
-        val level2b = TypeParser.createFrom("Level2B", true)
+        val root = TypeParser.createFrom("Root", true, CPPLanguage())
+        val level0 = TypeParser.createFrom("Level0", true, CPPLanguage())
+        val level0b = TypeParser.createFrom("Level0B", true, CPPLanguage())
+        val level1 = TypeParser.createFrom("Level1", true, CPPLanguage())
+        val level1b = TypeParser.createFrom("Level1B", true, CPPLanguage())
+        val level1c = TypeParser.createFrom("Level1C", true, CPPLanguage())
+        val level2 = TypeParser.createFrom("Level2", true, CPPLanguage())
+        val level2b = TypeParser.createFrom("Level2B", true, CPPLanguage())
 
         /*
         Type hierarchy:
