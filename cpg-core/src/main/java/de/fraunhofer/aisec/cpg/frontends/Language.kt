@@ -46,6 +46,9 @@ abstract class Language<T : LanguageFrontend> : Node() {
 
     abstract val frontend: Class<out T>
 
+    open val primitiveTypes: List<String>
+        get() = listOf("byte", "short", "int", "long", "float", "double", "boolean", "char")
+
     abstract fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager = ScopeManager()

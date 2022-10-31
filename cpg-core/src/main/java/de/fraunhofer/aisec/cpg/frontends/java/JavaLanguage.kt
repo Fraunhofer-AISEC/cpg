@@ -35,7 +35,9 @@ open class JavaLanguage :
     HasComplexCallResolution,
     HasClasses,
     HasSuperclasses,
-    HasTemplates {
+    HasTemplates,
+    HasQualifier,
+    HasUnknownType {
     override val fileExtensions: List<String>
         get() = listOf("java")
     override val namespaceDelimiter: String
@@ -44,6 +46,10 @@ open class JavaLanguage :
         get() = JavaLanguageFrontend::class.java
     override val superclassKeyword: String
         get() = "super"
+    override val qualifiers: List<String>
+        get() = listOf("final", "volatile")
+    override val unknownTypeString: List<String>
+        get() = listOf("var")
 
     override fun newFrontend(
         config: TranslationConfiguration,

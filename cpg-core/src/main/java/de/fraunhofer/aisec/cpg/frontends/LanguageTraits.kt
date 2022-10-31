@@ -84,3 +84,28 @@ interface HasSuperclasses : LanguageTrait {
      */
     val superclassKeyword: String
 }
+
+/**
+ * A language trait, that specifies that this language has certain qualifiers. If so, we should
+ * consider them when parsing the types.
+ */
+interface HasQualifier : LanguageTrait {
+    /** The qualifiers which exist in the language. */
+    val qualifiers: List<String>
+}
+
+/**
+ * A language trait, that specifies that this language has "elaborated type specifiers". If so, we
+ * should consider them when parsing the types.
+ */
+interface HasElaboratedTypeSpecifier : LanguageTrait {
+    val elaboratedTypeSpecifier: List<String>
+}
+
+/**
+ * A language trait, that specifies that this language has specifiers which let us conclude that we
+ * do not know the type. If so, we should consider them when parsing the types.
+ */
+interface HasUnknownType : LanguageTrait {
+    val unknownTypeString: List<String>
+}

@@ -37,13 +37,19 @@ class CPPLanguage :
     HasComplexCallResolution,
     HasStructs,
     HasClasses,
-    HasFunctionPointers {
+    HasFunctionPointers,
+    HasQualifier,
+    HasElaboratedTypeSpecifier {
     override val fileExtensions: List<String>
-        get() = listOf("cpp", "c", "h", "hpp")
+        get() = listOf("cpp", "cc", "hpp")
     override val namespaceDelimiter: String
         get() = "::"
     override val frontend: Class<CXXLanguageFrontend>
         get() = CXXLanguageFrontend::class.java
+    override val qualifiers: List<String>
+        get() = listOf("const", "volatile", "restrict", "atomic")
+    override val elaboratedTypeSpecifier: List<String>
+        get() = listOf("class", "struct", "union", "enum")
 
     override fun newFrontend(
         config: TranslationConfiguration,

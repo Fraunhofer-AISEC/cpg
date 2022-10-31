@@ -25,11 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
-import de.fraunhofer.aisec.cpg.frontends.Language;
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.*;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage;
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,27 +48,7 @@ public class TypeParser {
   private static final Logger log = LoggerFactory.getLogger(TypeParser.class);
 
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
-  public static final List<String> PRIMITIVES =
-      List.of(
-          "byte",
-          "short",
-          "int",
-          "long",
-          "float",
-          "double",
-          "boolean",
-          "char",
-          // LLVM primitive types
-          "i1",
-          "i8",
-          "i32",
-          "i64",
-          "i128",
-          "half",
-          "bfloat",
-          "fp128",
-          "x86_fp80",
-          "ppc_fp128");
+
   private static final Pattern functionPtrRegex =
       Pattern.compile(
           "(?:(?<functionptr>[\\h(]+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*[\\h)]+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
@@ -82,18 +60,6 @@ public class TypeParser {
   private static final String CONST_QUALIFIER = "const";
   private static final String RESTRICT_QUALIFIER = "restrict";
   private static final String ATOMIC_QUALIFIER = "atomic";
-
-  private static final String ELABORATED_TYPE_CLASS = "class";
-  private static final String ELABORATED_TYPE_STRUCT = "struct";
-  private static final String ELABORATED_TYPE_UNION = "union";
-  private static final String ELABORATED_TYPE_ENUM = "enum";
-
-  private static final List<String> elaboratedTypes =
-      List.of(
-          ELABORATED_TYPE_CLASS,
-          ELABORATED_TYPE_STRUCT,
-          ELABORATED_TYPE_UNION,
-          ELABORATED_TYPE_ENUM);
 
   private TypeParser() {
     throw new IllegalStateException("Do not instantiate the TypeParser");
@@ -119,7 +85,7 @@ public class TypeParser {
   }
 
   /**
-   * Infers corresponding qualifier information for the type depending of the keywords.
+   * Infers corresponding qualifier information for the type depending on the keywords.
    *
    * @param typeString list of found keywords
    * @param old previous qualifier information which is completed with newer qualifier information
@@ -196,15 +162,8 @@ public class TypeParser {
   }
 
   protected static boolean isQualifierSpecifier(String qualifier) {
-    // TODO: Convert to language trait
-    if (getLanguage() instanceof JavaLanguage) {
-      return qualifier.equals(FINAL_QUALIFIER) || qualifier.equals(VOLATILE_QUALIFIER);
-    } else {
-      return qualifier.equals(CONST_QUALIFIER)
-          || qualifier.equals(VOLATILE_QUALIFIER)
-          || qualifier.equals(RESTRICT_QUALIFIER)
-          || qualifier.equals(ATOMIC_QUALIFIER);
-    }
+    return getLanguage() instanceof HasQualifier
+        && ((HasQualifier) getLanguage()).getQualifiers().contains(qualifier);
   }
 
   /**
@@ -216,14 +175,10 @@ public class TypeParser {
    * @return true, if it is part of an elaborated type. false, otherwise
    */
   public static boolean isElaboratedTypeSpecifier(String specifier) {
-    if (getLanguage() instanceof CLanguage || getLanguage() instanceof CPPLanguage) {
-      return specifier.equals(ELABORATED_TYPE_CLASS)
-          || specifier.equals(ELABORATED_TYPE_STRUCT)
-          || specifier.equals(ELABORATED_TYPE_UNION)
-          || specifier.equals(ELABORATED_TYPE_ENUM);
-    }
-
-    return false;
+    return getLanguage() instanceof HasElaboratedTypeSpecifier
+        && ((HasElaboratedTypeSpecifier) getLanguage())
+            .getElaboratedTypeSpecifier()
+            .contains(specifier);
   }
 
   public static boolean isKnownSpecifier(String specifier) {
@@ -261,7 +216,7 @@ public class TypeParser {
   }
 
   /**
-   * Matches the type blocks and checks if it the typeString has the structure of a function pointer
+   * Matches the type blocks and checks if the typeString has the structure of a function pointer
    *
    * @param type separated type string
    * @return true if function pointer structure is found in typeString, false if not
@@ -295,7 +250,8 @@ public class TypeParser {
 
   private static boolean isUnknownType(String typeName) {
     return typeName.equals(UNKNOWN_TYPE_STRING)
-        || (languageSupplier.get() instanceof JavaLanguage && typeName.equals("var"));
+        || (languageSupplier.get() instanceof HasUnknownType
+            && ((HasUnknownType) languageSupplier.get()).getUnknownTypeString().contains(typeName));
   }
 
   /**
@@ -319,7 +275,7 @@ public class TypeParser {
        * by the elaborate type specifier and at least one more horizontal whitespace, which marks
        * that it is indeed an elaborate type and not something like structMy.
        */
-      for (String elaborate : elaboratedTypes) {
+      for (String elaborate : ((CPPLanguage) getLanguage()).getElaboratedTypeSpecifier()) {
         generics = generics.replaceAll("(^|(?<=[\\h,<]))\\h*(?<main>" + elaborate + "\\h+)", "");
       }
       type =
@@ -577,7 +533,7 @@ public class TypeParser {
    */
   private static boolean isPrimitiveType(@NotNull List<String> stringList) {
     for (String s : stringList) {
-      if (PRIMITIVES.contains(s)) {
+      if (getLanguage().getPrimitiveTypes().contains(s)) {
         return true;
       }
     }
@@ -598,7 +554,7 @@ public class TypeParser {
     boolean foundPrimitive = false;
 
     for (String s : typeBlocks) {
-      if (PRIMITIVES.contains(s)) {
+      if (getLanguage().getPrimitiveTypes().contains(s)) {
         if (primitiveType.length() > 0) {
           primitiveType.append(" ");
         }
@@ -607,11 +563,11 @@ public class TypeParser {
     }
 
     for (String s : typeBlocks) {
-      if (PRIMITIVES.contains(s) && !foundPrimitive) {
+      if (getLanguage().getPrimitiveTypes().contains(s) && !foundPrimitive) {
         joinedTypeBlocks.add(primitiveType.toString());
         foundPrimitive = true;
       } else {
-        if (!PRIMITIVES.contains(s)) {
+        if (!getLanguage().getPrimitiveTypes().contains(s)) {
           joinedTypeBlocks.add(s);
         }
       }

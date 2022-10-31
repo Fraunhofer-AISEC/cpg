@@ -54,27 +54,6 @@ public class TypeManager implements LanguageProvider {
 
   private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
-  private static final List<String> primitiveTypeNames =
-      List.of(
-          "byte",
-          "short",
-          "int",
-          "long",
-          "float",
-          "double",
-          "boolean",
-          "char",
-          // LLVM primitive types
-          "i1",
-          "i8",
-          "i32",
-          "i64",
-          "i128",
-          "half",
-          "bfloat",
-          "fp128",
-          "x86_fp80",
-          "ppc_fp128");
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
   @NotNull private static TypeManager instance = new TypeManager();
@@ -317,7 +296,7 @@ public class TypeManager implements LanguageProvider {
   }
 
   public boolean isPrimitive(Type type) {
-    return primitiveTypeNames.contains(type.getTypeName());
+    return getLanguage().getPrimitiveTypes().contains(type.getTypeName());
   }
 
   public boolean isUnknown(Type type) {

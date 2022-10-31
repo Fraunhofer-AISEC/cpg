@@ -34,6 +34,28 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val fileExtensions = listOf("ll")
     override val namespaceDelimiter = "."
     override val frontend = LLVMIRLanguageFrontend::class.java
+    override val primitiveTypes: List<String>
+        get() =
+            listOf(
+                "byte",
+                "short",
+                "int",
+                "long",
+                "float",
+                "double",
+                "boolean",
+                "char",
+                "i1",
+                "i8",
+                "i32",
+                "i64",
+                "i128",
+                "half",
+                "bfloat",
+                "fp128",
+                "x86_fp80",
+                "ppc_fp128"
+            )
 
     override fun newFrontend(
         config: TranslationConfiguration,
