@@ -404,7 +404,8 @@ public class TypeParser {
     return typeBlocks;
   }
 
-  private static List<Type> getParameterList(String parameterList) {
+  private static List<Type> getParameterList(
+      String parameterList, Language<? extends LanguageFrontend> language) {
     if (parameterList.startsWith("(") && parameterList.endsWith(")")) {
       parameterList = parameterList.trim().substring(1, parameterList.trim().length() - 1);
     }
@@ -413,7 +414,7 @@ public class TypeParser {
     for (String parameter : parametersSplit) {
       // ignore void parameters
       if (parameter.length() > 0 && !parameter.trim().equals("void")) {
-        parameters.add(createFrom(parameter.trim(), true));
+        parameters.add(createFrom(parameter.trim(), true, language));
       }
     }
 
@@ -785,7 +786,7 @@ public class TypeParser {
 
     if (funcptr != null) {
       Type returnType = createFrom(typeName, false, language);
-      List<Type> parameterList = getParameterList(funcptr.group("args"));
+      List<Type> parameterList = getParameterList(funcptr.group("args"), language);
 
       return typeManager.registerType(
           new FunctionPointerType(qualifier, storageValue, parameterList, returnType, language));
