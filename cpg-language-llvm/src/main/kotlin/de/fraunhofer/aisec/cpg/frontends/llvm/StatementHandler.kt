@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.annotations.FunctionReplacement
@@ -577,7 +576,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val cmpPred =
             when (LLVMGetFCmpPredicate(instr)) {
                 LLVMRealPredicateFalse -> {
-                    return newLiteral(false, TypeParser.createFrom("i1", true, language), "false")
+                    return newLiteral(false, parseType("i1", true), "false")
                 }
                 LLVMRealOEQ -> "=="
                 LLVMRealOGT -> ">"
@@ -612,7 +611,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     "!="
                 }
                 LLVMRealPredicateTrue -> {
-                    return newLiteral(true, TypeParser.createFrom("i1", true, language), "true")
+                    return newLiteral(true, parseType("i1", true), "true")
                 }
                 else -> "unknown"
             }
@@ -786,14 +785,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val ordering =
             newLiteral(
                 LLVMGetOrdering(instr),
-                TypeParser.createFrom("i32", true, language),
+                parseType("i32", true),
                 frontend.getCodeFromRawNode(instr)
             )
         callExpression.addArgument(ordering, "ordering")
         if (instrString?.contains("syncscope") == true) {
             val syncscope = instrString.split("\"")[1]
             callExpression.addArgument(
-                newLiteral(syncscope, TypeParser.createFrom("String", true, language), instrString),
+                newLiteral(syncscope, parseType("String", true), instrString),
                 "syncscope"
             )
         }
@@ -967,12 +966,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     }
                 val condition = newBinaryOperator(operatorCode, instrStr)
                 val castExprLhs = newCastExpression(frontend.getCodeFromRawNode(instr))
-                castExprLhs.castType = TypeParser.createFrom("u${ty.name}", true, language)
+                castExprLhs.castType = parseType("u${ty.name}", true)
                 castExprLhs.expression = ptrDeref
                 condition.lhs = castExprLhs
 
                 val castExprRhs = newCastExpression(frontend.getCodeFromRawNode(instr))
-                castExprRhs.castType = TypeParser.createFrom("u${ty.name}", true, language)
+                castExprRhs.castType = parseType("u${ty.name}", true)
                 castExprRhs.expression = value
                 condition.rhs = castExprRhs
 
@@ -1033,7 +1032,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val caseBBAddress = LLVMValueAsBasicBlock(LLVMGetOperand(instr, idx)).address()
             val caseStatement = newCaseStatement(nodeCode)
             caseStatement.caseExpression =
-                newLiteral(caseBBAddress, TypeParser.createFrom("i64", true, language), nodeCode)
+                newLiteral(caseBBAddress, parseType("i64", true), nodeCode)
             caseStatements.addStatement(caseStatement)
 
             // Get the label of the goto statement.
@@ -1234,11 +1233,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val except =
             newVariableDeclaration(
                 exceptionName,
-                TypeParser.createFrom(
-                    catchType,
-                    false,
-                    language
-                ), // TODO: This doesn't work for multiple types to catch
+                parseType(catchType, false), // TODO: This doesn't work for multiple types to catch
                 frontend.getCodeFromRawNode(instr),
                 false,
                 frontend.language
@@ -1341,7 +1336,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     val arrayExpr = newArraySubscriptionExpression(instrStr)
                     arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 0)
                     arrayExpr.subscriptExpression =
-                        newLiteral(idxInt, TypeParser.createFrom("i32", true, language), instrStr)
+                        newLiteral(idxInt, parseType("i32", true), instrStr)
                     initializers += arrayExpr
                 }
             } else if (idxInt < array1Length + array2Length) {
@@ -1353,11 +1348,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     val arrayExpr = newArraySubscriptionExpression(instrStr)
                     arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 1)
                     arrayExpr.subscriptExpression =
-                        newLiteral(
-                            idxInt - array1Length,
-                            TypeParser.createFrom("i32", true, language),
-                            instrStr
-                        )
+                        newLiteral(idxInt - array1Length, parseType("i32", true), instrStr)
                     initializers += arrayExpr
                 }
             } else {
@@ -1593,13 +1584,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             if (unsigned) {
                 val op1Type = "u${op1.type.name}"
                 val castExprLhs = newCastExpression(frontend.getCodeFromRawNode(instr))
-                castExprLhs.castType = TypeParser.createFrom(op1Type, true, language)
+                castExprLhs.castType = parseType(op1Type, true)
                 castExprLhs.expression = op1
                 binaryOperator.lhs = castExprLhs
 
                 val op2Type = "u${op2.type.name}"
                 val castExprRhs = newCastExpression(frontend.getCodeFromRawNode(instr))
-                castExprRhs.castType = TypeParser.createFrom(op2Type, true, language)
+                castExprRhs.castType = parseType(op2Type, true)
                 castExprRhs.expression = op2
                 binaryOperator.rhs = castExprRhs
             } else {

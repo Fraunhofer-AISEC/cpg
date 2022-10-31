@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -212,7 +213,7 @@ class LLVMIRLanguageFrontend(
                     record.toType() ?: UnknownType.getUnknownType(language)
                 }
                 else -> {
-                    TypeParser.createFrom(typeStr, false, language)
+                    parseType(typeStr, false)
                 }
             }
         alreadyVisited[typeRef] = res

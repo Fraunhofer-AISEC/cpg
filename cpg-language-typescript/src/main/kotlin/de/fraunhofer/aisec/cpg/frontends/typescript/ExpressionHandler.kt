@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 @ExperimentalTypeScript
@@ -169,11 +168,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 ?.replace("'", "")
                 ?: ""
 
-        return newLiteral(
-            value,
-            TypeParser.createFrom("String", false, language),
-            frontend.getCodeFromRawNode(node)
-        )
+        return newLiteral(value, parseType("String", false), frontend.getCodeFromRawNode(node))
     }
 
     private fun handleIdentifier(node: TypeScriptNode): Expression {

@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 @ExperimentalTypeScript
@@ -64,20 +64,20 @@ class TypeHandler(frontend: TypeScriptLanguageFrontend) :
     }
 
     private fun handleStringKeyword(): Type {
-        return TypeParser.createFrom("string", false, language)
+        return parseType("string", false)
     }
 
     private fun handleNumberKeyword(): Type {
-        return TypeParser.createFrom("number", false, language)
+        return parseType("number", false)
     }
 
     private fun handleAnyKeyword(): Type {
-        return TypeParser.createFrom("any", false, language)
+        return parseType("any", false)
     }
 
     private fun handleTypeReference(node: TypeScriptNode): Type {
         node.firstChild("Identifier")?.let {
-            return TypeParser.createFrom(this.frontend.getIdentifierName(node), false, language)
+            return parseType(this.frontend.getIdentifierName(node), false)
         }
 
         return UnknownType.getUnknownType(language)
