@@ -25,12 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.passes;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationResult;
+import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.order.*;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -100,52 +101,23 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
     }
   }
 
-  @JsonIgnore @Nullable protected LanguageFrontend lang;
-
   protected @Nullable ScopeManager scopeManager;
   protected @Nullable TranslationConfiguration config;
-
-  /**
-   * @return May be null
-   */
-  @Nullable
-  public LanguageFrontend getLang() {
-    return lang;
-  }
 
   public String getName() {
     return name;
   }
 
-  /**
-   * Passes may need information about what source language they are parsing.
-   *
-   * @param lang May be null
-   */
-  public void setLang(@Nullable LanguageFrontend lang) {
-    this.lang = lang;
-    if (lang != null) {
-      this.scopeManager = lang.getScopeManager();
-      this.config = lang.getConfig();
-    } else {
-      this.scopeManager = null;
-      this.config = null;
-    }
-  }
-
   public abstract void cleanup();
 
   /**
-   * Specifies, whether this pass supports this particular language frontend. This defaults to
-   * <code>true</code> and needs to be overridden if a different behaviour is wanted.
+   * Specifies, whether this pass supports this particular language. This defaults to <code>true
+   * </code> and needs to be overridden if a different behaviour is wanted.
    *
-   * <p>Note: this is not yet used, since we do not have an easy way at the moment to find out which
-   * language frontend a result used.
-   *
-   * @param lang the language frontend
+   * @param lang the language
    * @return <code>true</code> by default
    */
-  public boolean supportsLanguageFrontend(LanguageFrontend lang) {
+  public boolean supportsLanguage(Language lang) {
     return true;
   }
 
@@ -176,22 +148,19 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
   }
 
   /**
-   * Check whether the current language matches the language required by [RequiredLanguage]
+   * Check if the pass requires a specific language frontend and if that frontend has been executed.
    *
    * @return true, if the pass does not require a specific language frontend or if it matches the
    *     [RequiredLanguage]
    */
-  public boolean runsWithCurrentFrontend() {
-    if (this.getClass().isAnnotationPresent(RequiredFrontend.class)) {
-      Class<? extends LanguageFrontend> frontend =
-          this.getClass().getAnnotation(RequiredFrontend.class).value();
-      if (this.lang != null) {
-        return this.lang.getClass() == frontend;
-      } else {
-        return false;
-      }
-    } else {
-      return true;
+  public boolean runsWithCurrentFrontend(Collection<LanguageFrontend> usedFrontends) {
+    if (!this.getClass().isAnnotationPresent(RequiredFrontend.class)) return true;
+
+    Class<? extends LanguageFrontend> requiredFrontend =
+        this.getClass().getAnnotation(RequiredFrontend.class).value();
+    for (LanguageFrontend used : usedFrontends) {
+      if (used.getClass() == requiredFrontend) return true;
     }
+    return false;
   }
 }

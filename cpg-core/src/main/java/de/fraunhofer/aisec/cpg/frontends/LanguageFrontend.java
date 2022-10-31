@@ -30,23 +30,19 @@ import de.fraunhofer.aisec.cpg.graph.CodeAndLocationProvider;
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.util.*;
-import java.util.Map.Entry;
-import java.util.function.BiConsumer;
-import java.util.function.BiPredicate;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class LanguageFrontend implements CodeAndLocationProvider, LanguageProvider {
+public abstract class LanguageFrontend extends ProcessedListener
+    implements CodeAndLocationProvider, LanguageProvider {
 
   // Allow non-Java frontends to access the logger (i.e. jep)
   public static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
@@ -57,21 +53,6 @@ public abstract class LanguageFrontend implements CodeAndLocationProvider, Langu
 
   protected ScopeManager scopeManager;
 
-  protected List<Class<?>> interestingStatements =
-      List.of(GotoStatement.class, LabelStatement.class);
-
-  /**
-   * Two data structures used to associate Objects input to a pass to results of a pass, e.g.
-   * Javaparser AST-Nodes to CPG-Nodes. The "Listeners" in processedListener are called after the
-   * node they are saved under get an entry in processedMapping. THis combination allows to keep the
-   * information on which AST-Node build which CPG-Node and operate with these associations once
-   * they exist, important to resolve connections between labels and label usages.
-   */
-  protected Map<Object, BiConsumer<Object, Object>> objectListeners = new HashMap<>();
-
-  protected Map<BiPredicate<Object, Object>, BiConsumer<Object, Object>> predicateListeners =
-      new HashMap<>();
-  protected Map<Object, Object> processedMapping = new HashMap<>();
   private final String namespaceDelimiter;
   protected TranslationUnitDeclaration currentTU = null;
 
@@ -87,64 +68,6 @@ public abstract class LanguageFrontend implements CodeAndLocationProvider, Langu
     this.namespaceDelimiter = namespaceDelimiter;
     this.scopeManager = scopeManager;
     this.scopeManager.setLang(this);
-  }
-
-  public void process(Object from, Object to) {
-    if (interestingStatements.stream().anyMatch(c -> c.isInstance(from) || c.isInstance(to))) {
-      processedMapping.put(from, to);
-    }
-    BiConsumer<Object, Object> listener = objectListeners.get(from);
-    if (listener != null) {
-      listener.accept(from, to);
-      // Delete line if Node should be processed multiple times and should again invoke the
-      // listener, e.g. refinement.
-      objectListeners.remove(from);
-    }
-    // Iterate over existing predicate based listeners, if the predicate matches the
-    // listener/handler is executed on the new object.
-    Map<BiPredicate<Object, Object>, BiConsumer<Object, Object>> newPredicateListeners =
-        new HashMap<>();
-    for (Map.Entry<BiPredicate<Object, Object>, BiConsumer<Object, Object>> pListener :
-        predicateListeners.entrySet()) {
-      if (pListener.getKey().test(from, to)) {
-        pListener.getValue().accept(from, to);
-      } else {
-        // Delete line if Node should be processed multiple times and should again invoke the
-        // listener, e.g. refinement.
-        newPredicateListeners.put(pListener.getKey(), pListener.getValue());
-      }
-    }
-    predicateListeners = newPredicateListeners;
-  }
-
-  public void registerObjectListener(Object from, BiConsumer<Object, Object> biConsumer) {
-    if (processedMapping.containsKey(from)) {
-      biConsumer.accept(from, processedMapping.get(from));
-    }
-    objectListeners.put(from, biConsumer);
-  }
-
-  public void registerPredicateListener(
-      BiPredicate<Object, Object> predicate, BiConsumer<Object, Object> biConsumer) {
-    List<Entry<Object, Object>> matchingEntries = new ArrayList<>();
-    for (Map.Entry<Object, Object> mapping : processedMapping.entrySet()) {
-      if (predicate.test(mapping.getKey(), mapping.getValue())) {
-        matchingEntries.add(mapping);
-      }
-    }
-
-    if (!matchingEntries.isEmpty()) {
-      for (Map.Entry<Object, Object> match : matchingEntries) {
-        biConsumer.accept(match.getKey(), match.getValue());
-      }
-    }
-    predicateListeners.put(predicate, biConsumer);
-  }
-
-  public void clearProcessed() {
-    this.objectListeners.clear();
-    this.predicateListeners.clear();
-    this.processedMapping.clear();
   }
 
   public List<TranslationUnitDeclaration> parseAll() throws TranslationException {

@@ -79,13 +79,8 @@ open class CallResolver : SymbolResolverPass() {
     }
 
     override fun accept(translationResult: TranslationResult) {
-        if (lang == null) {
-            log.error("No language frontend specified. Can't resolve anything.")
-            return
-        }
-
-        scopeManager = lang!!.scopeManager
-        config = lang!!.config
+        scopeManager = translationResult.scopeManager
+        config = translationResult.config
 
         walker = ScopedWalker(scopeManager)
         walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }

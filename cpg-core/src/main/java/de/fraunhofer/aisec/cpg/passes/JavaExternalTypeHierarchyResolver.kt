@@ -26,11 +26,16 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import com.github.javaparser.resolution.UnsolvedSymbolException
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 import org.slf4j.LoggerFactory
@@ -39,7 +44,31 @@ import org.slf4j.LoggerFactory
 @RequiredFrontend(JavaLanguageFrontend::class)
 class JavaExternalTypeHierarchyResolver : Pass() {
     override fun accept(translationResult: TranslationResult) {
-        val resolver = (lang as? JavaLanguageFrontend)?.nativeTypeResolver ?: return
+        // TODO: We have to fix this! Also, the tr can have multiple languages, so we may need a
+        // type for this.
+        if (translationResult.language !is JavaLanguage) return
+
+        val resolver = CombinedTypeSolver()
+
+        resolver.add(ReflectionTypeSolver())
+        var root = translationResult.config.topLevel
+        if (root == null && translationResult.config.softwareComponents.size == 1) {
+            root =
+                CommonPath.commonPath(
+                    translationResult.config.softwareComponents[
+                            translationResult.config.softwareComponents.keys.first()]
+                )
+        }
+        if (root == null) {
+            log.warn(
+                "Could not determine source root for {}",
+                translationResult.config.softwareComponents
+            )
+        } else {
+            log.info("Source file root used for type solver: {}", root)
+            resolver.add(JavaParserTypeSolver(root))
+        }
+
         val tm = TypeManager.getInstance()
 
         // Iterate over all known types and add their (direct) supertypes.

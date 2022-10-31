@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
@@ -43,12 +42,6 @@ import java.util.regex.Pattern
 open class ImportResolver : Pass() {
     protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
-
-    override fun getLang(): LanguageFrontend? {
-        return null
-    }
-
-    override fun setLang(lang: LanguageFrontend?) {}
 
     override fun cleanup() {
         records.clear()

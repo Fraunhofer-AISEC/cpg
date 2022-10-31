@@ -71,6 +71,7 @@ private constructor(
      */
     fun analyze(): CompletableFuture<TranslationResult> {
         val result = TranslationResult(this, ScopeManager())
+        result.language = AnyLanguage
 
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
         return CompletableFuture.supplyAsync {
@@ -90,14 +91,11 @@ private constructor(
                 frontendsNeedCleanup = runFrontends(result, config)
                 bench.addMeasurement()
 
-                // TODO: Find a way to identify the right language during the execution of a pass
-                // (and set the lang to the scope manager)
-
                 // Apply passes
                 for (pass in config.registeredPasses) {
                     passesNeedCleanup.add(pass)
                     bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                    if (pass.runsWithCurrentFrontend()) {
+                    if (pass.runsWithCurrentFrontend(frontendsNeedCleanup)) {
                         pass.accept(result)
                     }
                     bench.addMeasurement()
@@ -326,11 +324,6 @@ private constructor(
                 mutableMapOf<String, String>()
             } as MutableMap<String, String>
         sfToFe[sourceLocation!!.name] = f.javaClass.simpleName
-
-        // Set frontend so passes know what language they are working on.
-        for (pass in config.registeredPasses) {
-            pass.lang = f
-        }
     }
 
     @Throws(TranslationException::class)
@@ -410,5 +403,21 @@ private constructor(
         fun builder(): Builder {
             return Builder()
         }
+    }
+}
+
+object AnyLanguage : Language<LanguageFrontend>() {
+    override val fileExtensions: List<String>
+        get() = TODO("Not yet implemented")
+    override val namespaceDelimiter: String
+        get() = TODO("Not yet implemented")
+    override val frontend: Class<out LanguageFrontend>
+        get() = TODO("Not yet implemented")
+
+    override fun newFrontend(
+        config: TranslationConfiguration,
+        scopeManager: ScopeManager
+    ): LanguageFrontend {
+        TODO("Not yet implemented")
     }
 }

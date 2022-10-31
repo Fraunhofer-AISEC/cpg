@@ -63,13 +63,8 @@ import org.slf4j.LoggerFactory
 open class VariableUsageResolver : SymbolResolverPass() {
 
     override fun accept(result: TranslationResult) {
-        if (lang == null) {
-            log.error("No language frontend specified. Can't resolve anything.")
-            return
-        }
-
-        scopeManager = lang!!.scopeManager
-        config = lang!!.config
+        scopeManager = result.scopeManager
+        config = result.config
 
         walker = ScopedWalker(scopeManager)
         for (tu in result.translationUnits) {
