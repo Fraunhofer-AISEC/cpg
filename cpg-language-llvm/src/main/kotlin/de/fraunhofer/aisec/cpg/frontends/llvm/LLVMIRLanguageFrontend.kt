@@ -212,7 +212,7 @@ class LLVMIRLanguageFrontend(
                     record.toType() ?: UnknownType.getUnknownType(language)
                 }
                 else -> {
-                    TypeParser.createFrom(typeStr, false)
+                    TypeParser.createFrom(typeStr, false, language)
                 }
             }
         alreadyVisited[typeRef] = res

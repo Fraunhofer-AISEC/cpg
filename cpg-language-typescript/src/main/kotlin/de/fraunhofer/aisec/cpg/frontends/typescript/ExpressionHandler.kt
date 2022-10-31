@@ -171,7 +171,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         return newLiteral(
             value,
-            TypeParser.createFrom("String", false),
+            TypeParser.createFrom("String", false, language),
             frontend.getCodeFromRawNode(node)
         )
     }
