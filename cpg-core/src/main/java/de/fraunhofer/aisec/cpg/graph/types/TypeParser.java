@@ -618,8 +618,9 @@ public class TypeParser {
    * @return the type
    */
   @NotNull
-  public static Type createIgnoringAlias(@NotNull String string) {
-    return createFrom(string, false);
+  public static Type createIgnoringAlias(
+      @NotNull String string, @NotNull Language<? extends LanguageFrontend> language) {
+    return createFrom(string, false, language);
   }
 
   @NotNull
@@ -839,7 +840,7 @@ public class TypeParser {
     if (templateType != null) {
       return templateType;
     }
-    Type createdType = createFrom(type, resolveAlias);
+    Type createdType = createFrom(type, resolveAlias, lang.getLanguage());
 
     if (createdType instanceof SecondOrderType) {
       templateType = searchForTemplateTypes(createdType.getRoot().getName(), lang);

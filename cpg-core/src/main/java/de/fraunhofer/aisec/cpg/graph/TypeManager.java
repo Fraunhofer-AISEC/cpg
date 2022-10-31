@@ -497,7 +497,9 @@ public class TypeManager implements LanguageProvider {
 
     Optional<Ancestor> lca =
         commonAncestors.stream().max(Comparator.comparingInt(Ancestor::getDepth));
-    Optional<Type> commonType = lca.map(a -> TypeParser.createFrom(a.getRecord().getName(), true));
+    Optional<Type> commonType =
+        lca.map(
+            a -> TypeParser.createFrom(a.getRecord().getName(), true, a.getRecord().getLanguage()));
 
     Type finalType;
     if (commonType.isPresent()) {
@@ -591,7 +593,8 @@ public class TypeManager implements LanguageProvider {
   private Type getTargetType(Type currTarget, String alias) {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
-      return TypeParser.createFrom(currTarget.getName() + " " + alias, true);
+      return TypeParser.createFrom(
+          currTarget.getName() + " " + alias, true, currTarget.getLanguage());
     } else if (alias.endsWith("]")) {
       // array type
       return currTarget.reference(PointerType.PointerOrigin.ARRAY);
@@ -607,20 +610,20 @@ public class TypeManager implements LanguageProvider {
     }
   }
 
-  private Type getAlias(String alias) {
+  private Type getAlias(String alias, @NotNull Language<? extends LanguageFrontend> language) {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
       Matcher matcher = funPointerPattern.matcher(alias);
       if (matcher.find()) {
-        return TypeParser.createIgnoringAlias(matcher.group("alias"));
+        return TypeParser.createIgnoringAlias(matcher.group("alias"), language);
       } else {
         log.error("Could not find alias name in function pointer typedef: {}", alias);
-        return TypeParser.createIgnoringAlias(alias);
+        return TypeParser.createIgnoringAlias(alias, language);
       }
     } else {
       alias = alias.split("\\[")[0];
       alias = alias.replace("*", "");
-      return TypeParser.createIgnoringAlias(alias);
+      return TypeParser.createIgnoringAlias(alias, language);
     }
   }
 
@@ -639,7 +642,12 @@ public class TypeManager implements LanguageProvider {
       LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
     String cleanedPart = Util.removeRedundantParentheses(aliasString);
     Type currTarget = getTargetType(target, cleanedPart);
-    Type alias = getAlias(cleanedPart);
+    Type alias;
+    if (frontend == null) {
+      alias = getAlias(cleanedPart, getLanguage());
+    } else {
+      alias = getAlias(cleanedPart, frontend.getLanguage());
+    }
 
     if (alias instanceof SecondOrderType) {
       Type chain = alias.duplicate();

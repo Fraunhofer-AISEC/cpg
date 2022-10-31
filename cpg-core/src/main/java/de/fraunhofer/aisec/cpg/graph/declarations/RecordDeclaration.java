@@ -378,7 +378,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
    * @return the type
    */
   public Type toType() {
-    var type = TypeParser.createFrom(this.getName(), false);
+    var type = TypeParser.createFrom(this.getName(), false, language);
 
     if (type instanceof ObjectType) {
       // as a shortcut, directly set the record declaration. This will be otherwise done
