@@ -34,9 +34,9 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val fileExtensions = listOf("ll")
     override val namespaceDelimiter = "."
     override val frontend = LLVMIRLanguageFrontend::class.java
-    override val primitiveTypes: List<String>
+    override val primitiveTypes: Set<String>
         get() =
-            listOf(
+            setOf(
                 "byte",
                 "short",
                 "int",

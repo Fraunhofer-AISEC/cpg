@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -253,7 +252,7 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
             fancyWord("new", node, list, styles.keyword)
 
             // check for primitive types
-            for (primitive in TypeParser.PRIMITIVES) {
+            for (primitive in node.language.primitiveTypes) {
                 fancyWord(primitive, node, list, styles.keyword)
             }
 
@@ -294,7 +293,7 @@ private fun fancyType(
     node: HasType,
     list: MutableList<Pair<AttributedStyle, Region>>
 ) {
-    val types = TypeParser.PRIMITIVES.toMutableSet()
+    val types = outer.language.primitiveTypes.toMutableSet()
     types += node.type.name
 
     // check for primitive types
