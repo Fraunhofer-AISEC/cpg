@@ -46,7 +46,7 @@ class CLanguage :
     override val qualifiers: List<String>
         get() = listOf("const", "volatile", "restrict", "atomic")
     override val elaboratedTypeSpecifier: List<String>
-        get() = listOf("class", "struct", "union", "enum")
+        get() = listOf("struct", "union", "enum")
 
     override fun newFrontend(
         config: TranslationConfiguration,

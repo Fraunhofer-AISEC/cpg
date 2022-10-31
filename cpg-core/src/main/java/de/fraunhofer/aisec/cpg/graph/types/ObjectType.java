@@ -148,6 +148,10 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
     return new PointerType(this, pointerOrigin);
   }
 
+  public PointerType reference() {
+    return new PointerType(this, PointerType.PointerOrigin.POINTER);
+  }
+
   /**
    * @return UnknownType, as we cannot infer any type information when dereferencing an ObjectType,
    *     as it is just some memory and its interpretation is unknown

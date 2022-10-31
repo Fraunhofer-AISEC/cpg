@@ -397,14 +397,14 @@ class CXXLanguageFrontend(
                 1 -> // a variable
                 newDeclaredReferenceExpression(code, UnknownType.getUnknownType(language), code)
                 2 -> // an integer
-                newLiteral(code.toInt(), TypeParser.createFrom("int", true), code)
+                newLiteral(code.toInt(), newPrimitiveType("int"), code)
                 130 -> // a string
                 newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
-                        TypeParser.createFrom("const char*", false),
+                        newPrimitiveType("char").const().reference(),
                         code
                     )
-                else -> newLiteral(code, TypeParser.createFrom("const char*", false), code)
+                else -> newLiteral(code, newPrimitiveType("char").const().reference(), code)
             }
         return newAnnotationMember("", expression, code)
     }

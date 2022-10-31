@@ -868,6 +868,7 @@ public class TypeParser {
    *     UnknownType is returned
    */
   @NotNull
+  @Deprecated
   public static Type createFrom(@NotNull String type, boolean resolveAlias) {
     Language<? extends LanguageFrontend> language = getLanguage();
     try {
