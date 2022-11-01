@@ -26,7 +26,7 @@ from ._misc import NOT_IMPLEMENTED_MSG
 from ._misc import handle_operator_code
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
-from de.fraunhofer.aisec.cpg.graph.types import TypeParser
+from de.fraunhofer.aisec.cpg.graph import NodeBuilderKt
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 import ast
 
@@ -214,7 +214,7 @@ def handle_expression_impl(self, expr):
                 call = ExpressionBuilderKt.newConstructExpression(
                     self.frontend, self.get_src_code(expr))
                 call.setName(expr.func.id)
-                tpe = TypeParser.createFrom(record.getName(), False)
+                tpe = NodeBuilderKt.parseType(self.frontend, record.getName(), False)
                 call.setType(tpe)
             else:
                 # TODO int, float, ...
@@ -222,7 +222,7 @@ def handle_expression_impl(self, expr):
                     cast = ExpressionBuilderKt.newCastExpression(
                         self.frontend, self.get_src_code(expr))
                     cast.setCastType(
-                        TypeParser.createFrom("str", False))
+                        NodeBuilderKt.parseType(self.frontend, "str", False))
                     cast.setExpression(
                         self.handle_expression(expr.args[0]))
                     return cast
@@ -254,19 +254,19 @@ def handle_expression_impl(self, expr):
         return r
     elif isinstance(expr, ast.Constant):
         if isinstance(expr.value, type(None)):
-            tpe = TypeParser.createFrom("None", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "None", False)
         elif isinstance(expr.value, bool):
-            tpe = TypeParser.createFrom("bool", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "bool", False)
         elif isinstance(expr.value, int):
-            tpe = TypeParser.createFrom("int", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "int", False)
         elif isinstance(expr.value, float):
-            tpe = TypeParser.createFrom("float", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "float", False)
         elif isinstance(expr.value, complex):
-            tpe = TypeParser.createFrom("complex", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "complex", False)
         elif isinstance(expr.value, str):
-            tpe = TypeParser.createFrom("str", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "str", False)
         elif isinstance(expr.value, bytes):
-            tpe = TypeParser.createFrom("byte[]", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "byte[]", False)
         else:
             self.log_with_loc(
                 "Found unexpected type - using a dummy: %s" %

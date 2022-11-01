@@ -26,10 +26,10 @@ from ._misc import NOT_IMPLEMENTED_MSG
 from ._misc import handle_operator_code
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import DeclarationBuilderKt
+from de.fraunhofer.aisec.cpg.graph import NodeBuilderKt
 from de.fraunhofer.aisec.cpg.graph import StatementBuilderKt
 from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
-from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 import ast
 
@@ -66,7 +66,7 @@ def handle_statement_impl(self, stmt):
                     (type(base)), loglevel="ERROR")
             else:
                 tname = "%s" % (base.id)
-                t = TypeParser.createFrom(tname, True)
+                t = NodeBuilderKt.parseType(self.frontend, tname, True)
                 bases.append(t)
         cls.setSuperClasses(bases)
         for keyword in stmt.keywords:
@@ -303,7 +303,7 @@ def handle_function_or_method(self, node, record=None):
     if record is not None:
         if len(node.args.args) > 0:
             recv_node = node.args.args[0]
-            tpe = TypeParser.createFrom(record.getName(), False)
+            tpe = NodeBuilderKt.parseType(self.frontend, record.getName(), False)
             recv = DeclarationBuilderKt.newVariableDeclaration(
                 self.frontend,
                 recv_node.arg, tpe, self.get_src_code(recv_node),
@@ -398,7 +398,7 @@ def handle_function_or_method(self, node, record=None):
 def handle_argument(self, arg: ast.arg):
     self.log_with_loc("Handling an argument: %s" % (ast.dump(arg)))
     if arg.annotation is not None:
-        tpe = TypeParser.createFrom(arg.annotation.id, False)
+        tpe = NodeBuilderKt.parseType(self.frontend, arg.annotation.id, False)
     else:
         tpe = UnknownType.getUnknownType()
     # TODO variadic
