@@ -53,19 +53,14 @@ public abstract class LanguageFrontend extends ProcessedListener
 
   protected ScopeManager scopeManager;
 
-  private final String namespaceDelimiter;
   protected TranslationUnitDeclaration currentTU = null;
-
-  // Todo Moving this to scope manager and add listeners and processedMappings to specified scopes.
 
   public LanguageFrontend(
       @NotNull Language<? extends LanguageFrontend> language,
       @NotNull TranslationConfiguration config,
-      ScopeManager scopeManager,
-      String namespaceDelimiter) {
+      ScopeManager scopeManager) {
     this.language = language;
     this.config = config;
-    this.namespaceDelimiter = namespaceDelimiter;
     this.scopeManager = scopeManager;
     this.scopeManager.setLang(this);
   }
@@ -225,10 +220,6 @@ public abstract class LanguageFrontend extends ProcessedListener
     clearProcessed();
   }
 
-  public String getNamespaceDelimiter() {
-    return namespaceDelimiter;
-  }
-
   public abstract <S, T> void setComment(S s, T ctx);
 
   public TranslationConfiguration getConfig() {
@@ -238,5 +229,14 @@ public abstract class LanguageFrontend extends ProcessedListener
   @NotNull
   public Language<? extends LanguageFrontend> getLanguage() {
     return this.language;
+  }
+
+  public String getCurrentNamePrefixWithDelimiter() {
+    String prefix = this.scopeManager.getCurrentNamePrefix();
+    if (prefix.isEmpty()) {
+      return "";
+    } else {
+      return prefix + this.language.getNamespaceDelimiter();
+    }
   }
 }

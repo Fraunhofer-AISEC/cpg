@@ -71,7 +71,7 @@ open class JavaLanguageFrontend(
     language: Language<JavaLanguageFrontend>,
     config: TranslationConfiguration,
     scopeManager: ScopeManager
-) : LanguageFrontend(language, config, scopeManager, ".") {
+) : LanguageFrontend(language, config, scopeManager) {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
@@ -371,7 +371,7 @@ open class JavaLanguageFrontend(
             }
                 ?: return simpleName
         // If scope is null we are in a default package
-        return theScope.scopedName + namespaceDelimiter + simpleName
+        return theScope.scopedName + language.namespaceDelimiter + simpleName
     }
 
     private fun getTypeFromImportIfPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {
@@ -401,7 +401,7 @@ open class JavaLanguageFrontend(
             // as our current translation unit
             val o = context!!.packageDeclaration
             if (o.isPresent) {
-                name = o.get().nameAsString + namespaceDelimiter + name
+                name = o.get().nameAsString + language.namespaceDelimiter + name
             }
             val returnType = parseType(name, true)
             returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED

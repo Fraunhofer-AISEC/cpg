@@ -62,7 +62,7 @@ class TypeScriptLanguageFrontend(
     language: Language<TypeScriptLanguageFrontend>,
     config: TranslationConfiguration,
     scopeManager: ScopeManager?
-) : LanguageFrontend(language, config, scopeManager, ".") {
+) : LanguageFrontend(language, config, scopeManager) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)

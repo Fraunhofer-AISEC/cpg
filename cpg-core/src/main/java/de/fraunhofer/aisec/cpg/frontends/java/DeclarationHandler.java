@@ -476,7 +476,7 @@ public class DeclarationHandler
 
   private String getAbsoluteName(String name) {
     String prefix = frontend.getScopeManager().getCurrentNamePrefix();
-    name = (prefix.length() > 0 ? prefix + frontend.getNamespaceDelimiter() : "") + name;
+    name = (prefix.length() > 0 ? prefix + getLanguage().getNamespaceDelimiter() : "") + name;
     return name;
   }
 }

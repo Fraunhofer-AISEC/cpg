@@ -42,18 +42,23 @@ abstract class Language<T : LanguageFrontend> : Node() {
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
 
+    /** The namespace delimiter used by the language. Often, this is "." */
     abstract val namespaceDelimiter: String
 
+    /** The class of the frontend which is used to parse files of this language. */
     abstract val frontend: Class<out T>
 
+    /** The primitive types of this language. */
     open val primitiveTypes: Set<String>
         get() = setOf("byte", "short", "int", "long", "float", "double", "boolean", "char")
 
+    /** Creates a new [LanguageFrontend] object to parse the language. */
     abstract fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager = ScopeManager()
     ): T
 
+    /** Returns true if the [file] can be handled by the frontend of this language. */
     fun handlesFile(file: File): Boolean {
         return file.extension in fileExtensions
     }

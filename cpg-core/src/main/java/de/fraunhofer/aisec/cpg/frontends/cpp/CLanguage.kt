@@ -36,7 +36,6 @@ class CLanguage :
     HasFunctionPointers,
     HasQualifier,
     HasElaboratedTypeSpecifier {
-    // TODO: Shouldn't there also be the "h" ending?
     override val fileExtensions: List<String>
         get() = listOf("c", "h")
     override val namespaceDelimiter: String

@@ -178,10 +178,12 @@ public abstract class Handler<S, T, L extends LanguageFrontend>
     return null;
   }
 
+  /** Returns the frontend which used this handler. */
   public @NotNull L getFrontend() {
     return frontend;
   }
 
+  /** Returns the language which this handler is parsing. */
   public @NotNull Language<L> getLanguage() {
     return (Language<L>) frontend.getLanguage();
   }

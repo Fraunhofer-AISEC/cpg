@@ -78,7 +78,7 @@ class CXXLanguageFrontend(
     language: Language<CXXLanguageFrontend>,
     config: TranslationConfiguration,
     scopeManager: ScopeManager?
-) : LanguageFrontend(language, config, scopeManager, "::") {
+) : LanguageFrontend(language, config, scopeManager) {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for

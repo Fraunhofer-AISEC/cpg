@@ -106,14 +106,6 @@ class ScopeManager {
             val namedScope = this.firstScopeIsInstanceOrNull<NameScope>()
             return if (namedScope is NameScope) namedScope.namePrefix else ""
         }
-    val currentNamePrefixWithDelimiter: String
-        get() {
-            var namePrefix = currentNamePrefix
-            if (namePrefix.isNotEmpty()) {
-                namePrefix += lang!!.namespaceDelimiter
-            }
-            return namePrefix
-        }
 
     init {
         pushScope(GlobalScope())
@@ -246,9 +238,17 @@ class ScopeManager {
                     is IfStatement -> ValueDeclarationScope(nodeToScope)
                     is CatchClause -> ValueDeclarationScope(nodeToScope)
                     is RecordDeclaration ->
-                        RecordScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
+                        RecordScope(
+                            nodeToScope,
+                            currentNamePrefix,
+                            nodeToScope.language!!.namespaceDelimiter
+                        )
                     is TemplateDeclaration ->
-                        TemplateScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
+                        TemplateScope(
+                            nodeToScope,
+                            currentNamePrefix,
+                            nodeToScope.language!!.namespaceDelimiter
+                        )
                     is TryStatement -> TryScope(nodeToScope)
                     is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
                     else -> {
@@ -303,7 +303,7 @@ class ScopeManager {
             // does not need to push a new scope
             null
         } else {
-            NameScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
+            NameScope(nodeToScope, currentNamePrefix, nodeToScope.language!!.namespaceDelimiter)
         }
     }
 
@@ -666,10 +666,12 @@ class ScopeManager {
         val fqn = call.fqn
 
         // First, we need to check, whether we have some kind of scoping.
-        if (lang != null && fqn != null && fqn.contains(lang!!.namespaceDelimiter)) {
+        if (
+            call.language != null && fqn != null && fqn.contains(call.language!!.namespaceDelimiter)
+        ) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = fqn.substring(0, fqn.lastIndexOf(lang!!.namespaceDelimiter))
+            val scopeName = fqn.substring(0, fqn.lastIndexOf(call.language!!.namespaceDelimiter))
 
             // TODO: proper scope selection
 

@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 /** The LLVM IR language. */
 class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val fileExtensions = listOf("ll")
-    override val namespaceDelimiter = "."
+    override val namespaceDelimiter = "::"
     override val frontend = LLVMIRLanguageFrontend::class.java
     override val primitiveTypes: Set<String>
         get() =

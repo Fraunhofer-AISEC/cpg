@@ -42,7 +42,7 @@ class GoLanguageFrontend(
     language: Language<GoLanguageFrontend>,
     config: TranslationConfiguration,
     scopeManager: ScopeManager?
-) : LanguageFrontend(language, config, scopeManager, ".") {
+) : LanguageFrontend(language, config, scopeManager) {
     companion object {
         @kotlin.jvm.JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
 

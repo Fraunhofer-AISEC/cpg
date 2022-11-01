@@ -88,7 +88,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
         // Build a FQN out of the current scope prefix
-        val fqn = frontend.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString()
+        val fqn = frontend.currentNamePrefixWithDelimiter + ctx.name.toString()
         val declaration = newNamespaceDeclaration(fqn, frontend.getCodeFromRawNode(ctx))
 
         frontend.scopeManager.addDeclaration(declaration)

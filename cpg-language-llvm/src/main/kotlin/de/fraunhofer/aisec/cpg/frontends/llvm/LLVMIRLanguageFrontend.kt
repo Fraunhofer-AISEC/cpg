@@ -55,7 +55,7 @@ class LLVMIRLanguageFrontend(
     language: Language<LLVMIRLanguageFrontend>,
     config: TranslationConfiguration,
     scopeManager: ScopeManager?
-) : LanguageFrontend(language, config, scopeManager, "::") {
+) : LanguageFrontend(language, config, scopeManager) {
 
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)

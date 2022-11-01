@@ -71,7 +71,6 @@ private constructor(
      */
     fun analyze(): CompletableFuture<TranslationResult> {
         val result = TranslationResult(this, ScopeManager())
-        result.language = AnyLanguage
 
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
         return CompletableFuture.supplyAsync {
@@ -82,20 +81,20 @@ private constructor(
                     false,
                     result
                 )
-            val passesNeedCleanup = mutableSetOf<Pass>()
-            var frontendsNeedCleanup: Set<LanguageFrontend>? = null
+            val executedPasses = mutableSetOf<Pass>()
+            var executedFrontends: Set<LanguageFrontend>? = null
 
             try {
                 // Parse Java/C/CPP files
                 var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
-                frontendsNeedCleanup = runFrontends(result, config)
+                executedFrontends = runFrontends(result, config)
                 bench.addMeasurement()
 
                 // Apply passes
                 for (pass in config.registeredPasses) {
-                    passesNeedCleanup.add(pass)
                     bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                    if (pass.runsWithCurrentFrontend(frontendsNeedCleanup)) {
+                    if (pass.runsWithCurrentFrontend(executedFrontends)) {
+                        executedPasses.add(pass)
                         pass.accept(result)
                     }
                     bench.addMeasurement()
@@ -108,13 +107,13 @@ private constructor(
             } finally {
                 outerBench.addMeasurement()
                 if (!config.disableCleanup) {
-                    log.debug("Cleaning up {} Passes", passesNeedCleanup.size)
+                    log.debug("Cleaning up {} Passes", executedPasses.size)
 
-                    passesNeedCleanup.forEach { it.cleanup() }
+                    executedPasses.forEach { it.cleanup() }
 
-                    log.debug("Cleaning up {} Frontends", frontendsNeedCleanup?.size)
+                    log.debug("Cleaning up {} Frontends", executedFrontends?.size)
 
-                    frontendsNeedCleanup?.forEach { it.cleanup() }
+                    executedFrontends?.forEach { it.cleanup() }
                     TypeManager.getInstance().cleanup()
                 }
             }
@@ -403,21 +402,5 @@ private constructor(
         fun builder(): Builder {
             return Builder()
         }
-    }
-}
-
-object AnyLanguage : Language<LanguageFrontend>() {
-    override val fileExtensions: List<String>
-        get() = TODO("Not yet implemented")
-    override val namespaceDelimiter: String
-        get() = TODO("Not yet implemented")
-    override val frontend: Class<out LanguageFrontend>
-        get() = TODO("Not yet implemented")
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager
-    ): LanguageFrontend {
-        TODO("Not yet implemented")
     }
 }

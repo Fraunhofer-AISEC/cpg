@@ -87,7 +87,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Check, if the name is qualified or if we are within a record scope
         return if (
             (frontend.scopeManager.currentScope is RecordScope ||
-                name.contains(frontend.namespaceDelimiter))
+                name.contains(language.namespaceDelimiter))
         ) {
             // If yes, treat this like a field declaration
             this.handleFieldDeclarator(ctx)
@@ -130,8 +130,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         val name = ctx.name.toString()
 
         val declaration =
-            if (name.contains(frontend.namespaceDelimiter)) {
-                val rr = name.split(frontend.namespaceDelimiter).toTypedArray()
+            if (name.contains(language.namespaceDelimiter)) {
+                val rr = name.split(language.namespaceDelimiter).toTypedArray()
                 val fieldName = rr[rr.size - 1]
                 newFieldDeclaration(
                     fieldName,
@@ -208,11 +208,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // check for function definitions that are really methods and constructors, i.e. if they
         // contain a scope operator
-        if (name.contains(frontend.namespaceDelimiter)) {
-            val rr = name.split(frontend.namespaceDelimiter).toTypedArray()
+        if (name.contains(language.namespaceDelimiter)) {
+            val rr = name.split(language.namespaceDelimiter).toTypedArray()
             val recordName =
                 java.lang.String.join(
-                    frontend.namespaceDelimiter,
+                    language.namespaceDelimiter,
                     listOf(*rr).subList(0, rr.size - 1)
                 )
             val methodName = rr[rr.size - 1]
@@ -440,7 +440,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         val recordDeclaration =
             newRecordDeclaration(
-                frontend.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString(),
+                frontend.currentNamePrefixWithDelimiter + ctx.name.toString(),
                 kind,
                 ctx.rawSignature,
             )
