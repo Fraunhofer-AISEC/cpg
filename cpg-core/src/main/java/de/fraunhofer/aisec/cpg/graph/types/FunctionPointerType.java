@@ -65,7 +65,7 @@ public class FunctionPointerType extends Type {
     super("", storage, qualifier);
     this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
     this.returnType = returnType;
-    this.language = language;
+    this.setLanguage(language);
   }
 
   public FunctionPointerType(
@@ -76,7 +76,7 @@ public class FunctionPointerType extends Type {
     super(type);
     this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
     this.returnType = returnType;
-    this.language = language;
+    this.setLanguage(language);
   }
 
   public List<PropertyEdge<Type>> getParametersPropertyEdge() {
@@ -104,7 +104,7 @@ public class FunctionPointerType extends Type {
   @Override
   public Type duplicate() {
     List<Type> copiedParameters = new ArrayList<>(unwrap(this.parameters));
-    return new FunctionPointerType(this, copiedParameters, this.returnType, this.language);
+    return new FunctionPointerType(this, copiedParameters, this.returnType, this.getLanguage());
   }
 
   @Override

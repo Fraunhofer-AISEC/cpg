@@ -36,12 +36,12 @@ public class ParameterizedType extends Type {
 
   public ParameterizedType(Type type) {
     super(type);
-    this.language = type.language;
+    this.setLanguage(type.getLanguage());
   }
 
   public ParameterizedType(String typeName, Language<? extends LanguageFrontend> language) {
     super(typeName);
-    this.language = language;
+    this.setLanguage(language);
   }
 
   @Override

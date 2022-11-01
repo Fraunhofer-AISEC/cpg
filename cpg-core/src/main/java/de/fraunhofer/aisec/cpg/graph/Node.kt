@@ -71,7 +71,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider {
 
     @field:Relationship(value = "Language", direction = "OUTGOING")
     @JsonBackReference
-    override lateinit var language: Language<out LanguageFrontend>
+    override var language: Language<out LanguageFrontend>? = null
 
     /** Optional comment of this node. */
     var comment: String? = null

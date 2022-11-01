@@ -129,6 +129,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
         parent: Node?,
         current: Node
     ) {
+        var language = current.language
+
         if (current !is DeclaredReferenceExpression || current is MemberExpression) return
         if (
             parent is MemberCallExpression &&
@@ -167,7 +169,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 recordDeclType.typeName in recordMap
         ) {
             // Maybe we are referring to a field instead of a local var
-            if (current.language.namespaceDelimiter in current.name) {
+            if (language != null && language.namespaceDelimiter in current.name) {
                 recordDeclType = getEnclosingTypeOf(current)
             }
             val field = resolveMember(recordDeclType, current)
@@ -178,7 +180,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         // TODO: we need to do proper scoping (and merge it with the code above), but for now
         // this just enables CXX static fields
-        if (refersTo == null && current.language.namespaceDelimiter in current.name) {
+        if (refersTo == null && language != null && language.namespaceDelimiter in current.name) {
             recordDeclType = getEnclosingTypeOf(current)
             val field = resolveMember(recordDeclType, current)
             if (field != null) {
@@ -201,21 +203,26 @@ open class VariableUsageResolver : SymbolResolverPass() {
      * and have the class)
      */
     private fun getEnclosingTypeOf(current: Node): Type {
-        val path =
-            listOf(
-                *current.name
-                    .split(Pattern.quote(current.language.namespaceDelimiter).toRegex())
-                    .dropLastWhile { it.isEmpty() }
-                    .toTypedArray()
-            )
-        return TypeParser.createFrom(
-            java.lang.String.join(
-                current.language.namespaceDelimiter,
-                path.subList(0, path.size - 1)
-            ),
-            true,
-            current.language
-        )
+        val language = current.language
+
+        // TODO(oxisto): This should use our new name system instead
+        if (language != null && language.namespaceDelimiter.isNotEmpty()) {
+            /*val path =
+                listOf(
+                    *current.name
+                        .split(Pattern.quote(language.namespaceDelimiter).toRegex())
+                        .dropLastWhile { it.isEmpty() }
+                        .toTypedArray()
+                )
+            return TypeParser.createFrom(
+                java.lang.String.join(language.namespaceDelimiter, path.subList(0, path.size - 1)),
+                true
+            )*/
+            val parentName = Util.getParentName(language, current.name)
+            return TypeParser.createFrom(parentName, true, language)
+        } else {
+            return UnknownType.getUnknownType()
+        }
     }
 
     private fun resolveFieldUsages(curClass: RecordDeclaration?, current: Node) {
@@ -323,7 +330,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             // this in the call resolver instead
             return null
         }
-        val simpleName = Util.getSimpleName(reference.language.namespaceDelimiter, reference.name)
+        val simpleName = Util.getSimpleName(reference.language, reference.name)
         var member: FieldDeclaration? = null
         if (containingClass !is UnknownType && containingClass.typeName in recordMap) {
             member =

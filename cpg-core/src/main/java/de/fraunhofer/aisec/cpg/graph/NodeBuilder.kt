@@ -53,7 +53,7 @@ interface MetadataProvider
  * each [Node], but also transformation steps, such as [Handler].
  */
 interface LanguageProvider : MetadataProvider {
-    val language: Language<out LanguageFrontend>
+    val language: Language<out LanguageFrontend>?
 }
 
 /**

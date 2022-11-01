@@ -144,11 +144,13 @@ abstract class SymbolResolverPass : Pass() {
      * there.
      */
     protected fun isSuperclassReference(reference: DeclaredReferenceExpression): Boolean {
-        return reference.language is HasSuperclasses &&
+        var language = reference.language
+
+        return language is HasSuperclasses &&
             reference.name.matches(
                 Regex(
                     "(?<class>.+" +
-                        Regex.escape(reference.language.namespaceDelimiter) +
+                        Regex.escape(language.namespaceDelimiter) +
                         ")?" +
                         (reference.language as HasSuperclasses).superclassKeyword
                 )

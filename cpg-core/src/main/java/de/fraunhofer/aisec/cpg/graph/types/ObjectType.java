@@ -96,7 +96,7 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;
-    this.language = language;
+    this.setLanguage(language);
   }
 
   public ObjectType(
@@ -106,15 +106,15 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
       boolean primitive,
       Language<? extends LanguageFrontend> language) {
     super(type);
-    this.language = language;
+    this.setLanguage(language);
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;
   }
 
-  public ObjectType(Language<? extends LanguageFrontend> language) {
+  /** Empty default constructor for use in Neo4J persistence. */
+  public ObjectType() {
     super();
-    this.language = language;
     this.generics = new ArrayList<>();
     this.modifier = Modifier.NOT_APPLICABLE;
     this.primitive = false;
@@ -158,14 +158,14 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
    */
   @Override
   public Type dereference() {
-    return UnknownType.getUnknownType(language);
+    return UnknownType.getUnknownType(getLanguage());
   }
 
   @Override
   public Type duplicate() {
     ObjectType newObject =
-        new ObjectType(this, this.getGenerics(), this.modifier, this.primitive, this.language);
-    newObject.setLanguage(this.language);
+        new ObjectType(this, this.getGenerics(), this.modifier, this.primitive, this.getLanguage());
+    newObject.setLanguage(this.getLanguage());
     return newObject;
   }
 
