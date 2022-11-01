@@ -214,7 +214,8 @@ def handle_expression_impl(self, expr):
                 call = ExpressionBuilderKt.newConstructExpression(
                     self.frontend, self.get_src_code(expr))
                 call.setName(expr.func.id)
-                tpe = NodeBuilderKt.parseType(self.frontend, record.getName(), False)
+                tpe = NodeBuilderKt.parseType(self.frontend, record.getName(),
+                                              False)
                 call.setType(tpe)
             else:
                 # TODO int, float, ...
@@ -222,7 +223,8 @@ def handle_expression_impl(self, expr):
                     cast = ExpressionBuilderKt.newCastExpression(
                         self.frontend, self.get_src_code(expr))
                     cast.setCastType(
-                        NodeBuilderKt.parseType(self.frontend, "str", False))
+                        NodeBuilderKt.parseType(self.frontend, "str",
+                                                False))
                     cast.setExpression(
                         self.handle_expression(expr.args[0]))
                     return cast
@@ -254,19 +256,25 @@ def handle_expression_impl(self, expr):
         return r
     elif isinstance(expr, ast.Constant):
         if isinstance(expr.value, type(None)):
-            tpe = NodeBuilderKt.parseType(self.frontend, "None", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "None",
+                                          False)
         elif isinstance(expr.value, bool):
-            tpe = NodeBuilderKt.parseType(self.frontend, "bool", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "bool",
+                                          False)
         elif isinstance(expr.value, int):
-            tpe = NodeBuilderKt.parseType(self.frontend, "int", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "int",
+                                          False)
         elif isinstance(expr.value, float):
-            tpe = NodeBuilderKt.parseType(self.frontend, "float", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "float",
+                                          False)
         elif isinstance(expr.value, complex):
-            tpe = NodeBuilderKt.parseType(self.frontend, "complex", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "complex",
+                                          False)
         elif isinstance(expr.value, str):
             tpe = NodeBuilderKt.parseType(self.frontend, "str", False)
         elif isinstance(expr.value, bytes):
-            tpe = NodeBuilderKt.parseType(self.frontend, "byte[]", False)
+            tpe = NodeBuilderKt.parseType(self.frontend, "byte[]",
+                                          False)
         else:
             self.log_with_loc(
                 "Found unexpected type - using a dummy: %s" %

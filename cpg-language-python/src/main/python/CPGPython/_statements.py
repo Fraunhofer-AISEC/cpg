@@ -303,7 +303,9 @@ def handle_function_or_method(self, node, record=None):
     if record is not None:
         if len(node.args.args) > 0:
             recv_node = node.args.args[0]
-            tpe = NodeBuilderKt.parseType(self.frontend, record.getName(), False)
+            tpe = NodeBuilderKt.parseType(self.frontend,
+                                          record.getName(),
+                                          False)
             recv = DeclarationBuilderKt.newVariableDeclaration(
                 self.frontend,
                 recv_node.arg, tpe, self.get_src_code(recv_node),
