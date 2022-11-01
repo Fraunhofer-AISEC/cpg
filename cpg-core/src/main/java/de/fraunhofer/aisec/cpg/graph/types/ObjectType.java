@@ -112,9 +112,11 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
     this.primitive = primitive;
   }
 
-  public ObjectType(Language<? extends LanguageFrontend> language) {
+  /**
+   * Empty default constructor for use in Neo4J persistence.
+   */
+  public ObjectType() {
     super();
-    this.language = language;
     this.generics = new ArrayList<>();
     this.modifier = Modifier.NOT_APPLICABLE;
     this.primitive = false;
