@@ -43,7 +43,7 @@ class FunctionType : Type {
         typeName: String,
         parameters: List<Type>,
         returnTypes: List<Type>,
-        language: Language<out LanguageFrontend>,
+        language: Language<out LanguageFrontend>?,
         qualifier: Qualifier = Qualifier(),
         storage: Storage = Storage.AUTO
     ) : super(typeName, storage, qualifier) {

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers;
 import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
@@ -330,10 +331,27 @@ public class Util {
     }
   }
 
-  public static String getSimpleName(String delimiter, String name) {
-    if (name.contains(delimiter)) {
-      name = name.substring(name.lastIndexOf(delimiter) + delimiter.length());
+  // TODO(oxisto): Remove at some point and directly use name class
+  public static String getSimpleName(Language<? extends LanguageFrontend> language, String name) {
+    if (language != null) {
+      var delimiter = language.getNamespaceDelimiter();
+      if (name.contains(delimiter)) {
+        name = name.substring(name.lastIndexOf(delimiter) + delimiter.length());
+      }
     }
+
+    return name;
+  }
+
+  // TODO(oxisto): Remove at some point and directly use name class
+  public static String getParentName(Language<? extends LanguageFrontend> language, String name) {
+    if (language != null) {
+      var delimiter = language.getNamespaceDelimiter();
+      if (name.contains(delimiter)) {
+        name = name.substring(0, name.lastIndexOf(delimiter));
+      }
+    }
+
     return name;
   }
 

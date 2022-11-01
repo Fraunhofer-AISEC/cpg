@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory
 class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
     val log: Logger = LoggerFactory.getLogger(Inference::class.java)
 
-    override val language: Language<out LanguageFrontend>
+    override val language: Language<out LanguageFrontend>?
         get() = start.language
 
     fun createInferredFunctionDeclaration(
@@ -191,7 +191,6 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
 
     fun inferTemplateParameter(
         name: String,
-        language: Language<out LanguageFrontend>
     ): TypeParamDeclaration {
         val parameterizedType = ParameterizedType(name, language)
         TypeManager.getInstance()
@@ -246,9 +245,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
                 // Template Parameter
                 val inferredTypeIdentifier = "T$typeCounter"
                 val typeParamDeclaration =
-                    inferred
-                        .startInference()
-                        .inferTemplateParameter(inferredTypeIdentifier, call.language)
+                    inferred.startInference().inferTemplateParameter(inferredTypeIdentifier)
                 typeCounter++
                 inferred.addParameter(typeParamDeclaration)
             } else if (node is Expression) {
