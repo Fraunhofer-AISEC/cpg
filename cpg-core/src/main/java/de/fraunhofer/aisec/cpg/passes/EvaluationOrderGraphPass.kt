@@ -542,7 +542,7 @@ open class EvaluationOrderGraphPass : Pass() {
                         param.type
                     } else {
                         LOGGER.info("Unknown throw type, potentially throw; in a method")
-                        TypeParser.createFrom("UNKNOWN_THROW_TYPE", true)
+                        TypeParser.createFrom("UNKNOWN_THROW_TYPE", true, node.language)
                     }
                 }
             pushToEOG(node)

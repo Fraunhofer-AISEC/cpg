@@ -120,7 +120,7 @@ public class DeclarationHandler
 
     declaration.addThrowTypes(
         constructorDecl.getThrownExceptions().stream()
-            .map(type -> TypeParser.createFrom(type.asString(), true))
+            .map(type -> parseType(this, type.asString(), true))
             .collect(Collectors.toList()));
 
     for (Parameter parameter : constructorDecl.getParameters()) {
@@ -138,7 +138,8 @@ public class DeclarationHandler
     }
 
     Type type =
-        TypeParser.createFrom(
+        parseType(
+            this,
             frontend
                 .getScopeManager()
                 .firstScopeOrNull(RecordScope.class::isInstance)
@@ -180,7 +181,7 @@ public class DeclarationHandler
 
     functionDeclaration.addThrowTypes(
         methodDecl.getThrownExceptions().stream()
-            .map(type -> TypeParser.createFrom(type.asString(), true))
+            .map(type -> parseType(this, type.asString(), true))
             .collect(Collectors.toList()));
 
     for (Parameter parameter : methodDecl.getParameters()) {
@@ -239,7 +240,7 @@ public class DeclarationHandler
             this,
             "this",
             recordDecl != null
-                ? TypeParser.createFrom(recordDecl.getName(), false)
+                ? parseType(this, recordDecl.getName(), false)
                 : UnknownType.getUnknownType(getLanguage()),
             "this",
             false);
@@ -352,7 +353,7 @@ public class DeclarationHandler
           newFieldDeclaration(
               this,
               scope.getSimpleName() + ".this",
-              TypeParser.createFrom(scope.getScopedName(), false),
+              parseType(this, scope.getScopedName(), false),
               null,
               null,
               null,
@@ -396,16 +397,15 @@ public class DeclarationHandler
                   this.frontend.getScopeManager().getCurrentRecord(),
                   variable.resolve().getType().describe());
       if (type == null) {
-        type =
-            TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe(), true);
+        type = parseType(this, joinedModifiers + variable.resolve().getType().describe(), true);
       }
     } catch (UnsolvedSymbolException | UnsupportedOperationException e) {
       String t = this.frontend.recoverTypeFromUnsolvedException(e);
       if (t == null) {
         log.warn("Could not resolve type for {}", variable);
-        type = TypeParser.createFrom(joinedModifiers + variable.getType().asString(), true);
+        type = parseType(this, joinedModifiers + variable.getType().asString(), true);
       } else {
-        type = TypeParser.createFrom(joinedModifiers + t, true);
+        type = parseType(this, joinedModifiers + t, true);
         type.setTypeOrigin(Type.Origin.GUESSED);
       }
     }
@@ -438,7 +438,7 @@ public class DeclarationHandler
             .map(
                 e -> (de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration) handle(e))
             .collect(Collectors.toList());
-    entries.forEach(e -> e.setType(TypeParser.createFrom(enumDeclaration.getName(), true)));
+    entries.forEach(e -> e.setType(parseType(this, enumDeclaration.getName(), true)));
     enumDeclaration.setEntries(entries);
 
     List<Type> superTypes =

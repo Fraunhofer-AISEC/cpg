@@ -54,7 +54,6 @@ import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
@@ -217,7 +216,7 @@ open class JavaLanguageFrontend(
             val type = nodeWithType.typeAsString
             if (type == "var") {
                 UnknownType.getUnknownType(language)
-            } else TypeParser.createFrom(resolved.type.describe(), true)
+            } else parseType(resolved.type.describe(), true)
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
         } catch (ex: NoClassDefFoundError) {
@@ -229,7 +228,7 @@ open class JavaLanguageFrontend(
         return try {
             if (type.toString() == "var") {
                 UnknownType.getUnknownType(language)
-            } else TypeParser.createFrom(type.resolve().describe(), true)
+            } else parseType(type.resolve().describe(), true)
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(type)
         } catch (ex: NoClassDefFoundError) {
@@ -348,7 +347,7 @@ open class JavaLanguageFrontend(
                 TypeManager.getInstance()
                     .getTypeParameter(scopeManager.currentRecord, resolved.returnType.describe())
             if (type == null) {
-                type = TypeParser.createFrom(resolved.returnType.describe(), true)
+                type = parseType(resolved.returnType.describe(), true)
             }
             type
         } catch (ex: RuntimeException) {
@@ -383,7 +382,7 @@ open class JavaLanguageFrontend(
         // if this is not a ClassOrInterfaceType, just return
         if (!searchType.isClassOrInterfaceType || context == null) {
             log.warn("Unable to resolve type for {}", type.asString())
-            val returnType = TypeParser.createFrom(type.asString(), true)
+            val returnType = parseType(type.asString(), true)
             returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
             return returnType
         }
@@ -393,7 +392,7 @@ open class JavaLanguageFrontend(
             for (importDeclaration in context!!.imports) {
                 if (importDeclaration.name.identifier.endsWith(clazz.name.identifier)) {
                     // TODO: handle type parameters
-                    return TypeParser.createFrom(importDeclaration.nameAsString, true)
+                    return parseType(importDeclaration.nameAsString, true)
                 }
             }
             var name = clazz.asString()
@@ -404,12 +403,12 @@ open class JavaLanguageFrontend(
             if (o.isPresent) {
                 name = o.get().nameAsString + namespaceDelimiter + name
             }
-            val returnType = TypeParser.createFrom(name, true)
+            val returnType = parseType(name, true)
             returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
             return returnType
         }
         log.warn("Unable to resolve type for {}", type.asString())
-        val returnType = TypeParser.createFrom(type.asString(), true)
+        val returnType = parseType(type.asString(), true)
         returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
         return returnType
     }

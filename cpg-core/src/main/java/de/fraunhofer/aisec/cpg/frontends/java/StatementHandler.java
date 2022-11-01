@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newVariableDeclaration;
 import static de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt.*;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.parseType;
 
 import com.github.javaparser.JavaToken;
 import com.github.javaparser.Range;
@@ -46,7 +47,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*;
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.util.ArrayList;
@@ -280,7 +280,7 @@ public class StatementHandler
     // Adds true expression node where default empty condition evaluates to true, remove here and in
     // cpp StatementHandler
     if (statement.getCondition() == null) {
-      Literal<?> literal = newLiteral(this, true, TypeParser.createFrom("boolean", true), "true");
+      Literal<?> literal = newLiteral(this, true, parseType(this, "boolean", true), "true");
       statement.setCondition(literal);
     }
 
@@ -643,7 +643,7 @@ public class StatementHandler
         possibleTypes.add(frontend.getTypeAsGoodAsPossible(t));
       }
       // we do not know which of the exceptions was actually thrown, so we assume this might be any
-      concreteType = TypeParser.createFrom("java.lang.Throwable", true);
+      concreteType = parseType(this, "java.lang.Throwable", true);
       concreteType.setTypeOrigin(Type.Origin.GUESSED);
     } else {
       concreteType = frontend.getTypeAsGoodAsPossible(catchCls.getParameter().getType());

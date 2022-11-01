@@ -730,7 +730,10 @@ fun getTemplateInitializationSignature(
     // Check for unresolved Parameters and try to deduce Type by looking at call arguments
     for (i in templateCall.arguments.indices) {
         val functionDeclaration = functionTemplateDeclaration.realization[0]
-        val currentArgumentType = functionDeclaration.parameters[i].type
+        val currentArgumentType =
+            functionDeclaration.parameters[i]
+                .type // TODO: Somehow, this should be the ParametrizedType but it's an ObjectType
+        // with the same name. => The template logic fails.
         val deducedType = templateCall.arguments[i].type
         val typeExpression = templateCall.newTypeExpression(deducedType.name, deducedType)
         typeExpression.isImplicit = true

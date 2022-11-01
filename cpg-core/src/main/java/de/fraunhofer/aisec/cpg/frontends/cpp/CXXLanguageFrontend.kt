@@ -486,10 +486,10 @@ class CXXLanguageFrontend(
             when (specifier) {
                 is IASTSimpleDeclSpecifier -> {
                     if (hint is ConstructorDeclaration) {
-                        TypeParser.createFrom(hint.name, false)
+                        parseType(hint.name, false)
                     } else {
                         // A primitive type
-                        TypeParser.createFrom(name, false)
+                        parseType(name, false)
                     }
                 }
                 is IASTNamedTypeSpecifier -> {
@@ -528,7 +528,7 @@ class CXXLanguageFrontend(
 
     /**
      * This is a little helper function, primarily used by [typeOf]. It's primary purpose is to
-     * "adjust" the [incoming] type based on the the [declarator]. This is needed because the type
+     * "adjust" the [incoming] type based on the [declarator]. This is needed because the type
      * information in C/C++ are split into a declarator and declaration specifiers.
      */
     private fun adjustType(declarator: IASTDeclarator, incoming: Type): Type {

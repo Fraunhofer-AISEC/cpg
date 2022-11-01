@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
@@ -53,8 +52,6 @@ public class TypeParser {
       Pattern.compile(
           "(?:(?<functionptr>[\\h(]+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*[\\h)]+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
 
-  private static Supplier<Language<? extends LanguageFrontend>> languageSupplier =
-      () -> TypeManager.getInstance().getLanguage();
   private static final String VOLATILE_QUALIFIER = "volatile";
   private static final String FINAL_QUALIFIER = "final";
   private static final String CONST_QUALIFIER = "const";
@@ -63,10 +60,6 @@ public class TypeParser {
 
   private TypeParser() {
     throw new IllegalStateException("Do not instantiate the TypeParser");
-  }
-
-  public static Language<? extends LanguageFrontend> getLanguage() {
-    return TypeParser.languageSupplier.get();
   }
 
   /**
@@ -252,7 +245,9 @@ public class TypeParser {
   @NotNull
   private static String fixGenerics(
       @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
-    if (type.contains("<") && type.contains(">") && language instanceof CPPLanguage) {
+    if (type.contains("<")
+        && type.contains(">")
+        && language instanceof CPPLanguage) { // TODO: Change to Trait
       String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
 
       /* Explanation from @vfsrfs:
@@ -264,7 +259,8 @@ public class TypeParser {
        * by the elaborate type specifier and at least one more horizontal whitespace, which marks
        * that it is indeed an elaborate type and not something like structMy.
        */
-      for (String elaborate : ((CPPLanguage) language).getElaboratedTypeSpecifier()) {
+      for (String elaborate :
+          ((HasElaboratedTypeSpecifier) language).getElaboratedTypeSpecifier()) {
         generics = generics.replaceAll("(^|(?<=[\\h,<]))\\h*(?<main>" + elaborate + "\\h+)", "");
       }
       type =
@@ -611,8 +607,8 @@ public class TypeParser {
   }
 
   /**
-   * Does the same as {@link #createIgnoringAlias(String)} but explicitly does not use type alias
-   * resolution. This is usually not what you want. Use with care!
+   * Does the same as {@link #createIgnoringAlias(String, Language)} but explicitly does not use
+   * type alias resolution. This is usually not what you want. Use with care!
    *
    * @param string the string representation of the type
    * @return the type
@@ -859,32 +855,12 @@ public class TypeParser {
   }
 
   /**
-   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from *
-   * the typeString
+   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from
+   * the typeString.
    *
    * @param type string with type information
    * @param resolveAlias should replace with original type in typedefs
-   * @return new type representing the type string. If an exception occurs during the parsing,
-   *     UnknownType is returned
-   */
-  @NotNull
-  @Deprecated
-  public static Type createFrom(@NotNull String type, boolean resolveAlias) {
-    Language<? extends LanguageFrontend> language = getLanguage();
-    try {
-      return createFromUnsafe(type, resolveAlias, language);
-    } catch (Exception e) {
-      log.error("Could not parse the type correctly", e);
-      return UnknownType.getUnknownType(language);
-    }
-  }
-
-  /**
-   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from *
-   * the typeString
-   *
-   * @param type string with type information
-   * @param resolveAlias should replace with original type in typedefs
+   * @param language the language in which the type exists.
    * @return new type representing the type string. If an exception occurs during the parsing,
    *     UnknownType is returned
    */

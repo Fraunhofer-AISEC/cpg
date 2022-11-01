@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
 import java.util.function.BiConsumer
@@ -234,7 +233,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         // Adds true expression node where default empty condition evaluates to true, remove here
         // and in java StatementAnalyzer
         if (statement.conditionDeclaration == null && statement.condition == null) {
-            val literal: Literal<*> = newLiteral(true, TypeParser.createFrom("bool", true), "true")
+            val literal: Literal<*> = newLiteral(true, parseType("bool", true), "true")
             statement.condition = literal
         }
 

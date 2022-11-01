@@ -128,15 +128,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         when (ctx.operator) {
             IASTTypeIdExpression.op_sizeof -> {
                 operatorCode = "sizeof"
-                type = TypeParser.createFrom("std::size_t", true)
+                type = parseType("std::size_t", true)
             }
             IASTTypeIdExpression.op_typeid -> {
                 operatorCode = "typeid"
-                type = TypeParser.createFrom("const std::type_info&", true)
+                type = parseType("const std::type_info&", true)
             }
             IASTTypeIdExpression.op_alignof -> {
                 operatorCode = "alignof"
-                type = TypeParser.createFrom("std::size_t", true)
+                type = parseType("std::size_t", true)
             }
             IASTTypeIdExpression
                 .op_typeof -> // typeof is not an official c++ keyword - not sure why eclipse
@@ -235,7 +235,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val templateArguments: MutableList<Node> = ArrayList()
         for (argument in template.templateArguments) {
             if (argument is IASTTypeId) {
-                val type = TypeParser.createFrom(argument.declSpecifier.toString(), true)
+                val type = parseType(argument.declSpecifier.toString(), true)
                 templateArguments.add(newTypeExpression(type.name, type))
             } else if (argument is IASTLiteralExpression) {
                 frontend.expressionHandler.handle(argument as IASTInitializerClause)?.let {
@@ -378,7 +378,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     val typeName = (ctx.operand as IASTIdExpression).name.toString()
                     if (TypeManager.getInstance().typeExists(typeName)) {
                         val cast = newCastExpression(frontend.getCodeFromRawNode<Any>(ctx))
-                        cast.castType = TypeParser.createFrom(typeName, false)
+                        cast.castType = parseType(typeName, false)
                         cast.expression = input
                         cast.location = frontend.getLocationFromRawNode<Any>(ctx)
                         return cast
@@ -551,11 +551,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         declaredReferenceExpression: DeclaredReferenceExpression
     ) {
         val type =
-            TypeParser.createFrom((proxy as CPPClassInstance).templateDefinition.toString(), true)
+            parseType((proxy as CPPClassInstance).templateDefinition.toString(), true)
                 as? ObjectType
         for (templateArgument in proxy.templateArguments) {
             if (templateArgument is CPPTemplateTypeArgument) {
-                type?.addGeneric(TypeParser.createFrom(templateArgument.toString(), true))
+                type?.addGeneric(parseType(templateArgument.toString(), true))
             }
         }
         type?.let { declaredReferenceExpression.type = it }
@@ -865,16 +865,16 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             if (numberValue is BigInteger && "ul" == suffix) {
                 // we follow the way clang/llvm handles this and this seems to always
                 // be an unsigned long long, except if it is explicitly specified as ul
-                TypeParser.createFrom("unsigned long", true)
+                parseType("unsigned long", true)
             } else if (numberValue is BigInteger) {
-                TypeParser.createFrom("unsigned long long", true)
+                parseType("unsigned long long", true)
             } else if (numberValue is Long && "ll" == suffix) {
                 // differentiate between long and long long
-                TypeParser.createFrom("long long", true)
+                parseType("long long", true)
             } else if (numberValue is Long) {
-                TypeParser.createFrom("long", true)
+                parseType("long", true)
             } else {
-                TypeParser.createFrom("int", true)
+                parseType("int", true)
             }
 
         return newLiteral(numberValue, type, ctx.rawSignature)

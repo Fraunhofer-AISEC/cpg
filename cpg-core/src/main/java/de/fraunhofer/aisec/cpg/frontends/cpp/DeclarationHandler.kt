@@ -573,7 +573,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 )
 
             // In C/C++, default enums are of type int
-            enumConst.type = TypeParser.createFrom("int", false)
+            enumConst.type = parseType("int", false)
 
             // We need to make them visible to the enclosing scope. However, we do NOT
             // want to add it to the AST of the enclosing scope, but to the AST of the
@@ -614,7 +614,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         sequence: DeclarationSequence
     ) {
         val templateId = typeSpecifier.name as CPPASTTemplateId
-        val type = TypeParser.createFrom(ctx.rawSignature, true)
+        val type = parseType(ctx.rawSignature, true)
         val templateParams: MutableList<Node?> = ArrayList()
 
         if (type.root !is ObjectType) {
@@ -627,8 +627,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         for (templateArgument in templateId.templateArguments) {
             if (templateArgument is CPPASTTypeId) {
-                val genericInstantiation =
-                    TypeParser.createFrom(templateArgument.getRawSignature(), true)
+                val genericInstantiation = parseType(templateArgument.getRawSignature(), true)
                 objectType.addGeneric(genericInstantiation)
                 templateParams.add(
                     newTypeExpression(
