@@ -54,7 +54,7 @@ import org.bytedeco.llvm.global.LLVM.*
 class LLVMIRLanguageFrontend(
     language: Language<LLVMIRLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager?
+    scopeManager: ScopeManager
 ) : LanguageFrontend(language, config, scopeManager) {
 
     val statementHandler = StatementHandler(this)

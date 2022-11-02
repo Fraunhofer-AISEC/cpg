@@ -111,7 +111,7 @@ open class JavaLanguageFrontend(
 
             // starting point is always a translation declaration
             val fileDeclaration = newTranslationUnitDeclaration(file.toString(), context.toString())
-            setCurrentTU(fileDeclaration)
+            currentTU = fileDeclaration
             scopeManager.resetToGlobal(fileDeclaration)
             val packDecl = context!!.packageDeclaration.orElse(null)
             var namespaceDeclaration: NamespaceDeclaration? = null
@@ -128,7 +128,7 @@ open class JavaLanguageFrontend(
                 // along
                 // the way
                 val declaration = declarationHandler.handle(type)
-                this.getScopeManager().addDeclaration(declaration)
+                scopeManager.addDeclaration(declaration)
             }
 
             for (anImport in context!!.imports) {
@@ -255,7 +255,7 @@ open class JavaLanguageFrontend(
                     // this is not strictly true. This could also be a function of a superclass,
                     // but is the best we can do for now. If the superclass would be known,
                     // this would already be resolved by the Java resolver
-                    getScopeManager().currentNamePrefix + "." + callExpr.nameAsString
+                    scopeManager.currentNamePrefix + "." + callExpr.nameAsString
                 } else {
                     scope.get().toString() + "." + callExpr.nameAsString
                 }
@@ -269,7 +269,7 @@ open class JavaLanguageFrontend(
                 // check if this is a "specific" static import (not of the type 'import static
                 // x.y.Z.*')
                 val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
-                fromImport ?: (getScopeManager().currentNamePrefix + "." + callExpr.nameAsString)
+                fromImport ?: (scopeManager.currentNamePrefix + "." + callExpr.nameAsString)
                 // this is not strictly true. This could also be a function of a superclass or from
                 // a static asterisk import
             }
@@ -284,13 +284,13 @@ open class JavaLanguageFrontend(
                     }
                 }
                 if (scope.get().toString() == THIS) {
-                    getScopeManager().currentNamePrefix + "." + callExpr.nameAsString
+                    scopeManager.currentNamePrefix + "." + callExpr.nameAsString
                 } else {
                     scope.get().toString() + "." + callExpr.nameAsString
                 }
             } else {
                 val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
-                fromImport ?: (getScopeManager().currentNamePrefix + "." + callExpr.nameAsString)
+                fromImport ?: (scopeManager.currentNamePrefix + "." + callExpr.nameAsString)
             }
         }
     }
@@ -366,9 +366,7 @@ open class JavaLanguageFrontend(
      */
     private fun getFQNInCurrentPackage(simpleName: String): String {
         val theScope =
-            getScopeManager().firstScopeOrNull { scope: Scope ->
-                scope.astNode is NamespaceDeclaration
-            }
+            scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDeclaration }
                 ?: return simpleName
         // If scope is null we are in a default package
         return theScope.scopedName + language.namespaceDelimiter + simpleName

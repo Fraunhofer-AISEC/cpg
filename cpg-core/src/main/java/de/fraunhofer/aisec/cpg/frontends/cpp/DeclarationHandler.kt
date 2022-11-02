@@ -224,9 +224,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // definitions and declarations.
         // TODO: Extract this into a pass
         val declarationCandidates =
-            frontend.currentTU.declarations
-                .filterIsInstance(FunctionDeclaration::class.java)
-                .filter { !it.isDefinition && it.hasSameSignature(declaration) }
+            frontend.currentTU
+                ?.declarations
+                ?.filterIsInstance(FunctionDeclaration::class.java)
+                ?.filter { !it.isDefinition && it.hasSameSignature(declaration) }
+                ?: listOf()
         for (candidate in declarationCandidates) {
             candidate.definition = declaration
             // Do some additional magic with default parameters, which I do not really understand

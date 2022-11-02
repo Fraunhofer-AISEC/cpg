@@ -56,7 +56,7 @@ class TestLanguageFrontend :
         TranslationConfiguration.builder().build(),
         ScopeManager(),
     ) {
-    override fun parse(file: File?): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnitDeclaration {
         TODO("Not yet implemented")
     }
 

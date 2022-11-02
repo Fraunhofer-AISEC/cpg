@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -37,11 +38,12 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.io.FileOutputStream
 
+@SupportsParallelParsing(false)
 @ExperimentalGolang
 class GoLanguageFrontend(
     language: Language<GoLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager?
+    scopeManager: ScopeManager
 ) : LanguageFrontend(language, config, scopeManager) {
     companion object {
         @kotlin.jvm.JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")

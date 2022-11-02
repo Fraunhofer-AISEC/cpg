@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
@@ -166,12 +167,23 @@ private constructor(
                             .map { it.toFile() }
                             .collect(Collectors.toList())
                     } else {
+                        val frontendClass = file.language?.frontend
                         if (
                             useParallelFrontends &&
+                                // By default, the frontends support parallel parsing. But the
+                                // SupportsParallelParsing annotation can be set to false and force
+                                // to disable it.
                                 // TODO: This shouldn't happen in the future!
-                                file.frontendClass?.frontend?.simpleName == "GoLanguageFrontend"
+                                frontendClass?.isAnnotationPresent(
+                                    SupportsParallelParsing::class.java
+                                ) == true &&
+                                frontendClass
+                                    .getAnnotation(SupportsParallelParsing::class.java)
+                                    ?.supported == false
                         ) {
-                            log.warn("Parallel frontends are not yet supported for Go")
+                            log.warn(
+                                "Parallel frontends are not yet supported for the language frontend ${frontendClass.simpleName}"
+                            )
                             useParallelFrontends = false
                         }
                         listOf(file)
@@ -356,7 +368,7 @@ private constructor(
     }
 
     private fun getFrontend(file: File, scopeManager: ScopeManager): LanguageFrontend? {
-        val language = file.frontendClass
+        val language = file.language
 
         return if (language != null) {
             try {
@@ -377,7 +389,7 @@ private constructor(
         } else null
     }
 
-    private val File.frontendClass: Language<*>?
+    private val File.language: Language<*>?
         get() {
             return config.languages.firstOrNull { it.handlesFile(this) }
         }

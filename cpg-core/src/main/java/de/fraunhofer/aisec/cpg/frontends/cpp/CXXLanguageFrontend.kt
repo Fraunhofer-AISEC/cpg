@@ -77,7 +77,7 @@ import org.slf4j.LoggerFactory
 class CXXLanguageFrontend(
     language: Language<CXXLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager?
+    scopeManager: ScopeManager
 ) : LanguageFrontend(language, config, scopeManager) {
 
     /**

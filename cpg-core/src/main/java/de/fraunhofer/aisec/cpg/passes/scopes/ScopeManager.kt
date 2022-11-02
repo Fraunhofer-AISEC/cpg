@@ -580,7 +580,7 @@ class ScopeManager {
         scope.addTypedef(typedef)
 
         if (scope.astNode == null) {
-            lang!!.currentTU.addTypedef(typedef)
+            lang!!.currentTU!!.addTypedef(typedef)
         } else {
             scope.astNode?.addTypedef(typedef)
         }
