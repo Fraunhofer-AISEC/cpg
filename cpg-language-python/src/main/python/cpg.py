@@ -23,7 +23,7 @@
 #                    \______/ \__|       \______/
 #
 from CPGPython import PythonASTToCPG
-
+import inspect
 
 def parse_code(code, filename, frontend):
     try:
@@ -34,5 +34,5 @@ def parse_code(code, filename, frontend):
 
         return tud
     except Exception as e:
-        frontend.log.error("Buidling the CPG failed with exception: %s" % (e))
+        frontend.Companion.getLog().error("Buidling the CPG failed with exception: %s" % (e))
         raise e

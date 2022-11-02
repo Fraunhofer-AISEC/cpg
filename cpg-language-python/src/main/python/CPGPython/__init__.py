@@ -37,7 +37,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.fname = fname
         self.scopemanager = frontend.getScopeManager()
         self.scopemanager.resetToGlobal(self.tud)
-        self.logger = self.frontend.log
+        self.logger = self.frontend.Companion.getLog()
         self.rootNode = ast.parse(code, filename=fname, type_comments=True)
 
     # import methods from other files
