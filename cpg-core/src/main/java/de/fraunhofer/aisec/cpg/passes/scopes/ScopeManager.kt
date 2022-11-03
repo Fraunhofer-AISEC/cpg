@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ScopeProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -54,7 +55,7 @@ import org.slf4j.LoggerFactory
  * than adding the declaration to the node itself. This ensures that all declarations are properly
  * registered in the scope map and can be resolved later.
  */
-class ScopeManager {
+class ScopeManager : ScopeProvider {
     /**
      * A map associating each CPG node with its scope. The key type is intentionally a nullable
      * [Node] because the [GlobalScope] is not associated to a CPG node when it is first created. It
@@ -780,4 +781,8 @@ class ScopeManager {
     fun getRecordForName(scope: Scope, name: String): RecordDeclaration? {
         return resolve<RecordDeclaration>(scope, true) { it.name == name }.firstOrNull()
     }
+
+    /** Returns the current scope for the [ScopeProvider] interface. */
+    override val scope: Scope?
+        get() = currentScope
 }

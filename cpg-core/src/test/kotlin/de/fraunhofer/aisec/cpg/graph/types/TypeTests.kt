@@ -1052,7 +1052,7 @@ internal class TypeTests : BaseTest() {
                |
              Level2
          */
-        var provider = result.translationUnits.firstOrNull()
+        var provider = result.scopeManager
 
         // A single type is its own least common ancestor
         for (t in listOf(root, level0, level1, level1b, level2)) {

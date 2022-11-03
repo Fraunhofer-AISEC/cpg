@@ -35,10 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope;
-import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
-import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
-import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
+import de.fraunhofer.aisec.cpg.passes.scopes.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -447,13 +444,23 @@ public class TypeManager implements LanguageProvider {
       if (scope222 == null) {
         return Optional.empty();
       }
+
       scope222 = scope222.getParent();
     }
 
-    typeToRecord = new HashMap<>();
     for (var child : scope222.getChildren()) {
       if (child instanceof RecordScope && child.getAstNode() instanceof RecordDeclaration) {
         typeToRecord.put(child.getAstNode().getName(), (RecordDeclaration) child.getAstNode());
+      }
+
+      // HACKY HACK HACK
+      if (child instanceof NameScope) {
+        for (var child2 : child.getChildren()) {
+          if (child2 instanceof RecordScope && child2.getAstNode() instanceof RecordDeclaration) {
+            typeToRecord.put(
+                child2.getAstNode().getName(), (RecordDeclaration) child2.getAstNode());
+          }
+        }
       }
     }
 
