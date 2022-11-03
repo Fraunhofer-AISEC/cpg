@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.passes.order.PassWithDepsContainer
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import java.io.File
 import java.util.*
+import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
@@ -401,8 +402,9 @@ private constructor(
         @Throws(ConfigurationException::class)
         private fun registerExtraFrontendPasses() {
             for (frontend in languages.map(Language<out LanguageFrontend>::frontend)) {
-                if (frontend.getAnnotationsByType(RegisterExtraPass::class.java).isNotEmpty()) {
-                    val extraPasses = frontend.getAnnotationsByType(RegisterExtraPass::class.java)
+                val extraPasses = frontend.findAnnotations<RegisterExtraPass>()
+
+                if (extraPasses.isNotEmpty()) {
                     for (p in extraPasses) {
                         val pass = p.value.primaryConstructor?.call()
                         if (pass != null) {
@@ -415,7 +417,7 @@ private constructor(
                         } else {
                             throw ConfigurationException(
                                 "Failed to load frontend because we could not register required pass dependency: {}" +
-                                    frontend.name
+                                    frontend.simpleName
                             )
                         }
                     }

@@ -33,8 +33,6 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
-import de.fraunhofer.aisec.cpg.frontends.HasClasses
-import de.fraunhofer.aisec.cpg.frontends.HasSuperclasses
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -51,6 +49,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.stream.Collectors
+import kotlin.reflect.KClass
 import kotlin.test.*
 
 internal class JavaLanguageFrontendTest : BaseTest() {
@@ -601,15 +600,12 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         }
 
-        class MyJavaLanguage : JavaLanguage(), HasClasses, HasSuperclasses {
-            override val fileExtensions: List<String>
-                get() = listOf("java")
-            override val namespaceDelimiter: String
-                get() = "."
-            override val superclassKeyword: String
-                get() = "super"
-            override val frontend: Class<out MyJavaLanguageFrontend>
-                get() = MyJavaLanguageFrontend::class.java
+        class MyJavaLanguage : JavaLanguage() {
+            override val fileExtensions: List<String> = listOf("java")
+            override val namespaceDelimiter: String = "."
+            override val superclassKeyword: String = "super"
+            override val frontend: KClass<out MyJavaLanguageFrontend> =
+                MyJavaLanguageFrontend::class
             override fun newFrontend(
                 config: TranslationConfiguration,
                 scopeManager: ScopeManager

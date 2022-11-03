@@ -48,6 +48,7 @@ import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.stream.Collectors
+import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
 
 /** Main entry point for all source code translation for all language front-ends. */
@@ -167,21 +168,18 @@ private constructor(
                             .collect(Collectors.toList())
                     } else {
                         val frontendClass = file.language?.frontend
-                        if (
-                            useParallelFrontends &&
-                                // By default, the frontends support parallel parsing. But the
-                                // SupportsParallelParsing annotation can be set to false and force
-                                // to disable it.
-                                // TODO: This shouldn't happen in the future!
-                                frontendClass?.isAnnotationPresent(
-                                    SupportsParallelParsing::class.java
-                                ) == true &&
-                                frontendClass
-                                    .getAnnotation(SupportsParallelParsing::class.java)
-                                    ?.supported == false
-                        ) {
+                        val supportsParallelParsing =
+                            file.language
+                                ?.frontend
+                                ?.findAnnotation<SupportsParallelParsing>()
+                                ?.supported
+                                ?: true
+                        // By default, the frontends support parallel parsing. But the
+                        // SupportsParallelParsing annotation can be set to false and force
+                        // to disable it.
+                        if (useParallelFrontends && !supportsParallelParsing) {
                             log.warn(
-                                "Parallel frontends are not yet supported for the language frontend ${frontendClass.simpleName}"
+                                "Parallel frontends are not yet supported for the language frontend ${frontendClass?.simpleName}"
                             )
                             useParallelFrontends = false
                         }
@@ -380,7 +378,7 @@ private constructor(
                     is NoSuchMethodException -> {
                         log.error(
                             "Could not instantiate language frontend {}",
-                            language.frontend.name,
+                            language.frontend.simpleName,
                             e
                         )
                         null

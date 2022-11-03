@@ -23,15 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg
+package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import kotlin.reflect.KClass
 
 /**
  * This is a test language that can be used for unit test, where we need a language but do not have
@@ -40,7 +39,7 @@ import java.io.File
 class TestLanguage : Language<TestLanguageFrontend>() {
     override val fileExtensions: List<String> = listOf()
     override val namespaceDelimiter: String = "."
-    override val frontend = TestLanguageFrontend::class.java
+    override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
 
     override fun newFrontend(
         config: TranslationConfiguration,

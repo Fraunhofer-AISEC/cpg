@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.util.regex.Pattern
+import kotlin.reflect.KClass
 
 /** The C++ language. */
 class CPPLanguage :
@@ -51,16 +52,11 @@ class CPPLanguage :
     HasFunctionPointers,
     HasQualifier,
     HasElaboratedTypeSpecifier {
-    override val fileExtensions: List<String>
-        get() = listOf("cpp", "cc", "hpp")
-    override val namespaceDelimiter: String
-        get() = "::"
-    override val frontend: Class<CXXLanguageFrontend>
-        get() = CXXLanguageFrontend::class.java
-    override val qualifiers: List<String>
-        get() = listOf("const", "volatile", "restrict", "atomic")
-    override val elaboratedTypeSpecifier: List<String>
-        get() = listOf("class", "struct", "union", "enum")
+    override val fileExtensions: List<String> = listOf("cpp", "cc", "hpp")
+    override val namespaceDelimiter: String = "::"
+    override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
+    override val qualifiers: List<String> = listOf("const", "volatile", "restrict", "atomic")
+    override val elaboratedTypeSpecifier: List<String> = listOf("class", "struct", "union", "enum")
 
     override fun newFrontend(
         config: TranslationConfiguration,

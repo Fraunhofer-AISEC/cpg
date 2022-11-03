@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import kotlin.reflect.KClass
 
 /** The Java language. */
 open class JavaLanguage :
@@ -42,8 +43,8 @@ open class JavaLanguage :
         get() = listOf("java")
     override val namespaceDelimiter: String
         get() = "."
-    override val frontend: Class<out JavaLanguageFrontend>
-        get() = JavaLanguageFrontend::class.java
+    override val frontend: KClass<out JavaLanguageFrontend>
+        get() = JavaLanguageFrontend::class
     override val superclassKeyword: String
         get() = "super"
     override val qualifiers: List<String>

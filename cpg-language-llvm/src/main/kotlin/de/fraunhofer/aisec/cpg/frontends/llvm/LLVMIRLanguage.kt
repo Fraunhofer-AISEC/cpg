@@ -28,12 +28,13 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import kotlin.reflect.KClass
 
 /** The LLVM IR language. */
 class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val fileExtensions = listOf("ll")
     override val namespaceDelimiter = "::"
-    override val frontend = LLVMIRLanguageFrontend::class.java
+    override val frontend: KClass<out LLVMIRLanguageFrontend> = LLVMIRLanguageFrontend::class
     override val primitiveTypes: Set<String>
         get() =
             setOf(

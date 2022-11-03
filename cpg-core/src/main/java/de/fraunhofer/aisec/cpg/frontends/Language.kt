@@ -25,10 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
+import kotlin.reflect.KClass
 
 /**
  * Represents a programming language. When creating new languages in the CPG, one must derive custom
@@ -45,8 +50,9 @@ abstract class Language<T : LanguageFrontend> : Node() {
     /** The namespace delimiter used by the language. Often, this is "." */
     abstract val namespaceDelimiter: String
 
+    @get:JsonSerialize(using = KClassSerializer::class)
     /** The class of the frontend which is used to parse files of this language. */
-    abstract val frontend: Class<out T>
+    abstract val frontend: KClass<out T>
 
     /** The primitive types of this language. */
     open val primitiveTypes: Set<String>
@@ -65,5 +71,16 @@ abstract class Language<T : LanguageFrontend> : Node() {
 
     init {
         this.also { this.language = it }
+    }
+}
+
+/**
+ * We need to bring our own serializer for [KClass] until
+ * https://github.com/FasterXML/jackson-module-kotlin/issues/361 is resolved.
+ */
+internal class KClassSerializer : StdSerializer<KClass<*>>(KClass::class.java) {
+    override fun serialize(value: KClass<*>, gen: JsonGenerator, provider: SerializerProvider) {
+        // Write the fully qualified name as a string
+        gen.writeString(value.qualifiedName)
     }
 }
