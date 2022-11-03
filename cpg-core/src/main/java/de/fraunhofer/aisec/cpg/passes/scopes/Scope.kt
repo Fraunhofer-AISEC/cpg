@@ -55,9 +55,7 @@ abstract class Scope(open var astNode: Node?) {
         return this is LoopScope
     }
 
-    /**
-     * Returns the [GlobalScope] of this scope by traversing its parents upwards.
-     */
+    /** Returns the [GlobalScope] of this scope by traversing its parents upwards. */
     val globalScope: Scope?
         get() {
             var scope: Scope? = this
