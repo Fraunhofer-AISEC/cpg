@@ -108,8 +108,6 @@ class TypeScriptLanguageFrontend(
 
         val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
 
-        TypeManager.getInstance().setLanguageFrontend(this)
-
         val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
 
         handleComments(file, translationUnit)

@@ -64,20 +64,20 @@ class TypeHandler(frontend: TypeScriptLanguageFrontend) :
     }
 
     private fun handleStringKeyword(): Type {
-        return parseType("string", false)
+        return parseType("string")
     }
 
     private fun handleNumberKeyword(): Type {
-        return parseType("number", false)
+        return parseType("number")
     }
 
     private fun handleAnyKeyword(): Type {
-        return parseType("any", false)
+        return parseType("any")
     }
 
     private fun handleTypeReference(node: TypeScriptNode): Type {
         node.firstChild("Identifier")?.let {
-            return parseType(this.frontend.getIdentifierName(node), false)
+            return parseType(this.frontend.getIdentifierName(node))
         }
 
         return UnknownType.getUnknownType(language)

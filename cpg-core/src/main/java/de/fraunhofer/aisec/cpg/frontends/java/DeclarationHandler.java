@@ -119,7 +119,7 @@ public class DeclarationHandler
 
     declaration.addThrowTypes(
         constructorDecl.getThrownExceptions().stream()
-            .map(type -> parseType(this, type.asString(), true))
+            .map(type -> parseType(this, type.asString()))
             .collect(Collectors.toList()));
 
     for (Parameter parameter : constructorDecl.getParameters()) {
@@ -143,8 +143,7 @@ public class DeclarationHandler
                 .getScopeManager()
                 .firstScopeOrNull(RecordScope.class::isInstance)
                 .getAstNode()
-                .getName(),
-            true);
+                .getName());
     declaration.setType(type);
 
     // check, if constructor has body (i.e. its not abstract or something)
@@ -180,7 +179,7 @@ public class DeclarationHandler
 
     functionDeclaration.addThrowTypes(
         methodDecl.getThrownExceptions().stream()
-            .map(type -> parseType(this, type.asString(), true))
+            .map(type -> parseType(this, type.asString()))
             .collect(Collectors.toList()));
 
     for (Parameter parameter : methodDecl.getParameters()) {
@@ -239,7 +238,7 @@ public class DeclarationHandler
             this,
             "this",
             recordDecl != null
-                ? parseType(this, recordDecl.getName(), false)
+                ? parseType(this, recordDecl.getName())
                 : UnknownType.getUnknownType(getLanguage()),
             "this",
             false);
@@ -351,7 +350,7 @@ public class DeclarationHandler
           newFieldDeclaration(
               this,
               scope.getSimpleName() + ".this",
-              parseType(this, scope.getScopedName(), false),
+              parseType(this, scope.getScopedName()),
               null,
               null,
               null,
@@ -395,15 +394,15 @@ public class DeclarationHandler
                   this.frontend.getScopeManager().getCurrentRecord(),
                   variable.resolve().getType().describe());
       if (type == null) {
-        type = parseType(this, joinedModifiers + variable.resolve().getType().describe(), true);
+        type = parseType(this, joinedModifiers + variable.resolve().getType().describe());
       }
     } catch (UnsolvedSymbolException | UnsupportedOperationException e) {
       String t = this.frontend.recoverTypeFromUnsolvedException(e);
       if (t == null) {
         log.warn("Could not resolve type for {}", variable);
-        type = parseType(this, joinedModifiers + variable.getType().asString(), true);
+        type = parseType(this, joinedModifiers + variable.getType().asString());
       } else {
-        type = parseType(this, joinedModifiers + t, true);
+        type = parseType(this, joinedModifiers + t);
         type.setTypeOrigin(Type.Origin.GUESSED);
       }
     }
@@ -436,7 +435,7 @@ public class DeclarationHandler
             .map(
                 e -> (de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration) handle(e))
             .collect(Collectors.toList());
-    entries.forEach(e -> e.setType(parseType(this, enumDeclaration.getName(), true)));
+    entries.forEach(e -> e.setType(parseType(this, enumDeclaration.getName())));
     enumDeclaration.setEntries(entries);
 
     List<Type> superTypes =

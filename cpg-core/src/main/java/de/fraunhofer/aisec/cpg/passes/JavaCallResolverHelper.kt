@@ -78,9 +78,7 @@ fun CallResolver.handleSpecificSupertype(
     call: CallExpression
 ): RecordDeclaration? {
     val baseName = call.base!!.name.substring(0, call.base!!.name.lastIndexOf(".super"))
-    if (
-        TypeParser.createFrom(baseName, true, curClass.language) in curClass.implementedInterfaces
-    ) {
+    if (TypeParser.createFrom(baseName, curClass.language) in curClass.implementedInterfaces) {
         // Basename is an interface -> BaseName.super refers to BaseName itself
         return recordMap[baseName]
     } else {

@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -236,7 +235,7 @@ private constructor(
                     s.translationUnits.forEach {
                         val bench =
                             Benchmark(this.javaClass, "Activating types for ${it.name}", true)
-                        SubgraphWalker.activateTypes(it)
+                        result.scopeManager.activateTypes(it)
                         bench.stop()
                     }
                 }

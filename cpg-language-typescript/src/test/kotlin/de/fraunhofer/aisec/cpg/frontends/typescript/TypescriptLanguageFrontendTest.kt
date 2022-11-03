@@ -67,17 +67,11 @@ class TypeScriptLanguageFrontendTest {
 
         val someFunction = functions.first()
         assertEquals("someFunction", someFunction.name)
-        assertEquals(
-            TypeParser.createFrom("Number", false, TypeScriptLanguage()),
-            someFunction.type
-        )
+        assertEquals(TypeParser.createFrom("Number", TypeScriptLanguage()), someFunction.type)
 
         val someOtherFunction = functions.last()
         assertEquals("someOtherFunction", someOtherFunction.name)
-        assertEquals(
-            TypeParser.createFrom("Number", false, TypeScriptLanguage()),
-            someOtherFunction.type
-        )
+        assertEquals(TypeParser.createFrom("Number", TypeScriptLanguage()), someOtherFunction.type)
 
         val parameters = someOtherFunction.parameters
         assertNotNull(parameters)
@@ -86,7 +80,7 @@ class TypeScriptLanguageFrontendTest {
 
         val parameter = parameters.first()
         assertEquals("s", parameter.name)
-        assertEquals(TypeParser.createFrom("String", false, TypeScriptLanguage()), parameter.type)
+        assertEquals(TypeParser.createFrom("String", TypeScriptLanguage()), parameter.type)
     }
 
     @Test
@@ -277,7 +271,7 @@ class TypeScriptLanguageFrontendTest {
         val lastName = user.fields.lastOrNull()
         assertNotNull(lastName)
         assertEquals("lastName", lastName.name)
-        assertEquals(TypeParser.createFrom("string", false, TypeScriptLanguage()), lastName.type)
+        assertEquals(TypeParser.createFrom("string", TypeScriptLanguage()), lastName.type)
 
         val usersState =
             tu.getDeclarationsByName("UsersState", RecordDeclaration::class.java).iterator().next()
@@ -290,7 +284,7 @@ class TypeScriptLanguageFrontendTest {
         val users = usersState.fields.firstOrNull()
         assertNotNull(users)
         assertEquals("users", users.name)
-        assertEquals(TypeParser.createFrom("User[]", false, TypeScriptLanguage()), users.type)
+        assertEquals(TypeParser.createFrom("User[]", TypeScriptLanguage()), users.type)
 
         val usersComponent =
             tu.getDeclarationsByName("Users", RecordDeclaration::class.java).iterator().next()
@@ -438,7 +432,7 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(function)
         assertEquals("Block comment on a function", function.comment)
 
-        var variableDeclaration =
+        val variableDeclaration =
             SubgraphWalker.flattenAST(function).filterIsInstance<DeclarationStatement>().first()
         assertNotNull(variableDeclaration)
         assertEquals("Comment on a variable", variableDeclaration.comment)

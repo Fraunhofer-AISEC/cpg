@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
-import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
@@ -154,5 +152,4 @@ fun MetadataProvider.newAnnotationMember(
  * Provides a nice alias to [TypeParser.createFrom]. In the future, this should not be used anymore
  * since we are moving away from the [TypeParser] altogether.
  */
-fun LanguageProvider.parseType(name: String, resolveAlias: Boolean) =
-    TypeParser.createFrom(name, resolveAlias, language)
+fun LanguageProvider.parseType(name: String) = TypeParser.createFrom(name, language)

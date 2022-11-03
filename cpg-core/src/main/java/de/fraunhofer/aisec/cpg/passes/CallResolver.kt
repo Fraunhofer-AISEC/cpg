@@ -108,7 +108,7 @@ open class CallResolver : SymbolResolverPass() {
     private fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node) {
         if (currentNode is MethodDeclaration && currentClass != null) {
             containingType[currentNode] =
-                TypeParser.createFrom(currentClass.name, true, currentClass.language)
+                TypeParser.createFrom(currentClass.name, currentClass.language)
         }
     }
 
@@ -478,10 +478,10 @@ open class CallResolver : SymbolResolverPass() {
             possibleTypes.addAll(base.possibleSubTypes)
         } else if (node is StaticCallExpression) {
             if (node.targetRecord != null) {
-                possibleTypes.add(TypeParser.createFrom(node.targetRecord, true, node.language))
+                possibleTypes.add(TypeParser.createFrom(node.targetRecord, node.language))
             }
         } else if (curClass != null) {
-            possibleTypes.add(TypeParser.createFrom(curClass.name, true, curClass.language))
+            possibleTypes.add(TypeParser.createFrom(curClass.name, curClass.language))
         }
         return possibleTypes
     }

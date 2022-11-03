@@ -300,10 +300,10 @@ class LLVMIRLanguageFrontendTest {
         val rhs = (comparison.rhs as Literal<*>)
         val lhs = (comparison.lhs as DeclaredReferenceExpression).refersTo as VariableDeclaration
         assertEquals(10L, (rhs.value as Long))
-        assertEquals(TypeParser.createFrom("i32", true, LLVMIRLanguage()), rhs.type)
+        assertEquals(TypeParser.createFrom("i32", LLVMIRLanguage()), rhs.type)
         assertEquals("x", (comparison.lhs as DeclaredReferenceExpression).name)
         assertEquals("x", lhs.name)
-        assertEquals(TypeParser.createFrom("i32", true, LLVMIRLanguage()), lhs.type)
+        assertEquals(TypeParser.createFrom("i32", LLVMIRLanguage()), lhs.type)
 
         // Check that the jump targets are set correctly
         val ifStatement = main.bodyOrNull<IfStatement>(0)
@@ -334,17 +334,11 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(CastExpression::class, ifBranchComp.lhs::class)
 
         val ifBranchCompRhs = ifBranchComp.rhs as CastExpression
-        assertEquals(
-            TypeParser.createFrom("ui32", true, LLVMIRLanguage()),
-            ifBranchCompRhs.castType
-        )
-        assertEquals(TypeParser.createFrom("ui32", true, LLVMIRLanguage()), ifBranchCompRhs.type)
+        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompRhs.castType)
+        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompRhs.type)
         val ifBranchCompLhs = ifBranchComp.lhs as CastExpression
-        assertEquals(
-            TypeParser.createFrom("ui32", true, LLVMIRLanguage()),
-            ifBranchCompLhs.castType
-        )
-        assertEquals(TypeParser.createFrom("ui32", true, LLVMIRLanguage()), ifBranchCompLhs.type)
+        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompLhs.castType)
+        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompLhs.type)
 
         val declRefExpr = ifBranchCompLhs.expression as DeclaredReferenceExpression
         assertEquals(-3, ((ifBranchCompRhs.expression as Literal<*>).value as Long))

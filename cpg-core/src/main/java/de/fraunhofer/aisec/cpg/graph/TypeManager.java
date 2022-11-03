@@ -87,15 +87,6 @@ public class TypeManager {
   private final Set<Type> firstOrderTypes = Collections.synchronizedSet(new HashSet<>());
   private final Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
 
-  /**
-   * The language frontend that is currently active. This can be null, e.g. if we are executed in
-   * tests. We cannot currently remove this completely because it is needed for resolving typedefs.
-   * No function should rely on having this still here!
-   */
-  @Deprecated @org.jetbrains.annotations.Nullable private LanguageFrontend frontend;
-
-  private boolean noFrontendWarningIssued = false;
-
   public static void reset() {
     instance = new TypeManager();
   }
@@ -289,10 +280,6 @@ public class TypeManager {
         types.add(type);
       }
     }
-  }
-
-  public void setLanguageFrontend(@NotNull LanguageFrontend frontend) {
-    this.frontend = frontend;
   }
 
   public static boolean isPrimitive(Type type, Language<? extends LanguageFrontend> language) {
@@ -520,8 +507,7 @@ public class TypeManager {
     Optional<Ancestor> lca =
         commonAncestors.stream().max(Comparator.comparingInt(Ancestor::getDepth));
     Optional<Type> commonType =
-        lca.map(
-            a -> TypeParser.createFrom(a.getRecord().getName(), true, a.getRecord().getLanguage()));
+        lca.map(a -> TypeParser.createFrom(a.getRecord().getName(), a.getRecord().getLanguage()));
 
     Type finalType;
     if (commonType.isPresent()) {
@@ -598,15 +584,13 @@ public class TypeManager {
   }
 
   public void cleanup() {
-    this.frontend = null;
     this.typeToRecord.clear();
   }
 
   private Type getTargetType(Type currTarget, String alias) {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
-      return TypeParser.createFrom(
-          currTarget.getName() + " " + alias, true, currTarget.getLanguage());
+      return TypeParser.createFrom(currTarget.getName() + " " + alias, currTarget.getLanguage());
     } else if (alias.endsWith("]")) {
       // array type
       return currTarget.reference(PointerType.PointerOrigin.ARRAY);
@@ -672,18 +656,10 @@ public class TypeManager {
     return typedef;
   }
 
-  public Type resolvePossibleTypedef(Type alias) {
-    if (frontend == null) {
-      if (!noFrontendWarningIssued) {
-        log.warn("No frontend available. Be aware that typedef resolving cannot currently be done");
-        noFrontendWarningIssued = true;
-      }
-      return alias;
-    }
-
+  public Type resolvePossibleTypedef(Type alias, ScopeManager scopeManager) {
     Type finalToCheck = alias.getRoot();
     Optional<Type> applicable =
-        frontend.getScopeManager().getCurrentTypedefs().stream()
+        scopeManager.getCurrentTypedefs().stream()
             .filter(t -> t.getAlias().getRoot().equals(finalToCheck))
             .findAny()
             .map(TypedefDeclaration::getType);

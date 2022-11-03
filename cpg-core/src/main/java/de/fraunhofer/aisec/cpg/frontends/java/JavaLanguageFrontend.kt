@@ -93,8 +93,6 @@ open class JavaLanguageFrontend(
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        TypeManager.getInstance().setLanguageFrontend(this)
-
         // load in the file
         return try {
             val parserConfiguration = ParserConfiguration()
@@ -216,7 +214,7 @@ open class JavaLanguageFrontend(
             val type = nodeWithType.typeAsString
             if (type == "var") {
                 UnknownType.getUnknownType(language)
-            } else parseType(resolved.type.describe(), true)
+            } else parseType(resolved.type.describe())
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
         } catch (ex: NoClassDefFoundError) {
@@ -228,7 +226,7 @@ open class JavaLanguageFrontend(
         return try {
             if (type.toString() == "var") {
                 UnknownType.getUnknownType(language)
-            } else parseType(type.resolve().describe(), true)
+            } else parseType(type.resolve().describe())
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(type)
         } catch (ex: NoClassDefFoundError) {
@@ -347,7 +345,7 @@ open class JavaLanguageFrontend(
                 TypeManager.getInstance()
                     .getTypeParameter(scopeManager.currentRecord, resolved.returnType.describe())
             if (type == null) {
-                type = parseType(resolved.returnType.describe(), true)
+                type = parseType(resolved.returnType.describe())
             }
             type
         } catch (ex: RuntimeException) {
@@ -380,7 +378,7 @@ open class JavaLanguageFrontend(
         // if this is not a ClassOrInterfaceType, just return
         if (!searchType.isClassOrInterfaceType || context == null) {
             log.warn("Unable to resolve type for {}", type.asString())
-            val returnType = parseType(type.asString(), true)
+            val returnType = parseType(type.asString())
             returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
             return returnType
         }
@@ -390,7 +388,7 @@ open class JavaLanguageFrontend(
             for (importDeclaration in context!!.imports) {
                 if (importDeclaration.name.identifier.endsWith(clazz.name.identifier)) {
                     // TODO: handle type parameters
-                    return parseType(importDeclaration.nameAsString, true)
+                    return parseType(importDeclaration.nameAsString)
                 }
             }
             var name = clazz.asString()
@@ -401,12 +399,12 @@ open class JavaLanguageFrontend(
             if (o.isPresent) {
                 name = o.get().nameAsString + language.namespaceDelimiter + name
             }
-            val returnType = parseType(name, true)
+            val returnType = parseType(name)
             returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
             return returnType
         }
         log.warn("Unable to resolve type for {}", type.asString())
-        val returnType = parseType(type.asString(), true)
+        val returnType = parseType(type.asString())
         returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
         return returnType
     }

@@ -82,9 +82,9 @@ func InitEnv(e *jnigi.Env) {
 	env = e
 }
 
-func TypeParser_createFrom(s string, resolveAlias bool, l *Language) *Type {
+func TypeParser_createFrom(s string, l *Language) *Type {
 	var t Type
-	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/TypeParser", "createFrom", &t, NewString(s), resolveAlias, l)
+	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/TypeParser", "createFrom", &t, NewString(s), l)
 	if err != nil {
 		log.Fatal(err)
 

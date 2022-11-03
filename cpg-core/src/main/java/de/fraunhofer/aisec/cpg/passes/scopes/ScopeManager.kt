@@ -26,10 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.ScopeProvider
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -38,7 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Consumer
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
 
@@ -785,4 +786,38 @@ class ScopeManager : ScopeProvider {
     /** Returns the current scope for the [ScopeProvider] interface. */
     override val scope: Scope?
         get() = currentScope
+
+    fun activateTypes(node: Node) {
+        val num = AtomicInteger()
+        val typeCache = TypeManager.getInstance().typeCache
+        node.accept(
+            { x: Node? -> Strategy.AST_FORWARD(x!!) },
+            object : IVisitor<Node?>() {
+                override fun visit(n: Node) {
+                    if (n is HasType) {
+                        val typeNode = n as HasType
+                        typeCache.getOrDefault(typeNode, emptyList()).forEach { t: Type? ->
+                            (n as HasType).type =
+                                TypeManager.getInstance()
+                                    .resolvePossibleTypedef(t, this@ScopeManager)
+                        }
+                        typeCache.remove(n as HasType)
+                        num.getAndIncrement()
+                    }
+                }
+            }
+        )
+        LOGGER.debug("Activated {} nodes for {}", num, node.name)
+
+        // For some nodes it may happen that they are not reachable via AST, but we still need to
+        // set
+        // their type to the requested value
+        typeCache.forEach { (n: HasType, types: List<Type>) ->
+            types.forEach(
+                Consumer { t: Type? ->
+                    n.type = TypeManager.getInstance().resolvePossibleTypedef(t, this)
+                }
+            )
+        }
+    }
 }

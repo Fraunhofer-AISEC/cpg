@@ -168,7 +168,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 ?.replace("'", "")
                 ?: ""
 
-        return newLiteral(value, parseType("String", false), frontend.getCodeFromRawNode(node))
+        return newLiteral(value, parseType("String"), frontend.getCodeFromRawNode(node))
     }
 
     private fun handleIdentifier(node: TypeScriptNode): Expression {

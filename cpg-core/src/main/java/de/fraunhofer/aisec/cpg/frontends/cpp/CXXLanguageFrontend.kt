@@ -194,7 +194,6 @@ class CXXLanguageFrontend(
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        TypeManager.getInstance().setLanguageFrontend(this)
         val content = FileContent.createForExternalFileLocation(file.absolutePath)
 
         // include paths
@@ -486,10 +485,10 @@ class CXXLanguageFrontend(
             when (specifier) {
                 is IASTSimpleDeclSpecifier -> {
                     if (hint is ConstructorDeclaration) {
-                        parseType(hint.name, false)
+                        parseType(hint.name)
                     } else {
                         // A primitive type
-                        parseType(name, false)
+                        parseType(name)
                     }
                 }
                 is IASTNamedTypeSpecifier -> {

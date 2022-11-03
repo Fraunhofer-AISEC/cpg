@@ -71,17 +71,17 @@ class PythonFrontendTest : BaseTest() {
         val b = p.getDeclarationsByName("b", VariableDeclaration::class.java).iterator().next()
         assertNotNull(b)
         assertEquals("b", b.name)
-        assertEquals(TypeParser.createFrom("bool", false, PythonLanguage()), b.type)
+        assertEquals(TypeParser.createFrom("bool", PythonLanguage()), b.type)
 
         val i = p.getDeclarationsByName("i", VariableDeclaration::class.java).iterator().next()
         assertNotNull(i)
         assertEquals("i", i.name)
-        assertEquals(TypeParser.createFrom("int", false, PythonLanguage()), i.type)
+        assertEquals(TypeParser.createFrom("int", PythonLanguage()), i.type)
 
         val f = p.getDeclarationsByName("f", VariableDeclaration::class.java).iterator().next()
         assertNotNull(f)
         assertEquals("f", f.name)
-        assertEquals(TypeParser.createFrom("float", false, PythonLanguage()), f.type)
+        assertEquals(TypeParser.createFrom("float", PythonLanguage()), f.type)
 
         /*
         val c = p.getDeclarationsByName("c", VariableDeclaration::class.java).iterator().next()
@@ -93,12 +93,12 @@ class PythonFrontendTest : BaseTest() {
         val t = p.getDeclarationsByName("t", VariableDeclaration::class.java).iterator().next()
         assertNotNull(t)
         assertEquals("t", t.name)
-        assertEquals(TypeParser.createFrom("str", false, PythonLanguage()), t.type)
+        assertEquals(TypeParser.createFrom("str", PythonLanguage()), t.type)
 
         val n = p.getDeclarationsByName("n", VariableDeclaration::class.java).iterator().next()
         assertNotNull(n)
         assertEquals("n", n.name)
-        assertEquals(TypeParser.createFrom("None", false, PythonLanguage()), n.type)
+        assertEquals(TypeParser.createFrom("None", PythonLanguage()), n.type)
     }
 
     @Test
@@ -137,7 +137,7 @@ class PythonFrontendTest : BaseTest() {
         val s = bar.parameters.first()
         assertNotNull(s)
         assertEquals("s", s.name)
-        assertEquals(TypeParser.createFrom("str", false, PythonLanguage()), s.type)
+        assertEquals(TypeParser.createFrom("str", PythonLanguage()), s.type)
 
         assertEquals("bar", bar.name)
 
@@ -154,7 +154,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(literal)
 
         assertEquals("bar(s) here: ", literal.value)
-        assertEquals(TypeParser.createFrom("str", false, PythonLanguage()), literal.type)
+        assertEquals(TypeParser.createFrom("str", PythonLanguage()), literal.type)
 
         val ref = callExpression.arguments[1] as? DeclaredReferenceExpression
         assertNotNull(ref)
@@ -216,12 +216,12 @@ class PythonFrontendTest : BaseTest() {
                 as? VariableDeclaration
         assertNotNull(sel)
         assertEquals("sel", sel.name)
-        assertEquals(TypeParser.createFrom("bool", false, PythonLanguage()), sel.type)
+        assertEquals(TypeParser.createFrom("bool", PythonLanguage()), sel.type)
 
         val initializer = sel.initializer as? Literal<*>
 
         assertNotNull(initializer)
-        assertEquals(TypeParser.createFrom("bool", false, PythonLanguage()), initializer.type)
+        assertEquals(TypeParser.createFrom("bool", PythonLanguage()), initializer.type)
         assertEquals("True", initializer.name)
 
         val `if` = body.statements[1] as? IfStatement
@@ -275,7 +275,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("c1", c1.name)
         val ctor = (c1.initializer as? ConstructExpression)?.constructor
         assertEquals(ctor, cls.constructors.first())
-        assertEquals(TypeParser.createFrom("SomeClass", false, PythonLanguage()), c1.type)
+        assertEquals(TypeParser.createFrom("SomeClass", PythonLanguage()), c1.type)
 
         assertEquals(c1, (s2.base as? DeclaredReferenceExpression)?.refersTo)
         assertEquals(1, s2.invokes.size)
@@ -310,12 +310,12 @@ class PythonFrontendTest : BaseTest() {
         val foo = body.singleDeclaration as? VariableDeclaration
         assertNotNull(foo)
         assertEquals("foo", foo.name)
-        assertEquals(TypeParser.createFrom("int", false, PythonLanguage()), foo.type)
+        assertEquals(TypeParser.createFrom("int", PythonLanguage()), foo.type)
 
         val initializer = foo.initializer as? ConditionalExpression
 
         assertNotNull(initializer)
-        assertEquals(TypeParser.createFrom("int", false, PythonLanguage()), initializer.type)
+        assertEquals(TypeParser.createFrom("int", PythonLanguage()), initializer.type)
 
         val ifCond = initializer.condition as? Literal<*>
         assertNotNull(ifCond)
@@ -324,13 +324,13 @@ class PythonFrontendTest : BaseTest() {
         val elseExpr = initializer.elseExpr as? Literal<*>
         assertNotNull(elseExpr)
 
-        assertEquals(TypeParser.createFrom("bool", false, PythonLanguage()), ifCond.type)
+        assertEquals(TypeParser.createFrom("bool", PythonLanguage()), ifCond.type)
         assertEquals(false, ifCond.value)
 
-        assertEquals(TypeParser.createFrom("int", false, PythonLanguage()), thenExpr.type)
+        assertEquals(TypeParser.createFrom("int", PythonLanguage()), thenExpr.type)
         assertEquals(21, (thenExpr.value as? Long)?.toInt())
 
-        assertEquals(TypeParser.createFrom("int", false, PythonLanguage()), elseExpr.type)
+        assertEquals(TypeParser.createFrom("int", PythonLanguage()), elseExpr.type)
         assertEquals(42, (elseExpr.value as? Long)?.toInt())
     }
 
@@ -440,14 +440,14 @@ class PythonFrontendTest : BaseTest() {
         val recv = bar.receiver
         assertNotNull(recv)
         assertEquals("self", recv.name)
-        assertEquals(TypeParser.createFrom("Foo", false, PythonLanguage()), recv.type)
+        assertEquals(TypeParser.createFrom("Foo", PythonLanguage()), recv.type)
 
         assertEquals(1, bar.parameters.size)
         val i = bar.parameters.get(0)
         assertNotNull(i)
 
         assertEquals("i", i.name)
-        assertEquals(TypeParser.createFrom("int", false, PythonLanguage()), i.type)
+        assertEquals(TypeParser.createFrom("int", PythonLanguage()), i.type)
 
         // self.somevar = i
         val someVarDeclaration =
@@ -517,7 +517,7 @@ class PythonFrontendTest : BaseTest() {
         val fooDecl = line1.declarations[0] as? VariableDeclaration
         assertNotNull(fooDecl)
         assertEquals("foo", fooDecl.name)
-        assertEquals(TypeParser.createFrom("Foo", false, PythonLanguage()), fooDecl.type)
+        assertEquals(TypeParser.createFrom("Foo", PythonLanguage()), fooDecl.type)
         val initializer = fooDecl.initializer as? ConstructExpression
         assertEquals(fooCtor, initializer?.constructor)
 

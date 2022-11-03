@@ -280,7 +280,7 @@ public class StatementHandler
     // Adds true expression node where default empty condition evaluates to true, remove here and in
     // cpp StatementHandler
     if (statement.getCondition() == null) {
-      Literal<?> literal = newLiteral(this, true, parseType(this, "boolean", true), "true");
+      Literal<?> literal = newLiteral(this, true, parseType(this, "boolean"), "true");
       statement.setCondition(literal);
     }
 
@@ -643,7 +643,7 @@ public class StatementHandler
         possibleTypes.add(frontend.getTypeAsGoodAsPossible(t));
       }
       // we do not know which of the exceptions was actually thrown, so we assume this might be any
-      concreteType = parseType(this, "java.lang.Throwable", true);
+      concreteType = parseType(this, "java.lang.Throwable");
       concreteType.setTypeOrigin(Type.Origin.GUESSED);
     } else {
       concreteType = frontend.getTypeAsGoodAsPossible(catchCls.getParameter().getType());

@@ -30,14 +30,12 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -223,43 +221,6 @@ public class SubgraphWalker {
             }
           }
         });
-  }
-
-  public static void activateTypes(Node node) {
-    AtomicInteger num = new AtomicInteger();
-
-    Map<HasType, List<Type>> typeCache = TypeManager.getInstance().getTypeCache();
-    node.accept(
-        Strategy::AST_FORWARD,
-        new IVisitor<>() {
-          @Override
-          public void visit(Node n) {
-            if (n instanceof HasType) {
-              HasType typeNode = (HasType) n;
-              typeCache
-                  .getOrDefault(typeNode, Collections.emptyList())
-                  .forEach(
-                      t -> {
-                        t = TypeManager.getInstance().resolvePossibleTypedef(t);
-                        ((HasType) n).setType(t);
-                      });
-              typeCache.remove((HasType) n);
-              num.getAndIncrement();
-            }
-          }
-        });
-
-    LOGGER.debug("Activated {} nodes for {}", num, node.getName());
-
-    // For some nodes it may happen that they are not reachable via AST, but we still need to set
-    // their type to the requested value
-    typeCache.forEach(
-        (n, types) ->
-            types.forEach(
-                t -> {
-                  t = TypeManager.getInstance().resolvePossibleTypedef(t);
-                  n.setType(t);
-                }));
   }
 
   /**

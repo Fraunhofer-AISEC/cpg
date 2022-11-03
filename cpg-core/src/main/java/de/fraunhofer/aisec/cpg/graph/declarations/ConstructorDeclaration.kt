@@ -39,7 +39,7 @@ class ConstructorDeclaration : MethodDeclaration() {
             super.recordDeclaration = recordDeclaration
             if (recordDeclaration != null) {
                 // constructors always have implicitly the return type of their class
-                returnTypes = listOf(TypeParser.createFrom(recordDeclaration.name, true, language))
+                returnTypes = listOf(TypeParser.createFrom(recordDeclaration.name, language))
             }
         }
 }

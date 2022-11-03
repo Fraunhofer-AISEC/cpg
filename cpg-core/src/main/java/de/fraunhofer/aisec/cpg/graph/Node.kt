@@ -75,12 +75,16 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     var code: String? = null
 
+    /**
+     * The language of this node. This property is set in [Node.applyMetadata] by a
+     * [LanguageProvider] at the time when the node is created.
+     */
     @field:Relationship(value = "Language", direction = "OUTGOING")
     @JsonBackReference
     override var language: Language<out LanguageFrontend>? = null
 
     /**
-     * The scope this node "lives" in / in which it is defined. This property set in
+     * The scope this node "lives" in / in which it is defined. This property is set in
      * [Node.applyMetadata] by a [ScopeProvider] at the time when the node is created.
      *
      * For example, if a [RecordDeclaration] is defined in a [TranslationUnitDeclaration] (without

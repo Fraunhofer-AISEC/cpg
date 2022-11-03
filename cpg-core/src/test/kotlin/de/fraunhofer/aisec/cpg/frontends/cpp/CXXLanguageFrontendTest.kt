@@ -1338,5 +1338,5 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     private fun createTypeFrom(typename: String, resolveAlias: Boolean) =
-        TypeParser.createFrom(typename, resolveAlias, CPPLanguage())
+        TypeParser.createFrom(typename, CPPLanguage(), resolveAlias, null)
 }

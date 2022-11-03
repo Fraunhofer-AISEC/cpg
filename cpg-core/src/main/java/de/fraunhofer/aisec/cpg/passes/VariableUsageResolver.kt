@@ -110,7 +110,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                     "Resolution of pointers to functions inside the current scope should have been done by the ScopeManager"
                 )
             } else {
-                containingClass = TypeParser.createFrom(cls, true, reference.language)
+                containingClass = TypeParser.createFrom(cls, reference.language)
             }
         }
 
@@ -156,7 +156,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // else current.refersTo!!
         var recordDeclType: Type? = null
         if (currentClass != null) {
-            recordDeclType = TypeParser.createFrom(currentClass.name, true, currentClass.language)
+            recordDeclType = TypeParser.createFrom(currentClass.name, currentClass.language)
         }
         if (current.type is FunctionPointerType && refersTo == null) {
             refersTo = resolveFunctionPtr(recordDeclType, current)
@@ -220,7 +220,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 true
             )*/
             val parentName = Util.getParentName(language, current.name)
-            return TypeParser.createFrom(parentName, true, language)
+            return TypeParser.createFrom(parentName, language)
         } else {
             return UnknownType.getUnknownType()
         }
@@ -244,8 +244,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                             "Could not find referring super type ${superType.typeName} for ${curClass.name} in the record map. Will set the super type to java.lang.Object"
                         )
                         // TODO: Should be more generic!
-                        base.type =
-                            TypeParser.createFrom(Any::class.java.name, true, current.language)
+                        base.type = TypeParser.createFrom(Any::class.java.name, current.language)
                     } else {
                         // We need to connect this super reference to the receiver of this
                         // method
@@ -265,8 +264,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 } else {
                     // no explicit super type -> java.lang.Object
                     // TODO: Should be more generic
-                    val objectType =
-                        TypeParser.createFrom(Any::class.java.name, true, current.language)
+                    val objectType = TypeParser.createFrom(Any::class.java.name, current.language)
                     base.type = objectType
                 }
             } else {
@@ -281,7 +279,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                     return
                 }
             } else if (baseTarget is RecordDeclaration) {
-                var baseType = TypeParser.createFrom(baseTarget.name, true, baseTarget.language)
+                var baseType = TypeParser.createFrom(baseTarget.name, baseTarget.language)
                 if (baseType.typeName !in recordMap) {
                     val containingT = baseType
                     val fqnResolvedType =
@@ -289,7 +287,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                             it.endsWith("." + containingT.name)
                         } // TODO: Is the "." correct here for all languages?
                     if (fqnResolvedType != null) {
-                        baseType = TypeParser.createFrom(fqnResolvedType, true, baseTarget.language)
+                        baseType = TypeParser.createFrom(fqnResolvedType, baseTarget.language)
                     }
                 }
                 current.refersTo = resolveMember(baseType, current)
@@ -300,7 +298,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         if (baseType.typeName !in recordMap) {
             val fqnResolvedType = recordMap.keys.firstOrNull { it.endsWith("." + baseType.name) }
             if (fqnResolvedType != null) {
-                baseType = TypeParser.createFrom(fqnResolvedType, true, baseType.language)
+                baseType = TypeParser.createFrom(fqnResolvedType, baseType.language)
             }
         }
         current.refersTo = resolveMember(baseType, current)

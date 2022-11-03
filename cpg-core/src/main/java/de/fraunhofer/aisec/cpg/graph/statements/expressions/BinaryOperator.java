@@ -160,7 +160,7 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
         || this.rhs != null && "java.lang.String".equals(this.rhs.getType().toString())) {
       // String + any other type results in a String
       getPossibleSubTypes().clear();
-      setType(TypeParser.createFrom("java.lang.String", true, getLanguage()), root);
+      setType(TypeParser.createFrom("java.lang.String", getLanguage()), root);
     }
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Type.Origin.DATAFLOW);

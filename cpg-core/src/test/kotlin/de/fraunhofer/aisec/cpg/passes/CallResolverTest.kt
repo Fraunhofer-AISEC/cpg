@@ -149,8 +149,8 @@ class CallResolverTest : BaseTest() {
     fun testJava() {
         val result = TestUtils.analyze("java", topLevel, true)
         val records = result.records
-        val intType = TypeParser.createFrom("int", true, JavaLanguage())
-        val stringType = TypeParser.createFrom("java.lang.String", true, JavaLanguage())
+        val intType = TypeParser.createFrom("int", JavaLanguage())
+        val stringType = TypeParser.createFrom("java.lang.String", JavaLanguage())
         testMethods(records, intType, stringType)
         testOverriding(records)
         ensureNoUnknownClassDummies(records)
@@ -166,8 +166,8 @@ class CallResolverTest : BaseTest() {
                 true
             )
         val records = result.records
-        val intType = TypeParser.createFrom("int", true, CPPLanguage())
-        val stringType = TypeParser.createFrom("char*", true, CPPLanguage())
+        val intType = TypeParser.createFrom("int", CPPLanguage())
+        val stringType = TypeParser.createFrom("char*", CPPLanguage())
         testMethods(records, intType, stringType)
         testOverriding(records)
 

@@ -1129,16 +1129,16 @@ func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.Bas
 	case token.STRING:
 		// strip the "
 		value = cpg.NewString(lit.Value[1 : len(lit.Value)-1])
-		t = cpg.TypeParser_createFrom("string", false, lang)
+		t = cpg.TypeParser_createFrom("string", lang)
 	case token.INT:
 		i, _ := strconv.ParseInt(lit.Value, 10, 64)
 		value = cpg.NewInteger(int(i))
-		t = cpg.TypeParser_createFrom("int", false, lang)
+		t = cpg.TypeParser_createFrom("int", lang)
 	case token.FLOAT:
 		// default seems to be float64
 		f, _ := strconv.ParseFloat(lit.Value, 64)
 		value = cpg.NewDouble(f)
-		t = cpg.TypeParser_createFrom("float64", false, lang)
+		t = cpg.TypeParser_createFrom("float64", lang)
 	case token.IMAG:
 	case token.CHAR:
 		value = cpg.NewString(lit.Value)
@@ -1245,12 +1245,12 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		fqn := this.handleIdentAsName(v)
 
 		this.LogDebug("FQN type: %s", fqn)
-		return cpg.TypeParser_createFrom(fqn, false, lang)
+		return cpg.TypeParser_createFrom(fqn, lang)
 	case *ast.SelectorExpr:
 		// small shortcut
 		fqn := fmt.Sprintf("%s.%s", v.X.(*ast.Ident).Name, v.Sel.Name)
 		this.LogDebug("FQN type: %s", fqn)
-		return cpg.TypeParser_createFrom(fqn, false, lang)
+		return cpg.TypeParser_createFrom(fqn, lang)
 	case *ast.StarExpr:
 		t := this.handleType(v.X)
 
@@ -1278,7 +1278,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 	case *ast.MapType:
 		// we cannot properly represent Golangs built-in map types, yet so we have
 		// to make a shortcut here and represent it as a Java-like map<K, V> type.
-		t := cpg.TypeParser_createFrom("map", false, lang)
+		t := cpg.TypeParser_createFrom("map", lang)
 		keyType := this.handleType(v.Key)
 		valueType := this.handleType(v.Value)
 
@@ -1289,7 +1289,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		return t
 	case *ast.ChanType:
 		// handle them similar to maps
-		t := cpg.TypeParser_createFrom("chan", false, lang)
+		t := cpg.TypeParser_createFrom("chan", lang)
 		chanType := this.handleType(v.Value)
 
 		(&(cpg.ObjectType{Type: *t})).AddGeneric(chanType)

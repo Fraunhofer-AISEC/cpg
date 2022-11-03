@@ -53,12 +53,12 @@ internal class CXXLiteralTest : BaseTest() {
 
         val funcDecl = zero.iterator().next()
         assertEquals("zero", funcDecl.name)
-        assertLiteral(0, createTypeFrom("int", true), funcDecl, "i")
-        assertLiteral(0L, createTypeFrom("long", true), funcDecl, "l_with_suffix")
-        assertLiteral(0L, createTypeFrom("long long", true), funcDecl, "l_long_long_with_suffix")
+        assertLiteral(0, createTypeFrom("int"), funcDecl, "i")
+        assertLiteral(0L, createTypeFrom("long"), funcDecl, "l_with_suffix")
+        assertLiteral(0L, createTypeFrom("long long"), funcDecl, "l_long_long_with_suffix")
         assertLiteral(
             BigInteger.valueOf(0),
-            createTypeFrom("unsigned long long", true),
+            createTypeFrom("unsigned long long"),
             funcDecl,
             "l_unsigned_long_long_with_suffix"
         )
@@ -73,31 +73,31 @@ internal class CXXLiteralTest : BaseTest() {
         assertFalse(decimal.isEmpty())
         val funcDecl = decimal.iterator().next()
         assertEquals("decimal", funcDecl.name)
-        assertLiteral(42, createTypeFrom("int", true), funcDecl, "i")
-        assertLiteral(1000, createTypeFrom("int", true), funcDecl, "i_with_literal")
-        assertLiteral(9223372036854775807L, createTypeFrom("long", true), funcDecl, "l")
-        assertLiteral(9223372036854775807L, createTypeFrom("long", true), funcDecl, "l_with_suffix")
+        assertLiteral(42, createTypeFrom("int"), funcDecl, "i")
+        assertLiteral(1000, createTypeFrom("int"), funcDecl, "i_with_literal")
+        assertLiteral(9223372036854775807L, createTypeFrom("long"), funcDecl, "l")
+        assertLiteral(9223372036854775807L, createTypeFrom("long"), funcDecl, "l_with_suffix")
         assertLiteral(
             9223372036854775807L,
-            createTypeFrom("long long", true),
+            createTypeFrom("long long"),
             funcDecl,
             "l_long_long_with_suffix"
         )
         assertLiteral(
             BigInteger("9223372036854775809"),
-            createTypeFrom("unsigned long", true),
+            createTypeFrom("unsigned long"),
             funcDecl,
             "l_unsigned_long_with_suffix"
         )
         assertLiteral(
             BigInteger("9223372036854775808"),
-            createTypeFrom("unsigned long long", true),
+            createTypeFrom("unsigned long long"),
             funcDecl,
             "l_long_long_implicit"
         )
         assertLiteral(
             BigInteger("9223372036854775809"),
-            createTypeFrom("unsigned long long", true),
+            createTypeFrom("unsigned long long"),
             funcDecl,
             "l_unsigned_long_long_with_suffix"
         )
@@ -112,11 +112,11 @@ internal class CXXLiteralTest : BaseTest() {
         assertFalse(octal.isEmpty())
         val funcDecl = octal.iterator().next()
         assertEquals("octal", funcDecl.name)
-        assertLiteral(42, createTypeFrom("int", true), funcDecl, "i")
-        assertLiteral(42L, createTypeFrom("long", true), funcDecl, "l_with_suffix")
+        assertLiteral(42, createTypeFrom("int"), funcDecl, "i")
+        assertLiteral(42L, createTypeFrom("long"), funcDecl, "l_with_suffix")
         assertLiteral(
             BigInteger.valueOf(42),
-            createTypeFrom("unsigned long long", true),
+            createTypeFrom("unsigned long long"),
             funcDecl,
             "l_unsigned_long_long_with_suffix"
         )
@@ -132,11 +132,11 @@ internal class CXXLiteralTest : BaseTest() {
         assertFalse(hex.isEmpty())
         val funcDecl = hex.iterator().next()
         assertEquals("hex", funcDecl.name)
-        assertLiteral(42, createTypeFrom("int", true), funcDecl, "i")
-        assertLiteral(42L, createTypeFrom("long", true), funcDecl, "l_with_suffix")
+        assertLiteral(42, createTypeFrom("int"), funcDecl, "i")
+        assertLiteral(42L, createTypeFrom("long"), funcDecl, "l_with_suffix")
         assertLiteral(
             BigInteger.valueOf(42),
-            createTypeFrom("unsigned long long", true),
+            createTypeFrom("unsigned long long"),
             funcDecl,
             "l_unsigned_long_long_with_suffix"
         )
@@ -197,6 +197,5 @@ internal class CXXLiteralTest : BaseTest() {
         assertEquals(expectedValue, literal.value)
     }
 
-    private fun createTypeFrom(typename: String, resolveAlias: Boolean) =
-        TypeParser.createFrom(typename, resolveAlias, CPPLanguage())
+    private fun createTypeFrom(typename: String) = TypeParser.createFrom(typename, CPPLanguage())
 }

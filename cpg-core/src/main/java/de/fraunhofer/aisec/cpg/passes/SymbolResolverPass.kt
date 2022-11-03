@@ -46,7 +46,7 @@ abstract class SymbolResolverPass : Pass() {
         if (node is RecordDeclaration) {
             // The type name is not the same as the node's name! So, we have to be careful when
             // using the map!
-            val type = TypeParser.createFrom(node.name, true, node.language)
+            val type = TypeParser.createFrom(node.name, node.language)
             recordMap.putIfAbsent(type.typeName, node)
         }
     }
@@ -54,7 +54,7 @@ abstract class SymbolResolverPass : Pass() {
     /** Maps the type of enums to its declaration. */
     protected fun findEnums(node: Node) {
         if (node is EnumDeclaration) {
-            val type = TypeParser.createFrom(node.name, true, node.language)
+            val type = TypeParser.createFrom(node.name, node.language)
             enumMap.putIfAbsent(type, node)
         }
     }

@@ -139,7 +139,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
         assertEquals("s", sDecl.name)
-        assertEquals(createTypeFrom("java.lang.String", true), sDecl.type)
+        assertEquals(createTypeFrom("java.lang.String"), sDecl.type)
 
         // should contain a single statement
         val sce = forEachStatement.statement as? MemberCallExpression
@@ -167,19 +167,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(3, catchClauses.size)
         // first exception type was? resolved, so we can expect a FQN
         assertEquals(
-            createTypeFrom("java.lang.NumberFormatException", true),
+            createTypeFrom("java.lang.NumberFormatException"),
             catchClauses[0].parameter?.type
         )
         // second one could not be resolved so we do not have an FQN
-        assertEquals(
-            createTypeFrom("NotResolvableTypeException", true),
-            catchClauses[1].parameter?.type
-        )
+        assertEquals(createTypeFrom("NotResolvableTypeException"), catchClauses[1].parameter?.type)
         // third type should have been resolved through the import
-        assertEquals(
-            createTypeFrom("some.ImportedException", true),
-            (catchClauses[2].parameter)?.type
-        )
+        assertEquals(createTypeFrom("some.ImportedException"), (catchClauses[2].parameter)?.type)
 
         // and 1 finally
         val finallyBlock = tryStatement.finallyBlock
@@ -279,7 +273,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
         assertEquals("method", method.name)
-        assertEquals(createTypeFrom("java.lang.Integer", true), method.returnTypes.firstOrNull())
+        assertEquals(createTypeFrom("java.lang.Integer"), method.returnTypes.firstOrNull())
 
         val functionType = method.type as? FunctionType
         assertNotNull(functionType)
@@ -382,7 +376,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(a)
 
         // type should be Integer[]
-        assertEquals(createTypeFrom("int[]", true), a.type)
+        assertEquals(createTypeFrom("int[]"), a.type)
 
         // it has an array creation initializer
         val ace = a.initializer as? ArrayCreationExpression
@@ -579,7 +573,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration?
         assertNotNull(receiver)
         assertEquals("this", receiver.name)
-        assertEquals(createTypeFrom("my.Animal", false), receiver.type)
+        assertEquals(createTypeFrom("my.Animal"), receiver.type)
     }
 
     @Test
@@ -690,6 +684,5 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         }
     }
 
-    private fun createTypeFrom(typename: String, resolveAlias: Boolean) =
-        TypeParser.createFrom(typename, resolveAlias, JavaLanguage())
+    private fun createTypeFrom(typename: String) = TypeParser.createFrom(typename, JavaLanguage())
 }

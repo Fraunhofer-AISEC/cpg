@@ -75,7 +75,7 @@ class JavaExternalTypeHierarchyResolver : Pass() {
                     val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
                     for (anc in resolvedSuperTypes) {
                         // Add all resolved supertypes to the type.
-                        val superType = TypeParser.createFrom(anc.qualifiedName, false, t.language)
+                        val superType = TypeParser.createFrom(anc.qualifiedName, t.language)
                         superType.typeOrigin = Type.Origin.RESOLVED
                         t.superTypes.add(superType)
                     }

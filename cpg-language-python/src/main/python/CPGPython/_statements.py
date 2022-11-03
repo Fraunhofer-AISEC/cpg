@@ -66,7 +66,7 @@ def handle_statement_impl(self, stmt):
                     (type(base)), loglevel="ERROR")
             else:
                 tname = "%s" % (base.id)
-                t = NodeBuilderKt.parseType(self.frontend, tname, True)
+                t = NodeBuilderKt.parseType(self.frontend, tname)
                 bases.append(t)
         cls.setSuperClasses(bases)
         for keyword in stmt.keywords:
@@ -304,8 +304,7 @@ def handle_function_or_method(self, node, record=None):
         if len(node.args.args) > 0:
             recv_node = node.args.args[0]
             tpe = NodeBuilderKt.parseType(self.frontend,
-                                          record.getName(),
-                                          False)
+                                          record.getName())
             recv = DeclarationBuilderKt.newVariableDeclaration(
                 self.frontend,
                 recv_node.arg, tpe, self.get_src_code(recv_node),
@@ -400,7 +399,7 @@ def handle_function_or_method(self, node, record=None):
 def handle_argument(self, arg: ast.arg):
     self.log_with_loc("Handling an argument: %s" % (ast.dump(arg)))
     if arg.annotation is not None:
-        tpe = NodeBuilderKt.parseType(self.frontend, arg.annotation.id, False)
+        tpe = NodeBuilderKt.parseType(self.frontend, arg.annotation.id)
     else:
         tpe = UnknownType.getUnknownType()
     # TODO variadic

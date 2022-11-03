@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -83,8 +82,6 @@ class LLVMIRLanguageFrontend(
         var bench = Benchmark(this.javaClass, "Parsing sourcefile")
         // clear the bindings cache, because it is just valid within one module
         bindingsCache.clear()
-
-        TypeManager.getInstance().setLanguageFrontend(this)
 
         // these will be filled by our create and parse functions later and will be passed as
         // pointer
@@ -213,7 +210,7 @@ class LLVMIRLanguageFrontend(
                     record.toType() ?: UnknownType.getUnknownType(language)
                 }
                 else -> {
-                    parseType(typeStr, false)
+                    parseType(typeStr)
                 }
             }
         alreadyVisited[typeRef] = res
