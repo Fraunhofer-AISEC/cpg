@@ -414,6 +414,17 @@ public class TypeManager implements LanguageProvider {
     }
   }
 
+  /**
+   * This function is a relict from the old ages. It iterates through a collection of types and
+   * returns the type they have in *common*. For example, if two types `A` and `B` both derive from
+   * the interface `C`` then `C` would be returned. Because this contains some legacy code that does
+   * crazy stuff, we need access to scope information, so we can build a map between type
+   * information and their record declarations. We want to get rid of that in the future.
+   *
+   * @param types the types to compare
+   * @param provider a {@link ScopeProvider}.
+   * @return the common type
+   */
   @NotNull
   public Optional<Type> getCommonType(@NotNull Collection<Type> types, ScopeProvider provider) {
     // TODO: Documentation needed.
@@ -439,16 +450,19 @@ public class TypeManager implements LanguageProvider {
           wrapState.getReferenceType());
     }
 
-    var scope222 = provider.getScope();
-    while (!(scope222 instanceof GlobalScope)) {
-      if (scope222 == null) {
-        return Optional.empty();
-      }
+    var scope = provider.getScope();
 
-      scope222 = scope222.getParent();
+    if (scope == null) {
+      return Optional.empty();
     }
 
-    for (var child : scope222.getChildren()) {
+    // We need to find the global scope
+    var globalScope = provider.getScope().getGlobalScope();
+    if (globalScope == null) {
+      return Optional.empty();
+    }
+
+    for (var child : globalScope.getChildren()) {
       if (child instanceof RecordScope && child.getAstNode() instanceof RecordDeclaration) {
         typeToRecord.put(child.getAstNode().getName(), (RecordDeclaration) child.getAstNode());
       }
@@ -463,22 +477,6 @@ public class TypeManager implements LanguageProvider {
         }
       }
     }
-
-    /*typeToRecord =
-    frontend
-        .getScopeManager()
-        .filterScopesDistinctBy(
-            scope -> {
-              // It seems that somehow other node types get mixed into the ast node of a record
-              // scope sometimes. So we need to be extra sure that our ast node is a record
-              // declaration
-              return scope instanceof RecordScope
-                  && scope.getAstNode() instanceof RecordDeclaration;
-            },
-            s -> s.getAstNode().getName())
-        .stream()
-        .map(s -> (RecordDeclaration) s.getAstNode())
-        .collect(Collectors.toMap(Node::getName, Function.identity()));*/
 
     List<Set<Ancestor>> allAncestors =
         types.stream()

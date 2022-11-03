@@ -29,12 +29,17 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -74,6 +79,15 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @JsonBackReference
     override var language: Language<out LanguageFrontend>? = null
 
+    /**
+     * The scope this node "lives" in / in which it is defined. This property set in
+     * [Node.applyMetadata] by a [ScopeProvider] at the time when the node is created.
+     *
+     * For example, if a [RecordDeclaration] is defined in a [TranslationUnitDeclaration] (without
+     * any namespaces), the scope of the [RecordDeclaration] is most likely a [GlobalScope]. Since
+     * the declaration itself creates a [RecordScope], the scope of a [MethodDeclaration] within the
+     * class would be a [RecordScope] pointing to the [RecordDeclaration].
+     */
     override var scope: Scope? = null
 
     /** Optional comment of this node. */

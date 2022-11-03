@@ -984,7 +984,7 @@ internal class TypeTests : BaseTest() {
         val level2 = TypeParser.createFrom("Level2", true, CPPLanguage())
         val level2b = TypeParser.createFrom("Level2B", true, CPPLanguage())
 
-        var provider = result.translationUnits.firstOrNull()
+        var provider = result.scopeManager
         /*
         Type hierarchy:
                   Root------------
