@@ -73,7 +73,7 @@ class PythonASTToCPG(ast.NodeVisitor):
             # TODO improve readability
             nsd_name = ".".join(self.fname.split("/")[-1].split(".")[:-1])
             nsd = DeclarationBuilderKt.newNamespaceDeclaration(self.frontend,
-                                                               nsd_name,  "")
+                                                               nsd_name, "")
             self.tud.addDeclaration(nsd)
             self.scopemanager.enterScope(nsd)
 

@@ -264,7 +264,7 @@ def handle_function_or_method(self, node, record=None):
             "Expected either ast.FunctionDef or ast.AsyncFunctionDef",
             loglevel="ERROR")
         r = DeclarationBuilderKt.newFunctionDeclaration(self.frontend,
-                                                        "DUMMY",  "DUMMY")
+                                                        "DUMMY", "DUMMY")
         return r
 
     if isinstance(node, ast.AsyncFunctionDef):
@@ -350,17 +350,17 @@ def handle_function_or_method(self, node, record=None):
         if isinstance(decorator.func, ast.Attribute):
             ref = self.handle_expression(decorator.func)
             annotation = self.frontend.newAnnotation(
-                ref.getName(),  self.get_src_code(decorator.func))
+                ref.getName(), self.get_src_code(decorator.func))
 
             # add the base as a receiver annotation
             member = self.frontend.newAnnotationMember(
-                "receiver", ref.getBase(),  self.get_src_code(decorator.func))
+                "receiver", ref.getBase(), self.get_src_code(decorator.func))
 
             members.append(member)
         elif isinstance(decorator.func, ast.Name):
             ref = self.handle_expression(decorator.func)
             annotation = self.frontend.newAnnotation(
-                ref.getName(),  self.get_src_code(decorator.func))
+                ref.getName(), self.get_src_code(decorator.func))
 
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
@@ -371,7 +371,7 @@ def handle_function_or_method(self, node, record=None):
             value = self.handle_expression(arg0)
 
             member = self.frontend.newAnnotationMember(
-                "value", value,  self.get_src_code(arg0))
+                "value", value, self.get_src_code(arg0))
 
             members.append(member)
 
@@ -379,7 +379,7 @@ def handle_function_or_method(self, node, record=None):
         for kw in decorator.keywords:
             member = self.frontend.newAnnotationMember(
                 kw.arg, self.handle_expression(
-                    kw.value),  self.get_src_code(kw))
+                    kw.value), self.get_src_code(kw))
 
             members.append(member)
 
@@ -489,14 +489,14 @@ def handle_assign_impl(self, stmt):
         op = self.handle_operator_code(stmt.op)
         value = self.handle_expression(stmt.value)
         r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
-                                                  op,  self.get_src_code(stmt))
+                                                  op, self.get_src_code(stmt))
         r.setLhs(target)
         r.setRhs(value)
         return r
     if isinstance(stmt, ast.Assign) and len(stmt.targets) != 1:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
-                                                  "=",  self.get_src_code(stmt)
+                                                  "=", self.get_src_code(stmt)
                                                   )
         return r
     if isinstance(stmt, ast.Assign):
