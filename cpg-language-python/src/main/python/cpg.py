@@ -35,5 +35,5 @@ def parse_code(code, filename, frontend):
         return tud
     except Exception as e:
         frontend.Companion.getLog().error(
-            "Buidling the CPG failed with exception: %s" % (e))
+            "Building the CPG failed with exception: %s" % (e))
         raise e

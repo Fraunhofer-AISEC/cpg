@@ -121,8 +121,8 @@ def handle_statement_impl(self, stmt):
         whl_stmt.setStatement(body)
         if stmt.orelse is not None and len(stmt.orelse) != 0:
             self.log_with_loc(
-                "\"orelse\" is currently not suppoorted for "
-                "\"while\" statments -> skipping",
+                "\"orelse\" is currently not supported for "
+                "\"while\" statements -> skipping",
                 loglevel="ERROR")
         return whl_stmt
     elif isinstance(stmt, ast.If):
@@ -176,7 +176,7 @@ def handle_statement_impl(self, stmt):
             v = StatementBuilderKt.newVariableDeclaration(self.frontend,
                                                           name, tpe, src,
                                                           False)
-            # inacurate but ast.alias does not hold location information
+            # inaccurate but ast.alias does not hold location information
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
         return decl_stmt
@@ -205,7 +205,7 @@ def handle_statement_impl(self, stmt):
             tpe = UnknownType.getUnknownType()
             v = DeclarationBuilderKt.newVariableDeclaration(
                 self.frontend, name, tpe, src, False)
-            # inacurate but ast.alias does not hold location information
+            # inaccurate but ast.alias does not hold location information
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
         return decl_stmt
@@ -248,7 +248,7 @@ def handle_statement_impl(self, stmt):
     else:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         self.log_with_loc(
-            "Received unepxected stmt: %s with type %s" %
+            "Received unexpected stmt: %s with type %s" %
             (stmt, type(stmt)))
         r = StatementBuilderKt.newStatement(self.frontend, "")
         return r
@@ -299,7 +299,7 @@ def handle_function_or_method(self, node, record=None):
     for arg in node.args.posonlyargs:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
 
-    # First argument is the reciver in case of a method
+    # First argument is the receiver in case of a method
     if record is not None:
         if len(node.args.args) > 0:
             recv_node = node.args.args[0]
@@ -481,7 +481,7 @@ def handle_assign(self, stmt):
 
 def handle_assign_impl(self, stmt):
     """
-    This funnction handles assignments (ast.Assign, ast.AnnAssign,
+    This function handles assignments (ast.Assign, ast.AnnAssign,
     ast.AugAssign)
     """
     if stmt is ast.AugAssign:
@@ -556,12 +556,12 @@ def handle_assign_impl(self, stmt):
                 v = DeclarationBuilderKt.newFieldDeclaration(
                     self.frontend, name, rhs.getType(),
                     None, self.get_src_code(stmt),
-                    None, rhs, False)  # TODO None -> infos eintragen
+                    None, rhs, False)  # TODO None -> add infos
             else:
                 v = DeclarationBuilderKt.newFieldDeclaration(
                     self.frontend, name, UnknownType.getUnknownType(),
                     None, self.get_src_code(stmt),
-                    None, None, False)  # TODO None -> infos eintragen
+                    None, None, False)  # TODO None -> add infos
             self.scopemanager.addDeclaration(v)
             return v
         elif inRecord and inFunction:

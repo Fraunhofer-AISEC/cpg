@@ -86,6 +86,6 @@ class PythonASTToCPG(ast.NodeVisitor):
             self.scopemanager.leaveScope(nsd)
             self.scopemanager.addDeclaration(nsd)
         else:
-            self.log_with_loc("Expected an ast.Module node but recieved %s." %
+            self.log_with_loc("Expected an ast.Module node but received %s." %
                               (type(self.rootNode)), level="ERROR")
             raise RuntimeError
