@@ -210,9 +210,8 @@ class CPPLanguage :
         scopeManager: ScopeManager
     ): List<FunctionDeclaration> {
         val invocationCandidates =
-            scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).filter { f
-                -> /*!f.isImplicit() &&*/
-                call.signature.size < f.signatureTypes.size
+            scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).filter {
+                call.signature.size < it.signatureTypes.size
             }
         return resolveWithDefaultArgs(call, invocationCandidates)
     }

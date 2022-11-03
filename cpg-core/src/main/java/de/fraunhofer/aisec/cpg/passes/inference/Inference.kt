@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
+import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -75,7 +76,9 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
             "Inferring a new function declaration $name with parameter types ${signature.map { it?.name }}"
         )
 
-        if (record?.isInferred == true && record.kind == "struct") {
+        if (
+            record?.isInferred == true && record.kind == "struct" && record.language is HasClasses
+        ) {
             // "upgrade" our struct to a class, if it was inferred by us, since we are calling
             // methods on it
             record.kind = "class"
@@ -227,7 +230,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
         val inferred = newFunctionTemplateDeclaration(name, code)
         inferred.isInferred = true
 
-        val inferredRealization: FunctionDeclaration? =
+        val inferredRealization: FunctionDeclaration =
             if (record != null) {
                 record.addDeclaration(inferred)
                 record.inferMethod(call)
@@ -250,7 +253,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
                 inferred.addParameter(typeParamDeclaration)
             } else if (node is Expression) {
                 val inferredNonTypeIdentifier = "N$nonTypeCounter"
-                var paramVariableDeclaration =
+                val paramVariableDeclaration =
                     node.startInference().inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
 
                 paramVariableDeclaration.addPrevDFG(node)
@@ -260,6 +263,39 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
             }
         }
         return inferred
+    }
+
+    /**
+     * Infers a record declaration for the given type. [type] is the object type representing a
+     * record that we want to infer, the [recordToUpdate] is either the type's name or the type's
+     * root name. The [kind] specifies if we create a class or a struct.
+     */
+    fun inferRecordDeclaration(
+        type: Type,
+        currentTU: TranslationUnitDeclaration,
+        kind: String = "class"
+    ): RecordDeclaration? {
+        if (type !is ObjectType) {
+            log.error(
+                "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?"
+            )
+            return null
+        }
+        log.debug(
+            "Encountered an unknown record type ${type.typeName} during a call. We are going to infer that record"
+        )
+
+        // This could be a class or a struct. We start with a class and may have to fine-tune this
+        // later.
+        val declaration = currentTU.newRecordDeclaration(type.typeName, kind, "")
+        declaration.isInferred = true
+
+        // update the type
+        type.recordDeclaration = declaration
+
+        // add this record declaration to the current TU (this bypasses the scope manager)
+        currentTU.addDeclaration(declaration)
+        return declaration
     }
 
     override val isInferred: Boolean

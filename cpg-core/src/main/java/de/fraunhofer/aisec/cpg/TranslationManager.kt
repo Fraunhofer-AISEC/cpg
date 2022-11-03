@@ -283,10 +283,10 @@ private constructor(
                     handleCompletion(result, usedFrontends, futureToFile[future], f)
                 }
             } catch (e: InterruptedException) {
-                log.error("Error parsing " + futureToFile[future], e)
+                log.error("Error parsing ${futureToFile[future]}", e)
                 Thread.currentThread().interrupt()
             } catch (e: ExecutionException) {
-                log.error("Error parsing " + futureToFile[future], e)
+                log.error("Error parsing ${futureToFile[future]}", e)
                 Thread.currentThread().interrupt()
             }
         }
@@ -359,7 +359,7 @@ private constructor(
             }
             component.translationUnits.add(frontend.parse(sourceLocation))
         } catch (ex: TranslationException) {
-            log.error("An error occurred during parsing of {}: {}", sourceLocation.name, ex.message)
+            log.error("An error occurred during parsing of ${sourceLocation.name}: ${ex.message}")
             if (config.failOnError) {
                 throw ex
             }
@@ -373,18 +373,21 @@ private constructor(
         return if (language != null) {
             try {
                 language.newFrontend(config, scopeManager)
-            } catch (e: InstantiationException) {
-                log.error("Could not instantiate language frontend {}", language.frontend.name, e)
-                null
-            } catch (e: IllegalAccessException) {
-                log.error("Could not instantiate language frontend {}", language.frontend.name, e)
-                null
-            } catch (e: InvocationTargetException) {
-                log.error("Could not instantiate language frontend {}", language.frontend.name, e)
-                null
-            } catch (e: NoSuchMethodException) {
-                log.error("Could not instantiate language frontend {}", language.frontend.name, e)
-                null
+            } catch (e: Exception) {
+                when (e) {
+                    is InstantiationException,
+                    is IllegalAccessException,
+                    is InvocationTargetException,
+                    is NoSuchMethodException -> {
+                        log.error(
+                            "Could not instantiate language frontend {}",
+                            language.frontend.name,
+                            e
+                        )
+                        null
+                    }
+                    else -> throw e
+                }
             }
         } else null
     }

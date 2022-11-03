@@ -508,6 +508,7 @@ public class TypeParser {
    * @param type provided typeString
    * @return typeString which uses . instead of the substring :: if CPP is the current language
    *     <p>TODO: Remove this function, this is not a good idea!
+   * @deprecated
    */
   @Deprecated
   private static String replaceScopeResolutionOperator(
@@ -732,7 +733,7 @@ public class TypeParser {
     // Separate typeString into a List containing each part of the typeString
     List<String> typeBlocks = separate(type);
 
-    // Depending if the Type is primitive or not signed/unsigned must be set differently (only
+    // Depending on if the Type is primitive or not signed/unsigned must be set differently (only
     // relevant for ObjectTypes)
     boolean primitiveType = isPrimitiveType(typeBlocks, language);
 

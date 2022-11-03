@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.*;
-import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.*;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.*;
 
 import com.github.javaparser.ast.ImportDeclaration;
@@ -244,7 +243,6 @@ public class DeclarationHandler
                 : UnknownType.getUnknownType(getLanguage()),
             "this",
             false);
-    ;
 
     functionDeclaration.setReceiver(receiver);
 

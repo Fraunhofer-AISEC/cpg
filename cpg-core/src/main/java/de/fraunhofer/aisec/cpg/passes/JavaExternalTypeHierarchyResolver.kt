@@ -30,7 +30,6 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSol
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -44,10 +43,6 @@ import org.slf4j.LoggerFactory
 @RequiredFrontend(JavaLanguageFrontend::class)
 class JavaExternalTypeHierarchyResolver : Pass() {
     override fun accept(translationResult: TranslationResult) {
-        // TODO: We have to fix this! Also, the tr can have multiple languages, so we may need a
-        // type for this.
-        if (translationResult.language !is JavaLanguage) return
-
         val resolver = CombinedTypeSolver()
 
         resolver.add(ReflectionTypeSolver())
@@ -73,6 +68,7 @@ class JavaExternalTypeHierarchyResolver : Pass() {
 
         // Iterate over all known types and add their (direct) supertypes.
         for (t in HashSet(tm.firstOrderTypes)) {
+            // TODO: Do we have to check if the type's language is JavaLanguage?
             val symbol = resolver.tryToSolveType(t.typeName)
             if (symbol.isSolved) {
                 try {

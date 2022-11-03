@@ -57,10 +57,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             is IASTFieldDeclarator -> handleFieldDeclarator(node)
             is IASTDeclarator -> handleDeclarator(node)
             is IASTCompositeTypeSpecifier -> handleCompositeTypeSpecifier(node)
-            is CPPASTArrayDeclarator ->
-                handleDeclarator(
-                    node
-                ) // TODO: Remove? It should already be covered by IASTDeclarator
             is CPPASTSimpleTypeTemplateParameter -> handleTemplateTypeParameter(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)

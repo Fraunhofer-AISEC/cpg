@@ -99,52 +99,11 @@ abstract class SymbolResolverPass : Pass() {
     }
 
     /**
-     * Infers a record declaration for the given type. [type] is the object type representing a
-     * record that we want to infer, the [recordToUpdate] is either the type's name or the type's
-     * root name. The [kind] specifies if we create a class or a struct.
-     *
-     * // TODO(oxisto): Move this to the Inference class
-     */
-    protected fun inferRecordDeclaration(
-        type: Type,
-        recordToUpdate: String,
-        kind: String = "class"
-    ): RecordDeclaration? {
-        if (type !is ObjectType) {
-            log.error(
-                "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?"
-            )
-            return null
-        }
-        log.debug(
-            "Encountered an unknown record type ${type.typeName} during a call. We are going to infer that record"
-        )
-
-        // This could be a class or a struct. We start with a class and may have to fine-tune this
-        // later.
-        // TODO: used to be a struct in the VariableUsageResolver and a class in the
-        // CallResolver. Both said that the kind could have been wrong and should be updated
-        // later. However, I don't know where/if this ever happened.
-        val declaration = currentTU.newRecordDeclaration(type.typeName, kind, "")
-        declaration.isInferred = true
-
-        // update the type
-        type.recordDeclaration = declaration
-
-        // update the record map
-        recordMap[recordToUpdate] = declaration
-
-        // add this record declaration to the current TU (this bypasses the scope manager)
-        currentTU.addDeclaration(declaration)
-        return declaration
-    }
-
-    /**
      * Determines if the [reference] is refers to the super class and we have to start searching
      * there.
      */
     protected fun isSuperclassReference(reference: DeclaredReferenceExpression): Boolean {
-        var language = reference.language
+        val language = reference.language
 
         return language is HasSuperclasses &&
             reference.name.matches(

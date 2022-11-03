@@ -327,7 +327,9 @@ open class CallResolver : SymbolResolverPass() {
                 .mapNotNull {
                     var record = recordMap[it.root.typeName]
                     if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
-                        record = inferRecordDeclaration(it, it.root.typeName)
+                        record = it.startInference().inferRecordDeclaration(it, currentTU)
+                        // update the record map
+                        if (record != null) recordMap[it.root.typeName] = record
                     }
                     record
                 }

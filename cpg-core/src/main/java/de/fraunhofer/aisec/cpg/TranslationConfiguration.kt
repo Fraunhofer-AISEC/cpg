@@ -539,11 +539,9 @@ private constructor(
             for (p in passes) {
                 val executeBefore = p.executeBefore
                 for (eb in executeBefore) {
-                    for (p2 in passes) {
-                        if (eb.isInstance(p2)) {
-                            p2.addSoftDependency(p.javaClass)
-                        }
-                    }
+                    passes
+                        .filter { eb.isInstance(it) }
+                        .forEach { it.addSoftDependency(p.javaClass) }
                 }
             }
             for (p in passes) {

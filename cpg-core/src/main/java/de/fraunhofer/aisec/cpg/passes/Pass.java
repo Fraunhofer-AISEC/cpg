@@ -117,7 +117,7 @@ public abstract class Pass implements Consumer<@NotNull TranslationResult> {
    * @param lang the language
    * @return <code>true</code> by default
    */
-  public boolean supportsLanguage(Language lang) {
+  public boolean supportsLanguage(Language<? extends LanguageFrontend> lang) {
     return true;
   }
 

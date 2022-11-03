@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.HasSuperclasses
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -367,7 +368,15 @@ open class VariableUsageResolver : SymbolResolverPass() {
             if (config?.inferenceConfiguration?.inferRecords != true) return null
 
             // We access an unknown field of an unknown record. so we need to handle that
-            inferRecordDeclaration(base, base.typeName, "struct")
+            val kind =
+                if (base.language is HasStructs) {
+                    "struct"
+                } else {
+                    "class"
+                }
+            val record = base.startInference().inferRecordDeclaration(base, currentTU, kind)
+            // update the record map
+            if (record != null) recordMap[base.typeName] = record
         }
 
         val recordDeclaration = recordMap[base.typeName]
