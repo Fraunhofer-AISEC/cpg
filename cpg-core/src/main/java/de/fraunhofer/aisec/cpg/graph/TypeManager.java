@@ -47,7 +47,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TypeManager implements LanguageProvider {
+public class TypeManager {
 
   private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
@@ -61,7 +61,7 @@ public class TypeManager implements LanguageProvider {
       Collections.synchronizedMap(new IdentityHashMap<>());
 
   @NotNull
-  private Map<String, RecordDeclaration> typeToRecord =
+  private final Map<String, RecordDeclaration> typeToRecord =
       Collections.synchronizedMap(new HashMap<>());
 
   /**
@@ -89,9 +89,10 @@ public class TypeManager implements LanguageProvider {
 
   /**
    * The language frontend that is currently active. This can be null, e.g. if we are executed in
-   * tests.
+   * tests. We cannot currently remove this completely because it is needed for resolving typedefs.
+   * No function should rely on having this still here!
    */
-  @org.jetbrains.annotations.Nullable private LanguageFrontend frontend;
+  @Deprecated @org.jetbrains.annotations.Nullable private LanguageFrontend frontend;
 
   private boolean noFrontendWarningIssued = false;
 
@@ -554,16 +555,6 @@ public class TypeManager implements LanguageProvider {
     return ancestors;
   }
 
-  @NotNull
-  public Language<? extends LanguageFrontend> getLanguage() {
-    return frontend.getLanguage();
-  }
-
-  @Nullable
-  public LanguageFrontend getFrontend() {
-    return frontend;
-  }
-
   public boolean isSupertypeOf(Type superType, Type subType, ScopeProvider provider) {
 
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
@@ -660,15 +651,11 @@ public class TypeManager implements LanguageProvider {
    */
   @NotNull
   public Declaration createTypeAlias(
-      LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
+      @NotNull LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
     String cleanedPart = Util.removeRedundantParentheses(aliasString);
     Type currTarget = getTargetType(target, cleanedPart);
     Type alias;
-    if (frontend == null) {
-      alias = getAlias(cleanedPart, getLanguage());
-    } else {
-      alias = getAlias(cleanedPart, frontend.getLanguage());
-    }
+    alias = getAlias(cleanedPart, frontend.getLanguage());
 
     if (alias instanceof SecondOrderType) {
       Type chain = alias.duplicate();
@@ -678,17 +665,10 @@ public class TypeManager implements LanguageProvider {
       alias = alias.getRoot();
     }
 
-    TypedefDeclaration typedef = newTypedefDeclaration(this, currTarget, alias, rawCode);
-
-    if (frontend == null) {
-      if (!noFrontendWarningIssued) {
-        log.warn("No frontend available. Be aware that typedef resolving cannot currently be done");
-        noFrontendWarningIssued = true;
-      }
-      return typedef;
-    }
+    TypedefDeclaration typedef = newTypedefDeclaration(frontend, currTarget, alias, rawCode);
 
     frontend.getScopeManager().addTypedef(typedef);
+
     return typedef;
   }
 

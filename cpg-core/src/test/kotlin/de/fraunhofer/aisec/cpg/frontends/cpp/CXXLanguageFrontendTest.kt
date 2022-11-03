@@ -1318,7 +1318,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/c/typedef_in_header/main.c")
         val result = analyze(listOf(file), file.parentFile.toPath(), true)
 
-        val typedefs = TypeManager.getInstance().frontend?.scopeManager?.currentTypedefs
+        val typedefs = result.scopeManager.currentTypedefs
         assertNotNull(typedefs)
         assertTrue(typedefs.isNotEmpty())
 
