@@ -41,12 +41,17 @@ import java.util.regex.Pattern
  * @return true if the CallExpression signature can be transformed into the FunctionDeclaration
  * signature by means of casting
  */
-fun compatibleSignatures(callSignature: List<Type?>, functionSignature: List<Type>): Boolean {
+fun compatibleSignatures(
+    callSignature: List<Type?>,
+    functionSignature: List<Type>,
+    provider: ScopeProvider
+): Boolean {
     return if (callSignature.size == functionSignature.size) {
         for (i in callSignature.indices) {
             if (
                 callSignature[i]!!.isPrimitive != functionSignature[i].isPrimitive &&
-                    !TypeManager.getInstance().isSupertypeOf(functionSignature[i], callSignature[i])
+                    !TypeManager.getInstance()
+                        .isSupertypeOf(functionSignature[i], callSignature[i], provider)
             ) {
                 return false
             }
@@ -100,7 +105,7 @@ fun resolveWithImplicitCast(
     for (functionDeclaration in initialInvocationCandidates) {
         val callSignature = getCallSignatureWithDefaults(call, functionDeclaration)
         // Check if the signatures match by implicit casts
-        if (compatibleSignatures(callSignature, functionDeclaration.signatureTypes)) {
+        if (compatibleSignatures(callSignature, functionDeclaration.signatureTypes, call)) {
             val implicitCastTargets =
                 signatureWithImplicitCastTransformation(
                     getCallSignatureWithDefaults(call, functionDeclaration),
@@ -114,7 +119,7 @@ fun resolveWithImplicitCast(
                 // to the same target type
                 checkMostCommonImplicitCast(implicitCasts, implicitCastTargets)
             }
-            if (compatibleSignatures(call.signature, functionDeclaration.signatureTypes)) {
+            if (compatibleSignatures(call.signature, functionDeclaration.signatureTypes, call)) {
                 invocationTargetsWithImplicitCast.add(functionDeclaration)
             } else {
                 invocationTargetsWithImplicitCastAndDefaults.add(functionDeclaration)
@@ -266,7 +271,8 @@ fun resolveConstructorWithImplicitCast(
         if (
             compatibleSignatures(
                 constructExpression.signature,
-                constructorDeclaration.signatureTypes
+                constructorDeclaration.signatureTypes,
+                constructExpression
             )
         ) {
             val implicitCasts =
@@ -277,7 +283,13 @@ fun resolveConstructorWithImplicitCast(
                 )
             applyImplicitCastToArguments(constructExpression, implicitCasts)
             return constructorDeclaration
-        } else if (compatibleSignatures(workingSignature, constructorDeclaration.signatureTypes)) {
+        } else if (
+            compatibleSignatures(
+                workingSignature,
+                constructorDeclaration.signatureTypes,
+                constructExpression
+            )
+        ) {
             val implicitCasts =
                 signatureWithImplicitCastTransformation(
                     getCallSignatureWithDefaults(constructExpression, constructorDeclaration),
@@ -564,7 +576,8 @@ fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boo
         callParameter is ObjectType
     } else if (callParameter is Expression && templateParameter is ParamVariableDeclaration) {
         callParameter.type == templateParameter.type ||
-            TypeManager.getInstance().isSupertypeOf(templateParameter.type, callParameter.type)
+            TypeManager.getInstance()
+                .isSupertypeOf(templateParameter.type, callParameter.type, callParameterArg)
     } else {
         false
     }

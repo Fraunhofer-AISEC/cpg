@@ -588,7 +588,8 @@ open class EvaluationOrderGraphPass : Pass() {
                 if (catchClause.parameter == null) { // e.g. catch (...)
                     currentEOG.addAll(eogEdges)
                 } else if (
-                    TypeManager.getInstance().isSupertypeOf(catchClause.parameter!!.type, throwType)
+                    TypeManager.getInstance()
+                        .isSupertypeOf(catchClause.parameter!!.type, throwType, node)
                 ) {
                     currentEOG.addAll(eogEdges)
                     toRemove.add(throwType)

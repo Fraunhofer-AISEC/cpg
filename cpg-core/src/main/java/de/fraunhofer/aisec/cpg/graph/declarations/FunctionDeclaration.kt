@@ -141,7 +141,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                     return true
                 }
                 val provided = targetSignature[i]
-                if (!TypeManager.getInstance().isSupertypeOf(declared.getType(), provided)) {
+                if (!TypeManager.getInstance().isSupertypeOf(declared.getType(), provided, this)) {
                     return false
                 }
             }

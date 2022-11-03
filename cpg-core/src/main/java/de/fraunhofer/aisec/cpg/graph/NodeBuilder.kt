@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -68,7 +69,9 @@ interface CodeAndLocationProvider : MetadataProvider {
  * This interfaces serves as a base for entities that provide the current scope / name prefix. This
  * is reserved for future use.
  */
-interface ScopeProvider : MetadataProvider
+interface ScopeProvider : MetadataProvider {
+    val scope: Scope?
+}
 
 /**
  * Applies various metadata on this [Node], based on the kind of provider in [provider]. This can
@@ -92,6 +95,10 @@ fun Node.applyMetadata(provider: MetadataProvider?, rawNode: Any?, codeOverride:
 
     if (provider is IsInferredProvider) {
         this.isInferred = provider.isInferred
+    }
+
+    if (provider is ScopeProvider) {
+        this.scope = provider.scope
     }
 
     if (codeOverride != null) {

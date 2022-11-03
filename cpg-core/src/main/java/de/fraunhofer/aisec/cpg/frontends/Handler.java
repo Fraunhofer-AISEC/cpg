@@ -29,6 +29,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -53,7 +54,7 @@ import org.slf4j.LoggerFactory;
  * @param <L> the language frontend
  */
 public abstract class Handler<S, T, L extends LanguageFrontend>
-    implements LanguageProvider, CodeAndLocationProvider {
+    implements LanguageProvider, CodeAndLocationProvider, ScopeProvider {
 
   protected static final Logger log = LoggerFactory.getLogger(Handler.class);
 
@@ -191,5 +192,11 @@ public abstract class Handler<S, T, L extends LanguageFrontend>
   @Override
   public <N, S> void setCodeAndLocation(N cpgNode, @Nullable S astNode) {
     this.frontend.setCodeAndLocation(cpgNode, astNode);
+  }
+
+  @Override
+  @Nullable
+  public Scope getScope() {
+    return this.frontend.getScopeManager().getCurrentScope();
   }
 }

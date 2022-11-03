@@ -29,7 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.CodeAndLocationProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ScopeProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -50,7 +52,7 @@ abstract class LanguageFrontend(
     override val language: Language<out LanguageFrontend>,
     val config: TranslationConfiguration,
     scopeManager: ScopeManager
-) : ProcessedListener(), CodeAndLocationProvider, LanguageProvider {
+) : ProcessedListener(), CodeAndLocationProvider, LanguageProvider, ScopeProvider {
     var scopeManager: ScopeManager = scopeManager
         set(scopeManager) {
             field = scopeManager
@@ -217,4 +219,6 @@ abstract class LanguageFrontend(
         // Allow non-Java frontends to access the logger (i.e. jep)
         val log = LoggerFactory.getLogger(LanguageFrontend::class.java)
     }
+
+    override val scope: Scope? = this.scopeManager.currentScope
 }

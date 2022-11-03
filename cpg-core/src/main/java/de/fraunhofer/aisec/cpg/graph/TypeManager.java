@@ -35,11 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
 import java.util.*;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -418,7 +418,7 @@ public class TypeManager implements LanguageProvider {
   }
 
   @NotNull
-  public Optional<Type> getCommonType(@NotNull Collection<Type> types) {
+  public Optional<Type> getCommonType(@NotNull Collection<Type> types, ScopeProvider provider) {
     // TODO: Documentation needed.
     boolean sameType =
         types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
@@ -441,21 +441,37 @@ public class TypeManager implements LanguageProvider {
           wrapState.isReference(),
           wrapState.getReferenceType());
     }
-    typeToRecord =
-        frontend
-            .getScopeManager()
-            .filterScopesDistinctBy(
-                scope -> {
-                  // It seems that somehow other node types get mixed into the ast node of a record
-                  // scope sometimes. So we need to be extra sure that our ast node is a record
-                  // declaration
-                  return scope instanceof RecordScope
-                      && scope.getAstNode() instanceof RecordDeclaration;
-                },
-                s -> s.getAstNode().getName())
-            .stream()
-            .map(s -> (RecordDeclaration) s.getAstNode())
-            .collect(Collectors.toMap(Node::getName, Function.identity()));
+
+    var scope222 = provider.getScope();
+    while (!(scope222 instanceof GlobalScope)) {
+      if (scope222 == null) {
+        return Optional.empty();
+      }
+      scope222 = scope222.getParent();
+    }
+
+    typeToRecord = new HashMap<>();
+    for (var child : scope222.getChildren()) {
+      if (child instanceof RecordScope && child.getAstNode() instanceof RecordDeclaration) {
+        typeToRecord.put(child.getAstNode().getName(), (RecordDeclaration) child.getAstNode());
+      }
+    }
+
+    /*typeToRecord =
+    frontend
+        .getScopeManager()
+        .filterScopesDistinctBy(
+            scope -> {
+              // It seems that somehow other node types get mixed into the ast node of a record
+              // scope sometimes. So we need to be extra sure that our ast node is a record
+              // declaration
+              return scope instanceof RecordScope
+                  && scope.getAstNode() instanceof RecordDeclaration;
+            },
+            s -> s.getAstNode().getName())
+        .stream()
+        .map(s -> (RecordDeclaration) s.getAstNode())
+        .collect(Collectors.toMap(Node::getName, Function.identity()));*/
 
     List<Set<Ancestor>> allAncestors =
         types.stream()
@@ -543,7 +559,7 @@ public class TypeManager implements LanguageProvider {
     return frontend;
   }
 
-  public boolean isSupertypeOf(Type superType, Type subType) {
+  public boolean isSupertypeOf(Type superType, Type subType, ScopeProvider provider) {
 
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
       return false;
@@ -556,10 +572,10 @@ public class TypeManager implements LanguageProvider {
 
     // ObjectTypes can be passed as ReferenceTypes
     if (superType instanceof ReferenceType) {
-      return isSupertypeOf(((ReferenceType) superType).getElementType(), subType);
+      return isSupertypeOf(((ReferenceType) superType).getElementType(), subType, provider);
     }
 
-    Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)));
+    Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)), provider);
     if (commonType.isPresent()) {
       return commonType.get().equals(superType);
     } else {

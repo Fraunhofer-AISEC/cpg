@@ -272,7 +272,8 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
                     it.returnTypes.firstOrNull()
                 }
             val alternative = if (types.isNotEmpty()) types[0] else null
-            val commonType = TypeManager.getInstance().getCommonType(types).orElse(alternative)
+            val commonType =
+                TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
             val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
 
             subTypes.remove(oldType)

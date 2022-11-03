@@ -295,7 +295,7 @@ private constructor(
         result.scopeManager.mergeFrom(parallelScopeManagers)
 
         // TODO: remove once we got rid of all legacy stuff
-        usedFrontends.forEach { it.scopeManager = result.scopeManager }
+        // usedFrontends.forEach { it.scopeManager = result.scopeManager }
 
         log.info("Parallel parsing completed")
 

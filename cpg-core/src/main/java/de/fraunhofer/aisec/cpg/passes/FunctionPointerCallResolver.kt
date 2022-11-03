@@ -141,7 +141,8 @@ class FunctionPointerCallResolver : Pass() {
                         curr.returnTypes[0]
                     }
                 if (
-                    TypeManager.getInstance().isSupertypeOf(pointerType.returnType, returnType) &&
+                    TypeManager.getInstance()
+                        .isSupertypeOf(pointerType.returnType, returnType, call) &&
                         curr.hasSignature(pointerType.parameters)
                 ) {
                     invocationCandidates.add(curr)

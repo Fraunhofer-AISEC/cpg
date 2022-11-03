@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.disableTypeManagerCleanup
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -941,14 +942,14 @@ internal class TypeTests : BaseTest() {
     fun testCommonTypeTestJava() {
         disableTypeManagerCleanup()
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy")
-        analyze("java", topLevel, true)
+        var result = analyze("java", topLevel, true)
         val root = TypeParser.createFrom("multistep.Root", true, JavaLanguage())
         val level0 = TypeParser.createFrom("multistep.Level0", true, JavaLanguage())
         val level1 = TypeParser.createFrom("multistep.Level1", true, JavaLanguage())
         val level1b = TypeParser.createFrom("multistep.Level1B", true, JavaLanguage())
         val level2 = TypeParser.createFrom("multistep.Level2", true, JavaLanguage())
         val unrelated = TypeParser.createFrom("multistep.Unrelated", true, JavaLanguage())
-        getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
+        getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated, result)
     }
 
     @Throws(Exception::class)
@@ -956,14 +957,14 @@ internal class TypeTests : BaseTest() {
     fun testCommonTypeTestCpp() {
         disableTypeManagerCleanup()
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
-        analyze("simple_inheritance.cpp", topLevel, true)
+        var result = analyze("simple_inheritance.cpp", topLevel, true)
         val root = TypeParser.createFrom("Root", true, CPPLanguage())
         val level0 = TypeParser.createFrom("Level0", true, CPPLanguage())
         val level1 = TypeParser.createFrom("Level1", true, CPPLanguage())
         val level1b = TypeParser.createFrom("Level1B", true, CPPLanguage())
         val level2 = TypeParser.createFrom("Level2", true, CPPLanguage())
         val unrelated = TypeParser.createFrom("Unrelated", true, CPPLanguage())
-        getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
+        getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated, result)
     }
 
     // level2 and level2b have two intersections, both root and level0 -> level0 is lower
@@ -972,7 +973,8 @@ internal class TypeTests : BaseTest() {
     fun testCommonTypeTestCppMultiInheritance() {
         disableTypeManagerCleanup()
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
-        analyze("multi_inheritance.cpp", topLevel, true)
+        var result = analyze("multi_inheritance.cpp", topLevel, true)
+
         val root = TypeParser.createFrom("Root", true, CPPLanguage())
         val level0 = TypeParser.createFrom("Level0", true, CPPLanguage())
         val level0b = TypeParser.createFrom("Level0B", true, CPPLanguage())
@@ -982,6 +984,7 @@ internal class TypeTests : BaseTest() {
         val level2 = TypeParser.createFrom("Level2", true, CPPLanguage())
         val level2b = TypeParser.createFrom("Level2B", true, CPPLanguage())
 
+        var provider = result.translationUnits.firstOrNull()
         /*
         Type hierarchy:
                   Root------------
@@ -994,35 +997,39 @@ internal class TypeTests : BaseTest() {
          */
         // Root is the top, but unrelated to Level0B
         for (t in listOf(root, level0, level1, level1b, level1c, level2, level2b)) {
-            assertEquals(Optional.of(t), TypeManager.getInstance().getCommonType(listOf(t)))
+            assertEquals(
+                Optional.of(t),
+                TypeManager.getInstance().getCommonType(listOf(t), provider)
+            )
         }
         assertEquals(
             Optional.empty(),
-            TypeManager.getInstance().getCommonType(listOf(root, level0b))
+            TypeManager.getInstance().getCommonType(listOf(root, level0b), provider)
         )
         for (t in listOf(level0, level1, level2)) {
             assertEquals(
                 Optional.empty(),
-                TypeManager.getInstance().getCommonType(listOf(t, level0b))
+                TypeManager.getInstance().getCommonType(listOf(t, level0b), provider)
             )
         }
         assertEquals(
             Optional.of(level0b),
-            TypeManager.getInstance().getCommonType(listOf(level1b, level1c))
+            TypeManager.getInstance().getCommonType(listOf(level1b, level1c), provider)
         )
         assertEquals(
             Optional.of(level0),
-            TypeManager.getInstance().getCommonType(listOf(level1, level1b, level2, level2b))
+            TypeManager.getInstance()
+                .getCommonType(listOf(level1, level1b, level2, level2b), provider)
         )
         assertEquals(
             Optional.of(root),
-            TypeManager.getInstance().getCommonType(listOf(level1, level1c))
+            TypeManager.getInstance().getCommonType(listOf(level1, level1c), provider)
         )
 
         // level2 and level2b have two intersections, both root and level0 -> level0 is lower
         assertEquals(
             Optional.of(level0),
-            TypeManager.getInstance().getCommonType(listOf(level2, level2b))
+            TypeManager.getInstance().getCommonType(listOf(level2, level2b), provider)
         )
     }
 
@@ -1032,7 +1039,8 @@ internal class TypeTests : BaseTest() {
         level1: Type,
         level1b: Type,
         level2: Type,
-        unrelated: Type
+        unrelated: Type,
+        result: TranslationResult
     ) {
         /*
         Type hierarchy:
@@ -1044,17 +1052,21 @@ internal class TypeTests : BaseTest() {
                |
              Level2
          */
+        var provider = result.translationUnits.firstOrNull()
 
         // A single type is its own least common ancestor
         for (t in listOf(root, level0, level1, level1b, level2)) {
-            assertEquals(Optional.of(t), TypeManager.getInstance().getCommonType(listOf(t)))
+            assertEquals(
+                Optional.of(t),
+                TypeManager.getInstance().getCommonType(listOf(t), provider)
+            )
         }
 
         // Root is the root of all types
         for (t in listOf(level0, level1, level1b, level2)) {
             assertEquals(
                 Optional.of(root),
-                TypeManager.getInstance().getCommonType(listOf(t, root))
+                TypeManager.getInstance().getCommonType(listOf(t, root), provider)
             )
         }
 
@@ -1062,33 +1074,33 @@ internal class TypeTests : BaseTest() {
         for (t in listOf(level1, level1b, level2)) {
             assertEquals(
                 Optional.of(level0),
-                TypeManager.getInstance().getCommonType(listOf(t, level0))
+                TypeManager.getInstance().getCommonType(listOf(t, level0), provider)
             )
         }
 
         // Level1 and Level1B have Level0 as common ancestor
         assertEquals(
             Optional.of(level0),
-            TypeManager.getInstance().getCommonType(listOf(level1, level1b))
+            TypeManager.getInstance().getCommonType(listOf(level1, level1b), provider)
         )
 
         // Level2 and Level1B have Level0 as common ancestor
         assertEquals(
             Optional.of(level0),
-            TypeManager.getInstance().getCommonType(listOf(level2, level1b))
+            TypeManager.getInstance().getCommonType(listOf(level2, level1b), provider)
         )
 
         // Level1 and Level2 have Level1 as common ancestor
         assertEquals(
             Optional.of(level1),
-            TypeManager.getInstance().getCommonType(listOf(level1, level2))
+            TypeManager.getInstance().getCommonType(listOf(level1, level2), provider)
         )
 
         // Check unrelated type behavior: No common root class
         for (t in listOf(root, level0, level1, level1b, level2)) {
             assertEquals(
                 Optional.empty(),
-                TypeManager.getInstance().getCommonType(listOf(unrelated, t))
+                TypeManager.getInstance().getCommonType(listOf(unrelated, t), provider)
             )
         }
     }

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -49,7 +50,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-open class Node : IVisitable<Node>, Persistable, LanguageProvider {
+open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider {
     /**
      * This property holds the full name using our new [Name] class. In the future, we might migrate
      * this to the [name] field. It is currently not persisted in the graph database.
@@ -72,6 +73,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider {
     @field:Relationship(value = "Language", direction = "OUTGOING")
     @JsonBackReference
     override var language: Language<out LanguageFrontend>? = null
+
+    override var scope: Scope? = null
 
     /** Optional comment of this node. */
     var comment: String? = null
