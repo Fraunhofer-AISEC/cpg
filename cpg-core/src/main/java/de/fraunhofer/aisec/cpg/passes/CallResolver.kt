@@ -184,7 +184,13 @@ open class CallResolver : SymbolResolverPass() {
             return
         }
         if (call.instantiatesTemplate() && call.language is HasTemplates) {
-            handleTemplateFunctionCalls(curClass, call, true)
+            (call.language as HasTemplates).handleTemplateFunctionCalls(
+                curClass,
+                call,
+                true,
+                scopeManager!!,
+                currentTU
+            )
             return
         }
 
@@ -228,8 +234,11 @@ open class CallResolver : SymbolResolverPass() {
             if (call.language is HasComplexCallResolution) {
                 // Handle CXX normal call resolution externally, otherwise it leads to increased
                 // complexity
-                // TODO: Move this to doBetterCallResolution()
-                handleNormalCallCXX(call)
+                (call.language as HasComplexCallResolution).refineNormalCallResolution(
+                    call,
+                    scopeManager!!,
+                    currentTU
+                )
             } else {
                 val invocationCandidates = scopeManager!!.resolveFunction(call).toMutableList()
 
@@ -286,8 +295,16 @@ open class CallResolver : SymbolResolverPass() {
         possibleContainingTypes: Set<Type>
     ): MutableList<FunctionDeclaration> {
         return if (call.language is HasComplexCallResolution) {
-            // TODO: Move logic to the doBetterCallResolution
-            handleCXXMethodCall(curClass, possibleContainingTypes, call).toMutableList()
+            (call.language as HasComplexCallResolution)
+                .refineMethodCallResolution(
+                    curClass,
+                    possibleContainingTypes,
+                    call,
+                    scopeManager!!,
+                    currentTU,
+                    this
+                )
+                .toMutableList()
         } else {
             scopeManager!!.resolveFunction(call).toMutableList()
         }
@@ -478,10 +495,12 @@ open class CallResolver : SymbolResolverPass() {
             Pattern.compile(
                 "(" + Pattern.quote(recordDeclaration.name) + "\\.)?" + Pattern.quote(name)
             )
-        return if (
-            call.language is HasComplexCallResolution
-        ) { // TODO Move to doBetterCallResolution
-            getInvocationCandidatesFromRecordCXX(recordDeclaration, call, namePattern)
+        return if (call.language is HasComplexCallResolution) {
+            (call.language as HasComplexCallResolution).refineInvocationCandidatesFromRecord(
+                recordDeclaration,
+                call,
+                namePattern
+            )
         } else {
             recordDeclaration.methods.filter {
                 namePattern.matcher(it.name).matches() && it.hasSignature(call.signature)

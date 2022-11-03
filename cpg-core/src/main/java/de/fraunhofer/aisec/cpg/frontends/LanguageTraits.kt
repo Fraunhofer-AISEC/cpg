@@ -25,6 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.CallResolver
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import java.util.regex.Pattern
+
 /**
  * A language trait is a feature or trait that is common to a group of programming languages. Any
  * [Language] that supports them should implement the desired trait interface. Examples could be the
@@ -37,7 +46,15 @@ package de.fraunhofer.aisec.cpg.frontends
 interface LanguageTrait
 
 /** A language trait, that specifies that this language has support for templates or generics. */
-interface HasTemplates : LanguageTrait
+interface HasTemplates : LanguageTrait {
+    fun handleTemplateFunctionCalls(
+        curClass: RecordDeclaration?,
+        templateCall: CallExpression,
+        applyInference: Boolean,
+        scopeManager: ScopeManager,
+        currentTU: TranslationUnitDeclaration
+    ): Boolean
+}
 
 /**
  * A language trait that specifies, that this language has support for default arguments, e.g. in
@@ -50,8 +67,26 @@ interface HasDefaultArguments : LanguageTrait
  * fine-tune in the language implementation.
  */
 interface HasComplexCallResolution : LanguageTrait {
-    // TODO: better name?
-    fun doBetterCallResolution()
+    fun refineNormalCallResolution(
+        call: CallExpression,
+        scopeManager: ScopeManager,
+        currentTU: TranslationUnitDeclaration
+    )
+
+    fun refineMethodCallResolution(
+        curClass: RecordDeclaration?,
+        possibleContainingTypes: Set<Type>,
+        call: CallExpression,
+        scopeManager: ScopeManager,
+        currentTU: TranslationUnitDeclaration,
+        callResolver: CallResolver
+    ): List<FunctionDeclaration>
+
+    fun refineInvocationCandidatesFromRecord(
+        recordDeclaration: RecordDeclaration,
+        call: CallExpression,
+        namePattern: Pattern
+    ): List<FunctionDeclaration>
 }
 
 /** A language trait that specifies if the language supports function pointers. */

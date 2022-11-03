@@ -32,10 +32,10 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 /** The Java language. */
 open class JavaLanguage :
     Language<JavaLanguageFrontend>(),
-    HasComplexCallResolution,
+    // HasComplexCallResolution,
     HasClasses,
     HasSuperclasses,
-    HasTemplates,
+    // HasTemplates,
     HasQualifier,
     HasUnknownType {
     override val fileExtensions: List<String>
@@ -56,10 +56,5 @@ open class JavaLanguage :
         scopeManager: ScopeManager
     ): JavaLanguageFrontend {
         return JavaLanguageFrontend(this, config, scopeManager)
-    }
-
-    // TODO: Remove if not needed.
-    override fun doBetterCallResolution() {
-        println("i know it better")
     }
 }
