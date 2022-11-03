@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.passes.order
 
 import de.fraunhofer.aisec.cpg.ConfigurationException
 import de.fraunhofer.aisec.cpg.passes.Pass
-import de.fraunhofer.aisec.cpg.passes.Pass.log
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import java.lang.reflect.InvocationTargetException
 import java.util.*
 
