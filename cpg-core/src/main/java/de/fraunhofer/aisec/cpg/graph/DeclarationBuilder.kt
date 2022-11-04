@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
@@ -48,9 +49,7 @@ fun MetadataProvider.newTranslationUnitDeclaration(
     rawNode: Any? = null
 ): TranslationUnitDeclaration {
     val node = TranslationUnitDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name ?: Node.EMPTY_NAME
+    node.applyMetadata(this, name, rawNode, code)
 
     log(node)
     return node
@@ -69,9 +68,7 @@ fun MetadataProvider.newFunctionDeclaration(
     rawNode: Any? = null
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name ?: Node.EMPTY_NAME
+    node.applyMetadata(this, name, rawNode, code)
 
     log(node)
     return node
@@ -92,9 +89,8 @@ fun MetadataProvider.newMethodDeclaration(
     rawNode: Any? = null
 ): MethodDeclaration {
     val node = MethodDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code)
 
-    node.name = name ?: Node.EMPTY_NAME
     node.isStatic = isStatic
     node.recordDeclaration = recordDeclaration
 
@@ -116,7 +112,7 @@ fun MetadataProvider.newConstructorDeclaration(
     rawNode: Any? = null
 ): ConstructorDeclaration {
     val node = ConstructorDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code)
 
     node.name = name ?: Node.EMPTY_NAME
     node.recordDeclaration = recordDeclaration
@@ -140,7 +136,7 @@ fun MetadataProvider.newParamVariableDeclaration(
     rawNode: Any? = null
 ): ParamVariableDeclaration {
     val node = ParamVariableDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code)
 
     node.name = name ?: Node.EMPTY_NAME
     node.type = type
@@ -165,7 +161,7 @@ fun MetadataProvider.newVariableDeclaration(
     rawNode: Any? = null
 ): VariableDeclaration {
     val node = VariableDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code)
 
     node.name = name ?: Node.EMPTY_NAME
     node.type = type
@@ -189,9 +185,8 @@ fun MetadataProvider.newTypedefDeclaration(
     rawNode: Any? = null
 ): TypedefDeclaration {
     val node = TypedefDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, alias.typeName, rawNode, code)
 
-    node.name = alias.typeName
     node.type = targetType
     node.alias = alias
 
@@ -212,9 +207,7 @@ fun MetadataProvider.newTypeParamDeclaration(
     rawNode: Any? = null
 ): TypeParamDeclaration {
     val node = TypeParamDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name ?: Node.EMPTY_NAME
+    node.applyMetadata(this, name, rawNode, code)
 
     log(node)
     return node
@@ -228,15 +221,14 @@ fun MetadataProvider.newTypeParamDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newRecordDeclaration(
-    fqn: String,
+    name: String,
     kind: String,
     code: String? = null,
     rawNode: Any? = null
 ): RecordDeclaration {
     val node = RecordDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code)
 
-    node.name = fqn
     node.kind = kind
 
     log(node)
@@ -257,7 +249,7 @@ fun MetadataProvider.newEnumDeclaration(
     rawNode: Any? = null
 ): EnumDeclaration {
     val node = EnumDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code)
 
     node.name = name ?: Node.EMPTY_NAME
     node.location = location
@@ -279,9 +271,7 @@ fun MetadataProvider.newFunctionTemplateDeclaration(
     rawNode: Any? = null
 ): FunctionTemplateDeclaration {
     val node = FunctionTemplateDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name ?: Node.EMPTY_NAME
+    node.applyMetadata(this, name, rawNode, code)
 
     log(node)
     return node
@@ -300,9 +290,7 @@ fun MetadataProvider.newClassTemplateDeclaration(
     rawNode: Any? = null
 ): ClassTemplateDeclaration {
     val node = ClassTemplateDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name ?: Node.EMPTY_NAME
+    node.applyMetadata(this, name, rawNode, code)
 
     log(node)
     return node
@@ -322,7 +310,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
     rawNode: Any? = null
 ): EnumConstantDeclaration {
     val node = EnumConstantDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code)
 
     node.name = name ?: Node.EMPTY_NAME
     node.location = location
@@ -349,7 +337,7 @@ fun MetadataProvider.newFieldDeclaration(
     rawNode: Any? = null
 ): FieldDeclaration {
     val node = FieldDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code)
 
     node.name = name ?: Node.EMPTY_NAME
     node.type = type
@@ -381,7 +369,7 @@ fun MetadataProvider.newProblemDeclaration(
     rawNode: Any? = null
 ): ProblemDeclaration {
     val node = ProblemDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code)
 
     node.problem = problem
     node.type = type
@@ -403,7 +391,7 @@ fun MetadataProvider.newIncludeDeclaration(
     rawNode: Any? = null
 ): IncludeDeclaration {
     val node = IncludeDeclaration()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code)
 
     val name = includeFilename.substring(includeFilename.lastIndexOf('/') + 1)
     node.name = name
@@ -421,14 +409,12 @@ fun MetadataProvider.newIncludeDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newNamespaceDeclaration(
-    fqn: String,
+    name: String,
     code: String? = null,
     rawNode: Any? = null
 ): NamespaceDeclaration {
     val node = NamespaceDeclaration()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = fqn
+    node.applyMetadata(this, name, rawNode, code)
 
     log(node)
     return node
@@ -447,7 +433,7 @@ fun MetadataProvider.newUsingDirective(
     rawNode: Any? = null
 ): UsingDirective {
     val node = UsingDirective()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, qualifiedName, rawNode, code)
 
     node.qualifiedName = qualifiedName
 

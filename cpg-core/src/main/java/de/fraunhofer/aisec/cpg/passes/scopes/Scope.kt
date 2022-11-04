@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes.scopes
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 
@@ -36,6 +37,8 @@ abstract class Scope(open var astNode: Node?) {
 
     // FQN Name currently valid
     var scopedName: String? = null
+
+    var name: Name? = null
 
     /* Scopes are nested and therefore have a parent child relationship, this two members will help
     navigate through the scopes,e.g. when looking up variables */

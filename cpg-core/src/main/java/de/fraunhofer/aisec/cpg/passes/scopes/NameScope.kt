@@ -49,6 +49,7 @@ open class NameScope(node: Node, currentPrefix: String, var delimiter: String) :
         }
 
         astNode = node
+        name = node.fullName
     }
 
     // Split scoped named by delimiter

@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory
  * than adding the declaration to the node itself. This ensures that all declarations are properly
  * registered in the scope map and can be resolved later.
  */
-class ScopeManager : ScopeProvider {
+class ScopeManager : ScopeProvider, NamespaceProvider {
     /**
      * A map associating each CPG node with its scope. The key type is intentionally a nullable
      * [Node] because the [GlobalScope] is not associated to a CPG node when it is first created. It
@@ -112,6 +112,12 @@ class ScopeManager : ScopeProvider {
     init {
         pushScope(GlobalScope())
     }
+
+    val currentNamespace: Name?
+        get() {
+            val namedScope = this.firstScopeIsInstanceOrNull<NameScope>()
+            return if (namedScope is NameScope) namedScope.name else null
+        }
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(ScopeManager::class.java)
@@ -786,6 +792,8 @@ class ScopeManager : ScopeProvider {
     /** Returns the current scope for the [ScopeProvider] interface. */
     override val scope: Scope?
         get() = currentScope
+    override val namespace: Name?
+        get() = currentNamespace
 
     fun activateTypes(node: Node) {
         val num = AtomicInteger()

@@ -60,7 +60,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * This property holds the full name using our new [Name] class. In the future, we might migrate
      * this to the [name] field. It is currently not persisted in the graph database.
      */
-    @Transient val fullName: Name = Name(EMPTY_NAME)
+    @Transient var fullName: Name = Name(EMPTY_NAME)
 
     /**
      * A human-readable name. It is backed by the [fullName] and is set to [Name.localName]

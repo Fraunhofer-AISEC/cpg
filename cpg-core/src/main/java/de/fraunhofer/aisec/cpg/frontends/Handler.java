@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
  * @param <L> the language frontend
  */
 public abstract class Handler<S extends Node, T, L extends LanguageFrontend>
-    implements LanguageProvider, CodeAndLocationProvider, ScopeProvider {
+    implements LanguageProvider, CodeAndLocationProvider, ScopeProvider, NamespaceProvider {
 
   protected static final Logger log = LoggerFactory.getLogger(Handler.class);
 
@@ -209,6 +209,12 @@ public abstract class Handler<S extends Node, T, L extends LanguageFrontend>
   @Override
   @Nullable
   public Scope getScope() {
-    return this.frontend.getScopeManager().getCurrentScope();
+    return this.frontend.getScope();
+  }
+
+  @Override
+  @Nullable
+  public Name getNamespace() {
+    return this.frontend.getNamespace();
   }
 }
