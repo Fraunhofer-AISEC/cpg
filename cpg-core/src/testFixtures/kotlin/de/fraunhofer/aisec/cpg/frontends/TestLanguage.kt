@@ -73,4 +73,4 @@ class TestLanguageFrontend :
     }
 }
 
-class TestHandler : Handler<Node, Any, TestLanguageFrontend>(null, TestLanguageFrontend()) {}
+class TestHandler : Handler<Node, Any, TestLanguageFrontend>(null, TestLanguageFrontend())

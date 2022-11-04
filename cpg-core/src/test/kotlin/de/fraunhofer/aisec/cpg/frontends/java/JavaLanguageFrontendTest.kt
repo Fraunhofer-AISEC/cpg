@@ -49,7 +49,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.stream.Collectors
-import kotlin.reflect.KClass
 import kotlin.test.*
 
 internal class JavaLanguageFrontendTest : BaseTest() {
@@ -601,11 +600,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         }
 
         class MyJavaLanguage : JavaLanguage() {
-            override val fileExtensions: List<String> = listOf("java")
-            override val namespaceDelimiter: String = "."
-            override val superclassKeyword: String = "super"
-            override val frontend: KClass<out MyJavaLanguageFrontend> =
-                MyJavaLanguageFrontend::class
+            override val fileExtensions = listOf("java")
+            override val namespaceDelimiter = "."
+            override val superclassKeyword = "super"
+            override val frontend = MyJavaLanguageFrontend::class
             override fun newFrontend(
                 config: TranslationConfiguration,
                 scopeManager: ScopeManager

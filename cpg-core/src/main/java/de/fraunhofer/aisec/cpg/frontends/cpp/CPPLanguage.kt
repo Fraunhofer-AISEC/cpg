@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.util.regex.Pattern
+import kotlin.reflect.KClass
 
 /** The C++ language. */
 class CPPLanguage :
@@ -53,7 +54,7 @@ class CPPLanguage :
     HasElaboratedTypeSpecifier {
     override val fileExtensions = listOf("cpp", "cc", "hpp")
     override val namespaceDelimiter = "::"
-    override val frontend = CXXLanguageFrontend::class
+    override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
     override val qualifiers = listOf("const", "volatile", "restrict", "atomic")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
 

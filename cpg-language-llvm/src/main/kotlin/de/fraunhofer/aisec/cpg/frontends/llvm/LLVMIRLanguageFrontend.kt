@@ -75,7 +75,7 @@ class LLVMIRLanguageFrontend(
     var bindingsCache = mutableMapOf<String, Declaration>()
 
     companion object {
-        @kotlin.jvm.JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
+        @JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
     }
 
     override fun parse(file: File): TranslationUnitDeclaration {

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import kotlin.reflect.KClass
 
 /** The C language. */
 class CLanguage :
@@ -38,7 +39,7 @@ class CLanguage :
     HasElaboratedTypeSpecifier {
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
-    override val frontend = CXXLanguageFrontend::class
+    override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
     override val qualifiers = listOf("const", "volatile", "restrict", "atomic")
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
 
