@@ -67,7 +67,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * automatically using a kotlin property delegator. We need to exclude the delegated field from
      * graph database persistence.
      */
-    @delegate:Transient open var name by fullName
+    @delegate:Transient open var name: String by NameDelegate(::fullName)
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases

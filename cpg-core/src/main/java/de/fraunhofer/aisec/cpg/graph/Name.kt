@@ -26,7 +26,18 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import java.util.*
+import kotlin.reflect.KMutableProperty0
 import kotlin.reflect.KProperty
+
+class NameDelegate(var nameProperty: KMutableProperty0<Name>) {
+    operator fun getValue(thisRef: Node, property: KProperty<*>): String {
+        return nameProperty.get().localName
+    }
+
+    operator fun setValue(thisRef: Node, property: KProperty<*>, value: String) {
+        nameProperty.get().localName = value
+    }
+}
 
 /**
  * This class represents anything that can have a "Name". In the simplest case it only represents a
@@ -48,8 +59,10 @@ class Name(
     override fun toString() =
         (if (parent != null) parent.toString() + delimiter else "") + localName
 
-    /** Implements kotlin propety delegation for a string getter. Returns the local name. */
-    operator fun getValue(node: Node, property: KProperty<*>) = localName
+    /** Implements kotlin property delegation for a string getter. Returns the local name. */
+    /*operator fun getValue(node: Node, property: KProperty<*>): String {
+        return localName
+    }
 
     /**
      * Implements kotlin property delegation for a string setter. Sets the local name to the
@@ -57,7 +70,7 @@ class Name(
      */
     operator fun setValue(node: Node, property: KProperty<*>, s: String) {
         localName = s
-    }
+    }*/
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

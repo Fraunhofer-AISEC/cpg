@@ -49,7 +49,7 @@ fun MetadataProvider.newTranslationUnitDeclaration(
     rawNode: Any? = null
 ): TranslationUnitDeclaration {
     val node = TranslationUnitDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
     return node
@@ -185,7 +185,7 @@ fun MetadataProvider.newTypedefDeclaration(
     rawNode: Any? = null
 ): TypedefDeclaration {
     val node = TypedefDeclaration()
-    node.applyMetadata(this, alias.typeName, rawNode, code)
+    node.applyMetadata(this, alias.typeName, rawNode, code, true)
 
     node.type = targetType
     node.alias = alias
@@ -207,7 +207,7 @@ fun MetadataProvider.newTypeParamDeclaration(
     rawNode: Any? = null
 ): TypeParamDeclaration {
     val node = TypeParamDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
     return node
@@ -271,7 +271,7 @@ fun MetadataProvider.newFunctionTemplateDeclaration(
     rawNode: Any? = null
 ): FunctionTemplateDeclaration {
     val node = FunctionTemplateDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
     return node
@@ -290,7 +290,7 @@ fun MetadataProvider.newClassTemplateDeclaration(
     rawNode: Any? = null
 ): ClassTemplateDeclaration {
     val node = ClassTemplateDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
     return node
@@ -369,7 +369,7 @@ fun MetadataProvider.newProblemDeclaration(
     rawNode: Any? = null
 ): ProblemDeclaration {
     val node = ProblemDeclaration()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.problem = problem
     node.type = type
@@ -391,7 +391,7 @@ fun MetadataProvider.newIncludeDeclaration(
     rawNode: Any? = null
 ): IncludeDeclaration {
     val node = IncludeDeclaration()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     val name = includeFilename.substring(includeFilename.lastIndexOf('/') + 1)
     node.name = name
@@ -417,6 +417,7 @@ fun MetadataProvider.newNamespaceDeclaration(
     node.applyMetadata(this, name, rawNode, code)
 
     log(node)
+    println(node.name)
     return node
 }
 

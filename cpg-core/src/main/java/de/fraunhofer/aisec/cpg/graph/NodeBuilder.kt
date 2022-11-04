@@ -92,7 +92,8 @@ fun Node.applyMetadata(
     provider: MetadataProvider?,
     localName: String? = EMPTY_NAME,
     rawNode: Any?,
-    codeOverride: String?
+    codeOverride: String?,
+    noFQN: Boolean = false
 ) {
     if (provider is CodeAndLocationProvider) {
         provider.setCodeAndLocation(this, rawNode)
@@ -117,8 +118,10 @@ fun Node.applyMetadata(
             null
         }
 
-    if (localName != null) {
+    if (localName != null && !noFQN) {
         this.fullName = Name(localName, namespace, this.language?.namespaceDelimiter ?: ".")
+    } else {
+        this.name = localName ?: EMPTY_NAME
     }
 
     if (codeOverride != null) {
