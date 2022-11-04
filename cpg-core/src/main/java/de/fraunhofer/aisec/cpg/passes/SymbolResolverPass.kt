@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.frontends.HasSuperclasses
+import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
@@ -105,13 +105,13 @@ abstract class SymbolResolverPass : Pass() {
     protected fun isSuperclassReference(reference: DeclaredReferenceExpression): Boolean {
         val language = reference.language
 
-        return language is HasSuperclasses &&
+        return language is HasSuperClasses &&
             reference.name.matches(
                 Regex(
                     "(?<class>.+" +
                         Regex.escape(language.namespaceDelimiter) +
                         ")?" +
-                        (reference.language as HasSuperclasses).superclassKeyword
+                        (reference.language as HasSuperClasses).superclassKeyword
                 )
             )
     }

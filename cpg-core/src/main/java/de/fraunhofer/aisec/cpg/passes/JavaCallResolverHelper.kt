@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
  */
 fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: CallExpression) {
     // We need to connect this super reference to the receiver of this method
-    val func = scopeManager!!.currentFunction
+    val func = scopeManager.currentFunction
     if (func is MethodDeclaration) {
         (call.base as DeclaredReferenceExpression?)?.refersTo = func.receiver
     }

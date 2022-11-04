@@ -103,7 +103,7 @@ class CXXLanguageFrontend(
                 }
 
                 // check, if the file is on the blacklist
-                if (absoluteOrRelativePathIsInList(path, config.includeBlocklist)) {
+                if (absoluteOrRelativePathIsInList(Path.of(path), config.includeBlocklist)) {
                     LOGGER.debug("Blacklisting include file: {}", path)
                     return null
                 }
@@ -111,7 +111,7 @@ class CXXLanguageFrontend(
                 // check, if the white-list exists at all
                 if (
                     hasIncludeWhitelist() && // and ignore the file if it is not on the whitelist
-                    !absoluteOrRelativePathIsInList(path, config.includeWhitelist)
+                    !absoluteOrRelativePathIsInList(Path.of(path), config.includeWhitelist)
                 ) {
                     LOGGER.debug("Include file {} not on the whitelist. Ignoring.", path)
                     return null
@@ -134,7 +134,7 @@ class CXXLanguageFrontend(
              * @param list the list of paths to look for, either relative or absolute
              * @return true, if the path is in the list, false otherwise
              */
-            private fun absoluteOrRelativePathIsInList(path: String, list: List<String>?): Boolean {
+            private fun absoluteOrRelativePathIsInList(path: Path, list: List<Path>?): Boolean {
                 // path cannot be in the list if its empty or null
                 if (list.isNullOrEmpty()) {
                     return false
@@ -151,14 +151,13 @@ class CXXLanguageFrontend(
                 if (topLevel != null) {
                     includeLocations.add(topLevel.toPath().toAbsolutePath())
                 }
-                includeLocations.addAll(config.includePaths.map { Path.of(it).toAbsolutePath() })
+                includeLocations.addAll(config.includePaths)
 
                 for (includeLocation in includeLocations) {
                     // try to resolve path relatively
-                    val includeFile = Path.of(path)
                     try {
-                        val relative = includeLocation.relativize(includeFile)
-                        if (list.contains(relative.toString())) {
+                        val relative = includeLocation.relativize(path)
+                        if (list.contains(relative)) {
                             return true
                         }
                     } catch (e: IllegalArgumentException) {
@@ -204,7 +203,7 @@ class CXXLanguageFrontend(
 
         val symbols: HashMap<String, String> = HashMap()
         symbols.putAll(config.symbols)
-        includePaths.addAll(config.includePaths)
+        includePaths.addAll(config.includePaths.map { it.toAbsolutePath().toString() })
 
         config.compilationDatabase?.getIncludePaths(file)?.let { includePaths.addAll(it) }
         config.compilationDatabase?.getSymbols(file)?.let { symbols.putAll(it) }

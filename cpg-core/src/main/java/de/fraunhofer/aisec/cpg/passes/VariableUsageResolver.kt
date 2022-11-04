@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
-import de.fraunhofer.aisec.cpg.frontends.HasSuperclasses
+import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.functions
@@ -151,7 +151,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
 
         // only consider resolving, if the language frontend did not specify a resolution
-        var refersTo = current.refersTo ?: scopeManager?.resolveReference(current)
+        var refersTo = current.refersTo ?: scopeManager.resolveReference(current)
         // if (current.refersTo == null) scopeManager?.resolveReference(current)
         // else current.refersTo!!
         var recordDeclType: Type? = null
@@ -233,8 +233,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
         if (current.base is DeclaredReferenceExpression) {
             val base = current.base as DeclaredReferenceExpression
             if (
-                current.language is HasSuperclasses &&
-                    base.name == (current.language as HasSuperclasses).superclassKeyword
+                current.language is HasSuperClasses &&
+                    base.name == (current.language as HasSuperClasses).superclassKeyword
             ) {
                 if (curClass != null && curClass.superClasses.isNotEmpty()) {
                     val superType = curClass.superClasses[0]
@@ -248,7 +248,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                     } else {
                         // We need to connect this super reference to the receiver of this
                         // method
-                        val func = scopeManager?.currentFunction
+                        val func = scopeManager.currentFunction
                         if (func is MethodDeclaration) {
                             baseTarget = func.receiver
                         }
@@ -305,7 +305,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
     }
 
     private fun resolveBase(reference: DeclaredReferenceExpression): Declaration? {
-        val declaration = scopeManager?.resolveReference(reference)
+        val declaration = scopeManager.resolveReference(reference)
         if (declaration != null) {
             return declaration
         }

@@ -76,6 +76,7 @@ interface ScopeProvider : MetadataProvider {
  * include:
  * - Setting [Node.code] and [Node.location], if a [CodeAndLocationProvider] is given
  * - Setting [Node.location], if a [LanguageProvider] is given
+ * - Setting [Node.scope]. if a [ScopeProvider] is given
  * - Setting [Node.isInferred], if an [IsInferredProvider] is given
  *
  * Note, that one provider can implement multiple provider interfaces. Additionally, if

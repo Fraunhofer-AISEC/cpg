@@ -44,11 +44,7 @@ class KeyValueExpression : Expression() {
     @field:SubGraph("AST") var key: Expression? = null
 
     /** The value of this pair. It can be any expression */
-    @field:SubGraph("AST")
-    var value: Expression? = null
-        set(value) {
-            field = value
-        }
+    @field:SubGraph("AST") var value: Expression? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

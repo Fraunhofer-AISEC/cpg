@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-/** Determines if the LanguageFrontend can parse multiple files in parallel. Defaults to true. */
+/** Determines if the [LanguageFrontend] can parse multiple files in parallel. Defaults to true. */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 annotation class SupportsParallelParsing(val supported: Boolean = true)

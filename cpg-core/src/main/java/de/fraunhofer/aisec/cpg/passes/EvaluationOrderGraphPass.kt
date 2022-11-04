@@ -66,7 +66,11 @@ import org.slf4j.LoggerFactory
  * this as one "if" statement.
  * * EOG considers a method header as a node. CFG will consider the first executable statement of
  * the methods as a node.
+ *
+ * Its handleXXX functions are intentionally set as `protected`, in case someone wants to extend
+ * this pass and fine-tune it.
  */
+@Suppress("MemberVisibilityCanBePrivate")
 @DependsOn(CallResolver::class)
 open class EvaluationOrderGraphPass : Pass() {
     protected val map = mutableMapOf<Class<out Node>, CallableInterface<Node>>()
@@ -208,28 +212,10 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     /**
-     * Use with 'SubgraphWalker.flattenAST(tu).filter(node -> node.getPrevEOG().isEmpty() &&
-     * !node.getNextEOG().isEmpty())' to eliminate edges starting from nodes that have no incoming
-     * edge and are no function declarations. ======= To eliminate edges starting from nodes that
-     * have no incoming edge and are no function declarations.
-     */
-    private fun truncateLooseEdges(eogSources: List<Node>) {
-        for (eogSourceNode in eogSources) {
-            if (eogSourceNode is FunctionDeclaration) {
-                continue
-            }
-            val nextNodes = ArrayList(eogSourceNode.nextEOG)
-            eogSourceNode.clearNextEOG()
-            nextNodes.forEach { node -> node.removePrevEOGEntry(eogSourceNode) }
-            truncateLooseEdges(nextNodes.filter { it.prevEOG.isEmpty() && it.nextEOG.isNotEmpty() })
-        }
-    }
-
-    /**
      * Removes EOG edges by first building the negative set of nodes that cannot be visited and then
      * remove there outgoing edges.In contrast to truncateLooseEdges this also removes cycles.
      */
-    protected fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
+    private fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
         val eognodes =
             SubgraphWalker.flattenAST(tu)
                 .filter { it.prevEOG.isNotEmpty() || it.nextEOG.isNotEmpty() }
@@ -385,7 +371,7 @@ open class EvaluationOrderGraphPass : Pass() {
         currentEOG.clear()
     }
 
-    protected fun createEOG(node: Node) {
+    private fun createEOG(node: Node) {
         intermediateNodes.add(node)
         var toHandle: Class<*> = node.javaClass
         var callable = map[toHandle]
@@ -725,19 +711,9 @@ open class EvaluationOrderGraphPass : Pass() {
         currentEOG.add(node)
     }
 
-    fun setCurrentEOG(node: Node) {
-        LOGGER.trace("Setting $node to EOG")
-        currentEOG = mutableListOf(node)
-    }
-
     fun setCurrentEOGs(nodes: List<Node>) {
         LOGGER.trace("Setting $nodes to EOGs")
         currentEOG = ArrayList(nodes)
-    }
-
-    fun addToCurrentEOG(nodes: List<Node>) {
-        LOGGER.trace("Adding $nodes to current EOG")
-        currentEOG.addAll(nodes)
     }
 
     /**
@@ -770,13 +746,6 @@ open class EvaluationOrderGraphPass : Pass() {
      * Connects current EOG nodes to the previously saved loop start to mimic control flow of loops
      */
     protected fun connectCurrentToLoopStart() {
-        if (scopeManager == null) {
-            // Avoid null checks in every if/else branch
-            LOGGER.warn(
-                "Skipping connection of EOG loop to start - no information about frontend available."
-            )
-            return
-        }
         val loopScope = scopeManager.firstScopeOrNull { it is LoopScope } as? LoopScope
         if (loopScope == null) {
             LOGGER.error("I am unexpectedly not in a loop, cannot add edge to loop start")
@@ -795,7 +764,7 @@ open class EvaluationOrderGraphPass : Pass() {
      * @param prev the previous node
      * @param next the next node
      */
-    protected fun addEOGEdge(prev: Node, next: Node) {
+    private fun addEOGEdge(prev: Node, next: Node) {
         val propertyEdge = PropertyEdge(prev, next)
         propertyEdge.addProperties(currentProperties)
         propertyEdge.addProperty(Properties.INDEX, prev.nextEOG.size)
@@ -804,7 +773,7 @@ open class EvaluationOrderGraphPass : Pass() {
         next.addPrevEOG(propertyEdge)
     }
 
-    protected fun addMultipleIncomingEOGEdges(prevs: List<Node>, next: Node) {
+    private fun addMultipleIncomingEOGEdges(prevs: List<Node>, next: Node) {
         prevs.forEach { prev -> addEOGEdge(prev, next) }
     }
 

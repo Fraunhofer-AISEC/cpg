@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -38,7 +37,7 @@ class ProblemExpression(
     override var type: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION
 ) : Expression(), ProblemNode {
     override fun toString(): String {
-        return ToStringBuilder(this, Node.TO_STRING_STYLE)
+        return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
             .append("problem", problem)
             .toString()

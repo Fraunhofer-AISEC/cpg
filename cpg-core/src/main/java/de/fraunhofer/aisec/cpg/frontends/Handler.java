@@ -59,7 +59,7 @@ public abstract class Handler<S extends Node, T, L extends LanguageFrontend>
   protected static final Logger log = LoggerFactory.getLogger(Handler.class);
 
   protected final HashMap<Class<? extends T>, HandlerInterface<S, T>> map = new HashMap<>();
-  protected final Supplier<S> configConstructor;
+  protected final Supplier<@NotNull S> configConstructor;
   protected @NotNull L frontend;
   @Nullable private final Class<?> typeOfT;
 
@@ -125,7 +125,7 @@ public abstract class Handler<S extends Node, T, L extends LanguageFrontend>
       if (s != null) {
         // The language frontend might set a location, which we should respect. Otherwise, we will
         // set the location here.
-        if (((Node) s).getLocation() == null) {
+        if (s.getLocation() == null) {
           frontend.setCodeAndLocation(s, ctx);
         }
 
@@ -144,7 +144,19 @@ public abstract class Handler<S extends Node, T, L extends LanguageFrontend>
       }
     }
 
+    // In case the node is empty, we report a problem
+    if (ret == null) {
+      errorWithFileLocation(
+          frontend,
+          ctx,
+          log,
+          "Parsing of type {} did not produce a proper CPG node",
+          ctx.getClass());
+      ret = this.configConstructor.get();
+    }
+
     frontend.process(ctx, ret);
+
     return ret;
   }
 

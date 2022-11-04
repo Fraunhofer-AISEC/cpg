@@ -284,7 +284,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return expression
     }
 
-    private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): DeclarationStatement? {
+    private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): DeclarationStatement {
         return if (ctx.declaration is IASTASMDeclaration) {
             newASMDeclarationStatement(ctx.rawSignature)
         } else {

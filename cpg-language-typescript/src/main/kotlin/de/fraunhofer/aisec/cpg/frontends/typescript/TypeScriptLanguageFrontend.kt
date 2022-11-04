@@ -74,9 +74,9 @@ class TypeScriptLanguageFrontend(
     val mapper = jacksonObjectMapper()
 
     companion object {
-        @kotlin.jvm.JvmField var TYPESCRIPT_EXTENSIONS: List<String> = listOf(".ts", ".tsx")
+        @JvmField var TYPESCRIPT_EXTENSIONS: List<String> = listOf(".ts", ".tsx")
 
-        @kotlin.jvm.JvmField var JAVASCRIPT_EXTENSIONS: List<String> = listOf(".js", ".jsx")
+        @JvmField var JAVASCRIPT_EXTENSIONS: List<String> = listOf(".js", ".jsx")
 
         private val parserFile: File = createTempFile("parser", ".js")
 

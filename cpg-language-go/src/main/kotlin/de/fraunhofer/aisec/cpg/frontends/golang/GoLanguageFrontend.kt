@@ -45,7 +45,7 @@ class GoLanguageFrontend(
     scopeManager: ScopeManager
 ) : LanguageFrontend(language, config, scopeManager) {
     companion object {
-        @kotlin.jvm.JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
+        @JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
 
         init {
             try {

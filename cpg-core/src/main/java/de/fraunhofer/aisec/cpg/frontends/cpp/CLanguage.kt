@@ -37,11 +37,11 @@ class CLanguage :
     HasFunctionPointers,
     HasQualifier,
     HasElaboratedTypeSpecifier {
-    override val fileExtensions: List<String> = listOf("c", "h")
-    override val namespaceDelimiter: String = "::"
+    override val fileExtensions = listOf("c", "h")
+    override val namespaceDelimiter = "::"
     override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
-    override val qualifiers: List<String> = listOf("const", "volatile", "restrict", "atomic")
-    override val elaboratedTypeSpecifier: List<String> = listOf("struct", "union", "enum")
+    override val qualifiers = listOf("const", "volatile", "restrict", "atomic")
+    override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
 
     override fun newFrontend(
         config: TranslationConfiguration,

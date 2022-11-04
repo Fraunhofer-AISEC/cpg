@@ -45,11 +45,7 @@ import org.neo4j.ogm.annotation.Relationship
 /** Represents the declaration or definition of a function. */
 open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     /** The function body. Usually a [CompoundStatement]. */
-    @field:SubGraph("AST")
-    var body: Statement? = null
-        set(value) {
-            field = value
-        }
+    @field:SubGraph("AST") var body: Statement? = null
 
     /**
      * Classes and Structs can be declared inside a function and are only valid within the function.

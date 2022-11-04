@@ -67,13 +67,12 @@ class PerformanceRegressionTest {
 
         // this should not exceed 20 seconds (it takes about 2800ms on a good machine, about
         // 10-20s on GitHub, depending on the slowness of the runner)
-        assertTimeout(Duration.of(20, ChronoUnit.SECONDS)) {
+        assertTimeout(Duration.of(25, ChronoUnit.SECONDS)) {
             val tu =
                 analyzeAndGetFirstTU(listOf(tmp.toFile()), tmp.parent, true) {
                     // No need for parallel processing for a single file. this might make it fast
                     // enough for those special moments where for some reasons the GitHub runners
-                    // are
-                    // slowing down (maybe because of some hidden quota).
+                    // are slowing down (maybe because of some hidden quota).
                     it.useParallelFrontends(false)
                     it.typeSystemActiveInFrontend(true)
                 }

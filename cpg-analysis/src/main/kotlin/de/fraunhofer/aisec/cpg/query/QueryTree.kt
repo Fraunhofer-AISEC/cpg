@@ -150,7 +150,7 @@ open class QueryTree<T>(
         throw QueryException("Cannot compare objects of type ${this.value} and ${other.value}")
     }
 
-    public operator fun compareTo(other: Number): Int {
+    operator fun compareTo(other: Number): Int {
         if (this.value is Number) {
             return (this.value as Number).compareTo(other)
         }

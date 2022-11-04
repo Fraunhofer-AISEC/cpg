@@ -35,10 +35,9 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.order.PassWithDependencies
-import de.fraunhofer.aisec.cpg.passes.order.PassWithDepsContainer
-import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
+import java.nio.file.Path
 import java.util.*
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
@@ -81,19 +80,19 @@ private constructor(
      * As long as loadIncludes is set to false, include files will only be parsed, but not loaded
      * into the CPG. *
      */
-    val includePaths: List<String>,
+    val includePaths: List<Path>,
     /**
      * This acts as a white list for include files, if the array is not empty. Only the specified
      * includes files will be parsed and processed in the CPG, unless it is a port of the blacklist,
      * in which it will be ignored.
      */
-    val includeWhitelist: List<String>,
+    val includeWhitelist: List<Path>,
     /**
      * This acts as a block list for include files, if the array is not empty. The specified include
      * files will be excluded from being parsed and processed in the CPG. The blocklist entries
      * always take priority over those in the whitelist.
      */
-    val includeBlocklist: List<String>,
+    val includeBlocklist: List<Path>,
     passes: List<Pass>?,
     languages: List<Language<out LanguageFrontend>>,
     codeInNodes: Boolean,
@@ -210,16 +209,16 @@ private constructor(
      */
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
-        private val languages: MutableList<Language<out LanguageFrontend>> = ArrayList()
+        private val languages = mutableListOf<Language<out LanguageFrontend>>()
         private var topLevel: File? = null
         private var debugParser = false
         private var failOnError = false
         private var loadIncludes = false
-        private var symbols: Map<String, String> = HashMap()
-        private val includePaths: MutableList<String> = ArrayList()
-        private val includeWhitelist: MutableList<String> = ArrayList()
-        private val includeBlocklist: MutableList<String> = ArrayList()
-        private val passes: MutableList<Pass> = ArrayList()
+        private var symbols = mapOf<String, String>()
+        private val includePaths = mutableListOf<Path>()
+        private val includeWhitelist = mutableListOf<Path>()
+        private val includeBlocklist = mutableListOf<Path>()
+        private val passes = mutableListOf<Pass>()
         private var codeInNodes = true
         private var processAnnotations = false
         private var disableCleanup = false
@@ -317,6 +316,12 @@ private constructor(
 
         /** Directory containing include headers. */
         fun includePath(includePath: String): Builder {
+            includePaths.add(Path.of(includePath))
+            return this
+        }
+
+        /** Directory containing include headers. */
+        fun includePath(includePath: Path): Builder {
             includePaths.add(includePath)
             return this
         }
@@ -326,6 +331,15 @@ private constructor(
          * supported.
          */
         fun includeWhitelist(includeFile: String): Builder {
+            includeWhitelist.add(Path.of(includeFile))
+            return this
+        }
+
+        /**
+         * Adds the specified file to the include whitelist. Relative and absolute paths are
+         * supported.
+         */
+        fun includeWhitelist(includeFile: Path): Builder {
             includeWhitelist.add(includeFile)
             return this
         }
@@ -340,6 +354,15 @@ private constructor(
          * supported.
          */
         fun includeBlocklist(includeFile: String): Builder {
+            includeBlocklist.add(Path.of(includeFile))
+            return this
+        }
+
+        /**
+         * Adds the specified file to the include blocklist. Relative and absolute paths are
+         * supported.
+         */
+        fun includeBlocklist(includeFile: Path): Builder {
             includeBlocklist.add(includeFile)
             return this
         }
@@ -373,15 +396,19 @@ private constructor(
          *
          * This will register
          *
-         * 1. FilenameMapper
-         * 1. TypeHierarchyResolver
-         * 1. ImportResolver
-         * 1. VariableUsageResolver
-         * 1. CallResolver
-         * 1. EvaluationOrderGraphPass
-         * 1. TypeResolver
+         * - [TypeHierarchyResolver]
+         * - [JavaExternalTypeHierarchyResolver]
+         * - [ImportResolver]
+         * - [VariableUsageResolver]
+         * - [CallResolver]
+         * - [DFGPass]
+         * - [FunctionPointerCallResolver]
+         * - [EvaluationOrderGraphPass]
+         * - [TypeResolver]
+         * - [ControlFlowSensitiveDFGPass]
+         * - [FilenameMapper]
          *
-         * to be executed exactly in the specified order
+         * to be executed in the order specified by their annotations.
          */
         fun defaultPasses(): Builder {
             registerPass(TypeHierarchyResolver())
@@ -416,8 +443,7 @@ private constructor(
                             )
                         } else {
                             throw ConfigurationException(
-                                "Failed to load frontend because we could not register required pass dependency: {}" +
-                                    frontend.simpleName
+                                "Failed to load frontend because we could not register required pass dependency: ${frontend.simpleName}"
                             )
                         }
                     }
@@ -529,10 +555,10 @@ private constructor(
         }
 
         /**
-         * Collects the requested passes stored in [this.registeredPasses] and generates a
+         * Collects the requested passes stored in [registeredPasses] and generates a
          * [PassWithDepsContainer] consisting of pairs of passes and their dependencies.
          *
-         * @return A populated [PassWithDepsContainer] derived from [this.registeredPasses].
+         * @return A populated [PassWithDepsContainer] derived from [registeredPasses].
          */
         private fun collectInitialPasses(): PassWithDepsContainer {
             val workingList = PassWithDepsContainer()
@@ -578,8 +604,10 @@ private constructor(
          *
          * This function uses a very simple (and inefficient) logic to meet the requirements above:
          *
-         * 1. A list of all registered passes and their dependencies is build [workingList]
-         * 1. All missing hard dependencies [DependsOn] are added to the [workingList]
+         * 1. A list of all registered passes and their dependencies is build
+         * [PassWithDepsContainer.workingList]
+         * 1. All missing hard dependencies [DependsOn] are added to the
+         * [PassWithDepsContainer.workingList]
          * 1. The first pass [ExecuteFirst] is added to the result and removed from the other passes
          * dependencies
          * 1. The first pass in the [workingList] without dependencies is added to the result and it
