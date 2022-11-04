@@ -51,6 +51,7 @@ public class TypeManager {
 
   private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
+  // TODO: document/remove this regexp, merge with other pattern
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
   @NotNull private static TypeManager instance = new TypeManager();

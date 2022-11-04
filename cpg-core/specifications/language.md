@@ -14,7 +14,7 @@ Each `Node` has a `language` property that specifies its language.
 
 ### `LanguageTrait`
 
-A language trait aims to further categorize a programming language based on conceptual paradigms. This can be easily extended by introducing new interfaces based on `LanguageTrait`. Examples includes:
+A language trait aims to further categorize a programming language based on conceptual paradigms. This can be easily extended by introducing new interfaces based on `LanguageTrait`. Examples include:
 * Are default arguments supported?
 * Does the language have structs or classes?
 * Are function pointers supported?

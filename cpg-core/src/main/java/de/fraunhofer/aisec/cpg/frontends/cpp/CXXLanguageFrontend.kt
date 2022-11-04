@@ -135,17 +135,17 @@ class CXXLanguageFrontend(
              * @return true, if the path is in the list, false otherwise
              */
             private fun absoluteOrRelativePathIsInList(path: Path, list: List<Path>?): Boolean {
-                // path cannot be in the list if its empty or null
+                // Path cannot be in the list if its empty or null
                 if (list.isNullOrEmpty()) {
                     return false
                 }
 
-                // check, if the absolute header path is in the list
+                // Check, if the absolute header path is in the list
                 if (list.contains(path)) {
                     return true
                 }
 
-                // check for relative path based on the top level and all include paths
+                // Check for relative path based on the top level and all include paths
                 val includeLocations: MutableList<Path> = ArrayList()
                 val topLevel = config.topLevel
                 if (topLevel != null) {
@@ -153,18 +153,19 @@ class CXXLanguageFrontend(
                 }
                 includeLocations.addAll(config.includePaths)
 
-                for (includeLocation in includeLocations) {
+                // We need to find the proper include location for our relative path. Any location
+                // is valid, if we can
+                // find that the include-location + the path is contained in the list of paths we
+                // are looking for.
+                return includeLocations.any { include ->
                     // try to resolve path relatively
                     try {
-                        val relative = includeLocation.relativize(path)
-                        if (list.contains(relative)) {
-                            return true
-                        }
+                        val relative = include.relativize(path)
+                        return list.contains(relative)
                     } catch (e: IllegalArgumentException) {
-                        continue
+                        return false
                     }
                 }
-                return false
             }
 
             override fun getContentForInclusion(

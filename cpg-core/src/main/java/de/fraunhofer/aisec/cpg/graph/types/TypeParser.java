@@ -49,6 +49,7 @@ public class TypeParser {
 
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
 
+  // TODO: document/remove this regexp
   private static final Pattern functionPtrRegex =
       Pattern.compile(
           "(?:(?<functionptr>[\\h(]+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*[\\h)]+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
