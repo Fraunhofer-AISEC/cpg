@@ -93,7 +93,7 @@ private constructor(
      * always take priority over those in the whitelist.
      */
     val includeBlocklist: List<Path>,
-    passes: List<Pass>?,
+    passes: List<Pass>,
     languages: List<Language<out LanguageFrontend>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
@@ -173,7 +173,7 @@ private constructor(
     val inferenceConfiguration: InferenceConfiguration
 
     init {
-        registeredPasses = passes ?: ArrayList()
+        registeredPasses = passes
         this.languages = languages
         // Make sure to init this AFTER sourceLocations has been set
         this.codeInNodes = codeInNodes
@@ -619,7 +619,7 @@ private constructor(
         @Throws(ConfigurationException::class)
         private fun orderPasses(): List<Pass> {
             log.info("Passes before enforcing order: {}", passes)
-            val result: MutableList<Pass> = ArrayList()
+            val result = mutableListOf<Pass>()
 
             // Create a local copy of all passes and their "current" dependencies without possible
             // duplicates

@@ -83,7 +83,7 @@ private constructor(
                     result
                 )
             val executedPasses = mutableSetOf<Pass>()
-            var executedFrontends: Set<LanguageFrontend>? = null
+            var executedFrontends = setOf<LanguageFrontend>()
 
             try {
                 // Parse Java/C/CPP files
@@ -112,9 +112,9 @@ private constructor(
 
                     executedPasses.forEach { it.cleanup() }
 
-                    log.debug("Cleaning up {} Frontends", executedFrontends?.size)
+                    log.debug("Cleaning up {} Frontends", executedFrontends.size)
 
-                    executedFrontends?.forEach { it.cleanup() }
+                    executedFrontends.forEach { it.cleanup() }
                     TypeManager.getInstance().cleanup()
                 }
             }
