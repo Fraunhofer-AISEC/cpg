@@ -32,19 +32,20 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.passes.order.*
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.util.function.Consumer
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
  * Represents an abstract class that enhances the graph before it is persisted.
  *
- * Passes are expected to mutate the `TranslationResult`.
+ * Passes are expected to mutate the [TranslationResult].
  */
 abstract class Pass protected constructor() : Consumer<TranslationResult> {
     var name: String
         protected set
 
     /**
-     * Dependencies which - if present - have to be executed before this pass. Note: Dependencies
+     * Dependencies which, if present, have to be executed before this pass. Note: Dependencies
      * registered here will not be added automatically to the list of active passes. Use
      * [hardDependencies] to add them automatically.
      */
@@ -62,7 +63,7 @@ abstract class Pass protected constructor() : Consumer<TranslationResult> {
         softDependencies.add(toAdd)
     }
 
-    var scopeManager: ScopeManager? = null
+    lateinit var scopeManager: ScopeManager
     protected var config: TranslationConfiguration? = null
 
     init {
@@ -96,8 +97,8 @@ abstract class Pass protected constructor() : Consumer<TranslationResult> {
      * Specifies, whether this pass supports this particular language. This defaults to `true ` *
      * and needs to be overridden if a different behaviour is wanted.
      *
-     * @param lang the language
-     * @return `true` by default
+     * @param language the language
+     * @return truw by default
      */
     fun supportsLanguage(language: Language<out LanguageFrontend>): Boolean {
         return true
@@ -123,7 +124,7 @@ abstract class Pass protected constructor() : Consumer<TranslationResult> {
      * executed.
      *
      * @return true, if the pass does not require a specific language frontend or if it matches the
-     * [RequiredLanguage]
+     * [RequiredFrontend]
      */
     fun runsWithCurrentFrontend(usedFrontends: Collection<LanguageFrontend>): Boolean {
         if (!this.javaClass.isAnnotationPresent(RequiredFrontend::class.java)) return true
@@ -135,6 +136,6 @@ abstract class Pass protected constructor() : Consumer<TranslationResult> {
     }
 
     companion object {
-        val log = LoggerFactory.getLogger(Pass::class.java)
+        val log: Logger = LoggerFactory.getLogger(Pass::class.java)
     }
 }

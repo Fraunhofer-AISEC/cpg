@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * @param <T> the raw ast node specific to the parser
  * @param <L> the language frontend
  */
-public abstract class Handler<S, T, L extends LanguageFrontend>
+public abstract class Handler<S extends Node, T, L extends LanguageFrontend>
     implements LanguageProvider, CodeAndLocationProvider, ScopeProvider {
 
   protected static final Logger log = LoggerFactory.getLogger(Handler.class);

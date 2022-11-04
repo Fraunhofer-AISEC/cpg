@@ -32,8 +32,10 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 
-abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CXXLanguageFrontend) :
-    Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {
+abstract class CXXHandler<S : Node?, T : Any>(
+    configConstructor: Supplier<S>,
+    lang: CXXLanguageFrontend
+) : Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
      * logic, but rather want to make use of the Kotlin-when syntax.
@@ -60,7 +62,9 @@ abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CX
         }
 
         frontend.setComment(node, ctx)
-        frontend.process(node, ctx)
+        if (node != null) {
+            frontend.process(ctx, node)
+        }
 
         return node
     }

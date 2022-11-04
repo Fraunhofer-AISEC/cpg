@@ -1629,7 +1629,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun assembleGotoStatement(instr: LLVMValueRef, bbTarget: LLVMValueRef): GotoStatement {
         val goto = newGotoStatement(frontend.getCodeFromRawNode(instr))
-        val assigneeTargetLabel = BiConsumer { _: Any, to: Any? ->
+        val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
             if (to is LabelStatement) {
                 goto.targetLabel = to
             } else if (goto.targetLabel != to) {

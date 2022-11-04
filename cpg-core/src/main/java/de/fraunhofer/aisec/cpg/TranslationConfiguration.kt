@@ -35,9 +35,7 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.order.PassWithDependencies
-import de.fraunhofer.aisec.cpg.passes.order.PassWithDepsContainer
-import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
 import java.util.*
 import kotlin.reflect.full.findAnnotations
@@ -373,15 +371,19 @@ private constructor(
          *
          * This will register
          *
-         * 1. FilenameMapper
-         * 1. TypeHierarchyResolver
-         * 1. ImportResolver
-         * 1. VariableUsageResolver
-         * 1. CallResolver
-         * 1. EvaluationOrderGraphPass
-         * 1. TypeResolver
+         * - [TypeHierarchyResolver]
+         * - [JavaExternalTypeHierarchyResolver]
+         * - [ImportResolver]
+         * - [VariableUsageResolver]
+         * - [CallResolver]
+         * - [DFGPass]
+         * - [FunctionPointerCallResolver]
+         * - [EvaluationOrderGraphPass]
+         * - [TypeResolver]
+         * - [ControlFlowSensitiveDFGPass]
+         * - [FilenameMapper]
          *
-         * to be executed exactly in the specified order
+         * to be executed in the order specified by their annotations.
          */
         fun defaultPasses(): Builder {
             registerPass(TypeHierarchyResolver())
@@ -416,8 +418,7 @@ private constructor(
                             )
                         } else {
                             throw ConfigurationException(
-                                "Failed to load frontend because we could not register required pass dependency: {}" +
-                                    frontend.simpleName
+                                "Failed to load frontend because we could not register required pass dependency: ${frontend.simpleName}"
                             )
                         }
                     }
@@ -529,10 +530,10 @@ private constructor(
         }
 
         /**
-         * Collects the requested passes stored in [this.registeredPasses] and generates a
+         * Collects the requested passes stored in [registeredPasses] and generates a
          * [PassWithDepsContainer] consisting of pairs of passes and their dependencies.
          *
-         * @return A populated [PassWithDepsContainer] derived from [this.registeredPasses].
+         * @return A populated [PassWithDepsContainer] derived from [registeredPasses].
          */
         private fun collectInitialPasses(): PassWithDepsContainer {
             val workingList = PassWithDepsContainer()
@@ -578,8 +579,8 @@ private constructor(
          *
          * This function uses a very simple (and inefficient) logic to meet the requirements above:
          *
-         * 1. A list of all registered passes and their dependencies is build [workingList]
-         * 1. All missing hard dependencies [DependsOn] are added to the [workingList]
+         * 1. A list of all registered passes and their dependencies is build [PassWithDepsContainer.workingList]
+         * 1. All missing hard dependencies [DependsOn] are added to the [PassWithDepsContainer.workingList]
          * 1. The first pass [ExecuteFirst] is added to the result and removed from the other passes
          * dependencies
          * 1. The first pass in the [workingList] without dependencies is added to the result and it
