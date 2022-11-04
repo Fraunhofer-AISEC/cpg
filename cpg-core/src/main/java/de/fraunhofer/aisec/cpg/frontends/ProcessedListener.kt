@@ -25,18 +25,24 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import java.util.function.BiConsumer
 import java.util.function.BiPredicate
 
+/**
+ * This class is a piece of legacy code that seems to offer a functionality to register certain
+ * listeners that get executed when raw AST nodes are processed into certain nodes (specified in
+ * [interestingStatements]).
+ */
 open class ProcessedListener {
     @JvmField
     protected var interestingStatements =
         listOf(GotoStatement::class.java, LabelStatement::class.java)
     @JvmField
-    protected var predicateListeners = mutableMapOf<BiPredicate<Any, Any>, BiConsumer<Any, Any?>>()
-    @JvmField protected var processedMapping = mutableMapOf<Any, Any>()
+    protected var predicateListeners = mutableMapOf<BiPredicate<Any, Node>, BiConsumer<Any, Node>>()
+    @JvmField protected var processedMapping = mutableMapOf<Any, Node>()
 
     /**
      * Two data structures used to associate Objects input to a pass to results of a pass, e.g.
@@ -45,7 +51,7 @@ open class ProcessedListener {
      * the information on which AST-Node build which CPG-Node and operate with these associations
      * once they exist, important to resolve connections between labels and label usages.
      */
-    protected var objectListeners = mutableMapOf<Any, BiConsumer<Any, Any?>>()
+    protected var objectListeners = mutableMapOf<Any, BiConsumer<Any, Node>>()
 
     fun clearProcessed() {
         this.objectListeners.clear()
@@ -53,9 +59,11 @@ open class ProcessedListener {
         this.processedMapping.clear()
     }
 
-    open fun process(from: Any?, to: Any?) {
-        if (from == null || to == null) return
-
+    /**
+     * This function should be called by anything that implements this processed listener to
+     * indicate that a new [Node] has been processed from the raw node in [from].
+     */
+    open fun process(from: Any, to: Node) {
         if (interestingStatements.any { c -> c.isInstance(from) || c.isInstance(to) }) {
             processedMapping[from] = to
         }
@@ -68,7 +76,7 @@ open class ProcessedListener {
         }
         // Iterate over existing predicate based listeners, if the predicate matches the
         // listener/handler is executed on the new object.
-        val newPredicateListeners = mutableMapOf<BiPredicate<Any, Any>, BiConsumer<Any, Any?>>()
+        val newPredicateListeners = mutableMapOf<BiPredicate<Any, Node>, BiConsumer<Any, Node>>()
         for ((key, value) in predicateListeners) {
             if (key.test(from, to)) {
                 value.accept(from, to)
@@ -81,7 +89,11 @@ open class ProcessedListener {
         predicateListeners = newPredicateListeners
     }
 
-    open fun registerObjectListener(from: Any, biConsumer: BiConsumer<Any, Any?>) {
+    /**
+     * Registers a new listener ([biConsumer]), that gets called if the raw node specified in [from]
+     * gets processed.
+     */
+    open fun registerObjectListener(from: Any, biConsumer: BiConsumer<Any, Node>) {
         if (from in processedMapping) {
             biConsumer.accept(from, processedMapping[from]!!)
         }
@@ -89,10 +101,10 @@ open class ProcessedListener {
     }
 
     open fun registerPredicateListener(
-        predicate: BiPredicate<Any, Any>,
-        biConsumer: BiConsumer<Any, Any?>
+        predicate: BiPredicate<Any, Node>,
+        biConsumer: BiConsumer<Any, Node>
     ) {
-        val matchingEntries: MutableList<Map.Entry<Any, Any>> = ArrayList()
+        val matchingEntries: MutableList<Map.Entry<Any, Node>> = ArrayList()
         for (mapping in processedMapping.entries) {
             if (predicate.test(mapping.key, mapping.value)) {
                 matchingEntries.add(mapping)

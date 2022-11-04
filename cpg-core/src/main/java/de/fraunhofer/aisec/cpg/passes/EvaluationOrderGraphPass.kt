@@ -70,15 +70,14 @@ import org.slf4j.LoggerFactory
 @DependsOn(CallResolver::class)
 open class EvaluationOrderGraphPass : Pass() {
     protected val map = mutableMapOf<Class<out Node>, CallableInterface<Node>>()
-    protected var currentEOG = mutableListOf<Node>()
-    protected val currentProperties = EnumMap<Properties, Any?>(Properties::class.java)
+    private var currentEOG = mutableListOf<Node>()
+    private val currentProperties = EnumMap<Properties, Any?>(Properties::class.java)
 
-    protected val processedListener = ProcessedListener()
+    private val processedListener = ProcessedListener()
 
     // Some nodes will have no incoming nor outgoing edges but still need to be associated to the
-    // next
-    // eog relevant node.
-    protected val intermediateNodes = mutableListOf<Node>()
+    // next EOG relevant node.
+    private val intermediateNodes = mutableListOf<Node>()
 
     init {
         map[IncludeDeclaration::class.java] = CallableInterface { doNothing(it) }
@@ -285,7 +284,7 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleRecordDeclaration(node: RecordDeclaration) {
-        scopeManager!!.enterScope(node)
+        scopeManager.enterScope(node)
         handleStatementHolder(node)
         currentEOG.clear()
         for (constructor in node.constructors) {
@@ -297,7 +296,7 @@ open class EvaluationOrderGraphPass : Pass() {
         for (records in node.records) {
             createEOG(records)
         }
-        scopeManager!!.leaveScope(node)
+        scopeManager.leaveScope(node)
     }
 
     protected fun handleStatementHolder(statementHolder: StatementHolder) {
@@ -328,21 +327,21 @@ open class EvaluationOrderGraphPass : Pass() {
         if (
             node is MethodDeclaration &&
                 node.recordDeclaration != null &&
-                (node.recordDeclaration !== scopeManager!!.currentRecord)
+                (node.recordDeclaration !== scopeManager.currentRecord)
         ) {
             // This is a method declaration outside the AST of the record, as its possible in
             // languages, such as C++. Therefore, we need to enter the record scope as well
-            scopeManager!!.enterScope(node.recordDeclaration!!)
+            scopeManager.enterScope(node.recordDeclaration!!)
             needToLeaveRecord = true
         }
-        scopeManager!!.enterScope(node)
+        scopeManager.enterScope(node)
         // push the function declaration
         pushToEOG(node)
 
         // analyze the body
         node.body?.let { createEOG(it) }
 
-        val currentScope = scopeManager!!.currentScope
+        val currentScope = scopeManager.currentScope
         if (currentScope !is FunctionScope) {
             Util.errorWithFileLocation(
                 node,
@@ -350,16 +349,16 @@ open class EvaluationOrderGraphPass : Pass() {
                 "Scope of function declaration is not a function scope. EOG of function might be incorrect."
             )
             // try to recover at least a little bit
-            scopeManager!!.leaveScope(node)
+            scopeManager.leaveScope(node)
             currentEOG.clear()
             return
         }
         val uncaughtEOGThrows = currentScope.catchesOrRelays.values.flatten()
         // Connect uncaught throws to block node
         node.body?.let { addMultipleIncomingEOGEdges(uncaughtEOGThrows, it) }
-        scopeManager!!.leaveScope(node)
+        scopeManager.leaveScope(node)
         if (node is MethodDeclaration && node.recordDeclaration != null && needToLeaveRecord) {
-            scopeManager!!.leaveScope(node.recordDeclaration!!)
+            scopeManager.leaveScope(node.recordDeclaration!!)
         }
 
         // Set default argument evaluation nodes
@@ -499,14 +498,14 @@ open class EvaluationOrderGraphPass : Pass() {
     protected fun handleCompoundStatement(node: CompoundStatement) {
         // not all language handle compound statements as scoping blocks, so we need to avoid
         // creating new scopes here
-        scopeManager!!.enterScopeIfExists(node)
+        scopeManager.enterScopeIfExists(node)
 
         // analyze the contained statements
         for (child in node.statements) {
             createEOG(child)
         }
-        if (scopeManager!!.currentScope is BlockScope) {
-            scopeManager!!.leaveScope(node)
+        if (scopeManager.currentScope is BlockScope) {
+            scopeManager.leaveScope(node)
         }
         pushToEOG(node)
     }
@@ -518,7 +517,7 @@ open class EvaluationOrderGraphPass : Pass() {
         }
         if (node.operatorCode == "throw") {
             val catchingScope =
-                scopeManager!!.firstScopeOrNull { scope ->
+                scopeManager.firstScopeOrNull { scope ->
                     scope is TryScope || scope is FunctionScope
                 }
 
@@ -529,7 +528,7 @@ open class EvaluationOrderGraphPass : Pass() {
                     // do not check via instanceof, since we do not want to allow subclasses of
                     // DeclarationScope here
                     val decl =
-                        scopeManager!!.firstScopeOrNull { scope ->
+                        scopeManager.firstScopeOrNull { scope ->
                             scope.javaClass == ValueDeclarationScope::class.java
                         }
 
@@ -571,8 +570,8 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleTryStatement(node: TryStatement) {
-        scopeManager!!.enterScope(node)
-        val tryScope = scopeManager!!.currentScope as TryScope?
+        scopeManager.enterScope(node)
+        val tryScope = scopeManager.currentScope as TryScope?
 
         node.resources.forEach { createEOG(it) }
 
@@ -618,7 +617,7 @@ open class EvaluationOrderGraphPass : Pass() {
         }
         // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
         val outerScope =
-            scopeManager!!.firstScopeOrNull(scopeManager!!.currentScope!!.parent) { scope: Scope? ->
+            scopeManager.firstScopeOrNull(scopeManager.currentScope!!.parent) { scope: Scope? ->
                 scope is TryScope || scope is FunctionScope
             }
         if (outerScope != null) {
@@ -631,7 +630,7 @@ open class EvaluationOrderGraphPass : Pass() {
                 outerCatchesOrRelays[key] = catches
             }
         }
-        scopeManager!!.leaveScope(node)
+        scopeManager.leaveScope(node)
         // To Avoid edges out of the "finally" block to the next regular statement.
         if (!canTerminateExceptionfree) {
             currentEOG.clear()
@@ -641,7 +640,7 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleContinueStatement(node: ContinueStatement) {
         pushToEOG(node)
-        scopeManager!!.addContinueStatement(node)
+        scopeManager.addContinueStatement(node)
         currentEOG.clear()
     }
 
@@ -652,12 +651,12 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleBreakStatement(node: BreakStatement) {
         pushToEOG(node)
-        scopeManager!!.addBreakStatement(node)
+        scopeManager.addBreakStatement(node)
         currentEOG.clear()
     }
 
     protected fun handleLabelStatement(node: LabelStatement) {
-        scopeManager!!.addLabelStatement(node)
+        scopeManager.addLabelStatement(node)
         createEOG(node.subStatement)
     }
 
@@ -778,7 +777,7 @@ open class EvaluationOrderGraphPass : Pass() {
             )
             return
         }
-        val loopScope = scopeManager!!.firstScopeOrNull { it is LoopScope } as? LoopScope
+        val loopScope = scopeManager.firstScopeOrNull { it is LoopScope } as? LoopScope
         if (loopScope == null) {
             LOGGER.error("I am unexpectedly not in a loop, cannot add edge to loop start")
             return
@@ -830,13 +829,13 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleDoStatement(node: DoStatement) {
-        scopeManager!!.enterScope(node)
+        scopeManager.enterScope(node)
         createEOG(node.statement)
         createEOG(node.condition)
         node.addPrevDFG(node.condition)
         pushToEOG(node) // To have semantic information after the condition evaluation
         connectCurrentToLoopStart()
-        val currentLoopScope = scopeManager!!.leaveScope(node) as LoopScope?
+        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(node, currentLoopScope)
         } else {
@@ -845,7 +844,7 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleForEachStatement(node: ForEachStatement) {
-        scopeManager!!.enterScope(node)
+        scopeManager.enterScope(node)
         createEOG(node.iterable)
         createEOG(node.variable)
         node.addPrevDFG(node.variable)
@@ -854,7 +853,7 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.statement)
         connectCurrentToLoopStart()
         currentEOG.clear()
-        val currentLoopScope = scopeManager!!.leaveScope(node) as LoopScope?
+        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(node, currentLoopScope)
         } else {
@@ -864,7 +863,7 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleForStatement(node: ForStatement) {
-        scopeManager!!.enterScope(node)
+        scopeManager.enterScope(node)
         node.initializerStatement?.let { createEOG(it) }
         node.conditionDeclaration?.let { createEOG(it) }
         node.condition?.let { createEOG(it) }
@@ -879,7 +878,7 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.iterationStatement)
         connectCurrentToLoopStart()
         currentEOG.clear()
-        val currentLoopScope = scopeManager!!.leaveScope(node) as LoopScope?
+        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(node, currentLoopScope)
         } else {
@@ -890,7 +889,7 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleIfStatement(node: IfStatement) {
         val openBranchNodes = mutableListOf<Node>()
-        scopeManager!!.enterScopeIfExists(node)
+        scopeManager.enterScopeIfExists(node)
         node.initializerStatement?.let { createEOG(it) }
         node.conditionDeclaration?.let { createEOG(it) }
         node.condition?.let { createEOG(it) }
@@ -912,12 +911,12 @@ open class EvaluationOrderGraphPass : Pass() {
         } else {
             openBranchNodes.addAll(openConditionEOGs)
         }
-        scopeManager!!.leaveScope(node)
+        scopeManager.leaveScope(node)
         setCurrentEOGs(openBranchNodes)
     }
 
     protected fun handleSwitchStatement(node: SwitchStatement) {
-        scopeManager!!.enterScopeIfExists(node)
+        scopeManager.enterScopeIfExists(node)
         node.initializerStatement?.let { createEOG(it) }
         node.selectorDeclaration?.let { createEOG(it) }
         node.selector?.let { createEOG(it) }
@@ -943,7 +942,7 @@ open class EvaluationOrderGraphPass : Pass() {
             createEOG(subStatement)
         }
         pushToEOG(compound)
-        val switchScope = scopeManager!!.leaveScope(node) as SwitchScope?
+        val switchScope = scopeManager.leaveScope(node) as SwitchScope?
         if (switchScope != null) {
             currentEOG.addAll(switchScope.breakStatements)
         } else {
@@ -952,7 +951,7 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleWhileStatement(node: WhileStatement) {
-        scopeManager!!.enterScope(node)
+        scopeManager.enterScope(node)
         node.conditionDeclaration?.let { createEOG(it) }
         node.condition?.let { createEOG(it) }
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
@@ -967,7 +966,7 @@ open class EvaluationOrderGraphPass : Pass() {
 
         // Replace current EOG nodes without triggering post setEOG ... processing
         currentEOG.clear()
-        val currentLoopScope = scopeManager!!.leaveScope(node) as LoopScope?
+        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(node, currentLoopScope)
         } else {

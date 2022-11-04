@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -72,4 +73,4 @@ class TestLanguageFrontend :
     }
 }
 
-class TestHandler : Handler<Any, Any, TestLanguageFrontend>(null, TestLanguageFrontend()) {}
+class TestHandler : Handler<Node, Any, TestLanguageFrontend>(null, TestLanguageFrontend()) {}
