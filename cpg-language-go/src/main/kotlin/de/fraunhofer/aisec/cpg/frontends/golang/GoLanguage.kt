@@ -29,14 +29,13 @@ import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
-import kotlin.reflect.KClass
 
 /** The Go language. */
 @OptIn(ExperimentalGolang::class)
 class GoLanguage : Language<GoLanguageFrontend>() {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
-    override val frontend: KClass<out GoLanguageFrontend> = GoLanguageFrontend::class
+    override val frontend = GoLanguageFrontend::class
 
     override fun newFrontend(
         config: TranslationConfiguration,

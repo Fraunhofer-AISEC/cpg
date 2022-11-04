@@ -29,15 +29,13 @@ import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
-import kotlin.reflect.KClass
 
 /** The TypeScript language. */
 @OptIn(ExperimentalTypeScript::class)
 class TypeScriptLanguage : Language<TypeScriptLanguageFrontend>() {
     override val fileExtensions = listOf("ts", "tsx")
     override val namespaceDelimiter = "."
-    override val frontend: KClass<out TypeScriptLanguageFrontend> =
-        TypeScriptLanguageFrontend::class
+    override val frontend = TypeScriptLanguageFrontend::class
 
     override fun newFrontend(
         config: TranslationConfiguration,

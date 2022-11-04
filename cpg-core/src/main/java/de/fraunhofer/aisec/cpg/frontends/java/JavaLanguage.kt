@@ -28,29 +28,22 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
-import kotlin.reflect.KClass
 
 /** The Java language. */
 open class JavaLanguage :
     Language<JavaLanguageFrontend>(),
     // HasComplexCallResolution,
     HasClasses,
-    HasSuperclasses,
+    HasSuperClasses,
     // HasTemplates,
     HasQualifier,
     HasUnknownType {
-    override val fileExtensions: List<String>
-        get() = listOf("java")
-    override val namespaceDelimiter: String
-        get() = "."
-    override val frontend: KClass<out JavaLanguageFrontend>
-        get() = JavaLanguageFrontend::class
-    override val superclassKeyword: String
-        get() = "super"
-    override val qualifiers: List<String>
-        get() = listOf("final", "volatile")
-    override val unknownTypeString: List<String>
-        get() = listOf("var")
+    override val fileExtensions = listOf("java")
+    override val namespaceDelimiter = "."
+    override val frontend = JavaLanguageFrontend::class
+    override val superclassKeyword = "super"
+    override val qualifiers = listOf("final", "volatile")
+    override val unknownTypeString = listOf("var")
 
     override fun newFrontend(
         config: TranslationConfiguration,

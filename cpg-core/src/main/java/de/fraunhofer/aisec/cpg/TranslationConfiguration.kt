@@ -579,8 +579,10 @@ private constructor(
          *
          * This function uses a very simple (and inefficient) logic to meet the requirements above:
          *
-         * 1. A list of all registered passes and their dependencies is build [PassWithDepsContainer.workingList]
-         * 1. All missing hard dependencies [DependsOn] are added to the [PassWithDepsContainer.workingList]
+         * 1. A list of all registered passes and their dependencies is build
+         * [PassWithDepsContainer.workingList]
+         * 1. All missing hard dependencies [DependsOn] are added to the
+         * [PassWithDepsContainer.workingList]
          * 1. The first pass [ExecuteFirst] is added to the result and removed from the other passes
          * dependencies
          * 1. The first pass in the [workingList] without dependencies is added to the result and it

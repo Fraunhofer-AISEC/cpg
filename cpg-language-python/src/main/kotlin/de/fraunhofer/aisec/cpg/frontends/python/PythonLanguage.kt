@@ -29,14 +29,13 @@ import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
-import kotlin.reflect.KClass
 
 /** The Python language. */
 @OptIn(ExperimentalPython::class)
 class PythonLanguage : Language<PythonLanguageFrontend>() {
     override val fileExtensions = listOf("py")
     override val namespaceDelimiter = "."
-    override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
+    override val frontend = PythonLanguageFrontend::class
 
     override fun newFrontend(
         config: TranslationConfiguration,

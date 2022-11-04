@@ -112,7 +112,7 @@ interface HasClasses : LanguageTrait
  * A language trait, that specifies that this language has support for superclasses. If so, we
  * should consider the specified superclass keyword to resolve calls etc.
  */
-interface HasSuperclasses : LanguageTrait {
+interface HasSuperClasses : LanguageTrait {
     /**
      * Determines which keyword is used to access functions, etc. of the superclass of an object
      * (often "super).

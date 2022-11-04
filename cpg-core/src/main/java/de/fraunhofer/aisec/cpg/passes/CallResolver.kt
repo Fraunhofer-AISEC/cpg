@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
 import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
@@ -161,7 +160,7 @@ open class CallResolver : SymbolResolverPass() {
                 // resolve this call's signature, we need to make sure any call expression arguments
                 // are fully resolved
                 resolveArguments(node)
-                handleCallExpression(scopeManager!!.currentRecord, node)
+                handleCallExpression(scopeManager.currentRecord, node)
             }
         }
     }
@@ -188,7 +187,7 @@ open class CallResolver : SymbolResolverPass() {
                 curClass,
                 call,
                 true,
-                scopeManager!!,
+                scopeManager,
                 currentTU
             )
             return
@@ -236,11 +235,11 @@ open class CallResolver : SymbolResolverPass() {
                 // complexity
                 (call.language as HasComplexCallResolution).refineNormalCallResolution(
                     call,
-                    scopeManager!!,
+                    scopeManager,
                     currentTU
                 )
             } else {
-                val invocationCandidates = scopeManager!!.resolveFunction(call).toMutableList()
+                val invocationCandidates = scopeManager.resolveFunction(call).toMutableList()
 
                 if (invocationCandidates.isEmpty()) {
                     // If we have no candidates, we create an inferred FunctionDeclaration
@@ -300,13 +299,13 @@ open class CallResolver : SymbolResolverPass() {
                     curClass,
                     possibleContainingTypes,
                     call,
-                    scopeManager!!,
+                    scopeManager,
                     currentTU,
                     this
                 )
                 .toMutableList()
         } else {
-            scopeManager!!.resolveFunction(call).toMutableList()
+            scopeManager.resolveFunction(call).toMutableList()
         }
     }
 
@@ -346,15 +345,7 @@ open class CallResolver : SymbolResolverPass() {
      * @return true if we should stop searching parent, false otherwise
      */
     private fun shouldSearchForInvokesInParent(call: CallExpression): Boolean {
-        if (scopeManager == null) {
-            Util.errorWithFileLocation(
-                call,
-                log,
-                "Could not search for invokes in parent: scopeManager is null"
-            )
-            return false
-        }
-        return scopeManager!!.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
+        return scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
     }
 
     private fun resolveConstructExpression(constructExpression: ConstructExpression) {
