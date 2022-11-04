@@ -293,7 +293,7 @@ private fun fancyType(
     node: HasType,
     list: MutableList<Pair<AttributedStyle, Region>>
 ) {
-    val types = outer.language?.primitiveTypes?.toMutableSet() ?: mutableListOf()
+    val types = outer.language?.primitiveTypes?.toMutableSet() ?: mutableSetOf()
     types += node.type.name
 
     // check for primitive types
