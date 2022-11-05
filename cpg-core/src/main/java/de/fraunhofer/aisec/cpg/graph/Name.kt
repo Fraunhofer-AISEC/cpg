@@ -26,18 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import java.util.*
-import kotlin.reflect.KMutableProperty0
-import kotlin.reflect.KProperty
-
-class NameDelegate(var nameProperty: KMutableProperty0<Name>) {
-    operator fun getValue(thisRef: Node, property: KProperty<*>): String {
-        return nameProperty.get().localName
-    }
-
-    operator fun setValue(thisRef: Node, property: KProperty<*>, value: String) {
-        nameProperty.get().localName = value
-    }
-}
 
 /**
  * This class represents anything that can have a "Name". In the simplest case it only represents a

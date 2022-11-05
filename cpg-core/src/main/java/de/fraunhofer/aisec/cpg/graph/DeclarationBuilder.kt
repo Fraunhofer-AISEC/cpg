@@ -114,7 +114,7 @@ fun MetadataProvider.newConstructorDeclaration(
     val node = ConstructorDeclaration()
     node.applyMetadata(this, name, rawNode, code)
 
-    node.name = name ?: Node.EMPTY_NAME
+    node.name = name ?: EMPTY_NAME
     node.recordDeclaration = recordDeclaration
 
     log(node)
@@ -138,7 +138,7 @@ fun MetadataProvider.newParamVariableDeclaration(
     val node = ParamVariableDeclaration()
     node.applyMetadata(this, name, rawNode, code)
 
-    node.name = name ?: Node.EMPTY_NAME
+    node.name = name ?: EMPTY_NAME
     node.type = type
     node.isVariadic = variadic
 
@@ -163,7 +163,7 @@ fun MetadataProvider.newVariableDeclaration(
     val node = VariableDeclaration()
     node.applyMetadata(this, name, rawNode, code)
 
-    node.name = name ?: Node.EMPTY_NAME
+    node.name = name ?: EMPTY_NAME
     node.type = type
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
 
@@ -251,7 +251,7 @@ fun MetadataProvider.newEnumDeclaration(
     val node = EnumDeclaration()
     node.applyMetadata(this, name, rawNode, code)
 
-    node.name = name ?: Node.EMPTY_NAME
+    node.name = name ?: EMPTY_NAME
     node.location = location
 
     log(node)
@@ -312,7 +312,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
     val node = EnumConstantDeclaration()
     node.applyMetadata(this, name, rawNode, code)
 
-    node.name = name ?: Node.EMPTY_NAME
+    node.name = name ?: EMPTY_NAME
     node.location = location
 
     log(node)
@@ -339,7 +339,7 @@ fun MetadataProvider.newFieldDeclaration(
     val node = FieldDeclaration()
     node.applyMetadata(this, name, rawNode, code)
 
-    node.name = name ?: Node.EMPTY_NAME
+    node.name = name ?: EMPTY_NAME
     node.type = type
     node.modifiers = modifiers
     node.location = location
