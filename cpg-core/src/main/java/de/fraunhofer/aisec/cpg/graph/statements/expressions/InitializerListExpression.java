@@ -109,7 +109,7 @@ public class InitializerListExpression extends Expression implements TypeListene
               .map(t -> TypeManager.getInstance().registerType(t.reference(PointerOrigin.ARRAY)))
               .collect(Collectors.toSet());
       Type alternative = !types.isEmpty() ? types.iterator().next() : UnknownType.getUnknownType();
-      newType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
+      newType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative);
       subTypes = new ArrayList<>(getPossibleSubTypes());
       subTypes.remove(oldType);
       subTypes.addAll(types);

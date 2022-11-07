@@ -75,7 +75,7 @@ public class CastExpression extends Expression implements TypeListener {
     }
     Type previous = this.type;
 
-    if (TypeManager.getInstance().isSupertypeOf(this.castType, src.getPropagationType())) {
+    if (TypeManager.getInstance().isSupertypeOf(this.castType, src.getPropagationType(), this)) {
       setType(src.getPropagationType(), root);
     } else {
       resetTypes(this.getCastType());

@@ -123,7 +123,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         return result
     }
 
-    override fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any? {
+    override fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any {
         val result = mutableSetOf<Any?>()
         val elseResult = evaluateInternal(expr.elseExpr, depth + 1)
         val thenResult = evaluateInternal(expr.thenExpr, depth + 1)

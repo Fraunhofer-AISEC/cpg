@@ -26,11 +26,10 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -43,12 +42,6 @@ import java.util.regex.Pattern
 open class ImportResolver : Pass() {
     protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
-
-    override fun getLang(): LanguageFrontend? {
-        return null
-    }
-
-    override fun setLang(lang: LanguageFrontend?) {}
 
     override fun cleanup() {
         records.clear()
@@ -130,25 +123,25 @@ open class ImportResolver : Pass() {
         )
 
         // now it gets weird: you can import a field and a number of methods that have the same
-        // name,
-        // all with a *single* static import...
+        // name, all with a *single* static import...
         val result = mutableSetOf<ValueDeclaration>()
         result.addAll(memberMethods)
         result.addAll(memberFields)
         if (result.isEmpty()) {
             // the target might be a field or a method, we don't know. Thus, we need to create both
             val targetField =
-                newFieldDeclaration(
+                base.newFieldDeclaration(
                     name,
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(base.language),
                     ArrayList(),
                     "",
                     null,
                     null,
-                    false
+                    false,
+                    base.language
                 )
             targetField.isInferred = true
-            val targetMethod = newMethodDeclaration(name, "", true, base)
+            val targetMethod = base.newMethodDeclaration(name, "", true, base)
             targetMethod.isInferred = true
             base.addField(targetField)
             base.addMethod(targetMethod)

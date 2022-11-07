@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -53,13 +53,7 @@ class UnreachableEOGandDFGTest {
                 listOf(topLevel.resolve("Unreachability.java").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                        JavaLanguageFrontend::class.java,
-                        JavaLanguageFrontend.JAVA_EXTENSIONS
-                    )
-                    .registerPass(UnreachableEOGPass())
-            }
+            ) { it.registerLanguage<JavaLanguage>().registerPass(UnreachableEOGPass()) }
     }
 
     @Test

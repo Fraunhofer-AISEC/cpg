@@ -42,7 +42,7 @@ class StatisticsCollectionPass : Pass() {
     override fun accept(translationResult: TranslationResult) {
         var problemNodes = 0
         var nodes = 0
-        val walker = ScopedWalker(lang)
+        val walker = ScopedWalker(translationResult.scopeManager)
         walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
             nodes++
             if (currNode is ProblemNode) {

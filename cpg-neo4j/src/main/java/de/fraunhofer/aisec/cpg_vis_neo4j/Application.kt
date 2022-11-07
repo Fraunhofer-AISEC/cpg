@@ -27,10 +27,11 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
-import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
+import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.frontends.typescript.JavaScriptLanguage
+import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import java.io.File
 import java.net.ConnectException
@@ -352,31 +353,19 @@ class Application : Callable<Int> {
             }
         }
 
-        translationConfiguration.registerLanguage(
-            LLVMIRLanguageFrontend::class.java,
-            LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-        )
+        translationConfiguration.registerLanguage<LLVMIRLanguage>()
 
         if (enableExperimentalPython) {
-            translationConfiguration.registerLanguage(
-                PythonLanguageFrontend::class.java,
-                PythonLanguageFrontend.PY_EXTENSIONS
-            )
+            translationConfiguration.registerLanguage<PythonLanguage>()
         }
 
         if (enableExperimentalGo) {
-            translationConfiguration.registerLanguage(
-                GoLanguageFrontend::class.java,
-                GoLanguageFrontend.GOLANG_EXTENSIONS
-            )
+            translationConfiguration.registerLanguage<GoLanguage>()
         }
 
         if (enableExperimentalTypeScript) {
-            translationConfiguration.registerLanguage(
-                TypeScriptLanguageFrontend::class.java,
-                TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS +
-                    TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
-            )
+            translationConfiguration.registerLanguage<TypeScriptLanguage>()
+            translationConfiguration.registerLanguage<JavaScriptLanguage>()
         }
 
         includesFile?.let { theFile ->

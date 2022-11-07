@@ -82,15 +82,8 @@ public class Region implements Comparable<Region> {
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append(startLine);
-    sb.append(":");
-    sb.append(startColumn);
-    sb.append("-");
-    sb.append(endLine);
-    sb.append(":");
-    sb.append(endColumn);
-    return sb.toString();
+    String sb = startLine + ":" + startColumn + "-" + endLine + ":" + endColumn;
+    return sb;
   }
 
   @Override

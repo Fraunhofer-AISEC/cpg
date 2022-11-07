@@ -25,77 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.graph.HasDefault
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
 import java.util.HashMap
 import java.util.regex.Pattern
-
-fun CallResolver.handleNormalCallCXX(call: CallExpression) {
-    if (scopeManager == null) {
-        Util.errorWithFileLocation(
-            call,
-            LOGGER,
-            "Could not handle normal call cpp: scopeManager is null"
-        )
-        return
-    }
-
-    val invocationCandidates =
-        scopeManager!!
-            .resolveFunctionStopScopeTraversalOnDefinition(call)
-            .filter { it.hasSignature(call.signature) }
-            .toMutableList()
-    if (invocationCandidates.isEmpty()) {
-        // Check for usage of default args
-        invocationCandidates.addAll(resolveWithDefaultArgsFunc(call))
-    }
-    if (invocationCandidates.isEmpty()) {
-        /*
-         Check if the call can be resolved to a function template instantiation. If it can be resolver, we
-         resolve the call. Otherwise, there won't be an inferred template, we will do an inferred
-         FunctionDeclaration instead.
-        */
-        call.templateParametersEdges = mutableListOf()
-        if (handleTemplateFunctionCalls(null, call, false)) {
-            return
-        } else {
-            call.templateParametersEdges = null
-        }
-    }
-    if (invocationCandidates.isEmpty()) {
-        // If we don't find any candidate and our current language is c/c++ we check if there is
-        // a candidate with an implicit cast
-        invocationCandidates.addAll(resolveWithImplicitCastFunc(call))
-    }
-
-    if (invocationCandidates.isEmpty()) {
-        // If we still have no candidates and our current language is c++ we create an inferred
-        // FunctionDeclaration
-        invocationCandidates.add(
-            createInferredFunctionDeclaration(
-                null,
-                call.name,
-                call.code,
-                false,
-                call.signature,
-                call.type // TODO: Is the call's type the return type?
-            )
-        )
-    }
-
-    call.invokes = invocationCandidates
-}
 
 /**
  * @param callSignature Type signature of the CallExpression
@@ -103,12 +41,17 @@ fun CallResolver.handleNormalCallCXX(call: CallExpression) {
  * @return true if the CallExpression signature can be transformed into the FunctionDeclaration
  * signature by means of casting
  */
-fun compatibleSignatures(callSignature: List<Type?>, functionSignature: List<Type>): Boolean {
+fun compatibleSignatures(
+    callSignature: List<Type?>,
+    functionSignature: List<Type>,
+    provider: ScopeProvider
+): Boolean {
     return if (callSignature.size == functionSignature.size) {
         for (i in callSignature.indices) {
             if (
                 callSignature[i]!!.isPrimitive != functionSignature[i].isPrimitive &&
-                    !TypeManager.getInstance().isSupertypeOf(functionSignature[i], callSignature[i])
+                    !TypeManager.getInstance()
+                        .isSupertypeOf(functionSignature[i], callSignature[i], provider)
             ) {
                 return false
             }
@@ -162,7 +105,7 @@ fun resolveWithImplicitCast(
     for (functionDeclaration in initialInvocationCandidates) {
         val callSignature = getCallSignatureWithDefaults(call, functionDeclaration)
         // Check if the signatures match by implicit casts
-        if (compatibleSignatures(callSignature, functionDeclaration.signatureTypes)) {
+        if (compatibleSignatures(callSignature, functionDeclaration.signatureTypes, call)) {
             val implicitCastTargets =
                 signatureWithImplicitCastTransformation(
                     getCallSignatureWithDefaults(call, functionDeclaration),
@@ -176,7 +119,7 @@ fun resolveWithImplicitCast(
                 // to the same target type
                 checkMostCommonImplicitCast(implicitCasts, implicitCastTargets)
             }
-            if (compatibleSignatures(call.signature, functionDeclaration.signatureTypes)) {
+            if (compatibleSignatures(call.signature, functionDeclaration.signatureTypes, call)) {
                 invocationTargetsWithImplicitCast.add(functionDeclaration)
             } else {
                 invocationTargetsWithImplicitCastAndDefaults.add(functionDeclaration)
@@ -215,8 +158,9 @@ fun checkMostCommonImplicitCast(
                 // ambiguous call, and we can't have a single cast
                 val contradictoryCast = CastExpression()
                 contradictoryCast.isImplicit = true
-                contradictoryCast.castType = UnknownType.getUnknownType()
+                contradictoryCast.castType = UnknownType.getUnknownType(currentCast.language)
                 contradictoryCast.expression = currentCast.expression
+                contradictoryCast.language = currentCast.language
                 implicitCasts[i] = contradictoryCast
             }
         }
@@ -234,48 +178,6 @@ fun applyImplicitCastToArguments(call: CallExpression, implicitCasts: List<CastE
         implicitCasts[i]?.let { call.setArgument(i, it) }
     }
 }
-
-/**
- * @param call we want to find invocation targets for by performing implicit casts
- * @return list of invocation candidates by applying implicit casts
- */
-fun CallResolver.resolveWithImplicitCastFunc(call: CallExpression): List<FunctionDeclaration> {
-    if (scopeManager == null) {
-        Util.errorWithFileLocation(
-            call,
-            LOGGER,
-            "Could not resolve with implicit cast function: scopeManager is null"
-        )
-        return listOf()
-    }
-    val initialInvocationCandidates =
-        listOf(*scopeManager!!.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray())
-    return resolveWithImplicitCast(call, initialInvocationCandidates)
-}
-
-/**
- * @param call we want to find invocation targets for by adding the default arguments to the
- * signature
- * @return list of invocation candidates that have matching signature when considering default
- * arguments
- */
-fun CallResolver.resolveWithDefaultArgsFunc(call: CallExpression): List<FunctionDeclaration> {
-    if (scopeManager == null) {
-        Util.errorWithFileLocation(
-            call,
-            LOGGER,
-            "Could not resolve with default args: scopeManager is null"
-        )
-        return listOf()
-    }
-    val invocationCandidates =
-        scopeManager!!.resolveFunctionStopScopeTraversalOnDefinition(call).filter { f
-            -> /*!f.isImplicit() &&*/
-            call.signature.size < f.signatureTypes.size
-        }
-    return resolveWithDefaultArgs(call, invocationCandidates)
-}
-
 /**
  * Resolves a CallExpression to the potential target FunctionDeclarations by checking for omitted
  * arguments due to previously defined default arguments
@@ -299,86 +201,6 @@ fun resolveWithDefaultArgs(
         }
     }
     return invocationCandidatesDefaultArgs
-}
-
-/**
- * @param call
- * @return FunctionDeclarations that are invocation candidates for the MethodCall call using C++
- * resolution techniques
- */
-fun CallResolver.handleCXXMethodCall(
-    curClass: RecordDeclaration?,
-    possibleContainingTypes: Set<Type>,
-    call: CallExpression
-): List<FunctionDeclaration> {
-    var invocationCandidates = mutableListOf<FunctionDeclaration>()
-    val records = possibleContainingTypes.mapNotNull { recordMap[it.root.typeName] }.toSet()
-    for (record in records) {
-        invocationCandidates.addAll(getInvocationCandidatesFromRecord(record, call.name, call))
-    }
-    if (invocationCandidates.isEmpty()) {
-        // Check for usage of default args
-        invocationCandidates.addAll(resolveWithDefaultArgsFunc(call))
-    }
-    if (invocationCandidates.isEmpty()) {
-        if (handleTemplateFunctionCalls(curClass, call, false)) {
-            return call.invokes
-        } else {
-            call.templateParametersEdges = null
-        }
-    }
-    if (invocationCandidates.isEmpty()) {
-        // Check for usage of implicit cast
-        invocationCandidates.addAll(resolveWithImplicitCastFunc(call))
-    }
-
-    // Make sure, that our invocation candidates for member call expressions are really METHODS,
-    // otherwise this will lead to false positives. This is a hotfix until we rework the call
-    // resolver completely.
-    if (call is MemberCallExpression) {
-        invocationCandidates =
-            invocationCandidates.filterIsInstance<MethodDeclaration>().toMutableList()
-    }
-    return invocationCandidates
-}
-
-fun getInvocationCandidatesFromRecordCXX(
-    recordDeclaration: RecordDeclaration,
-    call: CallExpression,
-    namePattern: Pattern
-): List<FunctionDeclaration> {
-    val invocationCandidate =
-        mutableListOf<FunctionDeclaration>(
-            *recordDeclaration.methods
-                .filter { m ->
-                    namePattern.matcher(m.name).matches() && m.hasSignature(call.signature)
-                }
-                .toTypedArray()
-        )
-    if (invocationCandidate.isEmpty()) {
-        // Search for possible invocation with defaults args
-        invocationCandidate.addAll(
-            resolveWithDefaultArgs(
-                call,
-                recordDeclaration.methods.filter { m ->
-                    (namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/ &&
-                        call.signature.size < m.signatureTypes.size)
-                }
-            )
-        )
-    }
-    if (invocationCandidate.isEmpty()) {
-        // Search for possible invocation with implicit cast
-        invocationCandidate.addAll(
-            resolveWithImplicitCast(
-                call,
-                recordDeclaration.methods.filter { m ->
-                    namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/
-                }
-            )
-        )
-    }
-    return invocationCandidate
 }
 
 /**
@@ -449,7 +271,8 @@ fun resolveConstructorWithImplicitCast(
         if (
             compatibleSignatures(
                 constructExpression.signature,
-                constructorDeclaration.signatureTypes
+                constructorDeclaration.signatureTypes,
+                constructExpression
             )
         ) {
             val implicitCasts =
@@ -460,7 +283,13 @@ fun resolveConstructorWithImplicitCast(
                 )
             applyImplicitCastToArguments(constructExpression, implicitCasts)
             return constructorDeclaration
-        } else if (compatibleSignatures(workingSignature, constructorDeclaration.signatureTypes)) {
+        } else if (
+            compatibleSignatures(
+                workingSignature,
+                constructorDeclaration.signatureTypes,
+                constructExpression
+            )
+        ) {
             val implicitCasts =
                 signatureWithImplicitCastTransformation(
                     getCallSignatureWithDefaults(constructExpression, constructorDeclaration),
@@ -472,156 +301,6 @@ fun resolveConstructorWithImplicitCast(
         }
     }
     return null
-}
-
-/**
- * @param curClass class the invoked method must be part of.
- * @param templateCall call to instantiate and invoke a function template
- * @param applyInference if the resolution was unsuccessful and applyInference is true the call will
- * resolve to an instantiation/invocation of an inferred template
- * @return true if resolution was successful, false if not
- */
-fun CallResolver.handleTemplateFunctionCalls(
-    curClass: RecordDeclaration?,
-    templateCall: CallExpression,
-    applyInference: Boolean
-): Boolean {
-    if (scopeManager == null) {
-        Util.errorWithFileLocation(
-            templateCall,
-            Pass.log,
-            "Could not handle template function call: scopeManager is null"
-        )
-        return false
-    }
-    val instantiationCandidates = scopeManager!!.resolveFunctionTemplateDeclaration(templateCall)
-    for (functionTemplateDeclaration in instantiationCandidates) {
-        val initializationType = mutableMapOf<Node?, TemplateDeclaration.TemplateInitialization?>()
-        val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
-        val explicitInstantiation = mutableListOf<ParameterizedType?>()
-        if (
-            (templateCall.templateParameters.size <= functionTemplateDeclaration.parameters.size) &&
-                (templateCall.arguments.size <=
-                    functionTemplateDeclaration.realization[0].parameters.size)
-        ) {
-            val initializationSignature =
-                getTemplateInitializationSignature(
-                    functionTemplateDeclaration,
-                    templateCall,
-                    initializationType,
-                    orderedInitializationSignature,
-                    explicitInstantiation
-                )
-            val function = functionTemplateDeclaration.realization[0]
-            if (
-                initializationSignature != null &&
-                    checkArgumentValidity(
-                        function,
-                        getCallSignature(
-                            function,
-                            getParameterizedSignaturesFromInitialization(initializationSignature),
-                            initializationSignature
-                        ),
-                        templateCall,
-                        explicitInstantiation
-                    )
-            ) {
-                // Valid Target -> Apply invocation
-                applyTemplateInstantiation(
-                    templateCall,
-                    functionTemplateDeclaration,
-                    function,
-                    initializationSignature,
-                    initializationType,
-                    orderedInitializationSignature
-                )
-                return true
-            }
-        }
-    }
-    if (applyInference) {
-        // If we want to use an inferred functionTemplateDeclaration, this needs to be provided.
-        // Otherwise, we could not resolve to a template and no modifications are made
-        val functionTemplateDeclaration = createInferredFunctionTemplate(curClass, templateCall)
-        templateCall.templateInstantiation = functionTemplateDeclaration
-        templateCall.invokes = functionTemplateDeclaration.realization
-        val edges = templateCall.templateParametersEdges ?: return false
-        // Set instantiation propertyEdges
-        for (instantiationParameter in edges) {
-            instantiationParameter.addProperty(
-                Properties.INSTANTIATION,
-                TemplateDeclaration.TemplateInitialization.EXPLICIT
-            )
-        }
-        return true
-    }
-    return false
-}
-
-/**
- * Create an inferred FunctionTemplateDeclaration if a call to an FunctionTemplate could not be
- * resolved
- *
- * @param containingRecord
- * @param call
- * @return inferred FunctionTemplateDeclaration which can be invoked by the call
- */
-fun CallResolver.createInferredFunctionTemplate(
-    containingRecord: RecordDeclaration?,
-    call: CallExpression
-): FunctionTemplateDeclaration {
-    val name = call.name
-    val code = call.code
-    val inferred = NodeBuilder.newFunctionTemplateDeclaration(name, code)
-    inferred.isInferred = true
-    if (containingRecord != null) {
-        containingRecord.addDeclaration(inferred)
-    } else {
-        currentTU.addDeclaration(inferred)
-    }
-    val inferredRealization =
-        createInferredFunctionDeclaration(
-            containingRecord,
-            name,
-            code,
-            false,
-            call.signature,
-            call.type // TODO: Is the call's type the return value's type?
-        )
-    inferred.addRealization(inferredRealization)
-    var typeCounter = 0
-    var nonTypeCounter = 0
-    for (node in call.templateParameters) {
-        if (node is TypeExpression) {
-            // Template Parameter
-            val inferredTypeIdentifier = "T$typeCounter"
-            val typeParamDeclaration =
-                NodeBuilder.newTypeParamDeclaration(inferredTypeIdentifier, inferredTypeIdentifier)
-            typeParamDeclaration.isInferred = true
-            val parameterizedType = ParameterizedType(inferredTypeIdentifier)
-            parameterizedType.isInferred = true
-            typeParamDeclaration.type = parameterizedType
-            TypeManager.getInstance().addTypeParameter(inferred, parameterizedType)
-            typeCounter++
-            inferred.addParameter(typeParamDeclaration)
-        } else if (node is Expression) {
-            // Non-Type Template Parameter
-            val inferredNonTypeIdentifier = "N$nonTypeCounter"
-            val paramVariableDeclaration =
-                NodeBuilder.newMethodParameterIn(
-                    inferredNonTypeIdentifier,
-                    node.type,
-                    false,
-                    inferredNonTypeIdentifier
-                )
-            paramVariableDeclaration.isInferred = true
-            paramVariableDeclaration.addPrevDFG(node)
-            node.addNextDFG(paramVariableDeclaration)
-            nonTypeCounter++
-            inferred.addParameter(paramVariableDeclaration)
-        }
-    }
-    return inferred
 }
 
 /**
@@ -726,6 +405,7 @@ fun signatureWithImplicitCastTransformation(
             val implicitCast = CastExpression()
             implicitCast.isImplicit = true
             implicitCast.castType = funcType
+            implicitCast.language = funcType.language
             implicitCast.expression = arguments[i]
             implicitCasts.add(implicitCast)
         } else {
@@ -801,9 +481,12 @@ fun getTemplateInitializationSignature(
     // Check for unresolved Parameters and try to deduce Type by looking at call arguments
     for (i in templateCall.arguments.indices) {
         val functionDeclaration = functionTemplateDeclaration.realization[0]
-        val currentArgumentType = functionDeclaration.parameters[i].type
+        val currentArgumentType =
+            functionDeclaration.parameters[i]
+                .type // TODO: Somehow, this should be the ParametrizedType but it's an ObjectType
+        // with the same name. => The template logic fails.
         val deducedType = templateCall.arguments[i].type
-        val typeExpression = NodeBuilder.newTypeExpression(deducedType.name, deducedType)
+        val typeExpression = templateCall.newTypeExpression(deducedType.name, deducedType)
         typeExpression.isImplicit = true
         if (
             currentArgumentType is ParameterizedType &&
@@ -893,7 +576,8 @@ fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boo
         callParameter is ObjectType
     } else if (callParameter is Expression && templateParameter is ParamVariableDeclaration) {
         callParameter.type == templateParameter.type ||
-            TypeManager.getInstance().isSupertypeOf(templateParameter.type, callParameter.type)
+            TypeManager.getInstance()
+                .isSupertypeOf(templateParameter.type, callParameter.type, callParameterArg)
     } else {
         false
     }
@@ -922,7 +606,11 @@ fun handleImplicitTemplateParameter(
         // If we have a default we fill it in
         var defaultNode = (functionTemplateDeclaration.parameters[index] as HasDefault<*>).default
         if (defaultNode is Type) {
-            defaultNode = NodeBuilder.newTypeExpression(defaultNode.name, defaultNode)
+            defaultNode =
+                functionTemplateDeclaration.newTypeExpression(
+                    defaultNode.name,
+                    defaultNode,
+                )
             defaultNode.isImplicit = true
         }
         instantiationSignature[functionTemplateDeclaration.parameters[index]] = defaultNode
@@ -955,7 +643,7 @@ fun getCallSignature(
     val templateCallSignature = mutableListOf<Type>()
     for (argument in function.parameters) {
         if (argument.type is ParameterizedType) {
-            var type: Type = UnknownType.getUnknownType()
+            var type: Type = UnknownType.getUnknownType(function.language)
             val typeParamDeclaration = parameterizedTypeResolution[argument.type]
             if (typeParamDeclaration != null) {
                 val node = initializationSignature[typeParamDeclaration]

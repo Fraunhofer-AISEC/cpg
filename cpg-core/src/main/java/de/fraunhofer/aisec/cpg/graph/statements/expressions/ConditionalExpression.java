@@ -105,7 +105,7 @@ public class ConditionalExpression extends Expression implements TypeListener {
     subTypes.addAll(types);
 
     Type alternative = !types.isEmpty() ? types.get(0) : UnknownType.getUnknownType();
-    setType(TypeManager.getInstance().getCommonType(types).orElse(alternative), root);
+    setType(TypeManager.getInstance().getCommonType(types, this).orElse(alternative), root);
     setPossibleSubTypes(subTypes, root);
 
     if (!previous.equals(this.type)) {

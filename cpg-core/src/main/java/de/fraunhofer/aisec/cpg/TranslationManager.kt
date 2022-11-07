@@ -25,13 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -47,10 +48,10 @@ import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.stream.Collectors
+import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
 
 /** Main entry point for all source code translation for all language front-ends. */
-@OptIn(ExperimentalGolang::class)
 class TranslationManager
 private constructor(
     /**
@@ -70,11 +71,10 @@ private constructor(
      * @return a [CompletableFuture] with the [TranslationResult].
      */
     fun analyze(): CompletableFuture<TranslationResult> {
-        val result = TranslationResult(this)
+        val result = TranslationResult(this, ScopeManager())
 
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
         return CompletableFuture.supplyAsync {
-            val scopesBuildForAnalysis = ScopeManager()
             val outerBench =
                 Benchmark(
                     TranslationManager::class.java,
@@ -82,23 +82,20 @@ private constructor(
                     false,
                     result
                 )
-            val passesNeedCleanup = mutableSetOf<Pass>()
-            var frontendsNeedCleanup: Set<LanguageFrontend>? = null
+            val executedPasses = mutableSetOf<Pass>()
+            var executedFrontends = setOf<LanguageFrontend>()
 
             try {
                 // Parse Java/C/CPP files
                 var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
-                frontendsNeedCleanup = runFrontends(result, config, scopesBuildForAnalysis)
+                executedFrontends = runFrontends(result, config)
                 bench.addMeasurement()
-
-                // TODO: Find a way to identify the right language during the execution of a pass
-                // (and set the lang to the scope manager)
 
                 // Apply passes
                 for (pass in config.registeredPasses) {
-                    passesNeedCleanup.add(pass)
                     bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                    if (pass.runsWithCurrentFrontend()) {
+                    if (pass.runsWithCurrentFrontend(executedFrontends)) {
+                        executedPasses.add(pass)
                         pass.accept(result)
                     }
                     bench.addMeasurement()
@@ -111,13 +108,13 @@ private constructor(
             } finally {
                 outerBench.addMeasurement()
                 if (!config.disableCleanup) {
-                    log.debug("Cleaning up {} Passes", passesNeedCleanup.size)
+                    log.debug("Cleaning up {} Passes", executedPasses.size)
 
-                    passesNeedCleanup.forEach { it.cleanup() }
+                    executedPasses.forEach { it.cleanup() }
 
-                    log.debug("Cleaning up {} Frontends", frontendsNeedCleanup?.size)
+                    log.debug("Cleaning up {} Frontends", executedFrontends.size)
 
-                    frontendsNeedCleanup?.forEach { it.cleanup() }
+                    executedFrontends.forEach { it.cleanup() }
                     TypeManager.getInstance().cleanup()
                 }
             }
@@ -146,7 +143,6 @@ private constructor(
     private fun runFrontends(
         result: TranslationResult,
         config: TranslationConfiguration,
-        scopeManager: ScopeManager
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
         for (sc in this.config.softwareComponents.keys) {
@@ -171,12 +167,20 @@ private constructor(
                             .map { it.toFile() }
                             .collect(Collectors.toList())
                     } else {
-                        if (
-                            useParallelFrontends &&
-                                Util.getExtension(file).frontendClass?.simpleName ==
-                                    "GoLanguageFrontend"
-                        ) {
-                            log.warn("Parallel frontends are not yet supported for Go")
+                        val frontendClass = file.language?.frontend
+                        val supportsParallelParsing =
+                            file.language
+                                ?.frontend
+                                ?.findAnnotation<SupportsParallelParsing>()
+                                ?.supported
+                                ?: true
+                        // By default, the frontends support parallel parsing. But the
+                        // SupportsParallelParsing annotation can be set to false and force
+                        // to disable it.
+                        if (useParallelFrontends && !supportsParallelParsing) {
+                            log.warn(
+                                "Parallel frontends are not yet supported for the language frontend ${frontendClass?.simpleName}"
+                            )
                             useParallelFrontends = false
                         }
                         listOf(file)
@@ -216,9 +220,9 @@ private constructor(
 
             usedFrontends.addAll(
                 if (useParallelFrontends) {
-                    parseParallel(component, result, scopeManager, sourceLocations)
+                    parseParallel(component, result, sourceLocations)
                 } else {
-                    parseSequentially(component, result, scopeManager, sourceLocations)
+                    parseSequentially(component, result, sourceLocations)
                 }
             )
 
@@ -229,7 +233,7 @@ private constructor(
                     s.translationUnits.forEach {
                         val bench =
                             Benchmark(this.javaClass, "Activating types for ${it.name}", true)
-                        SubgraphWalker.activateTypes(it)
+                        result.scopeManager.activateTypes(it)
                         bench.stop()
                     }
                 }
@@ -242,7 +246,6 @@ private constructor(
     private fun parseParallel(
         component: Component,
         result: TranslationResult,
-        originalScopeManager: ScopeManager,
         sourceLocations: Collection<File>
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
@@ -277,16 +280,16 @@ private constructor(
                     handleCompletion(result, usedFrontends, futureToFile[future], f)
                 }
             } catch (e: InterruptedException) {
-                log.error("Error parsing " + futureToFile[future], e)
+                log.error("Error parsing ${futureToFile[future]}", e)
                 Thread.currentThread().interrupt()
             } catch (e: ExecutionException) {
-                log.error("Error parsing " + futureToFile[future], e)
+                log.error("Error parsing ${futureToFile[future]}", e)
                 Thread.currentThread().interrupt()
             }
         }
 
-        originalScopeManager.mergeFrom(parallelScopeManagers)
-        usedFrontends.forEach { it.scopeManager = originalScopeManager }
+        // We want to merge everything into the final scope manager of the result
+        result.scopeManager.mergeFrom(parallelScopeManagers)
 
         log.info("Parallel parsing completed")
 
@@ -297,7 +300,6 @@ private constructor(
     private fun parseSequentially(
         component: Component,
         result: TranslationResult,
-        scopeManager: ScopeManager,
         sourceLocations: Collection<File>
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
@@ -305,7 +307,7 @@ private constructor(
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
 
-            parse(component, scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
+            parse(component, result.scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
         }
@@ -327,11 +329,6 @@ private constructor(
                 mutableMapOf<String, String>()
             } as MutableMap<String, String>
         sfToFe[sourceLocation!!.name] = f.javaClass.simpleName
-
-        // Set frontend so passes know what language they are working on.
-        for (pass in config.registeredPasses) {
-            pass.lang = f
-        }
     }
 
     @Throws(TranslationException::class)
@@ -342,21 +339,21 @@ private constructor(
     ): Optional<LanguageFrontend> {
         var frontend: LanguageFrontend? = null
         try {
-            frontend = getFrontend(Util.getExtension(sourceLocation), scopeManager)
+            frontend = getFrontend(sourceLocation, scopeManager)
 
             if (frontend == null) {
-                log.error("Found no parser frontend for {}", sourceLocation.name)
+                log.error("Found no parser frontend for ${sourceLocation.name}")
 
                 if (config.failOnError) {
                     throw TranslationException(
-                        "Found no parser frontend for " + sourceLocation.name
+                        "Found no parser frontend for ${sourceLocation.name}"
                     )
                 }
                 return Optional.empty()
             }
             component.translationUnits.add(frontend.parse(sourceLocation))
         } catch (ex: TranslationException) {
-            log.error("An error occurred during parsing of {}: {}", sourceLocation.name, ex.message)
+            log.error("An error occurred during parsing of ${sourceLocation.name}: ${ex.message}")
             if (config.failOnError) {
                 throw ex
             }
@@ -364,36 +361,34 @@ private constructor(
         return Optional.ofNullable(frontend)
     }
 
-    private fun getFrontend(extension: String, scopeManager: ScopeManager): LanguageFrontend? {
-        val clazz = extension.frontendClass
+    private fun getFrontend(file: File, scopeManager: ScopeManager): LanguageFrontend? {
+        val language = file.language
 
-        return if (clazz != null) {
+        return if (language != null) {
             try {
-                clazz
-                    .getConstructor(TranslationConfiguration::class.java, ScopeManager::class.java)
-                    .newInstance(config, scopeManager)
-            } catch (e: InstantiationException) {
-                log.error("Could not instantiate language frontend {}", clazz.name, e)
-                null
-            } catch (e: IllegalAccessException) {
-                log.error("Could not instantiate language frontend {}", clazz.name, e)
-                null
-            } catch (e: InvocationTargetException) {
-                log.error("Could not instantiate language frontend {}", clazz.name, e)
-                null
-            } catch (e: NoSuchMethodException) {
-                log.error("Could not instantiate language frontend {}", clazz.name, e)
-                null
+                language.newFrontend(config, scopeManager)
+            } catch (e: Exception) {
+                when (e) {
+                    is InstantiationException,
+                    is IllegalAccessException,
+                    is InvocationTargetException,
+                    is NoSuchMethodException -> {
+                        log.error(
+                            "Could not instantiate language frontend {}",
+                            language.frontend.simpleName,
+                            e
+                        )
+                        null
+                    }
+                    else -> throw e
+                }
             }
         } else null
     }
 
-    private val String.frontendClass: Class<out LanguageFrontend>?
+    private val File.language: Language<*>?
         get() {
-            return config.frontends.entries
-                .filter { it.value.contains(this) }
-                .map { it.key }
-                .firstOrNull()
+            return config.languages.firstOrNull { it.handlesFile(this) }
         }
 
     class Builder {

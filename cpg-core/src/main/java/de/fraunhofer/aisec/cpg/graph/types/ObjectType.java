@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.frontends.Language;
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
@@ -88,20 +90,29 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
       Qualifier qualifier,
       List<Type> generics,
       Modifier modifier,
-      boolean primitive) {
+      boolean primitive,
+      Language<? extends LanguageFrontend> language) {
     super(typeName, storage, qualifier);
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;
+    this.setLanguage(language);
   }
 
-  public ObjectType(Type type, List<Type> generics, Modifier modifier, boolean primitive) {
+  public ObjectType(
+      Type type,
+      List<Type> generics,
+      Modifier modifier,
+      boolean primitive,
+      Language<? extends LanguageFrontend> language) {
     super(type);
+    this.setLanguage(language);
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;
   }
 
+  /** Empty default constructor for use in Neo4J persistence. */
   public ObjectType() {
     super();
     this.generics = new ArrayList<>();
@@ -137,18 +148,25 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
     return new PointerType(this, pointerOrigin);
   }
 
+  public PointerType reference() {
+    return new PointerType(this, PointerType.PointerOrigin.POINTER);
+  }
+
   /**
    * @return UnknownType, as we cannot infer any type information when dereferencing an ObjectType,
    *     as it is just some memory and its interpretation is unknown
    */
   @Override
   public Type dereference() {
-    return UnknownType.getUnknownType();
+    return UnknownType.getUnknownType(getLanguage());
   }
 
   @Override
   public Type duplicate() {
-    return new ObjectType(this, this.getGenerics(), this.modifier, this.primitive);
+    ObjectType newObject =
+        new ObjectType(this, this.getGenerics(), this.modifier, this.primitive, this.getLanguage());
+    newObject.setLanguage(this.getLanguage());
+    return newObject;
   }
 
   public void setGenerics(List<Type> generics) {

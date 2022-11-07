@@ -46,20 +46,14 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSol
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.AnnotationMember
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotationMember
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newIncludeDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newNamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
@@ -73,8 +67,11 @@ import java.io.IOException
 import java.util.function.Consumer
 
 /** Main parser for ONE Java files. */
-open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    LanguageFrontend(config, scopeManager, ".") {
+open class JavaLanguageFrontend(
+    language: Language<JavaLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager
+) : LanguageFrontend(language, config, scopeManager) {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
@@ -96,8 +93,6 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        TypeManager.getInstance().setLanguageFrontend(this)
-
         // load in the file
         return try {
             val parserConfiguration = ParserConfiguration()
@@ -114,14 +109,14 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
 
             // starting point is always a translation declaration
             val fileDeclaration = newTranslationUnitDeclaration(file.toString(), context.toString())
-            setCurrentTU(fileDeclaration)
+            currentTU = fileDeclaration
             scopeManager.resetToGlobal(fileDeclaration)
             val packDecl = context!!.packageDeclaration.orElse(null)
             var namespaceDeclaration: NamespaceDeclaration? = null
             if (packDecl != null) {
                 namespaceDeclaration =
                     newNamespaceDeclaration(packDecl.name.asString(), getCodeFromRawNode(packDecl))
-                setCodeAndRegion(namespaceDeclaration, packDecl)
+                setCodeAndLocation(namespaceDeclaration, packDecl)
                 scopeManager.addDeclaration(namespaceDeclaration)
                 scopeManager.enterScope(namespaceDeclaration)
             }
@@ -131,7 +126,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                 // along
                 // the way
                 val declaration = declarationHandler.handle(type)
-                this.getScopeManager().addDeclaration(declaration)
+                scopeManager.addDeclaration(declaration)
             }
 
             for (anImport in context!!.imports) {
@@ -218,8 +213,8 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
         return try {
             val type = nodeWithType.typeAsString
             if (type == "var") {
-                UnknownType.getUnknownType()
-            } else TypeParser.createFrom(resolved.type.describe(), true)
+                UnknownType.getUnknownType(language)
+            } else parseType(resolved.type.describe())
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
         } catch (ex: NoClassDefFoundError) {
@@ -230,8 +225,8 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
     fun getTypeAsGoodAsPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {
         return try {
             if (type.toString() == "var") {
-                UnknownType.getUnknownType()
-            } else TypeParser.createFrom(type.resolve().describe(), true)
+                UnknownType.getUnknownType(language)
+            } else parseType(type.resolve().describe())
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(type)
         } catch (ex: NoClassDefFoundError) {
@@ -258,7 +253,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                     // this is not strictly true. This could also be a function of a superclass,
                     // but is the best we can do for now. If the superclass would be known,
                     // this would already be resolved by the Java resolver
-                    getScopeManager().currentNamePrefix + "." + callExpr.nameAsString
+                    scopeManager.currentNamePrefix + "." + callExpr.nameAsString
                 } else {
                     scope.get().toString() + "." + callExpr.nameAsString
                 }
@@ -272,7 +267,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                 // check if this is a "specific" static import (not of the type 'import static
                 // x.y.Z.*')
                 val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
-                fromImport ?: (getScopeManager().currentNamePrefix + "." + callExpr.nameAsString)
+                fromImport ?: (scopeManager.currentNamePrefix + "." + callExpr.nameAsString)
                 // this is not strictly true. This could also be a function of a superclass or from
                 // a static asterisk import
             }
@@ -287,13 +282,13 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                     }
                 }
                 if (scope.get().toString() == THIS) {
-                    getScopeManager().currentNamePrefix + "." + callExpr.nameAsString
+                    scopeManager.currentNamePrefix + "." + callExpr.nameAsString
                 } else {
                     scope.get().toString() + "." + callExpr.nameAsString
                 }
             } else {
                 val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
-                fromImport ?: (getScopeManager().currentNamePrefix + "." + callExpr.nameAsString)
+                fromImport ?: (scopeManager.currentNamePrefix + "." + callExpr.nameAsString)
             }
         }
     }
@@ -350,7 +345,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                 TypeManager.getInstance()
                     .getTypeParameter(scopeManager.currentRecord, resolved.returnType.describe())
             if (type == null) {
-                type = TypeParser.createFrom(resolved.returnType.describe(), true)
+                type = parseType(resolved.returnType.describe())
             }
             type
         } catch (ex: RuntimeException) {
@@ -369,12 +364,10 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
      */
     private fun getFQNInCurrentPackage(simpleName: String): String {
         val theScope =
-            getScopeManager().firstScopeOrNull { scope: Scope ->
-                scope.astNode is NamespaceDeclaration
-            }
+            scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDeclaration }
                 ?: return simpleName
         // If scope is null we are in a default package
-        return theScope.scopedName + namespaceDelimiter + simpleName
+        return theScope.scopedName + language.namespaceDelimiter + simpleName
     }
 
     private fun getTypeFromImportIfPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {
@@ -385,7 +378,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
         // if this is not a ClassOrInterfaceType, just return
         if (!searchType.isClassOrInterfaceType || context == null) {
             log.warn("Unable to resolve type for {}", type.asString())
-            val returnType = TypeParser.createFrom(type.asString(), true)
+            val returnType = parseType(type.asString())
             returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
             return returnType
         }
@@ -395,7 +388,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
             for (importDeclaration in context!!.imports) {
                 if (importDeclaration.name.identifier.endsWith(clazz.name.identifier)) {
                     // TODO: handle type parameters
-                    return TypeParser.createFrom(importDeclaration.nameAsString, true)
+                    return parseType(importDeclaration.nameAsString)
                 }
             }
             var name = clazz.asString()
@@ -404,14 +397,14 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
             // as our current translation unit
             val o = context!!.packageDeclaration
             if (o.isPresent) {
-                name = o.get().nameAsString + namespaceDelimiter + name
+                name = o.get().nameAsString + language.namespaceDelimiter + name
             }
-            val returnType = TypeParser.createFrom(name, true)
+            val returnType = parseType(name)
             returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
             return returnType
         }
         log.warn("Unable to resolve type for {}", type.asString())
-        val returnType = TypeParser.createFrom(type.asString(), true)
+        val returnType = parseType(type.asString())
         returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
         return returnType
     }

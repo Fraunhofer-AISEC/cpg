@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import java.io.File
@@ -40,6 +41,7 @@ class BenchmarkResults(val entries: List<List<Any>>) {
     val json: String
         get() {
             val mapper = jacksonObjectMapper()
+            mapper.configure(SerializationFeature.FAIL_ON_SELF_REFERENCES, false)
 
             return mapper.writeValueAsString(entries.associate { it[0] to it[1] })
         }

@@ -25,20 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph;
 
+import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newTypedefDeclaration;
+
+import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
-import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
-import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
+import de.fraunhofer.aisec.cpg.passes.scopes.*;
 import java.util.*;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -53,80 +51,18 @@ public class TypeManager {
 
   private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
-  private static Class<?> llvmClass = null;
-  private static Class<?> pythonClass = null;
-  private static Class<?> goClass = null;
-  private static Class<?> typescriptClass = null;
-
-  static {
-    try {
-      llvmClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
-    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("LLVM frontend not loaded.");
-    }
-    try {
-      pythonClass =
-          Class.forName("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend");
-    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("Python frontend not loaded.");
-    }
-    try {
-      goClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend");
-    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("Go frontend not loaded.");
-    } catch (LinkageError ex) {
-      log.error("Go frontend was found, but could not be loaded", ex);
-    }
-    try {
-      typescriptClass =
-          Class.forName("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend");
-    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("TypeScript frontend not loaded.");
-    }
-  }
-
-  private static final List<String> primitiveTypeNames =
-      List.of(
-          "byte",
-          "short",
-          "int",
-          "long",
-          "float",
-          "double",
-          "boolean",
-          "char",
-          // LLVM primitive types
-          "i1",
-          "i8",
-          "i32",
-          "i64",
-          "i128",
-          "half",
-          "bfloat",
-          "fp128",
-          "x86_fp80",
-          "ppc_fp128");
+  // TODO: document/remove this regexp, merge with other pattern
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
   @NotNull private static TypeManager instance = new TypeManager();
   private static boolean typeSystemActive = true;
-
-  public enum Language {
-    JAVA,
-    CXX,
-    GO,
-    PYTHON,
-    TYPESCRIPT,
-    LLVM_IR,
-    UNKNOWN
-  }
 
   @NotNull
   private final Map<HasType, List<Type>> typeCache =
       Collections.synchronizedMap(new IdentityHashMap<>());
 
   @NotNull
-  private Map<String, RecordDeclaration> typeToRecord =
+  private final Map<String, RecordDeclaration> typeToRecord =
       Collections.synchronizedMap(new HashMap<>());
 
   /**
@@ -151,14 +87,6 @@ public class TypeManager {
 
   private final Set<Type> firstOrderTypes = Collections.synchronizedSet(new HashSet<>());
   private final Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
-
-  /**
-   * The language frontend that is currently active. This can be null, e.g. if we are executed in
-   * tests.
-   */
-  @org.jetbrains.annotations.Nullable private LanguageFrontend frontend;
-
-  private boolean noFrontendWarningIssued = false;
 
   public static void reset() {
     instance = new TypeManager();
@@ -287,12 +215,14 @@ public class TypeManager {
    * @return
    */
   public ParameterizedType createOrGetTypeParameter(
-      TemplateDeclaration templateDeclaration, String typeName) {
+      TemplateDeclaration templateDeclaration,
+      String typeName,
+      Language<? extends LanguageFrontend> language) {
     ParameterizedType parameterizedType = getTypeParameter(templateDeclaration, typeName);
     if (parameterizedType != null) {
       return parameterizedType;
     } else {
-      parameterizedType = new ParameterizedType(typeName);
+      parameterizedType = new ParameterizedType(typeName, language);
       addTypeParameter(templateDeclaration, parameterizedType);
       return parameterizedType;
     }
@@ -353,12 +283,8 @@ public class TypeManager {
     }
   }
 
-  public void setLanguageFrontend(@NotNull LanguageFrontend frontend) {
-    this.frontend = frontend;
-  }
-
-  public boolean isPrimitive(Type type) {
-    return primitiveTypeNames.contains(type.getTypeName());
+  public static boolean isPrimitive(Type type, Language<? extends LanguageFrontend> language) {
+    return language.getPrimitiveTypes().contains(type.getTypeName());
   }
 
   public boolean isUnknown(Type type) {
@@ -477,8 +403,19 @@ public class TypeManager {
     }
   }
 
+  /**
+   * This function is a relict from the old ages. It iterates through a collection of types and
+   * returns the type they have in *common*. For example, if two types `A` and `B` both derive from
+   * the interface `C`` then `C` would be returned. Because this contains some legacy code that does
+   * crazy stuff, we need access to scope information, so we can build a map between type
+   * information and their record declarations. We want to get rid of that in the future.
+   *
+   * @param types the types to compare
+   * @param provider a {@link ScopeProvider}.
+   * @return the common type
+   */
   @NotNull
-  public Optional<Type> getCommonType(@NotNull Collection<Type> types) {
+  public Optional<Type> getCommonType(@NotNull Collection<Type> types, ScopeProvider provider) {
     // TODO: Documentation needed.
     boolean sameType =
         types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
@@ -501,21 +438,34 @@ public class TypeManager {
           wrapState.isReference(),
           wrapState.getReferenceType());
     }
-    typeToRecord =
-        frontend
-            .getScopeManager()
-            .filterScopesDistinctBy(
-                scope -> {
-                  // It seems that somehow other node types get mixed into the ast node of a record
-                  // scope sometimes. So we need to be extra sure that our ast node is a record
-                  // declaration
-                  return scope instanceof RecordScope
-                      && scope.getAstNode() instanceof RecordDeclaration;
-                },
-                s -> s.getAstNode().getName())
-            .stream()
-            .map(s -> (RecordDeclaration) s.getAstNode())
-            .collect(Collectors.toMap(Node::getName, Function.identity()));
+
+    var scope = provider.getScope();
+
+    if (scope == null) {
+      return Optional.empty();
+    }
+
+    // We need to find the global scope
+    var globalScope = provider.getScope().getGlobalScope();
+    if (globalScope == null) {
+      return Optional.empty();
+    }
+
+    for (var child : globalScope.getChildren()) {
+      if (child instanceof RecordScope && child.getAstNode() instanceof RecordDeclaration) {
+        typeToRecord.put(child.getAstNode().getName(), (RecordDeclaration) child.getAstNode());
+      }
+
+      // HACKY HACK HACK
+      if (child instanceof NameScope) {
+        for (var child2 : child.getChildren()) {
+          if (child2 instanceof RecordScope && child2.getAstNode() instanceof RecordDeclaration) {
+            typeToRecord.put(
+                child2.getAstNode().getName(), (RecordDeclaration) child2.getAstNode());
+          }
+        }
+      }
+    }
 
     List<Set<Ancestor>> allAncestors =
         types.stream()
@@ -557,7 +507,8 @@ public class TypeManager {
 
     Optional<Ancestor> lca =
         commonAncestors.stream().max(Comparator.comparingInt(Ancestor::getDepth));
-    Optional<Type> commonType = lca.map(a -> TypeParser.createFrom(a.getRecord().getName(), true));
+    Optional<Type> commonType =
+        lca.map(a -> TypeParser.createFrom(a.getRecord().getName(), a.getRecord().getLanguage()));
 
     Type finalType;
     if (commonType.isPresent()) {
@@ -591,42 +542,7 @@ public class TypeManager {
     return ancestors;
   }
 
-  @NotNull
-  public Language getLanguage() {
-    if (frontend instanceof JavaLanguageFrontend) {
-      return Language.JAVA;
-    } else if (frontend instanceof CXXLanguageFrontend) {
-      return Language.CXX;
-    } else if (frontend != null
-        && goClass != null
-        && goClass.isAssignableFrom(frontend.getClass())) {
-      return Language.GO;
-    } else if (frontend != null
-        && pythonClass != null
-        && pythonClass.isAssignableFrom(frontend.getClass())) {
-      return Language.PYTHON;
-    } else if (frontend != null
-        && typescriptClass != null
-        && typescriptClass.isAssignableFrom(frontend.getClass())) {
-      return Language.TYPESCRIPT;
-    } else if (frontend != null
-        && llvmClass != null
-        && llvmClass.isAssignableFrom(frontend.getClass())) {
-      return Language.LLVM_IR;
-    }
-
-    log.error(
-        "Unknown language (frontend: {})",
-        frontend != null ? frontend.getClass().getSimpleName() : null);
-    return Language.UNKNOWN;
-  }
-
-  @Nullable
-  public LanguageFrontend getFrontend() {
-    return frontend;
-  }
-
-  public boolean isSupertypeOf(Type superType, Type subType) {
+  public boolean isSupertypeOf(Type superType, Type subType, ScopeProvider provider) {
 
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
       return false;
@@ -639,10 +555,10 @@ public class TypeManager {
 
     // ObjectTypes can be passed as ReferenceTypes
     if (superType instanceof ReferenceType) {
-      return isSupertypeOf(((ReferenceType) superType).getElementType(), subType);
+      return isSupertypeOf(((ReferenceType) superType).getElementType(), subType, provider);
     }
 
-    Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)));
+    Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)), provider);
     if (commonType.isPresent()) {
       return commonType.get().equals(superType);
     } else {
@@ -669,14 +585,13 @@ public class TypeManager {
   }
 
   public void cleanup() {
-    this.frontend = null;
     this.typeToRecord.clear();
   }
 
   private Type getTargetType(Type currTarget, String alias) {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
-      return TypeParser.createFrom(currTarget.getName() + " " + alias, true);
+      return TypeParser.createFrom(currTarget.getName() + " " + alias, currTarget.getLanguage());
     } else if (alias.endsWith("]")) {
       // array type
       return currTarget.reference(PointerType.PointerOrigin.ARRAY);
@@ -692,20 +607,20 @@ public class TypeManager {
     }
   }
 
-  private Type getAlias(String alias) {
+  private Type getAlias(String alias, @NotNull Language<? extends LanguageFrontend> language) {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
       Matcher matcher = funPointerPattern.matcher(alias);
       if (matcher.find()) {
-        return TypeParser.createIgnoringAlias(matcher.group("alias"));
+        return TypeParser.createIgnoringAlias(matcher.group("alias"), language);
       } else {
         log.error("Could not find alias name in function pointer typedef: {}", alias);
-        return TypeParser.createIgnoringAlias(alias);
+        return TypeParser.createIgnoringAlias(alias, language);
       }
     } else {
       alias = alias.split("\\[")[0];
       alias = alias.replace("*", "");
-      return TypeParser.createIgnoringAlias(alias);
+      return TypeParser.createIgnoringAlias(alias, language);
     }
   }
 
@@ -721,10 +636,11 @@ public class TypeManager {
    */
   @NotNull
   public Declaration createTypeAlias(
-      LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
+      @NotNull LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
     String cleanedPart = Util.removeRedundantParentheses(aliasString);
     Type currTarget = getTargetType(target, cleanedPart);
-    Type alias = getAlias(cleanedPart);
+    Type alias;
+    alias = getAlias(cleanedPart, frontend.getLanguage());
 
     if (alias instanceof SecondOrderType) {
       Type chain = alias.duplicate();
@@ -734,32 +650,17 @@ public class TypeManager {
       alias = alias.getRoot();
     }
 
-    TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(currTarget, alias, rawCode);
-
-    if (frontend == null) {
-      if (!noFrontendWarningIssued) {
-        log.warn("No frontend available. Be aware that typedef resolving cannot currently be done");
-        noFrontendWarningIssued = true;
-      }
-      return typedef;
-    }
+    TypedefDeclaration typedef = newTypedefDeclaration(frontend, currTarget, alias, rawCode);
 
     frontend.getScopeManager().addTypedef(typedef);
+
     return typedef;
   }
 
-  public Type resolvePossibleTypedef(Type alias) {
-    if (frontend == null) {
-      if (!noFrontendWarningIssued) {
-        log.warn("No frontend available. Be aware that typedef resolving cannot currently be done");
-        noFrontendWarningIssued = true;
-      }
-      return alias;
-    }
-
+  public Type resolvePossibleTypedef(Type alias, ScopeManager scopeManager) {
     Type finalToCheck = alias.getRoot();
     Optional<Type> applicable =
-        frontend.getScopeManager().getCurrentTypedefs().stream()
+        scopeManager.getCurrentTypedefs().stream()
             .filter(t -> t.getAlias().getRoot().equals(finalToCheck))
             .findAny()
             .map(TypedefDeclaration::getType);

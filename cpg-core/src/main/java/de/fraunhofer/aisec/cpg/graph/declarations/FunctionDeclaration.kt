@@ -45,11 +45,7 @@ import org.neo4j.ogm.annotation.Relationship
 /** Represents the declaration or definition of a function. */
 open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     /** The function body. Usually a [CompoundStatement]. */
-    @field:SubGraph("AST")
-    var body: Statement? = null
-        set(value) {
-            field = value
-        }
+    @field:SubGraph("AST") var body: Statement? = null
 
     /**
      * Classes and Structs can be declared inside a function and are only valid within the function.
@@ -141,7 +137,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                     return true
                 }
                 val provided = targetSignature[i]
-                if (!TypeManager.getInstance().isSupertypeOf(declared.getType(), provided)) {
+                if (!TypeManager.getInstance().isSupertypeOf(declared.getType(), provided, this)) {
                     return false
                 }
             }
@@ -204,7 +200,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                 if (paramVariableDeclaration.default != null) {
                     signature.add(paramVariableDeclaration.getType())
                 } else {
-                    signature.add(UnknownType.getUnknownType())
+                    signature.add(UnknownType.getUnknownType(language))
                 }
             }
             return signature

@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -57,11 +56,6 @@ import java.util.*
 open class TypeHierarchyResolver : Pass() {
     protected val recordMap = mutableMapOf<String, RecordDeclaration>()
     protected val enums = mutableListOf<EnumDeclaration>()
-
-    override fun getLang(): LanguageFrontend? {
-        return null
-    }
-    override fun setLang(lang: LanguageFrontend?) {}
 
     override fun accept(translationResult: TranslationResult) {
         for (tu in translationResult.translationUnits) {

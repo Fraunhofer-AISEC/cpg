@@ -32,15 +32,17 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 
-abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CXXLanguageFrontend) :
-    Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {
+abstract class CXXHandler<S : Node?, T : Any>(
+    configConstructor: Supplier<S>,
+    lang: CXXLanguageFrontend
+) : Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
      * logic, but rather want to make use of the Kotlin-when syntax.
      */
     override fun handle(ctx: T): S? {
         // If we do not want to load includes into the CPG and the current fileLocation was included
-        if (!lang.config.loadIncludes && ctx is ASTNode) {
+        if (!frontend.config.loadIncludes && ctx is ASTNode) {
             val astNode = ctx as ASTNode
             if (
                 astNode.fileLocation != null &&
@@ -56,11 +58,13 @@ abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CX
         // The language frontend might set a location, which we should respect. Otherwise, we will
         // set the location here.
         if (node != null && node.location == null) {
-            lang.setCodeAndRegion<S, T>(node, ctx)
+            frontend.setCodeAndLocation<S, T>(node, ctx)
         }
 
-        lang.setComment(node, ctx)
-        lang.process(node, ctx)
+        frontend.setComment(node, ctx)
+        if (node != null) {
+            frontend.process(ctx, node)
+        }
 
         return node
     }
@@ -73,7 +77,7 @@ abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CX
      */
     protected fun handleNotSupported(node: T, name: String): S {
         Util.errorWithFileLocation(
-            lang,
+            frontend,
             node,
             log,
             "Parsing of type {} is not supported (yet)",

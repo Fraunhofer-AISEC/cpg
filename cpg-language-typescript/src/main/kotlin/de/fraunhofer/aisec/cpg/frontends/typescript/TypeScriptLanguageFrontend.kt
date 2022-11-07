@@ -29,12 +29,11 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -59,8 +58,11 @@ import java.nio.file.StandardCopyOption
  * also has built-in support for React dialects TSX and JSX.
  */
 @ExperimentalTypeScript
-class TypeScriptLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, ".") {
+class TypeScriptLanguageFrontend(
+    language: Language<TypeScriptLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager
+) : LanguageFrontend(language, config, scopeManager) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
@@ -72,9 +74,9 @@ class TypeScriptLanguageFrontend(config: TranslationConfiguration, scopeManager:
     val mapper = jacksonObjectMapper()
 
     companion object {
-        @kotlin.jvm.JvmField var TYPESCRIPT_EXTENSIONS: List<String> = listOf(".ts", ".tsx")
+        @JvmField var TYPESCRIPT_EXTENSIONS: List<String> = listOf(".ts", ".tsx")
 
-        @kotlin.jvm.JvmField var JAVASCRIPT_EXTENSIONS: List<String> = listOf(".js", ".jsx")
+        @JvmField var JAVASCRIPT_EXTENSIONS: List<String> = listOf(".js", ".jsx")
 
         private val parserFile: File = createTempFile("parser", ".js")
 
@@ -105,8 +107,6 @@ class TypeScriptLanguageFrontend(config: TranslationConfiguration, scopeManager:
             Runtime.getRuntime().exec(arrayOf("node", parserFile.absolutePath, file.absolutePath))
 
         val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
-
-        TypeManager.getInstance().setLanguageFrontend(this)
 
         val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
 
@@ -228,11 +228,9 @@ class TypeScriptLanguageFrontend(config: TranslationConfiguration, scopeManager:
         if (call != null) {
             val call = this.expressionHandler.handle(call) as CallExpression
 
-            val annotation =
-                NodeBuilder.newAnnotation(call.name, this.getCodeFromRawNode(node) ?: "")
+            val annotation = newAnnotation(call.name, this.getCodeFromRawNode(node) ?: "")
 
-            annotation.members =
-                call.arguments.map { NodeBuilder.newAnnotationMember("", it, it.code ?: "") }
+            annotation.members = call.arguments.map { newAnnotationMember("", it, it.code ?: "") }
 
             call.disconnectFromGraph()
 
@@ -241,7 +239,7 @@ class TypeScriptLanguageFrontend(config: TranslationConfiguration, scopeManager:
             // or a decorator just has a simple identifier
             val name = this.getIdentifierName(node)
 
-            val annotation = NodeBuilder.newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
+            val annotation = newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
 
             return annotation
         }

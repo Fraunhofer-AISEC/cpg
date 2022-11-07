@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
@@ -69,7 +68,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         set(value) {
             field = value
             if (value != null && this.type is UnknownType) {
-                setType(TypeParser.createFrom(value.name, true))
+                setType(TypeParser.createFrom(value.name, language))
             }
         }
 
@@ -114,7 +113,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
     }
 
     override fun toString(): String {
-        return ToStringBuilder(this, Node.TO_STRING_STYLE)
+        return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
             .append("constructor", constructor)
             .append("instantiates", instantiates)

@@ -11,6 +11,14 @@ A code property graph (CPG) is a representation of source code in form of a labe
 This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ source code [JavaParser](https://javaparser.org/) for parsing Java. In contrast to compiler AST generators, both are "forgiving" parsers that can cope with incomplete or even semantically incorrect source code. That makes it possible to analyze source code even without being able to compile it (due to missing dependencies or minor syntax errors). Furthermore, it uses [LLVM](https://llvm.org) through the [javacpp](https://github.com/bytedeco/javacpp) project to parse LLVM IR. Note that the LLVM IR parser is *not* forgiving, i.e., the LLVM IR code needs to be at least considered valid by LLVM. The necessary native libraries are shipped by the javacpp project for most platforms.
 
 
+## Specifications
+
+In order to improve some formal aspects of our library, we created several specifications of our core concepts. Currently, the following specifications exist:
+* [Dataflow Graph](./cpg-core/specifications/dfg.md)
+* [Language and Language Frontend](./cpg-core/specifications/language.md)
+
+We aim to provide more specifications over time and also include them in a new generated documentation site.
+
 ## Usage
 
 ### For Visualization Purposes
