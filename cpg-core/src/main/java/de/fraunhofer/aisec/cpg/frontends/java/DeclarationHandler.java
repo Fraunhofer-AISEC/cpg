@@ -257,7 +257,7 @@ public class DeclarationHandler
     // if (packageDeclaration != null) {
     //  name = packageDeclaration.getNameAsString() + "." + name;
     // }
-    fqn = getAbsoluteName(fqn);
+    // fqn = getAbsoluteName(fqn);
 
     // add a type declaration
     RecordDeclaration recordDeclaration =

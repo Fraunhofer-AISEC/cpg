@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.assertName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -690,6 +691,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val method = recordDeclaration.methods[0]
         assertEquals("method", method.name)
+        assertEquals("SomeClass::method", method.fullName.toString())
         assertEquals(0, method.parameters.size)
         assertEquals("()void*", method.type.typeName)
         assertFalse(method.hasBody())
@@ -1072,24 +1074,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         assertNotNull(tu)
 
-        val firstNamespace =
-            tu.getDeclarationsByName("FirstNamespace", NamespaceDeclaration::class.java)
-                .iterator()
-                .next()
+        val firstNamespace = tu.namespaces["FirstNamespace"]
         assertNotNull(firstNamespace)
 
-        val someClass =
-            firstNamespace
-                .getDeclarationsByName("FirstNamespace::SomeClass", RecordDeclaration::class.java)
-                .iterator()
-                .next()
+        val someClass = firstNamespace.records["SomeClass"]
         assertNotNull(someClass)
+        assertName("FirstNamespace::SomeClass", someClass)
 
-        val anotherClass =
-            tu.getDeclarationsByName("AnotherClass", RecordDeclaration::class.java)
-                .iterator()
-                .next()
+        val anotherClass = tu.records["AnotherClass"]
         assertNotNull(anotherClass)
+        assertName("AnotherClass", anotherClass)
     }
 
     @Test

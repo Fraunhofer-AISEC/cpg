@@ -72,7 +72,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             currentTU = tu
             walker.clearCallbacks()
             walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }
-            walker.registerHandler { node, _ -> findRecords(node) }
+            walker.registerHandler { node, _ -> gatherRecords(node) }
             walker.registerHandler { node, _ -> findEnums(node) }
             walker.iterate(currentTU)
         }

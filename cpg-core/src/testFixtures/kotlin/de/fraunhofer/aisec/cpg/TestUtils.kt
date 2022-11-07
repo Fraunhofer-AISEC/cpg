@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -293,4 +294,12 @@ object TestUtils {
             assertUsageOf(memberExpression.refersTo, usedMember)
         }
     }
+}
+
+/**
+ * Asserts that the node has the expected fully qualified name using [Node.fullName] and
+ * [Name.toString].
+ */
+fun assertName(fqn: String, node: Node, message: String? = null) {
+    asserter.assertEquals(message, fqn, node.fullName.toString())
 }

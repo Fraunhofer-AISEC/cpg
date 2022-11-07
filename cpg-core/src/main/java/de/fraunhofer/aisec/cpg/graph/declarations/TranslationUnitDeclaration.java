@@ -99,6 +99,7 @@ public class TranslationUnitDeclaration extends Declaration
    * @param <T> the type of the declaration
    * @return a {@code Set} containing the declarations, if any.
    */
+  @Deprecated()
   @NotNull
   public <T extends Declaration> Set<T> getDeclarationsByName(
       @NotNull String name, @NotNull Class<T> clazz) {

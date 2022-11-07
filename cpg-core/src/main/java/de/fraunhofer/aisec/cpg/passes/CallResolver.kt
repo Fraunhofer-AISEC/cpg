@@ -83,7 +83,7 @@ open class CallResolver : SymbolResolverPass() {
 
         walker = ScopedWalker(scopeManager)
         walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }
-        walker.registerHandler { node, _ -> findRecords(node) }
+        walker.registerHandler { node, _ -> gatherRecords(node) }
         walker.registerHandler { node, _ -> findTemplates(node) }
         walker.registerHandler { currentClass, _, currentNode ->
             registerMethods(currentClass, currentNode)
