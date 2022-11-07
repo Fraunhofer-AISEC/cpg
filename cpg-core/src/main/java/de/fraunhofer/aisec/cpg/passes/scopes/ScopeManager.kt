@@ -109,6 +109,12 @@ class ScopeManager : ScopeProvider {
             return if (namedScope is NameScope) namedScope.namePrefix else ""
         }
 
+    val currentNamespace: Name?
+        get() {
+            val namedScope = this.firstScopeIsInstanceOrNull<NameScope>()
+            return if (namedScope is NameScope) namedScope.name else null
+        }
+
     init {
         pushScope(GlobalScope())
     }

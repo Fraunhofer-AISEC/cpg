@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -71,6 +72,10 @@ interface ScopeProvider : MetadataProvider {
     val scope: Scope?
 }
 
+interface NamespaceProvider : MetadataProvider {
+    val namespace: Name?
+}
+
 /**
  * Applies various metadata on this [Node], based on the kind of provider in [provider]. This can
  * include:
@@ -83,7 +88,13 @@ interface ScopeProvider : MetadataProvider {
  * [codeOverride] is specified, the supplied source code is used to override anything from the
  * provider.
  */
-fun Node.applyMetadata(provider: MetadataProvider?, rawNode: Any?, codeOverride: String?) {
+fun Node.applyMetadata(
+    provider: MetadataProvider?,
+    localName: String? = EMPTY_NAME,
+    rawNode: Any?,
+    codeOverride: String?,
+    noFQN: Boolean = false
+) {
     if (provider is CodeAndLocationProvider) {
         provider.setCodeAndLocation(this, rawNode)
     }
@@ -98,6 +109,19 @@ fun Node.applyMetadata(provider: MetadataProvider?, rawNode: Any?, codeOverride:
 
     if (provider is ScopeProvider) {
         this.scope = provider.scope
+    }
+
+    val namespace =
+        if (provider is NamespaceProvider) {
+            provider.namespace
+        } else {
+            null
+        }
+
+    if (localName != null && !noFQN) {
+        this.fullName = Name(localName, namespace, this.language?.namespaceDelimiter ?: ".")
+    } else {
+        this.name = localName ?: EMPTY_NAME
     }
 
     if (codeOverride != null) {
@@ -118,9 +142,7 @@ fun MetadataProvider.newAnnotation(
     rawNode: Any? = null
 ): Annotation {
     val node = Annotation()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name ?: Node.EMPTY_NAME
+    node.applyMetadata(this, name, rawNode, code)
 
     log(node)
     return node
@@ -140,9 +162,8 @@ fun MetadataProvider.newAnnotationMember(
     rawNode: Any? = null
 ): AnnotationMember {
     val node = AnnotationMember()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code)
 
-    node.name = name ?: Node.EMPTY_NAME
     node.value = value
 
     log(node)

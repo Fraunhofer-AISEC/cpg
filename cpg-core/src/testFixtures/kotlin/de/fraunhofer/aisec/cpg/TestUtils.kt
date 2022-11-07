@@ -294,3 +294,7 @@ object TestUtils {
         }
     }
 }
+
+fun assertName(fqn: String, node: Node, message: String? = null) {
+    asserter.assertEquals(message, fqn, node.fullName.toString())
+}
