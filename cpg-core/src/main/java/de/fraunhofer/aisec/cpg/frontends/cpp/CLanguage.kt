@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
 /** The C language. */
-class CLanguage :
+open class CLanguage :
     Language<CXXLanguageFrontend>(),
     HasStructs,
     HasFunctionPointers,

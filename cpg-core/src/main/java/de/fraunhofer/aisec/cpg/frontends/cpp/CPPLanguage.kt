@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -39,31 +38,12 @@ import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.util.regex.Pattern
-import kotlin.reflect.KClass
 
 /** The C++ language. */
 class CPPLanguage :
-    Language<CXXLanguageFrontend>(),
-    HasDefaultArguments,
-    HasTemplates,
-    HasComplexCallResolution,
-    HasStructs,
-    HasClasses,
-    HasFunctionPointers,
-    HasQualifier,
-    HasElaboratedTypeSpecifier {
+    CLanguage(), HasDefaultArguments, HasTemplates, HasComplexCallResolution, HasClasses {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "hpp", "hh")
-    override val namespaceDelimiter = "::"
-    override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
-    override val qualifiers = listOf("const", "volatile", "restrict", "atomic")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager
-    ): CXXLanguageFrontend {
-        return CXXLanguageFrontend(this, config, scopeManager)
-    }
 
     /**
      * @param call
