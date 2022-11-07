@@ -239,7 +239,7 @@ public class TypeParser {
 
   /**
    * Removes spaces between a generics Expression, i.e. between "<" and ">" and the preceding Type
-   * information Required since, afterwards typeString get splitted by spaces
+   * information Required since, afterwards typeString get split by spaces
    *
    * @param type typeString
    * @return typeString without spaces in the generic Expression
@@ -249,7 +249,7 @@ public class TypeParser {
       @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
     if (type.contains("<")
         && type.contains(">")
-        && language instanceof CPPLanguage) { // TODO: Change to Trait
+        && language instanceof HasTemplates) { // TODO: Change to Trait
       String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
 
       /* Explanation from @vfsrfs:
