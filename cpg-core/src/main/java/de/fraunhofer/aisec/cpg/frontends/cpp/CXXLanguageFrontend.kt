@@ -58,7 +58,6 @@ import org.eclipse.cdt.core.parser.IncludeFileContentProvider
 import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.ASTTranslationUnit
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
@@ -493,15 +492,6 @@ class CXXLanguageFrontend(
                 }
                 is IASTNamedTypeSpecifier -> {
                     val nameDecl = specifier.name
-                    name =
-                        if (nameDecl is CPPASTQualifiedName) {
-                            // For some reason the legacy type system does not keep the language
-                            // specific namespace delimiters, and for backwards compatibility, we
-                            // are keeping this behaviour (for now).
-                            name.replace("::", ".")
-                        } else {
-                            name
-                        }
 
                     TypeParser.createFrom(name, true, this)
                 }

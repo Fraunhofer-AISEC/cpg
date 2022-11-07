@@ -327,9 +327,6 @@ public class TypeParser {
    */
   @NotNull
   public static List<String> separate(@NotNull String type) {
-
-    // Remove :: CPP operator, use . instead
-    type = type.replace("::", ".");
     type = type.split("=")[0];
 
     // Guarantee that there is no arbitrary number of whitespaces
@@ -502,20 +499,6 @@ public class TypeParser {
    */
   private static String removeAccessModifier(@NotNull String type) {
     return type.replaceAll("public|private|protected", "").trim();
-  }
-
-  /**
-   * Replaces the Scope Resolution Operator (::) in C++ by . for a consistent parsing
-   *
-   * @param type provided typeString
-   * @return typeString which uses . instead of the substring :: if CPP is the current language
-   *     <p>TODO: Remove this function, this is not a good idea!
-   * @deprecated
-   */
-  @Deprecated
-  private static String replaceScopeResolutionOperator(
-      @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
-    return (language instanceof CPPLanguage) ? type.replace("::", ".").trim() : type;
   }
 
   /**
@@ -726,8 +709,6 @@ public class TypeParser {
 
     // Preprocessing of the typeString
     type = removeAccessModifier(type);
-    // Remove CPP :: Operator
-    type = replaceScopeResolutionOperator(type, language);
 
     // Determine if inner class
 

@@ -296,7 +296,10 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
         var baseType = current.base.type
         if (baseType.typeName !in recordMap) {
-            val fqnResolvedType = recordMap.keys.firstOrNull { it.endsWith("." + baseType.name) }
+            val fqnResolvedType =
+                recordMap.keys.firstOrNull {
+                    it.endsWith(current.language?.namespaceDelimiter + baseType.name)
+                }
             if (fqnResolvedType != null) {
                 baseType = TypeParser.createFrom(fqnResolvedType, baseType.language)
             }

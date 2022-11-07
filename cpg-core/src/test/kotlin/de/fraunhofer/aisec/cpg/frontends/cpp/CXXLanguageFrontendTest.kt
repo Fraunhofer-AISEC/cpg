@@ -100,7 +100,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         var parameter = catchClauses[0].parameter
         assertNotNull(parameter)
         assertEquals("e", parameter.name)
-        assertEquals("std.exception&", parameter.type.typeName)
+        assertEquals("std::exception&", parameter.type.typeName)
         assertTrue(parameter.type.qualifier.isConst)
 
         // anonymous variable (this is not 100% handled correctly but will do for now)
@@ -108,7 +108,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(parameter)
         // this is currently our 'unnamed' parameter
         assertEquals("", parameter.name)
-        assertEquals("std.exception&", parameter.type.typeName)
+        assertEquals("std::exception&", parameter.type.typeName)
         assertTrue(parameter.type.qualifier.isConst)
 
         // catch all
@@ -258,7 +258,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals("function0(int)void", method!!.signature)
 
         method = declaration.getDeclarationAs(1, FunctionDeclaration::class.java)
-        assertEquals("function1(int, std.string, SomeType*, AnotherType&)int", method!!.signature)
+        assertEquals("function1(int, std::string, SomeType*, AnotherType&)int", method!!.signature)
 
         val args = method.parameters.stream().map(Node::name).collect(Collectors.toList())
         assertEquals(listOf("arg0", "arg1", "arg2", "arg3"), args)
@@ -469,7 +469,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             (statements[4] as DeclarationStatement).getSingleDeclarationAs(
                 VariableDeclaration::class.java
             )
-        assertEquals(createTypeFrom("std.string", true), qualifiedType.type)
+        assertEquals(createTypeFrom("std::string", true), qualifiedType.type)
         assertEquals("text", qualifiedType.name)
         assertTrue(qualifiedType.initializer is Literal<*>)
         assertEquals("some text", (qualifiedType.initializer as? Literal<*>)?.value)
@@ -657,7 +657,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // syntactically no different than the previous ones
         val stmt = statements[4] as DeclarationStatement
         val decl = stmt.singleDeclaration as VariableDeclaration
-        assertEquals(createTypeFrom("std.string*", true), decl.type)
+        assertEquals(createTypeFrom("std::string*", true), decl.type)
         assertEquals("notMultiplication", decl.name)
         assertTrue(decl.initializer is BinaryOperator)
 

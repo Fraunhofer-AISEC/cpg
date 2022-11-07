@@ -495,7 +495,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // template
                 name = name.substring(0, name.indexOf("<"))
             }
-            fqn = fqn.replace("::", ".")
+
             // FIXME this is only true if we are in a namespace! If we are in a class, this is
             // wrong!
             //  happens again in l367
