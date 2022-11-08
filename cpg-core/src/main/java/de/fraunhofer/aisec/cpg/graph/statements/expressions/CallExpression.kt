@@ -127,8 +127,6 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             field?.registerTypeListener(this)
         }
 
-    var fqn: String? = null
-
     fun setArgument(index: Int, argument: Expression) {
         argumentsEdges[index].end = argument
     }
@@ -263,7 +261,7 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             return
         }
         if (src === base) {
-            fqn = src.getType().root.typeName + "." + name
+            fullName = Name(name, src.getType().root.fullName, language?.namespaceDelimiter ?: ".")
         } else {
             val previous = type
             val types =

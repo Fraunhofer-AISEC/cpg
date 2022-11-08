@@ -143,7 +143,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val sce = forEachStatement.statement as? MemberCallExpression
         assertNotNull(sce)
         assertEquals("println", sce.name)
-        assertEquals("java.io.PrintStream.println", sce.fqn)
+        assertEquals("java.io.PrintStream.println", sce.fullName.toString())
     }
 
     @Test

@@ -815,9 +815,15 @@ class QueryTest {
                 { it.name == "highlyCriticalOperation" },
                 { n1 ->
                     val loggingQueryForward =
-                        executionPath(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                        executionPath(
+                            n1,
+                            { (it as? CallExpression)?.fullName.toString() == "Logger.log" }
+                        )
                     val loggingQueryBackwards =
-                        executionPathBackwards(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                        executionPathBackwards(
+                            n1,
+                            { (it as? CallExpression)?.fullName.toString() == "Logger.log" }
+                        )
                     val allChildren = loggingQueryForward.children
                     allChildren.addAll(loggingQueryBackwards.children)
                     val allPaths =
@@ -864,9 +870,15 @@ class QueryTest {
                 { it.name == "highlyCriticalOperation" },
                 { n1 ->
                     val loggingQueryForward =
-                        executionPath(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                        executionPath(
+                            n1,
+                            { (it as? CallExpression)?.fullName.toString() == "Logger.log" }
+                        )
                     val loggingQueryBackwards =
-                        executionPathBackwards(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                        executionPathBackwards(
+                            n1,
+                            { (it as? CallExpression)?.fullName.toString() == "Logger.log" }
+                        )
                     val allChildren = loggingQueryForward.children
                     allChildren.addAll(loggingQueryBackwards.children)
                     val allPaths =
@@ -913,9 +925,15 @@ class QueryTest {
                 { it.name == "highlyCriticalOperation" },
                 { n1 ->
                     val loggingQueryForward =
-                        executionPath(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                        executionPath(
+                            n1,
+                            { (it as? CallExpression)?.fullName.toString() == "Logger.log" }
+                        )
                     val loggingQueryBackwards =
-                        executionPathBackwards(n1, { (it as? CallExpression)?.fqn == "Logger.log" })
+                        executionPathBackwards(
+                            n1,
+                            { (it as? CallExpression)?.fullName.toString() == "Logger.log" }
+                        )
                     val allChildren = loggingQueryForward.children
                     allChildren.addAll(loggingQueryBackwards.children)
                     val allPaths =

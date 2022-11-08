@@ -671,7 +671,7 @@ class ScopeManager : ScopeProvider {
     ): List<FunctionDeclaration> {
         var s = scope
 
-        val fqn = call.fqn
+        val fqn = call.fullName.toString()
 
         // First, we need to check, whether we have some kind of scoping.
         if (
@@ -690,7 +690,7 @@ class ScopeManager : ScopeProvider {
                     LOGGER.error(
                         "Could not find the scope {} needed to resolve the call {}. Falling back to the current scope",
                         scopeName,
-                        call.fqn
+                        call.fullName.toString()
                     )
                     currentScope
                 } else {

@@ -290,7 +290,7 @@ class GoLanguageFrontendTest : BaseTest() {
         callExpression = body.statements.first() as? CallExpression
         assertNotNull(callExpression)
 
-        assertEquals("fmt.Printf", callExpression.fqn)
+        assertEquals("fmt.Printf", callExpression.fullName.toString())
         assertEquals("Printf", callExpression.name)
 
         val literal = callExpression.arguments.first() as? Literal<*>
@@ -437,13 +437,13 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(printf)
         assertEquals("Printf", printf.name)
-        assertEquals("fmt.Printf", printf.fqn)
+        assertEquals("fmt.Printf", printf.fullName.toString())
 
         val arg1 = printf.arguments[0] as? MemberCallExpression
 
         assertNotNull(arg1)
         assertEquals("myOtherFunc", arg1.name)
-        assertEquals("s.myOtherFunc", arg1.fqn)
+        assertEquals("s.myOtherFunc", arg1.fullName.toString())
 
         assertEquals(myFunc.receiver, (arg1.base as? DeclaredReferenceExpression)?.refersTo)
     }

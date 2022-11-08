@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import org.jetbrains.annotations.NotNull;
 
@@ -56,7 +57,18 @@ public class StaticCallExpression extends CallExpression {
         && !targetRecord.isEmpty()
         && getName() != null
         && !getName().isEmpty()) {
-      setFqn(targetRecord + "." + getName());
+      var namespaceDelimiter = ".";
+      var nameSplitter = new String[0];
+      if (this.getLanguage() != null) {
+        namespaceDelimiter = this.getLanguage().getNamespaceDelimiter();
+        nameSplitter = this.getLanguage().getNameSplitter();
+      }
+
+      setFullName(
+          new Name(
+              getName(),
+              Name.Companion.parse(targetRecord, namespaceDelimiter, nameSplitter),
+              namespaceDelimiter));
     }
   }
 }

@@ -245,10 +245,9 @@ fun MetadataProvider.newCallExpression(
     rawNode: Any? = null
 ): CallExpression {
     val node = CallExpression()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+    node.applyMetadata(this, fqn, rawNode, code, true)
 
     node.callee = callee
-    node.fqn = fqn
     node.template = template
 
     log(node)
@@ -293,9 +292,18 @@ fun MetadataProvider.newMemberCallExpression(
     rawNode: Any? = null
 ): CallExpression {
     val node = MemberCallExpression()
-    node.applyMetadata(this, name, rawNode, code, true)
+    node.applyMetadata(
+        this,
+        if (fqn.isNullOrEmpty()) {
+            name
+        } else {
+            fqn
+        },
+        rawNode,
+        code,
+        true
+    )
 
-    node.fqn = fqn
     node.base = base
     node.member = member
     node.operatorCode = operatorCode
@@ -345,9 +353,8 @@ fun MetadataProvider.newStaticCallExpression(
     rawNode: Any? = null
 ): StaticCallExpression {
     val node = StaticCallExpression()
-    node.applyMetadata(this, name, rawNode, code, true)
+    node.applyMetadata(this, fqn, rawNode, code, true)
 
-    node.fqn = fqn
     node.targetRecord = targetRecord
 
     log(node)

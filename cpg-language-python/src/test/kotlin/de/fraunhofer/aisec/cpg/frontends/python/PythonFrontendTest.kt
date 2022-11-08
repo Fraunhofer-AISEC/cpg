@@ -148,7 +148,7 @@ class PythonFrontendTest : BaseTest() {
         callExpression = compStmt.statements[0] as? CallExpression
         assertNotNull(callExpression)
 
-        assertEquals("print", callExpression.fqn)
+        assertEquals("print", callExpression.fullName.toString())
 
         val literal = callExpression.arguments.first() as? Literal<*>
         assertNotNull(literal)
@@ -465,7 +465,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(mem)
         assertEquals("bar", mem.name)
         assertEquals(".", fooMemCall.operatorCode)
-        assertEquals("Foo.bar", fooMemCall.fqn)
+        assertEquals("Foo.bar", fooMemCall.fullName.toString())
         assertEquals(1, fooMemCall.invokes.size)
         assertEquals(bar, fooMemCall.invokes[0])
         assertEquals("self", fooMemCall.base?.name)

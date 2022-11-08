@@ -50,6 +50,12 @@ abstract class Language<T : LanguageFrontend> : Node() {
     /** The namespace delimiter used by the language. Often, this is "." */
     abstract val namespaceDelimiter: String
 
+    /**
+     * Some languages can have other strings where we may want to split a name (e.g., "." in
+     * addition to "::")
+     */
+    open val nameSplitter: Array<String> = emptyArray()
+
     @get:JsonSerialize(using = KClassSerializer::class)
     /** The class of the frontend which is used to parse files of this language. */
     abstract val frontend: KClass<out T>

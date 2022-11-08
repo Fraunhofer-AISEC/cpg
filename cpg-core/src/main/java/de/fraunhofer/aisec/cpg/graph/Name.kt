@@ -36,7 +36,7 @@ import kotlin.reflect.KProperty
 class Name(
     /** The local name (sometimes also called simple name) without any namespace information. */
     var localName: String,
-    /** The parent name, e.g,. the namespace this name lives in. */
+    /** The parent name, e.g., the namespace this name lives in. */
     var parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
     val delimiter: String = "."
@@ -77,12 +77,15 @@ class Name(
          * Tries to parse the given fully qualified name using the specified [delimiter] into a
          * [Name].
          */
-        fun parse(fqn: String, delimiter: String = "."): Name {
-            val parts = fqn.split(delimiter)
+        fun parse(fqn: String, delimiter: String = ".", vararg splitDelimiters: String): Name {
+            val parts = fqn.split(delimiter, *splitDelimiters)
 
             var name: Name? = null
             for (part in parts) {
-                name = Name(part, name, delimiter)
+                val localName = part.replace(")", "").replace("*", "")
+                if (localName.isNotEmpty()) {
+                    name = Name(localName, name, delimiter)
+                }
             }
 
             // Actually this should not occur, but otherwise the compiler won't let us return a

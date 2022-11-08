@@ -63,18 +63,19 @@ internal class FunctionPointerTest : BaseTest() {
             findByUniquePredicate(functions) { it.name == "fun" && it.parameters.isEmpty() }
         val singleParamUnknown =
             findByUniquePredicate(functions) { it.name == "fun" && it.parameters.size == 1 }
-        val pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+\\.)?(?<func>.+)\\)")
+        val pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+(\\.|::))?(?<func>.+)\\)")
         for (call in calls) {
             if (call is ConstructExpression) {
                 continue
             }
             var func: String
-            if (!call.name.contains("(")) {
-                func = call.name
+            val callName = call.fullName.localName
+            if (!callName.contains("(")) {
+                func = callName
                 assertNotEquals("", func, "Unexpected call $func")
             } else {
-                val matcher = pattern.matcher(call.name)
-                assertTrue(matcher.matches(), "Unexpected call " + call.name)
+                val matcher = pattern.matcher(callName)
+                assertTrue(matcher.matches(), "Unexpected call " + callName)
                 func = matcher.group("func")
             }
             when (func) {
@@ -101,7 +102,7 @@ internal class FunctionPointerTest : BaseTest() {
                     assertEquals(listOf(singleParamUnknown), call.invokes)
                     assertTrue(singleParamUnknown.isInferred)
                 }
-                else -> fail("Unexpected call " + call.name)
+                else -> fail("Unexpected call " + callName)
             }
             val variables = result.variables
 

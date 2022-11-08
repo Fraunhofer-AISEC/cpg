@@ -68,12 +68,26 @@ inline fun <reified T : Node> Node.dfgFrom(): List<T> {
     return this.prevDFG.toList().filterIsInstance<T>()
 }
 
+fun matchesName(name: Name, lookup: String): Boolean {
+    return if (name.delimiter in lookup) {
+        // We have an FQN
+        val lookupName = Name.parse(lookup, name.delimiter)
+        name == lookupName ||
+            name.localName ==
+                lookup // TODO: There are some cases where the local name is actually the FQN. We
+        // have to fix this.
+    } else {
+        // No FQN, only check the local name
+        name.localName == lookup
+    }
+}
+
 /** This function returns the *first* node that matches the name on the supplied list of nodes. */
 fun <T : Node> Collection<T>?.byNameOrNull(lookup: String, modifier: SearchModifier): T? {
     return if (modifier == SearchModifier.NONE) {
-        this?.firstOrNull { it.name == lookup }
+        this?.firstOrNull { matchesName(it.fullName, lookup) }
     } else {
-        val nodes = this?.filter { it.name == lookup } ?: listOf()
+        val nodes = this?.filter { matchesName(it.fullName, lookup) } ?: listOf()
         if (nodes.size > 1) {
             throw NoSuchElementException("result is not unique")
         }

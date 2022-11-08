@@ -920,7 +920,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(2, tryStatement.tryBlock.statements.size)
         assertEquals(
             "_CxxThrowException",
-            (tryStatement.tryBlock.statements[0] as? CallExpression)?.fqn
+            (tryStatement.tryBlock.statements[0] as? CallExpression)?.fullName.toString()
         )
         assertEquals(
             "end",
@@ -935,11 +935,11 @@ class LLVMIRLanguageFrontendTest {
             (catchSwitchExpr.singleDeclaration as? VariableDeclaration)?.initializer
                 as? CallExpression
         assertNotNull(catchswitchCall)
-        assertEquals("llvm.catchswitch", catchswitchCall.fqn)
+        assertEquals("llvm.catchswitch", catchswitchCall.fullName.toString())
         val ifExceptionMatches = tryStatement.catchClauses[0].body.statements[1] as? IfStatement
         val matchesExceptionCall = ifExceptionMatches?.condition as? CallExpression
         assertNotNull(matchesExceptionCall)
-        assertEquals("llvm.matchesCatchpad", matchesExceptionCall.fqn)
+        assertEquals("llvm.matchesCatchpad", matchesExceptionCall.fullName.toString())
         assertEquals(
             catchSwitchExpr.singleDeclaration,
             (matchesExceptionCall.arguments[0] as DeclaredReferenceExpression).refersTo
@@ -955,14 +955,15 @@ class LLVMIRLanguageFrontendTest {
             (((catchBlock.statements[0] as? DeclarationStatement)?.singleDeclaration
                         as? VariableDeclaration)
                     ?.initializer as? CallExpression)
-                ?.fqn
+                ?.fullName
+                .toString()
         )
 
         val innerTry = catchBlock.statements[1] as? TryStatement
         assertNotNull(innerTry)
         assertEquals(
             "_CxxThrowException",
-            (innerTry.tryBlock.statements[0] as? CallExpression)?.fqn
+            (innerTry.tryBlock.statements[0] as? CallExpression)?.fullName.toString()
         )
         assertEquals(
             "try.cont",
@@ -978,7 +979,8 @@ class LLVMIRLanguageFrontendTest {
             (((innerCatchClause.statements[0] as? DeclarationStatement)?.singleDeclaration
                         as? VariableDeclaration)
                     ?.initializer as? CallExpression)
-                ?.fqn
+                ?.fullName
+                .toString()
         )
         assertEquals(
             "try.cont",
