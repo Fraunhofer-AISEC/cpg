@@ -201,7 +201,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         var record =
             frontend.scopeManager
                 .resolve<RecordDeclaration>(frontend.scopeManager.globalScope, true) {
-                    it.name == name
+                    it.fullName.toString() == name
                 }
                 .firstOrNull()
 
@@ -257,7 +257,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     ): String {
         val typeStr = LLVMPrintTypeToString(typeRef).string
         if (typeStr in frontend.typeCache && frontend.typeCache[typeStr] != null) {
-            return frontend.typeCache[typeStr]!!.name
+            return frontend.typeCache[typeStr]!!.fullName.localName
         }
 
         var name = "literal"

@@ -237,23 +237,21 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             } else {
                 null
             }
-        if (unwindDest != null) { // For "unwind to caller", the destination is null
-            val gotoStatement = assembleGotoStatement(instr, unwindDest)
-            gotoStatement.name =
+        val name =
+            Name(
                 if (instr.opCode == LLVMCatchRet) {
                     "catchret"
                 } else {
                     "cleanuppad"
                 }
+            )
+        if (unwindDest != null) { // For "unwind to caller", the destination is null
+            val gotoStatement = assembleGotoStatement(instr, unwindDest)
+            gotoStatement.fullName = name
             return gotoStatement
         } else {
             val emptyStatement = newEmptyStatement(frontend.getCodeFromRawNode(instr))
-            emptyStatement.name =
-                if (instr.opCode == LLVMCatchRet) {
-                    "catchret"
-                } else {
-                    "cleanuppad"
-                }
+            emptyStatement.fullName = name
             return emptyStatement
         }
     }
@@ -647,7 +645,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             if (copy is DeclarationStatement) {
                 base =
                     newDeclaredReferenceExpression(
-                        copy.singleDeclaration.name,
+                        copy.singleDeclaration.fullName.localName,
                         (copy.singleDeclaration as VariableDeclaration).type,
                         frontend.getCodeFromRawNode(instr)
                     )
@@ -667,7 +665,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             } else if (baseType is PointerType) {
                 val arrayExpr = newArraySubscriptionExpression("")
                 arrayExpr.arrayExpression = base
-                arrayExpr.name = index.toString()
+                arrayExpr.fullName = Name(index.toString())
                 arrayExpr.subscriptExpression = operand
                 expr = arrayExpr
 
@@ -691,8 +689,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 }
 
                 log.debug(
-                    "Trying to access a field within the record declaration of {}",
-                    record.name
+                    "Trying to access a field within the record declaration of ${record.fullName}"
                 )
 
                 // look for the field
@@ -702,7 +699,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: UnknownType.getUnknownType(language)
 
                 // construct our member expression
-                expr = newMemberExpression(base, field?.type, field?.name, ".", "")
+                expr = newMemberExpression(base, field?.type, field?.fullName?.localName, ".", "")
                 log.info("{}", expr)
 
                 // the current expression is the new base
@@ -810,7 +807,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleAtomiccmpxchg(instr: LLVMValueRef): Statement {
         val instrStr = frontend.getCodeFromRawNode(instr)
         val compoundStatement = newCompoundStatement(instrStr)
-        compoundStatement.name = "atomiccmpxchg"
+        compoundStatement.fullName = Name("atomiccmpxchg")
         val ptr = frontend.getOperandValueAtIndex(instr, 0)
         val cmp = frontend.getOperandValueAtIndex(instr, 1)
         val value = frontend.getOperandValueAtIndex(instr, 2)
@@ -876,7 +873,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val value = frontend.getOperandValueAtIndex(instr, 1)
         val ty = value.type
         val exchOp = newBinaryOperator("=", instrStr)
-        exchOp.name = "atomicrmw"
+        exchOp.fullName = Name("atomicrmw")
 
         val ptrDeref = newUnaryOperator("*", false, true, instrStr)
         ptrDeref.input = ptr
@@ -962,12 +959,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     }
                 val condition = newBinaryOperator(operatorCode, instrStr)
                 val castExprLhs = newCastExpression(frontend.getCodeFromRawNode(instr))
-                castExprLhs.castType = parseType("u${ty.name}")
+                castExprLhs.castType = parseType("u${ty.fullName}")
                 castExprLhs.expression = ptrDeref
                 condition.lhs = castExprLhs
 
                 val castExprRhs = newCastExpression(frontend.getCodeFromRawNode(instr))
-                castExprRhs.castType = parseType("u${ty.name}")
+                castExprRhs.castType = parseType("u${ty.fullName}")
                 castExprRhs.expression = value
                 condition.rhs = castExprRhs
 
@@ -1126,7 +1123,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Function is probably called by a local variable. For some reason, this is the last
             // operand
             val opName = frontend.getOperandValueAtIndex(instr, max)
-            calledFuncName = opName.name
+            calledFuncName = opName.fullName.toString()
         }
 
         var gotoCatch: GotoStatement = newGotoStatement(instrStr)
@@ -1172,7 +1169,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             frontend.scopeManager.leaveScope(tryStatement)
 
             val catchClause = newCatchClause(instrStr)
-            catchClause.name = gotoCatch.labelName
+            catchClause.fullName = Name(gotoCatch.labelName)
             catchClause.setParameter(
                 newVariableDeclaration(
                     "e_${gotoCatch.labelName}",
@@ -1235,7 +1232,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             )
         frontend.bindingsCache["%${exceptionName}"] = except
         catchInstr.setParameter(except)
-        catchInstr.name = catchType
+        catchInstr.fullName = Name(catchType)
         return catchInstr
     }
 
@@ -1255,7 +1252,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val decl = newArrayDecl.declarations[0] as? VariableDeclaration
         val arrayExpr = newArraySubscriptionExpression(instrStr)
         arrayExpr.arrayExpression =
-            newDeclaredReferenceExpression(decl?.name ?: Node.EMPTY_NAME, decl?.type, instrStr)
+            newDeclaredReferenceExpression(
+                decl?.fullName?.toString() ?: Node.EMPTY_NAME,
+                decl?.type,
+                instrStr
+            )
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 2)
 
         val binaryExpr = newBinaryOperator("=", instrStr)
@@ -1405,8 +1406,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val functionName = LLVMGetValueName(bbsFunction).string
         val functions =
             tu.declarations.filter { d ->
-                (d as? FunctionDeclaration)?.name != null &&
-                    (d as? FunctionDeclaration)?.name.equals(functionName)
+                (d as? FunctionDeclaration)?.fullName != null &&
+                    (d as? FunctionDeclaration)?.fullName.toString().equals(functionName)
             }
         if (functions.size != 1) {
             log.error(
@@ -1512,7 +1513,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         if (labelName != "") {
             val labelStatement = newLabelStatement(labelName)
-            labelStatement.name = labelName
+            labelStatement.fullName = Name(labelName)
             labelStatement.label = labelName
             labelStatement.subStatement = compound
 
@@ -1576,13 +1577,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             binaryOperator = newBinaryOperator(op, frontend.getCodeFromRawNode(instr))
 
             if (unsigned) {
-                val op1Type = "u${op1.type.name}"
+                val op1Type = "u${op1.type.fullName}"
                 val castExprLhs = newCastExpression(frontend.getCodeFromRawNode(instr))
                 castExprLhs.castType = parseType(op1Type)
                 castExprLhs.expression = op1
                 binaryOperator.lhs = castExprLhs
 
-                val op2Type = "u${op2.type.name}"
+                val op2Type = "u${op2.type.fullName}"
                 val castExprRhs = newCastExpression(frontend.getCodeFromRawNode(instr))
                 castExprRhs.castType = parseType(op2Type)
                 castExprRhs.expression = op2
@@ -1641,7 +1642,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         goto.labelName = labelName
         try {
             val label = newLabelStatement(labelName)
-            label.name = labelName
+            label.fullName = Name(labelName)
             // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
             // to the CPG goto statement
             frontend.registerObjectListener(label, assigneeTargetLabel)
