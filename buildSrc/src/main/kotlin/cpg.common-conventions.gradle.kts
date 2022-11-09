@@ -15,6 +15,10 @@ plugins {
 
 group = "de.fraunhofer.aisec"
 
+java {
+    withSourcesJar()
+}
+
 //
 // common repositories
 //
@@ -109,11 +113,10 @@ signing {
 // common compilation configuration
 //
 // specify Java & Kotlin JVM version
-java {
-    toolchain {
+kotlin {
+    jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(11))
     }
-    withSourcesJar()
 }
 
 tasks.withType<KotlinCompile> {
