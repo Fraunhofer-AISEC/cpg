@@ -136,13 +136,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
-        assertEquals("s", sDecl.name)
+        assertEquals("s", sDecl.fullName.localName)
         assertEquals(createTypeFrom("java.lang.String"), sDecl.type)
 
         // should contain a single statement
         val sce = forEachStatement.statement as? MemberCallExpression
         assertNotNull(sce)
-        assertEquals("println", sce.name)
+        assertEquals("println", sce.fullName.localName)
         assertEquals("java.io.PrintStream.println", sce.fullName.toString())
     }
 
@@ -264,22 +264,22 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             namespaceDeclaration?.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(recordDeclaration)
 
-        val fields = recordDeclaration.fields.map(FieldDeclaration::name)
+        val fields = recordDeclaration.fields.map { it.fullName.localName }
         assertTrue(fields.contains("field"))
 
         val method = recordDeclaration.methods[0]
         assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
-        assertEquals("method", method.name)
+        assertEquals("method", method.fullName.localName)
         assertEquals(createTypeFrom("java.lang.Integer"), method.returnTypes.firstOrNull())
 
         val functionType = method.type as? FunctionType
         assertNotNull(functionType)
-        assertEquals("method()java.lang.Integer", functionType.name)
+        assertEquals("method()java.lang.Integer", functionType.fullName.localName)
 
         val constructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration, constructor.recordDeclaration)
-        assertEquals("SimpleClass", constructor.name)
+        assertEquals("SimpleClass", constructor.fullName.localName)
     }
 
     @Test
@@ -332,19 +332,28 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         // This test can be simplified once we solved the issue with inconsistently used simple
         // names
         // vs. fully qualified names.
-        assertTrue(e?.type?.name == "ExtendedClass" || e?.type?.name == "cast.ExtendedClass")
+        assertTrue(
+            e?.type?.fullName?.localName == "ExtendedClass" ||
+                e?.type?.fullName?.toString() == "cast.ExtendedClass"
+        )
 
         // b = (BaseClass) e
         stmt = main.getBodyStatementAs(1, DeclarationStatement::class.java)
         assertNotNull(stmt)
 
         val b = stmt.getSingleDeclarationAs(VariableDeclaration::class.java)
-        assertTrue(b?.type?.name == "BaseClass" || b?.type?.name == "cast.BaseClass")
+        assertTrue(
+            b?.type?.fullName?.localName == "BaseClass" ||
+                b?.type?.fullName?.toString() == "cast.BaseClass"
+        )
 
         // initializer
         val cast = b.initializer as? CastExpression
         assertNotNull(cast)
-        assertTrue(cast.type.name == "BaseClass" || cast.type.name == "cast.BaseClass")
+        assertTrue(
+            cast.type.fullName.localName == "BaseClass" ||
+                cast.type?.fullName?.toString() == "cast.BaseClass"
+        )
 
         // expression itself should be a reference
         val ref = cast.expression as? DeclaredReferenceExpression
@@ -418,12 +427,12 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(statements)
 
         val l = (statements[1] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
-        assertEquals("l", l?.name)
+        assertEquals("l", l?.fullName?.localName)
 
         val length = l?.initializer as? MemberExpression
         assertNotNull(length)
-        assertEquals("length", length.name)
-        assertEquals("int", length.type?.typeName)
+        assertEquals("length", length.fullName.localName)
+        assertEquals("int", length.type?.fullName?.localName)
     }
 
     @Test
@@ -484,10 +493,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(1, annotations.size)
 
         val forClass = annotations[0]
-        assertEquals("AnnotationForClass", forClass.name)
+        assertEquals("AnnotationForClass", forClass.fullName.localName)
 
         var value = forClass.members[0]
-        assertEquals("value", value.name)
+        assertEquals("value", value.fullName.localName)
         assertEquals(2, (value.value as? Literal<*>)?.value)
 
         var field = record.fields["field"]
@@ -496,7 +505,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(1, annotations.size)
 
         var forField = annotations[0]
-        assertEquals("AnnotatedField", forField.name)
+        assertEquals("AnnotatedField", forField.fullName.localName)
 
         field = record.fields["anotherField"]
         assertNotNull(field)
@@ -505,10 +514,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(1, annotations.size)
 
         forField = annotations[0]
-        assertEquals("AnnotatedField", forField.name)
+        assertEquals("AnnotatedField", forField.fullName.localName)
 
         value = forField.members[0]
-        assertEquals(JavaLanguageFrontend.ANNOTATION_MEMBER_VALUE, value.name)
+        assertEquals(JavaLanguageFrontend.ANNOTATION_MEMBER_VALUE, value.fullName.localName)
         assertEquals("myString", (value.value as? Literal<*>)?.value)
     }
 
@@ -527,7 +536,9 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val request =
             nodes
                 .stream()
-                .filter { node: Node -> (node is VariableDeclaration && "request" == node.name) }
+                .filter { node: Node ->
+                    (node is VariableDeclaration && "request" == node.fullName.localName)
+                }
                 .map { node: Node? -> node as? VariableDeclaration? }
                 .findFirst()
                 .orElse(null)
@@ -538,7 +549,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertTrue(initializer is MemberCallExpression)
 
         val call = initializer as? MemberCallExpression
-        assertEquals("get", call?.name)
+        assertEquals("get", call?.fullName?.localName)
         val staticCall =
             nodes
                 .stream()
@@ -547,7 +558,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .findFirst()
                 .orElse(null)
         assertNotNull(staticCall)
-        assertEquals("doSomethingStatic", staticCall.name)
+        assertEquals("doSomethingStatic", staticCall.fullName.localName)
     }
 
     @Test
@@ -570,7 +581,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val receiver =
             (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration?
         assertNotNull(receiver)
-        assertEquals("this", receiver.name)
+        assertEquals("this", receiver.fullName.localName)
         assertEquals(createTypeFrom("my.Animal"), receiver.type)
     }
 
@@ -591,7 +602,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                             // take the original class and replace the name
                             val declaration =
                                 super.handleClassOrInterfaceDeclaration(classInterDecl)
-                            declaration.name = "MySimpleClass"
+                            declaration.fullName.localName = "MySimpleClass"
 
                             return declaration
                         }

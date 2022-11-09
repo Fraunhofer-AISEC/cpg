@@ -52,7 +52,7 @@ internal class CXXLiteralTest : BaseTest() {
         assertFalse(zero.isEmpty())
 
         val funcDecl = zero.iterator().next()
-        assertEquals("zero", funcDecl.name)
+        assertEquals("zero", funcDecl.fullName.localName)
         assertLiteral(0, createTypeFrom("int"), funcDecl, "i")
         assertLiteral(0L, createTypeFrom("long"), funcDecl, "l_with_suffix")
         assertLiteral(0L, createTypeFrom("long long"), funcDecl, "l_long_long_with_suffix")
@@ -72,7 +72,7 @@ internal class CXXLiteralTest : BaseTest() {
         val decimal = tu.getDeclarationsByName("decimal", FunctionDeclaration::class.java)
         assertFalse(decimal.isEmpty())
         val funcDecl = decimal.iterator().next()
-        assertEquals("decimal", funcDecl.name)
+        assertEquals("decimal", funcDecl.fullName.localName)
         assertLiteral(42, createTypeFrom("int"), funcDecl, "i")
         assertLiteral(1000, createTypeFrom("int"), funcDecl, "i_with_literal")
         assertLiteral(9223372036854775807L, createTypeFrom("long"), funcDecl, "l")
@@ -111,7 +111,7 @@ internal class CXXLiteralTest : BaseTest() {
         val octal = tu.getDeclarationsByName("octal", FunctionDeclaration::class.java)
         assertFalse(octal.isEmpty())
         val funcDecl = octal.iterator().next()
-        assertEquals("octal", funcDecl.name)
+        assertEquals("octal", funcDecl.fullName.localName)
         assertLiteral(42, createTypeFrom("int"), funcDecl, "i")
         assertLiteral(42L, createTypeFrom("long"), funcDecl, "l_with_suffix")
         assertLiteral(
@@ -131,7 +131,7 @@ internal class CXXLiteralTest : BaseTest() {
         val hex = tu.getDeclarationsByName("hex", FunctionDeclaration::class.java)
         assertFalse(hex.isEmpty())
         val funcDecl = hex.iterator().next()
-        assertEquals("hex", funcDecl.name)
+        assertEquals("hex", funcDecl.fullName.localName)
         assertLiteral(42, createTypeFrom("int"), funcDecl, "i")
         assertLiteral(42L, createTypeFrom("long"), funcDecl, "l_with_suffix")
         assertLiteral(

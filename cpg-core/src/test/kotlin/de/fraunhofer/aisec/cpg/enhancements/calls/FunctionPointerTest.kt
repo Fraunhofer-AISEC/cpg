@@ -55,14 +55,27 @@ internal class FunctionPointerTest : BaseTest() {
         val main = functions["main", SearchModifier.UNIQUE]
         val calls = main.calls
         val noParam =
-            functions[{ it.name == "target" && it.parameters.isEmpty() }, SearchModifier.UNIQUE]
-        findByUniquePredicate(functions) { it.name == "target" && it.parameters.isEmpty() }
+            functions[
+                {
+                    it.fullName.localName == "target" && it.parameters.isEmpty()
+                },
+                SearchModifier.UNIQUE
+            ]
+        findByUniquePredicate(functions) {
+            it.fullName.localName == "target" && it.parameters.isEmpty()
+        }
         val singleParam =
-            findByUniquePredicate(functions) { it.name == "target" && it.parameters.size == 1 }
+            findByUniquePredicate(functions) {
+                it.fullName.localName == "target" && it.parameters.size == 1
+            }
         val noParamUnknown =
-            findByUniquePredicate(functions) { it.name == "fun" && it.parameters.isEmpty() }
+            findByUniquePredicate(functions) {
+                it.fullName.localName == "fun" && it.parameters.isEmpty()
+            }
         val singleParamUnknown =
-            findByUniquePredicate(functions) { it.name == "fun" && it.parameters.size == 1 }
+            findByUniquePredicate(functions) {
+                it.fullName.localName == "fun" && it.parameters.size == 1
+            }
         val pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+(\\.|::))?(?<func>.+)\\)")
         for (call in calls) {
             if (call is ConstructExpression) {
@@ -75,7 +88,7 @@ internal class FunctionPointerTest : BaseTest() {
                 assertNotEquals("", func, "Unexpected call $func")
             } else {
                 val matcher = pattern.matcher(callName)
-                assertTrue(matcher.matches(), "Unexpected call " + callName)
+                assertTrue(matcher.matches(), "Unexpected call $callName")
                 func = matcher.group("func")
             }
             when (func) {
@@ -102,12 +115,12 @@ internal class FunctionPointerTest : BaseTest() {
                     assertEquals(listOf(singleParamUnknown), call.invokes)
                     assertTrue(singleParamUnknown.isInferred)
                 }
-                else -> fail("Unexpected call " + callName)
+                else -> fail("Unexpected call $callName")
             }
             val variables = result.variables
 
             for (variable in variables) {
-                when (variable.name) {
+                when (variable.fullName.localName) {
                     "no_param_unused",
                     "no_param_unused_field",
                     "no_param_unused_uninitialized" ->

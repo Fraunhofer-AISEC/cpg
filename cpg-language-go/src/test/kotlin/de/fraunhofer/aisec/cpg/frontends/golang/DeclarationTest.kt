@@ -80,7 +80,7 @@ class DeclarationTest {
 
         val param = myGlobalFunc.parameters.firstOrNull()
         assertNotNull(param)
-        assertEquals("", param.name)
+        assertEquals("", param.fullName.toString())
     }
 
     @Test

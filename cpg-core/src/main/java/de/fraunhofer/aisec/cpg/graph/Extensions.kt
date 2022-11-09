@@ -68,14 +68,14 @@ inline fun <reified T : Node> Node.dfgFrom(): List<T> {
     return this.prevDFG.toList().filterIsInstance<T>()
 }
 
-fun matchesName(name: Name, lookup: String): Boolean {
-    return if (name.delimiter in lookup) {
+fun matchesName(name: Name?, lookup: String): Boolean {
+    return if (name == null) {
+        return false
+    } else if (name.delimiter in lookup) {
         // We have an FQN
         val lookupName = Name.parse(lookup, name.delimiter)
-        name == lookupName ||
-            name.localName ==
-                lookup // TODO: There are some cases where the local name is actually the FQN. We
-        // have to fix this.
+        name == lookupName || name.localName == lookup
+        // TODO: There are some cases where the local name is actually the FQN. We have to fix this.
     } else {
         // No FQN, only check the local name
         name.localName == lookup
@@ -138,7 +138,7 @@ operator fun <T : Node> Collection<T>.invoke(predicate: (T) -> Boolean): List<T>
 
 /** A shortcut to filter a list of nodes by their name. */
 operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
-    return this.filter { it.name == lookup }
+    return this.filter { matchesName(it.fullName, lookup) }
 }
 
 inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
@@ -156,13 +156,13 @@ inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
 
         base =
             this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
-                (it as? Node)?.name == baseName
+                matchesName((it as? Node)?.fullName, baseName)
             }
                 ?: return null
         lookup = name.split(".")[1]
     }
 
-    return base.declarations.filterIsInstance<T>().firstOrNull { it.name == lookup }
+    return base.declarations.filterIsInstance<T>().firstOrNull { matchesName(it.fullName, lookup) }
 }
 
 @Throws(DeclarationNotFound::class)
@@ -506,7 +506,7 @@ val Node?.refs: List<DeclaredReferenceExpression>
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
     return SubgraphWalker.flattenAST(this).filter { node ->
-        (node as? CallExpression)?.invokes?.any { it.name == name } == true
+        (node as? CallExpression)?.invokes?.any { matchesName(it.fullName, name) } == true
     } as List<CallExpression>
 }
 
@@ -552,7 +552,7 @@ fun Node.controlledBy(): List<Node> {
  * Filters a list of [CallExpression]s for expressions which call a method with the given [name].
  */
 fun List<CallExpression>.filterByName(name: String): List<CallExpression> {
-    return this.filter { n -> n.invokes.any { it.name == name } }
+    return this.filter { n -> n.invokes.any { matchesName(it.fullName, name) } }
 }
 
 /**

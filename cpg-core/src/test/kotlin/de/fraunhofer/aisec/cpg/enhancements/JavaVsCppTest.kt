@@ -68,7 +68,7 @@ internal class JavaVsCppTest : BaseTest() {
 
         val decl = tu.declarations[0]
         assertTrue(decl is RecordDeclaration)
-        assertEquals("Simple", decl.name)
+        assertEquals("Simple", decl.fullName.localName)
         assertEquals(2, decl.methods.size)
         assertEquals("class", decl.kind)
 

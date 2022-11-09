@@ -84,11 +84,17 @@ internal class ConstructorsTest : BaseTest() {
         val result = TestUtils.analyze("cpp", topLevel, true)
         val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg =
-            findByUniquePredicate(constructors) { it.parameters.size == 0 && it.name == "A" }
+            findByUniquePredicate(constructors) {
+                it.parameters.size == 0 && it.fullName.localName == "A"
+            }
         val singleArg =
-            findByUniquePredicate(constructors) { it.parameters.size == 1 && it.name == "A" }
+            findByUniquePredicate(constructors) {
+                it.parameters.size == 1 && it.fullName.localName == "A"
+            }
         val twoArgs =
-            findByUniquePredicate(constructors) { it.parameters.size == 2 && it.name == "A" }
+            findByUniquePredicate(constructors) {
+                it.parameters.size == 2 && it.fullName.localName == "A"
+            }
         val variables = result.variables
         val a1 = findByUniqueName(variables, "a1")
         assertNotNull(a1)
@@ -179,7 +185,9 @@ internal class ConstructorsTest : BaseTest() {
         val constructors = result.allChildren<ConstructorDeclaration>()
         val variables = result.variables
         val twoDefaultArg =
-            findByUniquePredicate(constructors) { it.defaultParameters.size == 2 && it.name == "D" }
+            findByUniquePredicate(constructors) {
+                it.defaultParameters.size == 2 && it.fullName.localName == "D"
+            }
         assertNotNull(twoDefaultArg)
 
         val literal0 = findByUniquePredicate(result.literals) { it.value == 0 }
@@ -233,7 +241,7 @@ internal class ConstructorsTest : BaseTest() {
         val variables = result.variables
         val singleDefaultArg =
             findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
-                c.parameters.size == 2 && c.name == "E"
+                c.parameters.size == 2 && c.fullName.localName == "E"
             }
         val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val e1 = findByUniqueName(variables, "e1")
@@ -277,7 +285,9 @@ internal class ConstructorsTest : BaseTest() {
         val constructors = result.allChildren<ConstructorDeclaration>()
         val variables = result.variables
         val implicitConstructor =
-            findByUniquePredicate(constructors) { c: ConstructorDeclaration -> c.name == "I" }
+            findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
+                c.fullName.localName == "I"
+            }
         val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val i1 = findByUniqueName(variables, "i1")
         assertTrue(i1.initializer is ConstructExpression)
@@ -289,12 +299,14 @@ internal class ConstructorsTest : BaseTest() {
         assertTrue(i1Constructor.arguments[0] is CastExpression)
 
         val i1ConstructorArgument = i1Constructor.arguments[0] as CastExpression
-        assertEquals("int", i1ConstructorArgument.castType.name)
+        assertEquals("int", i1ConstructorArgument.castType.fullName.localName)
         assertEquals("1.0", i1ConstructorArgument.expression.code)
-        assertEquals("double", i1ConstructorArgument.expression.type.name)
+        assertEquals("double", i1ConstructorArgument.expression.type.fullName.localName)
 
         val implicitConstructorWithDefault =
-            findByUniquePredicate(constructors) { c: ConstructorDeclaration -> c.name == "H" }
+            findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
+                c.fullName.localName == "H"
+            }
         val h1 = findByUniqueName(variables, "h1")
         assertTrue(h1.initializer is ConstructExpression)
 
@@ -305,9 +317,9 @@ internal class ConstructorsTest : BaseTest() {
         assertTrue(h1Constructor.arguments[0] is CastExpression)
 
         val h1ConstructorArgument1 = h1Constructor.arguments[0] as CastExpression
-        assertEquals("int", h1ConstructorArgument1.castType.name)
+        assertEquals("int", h1ConstructorArgument1.castType.fullName.localName)
         assertEquals("2.0", h1ConstructorArgument1.expression.code)
-        assertEquals("double", h1ConstructorArgument1.expression.type.name)
+        assertEquals("double", h1ConstructorArgument1.expression.type.fullName.localName)
         assertTrue(implicitConstructorWithDefault.nextEOG.contains(literal10))
         for (node in implicitConstructorWithDefault.nextEOG) {
             if (node != literal10) {

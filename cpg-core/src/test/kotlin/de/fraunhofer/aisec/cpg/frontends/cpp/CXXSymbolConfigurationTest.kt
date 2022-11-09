@@ -63,7 +63,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         // not know)
         val dre = binaryOperator.getRhsAs(DeclaredReferenceExpression::class.java)
         assertNotNull(dre)
-        assertEquals("HELLO_WORLD", dre.name)
+        assertEquals("HELLO_WORLD", dre.fullName.localName)
 
         binaryOperator = funcDecl.getBodyStatementAs(1, BinaryOperator::class.java)
         assertNotNull(binaryOperator)
@@ -72,7 +72,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         // we do not know)
         val call = binaryOperator.getRhsAs(CallExpression::class.java)
         assertNotNull(call)
-        assertEquals("INCREASE", call.name)
+        assertEquals("INCREASE", call.fullName.localName)
     }
 
     @Test

@@ -72,7 +72,7 @@ class ExpressionTest {
 
         val cast = s.initializer as? CastExpression
         assertNotNull(cast)
-        assertEquals("main.MyStruct", cast.castType.name)
+        assertEquals("main.MyStruct", cast.castType.fullName.toString())
         assertSame(f, (cast.expression as? DeclaredReferenceExpression)?.refersTo)
     }
 }

@@ -51,7 +51,7 @@ class InferenceTest {
 
         val record = tu.byNameOrNull<RecordDeclaration>("T")
         assertNotNull(record)
-        assertEquals("T", record.name)
+        assertEquals("T", record.fullName.localName)
         assertEquals(true, record.isInferred)
         assertEquals("struct", record.kind)
 
@@ -59,11 +59,11 @@ class InferenceTest {
 
         val valueField = record.fields["value"]
         assertNotNull(valueField)
-        assertEquals("int", valueField.type.typeName)
+        assertEquals("int", valueField.type.fullName.localName)
 
         val nextField = record.fields["next"]
         assertNotNull(nextField)
-        assertEquals("T*", nextField.type.typeName)
+        assertEquals("T*", nextField.type.fullName.localName)
     }
 
     @Test
@@ -80,7 +80,7 @@ class InferenceTest {
 
         val record = tu.byNameOrNull<RecordDeclaration>("T")
         assertNotNull(record)
-        assertEquals("T", record.name)
+        assertEquals("T", record.fullName.localName)
         assertEquals(true, record.isInferred)
         assertEquals("class", record.kind)
 
@@ -88,10 +88,10 @@ class InferenceTest {
 
         val valueField = record.fields["value"]
         assertNotNull(valueField)
-        assertEquals("int", valueField.type.typeName)
+        assertEquals("int", valueField.type.fullName.localName)
 
         val nextField = record.fields["next"]
         assertNotNull(nextField)
-        assertEquals("T*", nextField.type.typeName)
+        assertEquals("T*", nextField.type.fullName.localName)
     }
 }

@@ -54,22 +54,28 @@ class CXXResolveTest {
 
         val aFoo = main.bodyOrNull<MemberCallExpression>(0)
         assertNotNull(aFoo)
-        assertEquals("foo", aFoo.name)
-        assertEquals("a", aFoo.base?.name)
+        assertEquals("foo", aFoo.fullName.localName)
+        assertEquals("a", aFoo.base?.fullName?.localName)
         // a.foo should connect to A::foo
         assertEquals(
             "A",
-            (aFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration?.name
+            (aFoo.invokes.firstOrNull() as? MethodDeclaration)
+                ?.recordDeclaration
+                ?.fullName
+                ?.localName
         )
 
         val bFoo = main.bodyOrNull<MemberCallExpression>(1)
         assertNotNull(bFoo)
-        assertEquals("foo", bFoo.name)
-        assertEquals("b", bFoo.base?.name)
+        assertEquals("foo", bFoo.fullName.localName)
+        assertEquals("b", bFoo.base?.fullName?.localName)
         // b.foo should connect to B::foo
         assertEquals(
             "B",
-            (bFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration?.name
+            (bFoo.invokes.firstOrNull() as? MethodDeclaration)
+                ?.recordDeclaration
+                ?.fullName
+                ?.localName
         )
 
         val foo = main.bodyOrNull<CallExpression>(2)
@@ -78,7 +84,7 @@ class CXXResolveTest {
         // foo should be connected to an inferred non-method function
         val func = foo.invokes.firstOrNull()
         assertNotNull(func)
-        assertEquals("foo", func.name)
+        assertEquals("foo", func.fullName.localName)
         assertFalse(func is MethodDeclaration)
         assertTrue(func.isInferred)
 
@@ -89,12 +95,12 @@ class CXXResolveTest {
         // and C as well as C:foo should be inferred
         val method = cFoo.invokes.firstOrNull() as? MethodDeclaration
         assertNotNull(method)
-        assertEquals("foo", method.name)
+        assertEquals("foo", method.fullName.localName)
         assertTrue(method.isInferred)
 
         val c = method.recordDeclaration
         assertNotNull(c)
-        assertEquals("C", c.name)
+        assertEquals("C", c.fullName.localName)
         assertTrue(c.isInferred)
     }
 

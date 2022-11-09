@@ -44,20 +44,24 @@ internal class BotanExampleTest : BaseTest() {
         val declarations = declaration.declarations
         assertEquals(5, declarations.size)
 
-        val doCrypt = declarations.stream().filter { it.name == "do_crypt" }.findFirst().get()
+        val doCrypt =
+            declarations.stream().filter { it.fullName.localName == "do_crypt" }.findFirst().get()
         assertTrue(doCrypt is FunctionDeclaration)
-        assertEquals("do_crypt", doCrypt.name)
+        assertEquals("do_crypt", doCrypt.fullName.localName)
 
-        val encrypt = declarations.stream().filter { it.name == "encrypt" }.findFirst().get()
+        val encrypt =
+            declarations.stream().filter { it.fullName.localName == "encrypt" }.findFirst().get()
         assertTrue(encrypt is FunctionDeclaration)
-        assertEquals("encrypt", encrypt.name)
+        assertEquals("encrypt", encrypt.fullName.localName)
 
-        val decrypt = declarations.stream().filter { it.name == "decrypt" }.findFirst().get()
+        val decrypt =
+            declarations.stream().filter { it.fullName.localName == "decrypt" }.findFirst().get()
         assertTrue(decrypt is FunctionDeclaration)
-        assertEquals("decrypt", decrypt.name)
+        assertEquals("decrypt", decrypt.fullName.localName)
 
-        val main = declarations.stream().filter { it.name == "main" }.findFirst().get()
+        val main =
+            declarations.stream().filter { it.fullName.localName == "main" }.findFirst().get()
         assertTrue(main is FunctionDeclaration)
-        assertEquals("main", main.name)
+        assertEquals("main", main.fullName.localName)
     }
 }

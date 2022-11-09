@@ -815,10 +815,10 @@ internal class TypeTests : BaseTest() {
         // Test java generics
         val map = findByUniqueName(variableDeclarations, "map")
         assertTrue(map.type is ObjectType)
-        assertEquals("C", map.type.name)
+        assertEquals("C", map.type.fullName.localName)
         assertEquals(2, (map.type as ObjectType).generics.size)
-        assertEquals("D", (map.type as ObjectType).generics[0].name)
-        assertEquals("E", (map.type as ObjectType).generics[1].name)
+        assertEquals("D", (map.type as ObjectType).generics[0].fullName.localName)
+        assertEquals("E", (map.type as ObjectType).generics[1].fullName.localName)
 
         topLevel = Path.of("src", "test", "resources", "types")
         result = analyze("cpp", topLevel, true)

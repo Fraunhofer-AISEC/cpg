@@ -386,7 +386,7 @@ internal class EOGTest : BaseTest() {
         val third = findByUniqueName(calls, "third")
         assertNotNull(third)
 
-        target = functions[{ it.name == "third" && it.parameters.size == 2 }, UNIQUE]
+        target = functions[{ it.fullName.localName == "third" && it.parameters.size == 2 }, UNIQUE]
         assertEquals(listOf(target), third.invokes)
 
         val fourth = findByUniqueName(calls, "fourth")
@@ -647,11 +647,11 @@ internal class EOGTest : BaseTest() {
         val a =
             result.refs[
                     { l: DeclaredReferenceExpression ->
-                        l.location?.region?.startLine == 8 && l.name == "a"
+                        l.location?.region?.startLine == 8 && l.fullName.localName == "a"
                     }
                 ]
         assertNotNull(a)
-        val b = result.refs[{ it.location?.region?.startLine == 7 && it.name == "b" }]
+        val b = result.refs[{ it.location?.region?.startLine == 7 && it.fullName.localName == "b" }]
         assertNotNull(b)
         var nextEOG: List<PropertyEdge<Node>> = firstIf.nextEOGEdges
         assertEquals(2, nextEOG.size)
@@ -671,9 +671,11 @@ internal class EOGTest : BaseTest() {
                 .allChildren<IfStatement>()
                 .filter { l: IfStatement -> l.location?.region?.startLine == 8 }[0]
         assertEquals(elseIf, firstIf.elseStatement)
-        val b2 = result.refs[{ it.location?.region?.startLine == 9 && it.name == "b" }]
+        val b2 =
+            result.refs[{ it.location?.region?.startLine == 9 && it.fullName.localName == "b" }]
         assertNotNull(b2)
-        val x = result.refs[{ it.location?.region?.startLine == 11 && it.name == "x" }]
+        val x =
+            result.refs[{ it.location?.region?.startLine == 11 && it.fullName.localName == "x" }]
         assertNotNull(x)
         nextEOG = elseIf.nextEOGEdges
         assertEquals(2, nextEOG.size)
