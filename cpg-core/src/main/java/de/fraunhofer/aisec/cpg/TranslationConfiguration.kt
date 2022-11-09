@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
 import java.nio.file.Path
 import java.util.*
+import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -385,6 +386,35 @@ private constructor(
             return this
         }
 
+        /**
+         * Loads and registers an additional [Language] based on a fully qualified class name (FQN).
+         */
+        @Throws(ConfigurationException::class)
+        fun registerLanguage(className: String): Builder {
+            val loadedClass: Class<*>
+            val languageClass: Class<Language<*>>
+
+            try {
+                loadedClass = Class.forName(className)
+            } catch (e: Exception) {
+                throw ConfigurationException(
+                    "Failed to load class from FQN '$className'. It seems to be unavailable in the class path."
+                )
+            }
+
+            try {
+                languageClass = loadedClass as Class<Language<*>>
+            } catch (e: Exception) {
+                throw ConfigurationException(
+                    "Failed cast supposed language class '$className'. It does not seem to be an implementation of Language<*>."
+                )
+            }
+
+            registerLanguage(languageClass.kotlin.createInstance())
+
+            return this
+        }
+
         /** Unregisters a registered [de.fraunhofer.aisec.cpg.frontends.Language]. */
         fun unregisterLanguage(language: Class<out Language<out LanguageFrontend>?>): Builder {
             languages.removeIf { obj: Language<out LanguageFrontend>? -> language.isInstance(obj) }
@@ -456,9 +486,25 @@ private constructor(
             registerLanguage(CLanguage())
             registerLanguage(CPPLanguage())
             registerLanguage(JavaLanguage())
-            // do not register experimental languages by default until we have a release strategy
+
             return this
         }
+
+        /**
+         * Safely registers an additional [Language] from a class name. If the [Language] given by
+         * the class name could not be loaded or instantiated, no [Language] is registered and no
+         * error is thrown. Please have a look at [registerLanguage] if an error should be thrown if
+         * the language could not be registered.
+         *
+         * @param className Fully qualified class name (FQN)
+         * @see [registerLanguage]
+         */
+        fun optionalLanguage(className: String) =
+            try {
+                registerLanguage(className)
+            } catch (e: ConfigurationException) {
+                this
+            }
 
         fun codeInNodes(b: Boolean): Builder {
             codeInNodes = b
