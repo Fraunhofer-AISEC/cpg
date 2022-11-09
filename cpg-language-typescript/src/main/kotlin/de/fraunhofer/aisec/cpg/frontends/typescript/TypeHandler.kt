@@ -25,14 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
-@ExperimentalTypeScript
 class TypeHandler(frontend: TypeScriptLanguageFrontend) :
     Handler<Type, TypeScriptNode, TypeScriptLanguageFrontend>(
         { UnknownType.getUnknownType(frontend.language) },
