@@ -24,7 +24,7 @@
  *
  */
 plugins {
-    application
+    id("cpg.application-conventions")
 }
 
 publishing {
@@ -43,6 +43,27 @@ application {
     mainClass.set("de.fraunhofer.aisec.cpg.console.CpgConsole")
 }
 
+val enableGoFrontend: Boolean by rootProject.extra
+val enablePythonFrontend: Boolean by rootProject.extra
+val enableLLVMFrontend: Boolean by rootProject.extra
+val enableTypeScriptFrontend: Boolean by rootProject.extra
+
+java {
+    registerFeature("llvmFrontend") {
+        usingSourceSet(sourceSets["main"])
+    }
+    registerFeature("pythonFrontend") {
+        usingSourceSet(sourceSets["main"])
+    }
+    registerFeature("goFrontend") {
+        usingSourceSet(sourceSets["main"])
+    }
+    registerFeature("typeScriptFrontend") {
+        usingSourceSet(sourceSets["main"])
+    }
+}
+
+
 tasks.withType<Test> {
     useJUnitPlatform {
         if (!project.hasProperty("integration")) {
@@ -51,30 +72,20 @@ tasks.withType<Test> {
     }
 }
 
-tasks.withType<JavaCompile> {
-    sourceCompatibility = "11"
-    targetCompatibility = "11"
-}
-
-val versions = mapOf(
-    "junit5" to "5.6.0"
-)
-
 dependencies {
     // CPG
-    api(project(":cpg-core"))
-    api(project(":cpg-analysis"))
-    api(project(":cpg-neo4j"))
+    api(projects.cpgAnalysis)
+    api(projects.cpgNeo4j)
 
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.19.0")
-    implementation("org.apache.logging.log4j:log4j-core:2.19.0")
+    implementation(libs.kotlin.script.runtime)
+    implementation(libs.kotlin.coroutines.core)
+    implementation(libs.jline)
+    implementation(libs.kotlin.ki.shell)
 
-    testImplementation(testFixtures(project(":cpg-core")))
+    // the optional language frontends
+    if (enableLLVMFrontend) "llvmFrontendImplementation"(project(":cpg-language-llvm"))
+    if (enablePythonFrontend) "pythonFrontendImplementation"(project(":cpg-language-python"))
+    if (enableGoFrontend) "goFrontendImplementation"(project(":cpg-language-go"))
+    if (enableTypeScriptFrontend) "typeScriptFrontendImplementation"(project(":cpg-language-typescript"))
 
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlin:kotlin-script-runtime")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    implementation("org.jline:jline:3.21.0")
-
-    implementation("org.jetbrains.kotlinx:ki-shell:0.5.2")
 }
