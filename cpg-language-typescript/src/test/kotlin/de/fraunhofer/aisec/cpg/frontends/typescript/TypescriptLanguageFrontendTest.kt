@@ -41,7 +41,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
-import org.junit.jupiter.api.Tag
 
 class TypeScriptLanguageFrontendTest {
 
