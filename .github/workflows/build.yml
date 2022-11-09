@@ -98,7 +98,7 @@ jobs:
         id: determine_version
       - name: Install JEP
         run: |
-          pip3 install jep==$(grep "black.ninia:jep" cpg-language-python/build.gradle.kts | cut -d ":" -f 3 | cut -d "\"" -f 1)
+          pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
           find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
       - name: Install pycodestyle
         run: |
