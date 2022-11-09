@@ -32,18 +32,25 @@ val enableGoFrontend by extra {
     val enableGoFrontend: String by project
     enableGoFrontend.toBoolean()
 }
+project.logger.lifecycle("Go frontend is ${if (enableGoFrontend) "disabled" else "enabled"}")
+
 val enablePythonFrontend by extra {
     val enablePythonFrontend: String by project
     enablePythonFrontend.toBoolean()
 }
+project.logger.lifecycle("Python frontend is ${if (enablePythonFrontend) "disabled" else "enabled"}")
+
 val enableLLVMFrontend by extra {
     val enableLLVMFrontend: String by project
     enableLLVMFrontend.toBoolean()
 }
+project.logger.lifecycle("LLVM frontend is ${if (enableLLVMFrontend) "disabled" else "enabled"}")
+
 val enableTypeScriptFrontend by extra {
     val enableTypeScriptFrontend: String by project
     enableTypeScriptFrontend.toBoolean()
 }
+project.logger.lifecycle("TypeScript frontend is ${if (enableTypeScriptFrontend) "disabled" else "enabled"}")
 
 tasks.dokkaHtmlMultiModule.configure {
     outputDirectory.set(buildDir.resolve("dokkaCustomMultiModuleOutput"))
