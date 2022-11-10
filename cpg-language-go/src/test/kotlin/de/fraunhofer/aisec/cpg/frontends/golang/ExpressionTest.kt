@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -36,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import java.nio.file.Path
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import org.junit.jupiter.api.Test
@@ -72,7 +72,7 @@ class ExpressionTest {
 
         val cast = s.initializer as? CastExpression
         assertNotNull(cast)
-        assertEquals("main.MyStruct", cast.castType.fullName.toString())
+        assertFullName("main.MyStruct", cast.castType)
         assertSame(f, (cast.expression as? DeclaredReferenceExpression)?.refersTo)
     }
 }

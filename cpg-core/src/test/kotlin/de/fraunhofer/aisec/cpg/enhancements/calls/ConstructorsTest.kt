@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.literals
@@ -299,9 +300,9 @@ internal class ConstructorsTest : BaseTest() {
         assertTrue(i1Constructor.arguments[0] is CastExpression)
 
         val i1ConstructorArgument = i1Constructor.arguments[0] as CastExpression
-        assertEquals("int", i1ConstructorArgument.castType.fullName.localName)
+        assertLocalName("int", i1ConstructorArgument.castType)
         assertEquals("1.0", i1ConstructorArgument.expression.code)
-        assertEquals("double", i1ConstructorArgument.expression.type.fullName.localName)
+        assertLocalName("double", i1ConstructorArgument.expression.type)
 
         val implicitConstructorWithDefault =
             findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
@@ -317,9 +318,9 @@ internal class ConstructorsTest : BaseTest() {
         assertTrue(h1Constructor.arguments[0] is CastExpression)
 
         val h1ConstructorArgument1 = h1Constructor.arguments[0] as CastExpression
-        assertEquals("int", h1ConstructorArgument1.castType.fullName.localName)
+        assertLocalName("int", h1ConstructorArgument1.castType)
         assertEquals("2.0", h1ConstructorArgument1.expression.code)
-        assertEquals("double", h1ConstructorArgument1.expression.type.fullName.localName)
+        assertLocalName("double", h1ConstructorArgument1.expression.type)
         assertTrue(implicitConstructorWithDefault.nextEOG.contains(literal10))
         for (node in implicitConstructorWithDefault.nextEOG) {
             if (node != literal10) {

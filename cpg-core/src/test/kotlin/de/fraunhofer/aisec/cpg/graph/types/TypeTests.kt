@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.disableTypeManagerCleanup
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -815,10 +816,10 @@ internal class TypeTests : BaseTest() {
         // Test java generics
         val map = findByUniqueName(variableDeclarations, "map")
         assertTrue(map.type is ObjectType)
-        assertEquals("C", map.type.fullName.localName)
+        assertLocalName("C", map.type)
         assertEquals(2, (map.type as ObjectType).generics.size)
-        assertEquals("D", (map.type as ObjectType).generics[0].fullName.localName)
-        assertEquals("E", (map.type as ObjectType).generics[1].fullName.localName)
+        assertLocalName("D", (map.type as ObjectType).generics[0])
+        assertLocalName("E", (map.type as ObjectType).generics[1])
 
         topLevel = Path.of("src", "test", "resources", "types")
         result = analyze("cpp", topLevel, true)

@@ -281,8 +281,7 @@ object TestUtils {
         assertNotNull(usingNode)
         if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
             // Assumtion here is that the target of the member portion of the expression and not the
-            // base
-            // is resolved
+            // base is resolved
             assertUsageOf(usingNode, usedMember)
         } else {
             assertTrue(usingNode is MemberExpression)
@@ -296,6 +295,12 @@ object TestUtils {
     }
 }
 
-fun assertName(fqn: String, node: Node, message: String? = null) {
+fun assertFullName(fqn: String, node: Node?, message: String? = null) {
+    assertNotNull(node)
     asserter.assertEquals(message, fqn, node.fullName.toString())
+}
+
+fun assertLocalName(localName: String, node: Node?, message: String? = null) {
+    assertNotNull(node)
+    asserter.assertEquals(message, localName, node.fullName.localName)
 }

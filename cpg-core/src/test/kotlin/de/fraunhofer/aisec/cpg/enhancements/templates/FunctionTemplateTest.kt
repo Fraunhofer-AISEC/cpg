@@ -197,7 +197,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, call.invokes.size)
         assertEquals(doubleFixedMultiply, call.invokes[0])
         // Check return value
-        assertEquals("double", call.type.fullName.localName)
+        assertLocalName("double", call.type)
     }
 
     @Test
@@ -287,11 +287,11 @@ internal class FunctionTemplateTest : BaseTest() {
         // Check template parameters
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)
-        assertEquals("double", call.templateParameters[0].fullName.localName)
+        assertLocalName("double", call.templateParameters[0])
         assertEquals(literal5, call.templateParameters[1])
 
         // Check return value
-        assertEquals("double", call.type.fullName.localName)
+        assertLocalName("double", call.type)
     }
 
     @Test
@@ -492,8 +492,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, f3.invokes.size)
         assertEquals(f, f3.invokes[0])
         assertEquals(2, f3.arguments.size)
-        assertEquals("int", f3.arguments[0].type.fullName.localName)
-        assertEquals("int", f3.arguments[1].type.fullName.localName)
+        assertLocalName("int", f3.arguments[0].type)
+        assertLocalName("int", f3.arguments[1].type)
         assertTrue(f3.arguments[1] is CastExpression)
         val castExpression = f3.arguments[1] as CastExpression
         assertEquals('b', (castExpression.expression as Literal<*>).value)
@@ -538,7 +538,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(methodDeclaration, callExpression.invokes[0])
         assertEquals(templateDeclaration, callExpression.templateInstantiation)
         assertEquals(2, callExpression.templateParameters.size)
-        assertEquals("int", callExpression.templateParameters[0].fullName.localName)
+        assertLocalName("int", callExpression.templateParameters[0])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
             callExpression.templateParametersEdges?.get(0)?.getProperty(Properties.INSTANTIATION)

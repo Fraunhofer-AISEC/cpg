@@ -26,12 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -136,14 +134,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
-        assertEquals("s", sDecl.fullName.localName)
+        assertLocalName("s", sDecl)
         assertEquals(createTypeFrom("java.lang.String"), sDecl.type)
 
         // should contain a single statement
         val sce = forEachStatement.statement as? MemberCallExpression
         assertNotNull(sce)
-        assertEquals("println", sce.fullName.localName)
-        assertEquals("java.io.PrintStream.println", sce.fullName.toString())
+        assertLocalName("println", sce)
+        assertFullName("java.io.PrintStream.println", sce)
     }
 
     @Test
@@ -270,16 +268,16 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val method = recordDeclaration.methods[0]
         assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
-        assertEquals("method", method.fullName.localName)
+        assertLocalName("method", method)
         assertEquals(createTypeFrom("java.lang.Integer"), method.returnTypes.firstOrNull())
 
         val functionType = method.type as? FunctionType
         assertNotNull(functionType)
-        assertEquals("method()java.lang.Integer", functionType.fullName.localName)
+        assertLocalName("method()java.lang.Integer", functionType)
 
         val constructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration, constructor.recordDeclaration)
-        assertEquals("SimpleClass", constructor.fullName.localName)
+        assertLocalName("SimpleClass", constructor)
     }
 
     @Test
@@ -427,12 +425,12 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(statements)
 
         val l = (statements[1] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
-        assertEquals("l", l?.fullName?.localName)
+        assertLocalName("l", l)
 
         val length = l?.initializer as? MemberExpression
         assertNotNull(length)
-        assertEquals("length", length.fullName.localName)
-        assertEquals("int", length.type?.fullName?.localName)
+        assertLocalName("length", length)
+        assertLocalName("int", length.type)
     }
 
     @Test
@@ -493,10 +491,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(1, annotations.size)
 
         val forClass = annotations[0]
-        assertEquals("AnnotationForClass", forClass.fullName.localName)
+        assertLocalName("AnnotationForClass", forClass)
 
         var value = forClass.members[0]
-        assertEquals("value", value.fullName.localName)
+        assertLocalName("value", value)
         assertEquals(2, (value.value as? Literal<*>)?.value)
 
         var field = record.fields["field"]
@@ -505,7 +503,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(1, annotations.size)
 
         var forField = annotations[0]
-        assertEquals("AnnotatedField", forField.fullName.localName)
+        assertLocalName("AnnotatedField", forField)
 
         field = record.fields["anotherField"]
         assertNotNull(field)
@@ -514,10 +512,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(1, annotations.size)
 
         forField = annotations[0]
-        assertEquals("AnnotatedField", forField.fullName.localName)
+        assertLocalName("AnnotatedField", forField)
 
         value = forField.members[0]
-        assertEquals(JavaLanguageFrontend.ANNOTATION_MEMBER_VALUE, value.fullName.localName)
+        assertLocalName(JavaLanguageFrontend.ANNOTATION_MEMBER_VALUE, value)
         assertEquals("myString", (value.value as? Literal<*>)?.value)
     }
 
@@ -549,7 +547,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertTrue(initializer is MemberCallExpression)
 
         val call = initializer as? MemberCallExpression
-        assertEquals("get", call?.fullName?.localName)
+        assertLocalName("get", call)
         val staticCall =
             nodes
                 .stream()
@@ -558,7 +556,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .findFirst()
                 .orElse(null)
         assertNotNull(staticCall)
-        assertEquals("doSomethingStatic", staticCall.fullName.localName)
+        assertLocalName("doSomethingStatic", staticCall)
     }
 
     @Test
@@ -581,7 +579,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val receiver =
             (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration?
         assertNotNull(receiver)
-        assertEquals("this", receiver.fullName.localName)
+        assertLocalName("this", receiver)
         assertEquals(createTypeFrom("my.Animal"), receiver.type)
     }
 

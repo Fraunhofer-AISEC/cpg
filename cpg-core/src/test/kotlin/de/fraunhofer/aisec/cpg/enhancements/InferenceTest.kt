@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.enhancements
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.get
@@ -51,7 +52,7 @@ class InferenceTest {
 
         val record = tu.byNameOrNull<RecordDeclaration>("T")
         assertNotNull(record)
-        assertEquals("T", record.fullName.localName)
+        assertLocalName("T", record)
         assertEquals(true, record.isInferred)
         assertEquals("struct", record.kind)
 
@@ -59,11 +60,11 @@ class InferenceTest {
 
         val valueField = record.fields["value"]
         assertNotNull(valueField)
-        assertEquals("int", valueField.type.fullName.localName)
+        assertLocalName("int", valueField.type)
 
         val nextField = record.fields["next"]
         assertNotNull(nextField)
-        assertEquals("T*", nextField.type.fullName.localName)
+        assertLocalName("T*", nextField.type)
     }
 
     @Test
@@ -80,7 +81,7 @@ class InferenceTest {
 
         val record = tu.byNameOrNull<RecordDeclaration>("T")
         assertNotNull(record)
-        assertEquals("T", record.fullName.localName)
+        assertLocalName("T", record)
         assertEquals(true, record.isInferred)
         assertEquals("class", record.kind)
 
@@ -88,10 +89,10 @@ class InferenceTest {
 
         val valueField = record.fields["value"]
         assertNotNull(valueField)
-        assertEquals("int", valueField.type.fullName.localName)
+        assertLocalName("int", valueField.type)
 
         val nextField = record.fields["next"]
         assertNotNull(nextField)
-        assertEquals("T*", nextField.type.fullName.localName)
+        assertLocalName("T*", nextField.type)
     }
 }

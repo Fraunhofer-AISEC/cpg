@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import java.io.File
 import kotlin.test.Test
@@ -44,24 +45,20 @@ internal class BotanExampleTest : BaseTest() {
         val declarations = declaration.declarations
         assertEquals(5, declarations.size)
 
-        val doCrypt =
-            declarations.stream().filter { it.fullName.localName == "do_crypt" }.findFirst().get()
+        val doCrypt = declarations.firstOrNull { it.fullName.localName == "do_crypt" }
         assertTrue(doCrypt is FunctionDeclaration)
-        assertEquals("do_crypt", doCrypt.fullName.localName)
+        assertLocalName("do_crypt", doCrypt)
 
-        val encrypt =
-            declarations.stream().filter { it.fullName.localName == "encrypt" }.findFirst().get()
+        val encrypt = declarations.firstOrNull { it.fullName.localName == "encrypt" }
         assertTrue(encrypt is FunctionDeclaration)
-        assertEquals("encrypt", encrypt.fullName.localName)
+        assertLocalName("encrypt", encrypt)
 
-        val decrypt =
-            declarations.stream().filter { it.fullName.localName == "decrypt" }.findFirst().get()
+        val decrypt = declarations.firstOrNull { it.fullName.localName == "decrypt" }
         assertTrue(decrypt is FunctionDeclaration)
-        assertEquals("decrypt", decrypt.fullName.localName)
+        assertLocalName("decrypt", decrypt)
 
-        val main =
-            declarations.stream().filter { it.fullName.localName == "main" }.findFirst().get()
+        val main = declarations.firstOrNull { it.fullName.localName == "main" }
         assertTrue(main is FunctionDeclaration)
-        assertEquals("main", main.fullName.localName)
+        assertLocalName("main", main)
     }
 }

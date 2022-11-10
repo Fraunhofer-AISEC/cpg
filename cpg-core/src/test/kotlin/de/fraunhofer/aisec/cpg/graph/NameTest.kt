@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.assertFullName
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -69,17 +71,17 @@ internal class NameTest {
             this.scopeManager.resetToGlobal(tu)
 
             val func = newFunctionDeclaration("main")
-            assertEquals("main", func.fullName.localName)
+            assertLocalName("main", func)
 
             val myClass = newRecordDeclaration("MyClass", "class")
-            assertEquals("MyClass", myClass.fullName.localName)
+            assertLocalName("MyClass", myClass)
 
             this.scopeManager.enterScope(myClass)
 
             val method =
                 newMethodDeclaration("doSomething", isStatic = false, recordDeclaration = myClass)
-            assertEquals("doSomething", method.fullName.localName)
-            assertEquals("MyClass::doSomething", method.fullName.toString())
+            assertLocalName("doSomething", method)
+            assertFullName("MyClass::doSomething", method)
 
             this.scopeManager.leaveScope(myClass)
         }
