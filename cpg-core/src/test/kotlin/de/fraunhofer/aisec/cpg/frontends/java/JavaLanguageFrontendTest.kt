@@ -137,7 +137,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
         assertEquals("s", sDecl.name)
-        assertEquals(TypeParser.createFrom("java.lang.String", true), sDecl.type)
+        assertEquals(createTypeFrom("java.lang.String"), sDecl.type)
 
         // should contain a single statement
         val sce = forEachStatement.statement as? MemberCallExpression
@@ -165,19 +165,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(3, catchClauses.size)
         // first exception type was? resolved, so we can expect a FQN
         assertEquals(
-            TypeParser.createFrom("java.lang.NumberFormatException", true),
+            createTypeFrom("java.lang.NumberFormatException"),
             catchClauses[0].parameter?.type
         )
         // second one could not be resolved so we do not have an FQN
-        assertEquals(
-            TypeParser.createFrom("NotResolvableTypeException", true),
-            catchClauses[1].parameter?.type
-        )
+        assertEquals(createTypeFrom("NotResolvableTypeException"), catchClauses[1].parameter?.type)
         // third type should have been resolved through the import
-        assertEquals(
-            TypeParser.createFrom("some.ImportedException", true),
-            (catchClauses[2].parameter)?.type
-        )
+        assertEquals(createTypeFrom("some.ImportedException"), (catchClauses[2].parameter)?.type)
 
         // and 1 finally
         val finallyBlock = tryStatement.finallyBlock
@@ -277,10 +271,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
         assertEquals("method", method.name)
-        assertEquals(
-            TypeParser.createFrom("java.lang.Integer", true),
-            method.returnTypes.firstOrNull()
-        )
+        assertEquals(createTypeFrom("java.lang.Integer"), method.returnTypes.firstOrNull())
 
         val functionType = method.type as? FunctionType
         assertNotNull(functionType)
@@ -383,7 +374,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(a)
 
         // type should be Integer[]
-        assertEquals(TypeParser.createFrom("int[]", true), a.type)
+        assertEquals(createTypeFrom("int[]"), a.type)
 
         // it has an array creation initializer
         val ace = a.initializer as? ArrayCreationExpression
@@ -580,14 +571,17 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration?
         assertNotNull(receiver)
         assertEquals("this", receiver.name)
-        assertEquals(TypeParser.createFrom("my.Animal", false), receiver.type)
+        assertEquals(createTypeFrom("my.Animal"), receiver.type)
     }
 
     @Test
     fun testOverrideHandler() {
         /** A simple extension of the [JavaLanguageFrontend] to demonstrate handler overriding. */
-        class MyJavaLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager) :
-            JavaLanguageFrontend(config, scopeManager) {
+        class MyJavaLanguageFrontend(
+            language: JavaLanguage,
+            config: TranslationConfiguration,
+            scopeManager: ScopeManager
+        ) : JavaLanguageFrontend(language, config, scopeManager) {
             init {
                 this.declarationHandler =
                     object : DeclarationHandler(this) {
@@ -605,14 +599,24 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         }
 
+        class MyJavaLanguage : JavaLanguage() {
+            override val fileExtensions = listOf("java")
+            override val namespaceDelimiter = "."
+            override val superclassKeyword = "super"
+            override val frontend = MyJavaLanguageFrontend::class
+            override fun newFrontend(
+                config: TranslationConfiguration,
+                scopeManager: ScopeManager
+            ): MyJavaLanguageFrontend {
+                return MyJavaLanguageFrontend(this, config, scopeManager)
+            }
+        }
+
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.unregisterLanguage(JavaLanguageFrontend::class.java)
-                it.registerLanguage(
-                    MyJavaLanguageFrontend::class.java,
-                    JavaLanguageFrontend.JAVA_EXTENSIONS
-                )
+                it.unregisterLanguage(JavaLanguage::class.java)
+                it.registerLanguage(MyJavaLanguage())
             }
 
         assertNotNull(tu)
@@ -673,4 +677,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             assertNotNull(node)
         }
     }
+
+    private fun createTypeFrom(typename: String) = TypeParser.createFrom(typename, JavaLanguage())
 }

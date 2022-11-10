@@ -167,11 +167,11 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
     this.type =
         TypeManager.getInstance()
-            .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
+            .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type));
 
     List<Type> newSubtypes = new ArrayList<>();
     for (var s : subTypes) {
-      if (TypeManager.getInstance().isSupertypeOf(this.type, s)) {
+      if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
         newSubtypes.add(TypeManager.getInstance().registerType(s));
       }
     }

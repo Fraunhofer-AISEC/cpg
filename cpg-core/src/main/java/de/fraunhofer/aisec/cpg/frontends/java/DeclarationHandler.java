@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.*;
+import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.*;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.*;
 
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.NodeList;
@@ -43,7 +44,6 @@ import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ProblemNode;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -107,42 +107,43 @@ public class DeclarationHandler
           com.github.javaparser.ast.body.ConstructorDeclaration constructorDecl) {
     ResolvedConstructorDeclaration resolvedConstructor = constructorDecl.resolve();
 
-    var currentRecordDecl = lang.getScopeManager().getCurrentRecord();
+    var currentRecordDecl = frontend.getScopeManager().getCurrentRecord();
     de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration declaration =
         newConstructorDeclaration(
-            resolvedConstructor.getName(), constructorDecl.toString(), currentRecordDecl);
-    lang.getScopeManager().addDeclaration(declaration);
+            this, resolvedConstructor.getName(), constructorDecl.toString(), currentRecordDecl);
+    frontend.getScopeManager().addDeclaration(declaration);
 
-    lang.getScopeManager().enterScope(declaration);
+    frontend.getScopeManager().enterScope(declaration);
 
     createMethodReceiver(currentRecordDecl, declaration);
 
     declaration.addThrowTypes(
         constructorDecl.getThrownExceptions().stream()
-            .map(type -> TypeParser.createFrom(type.asString(), true))
+            .map(type -> parseType(this, type.asString()))
             .collect(Collectors.toList()));
 
     for (Parameter parameter : constructorDecl.getParameters()) {
       ParamVariableDeclaration param =
-          newMethodParameterIn(
+          newParamVariableDeclaration(
+              this,
               parameter.getNameAsString(),
-              this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
-              parameter.isVarArgs(),
-              parameter.toString());
+              this.frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
+              parameter.isVarArgs());
 
       declaration.addParameter(param);
 
-      lang.setCodeAndRegion(param, parameter);
-      lang.getScopeManager().addDeclaration(param);
+      frontend.setCodeAndLocation(param, parameter);
+      frontend.getScopeManager().addDeclaration(param);
     }
 
     Type type =
-        TypeParser.createFrom(
-            lang.getScopeManager()
+        parseType(
+            this,
+            frontend
+                .getScopeManager()
                 .firstScopeOrNull(RecordScope.class::isInstance)
                 .getAstNode()
-                .getName(),
-            true);
+                .getName());
     declaration.setType(type);
 
     // check, if constructor has body (i.e. its not abstract or something)
@@ -150,11 +151,11 @@ public class DeclarationHandler
 
     addImplicitReturn(body);
 
-    declaration.setBody(this.lang.getStatementHandler().handle(body));
+    declaration.setBody(this.frontend.getStatementHandler().handle(body));
 
-    lang.processAnnotations(declaration, constructorDecl);
+    frontend.processAnnotations(declaration, constructorDecl);
 
-    lang.getScopeManager().leaveScope(declaration);
+    frontend.getScopeManager().leaveScope(declaration);
     return declaration;
   }
 
@@ -162,22 +163,23 @@ public class DeclarationHandler
       com.github.javaparser.ast.body.MethodDeclaration methodDecl) {
     ResolvedMethodDeclaration resolvedMethod = methodDecl.resolve();
 
-    var currentRecordDecl = lang.getScopeManager().getCurrentRecord();
+    var currentRecordDecl = frontend.getScopeManager().getCurrentRecord();
 
     de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
         newMethodDeclaration(
+            this,
             resolvedMethod.getName(),
             methodDecl.toString(),
             methodDecl.isStatic(),
             currentRecordDecl);
 
-    lang.getScopeManager().enterScope(functionDeclaration);
+    frontend.getScopeManager().enterScope(functionDeclaration);
 
     createMethodReceiver(currentRecordDecl, functionDeclaration);
 
     functionDeclaration.addThrowTypes(
         methodDecl.getThrownExceptions().stream()
-            .map(type -> TypeParser.createFrom(type.asString(), true))
+            .map(type -> parseType(this, type.asString()))
             .collect(Collectors.toList()));
 
     for (Parameter parameter : methodDecl.getParameters()) {
@@ -186,25 +188,23 @@ public class DeclarationHandler
               .getTypeParameter(
                   functionDeclaration.getRecordDeclaration(), parameter.getType().toString());
       if (resolvedType == null) {
-        resolvedType = this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve());
+        resolvedType = this.frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve());
       }
 
       ParamVariableDeclaration param =
-          newMethodParameterIn(
-              parameter.getNameAsString(),
-              resolvedType,
-              parameter.isVarArgs(),
-              parameter.toString());
+          newParamVariableDeclaration(
+              this, parameter.getNameAsString(), resolvedType, parameter.isVarArgs());
 
       functionDeclaration.addParameter(param);
-      lang.setCodeAndRegion(param, parameter);
+      frontend.setCodeAndLocation(param, parameter);
 
-      lang.processAnnotations(param, parameter);
+      frontend.processAnnotations(param, parameter);
 
-      lang.getScopeManager().addDeclaration(param);
+      frontend.getScopeManager().addDeclaration(param);
     }
 
-    var returnTypes = List.of(this.lang.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod));
+    var returnTypes =
+        List.of(this.frontend.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod));
     functionDeclaration.setReturnTypes(returnTypes);
 
     var type = FunctionType.computeType(functionDeclaration);
@@ -214,7 +214,7 @@ public class DeclarationHandler
     Optional<BlockStmt> o = methodDecl.getBody();
 
     if (o.isEmpty()) {
-      lang.getScopeManager().leaveScope(functionDeclaration);
+      frontend.getScopeManager().leaveScope(functionDeclaration);
       return functionDeclaration;
     }
 
@@ -222,11 +222,11 @@ public class DeclarationHandler
 
     addImplicitReturn(body);
 
-    functionDeclaration.setBody(this.lang.getStatementHandler().handle(body));
+    functionDeclaration.setBody(this.frontend.getStatementHandler().handle(body));
 
-    lang.processAnnotations(functionDeclaration, methodDecl);
+    frontend.processAnnotations(functionDeclaration, methodDecl);
 
-    lang.getScopeManager().leaveScope(functionDeclaration);
+    frontend.getScopeManager().leaveScope(functionDeclaration);
     return functionDeclaration;
   }
 
@@ -235,16 +235,17 @@ public class DeclarationHandler
     // create the receiver
     var receiver =
         newVariableDeclaration(
+            this,
             "this",
             recordDecl != null
-                ? TypeParser.createFrom(recordDecl.getName(), false)
-                : UnknownType.getUnknownType(),
+                ? parseType(this, recordDecl.getName())
+                : UnknownType.getUnknownType(getLanguage()),
             "this",
             false);
 
     functionDeclaration.setReceiver(receiver);
 
-    lang.getScopeManager().addDeclaration(receiver);
+    frontend.getScopeManager().addDeclaration(receiver);
   }
 
   public RecordDeclaration handleClassOrInterfaceDeclaration(
@@ -260,25 +261,25 @@ public class DeclarationHandler
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
-        newRecordDeclaration(fqn, "class", null, lang, classInterDecl);
+        newRecordDeclaration(this, fqn, "class", null, classInterDecl);
     recordDeclaration.setSuperClasses(
         classInterDecl.getExtendedTypes().stream()
-            .map(this.lang::getTypeAsGoodAsPossible)
+            .map(this.frontend::getTypeAsGoodAsPossible)
             .collect(Collectors.toList()));
     recordDeclaration.setImplementedInterfaces(
         classInterDecl.getImplementedTypes().stream()
-            .map(this.lang::getTypeAsGoodAsPossible)
+            .map(this.frontend::getTypeAsGoodAsPossible)
             .collect(Collectors.toList()));
 
     TypeManager.getInstance()
         .addTypeParameter(
             recordDeclaration,
             classInterDecl.getTypeParameters().stream()
-                .map(t -> new ParameterizedType(t.getNameAsString()))
+                .map(t -> new ParameterizedType(t.getNameAsString(), getLanguage()))
                 .collect(Collectors.toList()));
 
     Map<Boolean, List<String>> partitioned =
-        this.lang.getContext().getImports().stream()
+        this.frontend.getContext().getImports().stream()
             .collect(
                 Collectors.partitioningBy(
                     ImportDeclaration::isStatic,
@@ -295,7 +296,7 @@ public class DeclarationHandler
     recordDeclaration.setStaticImportStatements(partitioned.get(true));
     recordDeclaration.setImportStatements(partitioned.get(false));
 
-    lang.getScopeManager().enterScope(recordDeclaration);
+    frontend.getScopeManager().enterScope(recordDeclaration);
 
     // TODO: 'this' identifier for multiple instances?
     for (BodyDeclaration<?> decl : classInterDecl.getMembers()) {
@@ -314,7 +315,7 @@ public class DeclarationHandler
       } else if (decl instanceof com.github.javaparser.ast.body.InitializerDeclaration) {
         InitializerDeclaration id = (InitializerDeclaration) decl;
         CompoundStatement initializerBlock =
-            lang.getStatementHandler().handleBlockStatement(id.getBody());
+            frontend.getStatementHandler().handleBlockStatement(id.getBody());
         initializerBlock.setStaticBlock(id.isStatic());
         recordDeclaration.addStatement(initializerBlock);
       } else {
@@ -329,35 +330,36 @@ public class DeclarationHandler
     if (recordDeclaration.getConstructors().isEmpty()) {
       de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
           newConstructorDeclaration(
-              recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
+              this, recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
       recordDeclaration.addConstructor(constructorDeclaration);
-      lang.getScopeManager().addDeclaration(constructorDeclaration);
+      frontend.getScopeManager().addDeclaration(constructorDeclaration);
     }
 
-    lang.processAnnotations(recordDeclaration, classInterDecl);
+    frontend.processAnnotations(recordDeclaration, classInterDecl);
 
-    lang.getScopeManager().leaveScope(recordDeclaration);
+    frontend.getScopeManager().leaveScope(recordDeclaration);
 
     // We need special handling if this is a so called "inner class". In this case we need to store
     // a "this" reference to the outer class, so methods can use a "qualified this"
     // (OuterClass.this.someFunction()). This is the same as the java compiler does. The reference
     // is stored as an implicit field.
-    if (lang.getScopeManager().getCurrentScope() instanceof RecordScope) {
-      var scope = (RecordScope) lang.getScopeManager().getCurrentScope();
+    if (frontend.getScopeManager().getCurrentScope() instanceof RecordScope) {
+      var scope = (RecordScope) frontend.getScopeManager().getCurrentScope();
 
       var field =
-          NodeBuilder.newFieldDeclaration(
+          newFieldDeclaration(
+              this,
               scope.getSimpleName() + ".this",
-              TypeParser.createFrom(scope.getScopedName(), false),
+              parseType(this, scope.getScopedName()),
               null,
               null,
               null,
               false);
       field.setImplicit(true);
 
-      lang.getScopeManager().enterScope(recordDeclaration);
-      lang.getScopeManager().addDeclaration(field);
-      lang.getScopeManager().leaveScope(recordDeclaration);
+      frontend.getScopeManager().enterScope(recordDeclaration);
+      frontend.getScopeManager().addDeclaration(field);
+      frontend.getScopeManager().leaveScope(recordDeclaration);
     }
 
     return recordDeclaration;
@@ -375,35 +377,38 @@ public class DeclarationHandler
 
     String joinedModifiers = String.join(" ", modifiers) + " ";
 
-    PhysicalLocation location = this.lang.getLocationFromRawNode(fieldDecl);
+    PhysicalLocation location = this.frontend.getLocationFromRawNode(fieldDecl);
 
     Expression initializer =
         (Expression)
-            variable.getInitializer().map(this.lang.getExpressionHandler()::handle).orElse(null);
+            variable
+                .getInitializer()
+                .map(this.frontend.getExpressionHandler()::handle)
+                .orElse(null);
     Type type;
     try {
       // Resolve type first with ParameterizedType
       type =
           TypeManager.getInstance()
               .getTypeParameter(
-                  this.lang.getScopeManager().getCurrentRecord(),
+                  this.frontend.getScopeManager().getCurrentRecord(),
                   variable.resolve().getType().describe());
       if (type == null) {
-        type =
-            TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe(), true);
+        type = parseType(this, joinedModifiers + variable.resolve().getType().describe());
       }
     } catch (UnsolvedSymbolException | UnsupportedOperationException e) {
-      String t = this.lang.recoverTypeFromUnsolvedException(e);
+      String t = this.frontend.recoverTypeFromUnsolvedException(e);
       if (t == null) {
         log.warn("Could not resolve type for {}", variable);
-        type = TypeParser.createFrom(joinedModifiers + variable.getType().asString(), true);
+        type = parseType(this, joinedModifiers + variable.getType().asString());
       } else {
-        type = TypeParser.createFrom(joinedModifiers + t, true);
+        type = parseType(this, joinedModifiers + t);
         type.setTypeOrigin(Type.Origin.GUESSED);
       }
     }
     de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration fieldDeclaration =
         newFieldDeclaration(
+            this,
             variable.getName().asString(),
             type,
             modifiers,
@@ -411,9 +416,9 @@ public class DeclarationHandler
             location,
             initializer,
             false);
-    lang.getScopeManager().addDeclaration(fieldDeclaration);
+    frontend.getScopeManager().addDeclaration(fieldDeclaration);
 
-    this.lang.processAnnotations(fieldDeclaration, fieldDecl);
+    this.frontend.processAnnotations(fieldDeclaration, fieldDecl);
 
     return fieldDeclaration;
   }
@@ -421,21 +426,21 @@ public class DeclarationHandler
   public de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration handleEnumDeclaration(
       com.github.javaparser.ast.body.EnumDeclaration enumDecl) {
     String name = getAbsoluteName(enumDecl.getNameAsString());
-    PhysicalLocation location = this.lang.getLocationFromRawNode(enumDecl);
+    PhysicalLocation location = this.frontend.getLocationFromRawNode(enumDecl);
 
     de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration enumDeclaration =
-        newEnumDeclaration(name, enumDecl.toString(), location);
+        newEnumDeclaration(this, name, enumDecl.toString(), location);
     List<de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration> entries =
         enumDecl.getEntries().stream()
             .map(
                 e -> (de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration) handle(e))
             .collect(Collectors.toList());
-    entries.forEach(e -> e.setType(TypeParser.createFrom(enumDeclaration.getName(), true)));
+    entries.forEach(e -> e.setType(parseType(this, enumDeclaration.getName())));
     enumDeclaration.setEntries(entries);
 
     List<Type> superTypes =
         enumDecl.getImplementedTypes().stream()
-            .map(this.lang::getTypeAsGoodAsPossible)
+            .map(this.frontend::getTypeAsGoodAsPossible)
             .collect(Collectors.toList());
     enumDeclaration.setSuperTypes(superTypes);
 
@@ -448,9 +453,10 @@ public class DeclarationHandler
       handleEnumConstantDeclaration(
           com.github.javaparser.ast.body.EnumConstantDeclaration enumConstDecl) {
     return newEnumConstantDeclaration(
+        this,
         enumConstDecl.getNameAsString(),
         enumConstDecl.toString(),
-        this.lang.getLocationFromRawNode(enumConstDecl));
+        this.frontend.getLocationFromRawNode(enumConstDecl));
   }
 
   public Declaration /* TODO refine return type*/ handleAnnotationDeclaration(
@@ -466,8 +472,8 @@ public class DeclarationHandler
   }
 
   private String getAbsoluteName(String name) {
-    String prefix = lang.getScopeManager().getCurrentNamePrefix();
-    name = (prefix.length() > 0 ? prefix + lang.getNamespaceDelimiter() : "") + name;
+    String prefix = frontend.getScopeManager().getCurrentNamePrefix();
+    name = (prefix.length() > 0 ? prefix + getLanguage().getNamespaceDelimiter() : "") + name;
     return name;
   }
 }

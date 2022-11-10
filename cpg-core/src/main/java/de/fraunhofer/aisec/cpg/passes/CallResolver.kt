@@ -26,21 +26,22 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
+import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
 import de.fraunhofer.aisec.cpg.frontends.HasTemplates
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.duplicateLiteral
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.duplicateTypeExpression
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
+import de.fraunhofer.aisec.cpg.graph.duplicate
+import de.fraunhofer.aisec.cpg.graph.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
-import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
+import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
+import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
@@ -77,13 +78,8 @@ open class CallResolver : SymbolResolverPass() {
     }
 
     override fun accept(translationResult: TranslationResult) {
-        if (lang == null) {
-            log.error("No language frontend specified. Can't resolve anything.")
-            return
-        }
-
-        scopeManager = lang!!.scopeManager
-        config = lang!!.config
+        scopeManager = translationResult.scopeManager
+        config = translationResult.config
 
         walker = ScopedWalker(scopeManager)
         walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }
@@ -110,7 +106,8 @@ open class CallResolver : SymbolResolverPass() {
 
     private fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node) {
         if (currentNode is MethodDeclaration && currentClass != null) {
-            containingType[currentNode] = TypeParser.createFrom(currentClass.name, true)
+            containingType[currentNode] =
+                TypeParser.createFrom(currentClass.name, currentClass.language)
         }
     }
 
@@ -121,7 +118,7 @@ open class CallResolver : SymbolResolverPass() {
             if (typeString in recordMap) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
-                    val initializer = newConstructExpression("()")
+                    val initializer = node.newConstructExpression("()")
                     initializer.isImplicit = true
                     node.initializer = initializer
                     node.templateParameters?.let {
@@ -133,7 +130,7 @@ open class CallResolver : SymbolResolverPass() {
                     // This should actually be a construct expression, not a call!
                     val arguments = currInitializer.arguments
                     val signature = arguments.map(Node::code).joinToString(", ")
-                    val initializer = newConstructExpression("($signature)")
+                    val initializer = node.newConstructExpression("($signature)")
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
                     initializer.isImplicit = true
                     node.initializer = initializer
@@ -163,17 +160,15 @@ open class CallResolver : SymbolResolverPass() {
                 // resolve this call's signature, we need to make sure any call expression arguments
                 // are fully resolved
                 resolveArguments(node)
-                handleCallExpression(scopeManager!!.currentRecord, node)
+                handleCallExpression(scopeManager.currentRecord, node)
             }
         }
     }
 
     private fun handleCallExpression(curClass: RecordDeclaration?, call: CallExpression) {
         if (
-            call.language is JavaLanguageFrontend &&
-                (call.base as? DeclaredReferenceExpression)
-                    ?.name
-                    ?.matches(Regex("(?<class>.+\\.)?super")) == true
+            call.base is DeclaredReferenceExpression &&
+                isSuperclassReference(call.base as DeclaredReferenceExpression)
         ) {
             handleSuperCall(curClass!!, call)
             return
@@ -188,7 +183,13 @@ open class CallResolver : SymbolResolverPass() {
             return
         }
         if (call.instantiatesTemplate() && call.language is HasTemplates) {
-            handleTemplateFunctionCalls(curClass, call, true)
+            (call.language as HasTemplates).handleTemplateFunctionCalls(
+                curClass,
+                call,
+                true,
+                scopeManager,
+                currentTU
+            )
             return
         }
 
@@ -229,25 +230,20 @@ open class CallResolver : SymbolResolverPass() {
             // Handle function (not method) calls
             // C++ allows function overloading. Make sure we have at least the same number of
             // arguments
-            if (call.language is CXXLanguageFrontend) {
+            if (call.language is HasComplexCallResolution) {
                 // Handle CXX normal call resolution externally, otherwise it leads to increased
                 // complexity
-                handleNormalCallCXX(call)
+                (call.language as HasComplexCallResolution).refineNormalCallResolution(
+                    call,
+                    scopeManager,
+                    currentTU
+                )
             } else {
-                val invocationCandidates = scopeManager!!.resolveFunction(call).toMutableList()
+                val invocationCandidates = scopeManager.resolveFunction(call).toMutableList()
 
                 if (invocationCandidates.isEmpty()) {
                     // If we have no candidates, we create an inferred FunctionDeclaration
-                    invocationCandidates.add(
-                        createInferredFunctionDeclaration(
-                            null,
-                            call.name,
-                            call.code,
-                            false,
-                            call.signature,
-                            call.type // TODO: Is the call's type the return type?
-                        )
-                    )
+                    invocationCandidates.add(currentTU.inferFunction(call))
                 }
 
                 call.invokes = invocationCandidates
@@ -276,7 +272,7 @@ open class CallResolver : SymbolResolverPass() {
         // Find invokes by supertypes
         if (
             invocationCandidates.isEmpty() &&
-                (call.language !is CXXLanguageFrontend || shouldSearchForInvokesInParent(call))
+                (call.language !is CPPLanguage || shouldSearchForInvokesInParent(call))
         ) {
             val nameParts =
                 call.name.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
@@ -297,10 +293,19 @@ open class CallResolver : SymbolResolverPass() {
         curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>
     ): MutableList<FunctionDeclaration> {
-        return if (call.language is CXXLanguageFrontend) {
-            handleCXXMethodCall(curClass, possibleContainingTypes, call).toMutableList()
+        return if (call.language is HasComplexCallResolution) {
+            (call.language as HasComplexCallResolution)
+                .refineMethodCallResolution(
+                    curClass,
+                    possibleContainingTypes,
+                    call,
+                    scopeManager,
+                    currentTU,
+                    this
+                )
+                .toMutableList()
         } else {
-            scopeManager!!.resolveFunction(call).toMutableList()
+            scopeManager.resolveFunction(call).toMutableList()
         }
     }
 
@@ -321,20 +326,13 @@ open class CallResolver : SymbolResolverPass() {
                 .mapNotNull {
                     var record = recordMap[it.root.typeName]
                     if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
-                        record = inferRecordDeclaration(it, it.root.typeName)
+                        record = it.startInference().inferRecordDeclaration(it, currentTU)
+                        // update the record map
+                        if (record != null) recordMap[it.root.typeName] = record
                     }
                     record
                 }
-                .map {
-                    createInferredFunctionDeclaration(
-                        it,
-                        call.name,
-                        call.code,
-                        false,
-                        call.signature,
-                        call.type // TODO: Is this correct?
-                    )
-                }
+                .map { record -> record.inferMethod(call) }
                 .forEach { invocationCandidates.add(it) }
         }
     }
@@ -347,15 +345,7 @@ open class CallResolver : SymbolResolverPass() {
      * @return true if we should stop searching parent, false otherwise
      */
     private fun shouldSearchForInvokesInParent(call: CallExpression): Boolean {
-        if (scopeManager == null) {
-            Util.errorWithFileLocation(
-                call,
-                log,
-                "Could not search for invokes in parent: scopeManager is null"
-            )
-            return false
-        }
-        return scopeManager!!.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
+        return scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
     }
 
     private fun resolveConstructExpression(constructExpression: ConstructExpression) {
@@ -457,28 +447,18 @@ open class CallResolver : SymbolResolverPass() {
 
         for (recordDeclaration in containingRecords) {
             val inferred =
-                createInferredFunctionDeclaration(
-                    recordDeclaration,
-                    name,
-                    "",
-                    true,
-                    call.signature,
-                    call.type // TODO: Is this correct?
-                )
+                recordDeclaration
+                    .startInference()
+                    .createInferredFunctionDeclaration(
+                        name,
+                        "",
+                        true,
+                        call.signature,
+                        call.type // TODO: Is this correct?
+                    )
 
             invokes.add(inferred)
         }
-    }
-
-    private fun createInferredConstructor(
-        containingRecord: RecordDeclaration,
-        signature: List<Type?>
-    ): ConstructorDeclaration {
-        val inferred = newConstructorDeclaration(containingRecord.name, "", containingRecord)
-        inferred.isInferred = true
-        inferred.parameters = Util.createInferredParameters(signature)
-        containingRecord.addConstructor(inferred)
-        return inferred
     }
 
     private fun getPossibleContainingTypes(node: Node?, curClass: RecordDeclaration?): Set<Type> {
@@ -489,10 +469,10 @@ open class CallResolver : SymbolResolverPass() {
             possibleTypes.addAll(base.possibleSubTypes)
         } else if (node is StaticCallExpression) {
             if (node.targetRecord != null) {
-                possibleTypes.add(TypeParser.createFrom(node.targetRecord, true))
+                possibleTypes.add(TypeParser.createFrom(node.targetRecord, node.language))
             }
         } else if (curClass != null) {
-            possibleTypes.add(TypeParser.createFrom(curClass.name, true))
+            possibleTypes.add(TypeParser.createFrom(curClass.name, curClass.language))
         }
         return possibleTypes
     }
@@ -508,8 +488,12 @@ open class CallResolver : SymbolResolverPass() {
             Pattern.compile(
                 "(" + Pattern.quote(recordDeclaration.name) + "\\.)?" + Pattern.quote(name)
             )
-        return if (call.language is CXXLanguageFrontend) {
-            getInvocationCandidatesFromRecordCXX(recordDeclaration, call, namePattern)
+        return if (call.language is HasComplexCallResolution) {
+            (call.language as HasComplexCallResolution).refineInvocationCandidatesFromRecord(
+                recordDeclaration,
+                call,
+                namePattern
+            )
         } else {
             recordDeclaration.methods.filter {
                 namePattern.matcher(it.name).matches() && it.hasSignature(call.signature)
@@ -533,7 +517,7 @@ open class CallResolver : SymbolResolverPass() {
             // FunctionDeclaration with the same name as the function in the CallExpression we have
             // to stop the search in the parent even if the FunctionDeclaration does not match with
             // the signature of the CallExpression
-            if (call.language is CXXLanguageFrontend) {
+            if (call.language is CPPLanguage) { // TODO: Needs a special trait?
                 workingPossibleTypes.removeIf { recordDeclaration ->
                     !shouldContinueSearchInParent(recordDeclaration, name)
                 }
@@ -587,12 +571,14 @@ open class CallResolver : SymbolResolverPass() {
         val signature: List<Type?> = constructExpression.signature
         var constructorCandidate =
             getConstructorDeclarationDirectMatch(signature, recordDeclaration)
-        if (constructorCandidate == null && constructExpression.language is CXXLanguageFrontend) {
+        if (constructorCandidate == null && constructExpression.language is HasDefaultArguments) {
             // Check for usage of default args
             constructorCandidate =
                 resolveConstructorWithDefaults(constructExpression, signature, recordDeclaration)
         }
-        if (constructorCandidate == null && constructExpression.language is CXXLanguageFrontend) {
+        if (
+            constructorCandidate == null && constructExpression.language is CPPLanguage
+        ) { // TODO: Fix this
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
             constructorCandidate =
@@ -600,7 +586,9 @@ open class CallResolver : SymbolResolverPass() {
         }
 
         return constructorCandidate
-            ?: createInferredConstructor(recordDeclaration, constructExpression.signature)
+            ?: recordDeclaration
+                .startInference()
+                .createInferredConstructor(constructExpression.signature)
     }
 
     private fun getConstructorDeclarationForExplicitInvocation(
@@ -608,7 +596,7 @@ open class CallResolver : SymbolResolverPass() {
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
         return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
-            ?: createInferredConstructor(recordDeclaration, signature)
+            ?: recordDeclaration.startInference().createInferredConstructor(signature)
     }
 
     companion object {
@@ -627,9 +615,9 @@ open class CallResolver : SymbolResolverPass() {
         ) {
             for (node in templateParams) {
                 if (node is TypeExpression) {
-                    constructExpression.addTemplateParameter(duplicateTypeExpression(node, true))
+                    constructExpression.addTemplateParameter(node.duplicate(true))
                 } else if (node is Literal<*>) {
-                    constructExpression.addTemplateParameter(duplicateLiteral(node, true))
+                    constructExpression.addTemplateParameter(node.duplicate(true))
                 }
             }
         }

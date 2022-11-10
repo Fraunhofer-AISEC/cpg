@@ -23,20 +23,21 @@
 #                    \______/ \__|       \______/
 #
 from ._code_extractor import CodeExtractor
-from de.fraunhofer.aisec.cpg.graph import NodeBuilder
+from de.fraunhofer.aisec.cpg.graph import DeclarationBuilderKt
 import ast
 
 
 class PythonASTToCPG(ast.NodeVisitor):
     def __init__(self, fname, frontend, code):
         self.sourcecode = CodeExtractor(fname)
-        self.tud = NodeBuilder.newTranslationUnitDeclaration(fname, code)
+        self.frontend = frontend
+        self.tud = DeclarationBuilderKt.newTranslationUnitDeclaration(
+            self.frontend, fname, code)
         self.tud.setName(fname)
         self.fname = fname
-        self.frontend = frontend
         self.scopemanager = frontend.getScopeManager()
         self.scopemanager.resetToGlobal(self.tud)
-        self.logger = self.frontend.log
+        self.logger = self.frontend.Companion.getLog()
         self.rootNode = ast.parse(code, filename=fname, type_comments=True)
 
     # import methods from other files
@@ -71,7 +72,8 @@ class PythonASTToCPG(ast.NodeVisitor):
             # TODO how to name the namespace?
             # TODO improve readability
             nsd_name = ".".join(self.fname.split("/")[-1].split(".")[:-1])
-            nsd = NodeBuilder.newNamespaceDeclaration(nsd_name, "")
+            nsd = DeclarationBuilderKt.newNamespaceDeclaration(self.frontend,
+                                                               nsd_name, "")
             self.tud.addDeclaration(nsd)
             self.scopemanager.enterScope(nsd)
 
@@ -84,6 +86,6 @@ class PythonASTToCPG(ast.NodeVisitor):
             self.scopemanager.leaveScope(nsd)
             self.scopemanager.addDeclaration(nsd)
         else:
-            self.log_with_loc("Expected an ast.Module node but recieved %s." %
+            self.log_with_loc("Expected an ast.Module node but received %s." %
                               (type(self.rootNode)), level="ERROR")
             raise RuntimeError

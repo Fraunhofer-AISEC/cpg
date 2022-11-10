@@ -1,4 +1,4 @@
-golang.org/x/mod v0.6.0 h1:b9gGHsz9/HhJ3HF5DHQytPpuwocVTChQJK3AvoLRD5I=
-golang.org/x/mod v0.6.0/go.mod h1:4mET923SAdbXp2ki8ey+zGs1SLqsuM2Y0uvdZR/fUNI=
+golang.org/x/mod v0.7.0 h1:LapD9S96VoQRhi/GrNTqeBJFrUjs5UHCAtTlgwA5oZA=
+golang.org/x/mod v0.7.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
 tekao.net/jnigi v0.0.0-20220804033536-1481db6c0949 h1:dm+mZf0sVfEN1CqfVf4li64lPBczL5VxdVlz2Z7r31M=
 tekao.net/jnigi v0.0.0-20220804033536-1481db6c0949/go.mod h1:SmVvXetJ8N0ov5c2eOC+IxmkdYGEyuXghTuBq5HWZ/Y=

@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.newConstructExpression
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import java.util.function.Supplier
@@ -43,7 +44,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
             // TODO: Initializer List is handled in ExpressionsHandler that actually handles
             // InitializerClauses often used where
             //  one expects an expression.
-            is IASTInitializerList -> lang.expressionHandler.handle(node) as Expression
+            is IASTInitializerList -> frontend.expressionHandler.handle(node) as Expression
             is CPPASTConstructorInitializer -> handleConstructorInitializer(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)
@@ -52,10 +53,10 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
-        val constructExpression = NodeBuilder.newConstructExpression(ctx.rawSignature)
+        val constructExpression = newConstructExpression(ctx.rawSignature)
 
         for ((i, argument) in ctx.arguments.withIndex()) {
-            val arg = lang.expressionHandler.handle(argument)
+            val arg = frontend.expressionHandler.handle(argument)
             arg!!.argumentIndex = i
             constructExpression.addArgument(arg)
         }
@@ -64,7 +65,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleEqualsInitializer(ctx: IASTEqualsInitializer): Expression {
-        return lang.expressionHandler.handle(ctx.initializerClause)
-            ?: return NodeBuilder.newProblemExpression("could not parse initializer clause")
+        return frontend.expressionHandler.handle(ctx.initializerClause)
+            ?: return newProblemExpression("could not parse initializer clause")
     }
 }

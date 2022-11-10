@@ -25,6 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.frontends.Language;
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+
 /**
  * ParameterizedTypes describe types, that are passed as Paramters to Classes E.g. uninitialized
  * generics in the graph are represented as ParameterizedTypes
@@ -33,10 +36,12 @@ public class ParameterizedType extends Type {
 
   public ParameterizedType(Type type) {
     super(type);
+    this.setLanguage(type.getLanguage());
   }
 
-  public ParameterizedType(String typeName) {
+  public ParameterizedType(String typeName, Language<? extends LanguageFrontend> language) {
     super(typeName);
+    this.setLanguage(language);
   }
 
   @Override

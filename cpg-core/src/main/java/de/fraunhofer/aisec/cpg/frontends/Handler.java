@@ -27,8 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.ProblemNode;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -43,22 +44,28 @@ import org.slf4j.LoggerFactory;
  * A {@link Handler} is an abstract base class for a class that translates AST nodes from a raw ast
  * type, usually supplied by a language parser into our generic CPG nodes.
  *
+ * <p>It implements at least one {@link MetadataProvider}, so that node builder extension functions
+ * (e.g., {@link
+ * de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt#newCallExpression(MetadataProvider, Expression,
+ * String, boolean)} can be used directly to create appropriate nodes.
+ *
  * @param <S> the result node or a collection of nodes
  * @param <T> the raw ast node specific to the parser
  * @param <L> the language frontend
  */
-public abstract class Handler<S, T, L extends LanguageFrontend> {
+public abstract class Handler<S extends Node, T, L extends LanguageFrontend>
+    implements LanguageProvider, CodeAndLocationProvider, ScopeProvider {
 
   protected static final Logger log = LoggerFactory.getLogger(Handler.class);
 
   protected final HashMap<Class<? extends T>, HandlerInterface<S, T>> map = new HashMap<>();
-  protected final Supplier<S> configConstructor;
-  protected @NotNull L lang;
+  protected final Supplier<@NotNull S> configConstructor;
+  protected @NotNull L frontend;
   @Nullable private final Class<?> typeOfT;
 
-  public Handler(Supplier<S> configConstructor, @NotNull L lang) {
+  public Handler(Supplier<S> configConstructor, @NotNull L frontend) {
     this.configConstructor = configConstructor;
-    this.lang = lang;
+    this.frontend = frontend;
     this.typeOfT = retrieveTypeParameter();
   }
 
@@ -81,7 +88,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
     }
 
     // If we do not want to load includes into the CPG and the current fileLocation was included
-    if (!this.lang.config.loadIncludes && ctx instanceof ASTNode) {
+    if (!this.frontend.getConfig().getLoadIncludes() && ctx instanceof ASTNode) {
       ASTNode astNode = (ASTNode) ctx;
 
       if (astNode.getFileLocation() != null
@@ -101,7 +108,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
           // always ok to handle as generic literal expr
           !ctx.getClass().getSimpleName().contains("LiteralExpr")) {
         errorWithFileLocation(
-            lang,
+            frontend,
             ctx,
             log,
             "No handler for type {}, resolving for its superclass {}.",
@@ -118,17 +125,17 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       if (s != null) {
         // The language frontend might set a location, which we should respect. Otherwise, we will
         // set the location here.
-        if (((Node) s).getLocation() == null) {
-          lang.setCodeAndRegion(s, ctx);
+        if (s.getLocation() == null) {
+          frontend.setCodeAndLocation(s, ctx);
         }
 
-        lang.setComment(s, ctx);
+        frontend.setComment(s, ctx);
       }
 
       ret = s;
     } else {
       errorWithFileLocation(
-          lang, ctx, log, "Parsing of type {} is not supported (yet)", ctx.getClass());
+          frontend, ctx, log, "Parsing of type {} is not supported (yet)", ctx.getClass());
       ret = this.configConstructor.get();
       if (ret instanceof ProblemNode) {
         ProblemNode problem = (ProblemNode) ret;
@@ -137,7 +144,19 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       }
     }
 
-    lang.process(ctx, ret);
+    // In case the node is empty, we report a problem
+    if (ret == null) {
+      errorWithFileLocation(
+          frontend,
+          ctx,
+          log,
+          "Parsing of type {} did not produce a proper CPG node",
+          ctx.getClass());
+      ret = this.configConstructor.get();
+    }
+
+    frontend.process(ctx, ret);
+
     return ret;
   }
 
@@ -170,5 +189,26 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
     }
 
     return null;
+  }
+
+  /** Returns the frontend which used this handler. */
+  public @NotNull L getFrontend() {
+    return frontend;
+  }
+
+  /** Returns the language which this handler is parsing. */
+  public @NotNull Language<L> getLanguage() {
+    return (Language<L>) frontend.getLanguage();
+  }
+
+  @Override
+  public <N, S> void setCodeAndLocation(N cpgNode, @Nullable S astNode) {
+    this.frontend.setCodeAndLocation(cpgNode, astNode);
+  }
+
+  @Override
+  @Nullable
+  public Scope getScope() {
+    return this.frontend.getScopeManager().getCurrentScope();
   }
 }

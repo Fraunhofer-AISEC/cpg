@@ -82,9 +82,9 @@ func InitEnv(e *jnigi.Env) {
 	env = e
 }
 
-func TypeParser_createFrom(s string, resolveAlias bool) *Type {
+func TypeParser_createFrom(s string, l *Language) *Type {
 	var t Type
-	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/TypeParser", "createFrom", &t, NewString(s), resolveAlias)
+	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/TypeParser", "createFrom", &t, NewString(s), l)
 	if err != nil {
 		log.Fatal(err)
 
@@ -93,9 +93,9 @@ func TypeParser_createFrom(s string, resolveAlias bool) *Type {
 	return &t
 }
 
-func UnknownType_getUnknown() *UnknownType {
+func UnknownType_getUnknown(l *Language) *UnknownType {
 	var t UnknownType
-	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/UnknownType", "getUnknownType", &t)
+	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/UnknownType", "getUnknownType", &t, l)
 	if err != nil {
 		log.Fatal(err)
 

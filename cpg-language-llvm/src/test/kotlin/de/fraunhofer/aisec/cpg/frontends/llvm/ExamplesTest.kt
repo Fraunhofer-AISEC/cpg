@@ -42,12 +42,7 @@ class ExamplesTest {
                 listOf(topLevel.resolve("rust_sample.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertNotNull(tu)
     }
@@ -61,12 +56,7 @@ class ExamplesTest {
                 listOf(topLevel.resolve("client.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertNotNull(tu)
     }
@@ -80,12 +70,7 @@ class ExamplesTest {
                 listOf(topLevel.resolve("client.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertNotNull(tu)
     }
@@ -99,12 +84,7 @@ class ExamplesTest {
                 listOf(topLevel.resolve("if.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertNotNull(tu)
     }
@@ -118,12 +98,7 @@ class ExamplesTest {
                 listOf(topLevel.resolve("main.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertNotNull(tu)
     }

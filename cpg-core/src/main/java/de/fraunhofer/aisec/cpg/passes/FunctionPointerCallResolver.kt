@@ -64,8 +64,9 @@ class FunctionPointerCallResolver : Pass() {
     private var inferDfgForUnresolvedCalls = false
 
     override fun accept(t: TranslationResult) {
+        scopeManager = t.scopeManager
         inferDfgForUnresolvedCalls = t.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
-        walker = ScopedWalker(lang)
+        walker = ScopedWalker(t.scopeManager)
         walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
             walker.collectDeclarations(currNode)
         }
@@ -92,9 +93,8 @@ class FunctionPointerCallResolver : Pass() {
         // Since we are using a scoped walker, we can access the current scope here and try to
         // resolve the call expression to a declaration that contains the pointer.
         val pointer =
-            lang
-                ?.scopeManager
-                ?.resolve<ValueDeclaration>(lang?.scopeManager?.currentScope, true) {
+            scopeManager
+                .resolve<ValueDeclaration>(scopeManager.currentScope, true) {
                     it.type is FunctionPointerType && it.name == call.name
                 }
                 ?.firstOrNull()
@@ -141,7 +141,8 @@ class FunctionPointerCallResolver : Pass() {
                         curr.returnTypes[0]
                     }
                 if (
-                    TypeManager.getInstance().isSupertypeOf(pointerType.returnType, returnType) &&
+                    TypeManager.getInstance()
+                        .isSupertypeOf(pointerType.returnType, returnType, call) &&
                         curr.hasSignature(pointerType.parameters)
                 ) {
                     invocationCandidates.add(curr)

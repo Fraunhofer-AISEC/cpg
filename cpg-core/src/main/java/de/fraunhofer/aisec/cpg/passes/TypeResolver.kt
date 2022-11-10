@@ -238,7 +238,6 @@ open class TypeResolver : Pass() {
     override fun cleanup() {
         firstOrderTypes.clear()
         typeState.clear()
-        TypeParser.reset()
         TypeManager.reset()
     }
 }

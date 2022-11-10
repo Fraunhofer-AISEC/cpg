@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.frontends.Language;
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 
@@ -49,7 +51,14 @@ public class UnknownType extends Type {
    * @return UnknownType instance
    */
   @NotNull
+  public static UnknownType getUnknownType(Language<? extends LanguageFrontend> language) {
+    unknownType.setLanguage(language);
+    return unknownType;
+  }
+
+  @NotNull
   public static UnknownType getUnknownType() {
+    // TODO: This is just a temporary solution.
     return unknownType;
   }
 

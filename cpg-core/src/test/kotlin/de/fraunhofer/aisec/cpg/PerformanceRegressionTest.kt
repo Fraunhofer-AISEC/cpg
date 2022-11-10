@@ -26,12 +26,14 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -63,15 +65,14 @@ class PerformanceRegressionTest {
         val tmp = kotlin.io.path.createTempFile("c_range", ".c")
         tmp.writeText(string)
 
-        // this should not exceed 20 seconds (it takes about 2800ms on a good machine, about
+        // this should not exceed 25 seconds (it takes about 2800ms on a good machine, about
         // 10-20s on GitHub, depending on the slowness of the runner)
-        assertTimeout(Duration.of(20, ChronoUnit.SECONDS)) {
+        assertTimeout(Duration.of(25, ChronoUnit.SECONDS)) {
             val tu =
                 analyzeAndGetFirstTU(listOf(tmp.toFile()), tmp.parent, true) {
                     // No need for parallel processing for a single file. this might make it fast
                     // enough for those special moments where for some reasons the GitHub runners
-                    // are
-                    // slowing down (maybe because of some hidden quota).
+                    // are slowing down (maybe because of some hidden quota).
                     it.useParallelFrontends(false)
                     it.typeSystemActiveInFrontend(true)
                 }
@@ -81,39 +82,42 @@ class PerformanceRegressionTest {
 
     @Test
     fun testTraversal() {
-        val tu = TranslationUnitDeclaration()
-        val decl = VariableDeclaration()
-        val list = InitializerListExpression()
+        with(TestLanguageFrontend()) {
+            val tu = TranslationUnitDeclaration()
+            val decl = VariableDeclaration()
+            val list = InitializerListExpression()
 
-        for (i in 0 until 50000) {
-            list.initializersPropertyEdge.add(
-                PropertyEdge(
-                    list,
-                    NodeBuilder.newLiteral(
-                        i,
-                        ObjectType(
-                            "int",
-                            Type.Storage.AUTO,
-                            Type.Qualifier(),
-                            listOf(),
-                            ObjectType.Modifier.UNSIGNED,
-                            true
-                        ),
-                        null
+            for (i in 0 until 50000) {
+                list.initializersPropertyEdge.add(
+                    PropertyEdge(
+                        list,
+                        newLiteral(
+                            i,
+                            ObjectType(
+                                "int",
+                                Type.Storage.AUTO,
+                                Type.Qualifier(),
+                                listOf(),
+                                ObjectType.Modifier.UNSIGNED,
+                                true,
+                                CPPLanguage()
+                            ),
+                            null
+                        )
                     )
                 )
-            )
-        }
+            }
 
-        decl.initializer = list
-        tu.addDeclaration(decl)
+            decl.initializer = list
+            tu.addDeclaration(decl)
 
-        // Even on a slow machine, this should not exceed 1 second (it should be more like
-        // 200-300ms)
-        assertTimeout(Duration.of(1, ChronoUnit.SECONDS)) {
-            val b = Benchmark(PerformanceRegressionTest::class.java, "getAstChildren")
-            doNothing(tu)
-            b.addMeasurement()
+            // Even on a slow machine, this should not exceed 1 second (it should be more like
+            // 200-300ms)
+            assertTimeout(Duration.of(1, ChronoUnit.SECONDS)) {
+                val b = Benchmark(PerformanceRegressionTest::class.java, "getAstChildren")
+                doNothing(tu)
+                b.addMeasurement()
+            }
         }
     }
 

@@ -54,4 +54,19 @@ abstract class Scope(open var astNode: Node?) {
     fun isContinuable(): Boolean {
         return this is LoopScope
     }
+
+    /** Returns the [GlobalScope] of this scope by traversing its parents upwards. */
+    val globalScope: Scope?
+        get() {
+            var scope: Scope? = this
+            while (scope !is GlobalScope) {
+                if (scope == null) {
+                    return null
+                }
+
+                scope = scope.parent
+            }
+
+            return scope
+        }
 }

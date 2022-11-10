@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.BenchmarkResults;
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder;
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -63,8 +64,18 @@ public class TranslationResult extends Node implements StatisticsHolder {
 
   private final Set<MeasurementHolder> benchmarks = new LinkedHashSet<>();
 
-  public TranslationResult(TranslationManager translationManager) {
+  /**
+   * The scope manager which comprises the complete translation result. In case of sequential
+   * parsing, this scope manager is passed to the individual frontends one after another. In case of
+   * sequential parsing, individual scope managers will be spawned by each language frontend and
+   * then finally merged into this one.
+   */
+  @NotNull private final ScopeManager scopeManager;
+
+  public TranslationResult(
+      TranslationManager translationManager, @NotNull ScopeManager scopeManager) {
     this.translationManager = translationManager;
+    this.scopeManager = scopeManager;
   }
 
   public boolean isCancelled() {
@@ -197,5 +208,10 @@ public class TranslationResult extends Node implements StatisticsHolder {
   @NotNull
   public BenchmarkResults getBenchmarkResults() {
     return StatisticsHolder.DefaultImpls.getBenchmarkResults(this);
+  }
+
+  @NotNull
+  public ScopeManager getScopeManager() {
+    return scopeManager;
   }
 }

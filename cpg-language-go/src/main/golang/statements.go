@@ -26,10 +26,6 @@
 package cpg
 
 import (
-	"go/ast"
-	"go/token"
-	"log"
-
 	"tekao.net/jnigi"
 )
 
@@ -42,110 +38,6 @@ type SwitchStatement Statement
 type CaseStatement Statement
 type DefaultStatement Statement
 type ForStatement Statement
-
-func NewCompoundStatement(fset *token.FileSet, astNode ast.Node) *CompoundStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/CompoundStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*Node)(s), astNode)
-	updateLocation(fset, (*Node)(s), astNode)
-
-	return (*CompoundStatement)(s)
-}
-
-func NewReturnStatement(fset *token.FileSet, astNode ast.Node) *ReturnStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/ReturnStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*Node)(s), astNode)
-	updateLocation(fset, (*Node)(s), astNode)
-
-	return (*ReturnStatement)(s)
-}
-
-func NewDeclarationStatement(fset *token.FileSet, astNode ast.Node) *DeclarationStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/DeclarationStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*Node)(s), astNode)
-	updateLocation(fset, (*Node)(s), astNode)
-
-	return (*DeclarationStatement)(s)
-}
-
-func NewIfStatement(fset *token.FileSet, astNode ast.Node) *IfStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/IfStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*Node)(s), astNode)
-	updateLocation(fset, (*Node)(s), astNode)
-
-	return (*IfStatement)(s)
-}
-
-func NewForStatement(fset *token.FileSet, astNode ast.Node) *ForStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/ForStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*Node)(s), astNode)
-	updateLocation(fset, (*Node)(s), astNode)
-
-	return (*ForStatement)(s)
-}
-
-func NewSwitchStatement(fset *token.FileSet, astNode ast.Node) *SwitchStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/SwitchStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*Node)(s), astNode)
-	updateLocation(fset, (*Node)(s), astNode)
-
-	return (*SwitchStatement)(s)
-}
-
-func NewCaseStatement(fset *token.FileSet, astNode ast.Node) *CaseStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/CaseStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*Node)(s), astNode)
-	updateLocation(fset, (*Node)(s), astNode)
-
-	return (*CaseStatement)(s)
-}
-
-func NewDefaultStatement(fset *token.FileSet, astNode ast.Node) *DefaultStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/DefaultStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*Node)(s), astNode)
-	updateLocation(fset, (*Node)(s), astNode)
-
-	return (*DefaultStatement)(s)
-}
 
 func (f *CompoundStatement) AddStatement(s *Statement) {
 	(*jnigi.ObjectRef)(f).CallMethod(env, "addStatement", nil, (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))

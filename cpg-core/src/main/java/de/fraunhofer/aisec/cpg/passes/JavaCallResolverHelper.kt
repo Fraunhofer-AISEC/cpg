@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
  */
 fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: CallExpression) {
     // We need to connect this super reference to the receiver of this method
-    val func = scopeManager!!.currentFunction
+    val func = scopeManager.currentFunction
     if (func is MethodDeclaration) {
         (call.base as DeclaredReferenceExpression?)?.refersTo = func.receiver
     }
@@ -78,7 +78,7 @@ fun CallResolver.handleSpecificSupertype(
     call: CallExpression
 ): RecordDeclaration? {
     val baseName = call.base!!.name.substring(0, call.base!!.name.lastIndexOf(".super"))
-    if (TypeParser.createFrom(baseName, true) in curClass.implementedInterfaces) {
+    if (TypeParser.createFrom(baseName, curClass.language) in curClass.implementedInterfaces) {
         // Basename is an interface -> BaseName.super refers to BaseName itself
         return recordMap[baseName]
     } else {

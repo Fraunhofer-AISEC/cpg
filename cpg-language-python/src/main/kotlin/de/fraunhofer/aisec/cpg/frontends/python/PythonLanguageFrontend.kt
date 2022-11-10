@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -39,16 +39,15 @@ import jep.JepException
 import jep.SubInterpreter
 
 @ExperimentalPython
-class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, ".") {
-    companion object {
-        @kotlin.jvm.JvmField var PY_EXTENSIONS: List<String> = listOf(".py")
-    }
+class PythonLanguageFrontend(
+    language: Language<PythonLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager
+) : LanguageFrontend(language, config, scopeManager) {
     private val jep = JepSingleton // configure Jep
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        TypeManager.getInstance().setLanguageFrontend(this)
         return parseInternal(file.readText(Charsets.UTF_8), file.path)
     }
 

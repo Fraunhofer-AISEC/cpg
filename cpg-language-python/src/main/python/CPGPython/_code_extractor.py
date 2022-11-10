@@ -26,7 +26,7 @@ from ._spotless_dummy import *
 
 
 class CodeExtractor:
-    # Simple/ugly class to extrace code snippets given a region
+    # Simple/ugly class to extract code snippets given a region
     def __init__(self, fname):
         with open(fname) as f:
             self.lines = f.read().splitlines()
@@ -45,7 +45,7 @@ class CodeExtractor:
             res.append(" " * col_offset + self.lines[lineno][col_offset:])
             lineno += 1
 
-            # fill with compelte lines
+            # fill with complete lines
             while lineno < end_lineno:
                 res.append(self.lines[lineno][:])
                 lineno += 1

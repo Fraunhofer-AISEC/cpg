@@ -143,13 +143,13 @@ public abstract class Expression extends Statement implements HasType {
     // Probably tries to get something like the best supertype of all possible subtypes.
     this.type =
         TypeManager.getInstance()
-            .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
+            .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type));
 
     // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
     // getting the common type??
     List<Type> newSubtypes = new ArrayList<>();
     for (var s : subTypes) {
-      if (TypeManager.getInstance().isSupertypeOf(this.type, s)) {
+      if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
         newSubtypes.add(TypeManager.getInstance().registerType(s));
       }
     }
@@ -192,7 +192,7 @@ public abstract class Expression extends Statement implements HasType {
 
     // Loop detected or only primitive types (which cannot have a subtype)
     if (root.contains(this)
-        || (possibleSubTypes.stream().allMatch(TypeManager.getInstance()::isPrimitive)
+        || (possibleSubTypes.stream().allMatch(it -> TypeManager.isPrimitive(it, getLanguage()))
             && !this.possibleSubTypes.isEmpty())) {
       return;
     }

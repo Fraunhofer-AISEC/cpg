@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.newParamVariableDeclaration
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
@@ -51,10 +51,10 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         ctx: IASTParameterDeclaration
     ): ParamVariableDeclaration {
         // Parse the type
-        val type = lang.typeOf(ctx.declarator, ctx.declSpecifier)
+        val type = frontend.typeOf(ctx.declarator, ctx.declSpecifier)
 
         val paramVariableDeclaration =
-            NodeBuilder.newMethodParameterIn(
+            newParamVariableDeclaration(
                 ctx.declarator.name.toString(),
                 type,
                 false,
@@ -64,13 +64,13 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         // Add default values
         if (ctx.declarator.initializer != null) {
             paramVariableDeclaration.default =
-                lang.initializerHandler.handle(ctx.declarator.initializer)
+                frontend.initializerHandler.handle(ctx.declarator.initializer)
         }
 
         // Add default values
         if (ctx.declarator.initializer != null) {
             paramVariableDeclaration.default =
-                lang.initializerHandler.handle(ctx.declarator.initializer)
+                frontend.initializerHandler.handle(ctx.declarator.initializer)
         }
 
         return paramVariableDeclaration
