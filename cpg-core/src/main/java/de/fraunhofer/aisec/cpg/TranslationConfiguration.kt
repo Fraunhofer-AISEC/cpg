@@ -377,6 +377,9 @@ private constructor(
         /** Registers an additional [Language]. */
         fun registerLanguage(language: Language<out LanguageFrontend>): Builder {
             languages.add(language)
+            log.info(
+                "Registered language frontend '${language::class.simpleName}' for following file types: ${language.fileExtensions}"
+            )
             return this
         }
 
@@ -491,12 +494,12 @@ private constructor(
         }
 
         /**
-         * Safely registers an additional [Language] from a class name. If the [Language] given by
+         * Safely register an additional [Language] from a class name. If the [Language] given by
          * the class name could not be loaded or instantiated, no [Language] is registered and no
-         * error is thrown. Please have a look at [registerLanguage] if an error should be thrown if
-         * the language could not be registered.
+         * error is thrown. Please have a look at [registerLanguage] if an error should be thrown in
+         * case the language could not be registered.
          *
-         * @param className Fully qualified class name (FQN)
+         * @param className Fully qualified class name (FQN) of a [Language] class
          * @see [registerLanguage]
          */
         fun optionalLanguage(className: String) =
