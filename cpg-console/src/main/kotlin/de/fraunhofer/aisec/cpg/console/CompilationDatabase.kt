@@ -74,10 +74,10 @@ class CompilationDatabase : Plugin {
                         "                    .useCompilationDatabase(db)\n" +
                         "                    .sourceLocations(db.sourceFiles)\n" +
                         "                    .defaultLanguages()\n" +
-                        "                    .optionalLanguage(de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage)" +
-                        "                    .optionalLanguage(de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage)" +
-                        "                    .optionalLanguage(de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage)" +
-                        "                    .optionalLanguage(de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage)" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage\")" +
                         "                    .defaultPasses()\n" +
                         "                    .build()",
                     "val analyzer = TranslationManager.builder().config(config).build()",
