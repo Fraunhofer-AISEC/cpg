@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 /**
@@ -87,8 +88,8 @@ fun MetadataProvider.newFunctionDeclaration(
 fun MetadataProvider.newMethodDeclaration(
     name: String?,
     code: String? = null,
-    isStatic: Boolean,
-    recordDeclaration: RecordDeclaration?,
+    isStatic: Boolean = false,
+    recordDeclaration: RecordDeclaration? = null,
     rawNode: Any? = null
 ): MethodDeclaration {
     val node = MethodDeclaration()
@@ -159,9 +160,9 @@ fun MetadataProvider.newParamVariableDeclaration(
 @JvmOverloads
 fun MetadataProvider.newVariableDeclaration(
     name: String?,
-    type: Type?,
+    type: Type? = UnknownType.getUnknownType(),
     code: String? = null,
-    implicitInitializerAllowed: Boolean,
+    implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
 ): VariableDeclaration {
     val node = VariableDeclaration()
@@ -340,12 +341,12 @@ fun MetadataProvider.newEnumConstantDeclaration(
 @JvmOverloads
 fun MetadataProvider.newFieldDeclaration(
     name: String?,
-    type: Type?,
-    modifiers: List<String?>?,
+    type: Type? = UnknownType.getUnknownType(),
+    modifiers: List<String?>? = listOf(),
     code: String? = null,
-    location: PhysicalLocation?,
-    initializer: Expression?,
-    implicitInitializerAllowed: Boolean,
+    location: PhysicalLocation? = null,
+    initializer: Expression? = null,
+    implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
 ): FieldDeclaration {
     val node = FieldDeclaration()

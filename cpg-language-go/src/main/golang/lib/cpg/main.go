@@ -58,6 +58,7 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 		nil,
 		nil,
 		ast.CommentMap{},
+		nil,
 	}
 
 	srcObject := jnigi.WrapJObject(uintptr(arg1), "java/lang/String", false)

@@ -32,7 +32,7 @@ import (
 	"tekao.net/jnigi"
 )
 
-type Declaration jnigi.ObjectRef
+type Declaration Node
 type IncludeDeclaration jnigi.ObjectRef
 type TranslationUnitDeclaration Declaration
 type FunctionDeclaration Declaration
@@ -71,9 +71,7 @@ func (f *FunctionDeclaration) SetReturnTypes(types []*Type) (err error) {
 		return err
 	}
 
-	// Stupid workaround, since casting does not work. See
-	// https://github.com/timob/jnigi/issues/60
-	var funcDecl = jnigi.WrapJObject(uintptr((*jnigi.ObjectRef)(f).JObject()), "de/fraunhofer/aisec/cpg/graph/declarations/FunctionDeclaration", false)
+	var funcDecl = (*jnigi.ObjectRef)(f).Cast("de/fraunhofer/aisec/cpg/graph/declarations/FunctionDeclaration")
 
 	err = (*jnigi.ObjectRef)(funcDecl).CallMethod(env, "setReturnTypes", nil, list.Cast("java/util/List"))
 

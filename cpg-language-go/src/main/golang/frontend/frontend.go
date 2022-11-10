@@ -45,28 +45,12 @@ type GoLanguageFrontend struct {
 	File       *ast.File
 	Module     *modfile.File
 	CommentMap ast.CommentMap
+
+	CurrentTU *cpg.TranslationUnitDeclaration
 }
 
 func InitEnv(e *jnigi.Env) {
 	env = e
-}
-
-func (g *GoLanguageFrontend) SetCurrentTU(tu *cpg.TranslationUnitDeclaration) {
-	err := g.SetField(env, "currentTU", (*jnigi.ObjectRef)(tu))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (g *GoLanguageFrontend) GetCurrentTU() *cpg.TranslationUnitDeclaration {
-	var tu = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration")
-	err := g.GetField(env, "currentTU", tu)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return (*cpg.TranslationUnitDeclaration)(tu)
 }
 
 func (g *GoLanguageFrontend) GetCodeFromRawNode(fset *token.FileSet, astNode ast.Node) string {

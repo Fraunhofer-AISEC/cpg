@@ -83,15 +83,14 @@ func (frontend *GoLanguageFrontend) ParseModule(topLevel string) (exists bool, e
 }
 
 func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File, path string) (tu *cpg.TranslationUnitDeclaration, err error) {
-	tu = this.NewTranslationUnitDeclaration(fset, file, path, this.GetCodeFromRawNode(fset, file))
+	tu = this.NewTranslationUnitDeclaration(fset, file, path)
 
 	scope := this.GetScopeManager()
 
 	// reset scope
 	scope.ResetToGlobal((*cpg.Node)(tu))
 
-	// set current TU
-	this.SetCurrentTU(tu)
+	this.CurrentTU = tu
 
 	for _, imprt := range file.Imports {
 		i := this.handleImportSpec(fset, imprt)
@@ -103,7 +102,7 @@ func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File, 
 	}
 
 	// create a new namespace declaration, representing the package
-	p := this.NewNamespaceDeclaration(fset, nil, file.Name.Name, fmt.Sprintf("package %s", file.Name.Name))
+	p := this.NewNamespaceDeclaration(fset, nil, file.Name.Name)
 
 	// enter scope
 	scope.EnterScope((*cpg.Node)(p))
@@ -186,7 +185,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 	var f *cpg.FunctionDeclaration
 	if funcDecl.Recv != nil {
-		m := this.NewMethodDeclaration(fset, funcDecl)
+		m := this.NewMethodDeclaration(fset, funcDecl, funcDecl.Name.Name)
 
 		// TODO: why is this a list?
 		var recv = funcDecl.Recv.List[0]
@@ -198,10 +197,9 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		// because the syntax is only there to ensure that this method is part
 		// of the struct, but it is not modifying the receiver.
 		if len(recv.Names) > 0 {
-			receiver = this.NewVariableDeclaration(fset, nil)
+			receiver = this.NewVariableDeclaration(fset, nil, recv.Names[0].Name)
 
 			// TODO: should we use the FQN here? FQNs are a mess in the CPG...
-			receiver.SetName(recv.Names[0].Name)
 			receiver.SetType(recordType)
 
 			err := m.SetReceiver(receiver)
@@ -242,11 +240,8 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 		f = (*cpg.FunctionDeclaration)(m)
 	} else {
-		f = this.NewFunctionDeclaration(fset, funcDecl)
+		f = this.NewFunctionDeclaration(fset, funcDecl, funcDecl.Name.Name)
 	}
-
-	// note, the name must be set BEFORE entering the scope
-	f.SetName(funcDecl.Name.Name)
 
 	// enter scope for function
 	scope.EnterScope((*cpg.Node)(f))
@@ -267,9 +262,8 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 			// if the function has named return variables, be sure to declare them as well
 			if returnVariable.Names != nil {
-				p := this.NewVariableDeclaration(fset, returnVariable)
+				p := this.NewVariableDeclaration(fset, returnVariable, returnVariable.Names[0].Name)
 
-				p.SetName(returnVariable.Names[0].Name)
 				p.SetType(this.handleType(returnVariable.Type))
 
 				// add parameter to scope
@@ -288,14 +282,13 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 	// go, since we do not have a 'this', but rather a named receiver
 
 	for _, param := range funcDecl.Type.Params.List {
-		p := this.NewParamVariableDeclaration(fset, param)
-
 		this.LogDebug("Parsing param: %+v", param)
 
+		var name string
 		// Somehow parameters end up having no name sometimes, have not fully understood why.
 		if len(param.Names) > 0 {
 			// TODO: more than one name?
-			var name = param.Names[0].Name
+			name = param.Names[0].Name
 
 			// If the name is an underscore, it means that the parameter is
 			// unnamed. In order to avoid confusing and some compatibility with
@@ -304,11 +297,11 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 			if name == "_" {
 				name = ""
 			}
-
-			p.SetName(name)
 		} else {
 			this.LogError("Some param has no name, which is a bit weird: %+v", param)
 		}
+
+		p := this.NewParamVariableDeclaration(fset, param, name)
 
 		p.SetType(this.handleType(param.Type))
 
@@ -363,9 +356,7 @@ func (this *GoLanguageFrontend) handleValueSpec(fset *token.FileSet, valueDecl *
 	// TODO: more names
 	var ident = valueDecl.Names[0]
 
-	d := (this.NewVariableDeclaration(fset, valueDecl))
-
-	d.SetName(ident.Name)
+	d := (this.NewVariableDeclaration(fset, valueDecl, ident.Name))
 
 	if valueDecl.Type != nil {
 		t := this.handleType(valueDecl.Type)
@@ -406,11 +397,10 @@ func (this *GoLanguageFrontend) handleTypeSpec(fset *token.FileSet, typeDecl *as
 func (this *GoLanguageFrontend) handleImportSpec(fset *token.FileSet, importSpec *ast.ImportSpec) *cpg.Declaration {
 	this.LogInfo("Import specifier with: %+v)", *importSpec)
 
-	i := this.NewIncludeDeclaration(fset, importSpec)
+	i := this.NewIncludeDeclaration(fset, importSpec, getImportName(importSpec))
 
 	var scope = this.GetScopeManager()
 
-	i.SetName(getImportName(importSpec))
 	i.SetFilename(importSpec.Path.Value[1 : len(importSpec.Path.Value)-1])
 
 	err := scope.AddDeclaration((*cpg.Declaration)(i))
@@ -430,10 +420,7 @@ func (this *GoLanguageFrontend) handleIdentAsName(ident *ast.Ident) string {
 }
 
 func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDecl *ast.TypeSpec, structType *ast.StructType) *cpg.RecordDeclaration {
-	r := this.NewRecordDeclaration(fset, typeDecl)
-
-	r.SetKind("struct")
-	r.SetName(this.handleIdentAsName(typeDecl.Name))
+	r := this.NewRecordDeclaration(fset, typeDecl, this.handleIdentAsName(typeDecl.Name), "struct")
 
 	var scope = this.GetScopeManager()
 
@@ -442,12 +429,11 @@ func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDe
 	if !structType.Incomplete {
 		for _, field := range structType.Fields.List {
 
-			f := this.NewFieldDeclaration(fset, field)
-
 			// a field can also have no name, which means that it is embedded, not quite
 			// sure yet how to handle this, but since the embedded field can be accessed
 			// by its type, it could make sense to name the field according to the type
 
+			var name string
 			t := this.handleType(field.Type)
 
 			if field.Names == nil {
@@ -456,13 +442,15 @@ func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDe
 
 				this.LogDebug("Handling embedded field of type %s", typeName)
 
-				f.SetName(typeName)
+				name = typeName
 			} else {
 				this.LogDebug("Handling field %s", field.Names[0].Name)
 
 				// TODO: Multiple names?
-				f.SetName(field.Names[0].Name)
+				name = field.Names[0].Name
 			}
+
+			f := this.NewFieldDeclaration(fset, field, name)
 
 			f.SetType(t)
 
@@ -476,10 +464,7 @@ func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDe
 }
 
 func (this *GoLanguageFrontend) handleInterfaceTypeSpec(fset *token.FileSet, typeDecl *ast.TypeSpec, interfaceType *ast.InterfaceType) *cpg.RecordDeclaration {
-	r := this.NewRecordDeclaration(fset, typeDecl)
-
-	r.SetKind("interface")
-	r.SetName(this.handleIdentAsName(typeDecl.Name))
+	r := this.NewRecordDeclaration(fset, typeDecl, this.handleIdentAsName(typeDecl.Name), "struct")
 
 	var scope = this.GetScopeManager()
 
@@ -494,9 +479,8 @@ func (this *GoLanguageFrontend) handleInterfaceTypeSpec(fset *token.FileSet, typ
 			// "method" actually has a name, we declare a new method
 			// declaration.
 			if len(method.Names) > 0 {
-				m := this.NewMethodDeclaration(fset, method)
+				m := this.NewMethodDeclaration(fset, method, method.Names[0].Name)
 				m.SetType(t)
-				m.SetName(method.Names[0].Name)
 
 				scope.AddDeclaration((*cpg.Declaration)(m))
 			} else {
@@ -698,11 +682,10 @@ func (this *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, assignStmt
 		// lets create a variable declaration (wrapped with a declaration stmt) with this, because we define the variable here
 		stmt := this.NewDeclarationStatement(fset, assignStmt)
 
-		// TODO: assignment of multiple values
-		d := this.NewVariableDeclaration(fset, assignStmt)
-
 		var name = assignStmt.Lhs[0].(*ast.Ident).Name
-		d.SetName(name)
+
+		// TODO: assignment of multiple values
+		d := this.NewVariableDeclaration(fset, assignStmt, name)
 
 		if rhs != nil {
 			d.SetInitializer(rhs)
@@ -1199,7 +1182,7 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 
 	ref := this.NewDeclaredReferenceExpression(fset, ident)
 
-	tu := this.GetCurrentTU()
+	tu := this.CurrentTU
 
 	// check, if this refers to a package import
 	i := tu.GetIncludeByName(ident.Name)
