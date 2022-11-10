@@ -31,21 +31,6 @@ application {
     mainClass.set("de.fraunhofer.aisec.cpg_vis_neo4j.ApplicationKt")
 }
 
-java {
-    registerFeature("llvmFrontend") {
-        usingSourceSet(sourceSets["main"])
-    }
-    registerFeature("pythonFrontend") {
-        usingSourceSet(sourceSets["main"])
-    }
-    registerFeature("goFrontend") {
-        usingSourceSet(sourceSets["main"])
-    }
-    registerFeature("typeScriptFrontend") {
-        usingSourceSet(sourceSets["main"])
-    }
-}
-
 publishing {
     publications {
         named<MavenPublication>("cpg-neo4j") {
@@ -58,7 +43,6 @@ publishing {
     }
 }
 
-
 tasks.withType<Test> {
     useJUnitPlatform {
         if (!project.hasProperty("integration")) {
@@ -67,18 +51,7 @@ tasks.withType<Test> {
     }
 }
 
-val enableGoFrontend: Boolean by rootProject.extra
-val enablePythonFrontend: Boolean by rootProject.extra
-val enableLLVMFrontend: Boolean by rootProject.extra
-val enableTypeScriptFrontend: Boolean by rootProject.extra
-
 dependencies {
-    // the optional language frontends
-    if (enableLLVMFrontend) "llvmFrontendImplementation"(project(":cpg-language-llvm"))
-    if (enablePythonFrontend) "pythonFrontendImplementation"(project(":cpg-language-python"))
-    if (enableGoFrontend) "goFrontendImplementation"(project(":cpg-language-go"))
-    if (enableTypeScriptFrontend) "typeScriptFrontendImplementation"(project(":cpg-language-typescript"))
-
     // neo4j
     api(libs.bundles.neo4j)
 

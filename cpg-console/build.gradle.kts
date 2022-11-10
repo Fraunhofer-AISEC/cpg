@@ -43,27 +43,6 @@ application {
     mainClass.set("de.fraunhofer.aisec.cpg.console.CpgConsole")
 }
 
-val enableGoFrontend: Boolean by rootProject.extra
-val enablePythonFrontend: Boolean by rootProject.extra
-val enableLLVMFrontend: Boolean by rootProject.extra
-val enableTypeScriptFrontend: Boolean by rootProject.extra
-
-java {
-    registerFeature("llvmFrontend") {
-        usingSourceSet(sourceSets["main"])
-    }
-    registerFeature("pythonFrontend") {
-        usingSourceSet(sourceSets["main"])
-    }
-    registerFeature("goFrontend") {
-        usingSourceSet(sourceSets["main"])
-    }
-    registerFeature("typeScriptFrontend") {
-        usingSourceSet(sourceSets["main"])
-    }
-}
-
-
 tasks.withType<Test> {
     useJUnitPlatform {
         if (!project.hasProperty("integration")) {
@@ -81,11 +60,4 @@ dependencies {
     implementation(libs.kotlin.coroutines.core)
     implementation(libs.jline)
     implementation(libs.kotlin.ki.shell)
-
-    // the optional language frontends
-    if (enableLLVMFrontend) "llvmFrontendImplementation"(project(":cpg-language-llvm"))
-    if (enablePythonFrontend) "pythonFrontendImplementation"(project(":cpg-language-python"))
-    if (enableGoFrontend) "goFrontendImplementation"(project(":cpg-language-go"))
-    if (enableTypeScriptFrontend) "typeScriptFrontendImplementation"(project(":cpg-language-typescript"))
-
 }
