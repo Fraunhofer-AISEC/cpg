@@ -39,7 +39,7 @@ repositories {
 //
 // common documentation, signing and publishing configuration
 //
-// this is gradles alternative to POM files, which cause problems when publishing on Maven
+// this disables gradles alternative to POM files, which cause problems when publishing on Maven
 tasks.withType<GenerateModuleMetadata> {
     enabled = false
 }

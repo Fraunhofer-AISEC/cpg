@@ -23,10 +23,25 @@
  *                    \______/ \__|       \______/
  *
  */
+
+//
+// configure multi module dokka documentation
+//
 plugins {
     id("org.jetbrains.dokka")
 }
 
+repositories {
+    mavenCentral()
+}
+
+tasks.dokkaHtmlMultiModule.configure {
+    outputDirectory.set(buildDir.resolve("dokkaCustomMultiModuleOutput"))
+}
+
+//
+// Load the properties that define which frontends to include
+//
 // this code block also exists in settings.gradle.kts
 val enableGoFrontend by extra {
     val enableGoFrontend: String by project
@@ -51,7 +66,3 @@ val enableTypeScriptFrontend by extra {
     enableTypeScriptFrontend.toBoolean()
 }
 project.logger.lifecycle("TypeScript frontend is ${if (enableTypeScriptFrontend) "enabled" else "disabled"}")
-
-tasks.dokkaHtmlMultiModule.configure {
-    outputDirectory.set(buildDir.resolve("dokkaCustomMultiModuleOutput"))
-}
