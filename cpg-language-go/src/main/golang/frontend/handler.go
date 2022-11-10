@@ -464,7 +464,7 @@ func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDe
 }
 
 func (this *GoLanguageFrontend) handleInterfaceTypeSpec(fset *token.FileSet, typeDecl *ast.TypeSpec, interfaceType *ast.InterfaceType) *cpg.RecordDeclaration {
-	r := this.NewRecordDeclaration(fset, typeDecl, this.handleIdentAsName(typeDecl.Name), "struct")
+	r := this.NewRecordDeclaration(fset, typeDecl, this.handleIdentAsName(typeDecl.Name), "interface")
 
 	var scope = this.GetScopeManager()
 

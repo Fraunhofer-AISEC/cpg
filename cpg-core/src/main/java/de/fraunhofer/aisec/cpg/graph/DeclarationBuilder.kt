@@ -135,8 +135,8 @@ fun MetadataProvider.newConstructorDeclaration(
 @JvmOverloads
 fun MetadataProvider.newParamVariableDeclaration(
     name: String?,
-    type: Type?,
-    variadic: Boolean,
+    type: Type? = UnknownType.getUnknownType(),
+    variadic: Boolean = false,
     code: String? = null,
     rawNode: Any? = null
 ): ParamVariableDeclaration {
