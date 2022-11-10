@@ -56,7 +56,7 @@ tasks.named<Test>("test") {
 dependencies {
     api("org.apache.commons:commons-lang3:3.12.0")
 
-    api("org.neo4j:neo4j-ogm-core:3.2.37")
+    api("org.neo4j:neo4j-ogm-core:3.2.38")
 
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.19.0")
     implementation("org.apache.logging.log4j:log4j-core:2.19.0")
