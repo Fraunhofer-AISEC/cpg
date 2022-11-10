@@ -173,9 +173,9 @@ def handle_statement_impl(self, stmt):
                 name = s.name
                 src = name
             tpe = UnknownType.getUnknownType()
-            v = StatementBuilderKt.newVariableDeclaration(self.frontend,
-                                                          name, tpe, src,
-                                                          False)
+            v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
+                                                            name, tpe, src,
+                                                            False)
             # inaccurate but ast.alias does not hold location information
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
@@ -193,7 +193,7 @@ def handle_statement_impl(self, stmt):
             "Cannot correctly handle \"import from\". Using an approximation.",
             loglevel="ERROR")
 
-        decl_stmt = DeclarationBuilderKt.newDeclarationStatement(
+        decl_stmt = StatementBuilderKt.newDeclarationStatement(
             self.frontend, self.get_src_code(stmt))
         for s in stmt.names:
             if s.asname is not None:
