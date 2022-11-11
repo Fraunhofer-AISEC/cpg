@@ -30,13 +30,12 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -224,43 +223,6 @@ public class SubgraphWalker {
         });
   }
 
-  public static void activateTypes(Node node) {
-    AtomicInteger num = new AtomicInteger();
-
-    Map<HasType, List<Type>> typeCache = TypeManager.getInstance().getTypeCache();
-    node.accept(
-        Strategy::AST_FORWARD,
-        new IVisitor<>() {
-          @Override
-          public void visit(Node n) {
-            if (n instanceof HasType) {
-              HasType typeNode = (HasType) n;
-              typeCache
-                  .getOrDefault(typeNode, Collections.emptyList())
-                  .forEach(
-                      t -> {
-                        t = TypeManager.getInstance().resolvePossibleTypedef(t);
-                        ((HasType) n).setType(t);
-                      });
-              typeCache.remove((HasType) n);
-              num.getAndIncrement();
-            }
-          }
-        });
-
-    LOGGER.debug("Activated {} nodes for {}", num, node.getName());
-
-    // For some nodes it may happen that they are not reachable via AST, but we still need to set
-    // their type to the requested value
-    typeCache.forEach(
-        (n, types) ->
-            types.forEach(
-                t -> {
-                  t = TypeManager.getInstance().resolvePossibleTypedef(t);
-                  n.setType(t);
-                }));
-  }
-
   /**
    * For better readability: <code>result.entries</code> instead of <code>result.get(0)</code> when
    * working with getEOGPathEdges. Can be used for all subgraphs in subgraphs, e.g. AST entries and
@@ -281,7 +243,7 @@ public class SubgraphWalker {
 
   public static class IterativeGraphWalker {
 
-    private Deque<Node> todo;
+    private Deque<kotlin.Pair<Node, Node>> todo;
     private Deque<Node> backlog;
 
     /**
@@ -290,6 +252,8 @@ public class SubgraphWalker {
      * passed to the function
      */
     private final List<Consumer<Node>> onNodeVisit = new ArrayList<>();
+
+    private final List<BiConsumer<Node, Node>> onNodeVisit2 = new ArrayList<>();
 
     /**
      * The callback that is designed to tell the user when we leave the current scope. The exited
@@ -325,24 +289,28 @@ public class SubgraphWalker {
       backlog = new ArrayDeque<>();
       Set<Node> seen = new LinkedHashSet<>();
 
-      todo.push(root);
+      todo.push(new kotlin.Pair<>(root, null));
       while (!todo.isEmpty()) {
-        Node current = todo.pop();
+        kotlin.Pair<Node, Node> pair = todo.pop();
+        Node current = pair.getFirst();
+        Node parent = pair.getSecond();
         if (!backlog.isEmpty() && backlog.peek().equals(current)) {
           Node exiting = backlog.pop();
           onScopeExit.forEach(c -> c.accept(exiting));
         } else {
           // re-place the current node as a marker for the above check to find out when we need to
           // exit a scope
-          todo.push(current);
+          todo.push(new kotlin.Pair<>(current, parent));
           onNodeVisit.forEach(c -> c.accept(current));
+          onNodeVisit2.forEach(c -> c.accept(current, parent));
 
           var unseenChildren =
               SubgraphWalker.getAstChildren(current).stream()
                   .filter(Predicate.not(seen::contains))
                   .collect(Collectors.toList());
           seen.addAll(unseenChildren);
-          Util.reverse(unseenChildren.stream()).forEach(todo::push);
+          Util.reverse(unseenChildren.stream())
+              .forEach(child -> todo.push(new kotlin.Pair<>(child, current)));
           backlog.push(current);
         }
       }
@@ -350,6 +318,10 @@ public class SubgraphWalker {
 
     public void registerOnNodeVisit(Consumer<Node> callback) {
       onNodeVisit.add(callback);
+    }
+
+    public void registerOnNodeVisit2(BiConsumer<Node, Node> callback) {
+      onNodeVisit2.add(callback);
     }
 
     public void registerOnScopeExit(Consumer<Node> callback) {
@@ -362,7 +334,8 @@ public class SubgraphWalker {
     }
 
     public Deque<Node> getTodo() {
-      return todo;
+      return new ArrayDeque<>(
+          todo.stream().map(kotlin.Pair<Node, Node>::getFirst).collect(Collectors.toList()));
     }
 
     public Deque<Node> getBacklog() {
@@ -387,10 +360,14 @@ public class SubgraphWalker {
     private final Deque<RecordDeclaration> currentClass = new ArrayDeque<>();
     private IterativeGraphWalker walker;
 
-    private final LanguageFrontend lang;
+    private final ScopeManager scopeManager;
 
     public ScopedWalker(LanguageFrontend lang) {
-      this.lang = lang;
+      this.scopeManager = lang.getScopeManager();
+    }
+
+    public ScopedWalker(ScopeManager scopeManager) {
+      this.scopeManager = scopeManager;
     }
 
     /**
@@ -426,7 +403,7 @@ public class SubgraphWalker {
     }
 
     private void handleNode(Node current, TriConsumer<RecordDeclaration, Node, Node> handler) {
-      lang.getScopeManager().enterScopeIfExists(current);
+      scopeManager.enterScopeIfExists(current);
 
       Node parent = walker.getBacklog().peek();
 
@@ -455,7 +432,7 @@ public class SubgraphWalker {
         currentClass.pop();
       }
 
-      lang.getScopeManager().leaveScope(exiting);
+      scopeManager.leaveScope(exiting);
     }
 
     /**

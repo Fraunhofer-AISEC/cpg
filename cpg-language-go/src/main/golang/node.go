@@ -26,10 +26,6 @@
 package cpg
 
 import (
-	"bytes"
-	"go/ast"
-	"go/printer"
-	"go/token"
 	"log"
 
 	"tekao.net/jnigi"
@@ -38,7 +34,11 @@ import (
 type Node jnigi.ObjectRef
 
 func (n *Node) SetName(s string) error {
-	return (*jnigi.ObjectRef)(n).SetField(env, "name", NewString(s))
+	return (*jnigi.ObjectRef)(n).CallMethod(env, "setName", nil, NewString(s))
+}
+
+func (n *Node) SetLanguge(l *Language) error {
+	return (*jnigi.ObjectRef)(n).CallMethod(env, "setLanguage", nil, l)
 }
 
 func (n *Node) SetCode(s string) error {
@@ -68,41 +68,4 @@ func (n *Node) GetName() string {
 	}
 
 	return string(b)
-}
-
-func updateCode(fset *token.FileSet, node *Node, astNode ast.Node) {
-	var codeBuf bytes.Buffer
-	_ = printer.Fprint(&codeBuf, fset, astNode)
-
-	node.SetCode(codeBuf.String())
-}
-
-func updateLocation(fset *token.FileSet, node *Node, astNode ast.Node) {
-	if astNode == nil {
-		return
-	}
-
-	file := fset.File(astNode.Pos())
-	if file == nil {
-		return
-	}
-
-	uri, err := env.NewObject("java/net/URI", NewString(file.Name()))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	region := NewRegion(fset, astNode,
-		fset.Position(astNode.Pos()).Line,
-		fset.Position(astNode.Pos()).Column,
-		fset.Position(astNode.End()).Line,
-		fset.Position(astNode.End()).Column,
-	)
-
-	location := NewPhysicalLocation(fset, astNode, uri, region)
-
-	err = node.SetLocation(location)
-	if err != nil {
-		log.Fatal(err)
-	}
 }

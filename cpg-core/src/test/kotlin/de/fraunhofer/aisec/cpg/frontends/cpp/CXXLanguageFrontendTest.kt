@@ -60,7 +60,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val decl = main.iterator().next()
         val ls = decl.variables["ls"]
         assertNotNull(ls)
-        assertEquals(TypeParser.createFrom("std::vector<int>", true), ls.type)
+        assertEquals(createTypeFrom("std::vector<int>", true), ls.type)
         assertEquals("ls", ls.name)
 
         val forEachStatement = decl.getBodyStatementAs(1, ForEachStatement::class.java)
@@ -78,7 +78,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val i = stmt.singleDeclaration as VariableDeclaration
         assertNotNull(i)
         assertEquals("i", i.name)
-        assertEquals(UnknownType.getUnknownType(), i.type)
+        assertEquals(UnknownType.getUnknownType(CPPLanguage()), i.type)
     }
 
     @Test
@@ -131,7 +131,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val sizeof = i.initializer as? TypeIdExpression
         assertNotNull(sizeof)
         assertEquals("sizeof", sizeof.name)
-        assertEquals(TypeParser.createFrom("std::size_t", true), sizeof.type)
+        assertEquals(createTypeFrom("std::size_t", true), sizeof.type)
 
         val typeInfo = funcDecl.variables["typeInfo"]
         assertNotNull(typeInfo)
@@ -139,7 +139,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val typeid = typeInfo.initializer as? TypeIdExpression
         assertNotNull(typeid)
         assertEquals("typeid", typeid.name)
-        assertEquals(TypeParser.createFrom("const std::type_info&", true), typeid.type)
+        assertEquals(createTypeFrom("const std::type_info&", true), typeid.type)
 
         val j = funcDecl.variables["j"]
         assertNotNull(j)
@@ -148,7 +148,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(sizeof)
         assertNotNull(alignOf)
         assertEquals("alignof", alignOf.name)
-        assertEquals(TypeParser.createFrom("std::size_t", true), alignOf.type)
+        assertEquals(createTypeFrom("std::size_t", true), alignOf.type)
     }
 
     @Test
@@ -161,18 +161,18 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             Objects.requireNonNull(main!!.getBodyStatementAs(0, DeclarationStatement::class.java))
                 ?.singleDeclaration as VariableDeclaration
         assertNotNull(e)
-        assertEquals(TypeParser.createFrom("ExtendedClass*", true), e.type)
+        assertEquals(createTypeFrom("ExtendedClass*", true), e.type)
 
         val b =
             Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement::class.java))
                 ?.singleDeclaration as VariableDeclaration
         assertNotNull(b)
-        assertEquals(TypeParser.createFrom("BaseClass*", true), b.type)
+        assertEquals(createTypeFrom("BaseClass*", true), b.type)
 
         // initializer
         var cast = b.initializer as? CastExpression
         assertNotNull(cast)
-        assertEquals(TypeParser.createFrom("BaseClass*", true), cast.castType)
+        assertEquals(createTypeFrom("BaseClass*", true), cast.castType)
 
         val staticCast = main.getBodyStatementAs(2, BinaryOperator::class.java)
         assertNotNull(staticCast)
@@ -193,7 +193,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         cast = d.initializer as? CastExpression
         assertNotNull(cast)
-        assertEquals(TypeParser.createFrom("int", true), cast.castType)
+        assertEquals(createTypeFrom("int", true), cast.castType)
     }
 
     @Test
@@ -203,6 +203,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
+        assertNotNull(main)
 
         val statement = main.body as CompoundStatement
 
@@ -211,7 +212,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             (statement.statements[0] as DeclarationStatement).singleDeclaration
                 as VariableDeclaration
         assertNotNull(x)
-        assertEquals(TypeParser.createFrom("int[]", true), x.type)
+        assertEquals(createTypeFrom("int[]", true), x.type)
 
         // initializer is an initializer list expression
         val ile = x.initializer as? InitializerListExpression
@@ -430,7 +431,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             (statements[0] as DeclarationStatement).getSingleDeclarationAs(
                 VariableDeclaration::class.java
             )
-        assertEquals(TypeParser.createFrom("SSL_CTX*", true), declFromMultiplicateExpression.type)
+        assertEquals(createTypeFrom("SSL_CTX*", true), declFromMultiplicateExpression.type)
         assertEquals("ptr", declFromMultiplicateExpression.name)
 
         val withInitializer =
@@ -448,19 +449,19 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val b = twoDeclarations[0] as VariableDeclaration
         assertNotNull(b)
         assertEquals("b", b.name)
-        assertEquals(TypeParser.createFrom("int*", false), b.type)
+        assertEquals(createTypeFrom("int*", false), b.type)
 
         val c = twoDeclarations[1] as VariableDeclaration
         assertNotNull(c)
         assertEquals("c", c.name)
-        assertEquals(TypeParser.createFrom("int", false), c.type)
+        assertEquals(createTypeFrom("int", false), c.type)
 
         val withoutInitializer =
             (statements[3] as DeclarationStatement).getSingleDeclarationAs(
                 VariableDeclaration::class.java
             )
         initializer = withoutInitializer.initializer
-        assertEquals(TypeParser.createFrom("int*", true), withoutInitializer.type)
+        assertEquals(createTypeFrom("int*", true), withoutInitializer.type)
         assertEquals("d", withoutInitializer.name)
         assertNull(initializer)
 
@@ -468,7 +469,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             (statements[4] as DeclarationStatement).getSingleDeclarationAs(
                 VariableDeclaration::class.java
             )
-        assertEquals(TypeParser.createFrom("std.string", true), qualifiedType.type)
+        assertEquals(createTypeFrom("std.string", true), qualifiedType.type)
         assertEquals("text", qualifiedType.name)
         assertTrue(qualifiedType.initializer is Literal<*>)
         assertEquals("some text", (qualifiedType.initializer as? Literal<*>)?.value)
@@ -477,7 +478,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             (statements[5] as DeclarationStatement).getSingleDeclarationAs(
                 VariableDeclaration::class.java
             )
-        assertEquals(TypeParser.createFrom("void*", true), pointerWithAssign.type)
+        assertEquals(createTypeFrom("void*", true), pointerWithAssign.type)
         assertEquals("ptr2", pointerWithAssign.name)
         assertEquals("NULL", pointerWithAssign.initializer?.name)
 
@@ -656,7 +657,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // syntactically no different than the previous ones
         val stmt = statements[4] as DeclarationStatement
         val decl = stmt.singleDeclaration as VariableDeclaration
-        assertEquals(TypeParser.createFrom("std.string*", true), decl.type)
+        assertEquals(createTypeFrom("std.string*", true), decl.type)
         assertEquals("notMultiplication", decl.name)
         assertTrue(decl.initializer is BinaryOperator)
 
@@ -684,7 +685,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val constant = recordDeclaration.fields["CONSTANT"]
         assertNotNull(constant)
-        assertEquals(TypeParser.createFrom("void*", true), field.type)
+        assertEquals(createTypeFrom("void*", true), field.type)
         assertEquals(3, recordDeclaration.methods.size)
 
         val method = recordDeclaration.methods[0]
@@ -702,12 +703,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val methodWithParam = recordDeclaration.methods[1]
         assertEquals("method", methodWithParam.name)
         assertEquals(1, methodWithParam.parameters.size)
-        assertEquals(TypeParser.createFrom("int", true), methodWithParam.parameters[0].type)
+        assertEquals(createTypeFrom("int", true), methodWithParam.parameters[0].type)
         assertEquals(
             FunctionType(
                 "(int)void*",
-                listOf(TypeParser.createFrom("int", true)),
-                listOf(TypeParser.createFrom("void*", true))
+                listOf(createTypeFrom("int", true)),
+                listOf(createTypeFrom("void*", true)),
+                CPPLanguage()
             ),
             methodWithParam.type
         )
@@ -722,7 +724,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val inlineMethod = recordDeclaration.methods[2]
         assertEquals("inlineMethod", inlineMethod.name)
         assertEquals(
-            FunctionType("()void*", listOf(), listOf(TypeParser.createFrom("void*", true))),
+            FunctionType("()void*", listOf(), listOf(createTypeFrom("void*", true)), CPPLanguage()),
             inlineMethod.type
         )
         assertTrue(inlineMethod.hasBody())
@@ -730,7 +732,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val inlineConstructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration.name, inlineConstructor.name)
         assertEquals(
-            FunctionType("()SomeClass", listOf(), listOf(TypeParser.createFrom("SomeClass", true))),
+            FunctionType(
+                "()SomeClass",
+                listOf(),
+                listOf(createTypeFrom("SomeClass", true)),
+                CPPLanguage()
+            ),
             inlineConstructor.type
         )
         assertTrue(inlineConstructor.hasBody())
@@ -739,12 +746,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             declaration.getDeclarationAs(3, ConstructorDeclaration::class.java)
         assertNotNull(constructorDefinition)
         assertEquals(1, constructorDefinition.parameters.size)
-        assertEquals(TypeParser.createFrom("int", true), constructorDefinition.parameters[0].type)
+        assertEquals(createTypeFrom("int", true), constructorDefinition.parameters[0].type)
         assertEquals(
             FunctionType(
                 "(int)SomeClass",
-                listOf(TypeParser.createFrom("int", false)),
-                listOf(TypeParser.createFrom("SomeClass", true))
+                listOf(createTypeFrom("int", false)),
+                listOf(createTypeFrom("SomeClass", true)),
+                CPPLanguage()
             ),
             constructorDefinition.type
         )
@@ -775,7 +783,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/literals.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val s = declaration.getDeclarationAs(0, VariableDeclaration::class.java)
-        assertEquals(TypeParser.createFrom("char[]", true), s!!.type)
+        assertEquals(createTypeFrom("char[]", true), s!!.type)
         assertEquals("s", s.name)
 
         var initializer = s.initializer as? Literal<*>
@@ -783,7 +791,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals("string", initializer.value)
 
         val i = declaration.getDeclarationAs(1, VariableDeclaration::class.java)
-        assertEquals(TypeParser.createFrom("int", true), i!!.type)
+        assertEquals(createTypeFrom("int", true), i!!.type)
         assertEquals("i", i.name)
 
         initializer = i.initializer as? Literal<*>
@@ -791,7 +799,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(1, initializer.value)
 
         val f = declaration.getDeclarationAs(2, VariableDeclaration::class.java)
-        assertEquals(TypeParser.createFrom("float", true), f!!.type)
+        assertEquals(createTypeFrom("float", true), f!!.type)
         assertEquals("f", f.name)
 
         initializer = f.initializer as? Literal<*>
@@ -799,7 +807,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(0.2f, initializer.value)
 
         val d = declaration.getDeclarationAs(3, VariableDeclaration::class.java)
-        assertEquals(TypeParser.createFrom("double", true), d!!.type)
+        assertEquals(createTypeFrom("double", true), d!!.type)
         assertEquals("d", d.name)
 
         initializer = d.initializer as? Literal<*>
@@ -807,7 +815,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(0.2, initializer.value)
 
         val b = declaration.getDeclarationAs(4, VariableDeclaration::class.java)
-        assertEquals(TypeParser.createFrom("bool", true), b!!.type)
+        assertEquals(createTypeFrom("bool", true), b!!.type)
         assertEquals("b", b.name)
 
         initializer = b.initializer as? Literal<*>
@@ -815,7 +823,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(false, initializer.value)
 
         val c = declaration.getDeclarationAs(5, VariableDeclaration::class.java)
-        assertEquals(TypeParser.createFrom("char", true), c!!.type)
+        assertEquals(createTypeFrom("char", true), c!!.type)
         assertEquals("c", c.name)
 
         initializer = c.initializer as? Literal<*>
@@ -847,7 +855,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         // int z[] = { 2, 3, 4 };
         val z = declaration.getDeclarationAs(2, VariableDeclaration::class.java)
-        assertEquals(TypeParser.createFrom("int[]", true), z!!.type)
+        assertEquals(createTypeFrom("int[]", true), z!!.type)
 
         initializer = z.initializer
         assertNotNull(initializer)
@@ -873,20 +881,20 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             (statement.statements[0] as DeclarationStatement).singleDeclaration
                 as VariableDeclaration
         // type should be Integer
-        assertEquals(TypeParser.createFrom("Integer", true), i.type)
+        assertEquals(createTypeFrom("Integer", true), i.type)
 
         // initializer should be a construct expression
         var constructExpression = i.initializer as? ConstructExpression
         assertNotNull(constructExpression)
         // type of the construct expression should also be Integer
-        assertEquals(TypeParser.createFrom("Integer", true), constructExpression.type)
+        assertEquals(createTypeFrom("Integer", true), constructExpression.type)
 
         // auto (Integer) m
         val m =
             (statement.statements[6] as DeclarationStatement).singleDeclaration
                 as VariableDeclaration
         // type should be Integer*
-        assertEquals(TypeParser.createFrom("Integer*", true), m.type)
+        assertEquals(createTypeFrom("Integer*", true), m.type)
 
         val constructor = constructExpression.constructor
         assertNotNull(constructor)
@@ -897,19 +905,19 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val newExpression = m.initializer as? NewExpression
         assertNotNull(newExpression)
         // type of the new expression should also be Integer*
-        assertEquals(TypeParser.createFrom("Integer*", true), newExpression.type)
+        assertEquals(createTypeFrom("Integer*", true), newExpression.type)
 
         // initializer should be a construct expression
         constructExpression = newExpression.initializer as? ConstructExpression
         assertNotNull(constructExpression)
         // type of the construct expression should be Integer
-        assertEquals(TypeParser.createFrom("Integer", true), constructExpression.type)
+        assertEquals(createTypeFrom("Integer", true), constructExpression.type)
 
         // argument should be named k and of type m
         val k = constructExpression.arguments[0] as DeclaredReferenceExpression
         assertEquals("k", k.name)
         // type of the construct expression should also be Integer
-        assertEquals(TypeParser.createFrom("int", true), k.type)
+        assertEquals(createTypeFrom("int", true), k.type)
     }
 
     private val FunctionDeclaration.statements: List<Statement>?
@@ -1310,7 +1318,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/c/typedef_in_header/main.c")
         val result = analyze(listOf(file), file.parentFile.toPath(), true)
 
-        val typedefs = TypeManager.getInstance().frontend?.scopeManager?.currentTypedefs
+        val typedefs = result.scopeManager.currentTypedefs
         assertNotNull(typedefs)
         assertTrue(typedefs.isNotEmpty())
 
@@ -1328,4 +1336,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(func)
         assertFalse(func.isInferred)
     }
+
+    private fun createTypeFrom(typename: String, resolveAlias: Boolean) =
+        TypeParser.createFrom(typename, CPPLanguage(), resolveAlias, null)
 }

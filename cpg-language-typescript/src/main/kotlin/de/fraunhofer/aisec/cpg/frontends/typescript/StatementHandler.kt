@@ -25,9 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.newCompoundStatement
+import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -35,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 
-@ExperimentalTypeScript
 class StatementHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
     init {
@@ -58,29 +58,29 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
         // typescript allows to declare function on a statement level, e.g. within a compound
         // statement. We can wrap it into a declaration statement
-        val statement = NodeBuilder.newDeclarationStatement(this.lang.getCodeFromRawNode(node))
+        val statement = newDeclarationStatement(this.frontend.getCodeFromRawNode(node))
 
-        val decl = this.lang.declarationHandler.handle(node)
+        val decl = this.frontend.declarationHandler.handle(node)
 
         statement.addToPropertyEdgeDeclaration(decl)
 
-        this.lang.scopeManager.addDeclaration(decl)
+        this.frontend.scopeManager.addDeclaration(decl)
 
         return statement
     }
 
     private fun handleReturnStatement(node: TypeScriptNode): ReturnStatement {
-        val returnStmt = NodeBuilder.newReturnStatement(this.lang.getCodeFromRawNode(node))
+        val returnStmt = newReturnStatement(this.frontend.getCodeFromRawNode(node))
 
         node.children?.first()?.let {
-            returnStmt.returnValue = this.lang.expressionHandler.handle(it)
+            returnStmt.returnValue = this.frontend.expressionHandler.handle(it)
         }
 
         return returnStmt
     }
 
     private fun handleBlock(node: TypeScriptNode): CompoundStatement {
-        val block = NodeBuilder.newCompoundStatement(this.lang.getCodeFromRawNode(node))
+        val block = newCompoundStatement(this.frontend.getCodeFromRawNode(node))
 
         node.children?.forEach { block.addStatement(this.handle(it)) }
 
@@ -91,21 +91,21 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         // unwrap it and directly forward it to the expression handler
         // this is possible because in our CPG, expression inherit from statements
         // and can be directly added to a compound statement
-        return this.lang.expressionHandler.handle(node.children?.first())
+        return this.frontend.expressionHandler.handle(node.children?.first())
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
-        val statement = NodeBuilder.newDeclarationStatement(this.lang.getCodeFromRawNode(node))
+        val statement = newDeclarationStatement(this.frontend.getCodeFromRawNode(node))
 
         // the declarations are contained in a VariableDeclarationList
         val nodes = node.firstChild("VariableDeclarationList")?.children
 
         for (variableNode in nodes ?: emptyList()) {
-            val decl = this.lang.declarationHandler.handle(variableNode)
+            val decl = this.frontend.declarationHandler.handle(variableNode)
 
             statement.addToPropertyEdgeDeclaration(decl)
 
-            this.lang.scopeManager.addDeclaration(decl)
+            this.frontend.scopeManager.addDeclaration(decl)
         }
 
         return statement

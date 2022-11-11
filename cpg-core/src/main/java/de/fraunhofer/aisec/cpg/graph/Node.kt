@@ -25,13 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -40,20 +49,50 @@ import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-open class Node : IVisitable<Node>, Persistable {
-    /** A human readable name. */
-    open var name = EMPTY_NAME // initialize it with an empty string
+open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider {
+    /**
+     * This property holds the full name using our new [Name] class. In the future, we might migrate
+     * this to the [name] field. It is currently not persisted in the graph database.
+     */
+    @Transient val fullName: Name = Name(EMPTY_NAME)
+
+    /**
+     * A human-readable name. It is backed by the [fullName] and is set to [Name.localName]
+     * automatically using a kotlin property delegator. We need to exclude the delegated field from
+     * graph database persistence.
+     */
+    @delegate:Transient open var name by fullName
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
      * where nodes are created artificially, it may be null.
      */
     var code: String? = null
+
+    /**
+     * The language of this node. This property is set in [Node.applyMetadata] by a
+     * [LanguageProvider] at the time when the node is created.
+     */
+    @field:Relationship(value = "Language", direction = "OUTGOING")
+    @JsonBackReference
+    override var language: Language<out LanguageFrontend>? = null
+
+    /**
+     * The scope this node "lives" in / in which it is defined. This property is set in
+     * [Node.applyMetadata] by a [ScopeProvider] at the time when the node is created.
+     *
+     * For example, if a [RecordDeclaration] is defined in a [TranslationUnitDeclaration] (without
+     * any namespaces), the scope of the [RecordDeclaration] is most likely a [GlobalScope]. Since
+     * the declaration itself creates a [RecordScope], the scope of a [MethodDeclaration] within the
+     * class would be a [RecordScope] pointing to the [RecordDeclaration].
+     */
+    override var scope: Scope? = null
 
     /** Optional comment of this node. */
     var comment: String? = null
@@ -180,10 +219,27 @@ open class Node : IVisitable<Node>, Persistable {
         prev.nextDFG.add(this)
     }
 
+    fun addAllPrevDFG(prev: Collection<Node>) {
+        prevDFG.addAll(prev)
+        prev.forEach { it.nextDFG.add(this) }
+    }
+
     fun removePrevDFG(prev: Node?) {
         if (prev != null) {
             prevDFG.remove(prev)
             prev.nextDFG.remove(this)
+        }
+    }
+
+    fun clearPrevDFG() {
+        for (prev in ArrayList(prevDFG)) {
+            removePrevDFG(prev)
+        }
+    }
+
+    fun clearNextDFG() {
+        for (prev in ArrayList(nextDFG)) {
+            removeNextDFG(prev)
         }
     }
 

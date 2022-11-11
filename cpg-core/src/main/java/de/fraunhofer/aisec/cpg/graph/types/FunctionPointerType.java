@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.types;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
+import de.fraunhofer.aisec.cpg.frontends.Language;
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,16 +57,26 @@ public class FunctionPointerType extends Type {
   private FunctionPointerType() {}
 
   public FunctionPointerType(
-      Type.Qualifier qualifier, Type.Storage storage, List<Type> parameters, Type returnType) {
+      Type.Qualifier qualifier,
+      Type.Storage storage,
+      List<Type> parameters,
+      Type returnType,
+      Language<? extends LanguageFrontend> language) {
     super("", storage, qualifier);
     this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
     this.returnType = returnType;
+    this.setLanguage(language);
   }
 
-  public FunctionPointerType(Type type, List<Type> parameters, Type returnType) {
+  public FunctionPointerType(
+      Type type,
+      List<Type> parameters,
+      Type returnType,
+      Language<? extends LanguageFrontend> language) {
     super(type);
     this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
     this.returnType = returnType;
+    this.setLanguage(language);
   }
 
   public List<PropertyEdge<Type>> getParametersPropertyEdge() {
@@ -92,7 +104,7 @@ public class FunctionPointerType extends Type {
   @Override
   public Type duplicate() {
     List<Type> copiedParameters = new ArrayList<>(unwrap(this.parameters));
-    return new FunctionPointerType(this, copiedParameters, this.returnType);
+    return new FunctionPointerType(this, copiedParameters, this.returnType, this.getLanguage());
   }
 
   @Override

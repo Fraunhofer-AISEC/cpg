@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import kotlin.UnsupportedOperationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -105,10 +107,11 @@ open class ValueEvaluator(
      * or less language-independent.
      */
     protected open fun handleBinaryOperator(expr: BinaryOperator, depth: Int): Any? {
-        // Resolve lhs
-        val lhsValue = evaluateInternal(expr.lhs, depth + 1)
         // Resolve rhs
         val rhsValue = evaluateInternal(expr.rhs, depth + 1)
+
+        // Resolve lhs
+        val lhsValue = evaluateInternal(expr.lhs, depth + 1)
 
         return computeBinaryOpEffect(lhsValue, rhsValue, expr)
     }
@@ -119,10 +122,14 @@ open class ValueEvaluator(
         expr: BinaryOperator
     ): Any? {
         return when (expr.operatorCode) {
-            "+" -> handlePlus(lhsValue, rhsValue, expr)
-            "-" -> handleMinus(lhsValue, rhsValue, expr)
-            "/" -> handleDiv(lhsValue, rhsValue, expr)
-            "*" -> handleTimes(lhsValue, rhsValue, expr)
+            "+",
+            "+=" -> handlePlus(lhsValue, rhsValue, expr)
+            "-",
+            "-=" -> handleMinus(lhsValue, rhsValue, expr)
+            "/",
+            "/=" -> handleDiv(lhsValue, rhsValue, expr)
+            "*",
+            "*=" -> handleTimes(lhsValue, rhsValue, expr)
             ">" -> handleGreater(lhsValue, rhsValue, expr)
             ">=" -> handleGEq(lhsValue, rhsValue, expr)
             "<" -> handleLess(lhsValue, rhsValue, expr)
@@ -268,17 +275,13 @@ open class ValueEvaluator(
             }
             "--" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Double -> input - 1
-                    is Float -> input - 1
-                    is Number -> input.toLong() - 1
+                    is Number -> input.decrement()
                     else -> cannotEvaluate(expr, this)
                 }
             }
             "++" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Double -> input + 1
-                    is Float -> input + 1
-                    is Number -> input.toLong() + 1
+                    is Number -> input.increment()
                     else -> cannotEvaluate(expr, this)
                 }
             }
@@ -349,40 +352,67 @@ open class ValueEvaluator(
         depth: Int
     ): Any? {
         // For a reference, we are interested into its last assignment into the reference
-        // denoted by the previous DFG edge
-        val prevDFG = expr.prevDFG
+        // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
+        // references.
+        val prevDFG = filterSelfReferences(expr, expr.prevDFG.toList())
 
-        if (prevDFG.size == 1)
-        // There's only one incoming DFG edge, so we follow this one.
-        return evaluateInternal(prevDFG.first(), depth + 1)
-
-        // We are only interested in expressions
-        val expressions = prevDFG.filterIsInstance<Expression>()
-
-        if (expressions.size > 1) {
+        return if (prevDFG.size == 1) {
+            // There's only one incoming DFG edge, so we follow this one.
+            evaluateInternal(prevDFG.first(), depth + 1)
+        } else if (prevDFG.size > 1) {
             // We cannot have more than ONE valid solution, so we need to abort
             log.warn(
-                "We cannot evaluate {}: It has more than more previous DFG edges, meaning that the value is probably affected by a branch.",
+                "We cannot evaluate {}: It has more than 1 previous DFG edges, meaning that the value is probably affected by a branch.",
                 expr
             )
-            return cannotEvaluate(expr, this)
+            cannotEvaluate(expr, this)
+        } else {
+            // No previous DFG node
+            log.warn("We cannot evaluate {}: It has no previous DFG edges.", expr)
+            cannotEvaluate(expr, this)
+        }
+    }
+
+    /**
+     * If a reference has READWRITE access, ignore any "self-references", e.g. from a
+     * plus/minus/div/times-assign or a plusplus/minusminus, etc.
+     */
+    protected fun filterSelfReferences(
+        ref: DeclaredReferenceExpression,
+        inDFG: List<Node>
+    ): List<Node> {
+        var list = inDFG
+
+        // The ops +=, -=, ... and ++, -- have in common that we see the ref twice: Once to reach
+        // the operator and once to leave it. We have to differentiate between these two cases.
+        // Example: i = 3 -- DFG --> i++ -- DFG --> print(i)
+        // - We want to get i in the print, so we go backwards to "i" in "i++".
+        // - We now have to evaluate the whole statement (one more DFG edge back). Here, we only
+        // consider the statement where we already are (case 1)
+        // - To evaluate i++, we go one DFG edge back again and reach "i" for a second time
+        // - We now remove the statement where we already are (the "selfReference") to continue
+        // before it (case 2)
+
+        // Determines if we are in case 2
+        val isCase2 = path.size > 2 && ref in path.subList(0, path.size - 2)
+
+        if (ref.access == AccessValues.READWRITE && isCase2) {
+            // Remove the self reference
+            list =
+                list.filter {
+                    !((it is BinaryOperator && it.lhs == ref) ||
+                        (it is UnaryOperator && it.input == ref))
+                }
+        } else if (ref.access == AccessValues.READWRITE && !isCase2) {
+            // Consider only the self reference
+            list =
+                list.filter {
+                    ((it is BinaryOperator && it.lhs == ref) ||
+                        (it is UnaryOperator && it.input == ref))
+                }
         }
 
-        if (expressions.isEmpty()) {
-            // No previous expression?? Let's try with a variable declaration and its initialization
-            val decl = prevDFG.filterIsInstance<VariableDeclaration>()
-            if (decl.size > 1) {
-                // We cannot have more than ONE valid solution, so we need to abort
-                log.warn(
-                    "We cannot evaluate {}: It has more than more previous DFG edges, meaning that the value is probably affected by a branch.",
-                    expr
-                )
-                return cannotEvaluate(expr, this)
-            }
-            return evaluateInternal(decl.firstOrNull(), depth + 1)
-        }
-
-        return evaluateInternal(expressions.firstOrNull(), depth + 1)
+        return list
     }
 }
 
@@ -394,7 +424,29 @@ internal fun Number.negate(): Number {
         is Byte -> -this
         is Double -> -this
         is Float -> -this
-        else -> 0
+        else -> throw UnsupportedOperationException()
+    }
+}
+
+fun Number.increment(): Number {
+    return when (this) {
+        is Double -> this + 1
+        is Float -> this + 1
+        is Int -> this + 1
+        is Long -> this + 1
+        is Short -> this + 1
+        else -> throw UnsupportedOperationException()
+    }
+}
+
+fun Number.decrement(): Number {
+    return when (this) {
+        is Double -> this - 1
+        is Float -> this - 1
+        is Int -> this - 1
+        is Long -> this - 1
+        is Short -> this - 1
+        else -> throw UnsupportedOperationException()
     }
 }
 

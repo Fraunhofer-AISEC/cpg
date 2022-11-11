@@ -49,12 +49,6 @@ class CompilationDatabase : Plugin {
                     // basics
                     "import de.fraunhofer.aisec.cpg.TranslationConfiguration",
                     "import de.fraunhofer.aisec.cpg.TranslationManager",
-                    // go
-                    "import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend",
-                    // llvm
-                    "import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend",
-                    // python
-                    "import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend",
                     // all the graph nodes
                     "import de.fraunhofer.aisec.cpg.graph.*",
                     "import de.fraunhofer.aisec.cpg.graph.declarations.*",
@@ -75,16 +69,15 @@ class CompilationDatabase : Plugin {
                     "import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile",
                     "val db = fromFile(File(\"$path\"))",
                     // lets build and analyze
-                    "@OptIn(de.fraunhofer.aisec.cpg.ExperimentalGolang::class, de.fraunhofer.aisec.cpg.ExperimentalPython::class) val config =\n" +
+                    "val config =\n" +
                         "                TranslationConfiguration.builder()\n" +
                         "                    .useCompilationDatabase(db)\n" +
                         "                    .sourceLocations(db.sourceFiles)\n" +
                         "                    .defaultLanguages()\n" +
-                        //                      "
-                        // .registerLanguage(GoLanguageFrontend::class.java,
-                        // GoLanguageFrontend.GOLANG_EXTENSIONS)" +
-                        "                    .registerLanguage(LLVMIRLanguageFrontend::class.java, LLVMIRLanguageFrontend.LLVM_EXTENSIONS)" +
-                        "                    .registerLanguage(PythonLanguageFrontend::class.java, PythonLanguageFrontend.PY_EXTENSIONS)" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage\")" +
                         "                    .defaultPasses()\n" +
                         "                    .build()",
                     "val analyzer = TranslationManager.builder().config(config).build()",

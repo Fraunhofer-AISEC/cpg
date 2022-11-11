@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
+import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -106,7 +107,7 @@ internal class FunctionTemplateTest : BaseTest() {
         val typeParamDeclaration = typeParamDeclarations[0]
         assertEquals(typeParamDeclaration, functionTemplateDeclaration.parameters[0])
 
-        val typeT = ParameterizedType("T")
+        val typeT = ParameterizedType("T", CPPLanguage())
         val intType =
             ObjectType(
                 "int",
@@ -114,7 +115,8 @@ internal class FunctionTemplateTest : BaseTest() {
                 Type.Qualifier(),
                 ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true
+                true,
+                CPPLanguage()
             )
         val floatType =
             ObjectType(
@@ -123,7 +125,8 @@ internal class FunctionTemplateTest : BaseTest() {
                 Type.Qualifier(),
                 ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true
+                true,
+                CPPLanguage()
             )
         assertEquals(typeT, typeParamDeclaration.type)
         assertEquals(intType, typeParamDeclaration.default)
@@ -233,7 +236,8 @@ internal class FunctionTemplateTest : BaseTest() {
                 Type.Qualifier(),
                 ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true
+                true,
+                CPPLanguage()
             )
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)
@@ -363,7 +367,8 @@ internal class FunctionTemplateTest : BaseTest() {
                 Type.Qualifier(),
                 ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true
+                true,
+                CPPLanguage()
             )
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)

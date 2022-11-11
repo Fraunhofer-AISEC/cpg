@@ -128,3 +128,64 @@ func (g *GoLanguageFrontend) LogError(format string, args ...interface{}) (err e
 
 	return
 }
+
+func (g *GoLanguageFrontend) GetLanguage() (l *cpg.Language, err error) {
+	l = new(cpg.Language)
+	err = g.ObjectRef.CallMethod(env, "getLanguage", l)
+
+	return
+}
+
+func updateCode(fset *token.FileSet, node *cpg.Node, astNode ast.Node) {
+	var codeBuf bytes.Buffer
+	_ = printer.Fprint(&codeBuf, fset, astNode)
+
+	node.SetCode(codeBuf.String())
+}
+
+func updateLocation(fset *token.FileSet, node *cpg.Node, astNode ast.Node) {
+	if astNode == nil {
+		return
+	}
+
+	file := fset.File(astNode.Pos())
+	if file == nil {
+		return
+	}
+
+	uri, err := env.NewObject("java/net/URI", cpg.NewString(file.Name()))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	region := cpg.NewRegion(fset, astNode,
+		fset.Position(astNode.Pos()).Line,
+		fset.Position(astNode.Pos()).Column,
+		fset.Position(astNode.End()).Line,
+		fset.Position(astNode.End()).Column,
+	)
+
+	location := cpg.NewPhysicalLocation(fset, astNode, uri, region)
+
+	err = node.SetLocation(location)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func updateLanguage(node *cpg.Node, frontend *GoLanguageFrontend) {
+	var (
+		err error
+		l   *cpg.Language
+	)
+
+	l, err = frontend.GetLanguage()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = node.SetLanguge(l)
+	if err != nil {
+		log.Fatal(err)
+	}
+}

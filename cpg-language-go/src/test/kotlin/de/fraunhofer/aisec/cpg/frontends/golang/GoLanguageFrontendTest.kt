@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
@@ -41,7 +40,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-@ExperimentalGolang
 class GoLanguageFrontendTest : BaseTest() {
 
     @Test
@@ -49,10 +47,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("values.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
 
@@ -86,10 +81,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("dfg.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
 
@@ -120,12 +112,7 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("construct.go").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<GoLanguage>() }
 
         assertNotNull(tu)
 
@@ -149,7 +136,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val new = decl.initializer as? NewExpression
         assertNotNull(new)
-        assertEquals(TypeParser.createFrom("p.MyStruct*", false), new.type)
+        assertEquals(TypeParser.createFrom("p.MyStruct*", GoLanguage()), new.type)
 
         val construct = new.initializer as? ConstructExpression
         assertNotNull(construct)
@@ -165,7 +152,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         var make = decl.initializer
         assertNotNull(make)
-        assertEquals(TypeParser.createFrom("int[]", false), make.type)
+        assertEquals(TypeParser.createFrom("int[]", GoLanguage()), make.type)
 
         assertTrue(make is ArrayCreationExpression)
 
@@ -184,7 +171,7 @@ class GoLanguageFrontendTest : BaseTest() {
         make = decl.initializer
         assertNotNull(make)
         assertTrue(make is ConstructExpression)
-        assertEquals(TypeParser.createFrom("map<string,string>", false), make.type)
+        assertEquals(TypeParser.createFrom("map<string,string>", GoLanguage()), make.type)
 
         // make channel
 
@@ -197,7 +184,7 @@ class GoLanguageFrontendTest : BaseTest() {
         make = decl.initializer
         assertNotNull(make)
         assertTrue(make is ConstructExpression)
-        assertEquals(TypeParser.createFrom("chan<int>", false), make.type)
+        assertEquals(TypeParser.createFrom("chan<int>", GoLanguage()), make.type)
     }
 
     @Test
@@ -205,10 +192,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -221,26 +205,26 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(a.location)
 
         assertEquals("a", a.name)
-        assertEquals(TypeParser.createFrom("int", false), a.type)
+        assertEquals(TypeParser.createFrom("int", GoLanguage()), a.type)
 
         val s = p.byNameOrNull<VariableDeclaration>("s")
         assertNotNull(s)
         assertEquals("s", s.name)
-        assertEquals(TypeParser.createFrom("string", false), s.type)
+        assertEquals(TypeParser.createFrom("string", GoLanguage()), s.type)
 
         val f = p.byNameOrNull<VariableDeclaration>("f")
         assertNotNull(f)
         assertEquals("f", f.name)
-        assertEquals(TypeParser.createFrom("float64", false), f.type)
+        assertEquals(TypeParser.createFrom("float64", GoLanguage()), f.type)
 
         val f32 = p.byNameOrNull<VariableDeclaration>("f32")
         assertNotNull(f32)
         assertEquals("f32", f32.name)
-        assertEquals(TypeParser.createFrom("float32", false), f32.type)
+        assertEquals(TypeParser.createFrom("float32", GoLanguage()), f32.type)
 
         val n = p.byNameOrNull<VariableDeclaration>("n")
         assertNotNull(n)
-        assertEquals(TypeParser.createFrom("int*", false), n.type)
+        assertEquals(TypeParser.createFrom("int*", GoLanguage()), n.type)
 
         val nil = n.initializer as? Literal<*>
         assertNotNull(nil)
@@ -253,10 +237,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("function.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -297,7 +278,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val s = myTest.parameters.first()
         assertNotNull(s)
         assertEquals("s", s.name)
-        assertEquals(TypeParser.createFrom("string", false), s.type)
+        assertEquals(TypeParser.createFrom("string", GoLanguage()), s.type)
 
         assertEquals("myTest", myTest.name)
 
@@ -314,7 +295,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(literal)
 
         assertEquals("%s", literal.value)
-        assertEquals(TypeParser.createFrom("string", false), literal.type)
+        assertEquals(TypeParser.createFrom("string", GoLanguage()), literal.type)
 
         val ref = callExpression.arguments[1] as? DeclaredReferenceExpression
         assertNotNull(ref)
@@ -352,7 +333,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val err = binOp.lhs
 
         assertNotNull(err)
-        assertEquals(TypeParser.createFrom("error", false), err.type)
+        assertEquals(TypeParser.createFrom("error", GoLanguage()), err.type)
     }
 
     @Test
@@ -360,10 +341,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -389,7 +367,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val myField = fields.first()
 
         assertEquals("MyField", myField.name)
-        assertEquals(TypeParser.createFrom("int", false), myField.type)
+        assertEquals(TypeParser.createFrom("int", GoLanguage()), myField.type)
 
         val myInterface =
             p.getDeclarationsByName("p.MyInterface", RecordDeclaration::class.java)
@@ -433,10 +411,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -476,10 +451,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("field.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -503,7 +475,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(lhs)
         assertEquals(myFunc.receiver, (lhs.base as? DeclaredReferenceExpression)?.refersTo)
         assertEquals("Field", lhs.name)
-        assertEquals(TypeParser.createFrom("int", false), lhs.type)
+        assertEquals(TypeParser.createFrom("int", GoLanguage()), lhs.type)
 
         val rhs = binOp.rhs as? DeclaredReferenceExpression
 
@@ -516,10 +488,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("if.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -541,7 +510,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(b)
         assertEquals("b", b.name)
-        assertEquals(TypeParser.createFrom("bool", false), b.type)
+        assertEquals(TypeParser.createFrom("bool", GoLanguage()), b.type)
 
         // true, false are builtin variables, NOT literals in Golang
         // we might need to parse this special case differently
@@ -560,10 +529,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("switch.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -629,12 +595,7 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<GoLanguage>() }
 
         assertNotNull(result)
         val tus = result.translationUnits
@@ -656,7 +617,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(c)
         // type will be inferred from the function declaration
-        assertEquals(TypeParser.createFrom("p.MyStruct*", false), c.type)
+        assertEquals(TypeParser.createFrom("p.MyStruct*", GoLanguage()), c.type)
 
         val newMyStruct = c.initializer as? CallExpression
         assertNotNull(newMyStruct)
@@ -688,12 +649,7 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<GoLanguage>() }
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
 
@@ -723,12 +679,7 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<GoLanguage>() }
 
         assertNotNull(result)
         val tus = result.translationUnits
@@ -774,10 +725,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("comment.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         assertNotNull(tu)
@@ -819,10 +767,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("ref.go").toFile()), topLevel, true) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
+                it.registerLanguage<GoLanguage>()
             }
 
         val mainPackage = tu.byNameOrNull<NamespaceDeclaration>("main")

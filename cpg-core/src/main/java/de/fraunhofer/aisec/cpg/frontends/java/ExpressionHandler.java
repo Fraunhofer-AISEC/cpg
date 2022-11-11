@@ -25,6 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newVariableDeclaration;
+import static de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt.*;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.parseType;
+import static de.fraunhofer.aisec.cpg.graph.StatementBuilderKt.newDeclarationStatement;
+
 import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.ArrayCreationLevel;
 import com.github.javaparser.ast.NodeList;
@@ -37,7 +42,7 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
@@ -45,7 +50,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.List;
 import java.util.Objects;
@@ -86,7 +90,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
   private Statement handleCastExpr(Expression expr) {
     CastExpr castExpr = expr.asCastExpr();
-    CastExpression castExpression = NodeBuilder.newCastExpression(expr.toString());
+    CastExpression castExpression = newCastExpression(this, expr.toString());
 
     de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression expression =
         (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
@@ -94,12 +98,12 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     castExpression.setExpression(expression);
     castExpression.setCastOperator(2);
-    Type t = this.lang.getTypeAsGoodAsPossible(castExpr.getType());
+    Type t = this.frontend.getTypeAsGoodAsPossible(castExpr.getType());
     castExpression.setCastType(t);
     if (castExpr.getType().isPrimitiveType()) {
       // Set Type based on the Casting type as it will result in a conversion for primitive types
       castExpression.setType(
-          TypeParser.createFrom(castExpr.getType().resolve().asPrimitive().describe(), true));
+          parseType(this, castExpr.getType().resolve().asPrimitive().describe()));
     } else {
       // Get Runtime type from cast expression for complex types;
 
@@ -118,7 +122,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
   private Statement handleArrayCreationExpr(Expression expr) {
     ArrayCreationExpr arrayCreationExpr = (ArrayCreationExpr) expr;
     ArrayCreationExpression creationExpression =
-        NodeBuilder.newArrayCreationExpression(expr.toString());
+        newArrayCreationExpression(frontend.getLanguage(), expr.toString());
 
     // in Java, an array creation expression either specifies an initializer or dimensions
 
@@ -145,7 +149,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     ArrayInitializerExpr arrayInitializerExpr = (ArrayInitializerExpr) expr;
     // ArrayInitializerExpressions are converted into InitializerListExpressions to reduce the
     // syntactic distance a CPP and JAVA CPG
-    InitializerListExpression initList = NodeBuilder.newInitializerListExpression(expr.toString());
+    InitializerListExpression initList = newInitializerListExpression(this, expr.toString());
     List<de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression> initializers =
         arrayInitializerExpr.getValues().stream()
             .map(this::handle)
@@ -158,7 +162,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
   private ArraySubscriptionExpression handleArrayAccessExpr(Expression expr) {
     ArrayAccessExpr arrayAccessExpr = (ArrayAccessExpr) expr;
     ArraySubscriptionExpression arraySubsExpression =
-        NodeBuilder.newArraySubscriptionExpression(expr.toString());
+        newArraySubscriptionExpression(this, expr.toString());
     arraySubsExpression.setArrayExpression(
         (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(arrayAccessExpr.getName()));
@@ -176,11 +180,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     ConditionalExpr conditionalExpr = expr.asConditionalExpr();
     Type superType;
     try {
-      superType = TypeParser.createFrom(conditionalExpr.calculateResolvedType().describe(), true);
+      superType = parseType(this, conditionalExpr.calculateResolvedType().describe());
     } catch (RuntimeException | NoClassDefFoundError e) {
-      String s = this.lang.recoverTypeFromUnsolvedException(e);
+      String s = this.frontend.recoverTypeFromUnsolvedException(e);
       if (s != null) {
-        superType = TypeParser.createFrom(s, true);
+        superType = parseType(this, s);
       } else {
         superType = null;
       }
@@ -195,7 +199,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression elseExpr =
         (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(conditionalExpr.getElseExpr());
-    return NodeBuilder.newConditionalExpression(condition, thenExpr, elseExpr, superType);
+    return newConditionalExpression(this, condition, thenExpr, elseExpr, superType);
   }
 
   private BinaryOperator handleAssignmentExpression(Expression expr) {
@@ -212,7 +216,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             handle(assignExpr.getValue());
 
     BinaryOperator binaryOperator =
-        NodeBuilder.newBinaryOperator(assignExpr.getOperator().asString(), assignExpr.toString());
+        newBinaryOperator(this, assignExpr.getOperator().asString(), assignExpr.toString());
 
     binaryOperator.setLhs(lhs);
     binaryOperator.setRhs(rhs);
@@ -225,20 +229,20 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     VariableDeclarationExpr variableDeclarationExpr = expr.asVariableDeclarationExpr();
 
     DeclarationStatement declarationStatement =
-        NodeBuilder.newDeclarationStatement(variableDeclarationExpr.toString());
+        newDeclarationStatement(this, variableDeclarationExpr.toString());
 
     for (VariableDeclarator variable : variableDeclarationExpr.getVariables()) {
       ResolvedValueDeclaration resolved = variable.resolve();
 
-      Type declarationType = this.lang.getTypeAsGoodAsPossible(variable, resolved);
+      Type declarationType = this.frontend.getTypeAsGoodAsPossible(variable, resolved);
       declarationType.setAdditionalTypeKeywords(
           variableDeclarationExpr.getModifiers().stream()
               .map(m -> m.getKeyword().asString())
               .collect(Collectors.joining(" ")));
 
       VariableDeclaration declaration =
-          NodeBuilder.newVariableDeclaration(
-              resolved.getName(), declarationType, variable.toString(), false, lang, variable);
+          newVariableDeclaration(
+              this, resolved.getName(), declarationType, variable.toString(), false, variable);
 
       if (declarationType instanceof PointerType && ((PointerType) declarationType).isArray()) {
         declaration.setIsArray(true);
@@ -259,12 +263,12 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             new UninitializedValue();
         declaration.setInitializer(uninitialzedInitializer);
       }
-      lang.setCodeAndRegion(declaration, variable);
+      frontend.setCodeAndLocation(declaration, variable);
       declarationStatement.addToPropertyEdgeDeclaration(declaration);
 
-      lang.processAnnotations(declaration, variableDeclarationExpr);
+      frontend.processAnnotations(declaration, variableDeclarationExpr);
 
-      lang.getScopeManager().addDeclaration(declaration);
+      frontend.getScopeManager().addDeclaration(declaration);
     }
 
     return declarationStatement;
@@ -285,14 +289,13 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         if (resolve.asField().isStatic()) {
           isStaticAccess = true;
         }
-        baseType =
-            TypeParser.createFrom(resolve.asField().declaringType().getQualifiedName(), true);
+        baseType = parseType(this, resolve.asField().declaringType().getQualifiedName());
 
       } catch (RuntimeException | NoClassDefFoundError ex) {
         isStaticAccess = true;
-        String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
+        String typeString = this.frontend.recoverTypeFromUnsolvedException(ex);
         if (typeString != null) {
-          baseType = TypeParser.createFrom(typeString, true);
+          baseType = parseType(this, typeString);
         } else {
           // try to get the name
           String name;
@@ -302,21 +305,21 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
           } else {
             name = scope.asNameExpr().getNameAsString();
           }
-          String qualifiedNameFromImports = this.lang.getQualifiedNameFromImports(name);
+          String qualifiedNameFromImports = this.frontend.getQualifiedNameFromImports(name);
           if (qualifiedNameFromImports != null) {
-            baseType = TypeParser.createFrom(qualifiedNameFromImports, true);
+            baseType = parseType(this, qualifiedNameFromImports);
           } else {
             log.info("Unknown base type 1 for {}", fieldAccessExpr);
-            baseType = UnknownType.getUnknownType();
+            baseType = UnknownType.getUnknownType(getLanguage());
           }
         }
       }
       base =
-          NodeBuilder.newDeclaredReferenceExpression(
-              scope.asNameExpr().getNameAsString(), baseType, scope.toString());
+          newDeclaredReferenceExpression(
+              this, scope.asNameExpr().getNameAsString(), baseType, scope.toString());
       ((DeclaredReferenceExpression) base).setStaticAccess(isStaticAccess);
 
-      lang.setCodeAndRegion(base, fieldAccessExpr.getScope());
+      frontend.setCodeAndLocation(base, fieldAccessExpr.getScope());
     } else if (scope.isFieldAccessExpr()) {
       base = (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
       de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression tester = base;
@@ -335,20 +338,20 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         } else {
           name = scope.asFieldAccessExpr().getNameAsString();
         }
-        String qualifiedNameFromImports = this.lang.getQualifiedNameFromImports(name);
+        String qualifiedNameFromImports = this.frontend.getQualifiedNameFromImports(name);
         Type baseType;
         if (qualifiedNameFromImports != null) {
-          baseType = TypeParser.createFrom(qualifiedNameFromImports, true);
+          baseType = parseType(this, qualifiedNameFromImports);
         } else {
           log.info("Unknown base type 2 for {}", fieldAccessExpr);
-          baseType = UnknownType.getUnknownType();
+          baseType = UnknownType.getUnknownType(getLanguage());
         }
         base =
-            NodeBuilder.newDeclaredReferenceExpression(
-                scope.asFieldAccessExpr().getNameAsString(), baseType, scope.toString());
+            newDeclaredReferenceExpression(
+                this, scope.asFieldAccessExpr().getNameAsString(), baseType, scope.toString());
         ((DeclaredReferenceExpression) base).setStaticAccess(true);
       }
-      lang.setCodeAndRegion(base, fieldAccessExpr.getScope());
+      frontend.setCodeAndLocation(base, fieldAccessExpr.getScope());
     } else {
       base = (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
     }
@@ -359,24 +362,25 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       fieldType =
           TypeManager.getInstance()
               .getTypeParameter(
-                  this.lang.getScopeManager().getCurrentRecord(),
+                  this.frontend.getScopeManager().getCurrentRecord(),
                   symbol.asField().getType().describe());
       if (fieldType == null) {
-        fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
+        fieldType = parseType(this, symbol.asField().getType().describe());
       }
     } catch (RuntimeException | NoClassDefFoundError ex) {
-      String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
+      String typeString = this.frontend.recoverTypeFromUnsolvedException(ex);
       if (typeString != null) {
-        fieldType = TypeParser.createFrom(typeString, true);
+        fieldType = parseType(this, typeString);
       } else if (fieldAccessExpr.toString().endsWith(".length")) {
-        fieldType = TypeParser.createFrom("int", true);
+        fieldType = parseType(this, "int");
       } else {
         log.info("Unknown field type for {}", fieldAccessExpr);
-        fieldType = UnknownType.getUnknownType();
+        fieldType = UnknownType.getUnknownType(getLanguage());
       }
 
       MemberExpression memberExpression =
-          NodeBuilder.newMemberExpression(
+          newMemberExpression(
+              this,
               base,
               fieldType,
               fieldAccessExpr.getName().getIdentifier(),
@@ -387,10 +391,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     }
 
     if (base.getLocation() == null) {
-      base.setLocation(lang.getLocationFromRawNode(fieldAccessExpr));
+      base.setLocation(frontend.getLocationFromRawNode(fieldAccessExpr));
     }
 
-    return NodeBuilder.newMemberExpression(
+    return newMemberExpression(
+        this,
         base,
         fieldType,
         fieldAccessExpr.getName().getIdentifier(),
@@ -403,31 +408,28 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     String value = literalExpr.toString();
     if (literalExpr instanceof IntegerLiteralExpr) {
-      return NodeBuilder.newLiteral(
-          literalExpr.asIntegerLiteralExpr().asNumber(), TypeParser.createFrom("int", true), value);
+      return newLiteral(
+          this, literalExpr.asIntegerLiteralExpr().asNumber(), parseType(this, "int"), value);
     } else if (literalExpr instanceof StringLiteralExpr) {
-      return NodeBuilder.newLiteral(
+      return newLiteral(
+          this,
           literalExpr.asStringLiteralExpr().asString(),
-          TypeParser.createFrom("java.lang.String", true),
+          parseType(this, "java.lang.String"),
           value);
     } else if (literalExpr instanceof BooleanLiteralExpr) {
-      return NodeBuilder.newLiteral(
-          literalExpr.asBooleanLiteralExpr().getValue(),
-          TypeParser.createFrom("boolean", true),
-          value);
+      return newLiteral(
+          this, literalExpr.asBooleanLiteralExpr().getValue(), parseType(this, "boolean"), value);
     } else if (literalExpr instanceof CharLiteralExpr) {
-      return NodeBuilder.newLiteral(
-          literalExpr.asCharLiteralExpr().asChar(), TypeParser.createFrom("char", true), value);
+      return newLiteral(
+          this, literalExpr.asCharLiteralExpr().asChar(), parseType(this, "char"), value);
     } else if (literalExpr instanceof DoubleLiteralExpr) {
-      return NodeBuilder.newLiteral(
-          literalExpr.asDoubleLiteralExpr().asDouble(),
-          TypeParser.createFrom("double", true),
-          value);
+      return newLiteral(
+          this, literalExpr.asDoubleLiteralExpr().asDouble(), parseType(this, "double"), value);
     } else if (literalExpr instanceof LongLiteralExpr) {
-      return NodeBuilder.newLiteral(
-          literalExpr.asLongLiteralExpr().asNumber(), TypeParser.createFrom("long", true), value);
+      return newLiteral(
+          this, literalExpr.asLongLiteralExpr().asNumber(), parseType(this, "long"), value);
     } else if (literalExpr instanceof NullLiteralExpr) {
-      return NodeBuilder.newLiteral(null, TypeParser.createFrom("null", true), value);
+      return newLiteral(this, null, parseType(this, "null"), value);
     }
 
     return null;
@@ -436,15 +438,16 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
   private DeclaredReferenceExpression handleClassExpression(Expression expr) {
     ClassExpr classExpr = expr.asClassExpr();
 
-    Type type = TypeParser.createFrom(classExpr.getType().asString(), true);
+    Type type = parseType(this, classExpr.getType().asString());
 
     DeclaredReferenceExpression thisExpression =
-        NodeBuilder.newDeclaredReferenceExpression(
+        newDeclaredReferenceExpression(
+            this,
             classExpr.toString().substring(classExpr.toString().lastIndexOf('.') + 1),
             type,
             classExpr.toString());
     thisExpression.setStaticAccess(true);
-    lang.setCodeAndRegion(thisExpression, classExpr);
+    frontend.setCodeAndLocation(thisExpression, classExpr);
 
     return thisExpression;
   }
@@ -453,11 +456,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     ThisExpr thisExpr = expr.asThisExpr();
     ResolvedTypeDeclaration resolvedValueDeclaration = thisExpr.resolve();
 
-    Type type = TypeParser.createFrom(resolvedValueDeclaration.getQualifiedName(), true);
+    Type type = parseType(this, resolvedValueDeclaration.getQualifiedName());
 
     DeclaredReferenceExpression thisExpression =
-        NodeBuilder.newDeclaredReferenceExpression(thisExpr.toString(), type, thisExpr.toString());
-    lang.setCodeAndRegion(thisExpression, thisExpr);
+        newDeclaredReferenceExpression(this, thisExpr.toString(), type, thisExpr.toString());
+    frontend.setCodeAndLocation(thisExpression, thisExpr);
 
     return thisExpression;
   }
@@ -467,9 +470,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     // about the inheritance structure. Thus, we delay the resolving to the variable resolving
     // process
     DeclaredReferenceExpression superExpression =
-        NodeBuilder.newDeclaredReferenceExpression(
-            expr.toString(), UnknownType.getUnknownType(), expr.toString());
-    lang.setCodeAndRegion(superExpression, expr);
+        newDeclaredReferenceExpression(
+            this, expr.toString(), UnknownType.getUnknownType(getLanguage()), expr.toString());
+    frontend.setCodeAndLocation(superExpression, expr);
 
     return superExpression;
   }
@@ -484,7 +487,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     //    try {
     //      ResolvedType resolvedType = nameExpr.calculateResolvedType();
     //      if (resolvedType.isReferenceType()) {
-    //        return NodeBuilder.newDeclaredReferenceExpression(
+    //        return newDeclaredReferenceExpression(
     //            nameExpr.getNameAsString(),
     //            new Type(((ReferenceTypeImpl) resolvedType).getQualifiedName()),
     //            nameExpr.toString());
@@ -493,7 +496,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     //        UnsolvedSymbolException
     //            e) { // this might throw, e.g. if the type is simply not defined (i.e., syntax
     // error)
-    //      return NodeBuilder.newDeclaredReferenceExpression(
+    //      return newDeclaredReferenceExpression(
     //          nameExpr.getNameAsString(), new Type(UNKNOWN_TYPE), nameExpr.toString());
     //    }
 
@@ -534,37 +537,37 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         Type type =
             TypeManager.getInstance()
                 .getTypeParameter(
-                    this.lang.getScopeManager().getCurrentRecord(), symbol.getType().describe());
+                    this.frontend.getScopeManager().getCurrentRecord(),
+                    symbol.getType().describe());
 
         if (type == null) {
-          type = TypeParser.createFrom(symbol.getType().describe(), true);
+          type = parseType(this, symbol.getType().describe());
         }
 
-        return NodeBuilder.newDeclaredReferenceExpression(
-            symbol.getName(), type, nameExpr.toString());
+        return newDeclaredReferenceExpression(this, symbol.getName(), type, nameExpr.toString());
       }
     } catch (UnsolvedSymbolException ex) {
       String typeString;
       if (ex.getName().startsWith("We are unable to find the value declaration corresponding to")) {
         typeString = nameExpr.getNameAsString();
       } else {
-        typeString = this.lang.recoverTypeFromUnsolvedException(ex);
+        typeString = this.frontend.recoverTypeFromUnsolvedException(ex);
       }
       Type t;
       if (typeString == null) {
-        t = TypeParser.createFrom("UNKNOWN3", true);
+        t = parseType(this, "UNKNOWN3"); // TODO: What's this? UNKNOWN3??
         log.info("Unresolved symbol: {}", nameExpr.getNameAsString());
       } else {
-        t = TypeParser.createFrom(typeString, true);
+        t = parseType(this, typeString);
         t.setTypeOrigin(Type.Origin.GUESSED);
       }
 
       var name = nameExpr.getNameAsString();
 
       DeclaredReferenceExpression declaredReferenceExpression =
-          NodeBuilder.newDeclaredReferenceExpression(name, t, nameExpr.toString());
+          newDeclaredReferenceExpression(this, name, t, nameExpr.toString());
 
-      var recordDeclaration = this.lang.getScopeManager().getCurrentRecord();
+      var recordDeclaration = this.frontend.getScopeManager().getCurrentRecord();
 
       if (recordDeclaration != null && Objects.equals(recordDeclaration.getName(), name)) {
         declaredReferenceExpression.setRefersTo(recordDeclaration);
@@ -572,11 +575,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       return declaredReferenceExpression;
     } catch (RuntimeException | NoClassDefFoundError ex) {
-      Type t = TypeParser.createFrom("UNKNOWN4", true);
+      Type t = parseType(this, "UNKNOWN4"); // TODO: What's this? UNKNOWN4??
       log.info("Unresolved symbol: {}", nameExpr.getNameAsString());
 
-      return NodeBuilder.newDeclaredReferenceExpression(
-          nameExpr.getNameAsString(), t, nameExpr.toString());
+      return newDeclaredReferenceExpression(
+          this, nameExpr.getNameAsString(), t, nameExpr.toString());
     }
   }
 
@@ -588,17 +591,17 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(binaryExpr.getExpression());
 
-    Type typeAsGoodAsPossible = this.lang.getTypeAsGoodAsPossible(binaryExpr.getType());
+    Type typeAsGoodAsPossible = this.frontend.getTypeAsGoodAsPossible(binaryExpr.getType());
 
     // second, handle the value. this is the second argument of the operator call
     de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression rhs =
-        NodeBuilder.newLiteral(
+        newLiteral(
+            this,
             typeAsGoodAsPossible.getTypeName(),
-            TypeParser.createFrom("class", true),
+            parseType(this, "class"),
             binaryExpr.getTypeAsString());
 
-    BinaryOperator binaryOperator =
-        NodeBuilder.newBinaryOperator("instanceof", binaryExpr.toString());
+    BinaryOperator binaryOperator = newBinaryOperator(this, "instanceof", binaryExpr.toString());
 
     binaryOperator.setLhs(lhs);
     binaryOperator.setRhs(rhs);
@@ -615,7 +618,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             handle(unaryExpr.getExpression());
 
     UnaryOperator unaryOperator =
-        NodeBuilder.newUnaryOperator(
+        newUnaryOperator(
+            this,
             unaryExpr.getOperator().asString(),
             unaryExpr.isPostfix(),
             unaryExpr.isPrefix(),
@@ -640,7 +644,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             handle(binaryExpr.getRight());
 
     BinaryOperator binaryOperator =
-        NodeBuilder.newBinaryOperator(binaryExpr.getOperator().asString(), binaryExpr.toString());
+        newBinaryOperator(this, binaryExpr.getOperator().asString(), binaryExpr.toString());
 
     binaryOperator.setLhs(lhs);
     binaryOperator.setRhs(rhs);
@@ -653,7 +657,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     CallExpression callExpression;
     Optional<Expression> o = methodCallExpr.getScope();
-    String qualifiedName = this.lang.getQualifiedMethodNameAsGoodAsPossible(methodCallExpr);
+    String qualifiedName = this.frontend.getQualifiedMethodNameAsGoodAsPossible(methodCallExpr);
     String name = qualifiedName;
     if (name.contains(".")) {
       name = name.substring(name.lastIndexOf('.') + 1);
@@ -698,27 +702,28 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       // Or if the base is a reference to an import
       if (base instanceof DeclaredReferenceExpression
-          && this.lang.getQualifiedNameFromImports(base.getName()) != null) {
+          && this.frontend.getQualifiedNameFromImports(base.getName()) != null) {
         isStatic = true;
       }
 
       if (!isStatic) {
         DeclaredReferenceExpression member =
-            NodeBuilder.newDeclaredReferenceExpression(name, UnknownType.getUnknownType(), "");
+            newDeclaredReferenceExpression(
+                this, name, UnknownType.getUnknownType(getLanguage()), "");
 
-        lang.setCodeAndRegion(
+        frontend.setCodeAndLocation(
             member,
             methodCallExpr
                 .getName()); // This will also overwrite the code set to the empty string set above
         callExpression =
-            NodeBuilder.newMemberCallExpression(
-                name, qualifiedName, base, member, ".", methodCallExpr.toString());
+            newMemberCallExpression(
+                this, name, qualifiedName, base, member, ".", methodCallExpr.toString());
       } else {
         String targetClass;
         if (resolved != null) {
           targetClass = resolved.declaringType().getQualifiedName();
         } else {
-          targetClass = this.lang.getQualifiedNameFromImports(scopeName);
+          targetClass = this.frontend.getQualifiedNameFromImports(scopeName);
         }
 
         if (targetClass == null) {
@@ -726,16 +731,16 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         }
 
         callExpression =
-            NodeBuilder.newStaticCallExpression(
-                name, qualifiedName, methodCallExpr.toString(), targetClass);
+            newStaticCallExpression(
+                this, name, qualifiedName, methodCallExpr.toString(), targetClass);
       }
     } else {
-      var ref = NodeBuilder.newDeclaredReferenceExpression(name);
+      var ref = newDeclaredReferenceExpression(this, name);
       callExpression =
-          NodeBuilder.newCallExpression(ref, qualifiedName, methodCallExpr.toString(), false);
+          newCallExpression(this, ref, qualifiedName, methodCallExpr.toString(), false);
     }
 
-    callExpression.setType(TypeParser.createFrom(typeString, true));
+    callExpression.setType(parseType(this, typeString));
 
     NodeList<Expression> arguments = methodCallExpr.getArguments();
 
@@ -764,9 +769,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     }
 
     // todo can we merge newNewExpression and newConstructExpression?
-    Type t = this.lang.getTypeAsGoodAsPossible(objectCreationExpr.getType());
+    Type t = this.frontend.getTypeAsGoodAsPossible(objectCreationExpr.getType());
 
-    NewExpression newExpression = NodeBuilder.newNewExpression(expr.toString(), t);
+    NewExpression newExpression = newNewExpression(this, expr.toString(), t);
 
     NodeList<Expression> arguments = objectCreationExpr.getArguments();
 
@@ -775,9 +780,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       code = code.substring(4); // remove "new "
     }
 
-    ConstructExpression ctor = NodeBuilder.newConstructExpression(code);
+    ConstructExpression ctor = newConstructExpression(frontend.getLanguage(), code);
     ctor.setType(t);
-    lang.setCodeAndRegion(ctor, expr);
+    frontend.setCodeAndLocation(ctor, expr);
 
     // handle the arguments
     for (int i = 0; i < arguments.size(); i++) {

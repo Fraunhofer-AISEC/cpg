@@ -303,12 +303,12 @@ public abstract class Type extends Node {
   public void setAdditionalTypeKeywords(String keywords) {
     List<String> separatedKeywords = TypeParser.separate(keywords);
     for (String keyword : separatedKeywords) {
-      if (TypeParser.isKnownSpecifier(keyword)) {
-        if (TypeParser.isStorageSpecifier(keyword)) {
+      if (TypeParser.isKnownSpecifier(keyword, getLanguage())) {
+        if (TypeParser.isStorageSpecifier(keyword, getLanguage())) {
           List<String> specifiers = new ArrayList<>();
           specifiers.add(keyword);
           this.setStorage(TypeParser.calcStorage(specifiers));
-        } else if (TypeParser.isQualifierSpecifier(keyword)) {
+        } else if (TypeParser.isQualifierSpecifier(keyword, getLanguage())) {
           List<String> qualifiers = new ArrayList<>();
           qualifiers.add(keyword);
           this.setQualifier(TypeParser.calcQualifier(qualifiers, this.getQualifier()));

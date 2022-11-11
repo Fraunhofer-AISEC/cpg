@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import java.io.File
@@ -592,8 +591,7 @@ class QueryTest {
                 mustSatisfy = {
                     max(it.subscriptExpression) <
                         min(
-                            ((it.arrayExpression as DeclaredReferenceExpression).refersTo
-                                    as VariableDeclaration)
+                            it.arrayExpression
                                 .followPrevDFGEdgesUntilHit { node ->
                                     node is ArrayCreationExpression
                                 }
@@ -611,8 +609,7 @@ class QueryTest {
                 mustSatisfy = {
                     (max(it.subscriptExpression) lt
                         min(
-                            ((it.arrayExpression as DeclaredReferenceExpression).refersTo
-                                    as VariableDeclaration)
+                            it.arrayExpression
                                 .followPrevDFGEdgesUntilHit { node ->
                                     node is ArrayCreationExpression
                                 }

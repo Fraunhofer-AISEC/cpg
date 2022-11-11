@@ -32,6 +32,8 @@ import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -147,8 +149,8 @@ class CallResolverTest : BaseTest() {
     fun testJava() {
         val result = TestUtils.analyze("java", topLevel, true)
         val records = result.records
-        val intType = TypeParser.createFrom("int", true)
-        val stringType = TypeParser.createFrom("java.lang.String", true)
+        val intType = TypeParser.createFrom("int", JavaLanguage())
+        val stringType = TypeParser.createFrom("java.lang.String", JavaLanguage())
         testMethods(records, intType, stringType)
         testOverriding(records)
         ensureNoUnknownClassDummies(records)
@@ -164,8 +166,8 @@ class CallResolverTest : BaseTest() {
                 true
             )
         val records = result.records
-        val intType = TypeParser.createFrom("int", true)
-        val stringType = TypeParser.createFrom("char*", true)
+        val intType = TypeParser.createFrom("int", CPPLanguage())
+        val stringType = TypeParser.createFrom("char*", CPPLanguage())
         testMethods(records, intType, stringType)
         testOverriding(records)
 
@@ -261,7 +263,7 @@ class CallResolverTest : BaseTest() {
         assertTrue(ambiguousCall.arguments[0] is CastExpression)
 
         val castExpression = ambiguousCall.arguments[0] as CastExpression
-        assertEquals(UnknownType.getUnknownType(), castExpression.type)
+        assertEquals(UnknownType.getUnknownType(CPPLanguage()), castExpression.type)
         assertEquals("10.0", castExpression.expression.code)
     }
 

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
@@ -42,7 +41,6 @@ import kotlin.test.assertSame
 import org.junit.jupiter.api.Test
 
 class ExpressionTest {
-    @OptIn(ExperimentalGolang::class)
     @Test
     fun testTypeAssert() {
         val topLevel = Path.of("src", "test", "resources", "golang")
@@ -51,12 +49,7 @@ class ExpressionTest {
                 listOf(topLevel.resolve("type_assert.go").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<GoLanguage>() }
         assertNotNull(tu)
 
         val main = tu.byNameOrNull<NamespaceDeclaration>("main")

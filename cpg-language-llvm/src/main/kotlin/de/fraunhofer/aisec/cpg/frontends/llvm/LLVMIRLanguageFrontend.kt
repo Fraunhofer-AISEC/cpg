@@ -26,20 +26,21 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.CompressLLVMPass
-import de.fraunhofer.aisec.cpg.passes.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
@@ -49,8 +50,11 @@ import org.bytedeco.llvm.LLVM.*
 import org.bytedeco.llvm.global.LLVM.*
 
 @RegisterExtraPass(CompressLLVMPass::class)
-class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, "::") {
+class LLVMIRLanguageFrontend(
+    language: Language<LLVMIRLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager
+) : LanguageFrontend(language, config, scopeManager) {
 
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
@@ -71,15 +75,13 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     var bindingsCache = mutableMapOf<String, Declaration>()
 
     companion object {
-        @kotlin.jvm.JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
+        @JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
     }
 
     override fun parse(file: File): TranslationUnitDeclaration {
         var bench = Benchmark(this.javaClass, "Parsing sourcefile")
         // clear the bindings cache, because it is just valid within one module
         bindingsCache.clear()
-
-        TypeManager.getInstance().setLanguageFrontend(this)
 
         // these will be filled by our create and parse functions later and will be passed as
         // pointer
@@ -116,6 +118,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
         val tu = TranslationUnitDeclaration()
+        tu.language = language
 
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)
@@ -187,7 +190,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             return alreadyVisited[typeRef]!!
         } else if (typeRef in alreadyVisited) {
             // Recursive call but we can't resolve it.
-            return UnknownType.getUnknownType()
+            return UnknownType.getUnknownType(language)
         }
         alreadyVisited[typeRef] = null
         val res: Type =
@@ -204,10 +207,10 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                 }
                 LLVMStructTypeKind -> {
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
-                    record.toType() ?: UnknownType.getUnknownType()
+                    record.toType() ?: UnknownType.getUnknownType(language)
                 }
                 else -> {
-                    TypeParser.createFrom(typeStr, false)
+                    parseType(typeStr)
                 }
             }
         alreadyVisited[typeRef] = res

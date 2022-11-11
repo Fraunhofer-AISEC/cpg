@@ -24,3 +24,24 @@
  *
  */
 package cpg
+
+import "tekao.net/jnigi"
+
+type Language Node
+
+func (l *Language) ConvertToGo(o *jnigi.ObjectRef) error {
+	*l = (Language)(*o)
+	return nil
+}
+
+func (l *Language) ConvertToJava() (obj *jnigi.ObjectRef, err error) {
+	return (*jnigi.ObjectRef)(l), nil
+}
+
+func (l *Language) GetClassName() string {
+	return "de/fraunhofer/aisec/cpg/frontends/Language"
+}
+
+func (l *Language) IsArray() bool {
+	return false
+}

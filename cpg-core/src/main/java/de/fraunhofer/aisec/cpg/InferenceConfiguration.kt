@@ -44,7 +44,7 @@ private constructor(
      * Uses heuristics to add DFG edges for call expressions to unresolved functions (i.e.,
      * functions not implemented in the given source code).
      */
-    val inferDfgForUnresolvedCalls: Boolean
+    val inferDfgForUnresolvedSymbols: Boolean
 ) {
     class Builder(
         var guessCastExpressions: Boolean = false,

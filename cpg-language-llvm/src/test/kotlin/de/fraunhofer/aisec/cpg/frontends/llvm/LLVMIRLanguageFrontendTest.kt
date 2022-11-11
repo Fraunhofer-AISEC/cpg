@@ -47,7 +47,11 @@ class LLVMIRLanguageFrontendTest {
         val topLevel = Path.of("src", "test", "resources", "llvm")
 
         val frontend =
-            LLVMIRLanguageFrontend(TranslationConfiguration.builder().build(), ScopeManager())
+            LLVMIRLanguageFrontend(
+                LLVMIRLanguage(),
+                TranslationConfiguration.builder().build(),
+                ScopeManager()
+            )
         frontend.parse(topLevel.resolve("main.ll").toFile())
     }
 
@@ -59,12 +63,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("vector_poison.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertEquals(1, tu.declarations.size)
 
@@ -91,12 +90,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("integer_ops.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertEquals(2, tu.declarations.size)
 
@@ -142,12 +136,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("struct.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertNotNull(tu)
 
@@ -236,12 +225,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("switch_case.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
@@ -300,12 +284,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("br.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertEquals(2, tu.declarations.size)
 
@@ -321,10 +300,10 @@ class LLVMIRLanguageFrontendTest {
         val rhs = (comparison.rhs as Literal<*>)
         val lhs = (comparison.lhs as DeclaredReferenceExpression).refersTo as VariableDeclaration
         assertEquals(10L, (rhs.value as Long))
-        assertEquals(TypeParser.createFrom("i32", true), rhs.type)
+        assertEquals(TypeParser.createFrom("i32", LLVMIRLanguage()), rhs.type)
         assertEquals("x", (comparison.lhs as DeclaredReferenceExpression).name)
         assertEquals("x", lhs.name)
-        assertEquals(TypeParser.createFrom("i32", true), lhs.type)
+        assertEquals(TypeParser.createFrom("i32", LLVMIRLanguage()), lhs.type)
 
         // Check that the jump targets are set correctly
         val ifStatement = main.bodyOrNull<IfStatement>(0)
@@ -355,11 +334,11 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(CastExpression::class, ifBranchComp.lhs::class)
 
         val ifBranchCompRhs = ifBranchComp.rhs as CastExpression
-        assertEquals(TypeParser.createFrom("ui32", true), ifBranchCompRhs.castType)
-        assertEquals(TypeParser.createFrom("ui32", true), ifBranchCompRhs.type)
+        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompRhs.castType)
+        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompRhs.type)
         val ifBranchCompLhs = ifBranchComp.lhs as CastExpression
-        assertEquals(TypeParser.createFrom("ui32", true), ifBranchCompLhs.castType)
-        assertEquals(TypeParser.createFrom("ui32", true), ifBranchCompLhs.type)
+        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompLhs.castType)
+        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompLhs.type)
 
         val declRefExpr = ifBranchCompLhs.expression as DeclaredReferenceExpression
         assertEquals(-3, ((ifBranchCompRhs.expression as Literal<*>).value as Long))
@@ -382,12 +361,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
         assertNotNull(foo)
@@ -423,12 +397,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
         assertNotNull(foo)
@@ -479,12 +448,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
         assertNotNull(foo)
@@ -508,12 +472,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("literal_struct.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertNotNull(tu)
 
@@ -551,12 +510,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("global_local_var.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertNotNull(tu)
 
@@ -605,12 +559,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("alloca.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertNotNull(tu)
 
@@ -650,12 +599,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("undef_insertvalue.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         assertNotNull(tu)
 
@@ -704,12 +648,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("try_catch.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         val throwingFoo = tu.byNameOrNull<FunctionDeclaration>("throwingFoo")
 
@@ -761,12 +700,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("loopPhi.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
         val main = tu.byNameOrNull<FunctionDeclaration>("loopPhi")
         assertNotNull(main)
     }
@@ -779,12 +713,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("phi.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
@@ -839,12 +768,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("vector.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
@@ -955,12 +879,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("fence.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
@@ -988,12 +907,7 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("exceptions.ll").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<LLVMIRLanguage>() }
 
         val funcF = tu.byNameOrNull<FunctionDeclaration>("f")
         assertNotNull(funcF)

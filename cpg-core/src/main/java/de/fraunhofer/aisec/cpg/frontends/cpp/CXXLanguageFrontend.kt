@@ -26,8 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
-import de.fraunhofer.aisec.cpg.frontends.HasTemplates
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
@@ -46,8 +45,6 @@ import java.io.File
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.nio.file.Path
-import java.util.*
-import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
 import org.eclipse.cdt.core.dom.ast.gnu.c.GCCLanguage
@@ -77,8 +74,11 @@ import org.slf4j.LoggerFactory
  * ad [GPPLanguage]). This enables us (to some degree) to deal with the finer difference between C
  * and C++ code.
  */
-class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, "::"), HasDefaultArguments, HasTemplates {
+class CXXLanguageFrontend(
+    language: Language<CXXLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager
+) : LanguageFrontend(language, config, scopeManager) {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
@@ -103,7 +103,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 }
 
                 // check, if the file is on the blacklist
-                if (absoluteOrRelativePathIsInList(path, config.includeBlacklist)) {
+                if (absoluteOrRelativePathIsInList(Path.of(path), config.includeBlocklist)) {
                     LOGGER.debug("Blacklisting include file: {}", path)
                     return null
                 }
@@ -111,7 +111,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 // check, if the white-list exists at all
                 if (
                     hasIncludeWhitelist() && // and ignore the file if it is not on the whitelist
-                    !absoluteOrRelativePathIsInList(path, config.includeWhitelist)
+                    !absoluteOrRelativePathIsInList(Path.of(path), config.includeWhitelist)
                 ) {
                     LOGGER.debug("Include file {} not on the whitelist. Ignoring.", path)
                     return null
@@ -122,7 +122,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             }
 
             private fun hasIncludeWhitelist(): Boolean {
-                return config.includeWhitelist != null && config.includeWhitelist.isNotEmpty()
+                return config.includeWhitelist.isNotEmpty()
             }
 
             /**
@@ -134,41 +134,38 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
              * @param list the list of paths to look for, either relative or absolute
              * @return true, if the path is in the list, false otherwise
              */
-            private fun absoluteOrRelativePathIsInList(path: String, list: List<String>?): Boolean {
-                // path cannot be in the list if its empty or null
-                if (list == null || list.isEmpty()) {
+            private fun absoluteOrRelativePathIsInList(path: Path, list: List<Path>?): Boolean {
+                // Path cannot be in the list if its empty or null
+                if (list.isNullOrEmpty()) {
                     return false
                 }
 
-                // check, if the absolute header path is in the list
+                // Check, if the absolute header path is in the list
                 if (list.contains(path)) {
                     return true
                 }
 
-                // check for relative path based on the top level and all include paths
+                // Check for relative path based on the top level and all include paths
                 val includeLocations: MutableList<Path> = ArrayList()
                 val topLevel = config.topLevel
                 if (topLevel != null) {
                     includeLocations.add(topLevel.toPath().toAbsolutePath())
                 }
-                includeLocations.addAll(
-                    Arrays.stream(config.includePaths)
-                        .map { Path.of(it).toAbsolutePath() }
-                        .collect(Collectors.toList())
-                )
-                for (includeLocation in includeLocations) {
+                includeLocations.addAll(config.includePaths)
+
+                // We need to find the proper include location for our relative path. Any location
+                // is valid, if we can
+                // find that the include-location + the path is contained in the list of paths we
+                // are looking for.
+                return includeLocations.any { include ->
                     // try to resolve path relatively
-                    val includeFile = Path.of(path)
                     try {
-                        val relative = includeLocation.relativize(includeFile)
-                        if (list.contains(relative.toString())) {
-                            return true
-                        }
+                        val relative = include.relativize(path)
+                        return list.contains(relative)
                     } catch (e: IllegalArgumentException) {
-                        continue
+                        return false
                     }
                 }
-                return false
             }
 
             override fun getContentForInclusion(
@@ -197,7 +194,6 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        TypeManager.getInstance().setLanguageFrontend(this)
         val content = FileContent.createForExternalFileLocation(file.absolutePath)
 
         // include paths
@@ -208,7 +204,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
 
         val symbols: HashMap<String, String> = HashMap()
         symbols.putAll(config.symbols)
-        includePaths.addAll(listOf(*config.includePaths))
+        includePaths.addAll(config.includePaths.map { it.toAbsolutePath().toString() })
 
         config.compilationDatabase?.getIncludePaths(file)?.let { includePaths.addAll(it) }
         config.compilationDatabase?.getSymbols(file)?.let { symbols.putAll(it) }
@@ -369,8 +365,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     private fun handleAttributes(owner: IASTAttributeOwner): List<Annotation> {
         val list: MutableList<Annotation> = ArrayList()
         for (attribute in owner.attributes) {
-            val annotation =
-                NodeBuilder.newAnnotation(String(attribute.name), attribute.rawSignature)
+            val annotation = newAnnotation(String(attribute.name), attribute.rawSignature)
 
             // go over the parameters
             if (attribute.argumentClause is IASTTokenList) {
@@ -399,19 +394,18 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                NodeBuilder.newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code)
+                newDeclaredReferenceExpression(code, UnknownType.getUnknownType(language), code)
                 2 -> // an integer
-                NodeBuilder.newLiteral(code.toInt(), TypeParser.createFrom("int", true), code)
+                newLiteral(code.toInt(), newPrimitiveType("int"), code)
                 130 -> // a string
-                NodeBuilder.newLiteral(
+                newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
-                        TypeParser.createFrom("const char*", false),
+                        newPrimitiveType("char").const().reference(),
                         code
                     )
-                else ->
-                    NodeBuilder.newLiteral(code, TypeParser.createFrom("const char*", false), code)
+                else -> newLiteral(code, newPrimitiveType("char").const().reference(), code)
             }
-        return NodeBuilder.newAnnotationMember("", expression, code)
+        return newAnnotationMember("", expression, code)
     }
 
     @Throws(NoSuchFieldException::class)
@@ -491,10 +485,10 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             when (specifier) {
                 is IASTSimpleDeclSpecifier -> {
                     if (hint is ConstructorDeclaration) {
-                        TypeParser.createFrom(hint.name, false)
+                        parseType(hint.name)
                     } else {
                         // A primitive type
-                        TypeParser.createFrom(name, false)
+                        parseType(name)
                     }
                 }
                 is IASTNamedTypeSpecifier -> {
@@ -521,7 +515,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                     TypeParser.createFrom(name, true, this)
                 }
                 else -> {
-                    UnknownType.getUnknownType()
+                    UnknownType.getUnknownType(language)
                 }
             }
 
@@ -533,7 +527,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
 
     /**
      * This is a little helper function, primarily used by [typeOf]. It's primary purpose is to
-     * "adjust" the [incoming] type based on the the [declarator]. This is needed because the type
+     * "adjust" the [incoming] type based on the [declarator]. This is needed because the type
      * information in C/C++ are split into a declarator and declaration specifiers.
      */
     private fun adjustType(declarator: IASTDeclarator, incoming: Type): Type {
@@ -592,7 +586,8 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                     FunctionDeclaration.BRACKET_LEFT,
                     FunctionDeclaration.BRACKET_RIGHT
                 ) { it.typeName } + type.typeName
-            type = FunctionType(name, paramTypes, listOf(type), type.qualifier, type.storage)
+            type =
+                FunctionType(name, paramTypes, listOf(type), language, type.qualifier, type.storage)
         }
 
         // Lastly, there might be further nested declarators that adjust the type further.

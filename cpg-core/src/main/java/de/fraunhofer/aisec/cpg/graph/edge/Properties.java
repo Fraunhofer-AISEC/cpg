@@ -45,5 +45,6 @@ public enum Properties {
   BRANCH,
   NAME,
   INSTANTIATION,
-  UNREACHABLE
+  UNREACHABLE,
+  ACCESS
 }

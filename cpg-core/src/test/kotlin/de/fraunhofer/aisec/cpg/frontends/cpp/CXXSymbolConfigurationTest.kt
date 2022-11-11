@@ -47,6 +47,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         // parse without symbols
         val tu =
             CXXLanguageFrontend(
+                    CPPLanguage(),
                     TranslationConfiguration.builder().defaultPasses().build(),
                     ScopeManager()
                 )
@@ -80,6 +81,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         // let's try with symbol definitions
         val tu =
             CXXLanguageFrontend(
+                    CPPLanguage(),
                     TranslationConfiguration.builder()
                         .symbols(
                             mapOf(

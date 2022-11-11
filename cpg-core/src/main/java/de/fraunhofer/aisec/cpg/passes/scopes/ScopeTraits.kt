@@ -28,25 +28,15 @@ package de.fraunhofer.aisec.cpg.passes.scopes
 import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement
 
-interface ScopeTraits
-
 /** Represents scopes that can be interrupted by a [BreakStatement]. */
-interface Breakable : ScopeTraits {
-    fun addBreakStatement(breakStatement: BreakStatement?)
-    val breakStatements: List<BreakStatement?>?
+interface Breakable {
+    fun addBreakStatement(breakStatement: BreakStatement)
+    val breakStatements: List<BreakStatement>
 }
 
 /** Represents scopes that can be interrupted by a [ContinueStatement]. */
-interface Continuable : ScopeTraits {
+interface Continuable {
     fun addContinueStatement(continueStatement: ContinueStatement)
 
     val continueStatements: List<ContinueStatement>
-}
-
-fun Scope.isBreakable(): Boolean {
-    return this is LoopScope || this is SwitchScope
-}
-
-fun Scope.isContinuable(): Boolean {
-    return this is LoopScope
 }

@@ -24,7 +24,7 @@
  *
  */
 plugins {
-    `java-library`
+    id("cpg.frontend-conventions")
 }
 
 publishing {
@@ -40,10 +40,6 @@ publishing {
 }
 
 dependencies {
-    api(project(":cpg-core"))
-
-    testImplementation(testFixtures(project(":cpg-core")))
-
     // llvm
-    implementation("org.bytedeco:llvm-platform:13.0.1-1.5.7")
+    implementation(libs.llvm)
 }

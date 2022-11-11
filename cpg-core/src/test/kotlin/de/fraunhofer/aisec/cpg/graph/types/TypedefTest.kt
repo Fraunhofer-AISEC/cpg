@@ -72,10 +72,7 @@ internal class TypedefTest : BaseTest() {
         assertEquals(ObjectType.Modifier.UNSIGNED, returnType.modifier)
         assertEquals(uintfp1.type, uintfp2.type)
 
-        val frontend = TypeManager.getInstance().frontend
-        assertNotNull(frontend)
-
-        val typedefs = frontend.scopeManager.currentTypedefs
+        val typedefs = result.scopeManager.currentTypedefs
         val def = typedefs.stream().filter { it.alias.name == "test" }.findAny().orElse(null)
         assertNotNull(def)
     }

@@ -49,6 +49,7 @@ public class PointerType extends Type implements SecondOrderType {
 
   public PointerType(Type elementType, PointerOrigin pointerOrigin) {
     super();
+    this.setLanguage(elementType.getLanguage());
     if (pointerOrigin == PointerOrigin.ARRAY) {
       this.setName(elementType.getName() + "[]");
       this.pointerOrigin = PointerOrigin.ARRAY;
@@ -61,6 +62,7 @@ public class PointerType extends Type implements SecondOrderType {
 
   public PointerType(Type type, Type elementType, PointerOrigin pointerOrigin) {
     super(type);
+    this.setLanguage(elementType.getLanguage());
     if (pointerOrigin == PointerOrigin.ARRAY) {
       this.setName(elementType.getName() + "[]");
     } else {

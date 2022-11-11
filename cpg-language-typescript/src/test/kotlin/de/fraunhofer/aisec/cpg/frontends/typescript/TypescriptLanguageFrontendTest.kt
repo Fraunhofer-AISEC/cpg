@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -42,10 +41,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
-import org.junit.jupiter.api.Tag
 
-@Tag("experimentalTypeScript")
-@ExperimentalTypeScript
 class TypeScriptLanguageFrontendTest {
 
     @Test
@@ -56,12 +52,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("function.ts").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    TypeScriptLanguageFrontend::class.java,
-                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<TypeScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -72,11 +63,11 @@ class TypeScriptLanguageFrontendTest {
 
         val someFunction = functions.first()
         assertEquals("someFunction", someFunction.name)
-        assertEquals(TypeParser.createFrom("Number", false), someFunction.type)
+        assertEquals(TypeParser.createFrom("Number", TypeScriptLanguage()), someFunction.type)
 
         val someOtherFunction = functions.last()
         assertEquals("someOtherFunction", someOtherFunction.name)
-        assertEquals(TypeParser.createFrom("Number", false), someOtherFunction.type)
+        assertEquals(TypeParser.createFrom("Number", TypeScriptLanguage()), someOtherFunction.type)
 
         val parameters = someOtherFunction.parameters
         assertNotNull(parameters)
@@ -85,7 +76,7 @@ class TypeScriptLanguageFrontendTest {
 
         val parameter = parameters.first()
         assertEquals("s", parameter.name)
-        assertEquals(TypeParser.createFrom("String", false), parameter.type)
+        assertEquals(TypeParser.createFrom("String", TypeScriptLanguage()), parameter.type)
     }
 
     @Test
@@ -96,12 +87,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("function.js").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    TypeScriptLanguageFrontend::class.java,
-                    TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<JavaScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -136,12 +122,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("simple.jsx").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    TypeScriptLanguageFrontend::class.java,
-                    TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<JavaScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -169,12 +150,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("fetch.ts").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    TypeScriptLanguageFrontend::class.java,
-                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<TypeScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -277,12 +253,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    TypeScriptLanguageFrontend::class.java,
-                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<TypeScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -296,7 +267,7 @@ class TypeScriptLanguageFrontendTest {
         val lastName = user.fields.lastOrNull()
         assertNotNull(lastName)
         assertEquals("lastName", lastName.name)
-        assertEquals(TypeParser.createFrom("string", false), lastName.type)
+        assertEquals(TypeParser.createFrom("string", TypeScriptLanguage()), lastName.type)
 
         val usersState =
             tu.getDeclarationsByName("UsersState", RecordDeclaration::class.java).iterator().next()
@@ -309,7 +280,7 @@ class TypeScriptLanguageFrontendTest {
         val users = usersState.fields.firstOrNull()
         assertNotNull(users)
         assertEquals("users", users.name)
-        assertEquals(TypeParser.createFrom("User[]", false), users.type)
+        assertEquals(TypeParser.createFrom("User[]", TypeScriptLanguage()), users.type)
 
         val usersComponent =
             tu.getDeclarationsByName("Users", RecordDeclaration::class.java).iterator().next()
@@ -342,12 +313,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("function-component.tsx").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    TypeScriptLanguageFrontend::class.java,
-                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<TypeScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -374,12 +340,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("decorator.ts").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    TypeScriptLanguageFrontend::class.java,
-                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<TypeScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -412,12 +373,7 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("lambda.js").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    TypeScriptLanguageFrontend::class.java,
-                    TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<JavaScriptLanguage>() }
 
         assertNotNull(tu)
 
@@ -445,23 +401,13 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    TypeScriptLanguageFrontend::class.java,
-                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<TypeScriptLanguage>() }
         val functionTu =
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("function.ts").toFile()),
                 topLevel,
                 true
-            ) {
-                it.registerLanguage(
-                    TypeScriptLanguageFrontend::class.java,
-                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
-                )
-            }
+            ) { it.registerLanguage<TypeScriptLanguage>() }
 
         assertNotNull(componentTU)
         assertNotNull(functionTu)
@@ -482,12 +428,12 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(function)
         assertEquals("Block comment on a function", function.comment)
 
-        var variableDeclaration =
+        val variableDeclaration =
             SubgraphWalker.flattenAST(function).filterIsInstance<DeclarationStatement>().first()
         assertNotNull(variableDeclaration)
         assertEquals("Comment on a variable", variableDeclaration.comment)
 
-        function = functionTu.byNameOrNull<FunctionDeclaration>("someOtherFunction")
+        function = functionTu.byNameOrNull("someOtherFunction")
         assertNotNull(function)
         assertEquals("Comment on a Function", function.comment)
     }

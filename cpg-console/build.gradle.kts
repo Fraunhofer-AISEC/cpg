@@ -24,7 +24,7 @@
  *
  */
 plugins {
-    application
+    id("cpg.application-conventions")
 }
 
 publishing {
@@ -51,30 +51,13 @@ tasks.withType<Test> {
     }
 }
 
-tasks.withType<JavaCompile> {
-    sourceCompatibility = "11"
-    targetCompatibility = "11"
-}
-
-val versions = mapOf(
-    "junit5" to "5.6.0"
-)
-
 dependencies {
     // CPG
-    api(project(":cpg-core"))
-    api(project(":cpg-analysis"))
-    api(project(":cpg-neo4j"))
+    api(projects.cpgAnalysis)
+    api(projects.cpgNeo4j)
 
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.19.0")
-    implementation("org.apache.logging.log4j:log4j-core:2.19.0")
-
-    testImplementation(testFixtures(project(":cpg-core")))
-
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlin:kotlin-script-runtime")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    implementation("org.jline:jline:3.21.0")
-
-    implementation("org.jetbrains.kotlinx:ki-shell:0.5.2")
+    implementation(libs.kotlin.script.runtime)
+    implementation(libs.kotlin.coroutines.core)
+    implementation(libs.jline)
+    implementation(libs.kotlin.ki.shell)
 }

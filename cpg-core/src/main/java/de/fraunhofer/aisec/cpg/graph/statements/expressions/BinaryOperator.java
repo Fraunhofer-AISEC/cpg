@@ -53,7 +53,7 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
 
   /** Required for compound BinaryOperators. This should not be stored in the graph */
   @Transient
-  private final List<String> compoundOperators =
+  public static final List<String> compoundOperators =
       List.of("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=");
 
   public Expression getLhs() {
@@ -103,10 +103,8 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
 
   private void disconnectOldLhs() {
     this.lhs.unregisterTypeListener(this);
-    if ("=".equals(operatorCode)) {
-      if (this.lhs instanceof TypeListener) {
-        unregisterTypeListener((TypeListener) this.lhs);
-      }
+    if ("=".equals(operatorCode) && this.lhs instanceof TypeListener) {
+      unregisterTypeListener((TypeListener) this.lhs);
     }
   }
 
@@ -130,32 +128,16 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
 
   private void connectNewRhs(Expression rhs) {
     rhs.registerTypeListener(this);
-    if ("=".equals(operatorCode)) {
-      if (rhs instanceof TypeListener) {
-        this.registerTypeListener((TypeListener) rhs);
-      }
-      if (this.lhs != null) {
-        this.lhs.addPrevDFG(rhs);
-      }
+    if ("=".equals(operatorCode) && rhs instanceof TypeListener) {
+      this.registerTypeListener((TypeListener) rhs);
     }
-    this.addPrevDFG(
-        rhs); // in C++ we can have a + (b = 1) so the rhs has to connected to the BinOp in all
-    // cases
   }
 
   private void disconnectOldRhs() {
     this.rhs.unregisterTypeListener(this);
-    if ("=".equals(operatorCode)) {
-      if (this.rhs instanceof TypeListener) {
-        unregisterTypeListener((TypeListener) this.rhs);
-      }
-      if (this.lhs != null) {
-        this.lhs.removePrevDFG(this.rhs);
-      }
+    if ("=".equals(operatorCode) && this.rhs instanceof TypeListener) {
+      unregisterTypeListener((TypeListener) this.rhs);
     }
-    this.removePrevDFG(
-        this.rhs); // in C++ we can have a + (b = 1) so the rhs has to connected to the BinOp in all
-    // cases
   }
 
   public String getOperatorCode() {
@@ -178,7 +160,7 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
         || this.rhs != null && "java.lang.String".equals(this.rhs.getType().toString())) {
       // String + any other type results in a String
       getPossibleSubTypes().clear();
-      setType(TypeParser.createFrom("java.lang.String", true), root);
+      setType(TypeParser.createFrom("java.lang.String", getLanguage()), root);
     }
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Type.Origin.DATAFLOW);

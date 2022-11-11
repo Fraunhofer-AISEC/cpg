@@ -7,6 +7,7 @@ void zero() {
 
 void decimal() {
   int i = 42;
+  int i_with_literal = 1'000;
   long l = 9223372036854775807; // still fits into long
   long l_with_suffix = 9223372036854775807L;
   long long l_long_long_with_suffix = 9223372036854775807LL;

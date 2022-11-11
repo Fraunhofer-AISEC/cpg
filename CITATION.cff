@@ -1,0 +1,12 @@
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Weiss"
+    given-names: "Konrad"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+  - family-names: "Banse"
+    given-names: "Christian"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+  doi: "10.48550/arXiv.2203.08424"
+  title: "A Language-Independent Analysis Platform for Source Code"
+  year: 2022

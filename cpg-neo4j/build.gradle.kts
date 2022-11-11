@@ -24,7 +24,7 @@
  *
  */
 plugins {
-    application
+    id("cpg.application-conventions")
 }
 
 application {
@@ -43,7 +43,6 @@ publishing {
     }
 }
 
-
 tasks.withType<Test> {
     useJUnitPlatform {
         if (!project.hasProperty("integration")) {
@@ -52,42 +51,11 @@ tasks.withType<Test> {
     }
 }
 
-val versions = mapOf(
-    "neo4j-ogm" to "3.2.8",
-    "junit5" to "5.6.0"
-)
-
-distributions {
-    main {
-        contents {
-            // add the src/main/python folder to the distribution, so that our python CPG module is available
-            from("../cpg-library/src/main/python")
-        }
-    }
-}
-
 dependencies {
-    // CPG
-    api(project(":cpg-core"))
-    api(project(":cpg-language-llvm"))
-    api(project(":cpg-language-python"))
-    api(project(":cpg-language-go"))
-    api(project(":cpg-language-typescript"))
-
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.19.0")
-    implementation("org.apache.logging.log4j:log4j-core:2.19.0")
-
     // neo4j
-    api("org.neo4j", "neo4j-ogm-core", versions["neo4j-ogm"])
-    api("org.neo4j", "neo4j-ogm", versions["neo4j-ogm"])
-    api("org.neo4j", "neo4j-ogm-bolt-driver", versions["neo4j-ogm"])
-
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-
-    // JUnit
-    testImplementation(testFixtures(project(":cpg-core")))
+    api(libs.bundles.neo4j)
 
     // Command line interface support
-    api("info.picocli:picocli:4.6.3")
-    annotationProcessor("info.picocli:picocli-codegen:4.6.3")
+    api(libs.picocli)
+    annotationProcessor(libs.picocli.codegen)
 }

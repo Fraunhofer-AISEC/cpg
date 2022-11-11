@@ -25,30 +25,30 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
 import kotlin.test.*
 import org.junit.jupiter.api.assertThrows
 
 class FSMTest {
     private val simpleStringRepresentation =
         "digraph fsm {\n" +
-            "\t\"\" [shape=point];\n" +
-            "\tq1 [shape=circle];\n" +
-            "\tq2 [shape=doublecircle];\n" +
-            "\tq3 [shape=doublecircle];\n" +
-            "\tq4 [shape=circle];\n" +
-            "\tq5 [shape=doublecircle];\n" +
-            "\t\"\" -> q1;\n" +
-            "\tq1 -> q2 [label=\"v.create()\"];\n" +
-            "\tq2 -> q3 [label=\"v.check_whole_msg()\"];\n" +
-            "\tq2 -> q4 [label=\"v.update()\"];\n" +
-            "\tq2 -> q5 [label=\"v.check_after_update()\"];\n" +
-            "\tq3 -> q3 [label=\"v.check_whole_msg()\"];\n" +
-            "\tq4 -> q4 [label=\"v.update()\"];\n" +
-            "\tq4 -> q5 [label=\"v.check_after_update()\"];\n" +
-            "\tq5 -> q5 [label=\"v.check_after_update()\"];\n" +
-            "\tq5 -> q4 [label=\"v.update()\"];\n" +
-            "}"
+                "\t\"\" [shape=point];\n" +
+                "\tq1 [shape=circle];\n" +
+                "\tq2 [shape=doublecircle];\n" +
+                "\tq3 [shape=doublecircle];\n" +
+                "\tq4 [shape=circle];\n" +
+                "\tq5 [shape=doublecircle];\n" +
+                "\t\"\" -> q1;\n" +
+                "\tq1 -> q2 [label=\"v.create()\"];\n" +
+                "\tq2 -> q3 [label=\"v.check_whole_msg()\"];\n" +
+                "\tq2 -> q4 [label=\"v.update()\"];\n" +
+                "\tq2 -> q5 [label=\"v.check_after_update()\"];\n" +
+                "\tq3 -> q3 [label=\"v.check_whole_msg()\"];\n" +
+                "\tq4 -> q4 [label=\"v.update()\"];\n" +
+                "\tq4 -> q5 [label=\"v.check_after_update()\"];\n" +
+                "\tq5 -> q5 [label=\"v.check_after_update()\"];\n" +
+                "\tq5 -> q4 [label=\"v.update()\"];\n" +
+                "}"
 
     @Test
     fun `test toDotString method`() {
@@ -101,7 +101,7 @@ class FSMTest {
         assertFalse { createEdge === createEdgeCopy }
         assertFalse { createEdge.nextState === createEdgeCopy.nextState }
 
-        val emptyNode = NodeBuilder.newEmptyStatement()
+        val emptyNode = EmptyStatement()
         dfa.initializeOrderEvaluation(emptyNode)
         dfa.makeTransitionWithOp("create()", emptyNode)
 

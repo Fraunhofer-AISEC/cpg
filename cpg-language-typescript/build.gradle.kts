@@ -26,9 +26,8 @@
 import com.github.gradle.node.yarn.task.YarnTask
 
 plugins {
-    `java-library`
-
-    id("com.github.node-gradle.node") version "3.4.0"
+    id("cpg.frontend-conventions")
+    alias(libs.plugins.node)
 }
 
 publishing {
@@ -42,13 +41,6 @@ publishing {
         }
     }
 }
-
-dependencies {
-    api(project(":cpg-core"))
-
-    testImplementation(testFixtures(project(":cpg-core")))
-}
-
 
 node {
     download.set(findProperty("nodeDownload")?.toString()?.toBoolean() ?: false)
@@ -78,17 +70,6 @@ val yarnBuild by tasks.registering(YarnTask::class) {
     dependsOn(yarnInstall)
 }
 
-if (project.hasProperty("experimentalTypeScript")) {
-    tasks.processResources {
-        dependsOn(yarnBuild)
-    }
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform {
-        if (!project.hasProperty("experimentalTypeScript")) {
-            excludeTags("experimentalTypeScript")
-        }
-    }
-    maxHeapSize = "4048m"
+tasks.processResources {
+    dependsOn(yarnBuild)
 }

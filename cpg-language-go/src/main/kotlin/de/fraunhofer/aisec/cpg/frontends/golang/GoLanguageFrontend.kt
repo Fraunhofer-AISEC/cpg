@@ -25,22 +25,25 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.io.FileOutputStream
 
-@ExperimentalGolang
-class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, ".") {
+@SupportsParallelParsing(false)
+class GoLanguageFrontend(
+    language: Language<GoLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager
+) : LanguageFrontend(language, config, scopeManager) {
     companion object {
-        @kotlin.jvm.JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
+        @JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
 
         init {
             try {
@@ -80,9 +83,11 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        TypeManager.getInstance().setLanguageFrontend(this)
-
-        return parseInternal(file.readText(Charsets.UTF_8), file.path, config.topLevel.absolutePath)
+        return parseInternal(
+            file.readText(Charsets.UTF_8),
+            file.path,
+            config.topLevel?.absolutePath ?: file.parent
+        )
     }
 
     override fun <T> getCodeFromRawNode(astNode: T): String? {
