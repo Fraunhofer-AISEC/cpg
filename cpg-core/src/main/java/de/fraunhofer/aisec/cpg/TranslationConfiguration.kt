@@ -395,27 +395,18 @@ private constructor(
          */
         @Throws(ConfigurationException::class)
         fun registerLanguage(className: String): Builder {
-            val loadedClass: KClass<*>
-            val languageClass: KClass<Language<*>>
-
             try {
-                loadedClass = Class.forName(className).kotlin
+                val loadedClass = Class.forName(className).kotlin.createInstance() as? Language<*>
+                if (loadedClass != null) {
+                    registerLanguage(loadedClass)
+                } else throw ConfigurationException("Failed casting supposed language class '$className'. It does not seem to be an implementation of Language<*>.")
             } catch (e: Exception) {
                 throw ConfigurationException(
-                    "Failed to load class from FQN '$className'. It seems to be unavailable in the class path."
+                    "Failed to load and instantiate class from FQN '$className'. Possible causes of this error:\n" +
+                            "- the given class is unavailable in the class path\n" +
+                            "- the given class does not have a single no-arg constructor\n"
                 )
             }
-
-            try {
-                languageClass = loadedClass as KClass<Language<*>>
-            } catch (e: Exception) {
-                throw ConfigurationException(
-                    "Failed cast supposed language class '$className'. It does not seem to be an implementation of Language<*>."
-                )
-            }
-
-            registerLanguage(languageClass.createInstance())
-
             return this
         }
 
