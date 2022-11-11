@@ -113,8 +113,7 @@ public class NamespaceDeclaration extends Declaration
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
         .filter(declaration -> Objects.equals(declaration.getName(), name))
-        // TODO: Once the RecordDeclaration has a proper fullName and localName:
-        // .filter(declaration -> Objects.equals(declaration.getFullName().toString(), name))
+        .filter(declaration -> Objects.equals(declaration.getFullName().toString(), name))
         .collect(Collectors.toSet());
   }
 

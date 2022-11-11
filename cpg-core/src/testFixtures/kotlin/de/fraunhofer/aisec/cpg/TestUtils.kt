@@ -260,7 +260,7 @@ object TestUtils {
         } else {
             assertTrue(usingNode is DeclaredReferenceExpression)
             val reference = usingNode as? DeclaredReferenceExpression
-            assertEquals(reference?.refersTo, usedNode)
+            assertEquals(usedNode, reference?.refersTo)
         }
     }
 

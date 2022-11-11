@@ -69,7 +69,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     open var name: String
         get() {
-            return fullName.localName
+            return if (this is RecordDeclaration) return fullName.toString() else fullName.localName
         }
         set(value) {
             fullName.localName = value

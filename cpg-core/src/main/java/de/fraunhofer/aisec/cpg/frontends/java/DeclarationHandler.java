@@ -257,7 +257,7 @@ public class DeclarationHandler
     // if (packageDeclaration != null) {
     //  name = packageDeclaration.getNameAsString() + "." + name;
     // }
-    fqn = getAbsoluteName(fqn);
+    // fqn = getAbsoluteName(fqn);
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
@@ -330,7 +330,10 @@ public class DeclarationHandler
     if (recordDeclaration.getConstructors().isEmpty()) {
       de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
           newConstructorDeclaration(
-              this, recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
+              this,
+              recordDeclaration.getFullName().getLocalName(),
+              recordDeclaration.getFullName().getLocalName(),
+              recordDeclaration);
       recordDeclaration.addConstructor(constructorDeclaration);
       frontend.getScopeManager().addDeclaration(constructorDeclaration);
     }

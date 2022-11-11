@@ -164,7 +164,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     ): MethodDeclaration {
         // Check, if it's a constructor
         val method =
-            if (name == recordDeclaration?.name) {
+            if (name == recordDeclaration?.fullName?.localName) {
                 newConstructorDeclaration(name, null, recordDeclaration, ctx)
             } else {
                 newMethodDeclaration(name, null, false, recordDeclaration, ctx)
@@ -436,7 +436,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         val recordDeclaration =
             newRecordDeclaration(
-                frontend.currentNamePrefixWithDelimiter + ctx.name.toString(),
+                // frontend.currentNamePrefixWithDelimiter +
+                ctx.name.toString(),
                 kind,
                 ctx.rawSignature,
             )
@@ -460,7 +461,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration.constructors.isEmpty()) {
             val constructorDeclaration =
                 newConstructorDeclaration(
-                    recordDeclaration.name,
+                    recordDeclaration.fullName.localName,
                     recordDeclaration.name,
                     recordDeclaration,
                     frontend.language

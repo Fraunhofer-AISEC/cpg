@@ -633,7 +633,7 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = currentScope
     ): ValueDeclaration? {
         return resolve<ValueDeclaration>(scope) {
-                if (it.name == ref.name) {
+                if (it.name == ref.name) { // TODO: This place is likely to make things fail
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
                     if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
