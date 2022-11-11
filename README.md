@@ -71,7 +71,8 @@ The library can be used on the command line using the `cpg-console` subproject. 
 ### Experimental Languages
 
 Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included as gradle submodules by default.
-To include them as submodules simply toggle them on in the [gradle properties](./gradle.properties) file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`)
+To include them as submodules simply toggle them on in the [gradle properties](./gradle.properties) file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
+Instead of manually editing the [gradle properties](./gradle.properties) file, you can also use the `configure_frontends.sh` script, which edits the properties for you.
 
 #### Golang
 
@@ -128,12 +129,12 @@ The following authors have contributed to this project (in alphabetical order):
 * [KuechA](https://github.com/KuechA)
 * [Masrepus](https://github.com/Masrepus)
 * [maximiliankaul](https://github.com/maximiliankaul)
+* [maximilian-galanis](https://github.com/maximilian-galanis)
 * [obraunsdorf](https://github.com/obraunsdorf)
 * [oxisto](https://github.com/oxisto)
 * [peckto](https://github.com/peckto)
 * [titze](https://github.com/titze)
 * [vfsrfs](https://github.com/vfsrfs)
-* [maximilian-galanis](https://github.com/maximilian-galanis)
 
 ## Further reading
 

@@ -35,7 +35,7 @@ repositories {
     mavenCentral()
 }
 
-tasks.dokkaHtmlMultiModule.configure {
+tasks.dokkaHtmlMultiModule {
     outputDirectory.set(buildDir.resolve("dokkaCustomMultiModuleOutput"))
 }
 

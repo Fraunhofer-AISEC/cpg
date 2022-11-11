@@ -20,7 +20,7 @@ function setProperty {
 function ask() {
   local _ask_answer
   while true; do
-    read -p "$1 [Y/n/a] " _ask_answer
+    read -p "$1 [y/n/a] " _ask_answer
     case $_ask_answer in
       y|yes|"" ) echo "true" ; break; ;;
       n|no     ) echo "false" ; break; ;;
@@ -33,7 +33,7 @@ echo "Hi, this is a short script to configure the inclusion of experimental lang
 echo "This script only changes the 'gradle.properties' file."
 echo "When you run into build problems after enabling a frontend please make sure that you have installed all the"
 echo "necessary dependencies. There is a reason why they are not enabled by default."
-echo "You can always rerun this script in order to disable experimental frontends again."
+echo "You can always rerun this script to disable experimental frontends again."
 echo ""
 
 answerGo=$(ask "Do you want to enable the Go frontend? (currently $(getProperty "enableGoFrontend"))")
