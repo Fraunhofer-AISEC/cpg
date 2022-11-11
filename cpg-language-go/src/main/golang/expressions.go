@@ -42,6 +42,10 @@ func (e *Expression) GetClassName() string {
 	return "de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"
 }
 
+func (e *Expression) Cast(className string) *jnigi.ObjectRef {
+	return (*jnigi.ObjectRef)(e).Cast(className)
+}
+
 func (e *Expression) IsArray() bool {
 	return false
 }

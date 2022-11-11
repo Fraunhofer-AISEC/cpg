@@ -41,12 +41,21 @@ func NewString(s string) *jnigi.ObjectRef {
 	return o
 }
 
+func NewBoolean(b bool) *jnigi.ObjectRef {
+	// TODO: Use Boolean.valueOf
+	o, err := env.NewObject("java/lang/Boolean", b)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return o
+}
+
 func NewInteger(i int) *jnigi.ObjectRef {
 	// TODO: Use Integer.valueOf
 	o, err := env.NewObject("java/lang/Integer", i)
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
 	return o
@@ -57,7 +66,6 @@ func NewDouble(d float64) *jnigi.ObjectRef {
 	o, err := env.NewObject("java/lang/Double", d)
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
 	return o

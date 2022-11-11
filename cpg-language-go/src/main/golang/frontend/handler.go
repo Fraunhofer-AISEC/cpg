@@ -576,15 +576,16 @@ func (this *GoLanguageFrontend) handleReturnStmt(fset *token.FileSet, returnStmt
 func (this *GoLanguageFrontend) handleIncDecStmt(fset *token.FileSet, incDecStmt *ast.IncDecStmt) *cpg.UnaryOperator {
 	this.LogDebug("Handling decimal increment statement: %+v", *incDecStmt)
 
-	u := this.NewUnaryOperator(fset, incDecStmt)
-
+	var opCode string
 	if incDecStmt.Tok == token.INC {
-		u.SetOperatorCode("++")
+		opCode = "++"
 	}
 
 	if incDecStmt.Tok == token.DEC {
-		u.SetOperatorCode("--")
+		opCode = "--"
 	}
+
+	u := this.NewUnaryOperator(fset, incDecStmt, opCode, true, false)
 
 	if input := this.handleExpr(fset, incDecStmt.X); input != nil {
 		u.SetInput(input)
@@ -699,9 +700,7 @@ func (this *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, assignStmt
 	} else {
 		lhs := this.handleExpr(fset, assignStmt.Lhs[0])
 
-		b := this.NewBinaryOperator(fset, assignStmt)
-
-		b.SetOperatorCode("=")
+		b := this.NewBinaryOperator(fset, assignStmt, "=")
 
 		if lhs != nil {
 			b.SetLHS(lhs)
@@ -852,15 +851,8 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 
 		this.LogDebug("Fun is a member call to %s", name)
 
-		m := this.NewMemberCallExpression(fset, callExpr)
-		m.SetName(name)
-		m.SetFqn(fqn)
-
-		member := this.NewDeclaredReferenceExpression(fset, nil)
-		member.SetName(name)
-
-		m.SetBase((*cpg.MemberExpression)(reference).GetBase())
-		m.SetMember(member.Node())
+		member := this.NewDeclaredReferenceExpression(fset, nil, name)
+		m := this.NewMemberCallExpression(fset, callExpr, name, fqn, (*cpg.MemberExpression)(reference).GetBase(), member.Node())
 
 		c = (*cpg.CallExpression)(m)
 	} else {
@@ -880,7 +872,6 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		} else {
 			c.SetName(name)
 		}
-
 	}
 
 	for _, arg := range callExpr.Args {
@@ -974,16 +965,10 @@ func (this *GoLanguageFrontend) handleMakeExpr(fset *token.FileSet, callExpr *as
 }
 
 func (this *GoLanguageFrontend) handleBinaryExpr(fset *token.FileSet, binaryExpr *ast.BinaryExpr) *cpg.BinaryOperator {
-	b := this.NewBinaryOperator(fset, binaryExpr)
+	b := this.NewBinaryOperator(fset, binaryExpr, binaryExpr.Op.String())
 
 	lhs := this.handleExpr(fset, binaryExpr.X)
 	rhs := this.handleExpr(fset, binaryExpr.Y)
-
-	err := b.SetOperatorCode(binaryExpr.Op.String())
-	if err != nil {
-		log.Fatal(err)
-
-	}
 
 	if lhs != nil {
 		b.SetLHS(lhs)
@@ -997,15 +982,9 @@ func (this *GoLanguageFrontend) handleBinaryExpr(fset *token.FileSet, binaryExpr
 }
 
 func (this *GoLanguageFrontend) handleUnaryExpr(fset *token.FileSet, unaryExpr *ast.UnaryExpr) *cpg.UnaryOperator {
-	u := this.NewUnaryOperator(fset, unaryExpr)
+	u := this.NewUnaryOperator(fset, unaryExpr, unaryExpr.Op.String(), false, false)
 
 	input := this.handleExpr(fset, unaryExpr.X)
-
-	err := u.SetOperatorCode(unaryExpr.Op.String())
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	if input != nil {
 		u.SetInput(input)
 	}
@@ -1014,15 +993,9 @@ func (this *GoLanguageFrontend) handleUnaryExpr(fset *token.FileSet, unaryExpr *
 }
 
 func (this *GoLanguageFrontend) handleStarExpr(fset *token.FileSet, unaryExpr *ast.StarExpr) *cpg.UnaryOperator {
-	u := this.NewUnaryOperator(fset, unaryExpr)
+	u := this.NewUnaryOperator(fset, unaryExpr, "*", false, true)
 
 	input := this.handleExpr(fset, unaryExpr.X)
-
-	err := u.SetOperatorCode("*")
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	if input != nil {
 		u.SetInput(input)
 	}
@@ -1044,17 +1017,14 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 
 	var decl *cpg.DeclaredReferenceExpression
 	if isMemberExpression {
-		m := this.NewMemberExpression(fset, selectorExpr)
-		m.SetBase(base)
-		(*cpg.Node)(m).SetName(selectorExpr.Sel.Name)
+		m := this.NewMemberExpression(fset, selectorExpr, selectorExpr.Sel.Name, base)
 
 		decl = (*cpg.DeclaredReferenceExpression)(m)
 	} else {
-		decl = this.NewDeclaredReferenceExpression(fset, selectorExpr)
-
 		// we need to set the name to a FQN-style, including the package scope. the call resolver will then resolve this
 		fqn := fmt.Sprintf("%s.%s", base.GetName(), selectorExpr.Sel.Name)
-		decl.SetName(fqn)
+
+		decl = this.NewDeclaredReferenceExpression(fset, selectorExpr, fqn)
 	}
 
 	// For now we just let the VariableUsageResolver handle this. Therefore,
@@ -1098,9 +1068,7 @@ func (this *GoLanguageFrontend) handleKeyValueExpr(fset *token.FileSet, expr *as
 func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.BasicLit) *cpg.Literal {
 	this.LogDebug("Handling literal %+v", *lit)
 
-	l := this.NewLiteral(fset, lit)
-
-	var value interface{}
+	var value cpg.Castable
 	var t *cpg.Type
 
 	lang, err := this.GetLanguage()
@@ -1128,8 +1096,7 @@ func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.Bas
 		break
 	}
 
-	l.SetType(t)
-	l.SetValue(value)
+	l := this.NewLiteral(fset, lit, value, t)
 
 	return l
 }
@@ -1171,16 +1138,21 @@ func (this *GoLanguageFrontend) handleCompositeLit(fset *token.FileSet, lit *ast
 }
 
 func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Ident) *cpg.Expression {
+	lang, err := this.GetLanguage()
+	if err != nil {
+		panic(err)
+	}
+
 	// Check, if this is 'nil', because then we handle it as a literal in the graph
 	if ident.Name == "nil" {
-		lit := this.NewLiteral(fset, ident)
+		lit := this.NewLiteral(fset, ident, nil, &cpg.UnknownType_getUnknown(lang).Type)
 
 		(*cpg.Node)(lit).SetName(ident.Name)
 
 		return (*cpg.Expression)(lit)
 	}
 
-	ref := this.NewDeclaredReferenceExpression(fset, ident)
+	ref := this.NewDeclaredReferenceExpression(fset, ident, ident.Name)
 
 	tu := this.CurrentTU
 
@@ -1191,8 +1163,6 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 	if i != nil && !(*jnigi.ObjectRef)(i).IsNil() {
 		ref.SetRefersTo((*cpg.Declaration)(i))
 	}
-
-	ref.SetName(ident.Name)
 
 	return (*cpg.Expression)(ref)
 }

@@ -702,7 +702,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: UnknownType.getUnknownType(language)
 
                 // construct our member expression
-                expr = newMemberExpression(base, field?.type, field?.name, ".", "")
+                expr = newMemberExpression(field?.name, base, field?.type, ".", "")
                 log.info("{}", expr)
 
                 // the current expression is the new base

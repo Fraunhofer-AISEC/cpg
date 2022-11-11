@@ -33,6 +33,10 @@ import (
 
 type Node jnigi.ObjectRef
 
+func (n *Node) Cast(className string) *jnigi.ObjectRef {
+	return (*jnigi.ObjectRef)(n).Cast(className)
+}
+
 func (n *Node) SetName(s string) error {
 	return (*jnigi.ObjectRef)(n).CallMethod(env, "setName", nil, NewString(s))
 }
