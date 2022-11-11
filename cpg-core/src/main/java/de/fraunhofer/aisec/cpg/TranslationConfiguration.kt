@@ -45,6 +45,7 @@ import kotlin.reflect.full.primaryConstructor
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.slf4j.LoggerFactory
+import kotlin.reflect.KClass
 
 /**
  * The configuration for the [TranslationManager] holds all information that is used during the
@@ -394,11 +395,11 @@ private constructor(
          */
         @Throws(ConfigurationException::class)
         fun registerLanguage(className: String): Builder {
-            val loadedClass: Class<*>
-            val languageClass: Class<Language<*>>
+            val loadedClass: KClass<*>
+            val languageClass: KClass<Language<*>>
 
             try {
-                loadedClass = Class.forName(className)
+                loadedClass = Class.forName(className).kotlin
             } catch (e: Exception) {
                 throw ConfigurationException(
                     "Failed to load class from FQN '$className'. It seems to be unavailable in the class path."
@@ -406,14 +407,14 @@ private constructor(
             }
 
             try {
-                languageClass = loadedClass as Class<Language<*>>
+                languageClass = loadedClass as KClass<Language<*>>
             } catch (e: Exception) {
                 throw ConfigurationException(
                     "Failed cast supposed language class '$className'. It does not seem to be an implementation of Language<*>."
                 )
             }
 
-            registerLanguage(languageClass.kotlin.createInstance())
+            registerLanguage(languageClass.createInstance())
 
             return this
         }
