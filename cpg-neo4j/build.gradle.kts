@@ -88,6 +88,6 @@ dependencies {
     testImplementation(testFixtures(project(":cpg-core")))
 
     // Command line interface support
-    api("info.picocli:picocli:4.6.3")
+    api("info.picocli:picocli:4.7.0")
     annotationProcessor("info.picocli:picocli-codegen:4.7.0")
 }
