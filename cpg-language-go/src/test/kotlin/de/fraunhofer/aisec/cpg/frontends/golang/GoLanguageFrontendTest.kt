@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
@@ -41,7 +40,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-@ExperimentalGolang
 class GoLanguageFrontendTest : BaseTest() {
 
     @Test

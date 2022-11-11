@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -42,10 +41,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
-import org.junit.jupiter.api.Tag
 
-@Tag("experimentalTypeScript")
-@ExperimentalTypeScript
 class TypeScriptLanguageFrontendTest {
 
     @Test

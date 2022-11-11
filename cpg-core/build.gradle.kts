@@ -24,9 +24,8 @@
  *
  */
 plugins {
-    `java-library`
     `java-test-fixtures`
-    signing
+    id("cpg.library-conventions")
 }
 
 publishing {
@@ -44,52 +43,43 @@ publishing {
     }
 }
 
-tasks.named<Test>("test") {
+tasks.test {
     useJUnitPlatform {
         if (!project.hasProperty("experimental")) {
             excludeTags("experimental")
         }
     }
-    maxHeapSize = "4048m"
 }
 
 dependencies {
-    api("org.apache.commons:commons-lang3:3.12.0")
+    api(libs.apache.commons.lang3)
 
-    api("org.neo4j:neo4j-ogm-core:3.2.38")
+    api(libs.neo4j.ogm.core)
 
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.19.0")
-    implementation("org.apache.logging.log4j:log4j-core:2.19.0")
+    implementation(libs.bundles.log4j)
 
-    api("com.github.javaparser:javaparser-symbol-solver-core:3.24.7")
-    api("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
+    api(libs.javaparser)
+    api(libs.jackson)
 
     // Eclipse dependencies
-    api("org.eclipse.platform:org.eclipse.core.runtime:3.26.0") {
+    api(libs.eclipse.runtime) {
         // For some reason, this group name is wrong
         exclude("org.osgi.service", "org.osgi.service.prefs")
     }
-    api("org.osgi", "org.osgi.service.prefs", "1.1.2")
-    api("com.ibm.icu:icu4j:71.1")
+    api(libs.osgi.service)
+    api(libs.icu4j)
 
     // CDT
-    api("org.eclipse.cdt:core:7.2.100.202105180159")
+    api(libs.eclipse.cdt.core)
 
-    api("commons-io:commons-io:2.11.0")
+    api(libs.commons.io)
 
-    implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains:annotations:23.0.0")
+    implementation(libs.kotlin.reflect)
+    implementation(libs.jetbrains.annotations)
+
+    testImplementation(libs.junit.params)
 
     // JUnit
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.9.1")
-    testFixturesApi("org.jetbrains.kotlin:kotlin-test")
-    testFixturesApi("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.1")
-    testFixturesApi("org.mockito:mockito-core:4.8.1")
-    
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.1")
+    testFixturesApi(libs.kotlin.test.junit5)  // somehow just using testFixturesApi(kotlin("test")) does not work for testFixtures
+    testFixturesApi(libs.mockito)
 }

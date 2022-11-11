@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
 import java.nio.file.Path
 import java.util.*
+import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -376,12 +377,38 @@ private constructor(
         /** Registers an additional [Language]. */
         fun registerLanguage(language: Language<out LanguageFrontend>): Builder {
             languages.add(language)
+            log.info(
+                "Registered language frontend '${language::class.simpleName}' for following file types: ${language.fileExtensions}"
+            )
             return this
         }
 
         /** Registers an additional [Language]. */
         inline fun <reified T : Language<out LanguageFrontend>> registerLanguage(): Builder {
             T::class.primaryConstructor?.call()?.let { registerLanguage(it) }
+            return this
+        }
+
+        /**
+         * Loads and registers an additional [Language] based on a fully qualified class name (FQN).
+         */
+        @Throws(ConfigurationException::class)
+        fun registerLanguage(className: String): Builder {
+            try {
+                val loadedClass = Class.forName(className).kotlin.createInstance() as? Language<*>
+                if (loadedClass != null) {
+                    registerLanguage(loadedClass)
+                } else
+                    throw ConfigurationException(
+                        "Failed casting supposed language class '$className'. It does not seem to be an implementation of Language<*>."
+                    )
+            } catch (e: Exception) {
+                throw ConfigurationException(
+                    "Failed to load and instantiate class from FQN '$className'. Possible causes of this error:\n" +
+                        "- the given class is unavailable in the class path\n" +
+                        "- the given class does not have a single no-arg constructor\n"
+                )
+            }
             return this
         }
 
@@ -456,9 +483,25 @@ private constructor(
             registerLanguage(CLanguage())
             registerLanguage(CPPLanguage())
             registerLanguage(JavaLanguage())
-            // do not register experimental languages by default until we have a release strategy
+
             return this
         }
+
+        /**
+         * Safely register an additional [Language] from a class name. If the [Language] given by
+         * the class name could not be loaded or instantiated, no [Language] is registered and no
+         * error is thrown. Please have a look at [registerLanguage] if an error should be thrown in
+         * case the language could not be registered.
+         *
+         * @param className Fully qualified class name (FQN) of a [Language] class
+         * @see [registerLanguage]
+         */
+        fun optionalLanguage(className: String) =
+            try {
+                registerLanguage(className)
+            } catch (e: ConfigurationException) {
+                this
+            }
 
         fun codeInNodes(b: Boolean): Builder {
             codeInNodes = b

@@ -24,7 +24,7 @@
  *
  */
 plugins {
-    `java-library`
+    id("cpg.frontend-conventions")
 }
 
 publishing {
@@ -39,16 +39,6 @@ publishing {
     }
 }
 
-dependencies {
-    api(project(":cpg-core"))
-
-    testImplementation(testFixtures(project(":cpg-core")))
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform()
-}
-
 if (!project.hasProperty("skipGoBuild")) {
     val compileGolang = tasks.register("compileGolang") {
         doLast {
@@ -60,7 +50,7 @@ if (!project.hasProperty("skipGoBuild")) {
         }
     }
 
-    tasks.named("compileJava") {
+    tasks.compileJava {
         dependsOn(compileGolang)
     }
 }

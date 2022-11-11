@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -35,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import java.nio.file.Path
 import kotlin.test.*
 
-@OptIn(ExperimentalGolang::class)
 class DeclarationTest {
     @Test
     fun testUnnamedReceiver() {

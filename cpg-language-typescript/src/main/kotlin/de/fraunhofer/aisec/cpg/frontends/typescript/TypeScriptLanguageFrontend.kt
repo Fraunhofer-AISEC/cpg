@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
 import de.fraunhofer.aisec.cpg.frontends.Language
@@ -57,7 +56,6 @@ import java.nio.file.StandardCopyOption
  * JavaScript. However, this is not properly tested. Furthermore, the official TypeScript parser
  * also has built-in support for React dialects TSX and JSX.
  */
-@ExperimentalTypeScript
 class TypeScriptLanguageFrontend(
     language: Language<TypeScriptLanguageFrontend>,
     config: TranslationConfiguration,

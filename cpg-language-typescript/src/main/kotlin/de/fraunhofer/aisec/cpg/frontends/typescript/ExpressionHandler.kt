@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -33,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
-@ExperimentalTypeScript
 class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
     init {
