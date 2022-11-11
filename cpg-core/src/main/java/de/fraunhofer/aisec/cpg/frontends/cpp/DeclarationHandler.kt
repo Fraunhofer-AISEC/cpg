@@ -284,7 +284,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         frontend.scopeManager.leaveScope(templateDeclaration)
         if (templateDeclaration is FunctionTemplateDeclaration) {
             // Fix typeName
-            templateDeclaration.name = templateDeclaration.getRealizationDeclarations()[0].name
+            templateDeclaration.fullName =
+                Name.parse(templateDeclaration.getRealizationDeclarations()[0].name, language)
         } else
             (innerDeclaration as? RecordDeclaration)?.let {
                 addParameterizedTypesToRecord(templateDeclaration, it)
@@ -442,7 +443,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         // typedef'd name is called S. However, to make things a little bit easier
                         // we also transfer the name to the record declaration.
                         ctx.declarators.firstOrNull()?.name?.toString()?.let {
-                            primaryDeclaration?.name = it
+                            primaryDeclaration?.fullName = Name.parse(it, language)
                             // We need to inform the later steps that we want to take the name
                             // of this declaration as the basis for the result type of the typedef
                             useNameOfDeclarator = true

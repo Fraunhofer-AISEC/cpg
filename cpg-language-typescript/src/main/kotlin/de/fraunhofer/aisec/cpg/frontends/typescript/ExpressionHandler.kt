@@ -78,7 +78,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val tag = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
         // it contains an Identifier node, we map this into the name
-        this.frontend.getIdentifierName(node).let { tag.name = "</$it>" }
+        this.frontend.getIdentifierName(node).let { tag.fullName = Name("</$it>") }
 
         return tag
     }
@@ -93,7 +93,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val tag = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
         // it contains an Identifier node, we map this into the name
-        this.frontend.getIdentifierName(node).let { tag.name = "<$it>" }
+        this.frontend.getIdentifierName(node).let { tag.fullName = Name("<$it>") }
 
         // and a container named JsxAttributes, with JsxAttribute nodes
         tag.expressions =

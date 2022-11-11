@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -97,19 +98,19 @@ public class CastExpression extends Expression implements TypeListener {
   public void setCastOperator(int operatorCode) {
     switch (operatorCode) {
       case 0:
-        setName("cast");
+        setFullName(new Name("cast", null, this.getLanguage().getNamespaceDelimiter()));
         break;
       case 1:
-        setName("dynamic_cast");
+        setFullName(new Name("dynamic_cast", null, this.getLanguage().getNamespaceDelimiter()));
         break;
       case 2:
-        setName("static_cast");
+        setFullName(new Name("static_cast", null, this.getLanguage().getNamespaceDelimiter()));
         break;
       case 3:
-        setName("reinterpret_cast");
+        setFullName(new Name("reinterpret_cast", null, this.getLanguage().getNamespaceDelimiter()));
         break;
       case 4:
-        setName("const_cast");
+        setFullName(new Name("const_cast", null, this.getLanguage().getNamespaceDelimiter()));
         break;
       default:
         log.error("unknown operator {}", operatorCode);

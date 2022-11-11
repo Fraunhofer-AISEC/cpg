@@ -43,20 +43,16 @@ public class StaticCallExpression extends CallExpression {
 
   @Override
   public void setName(@NotNull String name) {
-    super.setName(name);
-    updateFqn();
+    updateFqn(name);
   }
 
   public void setTargetRecord(String targetRecord) {
     this.targetRecord = targetRecord;
-    updateFqn();
+    updateFqn(this.getFullName().getLocalName());
   }
 
-  private void updateFqn() {
-    if (targetRecord != null
-        && !targetRecord.isEmpty()
-        && getName() != null
-        && !getName().isEmpty()) {
+  private void updateFqn(@NotNull String localName) {
+    if (targetRecord != null && !targetRecord.isEmpty() && !localName.isEmpty()) {
       var namespaceDelimiter = ".";
       var nameSplitter = new String[0];
       if (this.getLanguage() != null) {
@@ -66,7 +62,7 @@ public class StaticCallExpression extends CallExpression {
 
       setFullName(
           new Name(
-              getName(),
+              localName,
               Name.Companion.parse(targetRecord, namespaceDelimiter, nameSplitter),
               namespaceDelimiter));
     }

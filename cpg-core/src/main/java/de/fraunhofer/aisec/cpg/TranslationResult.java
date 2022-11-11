@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg;
 
 import de.fraunhofer.aisec.cpg.graph.Component;
+import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
@@ -116,13 +117,13 @@ public class TranslationResult extends Node implements StatisticsHolder {
     } else if (components.isEmpty()) {
       // No component exists, so we create the new dummy component.
       swc = new Component();
-      swc.setName("application");
+      swc.setFullName(new Name("application", null, ""));
       components.add(swc);
     } else {
       // Multiple components exist. As we don't know where to put the tu, we check if we have the
       // component we created and add it there or create a new one.
       for (var component : components) {
-        if (component.getName().equals("application")) {
+        if (component.getFullName().getLocalName().equals("application")) {
           swc = component;
           break;
         }
@@ -130,7 +131,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
 
       if (swc == null) {
         swc = new Component();
-        swc.setName("application");
+        swc.setFullName(new Name("application", null, ""));
         components.add(swc);
       }
     }

@@ -51,12 +51,12 @@ class WalkerTest : BaseTest() {
             // Let's build some fake CPG trees with a good amount of classes
             for (i in 0..100) {
                 val record = RecordDeclaration()
-                record.name = "class${i}"
+                record.fullName = Name("class${i}")
 
                 // Each class should have a couple of dozen functions
                 for (j in 0..20) {
                     val method = MethodDeclaration()
-                    method.name = "method${j}"
+                    method.fullName = Name("method${j}", record.fullName)
 
                     val comp = CompoundStatement()
 
@@ -64,7 +64,7 @@ class WalkerTest : BaseTest() {
                     for (k in 0..10) {
                         val stmt = DeclarationStatement()
                         val decl = VariableDeclaration()
-                        decl.name = "var${i}"
+                        decl.fullName = Name("var${i}")
 
                         // With a literal initializer
                         val lit = Literal<Int>()
@@ -84,7 +84,7 @@ class WalkerTest : BaseTest() {
                 // And a couple of fields
                 for (j in 0..40) {
                     val field = FieldDeclaration()
-                    field.name = "field${j}"
+                    field.fullName = Name("field${j}", record.fullName)
 
                     // With a literal initializer
                     val lit = Literal<Int>()

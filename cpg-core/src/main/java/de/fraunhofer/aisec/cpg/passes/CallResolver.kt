@@ -52,11 +52,11 @@ import org.slf4j.LoggerFactory
 /**
  * Resolves [CallExpression] and [NewExpression] targets.
  *
- * A [CallExpression] specifies the method that wants to be called via [CallExpression.name]. The
- * call target is a method of the same class the caller belongs to, so the name is resolved to the
- * appropriate [MethodDeclaration]. This pass also takes into consideration that a method might not
- * be present in the current class, but rather has its implementation in a superclass, and sets the
- * pointer accordingly.
+ * A [CallExpression] specifies the method that wants to be called via [CallExpression.fullName].
+ * The call target is a method of the same class the caller belongs to, so the name is resolved to
+ * the appropriate [MethodDeclaration]. This pass also takes into consideration that a method might
+ * not be present in the current class, but rather has its implementation in a superclass, and sets
+ * the pointer accordingly.
  *
  * Constructor calls with [ConstructExpression] are resolved in such a way that their
  * [ConstructExpression.instantiates] points to the correct [RecordDeclaration]. Additionally, the

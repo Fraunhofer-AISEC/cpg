@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
 import kotlin.reflect.KProperty
 
@@ -73,6 +75,9 @@ class Name(
     }
 
     companion object {
+        fun parse(fqn: String, language: Language<out LanguageFrontend>): Name {
+            return parse(fqn, language.namespaceDelimiter, *language.nameSplitter)
+        }
         /**
          * Tries to parse the given fully qualified name using the specified [delimiter] into a
          * [Name].

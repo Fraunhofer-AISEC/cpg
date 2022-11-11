@@ -96,7 +96,6 @@ fun MetadataProvider.newUnaryOperator(
     node.applyMetadata(this, operatorType, rawNode, code, true)
 
     node.operatorCode = operatorType
-    node.name = operatorType
     node.isPostfix = postfix
     node.isPrefix = prefix
 
@@ -393,7 +392,6 @@ fun MetadataProvider.newTypeIdExpression(
     val node = TypeIdExpression()
     node.applyMetadata(this, operatorCode, rawNode, code, true)
 
-    node.name = operatorCode
     node.operatorCode = operatorCode
     node.type = type
     node.referencedType = referencedType
@@ -607,7 +605,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.annotations = this.annotations
     duplicate.comment = this.comment
     duplicate.file = this.file
-    duplicate.name = this.name
+    duplicate.fullName = this.fullName
     duplicate.nextDFG = this.nextDFG
     duplicate.prevDFG = this.prevDFG
     duplicate.nextEOG = this.nextEOG
@@ -618,7 +616,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
 
 fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
     val duplicate = TypeExpression()
-    duplicate.name = this.name
+    duplicate.fullName = this.fullName
     duplicate.language = this.language
     duplicate.type = this.type
     duplicate.isImplicit = implicit
