@@ -363,6 +363,8 @@ public abstract class Type extends Node {
   @NotNull
   @Override
   public String toString() {
-    return new ToStringBuilder(this, TO_STRING_STYLE).append("name", getName()).toString();
+    return new ToStringBuilder(this, TO_STRING_STYLE)
+        .append("name", getFullName().toString())
+        .toString();
   }
 }

@@ -203,7 +203,7 @@ public class StatementHandler
         frontend.getExpressionHandler().handle(forEachStmt.getIterable());
 
     if (!(variable instanceof DeclarationStatement)) {
-      log.error("Expected a DeclarationStatement but received: {}", variable.getName());
+      log.error("Expected a DeclarationStatement but received: {}", variable.getFullName());
     } else {
       statement.setVariable(variable);
     }

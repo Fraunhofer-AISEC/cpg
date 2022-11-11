@@ -98,7 +98,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
 
     val signature: String
         get() =
-            name +
+            fullName.localName +
                 parameters.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
                     it.type.typeName
                 } +
@@ -111,7 +111,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                 })
 
     fun hasSameSignature(targetFunctionDeclaration: FunctionDeclaration): Boolean {
-        return targetFunctionDeclaration.name == name &&
+        return targetFunctionDeclaration.fullName.localName == fullName.localName &&
             targetFunctionDeclaration.signatureTypes == signatureTypes
     }
 
@@ -148,7 +148,9 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     }
 
     fun isOverrideCandidate(other: FunctionDeclaration): Boolean {
-        return other.name == name && other.getType() == type && other.signature == signature
+        return other.fullName.localName == fullName.localName &&
+            other.getType() == type &&
+            other.signature == signature
     }
 
     fun addOverriddenBy(c: Collection<FunctionDeclaration>) {

@@ -410,7 +410,7 @@ fun MetadataProvider.newNamespaceDeclaration(
     node.applyMetadata(this, name, rawNode, code)
 
     log(node)
-    println(node.name)
+    println(node.fullName.toString())
     return node
 }
 

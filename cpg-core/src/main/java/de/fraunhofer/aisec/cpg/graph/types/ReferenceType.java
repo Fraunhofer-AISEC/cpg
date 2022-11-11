@@ -119,7 +119,7 @@ public class ReferenceType extends Type implements SecondOrderType {
         + "reference="
         + reference
         + ", typeName='"
-        + this.getName()
+        + this.getFullName().toString()
         + '\''
         + ", storage="
         + this.getStorage()

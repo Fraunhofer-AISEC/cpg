@@ -171,7 +171,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     newConstructorDeclaration(
                         record?.name ?: "",
                         this.frontend.getCodeFromRawNode(node),
-                        record,
+                        record
                     )
                 }
                 else -> newFunctionDeclaration(name, this.frontend.getCodeFromRawNode(node))

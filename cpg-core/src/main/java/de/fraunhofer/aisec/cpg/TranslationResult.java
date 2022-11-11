@@ -195,7 +195,8 @@ public class TranslationResult extends Node implements StatisticsHolder {
         sc ->
             result.addAll(
                 sc.getTranslationUnits().stream()
-                    .map(TranslationUnitDeclaration::getName)
+                    .map(TranslationUnitDeclaration::getFullName)
+                    .map(Name::toString)
                     .collect(Collectors.toList())));
     return result;
   }

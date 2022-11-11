@@ -233,7 +233,7 @@ private constructor(
                 result.components.forEach { s ->
                     s.translationUnits.forEach {
                         val bench =
-                            Benchmark(this.javaClass, "Activating types for ${it.name}", true)
+                            Benchmark(this.javaClass, "Activating types for ${it.fullName}", true)
                         result.scopeManager.activateTypes(it)
                         bench.stop()
                     }

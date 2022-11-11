@@ -180,8 +180,8 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .append("lhs", (lhs == null ? "null" : lhs.getName()))
-        .append("rhs", (rhs == null ? "null" : rhs.getName()))
+        .append("lhs", (lhs == null ? "null" : lhs.getFullName().toString()))
+        .append("rhs", (rhs == null ? "null" : rhs.getFullName().toString()))
         .append("operatorCode", operatorCode)
         .toString();
   }

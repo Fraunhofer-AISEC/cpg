@@ -295,8 +295,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     override fun toString(): String {
         val builder = ToStringBuilder(this, TO_STRING_STYLE)
 
-        if (name != "") {
-            builder.append("name", name)
+        if (fullName.toString().isNotEmpty()) {
+            builder.append("name", fullName.toString())
         }
 
         return builder.append("location", location).toString()
@@ -314,7 +314,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
             // as a different LOC can have the same name/code/comment/file
             false
         } else
-            name == other.name &&
+            fullName == other.fullName &&
                 code == other.code &&
                 comment == other.comment &&
                 location == other.location &&
@@ -336,7 +336,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * location already when creating the node.
      */
     override fun hashCode(): Int {
-        return Objects.hash(name, location, this.javaClass)
+        return Objects.hash(fullName, location, this.javaClass)
     }
 
     companion object {

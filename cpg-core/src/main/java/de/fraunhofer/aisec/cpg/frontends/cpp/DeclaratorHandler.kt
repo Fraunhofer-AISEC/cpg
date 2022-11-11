@@ -273,7 +273,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             if (arg is ParamVariableDeclaration) {
                 // check for void type parameters
                 if (arg.type is IncompleteType) {
-                    if (arg.name.isNotEmpty()) {
+                    if (arg.fullName.toString().isNotEmpty()) {
                         Util.warnWithFileLocation(
                             declaration,
                             log,

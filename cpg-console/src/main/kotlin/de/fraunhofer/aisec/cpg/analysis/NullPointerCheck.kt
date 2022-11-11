@@ -90,7 +90,7 @@ class NullPointerCheck {
                     sb.append("--- FINDING: Null pointer detected in ")
                     sb.append(node.javaClass.simpleName, DEFAULT.foreground(GREEN))
                     sb.append(" when accessing base ")
-                    sb.append(node.base?.name, DEFAULT.foreground(YELLOW))
+                    sb.append(node.base?.fullName.toString(), DEFAULT.foreground(YELLOW))
                     sb.append(" ---")
 
                     val header = sb.toAnsi()

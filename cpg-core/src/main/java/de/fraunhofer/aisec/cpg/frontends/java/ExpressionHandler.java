@@ -702,7 +702,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       // Or if the base is a reference to an import
       if (base instanceof DeclaredReferenceExpression
-          && this.frontend.getQualifiedNameFromImports(base.getName()) != null) {
+          && this.frontend.getQualifiedNameFromImports(base.getFullName().toString()) != null) {
         isStatic = true;
       }
 

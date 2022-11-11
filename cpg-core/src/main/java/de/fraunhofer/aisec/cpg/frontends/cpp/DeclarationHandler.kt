@@ -434,7 +434,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 if (primaryDeclaration != null) {
                     // handle typedef
                     if (
-                        primaryDeclaration.name.isEmpty() &&
+                        primaryDeclaration.fullName.toString().isEmpty() &&
                             ctx.rawSignature.trim().startsWith("typedef")
                     ) {
                         // This is a special case, which is a common idiom in C, to typedef a

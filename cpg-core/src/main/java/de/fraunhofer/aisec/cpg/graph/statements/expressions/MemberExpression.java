@@ -57,7 +57,7 @@ public class MemberExpression extends DeclaredReferenceExpression implements Has
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        .append("base", base.getName())
+        .append("base", base.getFullName().toString())
         .toString();
   }
 
