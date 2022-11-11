@@ -45,7 +45,6 @@ import kotlin.reflect.full.primaryConstructor
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.slf4j.LoggerFactory
-import kotlin.reflect.KClass
 
 /**
  * The configuration for the [TranslationManager] holds all information that is used during the
@@ -399,12 +398,15 @@ private constructor(
                 val loadedClass = Class.forName(className).kotlin.createInstance() as? Language<*>
                 if (loadedClass != null) {
                     registerLanguage(loadedClass)
-                } else throw ConfigurationException("Failed casting supposed language class '$className'. It does not seem to be an implementation of Language<*>.")
+                } else
+                    throw ConfigurationException(
+                        "Failed casting supposed language class '$className'. It does not seem to be an implementation of Language<*>."
+                    )
             } catch (e: Exception) {
                 throw ConfigurationException(
                     "Failed to load and instantiate class from FQN '$className'. Possible causes of this error:\n" +
-                            "- the given class is unavailable in the class path\n" +
-                            "- the given class does not have a single no-arg constructor\n"
+                        "- the given class is unavailable in the class path\n" +
+                        "- the given class does not have a single no-arg constructor\n"
                 )
             }
             return this
