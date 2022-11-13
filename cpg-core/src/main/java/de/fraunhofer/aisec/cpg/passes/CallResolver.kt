@@ -272,17 +272,13 @@ open class CallResolver : SymbolResolverPass() {
         // Find invokes by supertypes
         if (
             invocationCandidates.isEmpty() &&
+                call.fullName.localName.isNotEmpty() &&
                 (call.language !is CPPLanguage || shouldSearchForInvokesInParent(call))
         ) {
-            val nameParts =
-                call.name.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            if (nameParts.isNotEmpty()) {
-                val records =
-                    possibleContainingTypes.mapNotNull { recordMap[it.root.typeName] }.toSet()
-                invocationCandidates =
-                    getInvocationCandidatesFromParents(nameParts[nameParts.size - 1], call, records)
-                        .toMutableList()
-            }
+            val records = possibleContainingTypes.mapNotNull { recordMap[it.root.typeName] }.toSet()
+            invocationCandidates =
+                getInvocationCandidatesFromParents(call.fullName.localName, call, records)
+                    .toMutableList()
         }
         createMethodDummies(invocationCandidates, possibleContainingTypes, call)
         call.invokes = invocationCandidates
@@ -407,10 +403,10 @@ open class CallResolver : SymbolResolverPass() {
         call: CallExpression,
         curClass: RecordDeclaration
     ): Boolean {
-        val name = call.name.substring(call.name.lastIndexOf('.') + 1)
+        val name = call.fullName.localName // call.name.substring(call.name.lastIndexOf('.') + 1)
         val nameMatches =
             curClass.staticImports.filterIsInstance<FunctionDeclaration>().filter {
-                it.name == name || it.name.endsWith(".$name")
+                it.fullName.toString() == name || it.fullName.localName == name
             }
         return if (nameMatches.isEmpty()) {
             false

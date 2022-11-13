@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.types;
 import de.fraunhofer.aisec.cpg.frontends.*;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage;
+import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.ArrayList;
@@ -875,5 +876,11 @@ public class TypeParser {
   public static Type createFrom(
       @NotNull String type, Language<? extends LanguageFrontend> language) {
     return createFrom(type, language, false, null);
+  }
+
+  /** Parses the type from a string and the supplied language. */
+  @NotNull
+  public static Type createFrom(@NotNull Name name, Language<? extends LanguageFrontend> language) {
+    return createFrom(name.toString(), language, false, null);
   }
 }

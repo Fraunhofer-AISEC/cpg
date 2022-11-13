@@ -47,7 +47,7 @@ fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: CallExpressi
         (call.base as DeclaredReferenceExpression?)?.refersTo = func.receiver
     }
     var target: RecordDeclaration? = null
-    if (call.base!!.name == "super") {
+    if (call.base!!.fullName.localName == "super") {
         // Direct superclass, either defined explicitly or java.lang.Object by default
         if (curClass.superClasses.isNotEmpty()) {
             target = recordMap[curClass.superClasses[0].root.typeName]

@@ -97,7 +97,7 @@ class FunctionPointerCallResolver : Pass() {
                 .resolve<ValueDeclaration>(scopeManager.currentScope, true) {
                     it.type is FunctionPointerType && it.name == call.name
                 }
-                ?.firstOrNull()
+                .firstOrNull()
         if (pointer != null) {
             handleFunctionPointerCall(call, pointer)
         }

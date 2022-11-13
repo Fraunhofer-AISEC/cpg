@@ -116,9 +116,9 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             // to have the name of the variable. This might change in the future.
             this.fullName.localName =
                 if (value is UnaryOperator && value.input.type is FunctionPointerType) {
-                    value.input.name
+                    value.input.fullName.localName
                 } else {
-                    value?.name ?: ""
+                    value?.fullName?.localName ?: ""
                 }
 
             // Register the callee as a type listener for this call expressions. Once we re-design
@@ -261,7 +261,12 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             return
         }
         if (src === base) {
-            fullName = Name(name, src.getType().root.fullName, language?.namespaceDelimiter ?: ".")
+            fullName =
+                Name(
+                    fullName.localName,
+                    src.getType().root.fullName,
+                    language?.namespaceDelimiter ?: "."
+                )
         } else {
             val previous = type
             val types =

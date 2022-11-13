@@ -84,7 +84,7 @@ open class TypeHierarchyResolver : Pass() {
             object : IVisitor<Node?>() {
                 override fun visit(child: Node) {
                     if (child is RecordDeclaration) {
-                        recordMap.putIfAbsent(child.name, child)
+                        recordMap.putIfAbsent(child.fullName.toString(), child)
                     } else if (child is EnumDeclaration) {
                         enums.add(child)
                     }

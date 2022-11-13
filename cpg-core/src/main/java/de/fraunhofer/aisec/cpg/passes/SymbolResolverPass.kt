@@ -44,7 +44,7 @@ abstract class SymbolResolverPass : Pass() {
     /** Maps the name of the type of record declarations to its declaration. */
     protected fun findRecords(node: Node) {
         if (node is RecordDeclaration) {
-            recordMap.putIfAbsent(node.name, node)
+            recordMap.putIfAbsent(node.fullName.toString(), node)
         }
     }
 
@@ -103,14 +103,16 @@ abstract class SymbolResolverPass : Pass() {
         val language = reference.language
 
         return language is HasSuperClasses &&
-            reference.name.matches(
-                Regex(
-                    "(?<class>.+" +
-                        Regex.escape(language.namespaceDelimiter) +
-                        ")?" +
-                        (reference.language as HasSuperClasses).superclassKeyword
+            reference.fullName
+                .toString()
+                .matches(
+                    Regex(
+                        "(?<class>.+" +
+                            Regex.escape(language.namespaceDelimiter) +
+                            ")?" +
+                            (reference.language as HasSuperClasses).superclassKeyword
+                    )
                 )
-            )
     }
 
     override fun cleanup() {

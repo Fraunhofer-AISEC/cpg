@@ -234,14 +234,15 @@ open class VariableUsageResolver : SymbolResolverPass() {
             val base = current.base as DeclaredReferenceExpression
             if (
                 current.language is HasSuperClasses &&
-                    base.name == (current.language as HasSuperClasses).superclassKeyword
+                    base.fullName.localName ==
+                        (current.language as HasSuperClasses).superclassKeyword
             ) {
                 if (curClass != null && curClass.superClasses.isNotEmpty()) {
                     val superType = curClass.superClasses[0]
                     val superRecord = recordMap[superType.typeName]
                     if (superRecord == null) {
                         log.error(
-                            "Could not find referring super type ${superType.typeName} for ${curClass.name} in the record map. Will set the super type to java.lang.Object"
+                            "Could not find referring super type ${superType.typeName} for ${curClass.fullName} in the record map. Will set the super type to java.lang.Object"
                         )
                         // TODO: Should be more generic!
                         base.type = TypeParser.createFrom(Any::class.java.name, current.language)

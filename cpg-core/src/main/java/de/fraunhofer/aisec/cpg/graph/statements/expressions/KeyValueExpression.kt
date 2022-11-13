@@ -55,6 +55,6 @@ class KeyValueExpression : Expression() {
             return false
         }
 
-        return super.equals(other) && name == other.name && value == other.value
+        return super.equals(other) && fullName == other.fullName && value == other.value
     }
 }
