@@ -7,7 +7,6 @@ plugins {
     `java-library`
     jacoco
     kotlin("jvm")
-    id("org.sonarqube")
     id("org.jetbrains.dokka")
     signing
     `maven-publish`
@@ -138,8 +137,4 @@ tasks.jacocoTestReport {
         xml.required.set(true)
     }
     dependsOn(tasks.test) // tests are required to run before generating the report
-}
-
-tasks.sonar {
-    dependsOn(tasks.jacocoTestReport)
 }
