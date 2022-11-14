@@ -92,7 +92,7 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
       Modifier modifier,
       boolean primitive,
       Language<? extends LanguageFrontend> language) {
-    super(typeName, storage, qualifier);
+    super(typeName, storage, qualifier, language);
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;

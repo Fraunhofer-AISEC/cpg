@@ -42,7 +42,17 @@ class Name(
     var parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
     val delimiter: String = "."
-) {
+) : Cloneable {
+    constructor(
+        localName: String,
+        parent: Name? = null,
+        language: Language<out LanguageFrontend>?
+    ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
+
+    public override fun clone(): Name {
+        return Name(localName, parent?.clone(), delimiter)
+    }
+
     /**
      * Returns the string representation of this name using a fully qualified name notation with the
      * specified [delimiter].
@@ -75,8 +85,12 @@ class Name(
     }
 
     companion object {
-        fun parse(fqn: String, language: Language<out LanguageFrontend>): Name {
-            return parse(fqn, language.namespaceDelimiter, *language.nameSplitter)
+        fun parse(fqn: String, language: Language<out LanguageFrontend>?): Name {
+            return parse(
+                fqn,
+                language?.namespaceDelimiter ?: ".",
+                *(language?.nameSplitter ?: arrayOf())
+            )
         }
         /**
          * Tries to parse the given fully qualified name using the specified [delimiter] into a

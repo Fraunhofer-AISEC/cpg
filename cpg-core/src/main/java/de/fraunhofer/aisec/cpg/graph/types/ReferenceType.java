@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.graph.Name;
 import java.util.Objects;
 
 /**
@@ -42,19 +43,28 @@ public class ReferenceType extends Type implements SecondOrderType {
   public ReferenceType(Type reference) {
     super();
     this.setLanguage(reference.getLanguage());
-    this.setName(reference.getName() + "&");
+    Name fullTypeName = reference.getFullName().clone();
+    fullTypeName.setLocalName(fullTypeName.getLocalName() + "&");
+    this.setFullName(fullTypeName);
     this.reference = reference;
   }
 
   public ReferenceType(Type type, Type reference) {
     super(type);
     this.setLanguage(reference.getLanguage());
-    this.setName(reference.getName() + "&");
+    Name fullTypeName = reference.getFullName().clone();
+    fullTypeName.setLocalName(fullTypeName.getLocalName() + "&");
+    this.setFullName(fullTypeName);
     this.reference = reference;
   }
 
   public ReferenceType(Storage storage, Qualifier qualifier, Type reference) {
-    super(reference.getName() + "&", storage, qualifier);
+    Name fullTypeName = reference.getFullName().clone();
+    fullTypeName.setLocalName(fullTypeName.getLocalName() + "&");
+    this.setFullName(fullTypeName);
+    this.storage = storage != null ? storage : Storage.AUTO;
+    this.qualifier = qualifier;
+    this.origin = Origin.UNRESOLVED;
     this.reference = reference;
     this.setLanguage(reference.getLanguage());
   }
@@ -96,7 +106,9 @@ public class ReferenceType extends Type implements SecondOrderType {
   }
 
   public void refreshName() {
-    this.setName(this.getElementType().getName() + "&");
+    Name fullTypeName = getElementType().getFullName().clone();
+    fullTypeName.setLocalName(fullTypeName.getLocalName() + "&");
+    this.setFullName(fullTypeName);
   }
 
   @Override
@@ -119,7 +131,7 @@ public class ReferenceType extends Type implements SecondOrderType {
         + "reference="
         + reference
         + ", typeName='"
-        + this.getFullName().toString()
+        + this.getFullName()
         + '\''
         + ", storage="
         + this.getStorage()

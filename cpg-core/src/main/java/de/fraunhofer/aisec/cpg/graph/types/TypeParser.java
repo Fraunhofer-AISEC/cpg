@@ -832,7 +832,8 @@ public class TypeParser {
 
     if (createdType instanceof SecondOrderType) {
       templateType =
-          searchForTemplateTypes(createdType.getRoot().getName(), lang.getScopeManager());
+          searchForTemplateTypes(
+              createdType.getRoot().getFullName().toString(), lang.getScopeManager());
       if (templateType != null) {
         createdType.setRoot(templateType);
       }

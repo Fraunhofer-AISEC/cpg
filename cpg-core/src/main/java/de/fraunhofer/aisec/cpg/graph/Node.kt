@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope
@@ -69,7 +70,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     open var name: String
         get() {
-            return if (this is RecordDeclaration) return fullName.toString() else fullName.localName
+            return if (this is RecordDeclaration || this is Type) return fullName.toString()
+            else fullName.localName
         }
         set(value) {
             fullName.localName = value

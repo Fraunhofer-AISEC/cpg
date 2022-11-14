@@ -103,7 +103,7 @@ public class TypeManager {
     if (this.recordToTypeParameters.containsKey(recordDeclaration)) {
       for (ParameterizedType parameterizedType :
           this.recordToTypeParameters.get(recordDeclaration)) {
-        if (parameterizedType.getName().equals(name)) {
+        if (parameterizedType.getFullName().toString().equals(name)) {
           return parameterizedType;
         }
       }
@@ -136,7 +136,7 @@ public class TypeManager {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
       for (ParameterizedType parameterizedType :
           this.templateToTypeParameters.get(templateDeclaration)) {
-        if (parameterizedType.getName().equals(name)) {
+        if (parameterizedType.getFullName().toString().equals(name)) {
           return parameterizedType;
         }
       }
@@ -252,7 +252,8 @@ public class TypeManager {
   }
 
   public boolean typeExists(String name) {
-    return firstOrderTypes.stream().anyMatch(type -> type.getRoot().getName().equals(name));
+    return firstOrderTypes.stream()
+        .anyMatch(type -> type.getRoot().getFullName().toString().equals(name));
   }
 
   private TypeManager() {}
@@ -315,7 +316,7 @@ public class TypeManager {
         && newType instanceof ObjectType
         && ((ObjectType) type).getGenerics() != null
         && ((ObjectType) newType).getGenerics() != null
-        && type.getName().equals(newType.getName())) {
+        && type.getFullName().toString().equals(newType.getFullName().toString())) {
       return containsParameterizedType(((ObjectType) newType).getGenerics())
           && !(containsParameterizedType(((ObjectType) type).getGenerics()));
     }
@@ -453,7 +454,8 @@ public class TypeManager {
 
     for (var child : globalScope.getChildren()) {
       if (child instanceof RecordScope && child.getAstNode() instanceof RecordDeclaration) {
-        typeToRecord.put(child.getAstNode().getName(), (RecordDeclaration) child.getAstNode());
+        typeToRecord.put(
+            child.getAstNode().getFullName().toString(), (RecordDeclaration) child.getAstNode());
       }
 
       // HACKY HACK HACK
@@ -461,7 +463,8 @@ public class TypeManager {
         for (var child2 : child.getChildren()) {
           if (child2 instanceof RecordScope && child2.getAstNode() instanceof RecordDeclaration) {
             typeToRecord.put(
-                child2.getAstNode().getName(), (RecordDeclaration) child2.getAstNode());
+                child2.getAstNode().getFullName().toString(),
+                (RecordDeclaration) child2.getAstNode());
           }
         }
       }
@@ -508,7 +511,8 @@ public class TypeManager {
     Optional<Ancestor> lca =
         commonAncestors.stream().max(Comparator.comparingInt(Ancestor::getDepth));
     Optional<Type> commonType =
-        lca.map(a -> TypeParser.createFrom(a.getRecord().getName(), a.getRecord().getLanguage()));
+        lca.map(
+            a -> TypeParser.createFrom(a.getRecord().getFullName(), a.getRecord().getLanguage()));
 
     Type finalType;
     if (commonType.isPresent()) {
@@ -591,7 +595,8 @@ public class TypeManager {
   private Type getTargetType(Type currTarget, String alias) {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
-      return TypeParser.createFrom(currTarget.getName() + " " + alias, currTarget.getLanguage());
+      return TypeParser.createFrom(
+          currTarget.getFullName().toString() + " " + alias, currTarget.getLanguage());
     } else if (alias.endsWith("]")) {
       // array type
       return currTarget.reference(PointerType.PointerOrigin.ARRAY);
@@ -714,7 +719,7 @@ public class TypeManager {
     @Override
     public String toString() {
       return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-          .append("record", recordDeclaration.getName())
+          .append("record", recordDeclaration.getFullName().toString())
           .append("depth", depth)
           .toString();
     }

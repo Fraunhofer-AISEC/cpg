@@ -25,6 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.frontends.Language;
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -59,13 +62,13 @@ public abstract class Type extends Node {
   protected Origin origin;
 
   public Type() {
-    this.setName("");
+    this.setFullName(new Name("", null, this.getLanguage()));
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier(false, false, false, false);
   }
 
   public Type(String typeName) {
-    this.setName(typeName);
+    this.setFullName(Name.Companion.parse(typeName, this.getLanguage()));
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier();
     this.origin = Origin.UNRESOLVED;
@@ -73,7 +76,7 @@ public abstract class Type extends Node {
 
   public Type(Type type) {
     this.storage = type.storage;
-    this.setName(type.getName());
+    this.setFullName(type.getFullName());
     this.qualifier =
         new Qualifier(
             type.qualifier.isConst,
@@ -83,8 +86,34 @@ public abstract class Type extends Node {
     this.origin = type.origin;
   }
 
-  public Type(String typeName, @Nullable Storage storage, Qualifier qualifier) {
-    this.setName(typeName);
+  public Type(
+      String typeName,
+      @Nullable Storage storage,
+      Qualifier qualifier,
+      Language<? extends LanguageFrontend> language) {
+    if (this instanceof FunctionType) {
+      // Function types need a special treatment because they can have many fqns e.g. in the params
+      // or return value.
+      // We remove all these parts (i.e., everything after the first "(") and add it back to the
+      // local name later.
+      String[] splitName = typeName.split("\\(");
+      assert (splitName.length <= 2); // For now, we assume that we have exactly one opening bracket
+      Name fullName = Name.Companion.parse(splitName[0], language);
+      if (splitName.length == 2) {
+        fullName.setLocalName(fullName.getLocalName() + "(" + splitName[1]);
+      }
+      this.setFullName(fullName);
+    } else {
+      this.setFullName(Name.Companion.parse(typeName, language));
+    }
+    this.setLanguage(language);
+    this.storage = storage != null ? storage : Storage.AUTO;
+    this.qualifier = qualifier;
+    this.origin = Origin.UNRESOLVED;
+  }
+
+  public Type(Name fullTypeName, @Nullable Storage storage, Qualifier qualifier) {
+    this.setFullName(fullTypeName.clone());
     this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
@@ -260,8 +289,8 @@ public abstract class Type extends Node {
   public void refreshNames() {}
 
   /**
-   * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until Object-
-   * Incomplete- FunctionPtrType is reached
+   * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a
+   * Object-, Incomplete-, or FunctionPtrType is reached.
    *
    * @return root Type
    */
@@ -289,7 +318,7 @@ public abstract class Type extends Node {
   public abstract Type duplicate();
 
   public String getTypeName() {
-    return getName();
+    return getFullName().toString();
   }
 
   /**
@@ -350,14 +379,14 @@ public abstract class Type extends Node {
     if (this == o) return true;
     if (!(o instanceof Type)) return false;
     Type type = (Type) o;
-    return Objects.equals(getName(), type.getName())
+    return Objects.equals(getFullName(), type.getFullName())
         && storage == type.storage
         && Objects.equals(qualifier, type.qualifier);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getName(), storage, qualifier);
+    return Objects.hash(getFullName(), storage, qualifier);
   }
 
   @NotNull

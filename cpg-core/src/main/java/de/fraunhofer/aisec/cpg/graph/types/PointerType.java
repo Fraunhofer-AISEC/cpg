@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.graph.Name;
 import java.util.Objects;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -50,24 +51,28 @@ public class PointerType extends Type implements SecondOrderType {
   public PointerType(Type elementType, PointerOrigin pointerOrigin) {
     super();
     this.setLanguage(elementType.getLanguage());
+    Name fullTypeName = elementType.getFullName().clone();
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      this.setName(elementType.getName() + "[]");
+      fullTypeName.setLocalName(fullTypeName.getLocalName() + "[]");
       this.pointerOrigin = PointerOrigin.ARRAY;
     } else {
-      this.setName(elementType.getName() + "*");
+      fullTypeName.setLocalName(fullTypeName.getLocalName() + "*");
       this.pointerOrigin = PointerOrigin.POINTER;
     }
+    this.setFullName(fullTypeName);
     this.elementType = elementType;
   }
 
   public PointerType(Type type, Type elementType, PointerOrigin pointerOrigin) {
     super(type);
     this.setLanguage(elementType.getLanguage());
+    Name fullTypeName = elementType.getFullName().clone();
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      this.setName(elementType.getName() + "[]");
+      fullTypeName.setLocalName(fullTypeName.getLocalName() + "[]");
     } else {
-      this.setName(elementType.getName() + "*");
+      fullTypeName.setLocalName(fullTypeName.getLocalName() + "*");
     }
+    this.setFullName(fullTypeName);
     this.elementType = elementType;
     this.pointerOrigin = pointerOrigin;
   }
@@ -97,11 +102,13 @@ public class PointerType extends Type implements SecondOrderType {
     if (this.getElementType() instanceof PointerType) {
       this.getElementType().refreshNames();
     }
+    Name fullTypeName = getElementType().getFullName().clone();
     if (this.pointerOrigin == PointerOrigin.ARRAY) {
-      this.setName(this.getElementType().getName() + "[]");
+      fullTypeName.setLocalName(fullTypeName.getLocalName() + "[]");
     } else {
-      this.setName(this.getElementType().getName() + "*");
+      fullTypeName.setLocalName(fullTypeName.getLocalName() + "*");
     }
+    this.setFullName(fullTypeName);
   }
 
   @Override
