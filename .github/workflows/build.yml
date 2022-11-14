@@ -63,10 +63,10 @@ jobs:
           distribution: "zulu"
           java-version: "15"
           cache: "gradle"
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: "16"
       - name: Setup neo4j
