@@ -137,8 +137,9 @@ tasks.jacocoTestReport {
     reports {
         xml.required.set(true)
     }
+    dependsOn(tasks.test) // tests are required to run before generating the report
 }
 
-tasks.sonarqube {
+tasks.sonar {
     dependsOn(tasks.jacocoTestReport)
 }
