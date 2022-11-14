@@ -29,14 +29,36 @@
 //
 plugins {
     id("org.jetbrains.dokka")
+    id("org.sonarqube")
 }
 
+// this is needed for the plugins block
 repositories {
     mavenCentral()
 }
 
+// configure dokka for the multi-module cpg project
+// this works together with the dokka configuration in the common-conventions plugin
 tasks.dokkaHtmlMultiModule {
     outputDirectory.set(buildDir.resolve("dokkaCustomMultiModuleOutput"))
+}
+
+//
+// Configure sonarqube for the whole cpg project
+//
+// the submodules do not configure sonarqube
+// this makes sure that jacoco reports are generated when executing the top-level 'sonar' task
+// so that the whole cpg project gets one combined coverage report
+tasks.sonar {
+    subprojects.forEach {
+        dependsOn(it.tasks.withType<JacocoReport>())
+    }
+}
+
+sonarqube {
+    properties {
+        property("sonar.sourceEncoding", "UTF-8")
+    }
 }
 
 //
