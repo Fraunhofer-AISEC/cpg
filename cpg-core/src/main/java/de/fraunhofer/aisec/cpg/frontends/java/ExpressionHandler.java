@@ -52,7 +52,6 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -569,7 +568,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       var recordDeclaration = this.frontend.getScopeManager().getCurrentRecord();
 
-      if (recordDeclaration != null && Objects.equals(recordDeclaration.getName(), name)) {
+      if (recordDeclaration != null && recordDeclaration.getFullName().endsWith(name)) {
         declaredReferenceExpression.setRefersTo(recordDeclaration);
       }
 

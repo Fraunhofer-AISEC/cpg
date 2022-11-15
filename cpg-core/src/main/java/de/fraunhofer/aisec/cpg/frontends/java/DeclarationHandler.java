@@ -143,7 +143,7 @@ public class DeclarationHandler
                 .getScopeManager()
                 .firstScopeOrNull(RecordScope.class::isInstance)
                 .getAstNode()
-                .getName());
+                .getFullName());
     declaration.setType(type);
 
     // check, if constructor has body (i.e. its not abstract or something)
@@ -238,7 +238,7 @@ public class DeclarationHandler
             this,
             "this",
             recordDecl != null
-                ? parseType(this, recordDecl.getName())
+                ? parseType(this, recordDecl.getFullName())
                 : UnknownType.getUnknownType(getLanguage()),
             "this",
             false);
@@ -322,7 +322,7 @@ public class DeclarationHandler
         log.debug(
             "Member {} of type {} is something that we do not parse yet: {}",
             decl,
-            recordDeclaration.getName(),
+            recordDeclaration.getFullName().toString(),
             decl.getClass().getSimpleName());
       }
     }
@@ -438,7 +438,7 @@ public class DeclarationHandler
             .map(
                 e -> (de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration) handle(e))
             .collect(Collectors.toList());
-    entries.forEach(e -> e.setType(parseType(this, enumDeclaration.getName())));
+    entries.forEach(e -> e.setType(parseType(this, enumDeclaration.getFullName())));
     enumDeclaration.setEntries(entries);
 
     List<Type> superTypes =

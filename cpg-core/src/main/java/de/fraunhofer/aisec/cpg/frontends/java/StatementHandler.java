@@ -580,7 +580,7 @@ public class StatementHandler
     if (currentRecord == null) {
       log.error("Explicit constructor invocation has to be located inside a record declaration!");
     } else {
-      containingClass = currentRecord.getName();
+      containingClass = currentRecord.getFullName().toString();
     }
 
     ExplicitConstructorInvocation node =

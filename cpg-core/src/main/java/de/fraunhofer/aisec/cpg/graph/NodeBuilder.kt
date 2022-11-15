@@ -190,3 +190,9 @@ fun MetadataProvider.newAnnotationMember(
  * since we are moving away from the [TypeParser] altogether.
  */
 fun LanguageProvider.parseType(name: String) = TypeParser.createFrom(name, language)
+
+/**
+ * Provides a nice alias to [TypeParser.createFrom]. In the future, this should not be used anymore
+ * since we are moving away from the [TypeParser] altogether.
+ */
+fun LanguageProvider.parseType(name: Name) = TypeParser.createFrom(name, language)
