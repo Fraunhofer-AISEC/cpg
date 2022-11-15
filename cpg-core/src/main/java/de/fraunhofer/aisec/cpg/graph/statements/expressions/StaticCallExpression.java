@@ -41,11 +41,6 @@ public class StaticCallExpression extends CallExpression {
     return targetRecord;
   }
 
-  @Override
-  public void setName(@NotNull String name) {
-    updateFqn(name);
-  }
-
   public void setTargetRecord(String targetRecord) {
     this.targetRecord = targetRecord;
     updateFqn(this.getFullName().getLocalName());
