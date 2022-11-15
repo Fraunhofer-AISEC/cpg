@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 class FilenameMapper : Pass() {
     override fun accept(translationResult: TranslationResult) {
         for (tu in translationResult.translationUnits) {
-            tu.file = tu.name
-            handle(tu, tu.name)
+            tu.file = tu.fullName.toString()
+            handle(tu, tu.fullName.toString())
         }
     }
 

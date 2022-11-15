@@ -239,10 +239,13 @@ fun resolveConstructorWithDefaults(
 fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: String?): Boolean {
     val namePattern =
         Pattern.compile(
-            "(" + Pattern.quote(recordDeclaration!!.name) + "\\.)?" + Pattern.quote(name)
+            "(" +
+                Pattern.quote(recordDeclaration!!.fullName.toString()) +
+                "\\.)?" +
+                Pattern.quote(name)
         )
     val invocationCandidate =
-        recordDeclaration.methods.filter { namePattern.matcher(it.name).matches() }
+        recordDeclaration.methods.filter { namePattern.matcher(it.fullName.toString()).matches() }
     return invocationCandidate.isEmpty()
 }
 
@@ -486,7 +489,8 @@ fun getTemplateInitializationSignature(
                 .type // TODO: Somehow, this should be the ParametrizedType but it's an ObjectType
         // with the same name. => The template logic fails.
         val deducedType = templateCall.arguments[i].type
-        val typeExpression = templateCall.newTypeExpression(deducedType.name, deducedType)
+        val typeExpression =
+            templateCall.newTypeExpression(deducedType.fullName.toString(), deducedType)
         typeExpression.isImplicit = true
         if (
             currentArgumentType is ParameterizedType &&
@@ -608,7 +612,7 @@ fun handleImplicitTemplateParameter(
         if (defaultNode is Type) {
             defaultNode =
                 functionTemplateDeclaration.newTypeExpression(
-                    defaultNode.name,
+                    defaultNode.fullName.toString(),
                     defaultNode,
                 )
             defaultNode.isImplicit = true

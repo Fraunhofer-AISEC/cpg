@@ -122,7 +122,12 @@ fun Node.applyMetadata(
         // TODO: Shouldn't we check if the delimiter is in the local name and use Name.parse() if
         // this is the case? E.g., the namespace declarations pass the FQN
         this.fullName = Name(localName, namespace, this.language?.namespaceDelimiter ?: ".")
-    } else if (localName != null && this is CallExpression) {
+    } else if (
+        localName != null &&
+            (this is CallExpression ||
+                this is DeclaredReferenceExpression ||
+                this is TypeExpression)
+    ) {
         this.fullName =
             Name.parse(
                 localName,

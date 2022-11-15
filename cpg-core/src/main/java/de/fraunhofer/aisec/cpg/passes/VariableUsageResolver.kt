@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.functions
@@ -99,9 +100,9 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // Without FunctionPointerType, we cannot resolve function pointers
         val fptrType = reference.type as? FunctionPointerType ?: return null
 
-        var functionName = reference.name
+        var functionName = reference.fullName.localName
         val matcher =
-            Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.name)
+            Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(functionName)
         if (matcher.matches()) {
             val cls = matcher.group("class")
             functionName = matcher.group("function")
@@ -156,7 +157,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // else current.refersTo!!
         var recordDeclType: Type? = null
         if (currentClass != null) {
-            recordDeclType = TypeParser.createFrom(currentClass.name, currentClass.language)
+            recordDeclType = TypeParser.createFrom(currentClass.fullName, currentClass.language)
         }
         if (current.type is FunctionPointerType && refersTo == null) {
             refersTo = resolveFunctionPtr(recordDeclType, current)
@@ -170,7 +171,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 recordDeclType.typeName in recordMap
         ) {
             // Maybe we are referring to a field instead of a local var
-            if (language != null && language.namespaceDelimiter in current.name) {
+            if (language != null && language.namespaceDelimiter in current.fullName.toString()) {
                 recordDeclType = getEnclosingTypeOf(current)
             }
             val field = resolveMember(recordDeclType, current)
@@ -181,7 +182,11 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         // TODO: we need to do proper scoping (and merge it with the code above), but for now
         // this just enables CXX static fields
-        if (refersTo == null && language != null && language.namespaceDelimiter in current.name) {
+        if (
+            refersTo == null &&
+                language != null &&
+                language.namespaceDelimiter in current.fullName.toString()
+        ) {
             recordDeclType = getEnclosingTypeOf(current)
             val field = resolveMember(recordDeclType, current)
             if (field != null) {
@@ -194,7 +199,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             Util.warnWithFileLocation(
                 current,
                 log,
-                "Did not find a declaration for ${current.name}"
+                "Did not find a declaration for ${current.fullName}"
             )
         }
     }
@@ -219,7 +224,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 java.lang.String.join(language.namespaceDelimiter, path.subList(0, path.size - 1)),
                 true
             )*/
-            val parentName = Util.getParentName(language, current.name)
+            val parentName = (current.fullName.parent ?: current.fullName).toString()
             return TypeParser.createFrom(parentName, language)
         } else {
             return UnknownType.getUnknownType()
@@ -234,7 +239,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             val base = current.base as DeclaredReferenceExpression
             if (
                 current.language is HasSuperClasses &&
-                    base.fullName.localName ==
+                    base.fullName.toString() ==
                         (current.language as HasSuperClasses).superclassKeyword
             ) {
                 if (curClass != null && curClass.superClasses.isNotEmpty()) {
@@ -273,19 +278,21 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 base.refersTo = baseTarget
             }
             if (baseTarget is EnumDeclaration) {
-                val name = current.name
-                val memberTarget = baseTarget.entries.firstOrNull { it.name == name }
+                val memberTarget =
+                    baseTarget.entries.firstOrNull { it.fullName.endsWith(current.fullName) }
                 if (memberTarget != null) {
                     current.refersTo = memberTarget
                     return
                 }
             } else if (baseTarget is RecordDeclaration) {
-                var baseType = TypeParser.createFrom(baseTarget.name, baseTarget.language)
+                var baseType = TypeParser.createFrom(baseTarget.fullName, baseTarget.language)
                 if (baseType.typeName !in recordMap) {
                     val containingT = baseType
                     val fqnResolvedType =
                         recordMap.keys.firstOrNull {
-                            it.endsWith(containingT.fullName.delimiter + containingT.name)
+                            it.endsWith(
+                                containingT.fullName.delimiter + containingT.fullName.toString()
+                            )
                         } // TODO: Is the "." correct here for all languages?
                     if (fqnResolvedType != null) {
                         baseType = TypeParser.createFrom(fqnResolvedType, baseTarget.language)
@@ -299,7 +306,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         if (baseType.typeName !in recordMap) {
             val fqnResolvedType =
                 recordMap.keys.firstOrNull {
-                    it.endsWith(current.language?.namespaceDelimiter + baseType.name)
+                    it.endsWith(current.language?.namespaceDelimiter + baseType.fullName.toString())
                 }
             if (fqnResolvedType != null) {
                 baseType = TypeParser.createFrom(fqnResolvedType, baseType.language)
@@ -333,13 +340,12 @@ open class VariableUsageResolver : SymbolResolverPass() {
             // this in the call resolver instead
             return null
         }
-        val simpleName = Util.getSimpleName(reference.language, reference.name)
         var member: FieldDeclaration? = null
         if (containingClass !is UnknownType && containingClass.typeName in recordMap) {
             member =
                 recordMap[containingClass.typeName]!!
                     .fields
-                    .filter { it.name == simpleName }
+                    .filter { it.fullName.endsWith(reference.fullName) }
                     .map { it.definition }
                     .firstOrNull()
         }
@@ -349,17 +355,17 @@ open class VariableUsageResolver : SymbolResolverPass() {
                     .getOrDefault(containingClass.typeName, listOf())
                     .mapNotNull { recordMap[it.typeName] }
                     .flatMap { it.fields }
-                    .filter { it.name == simpleName }
+                    .filter { it.fullName.endsWith(reference.fullName) }
                     .map { it.definition }
                     .firstOrNull()
         }
         // Attention: using orElse instead of orElseGet will always invoke unknown declaration
         // handling!
-        return member ?: handleUnknownField(containingClass, reference.name, reference.type)
+        return member ?: handleUnknownField(containingClass, reference.fullName, reference.type)
     }
 
     // TODO(oxisto): Move to inference class
-    private fun handleUnknownField(base: Type, name: String, type: Type): FieldDeclaration? {
+    private fun handleUnknownField(base: Type, name: Name, type: Type): FieldDeclaration? {
         // unwrap a potential pointer-type
         if (base is PointerType) {
             return handleUnknownField(base.elementType, name, type)
@@ -389,14 +395,14 @@ open class VariableUsageResolver : SymbolResolverPass() {
             return null
         }
 
-        val target = recordDeclaration.fields.firstOrNull { it.name == name }
+        val target = recordDeclaration.fields.firstOrNull { it.fullName.endsWith(name) }
 
         return if (target != null) {
             target
         } else {
             val declaration =
                 recordDeclaration.newFieldDeclaration(
-                    name,
+                    name.localName,
                     type,
                     listOf<String>(),
                     "",

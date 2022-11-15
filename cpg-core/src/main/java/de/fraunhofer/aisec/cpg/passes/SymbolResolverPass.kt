@@ -51,7 +51,8 @@ abstract class SymbolResolverPass : Pass() {
     /** Maps the type of enums to its declaration. */
     protected fun findEnums(node: Node) {
         if (node is EnumDeclaration) {
-            val type = TypeParser.createFrom(node.name, node.language)
+            // TODO: Use the name instead of the type.
+            val type = TypeParser.createFrom(node.fullName.toString(), node.language)
             enumMap.putIfAbsent(type, node)
         }
     }
@@ -87,7 +88,9 @@ abstract class SymbolResolverPass : Pass() {
                 // TODO(oxisto): support multiple return types
                 this.returnTypes[0]
             }
-        return this.name == name && thisReturnType == returnType && this.hasSignature(signature)
+        return this.fullName.endsWith(name) &&
+            thisReturnType == returnType &&
+            this.hasSignature(signature)
     }
 
     protected fun collectSupertypes() {

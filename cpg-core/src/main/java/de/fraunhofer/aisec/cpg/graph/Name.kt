@@ -84,6 +84,24 @@ class Name(
         return Objects.hash(localName, parent, delimiter)
     }
 
+    /**
+     * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
+     * has no parent any more).
+     */
+    fun endsWith(ending: Name): Boolean {
+        return this.localName == ending.localName &&
+            (ending.parent == null ||
+                this.parent != null && this.parent!!.endsWith(ending.parent!!))
+    }
+
+    /**
+     * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
+     * has no parent any more).
+     */
+    fun endsWith(ending: String): Boolean {
+        return this.endsWith(parse(ending, this.delimiter))
+    }
+
     companion object {
         fun parse(fqn: String, language: Language<out LanguageFrontend>?): Name {
             return parse(

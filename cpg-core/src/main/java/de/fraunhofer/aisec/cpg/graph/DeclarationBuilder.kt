@@ -159,7 +159,7 @@ fun MetadataProvider.newVariableDeclaration(
     rawNode: Any? = null
 ): VariableDeclaration {
     val node = VariableDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, true)
 
     node.type = type
     node.isImplicitInitializerAllowed = implicitInitializerAllowed

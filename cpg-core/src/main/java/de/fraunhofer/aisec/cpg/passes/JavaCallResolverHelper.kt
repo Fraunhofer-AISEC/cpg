@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -47,7 +48,7 @@ fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: CallExpressi
         (call.base as DeclaredReferenceExpression?)?.refersTo = func.receiver
     }
     var target: RecordDeclaration? = null
-    if (call.base!!.fullName.localName == "super") {
+    if (call.base!!.fullName.toString() == "super") {
         // Direct superclass, either defined explicitly or java.lang.Object by default
         if (curClass.superClasses.isNotEmpty()) {
             target = recordMap[curClass.superClasses[0].root.typeName]
@@ -77,7 +78,24 @@ fun CallResolver.handleSpecificSupertype(
     curClass: RecordDeclaration,
     call: CallExpression
 ): RecordDeclaration? {
-    val baseName = call.base!!.name.substring(0, call.base!!.name.lastIndexOf(".super"))
+    // TODO: Somehow, the old expression looks as if the super could be somewhere in the middle of
+    // the name. I think this doesn't make much sense. If that was not the intention, just remove
+    // the while loop.
+    var baseFullName = call.base?.fullName
+    while (
+        baseFullName != null &&
+            baseFullName.localName != (curClass.language as HasSuperClasses).superclassKeyword
+    ) {
+        baseFullName = baseFullName.parent
+    }
+    if (baseFullName?.localName == (curClass.language as HasSuperClasses).superclassKeyword) {
+        baseFullName = baseFullName.parent
+    }
+    baseFullName = baseFullName ?: call.base!!.fullName
+    val baseName = baseFullName.toString()
+
+    // val baseName = call.base!!.name.substring(0,
+    // call.base!!.fullName.toString().lastIndexOf(".super"))
     if (TypeParser.createFrom(baseName, curClass.language) in curClass.implementedInterfaces) {
         // Basename is an interface -> BaseName.super refers to BaseName itself
         return recordMap[baseName]

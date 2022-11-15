@@ -107,14 +107,14 @@ open class CallResolver : SymbolResolverPass() {
     private fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node) {
         if (currentNode is MethodDeclaration && currentClass != null) {
             containingType[currentNode] =
-                TypeParser.createFrom(currentClass.name, currentClass.language)
+                TypeParser.createFrom(currentClass.fullName, currentClass.language)
         }
     }
 
     private fun fixInitializers(node: Node) {
         if (node is VariableDeclaration) {
             // check if we have the corresponding class for this type
-            val typeString = node.type.root.name
+            val typeString = node.type.root.fullName.toString()
             if (typeString in recordMap) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
@@ -125,7 +125,8 @@ open class CallResolver : SymbolResolverPass() {
                         addImplicitTemplateParametersToCall(it, initializer)
                     }
                 } else if (
-                    currInitializer is CallExpression && currInitializer.name == typeString
+                    currInitializer is CallExpression &&
+                        currInitializer.fullName.localName == node.type.root.fullName.localName
                 ) {
                     // This should actually be a construct expression, not a call!
                     val arguments = currInitializer.arguments
@@ -198,7 +199,7 @@ open class CallResolver : SymbolResolverPass() {
         // but it isn't
         val funcPointer =
             walker.getDeclarationForScope(call) { v ->
-                v.type is FunctionPointerType && v.name == call.name
+                v.type is FunctionPointerType && v.fullName.endsWith(call.fullName)
             }
         if (!funcPointer.isPresent) {
             // function pointers are handled by extra pass
@@ -403,7 +404,7 @@ open class CallResolver : SymbolResolverPass() {
         call: CallExpression,
         curClass: RecordDeclaration
     ): Boolean {
-        val name = call.fullName.localName // call.name.substring(call.name.lastIndexOf('.') + 1)
+        val name = call.fullName.localName
         val nameMatches =
             curClass.staticImports.filterIsInstance<FunctionDeclaration>().filter {
                 it.fullName.toString() == name || it.fullName.localName == name
@@ -468,7 +469,7 @@ open class CallResolver : SymbolResolverPass() {
                 possibleTypes.add(TypeParser.createFrom(node.targetRecord, node.language))
             }
         } else if (curClass != null) {
-            possibleTypes.add(TypeParser.createFrom(curClass.name, curClass.language))
+            possibleTypes.add(TypeParser.createFrom(curClass.fullName, curClass.language))
         }
         return possibleTypes
     }
@@ -482,7 +483,10 @@ open class CallResolver : SymbolResolverPass() {
 
         val namePattern =
             Pattern.compile(
-                "(" + Pattern.quote(recordDeclaration.name) + "\\.)?" + Pattern.quote(name)
+                "(" +
+                    Pattern.quote(recordDeclaration.fullName.toString()) +
+                    "\\.)?" +
+                    Pattern.quote(name)
             )
         return if (call.language is HasComplexCallResolution) {
             (call.language as HasComplexCallResolution).refineInvocationCandidatesFromRecord(
@@ -492,7 +496,8 @@ open class CallResolver : SymbolResolverPass() {
             )
         } else {
             recordDeclaration.methods.filter {
-                namePattern.matcher(it.name).matches() && it.hasSignature(call.signature)
+                namePattern.matcher(it.fullName.toString()).matches() &&
+                    it.hasSignature(call.signature)
             }
         }
     }
