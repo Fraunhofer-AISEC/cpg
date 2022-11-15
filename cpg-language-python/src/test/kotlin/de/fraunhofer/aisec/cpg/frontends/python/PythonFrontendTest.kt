@@ -43,7 +43,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
-@ExperimentalPython
 class PythonFrontendTest : BaseTest() {
     // TODO ensure gradle doesn't remove those classes
     private val dummyRegion = Region()

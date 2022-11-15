@@ -24,9 +24,7 @@
  *
  */
 plugins {
-    `java-library`
-    `maven-publish`
-    signing
+    id("cpg.library-conventions")
 }
 
 
@@ -42,13 +40,8 @@ publishing {
     }
 }
 
-tasks.named<Test>("test") {
-    useJUnitPlatform()
-    maxHeapSize = "4048m"
-}
-
 dependencies {
-    api(project(":cpg-core"))
+    api(projects.cpgCore)
 
-    testImplementation(testFixtures(project(":cpg-core")))
+    testImplementation(testFixtures(projects.cpgCore))
 }

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.newCompoundStatement
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
@@ -37,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 
-@ExperimentalTypeScript
 class StatementHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
     init {

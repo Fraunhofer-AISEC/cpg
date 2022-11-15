@@ -27,11 +27,6 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
-import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
-import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.frontends.typescript.JavaScriptLanguage
-import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import java.io.File
 import java.net.ConnectException
@@ -147,30 +142,6 @@ class Application : Callable<Int> {
 
     @CommandLine.Option(names = ["--includes-file"], description = ["Load includes from file"])
     private var includesFile: File? = null
-
-    @CommandLine.Option(
-        names = ["--enable-experimental-python"],
-        description =
-            [
-                "Enables the experimental language frontend for Python. Be aware, that further steps might be necessary to install native libraries such as jep"
-            ]
-    )
-    private var enableExperimentalPython: Boolean = false
-
-    @CommandLine.Option(
-        names = ["--enable-experimental-go"],
-        description =
-            [
-                "Enables the experimental language frontend for Go. Be aware, that further steps might be necessary to install native libraries such as cpgo"
-            ]
-    )
-    private var enableExperimentalGo: Boolean = false
-
-    @CommandLine.Option(
-        names = ["--enable-experimental-typescript"],
-        description = ["Enables the experimental language frontend for TypeScript."]
-    )
-    private var enableExperimentalTypeScript: Boolean = false
 
     @CommandLine.Option(
         names = ["--print-benchmark"],
@@ -320,13 +291,15 @@ class Application : Callable<Int> {
      * point to a file, is a directory or point to a hidden file or the paths does not have the same
      * top level path.
      */
-    @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
-
         val translationConfiguration =
             TranslationConfiguration.builder()
                 .topLevel(topLevel)
                 .defaultLanguages()
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
 
@@ -351,21 +324,6 @@ class Application : Callable<Int> {
                 translationConfiguration.useCompilationDatabase(db)
                 translationConfiguration.sourceLocations(db.sourceFiles)
             }
-        }
-
-        translationConfiguration.registerLanguage<LLVMIRLanguage>()
-
-        if (enableExperimentalPython) {
-            translationConfiguration.registerLanguage<PythonLanguage>()
-        }
-
-        if (enableExperimentalGo) {
-            translationConfiguration.registerLanguage<GoLanguage>()
-        }
-
-        if (enableExperimentalTypeScript) {
-            translationConfiguration.registerLanguage<TypeScriptLanguage>()
-            translationConfiguration.registerLanguage<JavaScriptLanguage>()
         }
 
         includesFile?.let { theFile ->

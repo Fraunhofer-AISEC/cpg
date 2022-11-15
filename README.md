@@ -42,21 +42,21 @@ repositories {
 }
 
 dependencies {
-    var cpgVersion = "4.3.0" 
+    var cpgVersion = "5.1.0" 
     
     // if you want to include all published cpg modules
-    api("de.fraunhofer.aisec", "cpg", cpgVersion)
+    implementation("de.fraunhofer.aisec", "cpg", cpgVersion)
     
-    // if you only want to include the core CPG without extra modules
-    api("de.fraunhofer.aisec", "cpg-core", cpgVersion)
-    
-    // or just a particular extra module, such as LLVM or Python
-    api("de.fraunhofer.aisec", "cpg-language-llvm", cpgVersion)
-    api("de.fraunhofer.aisec", "cpg-language-python", cpgVersion)    
+    // if you only want to use some of the cpg modules
+    // use the 'cpg-core' module
+    // and then add the needed extra modules, such as Go and Python
+    implementation("de.fraunhofer.aisec", "cpg-core", cpgVersion)
+    implementation("de.fraunhofer.aisec", "cpg-language-go", cpgVersion)
+    implementation("de.fraunhofer.aisec", "cpg-language-python", cpgVersion)
 }
 ```
 
-Beware, that the `cpg` module includes all optional features and might potentially be HUGE (especially because of the LLVM support). If you do not need LLVM, we suggest just using the `cpg-core` module. In the future we are working on extracting more optional modules into separate modules.
+Beware, that the `cpg` module includes all optional features and might potentially be HUGE (especially because of the LLVM support). If you do not need LLVM, we suggest just using the `cpg-core` module with the needed extra modules like `cpg-language-go`. In the future we are working on extracting more optional modules into separate modules.
 
 #### Development Builds
 
@@ -66,17 +66,21 @@ A published artifact of every commit can be requested through [JitPack](https://
 
 The library can be used on the command line using the `cpg-console` subproject. Please refer to the [README.md](./cpg-console/README.md) of the `cpg-console` as well as our small [tutorial](./tutorial.md) for further details.
 
-### Usage of Experimental Languages
+## Development Setup
 
-Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars (with exception of TypeScript), so you need to build them manually using the property `-Pexperimental` when using tasks such as `build` or `test`. For typescript, please use `-PexperimentalTypeScript`. Use the `cpg-language-python` module for Python support.
+### Experimental Languages
+
+Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included as gradle submodules by default.
+To include them as submodules simply toggle them on in the [gradle properties](./gradle.properties) file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
+Instead of manually editing the [gradle properties](./gradle.properties) file, you can also use the `configure_frontends.sh` script, which edits the properties for you.
 
 #### Golang
 
-In the case of Golang, the necessary native code can be found in the `src/main/golang` folder. Gradle should automatically find JNI headers and stores the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS. In order to use it in an external project, the resulting library needs to be placed somewhere in `java.library.path`. 
+In the case of Golang, the necessary native code can be found in the `src/main/golang` folder of the `cpg-language-go` submodule. Gradle should automatically find JNI headers and stores the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS. In order to use it in an external project, the resulting library needs to be placed somewhere in `java.library.path`.
 
 #### Python
 
-You need to install [jep](https://github.com/ninia/jep/). This can either be system wide or in a virtual environment. Your jep version hast to match the version used by CPG (see [build.gradle.kts](./cpg-language-python/build.gradle.kts)).
+You need to install [jep](https://github.com/ninia/jep/). This can either be system-wide or in a virtual environment. Your jep version has to match the version used by the CPG (see [version catalog](./gradle/libs.versions.toml)).
 
 Currently, only Python 3.10 is supported.
 
@@ -94,9 +98,8 @@ Through the `JepSingleton`, the CPG library will look for well known paths on Li
 
 #### TypeScript
 
-For parsing TypeScript, the necessary NodeJS-based code can be found in the `src/main/nodejs` directory of the `cpg-library` folder. Gradle should build the script automatically, provided NodeJS (>=16) is installed. The bundles script will be placed inside the jar's resources and should work out of the box.
+For parsing TypeScript, the necessary NodeJS-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically, provided NodeJS (>=16) is installed. The bundles script will be placed inside the jar's resources and should work out of the box.
 
-## Development Setup
 
 ### Code Style
 
@@ -115,14 +118,6 @@ Straightforward, however three things are recommended
 You can use the hook in `style/pre-commit` to check for formatting errors:
 ```
 cp style/pre-commit .git/hooks
-```  
-
-### How to build
-
-This project requires Java 11. If Java 11 is not your default Java version, make sure to configure gradle to use it by setting its `java.home` variable:
-
-```
-./gradlew -Dorg.gradle.java.home="/usr/lib/jvm/java-11-openjdk-amd64/" build
 ```
 
 ## Contributors
@@ -134,6 +129,7 @@ The following authors have contributed to this project (in alphabetical order):
 * [KuechA](https://github.com/KuechA)
 * [Masrepus](https://github.com/Masrepus)
 * [maximiliankaul](https://github.com/maximiliankaul)
+* [maximilian-galanis](https://github.com/maximilian-galanis)
 * [obraunsdorf](https://github.com/obraunsdorf)
 * [oxisto](https://github.com/oxisto)
 * [peckto](https://github.com/peckto)

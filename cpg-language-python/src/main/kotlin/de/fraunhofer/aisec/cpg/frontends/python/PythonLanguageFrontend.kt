@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -38,7 +37,6 @@ import java.nio.file.Path
 import jep.JepException
 import jep.SubInterpreter
 
-@ExperimentalPython
 class PythonLanguageFrontend(
     language: Language<PythonLanguageFrontend>,
     config: TranslationConfiguration,

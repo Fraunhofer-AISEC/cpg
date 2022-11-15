@@ -41,6 +41,6 @@ class TranslatePluginTest {
 
         val result = plugin.execute(":tr")
         assertTrue(result is Command.Result.RunSnippets)
-        assertEquals(22, result.snippetsToRun.toList().size)
+        assertEquals(19, result.snippetsToRun.toList().size)
     }
 }

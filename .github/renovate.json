@@ -1,0 +1,21 @@
+{
+  "extends": [
+    "config:base",
+    "schedule:daily",
+    ":enableVulnerabilityAlerts"
+  ],
+  "patch": {
+    "enabled": false
+  },
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "matchManagers": ["gomod"],
+      "addLabels": ["go"]
+    },
+    {
+      "matchManagers": ["npm"],
+      "addLabels": ["npm"]
+    }
+  ]
+}
