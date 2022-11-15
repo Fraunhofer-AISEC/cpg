@@ -228,7 +228,8 @@ class TypeScriptLanguageFrontend(
         if (call != null) {
             val call = this.expressionHandler.handle(call) as CallExpression
 
-            val annotation = newAnnotation(call.name, this.getCodeFromRawNode(node) ?: "")
+            val annotation =
+                newAnnotation(call.fullName.localName, this.getCodeFromRawNode(node) ?: "")
 
             annotation.members = call.arguments.map { newAnnotationMember("", it, it.code ?: "") }
 

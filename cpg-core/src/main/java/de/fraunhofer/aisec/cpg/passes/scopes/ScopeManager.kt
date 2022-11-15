@@ -65,7 +65,7 @@ class ScopeManager : ScopeProvider {
     private val scopeMap: MutableMap<Node?, Scope> = IdentityHashMap()
 
     /** A lookup map for each scope and its associated FQN. */
-    private val fqnScopeMap: MutableMap<String, NameScope> = IdentityHashMap()
+    private val fqnScopeMap: MutableMap<String, NameScope> = mutableMapOf() // IdentityHashMap()
 
     /** The currently active scope. */
     var currentScope: Scope? = null
@@ -207,7 +207,7 @@ class ScopeManager : ScopeProvider {
         if (scope is NameScope) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
             // nodes have a FQN as their name.
-            fqnScopeMap[scope.astNode!!.name] = scope
+            fqnScopeMap[scope.astNode!!.fullName.toString()] = scope
         }
         currentScope?.let {
             it.children.add(scope)
@@ -296,7 +296,7 @@ class ScopeManager : ScopeProvider {
     private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
         val existingScope =
             currentScope?.children?.firstOrNull {
-                it is NameScope && it.scopedName == nodeToScope.name
+                it is NameScope && it.scopedName == nodeToScope.fullName.toString()
             }
 
         return if (existingScope != null) {
@@ -633,7 +633,9 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = currentScope
     ): ValueDeclaration? {
         return resolve<ValueDeclaration>(scope) {
-                if (it.name == ref.name) { // TODO: This place is likely to make things fail
+                if (
+                    it.fullName.endsWith(ref.fullName)
+                ) { // TODO: This place is likely to make things fail
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
                     if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
@@ -698,13 +700,15 @@ class ScopeManager : ScopeProvider {
                 }
         }
 
-        return resolve(s) { it.name == call.name && it.hasSignature(call.signature) }
+        return resolve(s) { it.fullName.endsWith(call.fullName) && it.hasSignature(call.signature) }
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return resolve(currentScope, true) { f: FunctionDeclaration -> f.name == call.name }
+        return resolve(currentScope, true) { f: FunctionDeclaration ->
+            f.fullName.endsWith(call.fullName)
+        }
     }
 
     /**
@@ -775,7 +779,9 @@ class ScopeManager : ScopeProvider {
         call: CallExpression,
         scope: Scope? = currentScope
     ): List<FunctionTemplateDeclaration> {
-        return resolve(scope, true) { c: FunctionTemplateDeclaration -> c.name == call.name }
+        return resolve(scope, true) { c: FunctionTemplateDeclaration ->
+            c.fullName.endsWith(call.fullName)
+        }
     }
 
     /**
@@ -786,7 +792,8 @@ class ScopeManager : ScopeProvider {
      * @return the declaration, or null if it does not exist
      */
     fun getRecordForName(scope: Scope, name: String): RecordDeclaration? {
-        return resolve<RecordDeclaration>(scope, true) { it.name == name }.firstOrNull()
+        return resolve<RecordDeclaration>(scope, true) { it.fullName.toString() == name }
+            .firstOrNull()
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */
@@ -813,7 +820,7 @@ class ScopeManager : ScopeProvider {
                 }
             }
         )
-        LOGGER.debug("Activated {} nodes for {}", num, node.name)
+        LOGGER.debug("Activated {} nodes for {}", num, node.fullName)
 
         // For some nodes it may happen that they are not reachable via AST, but we still need to
         // set

@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope
@@ -62,20 +61,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * this to the [name] field. It is currently not persisted in the graph database.
      */
     @Transient var fullName: Name = Name(EMPTY_NAME)
-
-    /**
-     * A human-readable name. It is backed by the [fullName] and is set to [Name.localName]
-     * automatically using a kotlin property delegator. We need to exclude the delegated field from
-     * graph database persistence.
-     */
-    open var name: String
-        get() {
-            return if (this is RecordDeclaration || this is Type) return fullName.toString()
-            else fullName.localName
-        }
-        set(value) {
-            fullName.localName = value
-        }
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases

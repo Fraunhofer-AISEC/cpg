@@ -25,11 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import de.fraunhofer.aisec.cpg.graph.Name;
+
 public class UninitializedValue extends Expression {
   public UninitializedValue() {
-    setName("Uninitialized Value");
-    // TODO: This doesn't work. No idea why...
-    // setFullName(new Name("Uninitialized Value", null,
-    // this.getLanguage().getNamespaceDelimiter()));
+    setFullName(new Name("Uninitialized Value", null, this.getLanguage()));
   }
 }

@@ -215,30 +215,26 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             // https://github.com/Fraunhofer-AISEC/cpg/issues/298
             val member =
                 newDeclaredReferenceExpression(
-                    memberExpression.name,
+                    memberExpression.fullName.toString(),
                     memberExpression.type,
-                    memberExpression.name
+                    memberExpression.fullName.toString()
                 )
 
-            // TODO: fqn - how?
-            val fqn = memberExpression.name
             call =
                 newMemberCallExpression(
-                    memberExpression.name,
-                    fqn,
+                    memberExpression.fullName.localName,
+                    memberExpression.fullName.toString(),
                     memberExpression.base,
                     member,
                     ".",
                     this.frontend.getCodeFromRawNode(node)
                 )
         } else {
-            val name = this.frontend.getIdentifierName(node)
-
             // TODO: fqn - how?
-            val fqn = name
+            val fqn = this.frontend.getIdentifierName(node)
             // regular function call
 
-            val ref = newDeclaredReferenceExpression(name)
+            val ref = newDeclaredReferenceExpression(fqn)
 
             call = newCallExpression(ref, fqn, this.frontend.getCodeFromRawNode(node), false)
         }

@@ -117,14 +117,14 @@ internal class ScopeManagerTest : BaseTest() {
             CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), final)
         final.mergeFrom(listOf(s1, s2))
 
-        // in the final scope manager, the should only be one NameScope "A"
+        // in the final scope manager, there should only be one NameScope "A"
         val scopes = final.filterScopes { it.scopedName == "A" }
         assertEquals(1, scopes.size)
 
         val scopeA = scopes.firstOrNull() as? NameScope
         assertNotNull(scopeA)
 
-        // should also be able to look-up via the FQN
+        // should also be able to look up via the FQN
         assertEquals(scopeA, final.lookupScope("A"))
 
         // and it should contain both functions from the different file in the same namespace

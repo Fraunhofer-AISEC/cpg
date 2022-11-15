@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
@@ -118,7 +119,14 @@ fun Node.applyMetadata(
             null
         }
 
-    if (localName != null && !noFQN) {
+    if (localName != null && this is NamespaceDeclaration) {
+        this.fullName =
+            Name.parse(
+                localName,
+                this.language?.namespaceDelimiter ?: ".",
+                *(this.language?.nameSplitter ?: emptyArray())
+            )
+    } else if (localName != null && !noFQN) {
         // TODO: Shouldn't we check if the delimiter is in the local name and use Name.parse() if
         // this is the case? E.g., the namespace declarations pass the FQN
         this.fullName = Name(localName, namespace, this.language?.namespaceDelimiter ?: ".")
