@@ -605,7 +605,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.annotations = this.annotations
     duplicate.comment = this.comment
     duplicate.file = this.file
-    duplicate.fullName = this.fullName
+    duplicate.fullName = this.fullName.clone()
     duplicate.nextDFG = this.nextDFG
     duplicate.prevDFG = this.prevDFG
     duplicate.nextEOG = this.nextEOG
@@ -616,7 +616,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
 
 fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
     val duplicate = TypeExpression()
-    duplicate.fullName = this.fullName
+    duplicate.fullName = this.fullName.clone()
     duplicate.language = this.language
     duplicate.type = this.type
     duplicate.isImplicit = implicit

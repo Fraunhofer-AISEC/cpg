@@ -733,7 +733,7 @@ class CallResolverTest : BaseTest() {
 
         /*
          This call cannot be resolved to the overloaded calc because the signature doesn't match.
-         However it also cannot be resolved to the base because due to the overloaded matching name it
+         However, it also cannot be resolved to the base because due to the overloaded matching name it
          stops searching for an invocation
         */
         val calcCall =

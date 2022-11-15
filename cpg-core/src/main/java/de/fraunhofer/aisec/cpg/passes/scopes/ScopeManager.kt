@@ -673,15 +673,11 @@ class ScopeManager : ScopeProvider {
     ): List<FunctionDeclaration> {
         var s = scope
 
-        val fqn = call.fullName.toString()
-
         // First, we need to check, whether we have some kind of scoping.
-        if (
-            call.language != null && fqn != null && fqn.contains(call.language!!.namespaceDelimiter)
-        ) {
+        if (call.language != null && call.fullName.parent != null) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = fqn.substring(0, fqn.lastIndexOf(call.language!!.namespaceDelimiter))
+            val scopeName = call.fullName.parent.toString()
 
             // TODO: proper scope selection
 

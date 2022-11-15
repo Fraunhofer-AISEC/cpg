@@ -76,7 +76,7 @@ public abstract class Type extends Node {
 
   public Type(Type type) {
     this.storage = type.storage;
-    this.setFullName(type.getFullName());
+    this.setFullName(type.getFullName().clone());
     this.qualifier =
         new Qualifier(
             type.qualifier.isConst,

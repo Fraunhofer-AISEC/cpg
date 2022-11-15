@@ -210,7 +210,7 @@ public class DeclarationHandler
     var type = FunctionType.computeType(functionDeclaration);
     functionDeclaration.setType(type);
 
-    // check, if method has body (i.e. its not abstract or something)
+    // check, if method has body (i.e., it's not abstract or something)
     Optional<BlockStmt> o = methodDecl.getBody();
 
     if (o.isEmpty()) {
