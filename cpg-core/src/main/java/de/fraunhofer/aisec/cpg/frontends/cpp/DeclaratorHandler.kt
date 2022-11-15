@@ -462,7 +462,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             val constructorDeclaration =
                 newConstructorDeclaration(
                     recordDeclaration.fullName.localName,
-                    recordDeclaration.name,
+                    recordDeclaration.fullName.toString(),
                     recordDeclaration,
                     frontend.language
                 )

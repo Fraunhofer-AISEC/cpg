@@ -170,14 +170,14 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             if (candidates.isEmpty() && frontend.scopeManager.currentScope !is TemplateScope) {
                 log.warn(
                     "Could not find declaration of method {} in record {}",
-                    declaration.name,
-                    recordDeclaration.name
+                    declaration.fullName.toString(),
+                    recordDeclaration.fullName.toString()
                 )
             } else if (candidates.size > 1) {
                 log.warn(
                     "Found more than one candidate to connect definition of method {} in record {} to its declaration. We will comply, but this is suspicious.",
-                    declaration.name,
-                    recordDeclaration.name
+                    declaration.fullName.toString(),
+                    recordDeclaration.fullName.toString()
                 )
             }
             for (candidate in candidates) {
@@ -285,7 +285,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         if (templateDeclaration is FunctionTemplateDeclaration) {
             // Fix typeName
             templateDeclaration.fullName =
-                Name.parse(templateDeclaration.getRealizationDeclarations()[0].name, language)
+                Name.parse(
+                    templateDeclaration.getRealizationDeclarations()[0].fullName.toString(),
+                    language
+                )
         } else
             (innerDeclaration as? RecordDeclaration)?.let {
                 addParameterizedTypesToRecord(templateDeclaration, it)
@@ -482,7 +485,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 val declSpecifierToUse =
                     if (useNameOfDeclarator && declSpecifier is IASTCompositeTypeSpecifier) {
                         val copy = declSpecifier.copy()
-                        copy.name = CPPASTName(primaryDeclaration?.name?.toCharArray())
+                        copy.name =
+                            CPPASTName(primaryDeclaration?.fullName?.toString()?.toCharArray())
                         copy
                     } else {
                         declSpecifier
@@ -634,7 +638,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 objectType.addGeneric(genericInstantiation)
                 templateParams.add(
                     newTypeExpression(
-                        genericInstantiation.name,
+                        genericInstantiation.fullName.toString(),
                         genericInstantiation,
                     )
                 )

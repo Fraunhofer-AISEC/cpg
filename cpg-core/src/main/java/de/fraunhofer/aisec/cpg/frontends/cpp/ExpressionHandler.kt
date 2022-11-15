@@ -236,7 +236,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         for (argument in template.templateArguments) {
             if (argument is IASTTypeId) {
                 val type = parseType(argument.declSpecifier.toString())
-                templateArguments.add(newTypeExpression(type.name, type))
+                templateArguments.add(newTypeExpression(type.fullName.toString(), type))
             } else if (argument is IASTLiteralExpression) {
                 frontend.expressionHandler.handle(argument as IASTInitializerClause)?.let {
                     templateArguments.add(it)
@@ -421,15 +421,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             baseTypename = baseType.typeName
             val member =
                 newDeclaredReferenceExpression(
-                    reference.name,
+                    reference.fullName.localName,
                     UnknownType.getUnknownType(language),
-                    reference.name
+                    reference.fullName.localName
                 )
             member.location = frontend.getLocationFromRawNode<Expression>(reference)
             callExpression =
                 newMemberCallExpression(
-                    member.name,
-                    baseTypename + "." + member.name,
+                    member.fullName.localName,
+                    baseTypename + language.namespaceDelimiter + member.fullName.localName,
                     reference.base,
                     member,
                     reference.operatorCode,
@@ -484,26 +484,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // this really is a cast expression in disguise
             return reference
         } else {
-            var fqn = reference!!.name
-            var name = fqn
-            if (name.contains("::")) {
-                name = name.substring(name.lastIndexOf("::") + 2)
-            }
-            if (name.contains("<")) {
-                // The characters < and > are not allowed in identifier names, as they denote the
-                // usage of a
-                // template
-                name = name.substring(0, name.indexOf("<"))
-            }
-
-            // FIXME this is only true if we are in a namespace! If we are in a class, this is
-            // wrong!
-            //  happens again in l367
-            // String fullNamePrefix = lang.getScopeManager().getFullNamePrefix();
-            // if (!fullNamePrefix.isEmpty()) {
-            //  fqn = fullNamePrefix + "." + fqn;
-            // }
-            callExpression = newCallExpression(reference, fqn, ctx.rawSignature, false)
+            callExpression =
+                newCallExpression(
+                    reference,
+                    reference!!.fullName.toString(),
+                    ctx.rawSignature,
+                    false
+                )
         }
 
         for ((i, argument) in ctx.arguments.withIndex()) {

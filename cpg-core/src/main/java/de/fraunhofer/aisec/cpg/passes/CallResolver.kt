@@ -485,7 +485,8 @@ open class CallResolver : SymbolResolverPass() {
             Pattern.compile(
                 "(" +
                     Pattern.quote(recordDeclaration.fullName.toString()) +
-                    "\\.)?" +
+                    Regex.escape(recordDeclaration.language!!.namespaceDelimiter) +
+                    ")?" +
                     Pattern.quote(name)
             )
         return if (call.language is HasComplexCallResolution) {
