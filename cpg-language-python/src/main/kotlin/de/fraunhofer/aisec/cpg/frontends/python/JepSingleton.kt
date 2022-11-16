@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory
  * Takes care of configuring Jep according to some well known paths on popular operating systems.
  */
 object JepSingleton {
-
     private const val libJepJniLib = "libjep.jnilib"
 
     private const val libJepSo = "libjep.so"
@@ -153,6 +152,7 @@ object JepSingleton {
 
     private fun macOsInstallationPath(version: String) =
         "/opt/homebrew/lib/python${version}/site-packages/jep/$libJepJniLib"
+
     private fun otherPathsToJepLibrary() =
         listOf(
             "/usr/lib/$libJepSo",
