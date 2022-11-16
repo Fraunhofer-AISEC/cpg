@@ -35,6 +35,15 @@ import org.slf4j.LoggerFactory
  * Takes care of configuring Jep according to some well known paths on popular operating systems.
  */
 object JepSingleton {
+
+    private const val libJepJniLib = "libjep.jnilib"
+
+    private const val libJepSo = "libjep.so"
+
+    private val virtualEnv =
+        System.getenv("CPG_PYTHON_VIRTUALENV")?.also { System.getenv("CPG_PYTHON_VIRTUALENV") }
+            ?: "cpg"
+
     var config = JepConfig()
 
     private val LOGGER = LoggerFactory.getLogger(javaClass)
@@ -112,47 +121,41 @@ object JepSingleton {
                 ) // this assumes that the python code is also at the library's location
             }
         } else {
-            var virtualEnv = "cpg"
+            val knownPathsToJep =
+                listOf("3.11", "3.10", "3.9").flatMap {
+                    listOf(
+                        libJepSoFromVirtualEnv(it),
+                        libJepJniFromVirtualEnv(it),
+                        macOsInstallationPath(it)
+                    )
+                } + otherPathsToJepLibrary()
 
-            if (System.getenv("CPG_PYTHON_VIRTUALENV") != null) {
-                virtualEnv = System.getenv("CPG_PYTHON_VIRTUALENV")
-            }
-
-            val wellKnownPaths =
-                listOf(
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.11/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.11/site-packages/jep/libjep.jnilib"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.10/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.10/site-packages/jep/libjep.jnilib"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.jnilib"
-                    ),
-                    File("/usr/lib/libjep.so"),
-                    File("/Library/Java/Extensions/libjep.jnilib")
-                )
-
-            wellKnownPaths.forEach {
-                if (it.exists()) {
-                    // Jep's configuration must be set before the first instance is created. Later
-                    // calls
-                    // to setJepLibraryPath and co result in failures.
-                    MainInterpreter.setJepLibraryPath(it.path)
-                    config.addIncludePaths(
-                        it.toPath().parent.parent.toString()
-                    ) // this assumes that the python code is also at the library's location
+            knownPathsToJep
+                .map { File(it) }
+                .forEach {
+                    if (it.exists()) {
+                        // Jep's configuration must be set before the first instance is created.
+                        // Later calls to setJepLibraryPath and co result in failures.
+                        MainInterpreter.setJepLibraryPath(it.path)
+                        config.addIncludePaths(
+                            it.toPath().parent.parent.toString()
+                        ) // this assumes that the python code is also at the library's location
+                    }
                 }
-            }
         }
     }
+
+    private fun libJepSoFromVirtualEnv(version: String) =
+        "${System.getProperty("user.home")}/.virtualenvs/$virtualEnv/lib/python${version}/site-packages/jep/$libJepSo"
+
+    private fun libJepJniFromVirtualEnv(version: String) =
+        "${System.getProperty("user.home")}/.virtualenvs/$virtualEnv/lib/python${version}/site-packages/jep/$libJepJniLib"
+
+    private fun macOsInstallationPath(version: String) =
+        "/opt/homebrew/lib/python${version}/site-packages/jep/libjep.jnilib"
+    private fun otherPathsToJepLibrary() =
+        listOf(
+            "/usr/lib/libjep.so",
+            "/Library/Java/Extensions/libjep.jnilib",
+        )
 }
