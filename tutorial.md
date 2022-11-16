@@ -12,7 +12,7 @@ A code property graph (CPG) is a representation of source code in form of a labe
 
 ## CPG Console
 
-While the CPG tool is mostly used as a libary in external tools, such as [Codyze](http://github.com/Fraunhofer-AISEC/codyze), we decided to showcase its functionalities with a simple CLI based console that can be used to query the graph and run simple analysis steps.
+While the CPG tool is mostly used as a library in external tools, such as [Codyze](http://github.com/Fraunhofer-AISEC/codyze), we decided to showcase its functionalities with a simple CLI based console that can be used to query the graph and run simple analysis steps.
 
 To launch the console, first build it according to the instructions in our `README.md` and then run `bin/cpg-console`. You will be greeted by the interactive prompt of our console, which is implemented by the kotlin `ki` interactive shell. The commands on this shell follow the syntax of the Kotlin language. For more information please see the [Kotlin documentation](https://kotlinlang.org/docs/home.html). 
 
@@ -82,7 +82,7 @@ Most interesting for the user is the `result` object which holds the complete tr
 
 ### Querying the translation result
 
-In the following, we will use the aforementioned objects to query the source code for interesting patterns. To do so, we will explore several built-in functions that can be used in exploring the graph. The first of these, is the `all` function, it returns a list of all nodes that are direct descendents of a particular node, basicically flattening the hierarchy.
+In the following, we will use the aforementioned objects to query the source code for interesting patterns. To do so, we will explore several built-in functions that can be used in exploring the graph. The first of these, is the `all` function, it returns a list of all nodes that are direct descendants of a particular node, basically flattening the hierarchy.
 
 ```kotlin
 [3] result.all()
@@ -126,7 +126,7 @@ This also demonstrates quite nicely, that queries on the CPG work independently 
 
 ### Looking for software errors
 
-In a next step, we want to identify, which of those expression are accessing an array index that is greater than its capacity, thus leading to an error. From the code output we have seen before we can already identify two array indicies: `0` and `11`. But the other two are using a variable `b` as the index. Using the `evaluate` function, we can try to evaluate the variable `b`, to check if it has a constant value.
+In a next step, we want to identify, which of those expression are accessing an array index that is greater than its capacity, thus leading to an error. From the code output we have seen before we can already identify two array indices: `0` and `11`. But the other two are using a variable `b` as the index. Using the `evaluate` function, we can try to evaluate the variable `b`, to check if it has a constant value.
 
 ```kotlin
 [6] result.all<ArraySubscriptionExpression>().map { it.subscriptExpression.evaluate() }
@@ -154,7 +154,7 @@ res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 This gives us a triple of the array index, the array capacity and a reference to the node in the graph.
 
-Lastly, we can make use of the `filter` function to return only those nodes where the evaluated index is greater or equal to the capacity, leading to an out of bounds error, and a possible program crash.
+Lastly, we can make use of the `filter` function to return only those nodes where the evaluated index is greater or equal to the capacity, leading to an out-of-bounds error, and a possible program crash.
 
 ```kotlin
 [9] expr.filter { it.first >= it.second }
@@ -184,7 +184,7 @@ Using the already known `:code` command, we can also show the relevant code loca
 
 ### Futher analysis
 
-Because the manual analyis we have shown can be quite tedious, we already included several example analyis steps that can be performed on the currently loaded graph. They can be executed by running the `:run` command. This includes the aforementioned check for out of bounds as well as check for null pointers and will be extended in the future.
+Because the manual analysis we have shown can be quite tedious, we already included several example analysis steps that can be performed on the currently loaded graph. They can be executed by running the `:run` command. This includes the aforementioned check for out of bounds as well as check for null pointers and will be extended in the future.
 
 ```kotlin
 [11] :run
@@ -233,6 +233,6 @@ Then, additional tools, such as the Neo4j browser can be used to further explore
 
 ## Conclusion
 
-In conclusion, the CPG tool can be used to translate source code of different programming languages to a uniform, language-independed represetation in the form of a code property graph. It can either be used as a library, in which it forms the underlying basis of the [Codyze](http://github.com/Fraunhofer-AISEC/codyze) analyizer or it's console can be used to quickly explore source code and find weaknesses.
+In conclusion, the CPG tool can be used to translate source code of different programming languages to a uniform, language-independent representation in the form of a code property graph. It can either be used as a library, in which it forms the underlying basis of the [Codyze](http://github.com/Fraunhofer-AISEC/codyze) analyzer or it's console can be used to quickly explore source code and find weaknesses.
 
 It is available as open source on GitHub: https://github.com/Fraunhofer-AISEC/cpg
