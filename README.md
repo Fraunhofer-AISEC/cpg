@@ -136,6 +136,11 @@ The following authors have contributed to this project (in alphabetical order):
 * [titze](https://github.com/titze)
 * [vfsrfs](https://github.com/vfsrfs)
 
+## Contributing
+
+We are currently discussing the implementation of a Contributor License Agreement (CLA). Unfortunately,
+we cannot merge external pull requests until this issue is resolved.
+
 ## Further reading
 
 A quick write-up of our CPG has been published on arXiv:
