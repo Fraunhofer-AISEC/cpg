@@ -154,6 +154,63 @@ fun Node.applyMetadata(
 }
 
 /**
+ * Applies various metadata on this [Node], based on the kind of provider in [provider]. This can
+ * include:
+ * - Setting [Node.code] and [Node.location], if a [CodeAndLocationProvider] is given
+ * - Setting [Node.location], if a [LanguageProvider] is given
+ * - Setting [Node.scope]. if a [ScopeProvider] is given
+ * - Setting [Node.isInferred], if an [IsInferredProvider] is given
+ *
+ * Note, that one provider can implement multiple provider interfaces. Additionally, if
+ * [codeOverride] is specified, the supplied source code is used to override anything from the
+ * provider.
+ */
+fun Node.applyMetadata(
+    provider: MetadataProvider?,
+    localName: Name = Name(EMPTY_NAME),
+    rawNode: Any?,
+    codeOverride: String?,
+    noFQN: Boolean = false,
+    defaultNamespace: Name? = null
+) {
+    if (provider is CodeAndLocationProvider) {
+        provider.setCodeAndLocation(this, rawNode)
+    }
+
+    if (provider is LanguageProvider) {
+        this.language = provider.language
+    }
+
+    if (provider is IsInferredProvider) {
+        this.isInferred = provider.isInferred
+    }
+
+    if (provider is ScopeProvider) {
+        this.scope = provider.scope
+    }
+
+    val namespace =
+        if (provider is NamespaceProvider) {
+            provider.namespace ?: defaultNamespace
+        } else {
+            defaultNamespace
+        }
+
+    if (noFQN) {
+        this.fullName = localName
+    } else {
+        var currentName = localName
+        while (currentName.parent != null) currentName = currentName.parent!!
+        currentName.parent = namespace
+        this.fullName = localName
+    }
+
+    if (codeOverride != null) {
+        this.code = codeOverride
+    }
+}
+
+/**
  * Creates a new [Annotation]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended

@@ -651,7 +651,7 @@ class ScopeManager : ScopeProvider {
                             return@resolve true
                         }
                     } else {
-                        return@resolve true
+                        return@resolve it !is FunctionDeclaration
                     }
                 }
 
