@@ -94,7 +94,8 @@ fun Node.applyMetadata(
     localName: String? = EMPTY_NAME,
     rawNode: Any?,
     codeOverride: String?,
-    noFQN: Boolean = false
+    noFQN: Boolean = false,
+    defaultNamespace: Name? = null
 ) {
     if (provider is CodeAndLocationProvider) {
         provider.setCodeAndLocation(this, rawNode)
@@ -114,9 +115,9 @@ fun Node.applyMetadata(
 
     val namespace =
         if (provider is NamespaceProvider) {
-            provider.namespace
+            provider.namespace ?: defaultNamespace
         } else {
-            null
+            defaultNamespace
         }
 
     if (localName != null && this is NamespaceDeclaration) {

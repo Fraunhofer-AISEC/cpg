@@ -368,7 +368,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // Create the receiver.
         val thisDeclaration =
-            newVariableDeclaration("this", type = type, implicitInitializerAllowed = false)
+            newVariableDeclaration(
+                "this",
+                type = type,
+                implicitInitializerAllowed = true
+            ) // TODO: Why was this false here??
         // Yes, this is implicit
         thisDeclaration.isImplicit = true
 

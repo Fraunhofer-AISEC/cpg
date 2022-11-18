@@ -89,7 +89,7 @@ fun MetadataProvider.newMethodDeclaration(
     rawNode: Any? = null
 ): MethodDeclaration {
     val node = MethodDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDeclaration?.fullName)
 
     node.isStatic = isStatic
     node.recordDeclaration = recordDeclaration
@@ -112,7 +112,8 @@ fun MetadataProvider.newConstructorDeclaration(
     rawNode: Any? = null
 ): ConstructorDeclaration {
     val node = ConstructorDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+
+    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDeclaration?.fullName)
 
     node.recordDeclaration = recordDeclaration
 

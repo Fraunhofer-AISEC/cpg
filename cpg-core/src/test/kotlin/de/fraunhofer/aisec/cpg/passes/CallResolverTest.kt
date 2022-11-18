@@ -714,7 +714,7 @@ class CallResolverTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testCXXMethodResolutionStopOnFirstOccurrence() {
+    fun testCXXMethodResolutionDoNotStopOnFirstOccurrence() {
         val result =
             TestUtils.analyze(
                 listOf(
@@ -731,11 +731,6 @@ class CallResolverTest : BaseTest() {
             )
         val calls = result.calls
 
-        /*
-         This call cannot be resolved to the overloaded calc because the signature doesn't match.
-         However, it also cannot be resolved to the base because due to the overloaded matching name it
-         stops searching for an invocation
-        */
         val calcCall =
             findByUniquePredicate(calls) {
                 if (it.location != null) {
@@ -744,7 +739,7 @@ class CallResolverTest : BaseTest() {
                 false
             }
         assertEquals(1, calcCall.invokes.size)
-        assertTrue(calcCall.invokes[0].isInferred)
+        assertFalse(calcCall.invokes[0].isInferred)
     }
 
     @Test

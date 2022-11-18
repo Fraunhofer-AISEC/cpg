@@ -57,14 +57,16 @@ internal class CXXIncludeTest : BaseTest() {
         assertFalse(main.isEmpty())
 
         val someClassConstructor =
-            tu.getDeclarationsByName("SomeClass", ConstructorDeclaration::class.java)
+            tu.getDeclarationsByName("SomeClass::SomeClass", ConstructorDeclaration::class.java)
                 .iterator()
                 .next()
         assertNotNull(someClassConstructor)
         assertEquals(someClass, someClassConstructor.recordDeclaration)
 
         val doSomething =
-            tu.getDeclarationsByName("DoSomething", MethodDeclaration::class.java).iterator().next()
+            tu.getDeclarationsByName("SomeClass::DoSomething", MethodDeclaration::class.java)
+                .iterator()
+                .next()
         assertNotNull(doSomething)
         assertEquals(someClass, doSomething.recordDeclaration)
 

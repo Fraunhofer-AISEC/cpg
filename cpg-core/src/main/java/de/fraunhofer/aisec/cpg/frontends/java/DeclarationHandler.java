@@ -347,20 +347,18 @@ public class DeclarationHandler
     // (OuterClass.this.someFunction()). This is the same as the java compiler does. The reference
     // is stored as an implicit field.
     if (frontend.getScopeManager().getCurrentScope() instanceof RecordScope) {
+      // Get all the information of the outer class (its name and the respective type). We need this
+      // to generate the field.
       var scope = (RecordScope) frontend.getScopeManager().getCurrentScope();
+      var name = scope.getSimpleName() + ".this";
+      var fieldType = parseType(this, scope.getScopedName());
 
-      var field =
-          newFieldDeclaration(
-              this,
-              scope.getSimpleName() + ".this",
-              parseType(this, scope.getScopedName()),
-              null,
-              null,
-              null,
-              false);
+      // Enter the scope of the inner class because the new field belongs there.
+      frontend.getScopeManager().enterScope(recordDeclaration);
+
+      var field = newFieldDeclaration(this, name, fieldType, null, null, null, false);
       field.setImplicit(true);
 
-      frontend.getScopeManager().enterScope(recordDeclaration);
       frontend.getScopeManager().addDeclaration(field);
       frontend.getScopeManager().leaveScope(recordDeclaration);
     }
