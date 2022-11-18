@@ -135,7 +135,6 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
                         base = transitionBase,
                         op = transitionOp,
                         nextState = nextDfaState,
-                        nodeGetter = { edges.first().correspondingNodes }
                     )
                 )
             }
