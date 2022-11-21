@@ -183,7 +183,7 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
             union(setOf(p0), setOf(q0)) // UNION(p0, q0)
             statesToExplore.add(p0 to q0) // PUSH(p0, q0)
 
-            while (statesToExplore.size > 0) {
+            while (statesToExplore.isNotEmpty()) {
                 val (p1, q1) = statesToExplore.removeLast() // POP(S)
                 if (p1.isAcceptingState != q1.isAcceptingState)
                     return false // if ε(p)!=ε(q): return False
@@ -206,8 +206,10 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
                 }
             }
 
-            // this is an addition to the comparison algorithm
-            // check whether both DFAs are in the same state currently
+            // if the algorithm does not return before here, the graphs are equal!
+
+            // for our case, we want to additionally make sure that both DFAs
+            // are in the same state currently
             val currentState1 = findSet(currentState!!) // FIND-SET(p')
             val currentState2 = findSet(otherDfa.currentState!!) // FIND-SET(q')
             return currentState1 == currentState2

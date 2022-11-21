@@ -685,9 +685,9 @@ class ComplexDFAOrderEvaluationTest {
                 baseOfLastNode = baseOfLastNode.refersTo
             }
             val returnStatements =
-                lastNode.followNextEOG {
-                    it.end is ReturnStatement &&
-                        ((it.end as ReturnStatement).returnValue as? DeclaredReferenceExpression)
+                lastNode.followNextEOG { edge ->
+                    edge.end is ReturnStatement &&
+                        ((edge.end as ReturnStatement).returnValue as? DeclaredReferenceExpression)
                             ?.refersTo == baseOfLastNode
                 }
             if (returnStatements?.isNotEmpty() == true) {

@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-// TODO: add tests for the other [OrderQuantifier] types
 /**
  * Tests whether a NFA is correctly converted to a DFA.
  *

@@ -52,9 +52,7 @@ class DFAEqualityTest {
     }
 
     @Test
-    /**
-     * Tests a DFA with an isomorphic states (exactly the same DFA but with different state names)
-     */
+    /** Tests a DFA with isomorphic states (exactly the same DFA but with different state names) */
     fun `test isomorphic DFA`() {
         val getStates = { offset: Int ->
             val q4 = DfaState(4 + offset, isAcceptingState = true)
@@ -75,7 +73,7 @@ class DFAEqualityTest {
 
     @Test
     /**
-     * Tests a DFA and an equivalent minimal DFA. Uses the two DFAs depicted
+     * Tests a DFA and its equivalent minimal DFA. Uses the two DFAs depicted
      * [here](https://en.wikipedia.org/wiki/DFA_minimization)
      */
     fun `test bloated and minimal DFA`() {
