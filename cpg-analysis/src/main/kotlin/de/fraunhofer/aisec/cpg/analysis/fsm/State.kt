@@ -33,21 +33,25 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
  * order of statements was correct).
  */
 sealed class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = false) {
-    /** Must only be changed through [FSM.changeStateProperty] as soon as they part of a [FSM]. */
-    internal var _name = name
-    val name
-        get() = _name
+    /**
+     * Must only be changed through [FSM.changeStateProperty] as soon as they are part of a [FSM].
+     */
+    var name = name
+        internal set
 
-    /** Must only be changed through [FSM.changeStateProperty] as soon as they part of a [FSM]. */
-    internal var _isStart = isStart
-    val isStart
-        get() = _isStart
+    /**
+     * Must only be changed through [FSM.changeStateProperty] as soon as they are part of a [FSM].
+     */
+    var isStart = isStart
+        internal set
 
-    /** Must only be changed through [FSM.changeStateProperty] as soon as they part of a [FSM]. */
-    internal var _isAcceptingState = isAcceptingState
-    val isAcceptingState
-        get() = _isAcceptingState
+    /**
+     * Must only be changed through [FSM.changeStateProperty] as soon as they are part of a [FSM].
+     */
+    var isAcceptingState = isAcceptingState
+        internal set
 
+    /** Must only be changed through [addEdge]. */
     protected val _outgoingEdges: MutableSet<Edge> = mutableSetOf()
     val outgoingEdges: Set<Edge>
         get() = _outgoingEdges
@@ -80,12 +84,7 @@ sealed class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolea
             return currentStates
         }
 
-        val newState =
-            copy(
-                name = name,
-                isStart = isStart,
-                isAcceptingState = isAcceptingState
-            ) // get a shallow copy
+        val newState = copy() // get a shallow copy
         newState._outgoingEdges
             .clear() // and then get rid of the shallowly copied edges -> when doing a deepCopy, we
         // must also create new edge objects

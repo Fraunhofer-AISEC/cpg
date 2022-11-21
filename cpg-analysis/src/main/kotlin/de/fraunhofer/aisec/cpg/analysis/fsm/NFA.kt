@@ -31,12 +31,6 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
         @JvmStatic val EPSILON: String = "ε"
     }
 
-    /**
-     * Checks whether the given object is an FSM and whether it accepts the same language as this
-     * NFA
-     */
-    override fun equals(other: Any?) = if (other is FSM) this.toDfa() == other else false
-
     /** Create a new state and add it to this NFA. Returns the newly created state. */
     override fun addState(isStart: Boolean, isAcceptingState: Boolean): State {
         val newState =

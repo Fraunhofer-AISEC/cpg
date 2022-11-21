@@ -38,6 +38,12 @@ sealed class FSM(states: Set<State>) {
         for (state in states) addState(state)
     }
 
+    /**
+     * Checks whether the given object is an [FSM] and whether it accepts the same language as this
+     * [FSM]
+     */
+    override fun equals(other: Any?) = if (other is FSM) acceptsSameLanguage(this, other) else false
+
     /** Generates a new state and adds it to this FSM. */
     abstract fun addState(isStart: Boolean = false, isAcceptingState: Boolean = false): State
 
@@ -70,14 +76,14 @@ sealed class FSM(states: Set<State>) {
         if (name != null) {
             if (states.any { it.name == name }) return false
             else {
-                state._name = name
+                state.name = name
             }
         }
         if (isStart != null) {
-            if (isStart && states.any { it.isStart }) return false else state._isStart = isStart
+            if (isStart && states.any { it.isStart }) return false else state.isStart = isStart
         }
         if (isAcceptingState != null) {
-            state._isAcceptingState = isAcceptingState
+            state.isAcceptingState = isAcceptingState
         }
         return true
     }
