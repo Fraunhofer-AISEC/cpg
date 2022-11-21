@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 
 /** This [Pass] adds a unique ID to each [Node] in the CPG. */
+@Deprecated("Use a reference to a Node instead")
 class IdentifierPass : Pass() {
     companion object {
         var lastId: Long = 0
