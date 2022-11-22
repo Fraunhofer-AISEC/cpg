@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
+/** A representation of a generic finite state automaton. Can either a [NFA] or a [DFA]. */
 sealed class FSM(states: Set<State>) {
 
     private val _states: MutableSet<State> = mutableSetOf()

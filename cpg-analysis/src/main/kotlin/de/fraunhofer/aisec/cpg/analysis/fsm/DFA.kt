@@ -27,6 +27,10 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
+/**
+ * Holds the information generated during an order evaluation using the [DFAOrderEvaluator]. It is
+ * used to provide full traceability of the order evaluation in [DFA.executionTrace].
+ */
 data class Trace(val state: State, val cpgNode: Node, val edge: Edge)
 
 /** A representation of a deterministic finite automaton (DFA). */
@@ -76,7 +80,7 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
      */
     fun makeTransitionWithOp(op: String, cpgNode: Node): Boolean {
         checkNotNull(currentState) {
-            "Cannot make transition because the FSM does not have a starting state!"
+            "Cannot perform a transition because the FSM does not have a starting state!"
         }
         check(executionTrace.isNotEmpty()) {
             "Before performing transitions, you must call [initializeOrderEvaluation] first."
