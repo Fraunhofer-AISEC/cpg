@@ -36,15 +36,17 @@ flowchart LR
 
 Whether or not a subgraph (a) or (b) is connected first, depends on the exact constuct and sometimes the language that is translated into a CPG.Note, in the following graphics we will often draw an EOG-Edge to an abstract childnode of a language construct that is an AST-Subtree. The EOG-Path through that subtree will depend on the node types of that tree and mostly start connecting one of the AST-Leaf nodes.
 
-## VariableDeclaration
+## FunctionDeclaration
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> child
-  parent(["VariableDeclaration"]) --EOG--> next:::outer
-  parent -.-> child["initializer"]
-  child --EOG--> parent
-
+  parent(["FunctionDeclaration"]) --EOG-->child1["default(i-1)"]
+  child1 --EOG-->child2["default(i)"]
+  child2  --EOG--> body
+  parent -.-> body
+  parent -."parameters(n)".->child3["parameter(i-1)"] -.->child1 
+  parent -."parameters(n)".->child4["parameter(i)"] -.->child2
+  
 ```
   
 ## StatementHolder
@@ -61,6 +63,17 @@ flowchart LR
   holder--EOG-->nblock1
   nblock1--EOG-->nblock2
   
+```
+
+## VariableDeclaration
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child
+  parent(["VariableDeclaration"]) --EOG--> next:::outer
+  parent -.-> child["initializer"]
+  child --EOG--> parent
+
 ```
 
 ## CallExpression
@@ -274,38 +287,227 @@ flowchart LR
 
 ```
 ## DeleteExpression
-## LabelStatement
-## GotoStatemen
-## CaseStatement
-## NewExpression
-## CastExpression
-## ExpressionList
-## InitializerListExpression
-## ConstructExpression
-## SynchronizedStatemen
-## ConditionalExpression 
-## DoStatement
-## ForEachStatement
-## ForStatement
-## IfStatement
-## SwitchStatement
-## WhileStatement
-
-
-## FunctionDeclaration
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  holder([StatementHolder])-."statements(n)".->sblock1["StaticStatement(i-1)"]
-  holder([StatementHolder])-."statements(n)".->sblock2["StaticStatement(i)"]
-  holder-."statements(n)".->nblock1["NonStaticStatement(i-1)"]
-  holder-."statements(n)".->nblock2["NonStaticStatement(i)"]
-  holder--EOG-->sblock1
-  sblock1--EOG-->sblock2
-  holder--EOG-->nblock1
-  nblock1--EOG-->nblock2
-  
+  prev:::outer --EOG--> child["operand"]
+  child --EOG--> parent
+  parent(["DeleteExpression"]) --EOG--> next:::outer
+  parent -.-> child
+
 ```
+## LabelStatement
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child["subStatement"]
+  child --EOG--> next:::outer
+  parent(["LabelStatement"]) -.-> child
+
+```
+## GotoStatemen
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child["GotoStatement"]
+  child --EOG--> labeledStatement:::outer
+
+```
+## CaseStatement
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child["caseExpression"]
+  child --EOG--> parent
+  parent(["CaseStatement"]) --EOG--> next:::outer
+  parent -.-> child
+
+```
+## NewExpression
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child["initializer"]
+  child --EOG--> parent
+  parent(["NewExpression"]) --EOG--> next:::outer
+  parent -.-> child
+
+```
+## CastExpression
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child["expression"]
+  child --EOG--> parent
+  parent(["CastExpression"]) --EOG--> next:::outer
+  parent -.-> child
+
+```
+## ExpressionList
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["expression(i-1)"]
+  child1 --EOG--> child2["expression(i)"]
+  child2 --EOG--> parent
+  parent(["ExpressionList"]) --EOG--> next:::outer
+  parent -."expressions(n)".-> child1
+  parent -."expressions(n)".-> child2
+
+```
+## InitializerListExpression
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["initializer(i-1)"]
+  child1 --EOG--> child2["initializer(i)"]
+  child2 --EOG--> parent
+  parent(["InitializerListExpression"]) --EOG--> next:::outer
+  parent -."initializers(n)".-> child1
+  parent -."initializers(n)".-> child2
+
+```
+## ConstructExpression
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["argument(i-1)"]
+  child1 --EOG--> child2["argument(i)"]
+  child2 --EOG--> parent
+  parent(["ConstructExpression"]) --EOG--> next:::outer
+  parent -."arguments(n)".-> child1
+  parent -."arguments(n)".-> child2
+
+```
+## SynchronizedStatement
+The placement of the root node between expression and executed block is such that algorithms can evaluated the expression and then encountering the information that this expression is used for synchronization.
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["expression"]
+  child1 --EOG--> parent
+  parent --EOG--> child2["blockStatement"]
+  child2 --EOG--> next:::outer
+  parent -.-> child1
+  parent -.-> child2
+
+```
+## ConditionalExpression 
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["condition"]
+  child1 --EOG--> parent(["ConditionalExpression"])
+  parent --EOG--> child2["thenExpr"]
+  parent --EOG--> child3["elseExpr"]
+  child2 --EOG--> next:::outer
+  child3 --EOG--> next:::outer
+  parent -.-> child1
+  parent -.-> child2
+  parent -.-> child3
+
+```
+## DoStatement
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["statement"]
+  child1 --EOG--> child2["condition"]
+  child2 --EOG--> parent(["DoStatement"])
+  parent --EOG--> next:::outer
+  parent --EOG--> child1
+  parent -.-> child1
+  parent -.-> child2
+
+```
+## WhileStatement
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["condition"]
+  prev:::outer --EOG--> child2["conditionDeclaration"]
+  child1 --EOG--> parent
+  child2 --EOG--> parent
+  parent(["WhileStatement"]) --EOG--> child3["statement"]
+  parent --EOG--> next:::outer
+  child3 --EOG--> child1
+  child3 --EOG--> child2
+  parent -.-> child1
+  parent -.-> child2
+  parent -.-> child3
+
+```
+## ForEachStatement
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["iterable"]
+  child1 --EOG--> child2["variable"]
+  child2 --EOG--> parent
+  parent(["ForEachStatement"]) --EOG--> child3["statement"]
+  parent --EOG--> next:::outer
+  child3 --EOG--> child1
+  child3 --EOG--> child2
+  parent -.-> child1
+  parent -.-> child2
+  parent -.-> child3
+
+```
+## ForStatement
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["initializerStatement"]
+  child1 --EOG--> child2["condition"]
+  child1 --EOG--> child3["conditionDeclaration"]
+  child2 --EOG--> parent
+  child3 --EOG--> parent
+  parent(["ForStatement"]) --EOG--> child4["statement"]
+  parent --EOG--> next:::outer
+  child4 --EOG--> child5["iterationStatement"]
+  child5 --EOG--> child2
+  child5 --EOG--> child3
+
+```
+## IfStatement
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["initializerStatement"]
+  child1 --EOG--> child2["condition"]
+  child1 --EOG--> child3["conditionDeclaration"]
+  child2 --EOG--> parent
+  child3 --EOG--> parent
+  parent(["ifStatement"]) --EOG--> child4["thenStatement"]
+  parent --EOG--> child5["elseStatement"]
+  parent --EOG--> next:::outer
+  child4 --EOG--> next:::outer
+  child5 --EOG--> next:::outer
+
+```
+## SwitchStatement
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["initializerStatement"]
+  child1 --EOG--> child2["selector"]
+  child1 --EOG--> child3["selectorDeclaration"]
+  child2 --EOG--> parent
+  child3 --EOG--> parent
+  parent(["SwitchStatement"]) --EOG--> child4["caseStatement"]
+  parent --EOG--> child5["defaultStatement"]
+  child7["statement(n-1)"] --EOG--> child6["statement"]
+  parent -.->child6
+  child6 -."statements(n)".-> child4
+  child6 -."statements(n)".-> child5
+  child6 -."statements(n)".-> child7
+  child6 --EOG--> next:::outer
+
+```
+
+
 
 
   
