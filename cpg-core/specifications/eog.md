@@ -138,6 +138,160 @@ flowchart LR
 
 ```
 
+## BinaryOperator
+
+For binary operations like `+`, `-` but also assigments `=` and `+=` wer follow the left before right order.
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> lhs
+  node --EOG--> next:::outer
+  node([op]) -.-> lhs
+  node -.-> rhs
+  lhs --EOG--> rhs
+  rhs --EOG--> node
+```
+
+
+## BinaryOperator of short-circuit evaluation
+
+`&&` and `||` lead to control flow bypassing the evaluation of the rhs expression.
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> lhs
+  node --EOG--> next:::outer
+  node(["&& or ||"]) -.-> lhs
+  node -.-> rhs
+  lhs --EOG--> rhs
+  lhs --EOG--> node
+  rhs --EOG--> node
+```
+
+## CompoundStatement
+
+Represent an explizit block of statements
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["statement(i-1)"]
+  child1 --EOG-->child2["statement(i)"]
+  parent(["CompoundStatement"]) --EOG--> next:::outer
+  parent -."statements(n)".-> child1
+  parent -."statements(n)".-> child2
+  child2 --EOG--> parent
+
+```
+
+## UnaryOperator
+For unary operations like `!` but also writes `++` and `--`.
+
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child["input"]
+  child --EOG-->parent
+  parent(["UnaryOperator"]) --EOG--> next:::outer
+  parent -."statements(n)".-> child
+
+```
+
+
+## UnaryOperator for exception throws
+Throwing of exceptions is modelled as binary operation to follow the parsing of some compilers.
+
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child["input"]
+  child --EOG-->parent
+  parent(["throw"]) --EOG--> catchingContext:::outer
+  parent -."statements(n)".-> child
+
+```
+
+
+## AssertStatement
+
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["condition"]
+  child1 --EOG-->child2["message"]
+  child1 --EOG-->parent
+  parent([AssertStatement]) --EOG--> next:::outer
+  parent -.-> child1
+  parent -.-> child2
+
+```
+
+
+
+## TryStatement
+
+After the execution of the statement the control flow only proceeds with the next statement if all exceptions were handled. If not, execution is relayed to the next outer exception handling context.
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["resource(i-1)"]
+  throws::outer --EOG-->child5["catchBlock(i)"]
+  child1 --EOG-->child2["resource(i)"]
+  child2 --EOG-->child3["tryBlock"]
+  child3 --EOG-->child4["finallyBlock"]
+  child5 --EOG-->child4
+  child4 --EOG-->parent
+  parent -.-> child1
+  parent -.-> child2
+  parent -.-> child3
+  parent -.-> child4
+  parent -.-> child5
+  parent([TryStatement]) --EOG--> next:::outer
+  parent([TryStatement]) --EOG--> catchingContext:::outer
+
+```
+
+## ContinueStatement
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent
+  parent(["ContinueStatement"]) --EOG--> conditionInContinuableContext:::outer
+
+```
+## BreakStatement
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent
+  parent(["BreakStatement"]) --EOG--> nextAfterBreakableContext:::outer
+
+```
+## DeleteExpression
+## LabelStatement
+## GotoStatemen
+## CaseStatement
+## NewExpression
+## CastExpression
+## ExpressionList
+## InitializerListExpression
+## ConstructExpression
+## SynchronizedStatemen
+## ConditionalExpression 
+## DoStatement
+## ForEachStatement
+## ForStatement
+## IfStatement
+## SwitchStatement
+## WhileStatement
+
+
 ## FunctionDeclaration
 ```mermaid
 flowchart LR
@@ -152,6 +306,7 @@ flowchart LR
   nblock1--EOG-->nblock2
   
 ```
+
 
   
 
