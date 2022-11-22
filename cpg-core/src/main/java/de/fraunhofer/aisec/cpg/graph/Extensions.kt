@@ -320,7 +320,7 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
         if (currentPath.last().nextEOG.isEmpty()) {
             // No further nodes in the path and the path criteria are not satisfied.
             failedPaths.add(currentPath)
-            continue // Don't add this path any more. The requirement is satisfied.
+            continue // Don't add this path anymore. The requirement is satisfied.
         }
 
         for (next in currentPath.last().nextEOG) {
