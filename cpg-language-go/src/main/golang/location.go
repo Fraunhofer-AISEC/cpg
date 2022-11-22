@@ -36,8 +36,12 @@ import (
 type PhysicalLocation jnigi.ObjectRef
 type Region jnigi.ObjectRef
 
+const SarifPackage = CPGPackage + "/sarif"
+const RegionClass = SarifPackage + "/Region"
+const PhysicalLocationClass = SarifPackage + "/PhysicalLocation"
+
 func NewRegion(fset *token.FileSet, astNode ast.Node, startLine int, startColumn int, endLine int, endColumn int) *Region {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/sarif/Region", startLine, startColumn, endLine, endColumn)
+	c, err := env.NewObject(RegionClass, startLine, startColumn, endLine, endColumn)
 	if err != nil {
 		log.Fatal(err)
 
@@ -47,7 +51,7 @@ func NewRegion(fset *token.FileSet, astNode ast.Node, startLine int, startColumn
 }
 
 func NewPhysicalLocation(fset *token.FileSet, astNode ast.Node, uri *jnigi.ObjectRef, region *Region) *PhysicalLocation {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/sarif/PhysicalLocation", (*jnigi.ObjectRef)(uri), (*jnigi.ObjectRef)(region))
+	c, err := env.NewObject(PhysicalLocationClass, (*jnigi.ObjectRef)(uri), (*jnigi.ObjectRef)(region))
 	if err != nil {
 		log.Fatal(err)
 

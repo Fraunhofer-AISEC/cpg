@@ -27,203 +27,102 @@ package frontend
 
 import (
 	"cpg"
+	"fmt"
 	"go/ast"
 	"go/token"
-	"log"
+
+	"tekao.net/jnigi"
 )
 
 func (frontend *GoLanguageFrontend) NewCallExpression(fset *token.FileSet, astNode ast.Node) *cpg.CallExpression {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/CallExpression")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(c), astNode)
-	updateLocation(fset, (*cpg.Node)(c), astNode)
-	updateLanguage((*cpg.Node)(c), frontend)
-
-	return (*cpg.CallExpression)(c)
+	return (*cpg.CallExpression)(frontend.NewExpression("CallExpression", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewCastExpression(fset *token.FileSet, astNode ast.Node) *cpg.CastExpression {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/CastExpression")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(c), astNode)
-	updateLocation(fset, (*cpg.Node)(c), astNode)
-	updateLanguage((*cpg.Node)(c), frontend)
-
-	return (*cpg.CastExpression)(c)
+	return (*cpg.CastExpression)(frontend.NewExpression("CastExpression", fset, astNode))
 }
 
-func (frontend *GoLanguageFrontend) NewMemberExpression(fset *token.FileSet, astNode ast.Node) *cpg.MemberExpression {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/MemberExpression")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(c), astNode)
-	updateLocation(fset, (*cpg.Node)(c), astNode)
-	updateLanguage((*cpg.Node)(c), frontend)
-
-	return (*cpg.MemberExpression)(c)
+func (frontend *GoLanguageFrontend) NewMemberExpression(fset *token.FileSet, astNode ast.Node, name string, base cpg.Castable) *cpg.MemberExpression {
+	return (*cpg.MemberExpression)(frontend.NewExpression("MemberExpression", fset, astNode, cpg.NewString(name), base.Cast(cpg.ExpressionClass)))
 }
 
-func (frontend *GoLanguageFrontend) NewMemberCallExpression(fset *token.FileSet, astNode ast.Node) *cpg.MemberCallExpression {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/MemberCallExpression")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(c), astNode)
-	updateLocation(fset, (*cpg.Node)(c), astNode)
-	updateLanguage((*cpg.Node)(c), frontend)
-
-	return (*cpg.MemberCallExpression)(c)
+func (frontend *GoLanguageFrontend) NewMemberCallExpression(fset *token.FileSet, astNode ast.Node, name string, fqn string, base *cpg.Expression, member *cpg.Node) *cpg.MemberCallExpression {
+	return (*cpg.MemberCallExpression)(frontend.NewExpression("MemberCallExpression", fset, astNode,
+		cpg.NewString(name),
+		cpg.NewString(fqn),
+		base.Cast(cpg.ExpressionClass),
+		member.Cast(cpg.NodeClass),
+	))
 }
 
 func (frontend *GoLanguageFrontend) NewNewExpression(fset *token.FileSet, astNode ast.Node) *cpg.NewExpression {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/NewExpression")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(c), astNode)
-	updateLocation(fset, (*cpg.Node)(c), astNode)
-	updateLanguage((*cpg.Node)(c), frontend)
-
-	return (*cpg.NewExpression)(c)
+	return (*cpg.NewExpression)(frontend.NewExpression("NewExpression", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewArrayCreationExpression(fset *token.FileSet, astNode ast.Node) *cpg.ArrayCreationExpression {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/ArrayCreationExpression")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(c), astNode)
-	updateLocation(fset, (*cpg.Node)(c), astNode)
-	updateLanguage((*cpg.Node)(c), frontend)
-
-	return (*cpg.ArrayCreationExpression)(c)
+	return (*cpg.ArrayCreationExpression)(frontend.NewExpression("ArrayCreationExpression", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewArraySubscriptionExpression(fset *token.FileSet, astNode ast.Node) *cpg.ArraySubscriptionExpression {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/ArraySubscriptionExpression")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(c), astNode)
-	updateLocation(fset, (*cpg.Node)(c), astNode)
-	updateLanguage((*cpg.Node)(c), frontend)
-
-	return (*cpg.ArraySubscriptionExpression)(c)
+	return (*cpg.ArraySubscriptionExpression)(frontend.NewExpression("ArraySubscriptionExpression", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewConstructExpression(fset *token.FileSet, astNode ast.Node) *cpg.ConstructExpression {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/ConstructExpression")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(c), astNode)
-	updateLocation(fset, (*cpg.Node)(c), astNode)
-	updateLanguage((*cpg.Node)(c), frontend)
-
-	return (*cpg.ConstructExpression)(c)
+	return (*cpg.ConstructExpression)(frontend.NewExpression("ConstructExpression", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewInitializerListExpression(fset *token.FileSet, astNode ast.Node) *cpg.InitializerListExpression {
-	l, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/InitializerListExpression")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(l), astNode)
-	updateLocation(fset, (*cpg.Node)(l), astNode)
-	updateLanguage((*cpg.Node)(l), frontend)
-
-	return (*cpg.InitializerListExpression)(l)
+	return (*cpg.InitializerListExpression)(frontend.NewExpression("InitializerListExpression", fset, astNode))
 }
 
-func (frontend *GoLanguageFrontend) NewBinaryOperator(fset *token.FileSet, astNode ast.Node) *cpg.BinaryOperator {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/BinaryOperator")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(c), astNode)
-	updateLocation(fset, (*cpg.Node)(c), astNode)
-	updateLanguage((*cpg.Node)(c), frontend)
-
-	return (*cpg.BinaryOperator)(c)
+func (frontend *GoLanguageFrontend) NewBinaryOperator(fset *token.FileSet, astNode ast.Node, opCode string) *cpg.BinaryOperator {
+	return (*cpg.BinaryOperator)(frontend.NewExpression("BinaryOperator", fset, astNode,
+		cpg.NewString(opCode),
+	))
 }
 
-func (frontend *GoLanguageFrontend) NewUnaryOperator(fset *token.FileSet, astNode ast.Node) *cpg.UnaryOperator {
-	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/UnaryOperator")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(c), astNode)
-	updateLocation(fset, (*cpg.Node)(c), astNode)
-	updateLanguage((*cpg.Node)(c), frontend)
-
-	return (*cpg.UnaryOperator)(c)
+func (frontend *GoLanguageFrontend) NewUnaryOperator(fset *token.FileSet, astNode ast.Node, opCode string, postfix bool, prefix bool) *cpg.UnaryOperator {
+	return (*cpg.UnaryOperator)(frontend.NewExpression("UnaryOperator", fset, astNode,
+		cpg.NewString(opCode),
+		postfix, prefix,
+	))
 }
 
-func (frontend *GoLanguageFrontend) NewLiteral(fset *token.FileSet, astNode ast.Node) *cpg.Literal {
-	l, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/Literal")
-	if err != nil {
-		log.Fatal(err)
-
+func (frontend *GoLanguageFrontend) NewLiteral(fset *token.FileSet, astNode ast.Node, value cpg.Castable, typ *cpg.Type) *cpg.Literal {
+	if value == nil {
+		value = jnigi.NewObjectRef("java/lang/Object")
+	} else {
+		value = value.Cast("java/lang/Object")
 	}
 
-	updateCode(fset, (*cpg.Node)(l), astNode)
-	updateLocation(fset, (*cpg.Node)(l), astNode)
-	updateLanguage((*cpg.Node)(l), frontend)
-
-	return (*cpg.Literal)(l)
+	return (*cpg.Literal)(frontend.NewExpression("Literal", fset, astNode, value, typ.Cast(cpg.TypeClass)))
 }
 
-func (frontend *GoLanguageFrontend) NewDeclaredReferenceExpression(fset *token.FileSet, astNode ast.Node) *cpg.DeclaredReferenceExpression {
-	l, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/DeclaredReferenceExpression")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(l), astNode)
-	updateLocation(fset, (*cpg.Node)(l), astNode)
-	updateLanguage((*cpg.Node)(l), frontend)
-
-	return (*cpg.DeclaredReferenceExpression)(l)
+func (frontend *GoLanguageFrontend) NewDeclaredReferenceExpression(fset *token.FileSet, astNode ast.Node, name string) *cpg.DeclaredReferenceExpression {
+	return (*cpg.DeclaredReferenceExpression)(frontend.NewExpression("DeclaredReferenceExpression", fset, astNode, cpg.NewString(name)))
 }
 
 func (frontend *GoLanguageFrontend) NewKeyValueExpression(fset *token.FileSet, astNode ast.Node) *cpg.KeyValueExpression {
-	k, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/KeyValueExpression")
-	if err != nil {
-		log.Fatal(err)
+	return (*cpg.KeyValueExpression)(frontend.NewExpression("KeyValueExpression", fset, astNode))
+}
 
+func (frontend *GoLanguageFrontend) NewExpression(typ string, fset *token.FileSet, astNode ast.Node, args ...any) *jnigi.ObjectRef {
+	var node = jnigi.NewObjectRef(fmt.Sprintf("%s/%s", cpg.ExpressionsPackage, typ))
+
+	// Prepend the frontend as the receiver
+	args = append([]any{frontend.Cast(cpg.GraphPackage + "/MetadataProvider")}, args...)
+
+	err := env.CallStaticMethod(
+		cpg.GraphPackage+"/ExpressionBuilderKt",
+		fmt.Sprintf("new%s", typ), node,
+		args...,
+	)
+	if err != nil {
+		panic(err)
 	}
 
-	updateCode(fset, (*cpg.Node)(k), astNode)
-	updateLocation(fset, (*cpg.Node)(k), astNode)
-	updateLanguage((*cpg.Node)(k), frontend)
+	updateCode(fset, (*cpg.Node)(node), astNode)
+	updateLocation(fset, (*cpg.Node)(node), astNode)
 
-	return (*cpg.KeyValueExpression)(k)
+	return node
 }

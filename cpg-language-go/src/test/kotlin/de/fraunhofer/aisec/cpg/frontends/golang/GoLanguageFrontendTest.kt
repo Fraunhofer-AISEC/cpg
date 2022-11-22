@@ -441,7 +441,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(arg1)
         assertEquals("myOtherFunc", arg1.name)
-        assertEquals("s.myOtherFunc", arg1.fqn)
+        assertEquals("p.MyStruct.myOtherFunc", arg1.fqn)
 
         assertEquals(myFunc.receiver, (arg1.base as? DeclaredReferenceExpression)?.refersTo)
     }

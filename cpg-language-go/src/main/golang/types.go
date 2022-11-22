@@ -38,6 +38,15 @@ var env *jnigi.Env
 
 type Type struct{ *jnigi.ObjectRef }
 
+const TypesPackage = GraphPackage + "/types"
+const TypeClass = TypesPackage + "/Type"
+const ObjectTypeClass = TypesPackage + "/ObjectType"
+const UnknownTypeClass = TypesPackage + "/UnknownType"
+const TypeParserClass = TypesPackage + "/TypeParser"
+const PointerTypeClass = TypesPackage + "/PointerType"
+const FunctionTypeClass = TypesPackage + "/FunctionType"
+const PointerOriginClass = PointerTypeClass + "$PointerOrigin"
+
 func (t *Type) ConvertToGo(o *jnigi.ObjectRef) error {
 	t.ObjectRef = o
 	return nil
@@ -48,7 +57,7 @@ func (t *Type) ConvertToJava() (obj *jnigi.ObjectRef, err error) {
 }
 
 func (*Type) GetClassName() string {
-	return "de/fraunhofer/aisec/cpg/graph/types/Type"
+	return TypeClass
 }
 
 func (*Type) IsArray() bool {
@@ -65,7 +74,7 @@ type ObjectType struct {
 }
 
 func (*ObjectType) GetClassName() string {
-	return "de/fraunhofer/aisec/cpg/graph/types/ObjectType"
+	return ObjectTypeClass
 }
 
 type UnknownType struct {
@@ -73,7 +82,7 @@ type UnknownType struct {
 }
 
 func (*UnknownType) GetClassName() string {
-	return "de/fraunhofer/aisec/cpg/graph/types/UnknownType"
+	return UnknownTypeClass
 }
 
 type HasType jnigi.ObjectRef
@@ -84,7 +93,7 @@ func InitEnv(e *jnigi.Env) {
 
 func TypeParser_createFrom(s string, l *Language) *Type {
 	var t Type
-	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/TypeParser", "createFrom", &t, NewString(s), l)
+	err := env.CallStaticMethod(TypeParserClass, "createFrom", &t, NewString(s), l)
 	if err != nil {
 		log.Fatal(err)
 
@@ -95,7 +104,7 @@ func TypeParser_createFrom(s string, l *Language) *Type {
 
 func UnknownType_getUnknown(l *Language) *UnknownType {
 	var t UnknownType
-	err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/UnknownType", "getUnknownType", &t, l)
+	err := env.CallStaticMethod(UnknownTypeClass, "getUnknownType", &t, l)
 	if err != nil {
 		log.Fatal(err)
 
@@ -116,7 +125,7 @@ func (t *Type) GetRoot() *Type {
 
 func (t *Type) Reference(o *jnigi.ObjectRef) *Type {
 	var refType Type
-	err := t.CallMethod(env, "reference", &refType, (*jnigi.ObjectRef)(o).Cast("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
+	err := t.CallMethod(env, "reference", &refType, (*jnigi.ObjectRef)(o).Cast(PointerOriginClass))
 
 	if err != nil {
 		log.Fatal(err)
@@ -127,7 +136,7 @@ func (t *Type) Reference(o *jnigi.ObjectRef) *Type {
 
 func (h *HasType) SetType(t *Type) {
 	if t != nil {
-		(*jnigi.ObjectRef)(h).CallMethod(env, "setType", nil, t.Cast("de/fraunhofer/aisec/cpg/graph/types/Type"))
+		(*jnigi.ObjectRef)(h).CallMethod(env, "setType", nil, t.Cast(TypeClass))
 	}
 }
 
@@ -144,8 +153,8 @@ func (h *HasType) GetType() *Type {
 func (t *ObjectType) AddGeneric(g *Type) {
 	// Stupid workaround, since casting does not work. See
 	// https://github.com/timob/jnigi/issues/60
-	var objType = jnigi.WrapJObject(uintptr(t.JObject()), "de/fraunhofer/aisec/cpg/graph/types/ObjectType", false)
-	err := objType.CallMethod(env, "addGeneric", nil, g.Cast("de/fraunhofer/aisec/cpg/graph/types/Type"))
+	var objType = jnigi.WrapJObject(uintptr(t.JObject()), ObjectTypeClass, false)
+	err := objType.CallMethod(env, "addGeneric", nil, g.Cast(TypeClass))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -154,7 +163,7 @@ func (t *ObjectType) AddGeneric(g *Type) {
 func FunctionType_ComputeType(decl *FunctionDeclaration) (t *Type, err error) {
 	var funcType Type
 
-	err = env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/types/FunctionType", "computeType", &t, decl)
+	err = env.CallStaticMethod(FunctionTypeClass, "computeType", &t, decl)
 	if err != nil {
 		return nil, err
 	}

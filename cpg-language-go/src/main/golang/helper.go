@@ -28,7 +28,7 @@ package cpg
 import "tekao.net/jnigi"
 
 type Castable interface {
-	Cast(className string) *jnigi.CastedObjectRef
+	Cast(className string) *jnigi.ObjectRef
 }
 
 func ListOf[T Castable](slice []T) (list *jnigi.ObjectRef, err error) {

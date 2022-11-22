@@ -29,6 +29,12 @@ import "tekao.net/jnigi"
 
 type Language Node
 
+const FrontendsPackage = CPGPackage + "/frontends"
+const GolangPackage = FrontendsPackage + "/golang"
+const LanguageClass = FrontendsPackage + "/Language"
+const LanguageFrontendClass = FrontendsPackage + "/LanguageFrontend"
+const GoLanguageFrontendClass = GolangPackage + "/GoLanguageFrontend"
+
 func (l *Language) ConvertToGo(o *jnigi.ObjectRef) error {
 	*l = (Language)(*o)
 	return nil
@@ -39,7 +45,7 @@ func (l *Language) ConvertToJava() (obj *jnigi.ObjectRef, err error) {
 }
 
 func (l *Language) GetClassName() string {
-	return "de/fraunhofer/aisec/cpg/frontends/Language"
+	return LanguageClass
 }
 
 func (l *Language) IsArray() bool {

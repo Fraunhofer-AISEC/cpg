@@ -343,9 +343,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         }
 
         return newMemberExpression(
+            ctx.fieldName.toString(),
             base,
             UnknownType.getUnknownType(language),
-            ctx.fieldName.toString(),
             if (ctx.isPointerDereference) "->" else ".",
             ctx.rawSignature
         )

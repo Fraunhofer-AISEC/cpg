@@ -32,7 +32,7 @@ import (
 	"tekao.net/jnigi"
 )
 
-type Declaration jnigi.ObjectRef
+type Declaration Node
 type IncludeDeclaration jnigi.ObjectRef
 type TranslationUnitDeclaration Declaration
 type FunctionDeclaration Declaration
@@ -42,6 +42,14 @@ type FieldDeclaration Declaration
 type VariableDeclaration Declaration
 type ParamVariableDeclaration Declaration
 type NamespaceDeclaration Declaration
+
+const DeclarationsPackage = GraphPackage + "/declarations"
+const DeclarationClass = DeclarationsPackage + "/Declaration"
+const RecordDeclarationClass = DeclarationsPackage + "/RecordDeclaration"
+const FunctionDeclarationClass = DeclarationsPackage + "/FunctionDeclaration"
+const VariableDeclarationClass = DeclarationsPackage + "/VariableDeclaration"
+const IncludeDeclarationClass = DeclarationsPackage + "/IncludeDeclaration"
+const TranslationUnitDeclarationClass = DeclarationsPackage + "/TranslationUnitDeclaration"
 
 func (n *NamespaceDeclaration) SetName(s string) error {
 	return (*Node)(n).SetName(s)
@@ -71,9 +79,7 @@ func (f *FunctionDeclaration) SetReturnTypes(types []*Type) (err error) {
 		return err
 	}
 
-	// Stupid workaround, since casting does not work. See
-	// https://github.com/timob/jnigi/issues/60
-	var funcDecl = jnigi.WrapJObject(uintptr((*jnigi.ObjectRef)(f).JObject()), "de/fraunhofer/aisec/cpg/graph/declarations/FunctionDeclaration", false)
+	var funcDecl = (*jnigi.ObjectRef)(f).Cast(FunctionDeclarationClass)
 
 	err = (*jnigi.ObjectRef)(funcDecl).CallMethod(env, "setReturnTypes", nil, list.Cast("java/util/List"))
 
@@ -85,7 +91,7 @@ func (f *FunctionDeclaration) AddParameter(p *ParamVariableDeclaration) {
 }
 
 func (f *FunctionDeclaration) SetBody(s *Statement) (err error) {
-	err = (*jnigi.ObjectRef)(f).CallMethod(env, "setBody", nil, (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
+	err = (*jnigi.ObjectRef)(f).CallMethod(env, "setBody", nil, (*jnigi.ObjectRef)(s).Cast(StatementClass))
 
 	return
 }
@@ -103,7 +109,7 @@ func (m *MethodDeclaration) SetReceiver(v *VariableDeclaration) error {
 }
 
 func (m *MethodDeclaration) GetReceiver() *VariableDeclaration {
-	o := jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration")
+	o := jnigi.NewObjectRef(VariableDeclarationClass)
 	err := (*jnigi.ObjectRef)(m).GetField(env, "receiver", o)
 
 	if err != nil {
@@ -143,7 +149,7 @@ func (v *VariableDeclaration) IsNil() bool {
 }
 
 func (v *VariableDeclaration) SetInitializer(e *Expression) (err error) {
-	err = (*jnigi.ObjectRef)(v).CallMethod(env, "setInitializer", nil, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	err = (*jnigi.ObjectRef)(v).CallMethod(env, "setInitializer", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 
 	return
 }
@@ -153,7 +159,7 @@ func (v *VariableDeclaration) Declaration() *Declaration {
 }
 
 func (t *TranslationUnitDeclaration) GetIncludeByName(s string) *IncludeDeclaration {
-	var i = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/IncludeDeclaration")
+	var i = jnigi.NewObjectRef(IncludeDeclarationClass)
 	err := (*jnigi.ObjectRef)(t).CallMethod(env, "getIncludeByName", i, NewString(s))
 	if err != nil {
 		log.Fatal(err)
@@ -196,5 +202,5 @@ func (r *CompoundStatement) IsNil() bool {
 }
 
 func (c *CaseStatement) SetCaseExpression(e *Expression) error {
-	return (*jnigi.ObjectRef)(c).SetField(env, "caseExpression", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	return (*jnigi.ObjectRef)(c).SetField(env, "caseExpression", (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }

@@ -27,138 +27,66 @@ package frontend
 
 import (
 	"cpg"
+	"fmt"
 	"go/ast"
 	"go/token"
-	"log"
-	"runtime/debug"
+
+	"tekao.net/jnigi"
 )
 
-func (frontend *GoLanguageFrontend) NewTranslationUnitDeclaration(fset *token.FileSet, astNode ast.Node, name string, code string) *cpg.TranslationUnitDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration")
-	if err != nil {
-		log.Fatal(err)
-		debug.PrintStack()
-	}
-
-	updateCode(fset, (*cpg.Node)(tu), astNode)
-	updateLocation(fset, (*cpg.Node)(tu), astNode)
-	updateLanguage((*cpg.Node)(tu), frontend)
-
-	(*cpg.Node)(tu).SetName(name)
-
-	return (*cpg.TranslationUnitDeclaration)(tu)
+func (frontend *GoLanguageFrontend) NewTranslationUnitDeclaration(fset *token.FileSet, astNode ast.Node, name string) *cpg.TranslationUnitDeclaration {
+	return (*cpg.TranslationUnitDeclaration)(frontend.NewDeclaration("TranslationUnitDeclaration", fset, astNode, name))
 }
 
-func (frontend *GoLanguageFrontend) NewNamespaceDeclaration(fset *token.FileSet, astNode ast.Node, name string, code string) *cpg.NamespaceDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/NamespaceDeclaration")
-	if err != nil {
-		log.Fatal(err)
-		debug.PrintStack()
-	}
-
-	updateCode(fset, (*cpg.Node)(tu), astNode)
-	updateLocation(fset, (*cpg.Node)(tu), astNode)
-	updateLanguage((*cpg.Node)(tu), frontend)
-
-	(*cpg.Node)(tu).SetName(name)
-
-	return (*cpg.NamespaceDeclaration)(tu)
+func (frontend *GoLanguageFrontend) NewNamespaceDeclaration(fset *token.FileSet, astNode ast.Node, name string) *cpg.NamespaceDeclaration {
+	return (*cpg.NamespaceDeclaration)(frontend.NewDeclaration("NamespaceDeclaration", fset, astNode, name))
 }
 
-func (frontend *GoLanguageFrontend) NewIncludeDeclaration(fset *token.FileSet, astNode ast.Node) *cpg.IncludeDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/IncludeDeclaration")
-	if err != nil {
-		log.Fatal(err)
-		debug.PrintStack()
-	}
-
-	updateCode(fset, (*cpg.Node)(tu), astNode)
-	updateLocation(fset, (*cpg.Node)(tu), astNode)
-	updateLanguage((*cpg.Node)(tu), frontend)
-
-	return (*cpg.IncludeDeclaration)(tu)
+func (frontend *GoLanguageFrontend) NewIncludeDeclaration(fset *token.FileSet, astNode ast.Node, name string) *cpg.IncludeDeclaration {
+	return (*cpg.IncludeDeclaration)(frontend.NewDeclaration("IncludeDeclaration", fset, astNode, name))
 }
 
-func (frontend *GoLanguageFrontend) NewFunctionDeclaration(fset *token.FileSet, astNode ast.Node) *cpg.FunctionDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/FunctionDeclaration")
-	if err != nil {
-		log.Fatal(err)
-		debug.PrintStack()
-	}
-
-	updateCode(fset, (*cpg.Node)(tu), astNode)
-	updateLocation(fset, (*cpg.Node)(tu), astNode)
-	updateLanguage((*cpg.Node)(tu), frontend)
-
-	return (*cpg.FunctionDeclaration)(tu)
+func (frontend *GoLanguageFrontend) NewFunctionDeclaration(fset *token.FileSet, astNode ast.Node, name string) *cpg.FunctionDeclaration {
+	return (*cpg.FunctionDeclaration)(frontend.NewDeclaration("FunctionDeclaration", fset, astNode, name))
 }
 
-func (frontend *GoLanguageFrontend) NewMethodDeclaration(fset *token.FileSet, astNode ast.Node) *cpg.MethodDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration")
-	if err != nil {
-		log.Fatal(err)
-		debug.PrintStack()
-	}
-
-	updateCode(fset, (*cpg.Node)(tu), astNode)
-	updateLocation(fset, (*cpg.Node)(tu), astNode)
-	updateLanguage((*cpg.Node)(tu), frontend)
-
-	return (*cpg.MethodDeclaration)(tu)
+func (frontend *GoLanguageFrontend) NewMethodDeclaration(fset *token.FileSet, astNode ast.Node, name string) *cpg.MethodDeclaration {
+	return (*cpg.MethodDeclaration)(frontend.NewDeclaration("MethodDeclaration", fset, astNode, name))
 }
 
-func (frontend *GoLanguageFrontend) NewRecordDeclaration(fset *token.FileSet, astNode ast.Node) *cpg.RecordDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/RecordDeclaration")
-	if err != nil {
-		log.Fatal(err)
-		debug.PrintStack()
-	}
-
-	updateCode(fset, (*cpg.Node)(tu), astNode)
-	updateLocation(fset, (*cpg.Node)(tu), astNode)
-	updateLanguage((*cpg.Node)(tu), frontend)
-
-	return (*cpg.RecordDeclaration)(tu)
+func (frontend *GoLanguageFrontend) NewRecordDeclaration(fset *token.FileSet, astNode ast.Node, name string, kind string) *cpg.RecordDeclaration {
+	return (*cpg.RecordDeclaration)(frontend.NewDeclaration("RecordDeclaration", fset, astNode, name, cpg.NewString(kind)))
 }
 
-func (frontend *GoLanguageFrontend) NewVariableDeclaration(fset *token.FileSet, astNode ast.Node) *cpg.VariableDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration")
-	if err != nil {
-		log.Fatal(err)
-		debug.PrintStack()
-	}
-
-	updateCode(fset, (*cpg.Node)(tu), astNode)
-	updateLocation(fset, (*cpg.Node)(tu), astNode)
-	updateLanguage((*cpg.Node)(tu), frontend)
-
-	return (*cpg.VariableDeclaration)(tu)
+func (frontend *GoLanguageFrontend) NewVariableDeclaration(fset *token.FileSet, astNode ast.Node, name string) *cpg.VariableDeclaration {
+	return (*cpg.VariableDeclaration)(frontend.NewDeclaration("VariableDeclaration", fset, astNode, name))
 }
 
-func (frontend *GoLanguageFrontend) NewParamVariableDeclaration(fset *token.FileSet, astNode ast.Node) *cpg.ParamVariableDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/ParamVariableDeclaration")
-	if err != nil {
-		log.Fatal(err)
-		debug.PrintStack()
-	}
-
-	updateCode(fset, (*cpg.Node)(tu), astNode)
-	updateLocation(fset, (*cpg.Node)(tu), astNode)
-	updateLanguage((*cpg.Node)(tu), frontend)
-
-	return (*cpg.ParamVariableDeclaration)(tu)
+func (frontend *GoLanguageFrontend) NewParamVariableDeclaration(fset *token.FileSet, astNode ast.Node, name string) *cpg.ParamVariableDeclaration {
+	return (*cpg.ParamVariableDeclaration)(frontend.NewDeclaration("ParamVariableDeclaration", fset, astNode, name))
 }
 
-func (frontend *GoLanguageFrontend) NewFieldDeclaration(fset *token.FileSet, astNode ast.Node) *cpg.FieldDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/FieldDeclaration")
+func (frontend *GoLanguageFrontend) NewFieldDeclaration(fset *token.FileSet, astNode ast.Node, name string) *cpg.FieldDeclaration {
+	return (*cpg.FieldDeclaration)(frontend.NewDeclaration("FieldDeclaration", fset, astNode, name))
+}
+
+func (frontend *GoLanguageFrontend) NewDeclaration(typ string, fset *token.FileSet, astNode ast.Node, name string, args ...any) *jnigi.ObjectRef {
+	var node = jnigi.NewObjectRef(fmt.Sprintf("%s/%s", cpg.DeclarationsPackage, typ))
+
+	// Prepend the frontend and the name as the receiver and the first argument
+	args = append([]any{frontend.Cast(MetadataProviderClass), cpg.NewString(name)}, args...)
+
+	err := env.CallStaticMethod(
+		cpg.GraphPackage+"/DeclarationBuilderKt",
+		fmt.Sprintf("new%s", typ), node,
+		args...,
+	)
 	if err != nil {
-		log.Fatal(err)
-		debug.PrintStack()
+		panic(err)
 	}
 
-	updateCode(fset, (*cpg.Node)(tu), astNode)
-	updateLocation(fset, (*cpg.Node)(tu), astNode)
-	updateLanguage((*cpg.Node)(tu), frontend)
+	updateCode(fset, (*cpg.Node)(node), astNode)
+	updateLocation(fset, (*cpg.Node)(node), astNode)
 
-	return (*cpg.FieldDeclaration)(tu)
+	return node
 }
