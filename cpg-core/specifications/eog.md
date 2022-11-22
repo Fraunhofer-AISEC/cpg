@@ -124,7 +124,7 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child
   parent(["DeclarationStatement"]) --EOG--> next:::outer
-  parent -.-> (child["VariableDeclaration"])
+  parent -.-> child(["VariableDeclaration"])
   child --EOG--> parent
 
 ```
@@ -133,9 +133,8 @@ flowchart LR
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child
-  parent(["VariableDeclaration"]) --EOG--> next:::outer
-  parent -.-> child["initializer"]
-  child --EOG--> parent
+  child["returnValue"] --EOG--> parent(["ReturnStatement"])
+  parent -.-> child
 
 ```
 
