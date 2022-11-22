@@ -15,17 +15,20 @@ The Evaluation Order Graph (EOG) is built as edges between AST nodes after the i
  * EOG considers a method header as a node. CFG will consider the first executable statement of the methods as a node.
 
 ## General Structure
-The graphs in this specifications abstract the representation of the handled graph to formally specify how EOG-edges are drawn between a parent node and the subgraphs rooted by its children. Therefore a collection of AST-children are represented as abstract nodes showing the multiplicity of the node with an indicator (n), in case of sets, or as several nodes showing how the position in a list can impact the construction of an EOG, e.g. nodes (n - 1) to n.
+The graphs in this specifications abstract the representation of the handled graph to formally specify how EOG-edges are drawn between a parent node and the subgraphs rooted by its children. Therefore a collection of AST-children are represented as abstract nodes showing the multiplicity of the node with an indicator (n), in case of sets, or as several nodes showing how the position in a list can impact the construction of an EOG, e.g. nodes (i - 1) to i.
 The EOG is constructed as postorder of the AST-traversal. When building the EOG for the expression a + b, the entire expression is considerd evaluated after the subexpression a and the subexpression b is evaluated, therefore EOG-Edges connect nodes of (a) and (b) before reaching the parent node (+).
+
+Note: Nodes describing the titled programing construct will be drawn round, while the rectangular nodes represent their abstract children, that can be atomic leaf nodes or deep AST-Subtrees. EOG-Edges to these abstract nodes always mean that a subtree expansion would be necessary to connect the target of the EOG-Edge to the right node in the subtree.
 
 ```mermaid
 flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> lhs
+  node --EOG--> next:::outer
   node([+]) -.-> lhs["a"]
   node -.-> rhs["b"]
-  prev --EOG--> lhs
   lhs --EOG--> rhs
   rhs --EOG--> node
-  node --EOG-->next
   
 ```
 
@@ -34,4 +37,31 @@ flowchart LR
 Whether or not a subgraph (a) or (b) is connected first, depends on the exact constuct and sometimes the language that is translated into a CPG.Note, in the following graphics we will often draw an EOG-Edge to an abstract childnode of a language construct that is an AST-Subtree. The EOG-Path through that subtree will depend on the node types of that tree and mostly start connecting one of the AST-Leaf nodes.
 
 ## VariableDeclaration
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child
+  parent(["VariableDeclaration"]) --EOG--> next:::outer
+  parent -.-> child["initializer"]
+  child --EOG--> parent
+
+```
+  
+## StatementHolder
+StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `CompoundStatement`. Note that code can be static or non-static (bound to an instance of a record)
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  holder([StatementHolder])-."statements(n)".->sblock1["StaticStatement(i-1)"]
+  holder([StatementHolder])-."statements(n)".->sblock2["StaticStatement(i)"]
+  holder-."statements(n)".->nblock1["NonStaticStatement(i-1)"]
+  holder-."statements(n)".->nblock2["NonStaticStatement(i)"]
+  holder--EOG-->sblock1
+  sblock1--EOG-->sblock2
+  holder--EOG-->nblock1
+  nblock1--EOG-->nblock2
+  
+```
+
+  
 
