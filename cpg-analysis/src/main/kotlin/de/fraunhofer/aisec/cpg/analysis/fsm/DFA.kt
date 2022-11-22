@@ -46,13 +46,13 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
         get() = currentState?.isAcceptingState == true
 
     override fun checkEdge(state: State, edge: Edge) {
-        check(edge.op != NFA.EPSILON) { "A DFA state must not contain EPSILON edges!" }
-        check(edge.op != "") {
+        require(edge.op != NFA.EPSILON) { "A DFA state must not contain EPSILON edges!" }
+        require(edge.op != "") {
             "The empty String is a reserved op for DFAs."
         } // reserved for [initializeOrderEvaluation]
-        check(state.outgoingEdges.none { e -> e.matches(edge) && e.nextState != edge.nextState }) {
-            "State already has an outgoing edge with the same label but a different target!"
-        }
+        require(
+            state.outgoingEdges.none { e -> e.matches(edge) && e.nextState != edge.nextState }
+        ) { "State already has an outgoing edge with the same label but a different target!" }
     }
 
     /**

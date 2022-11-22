@@ -53,7 +53,7 @@ class DFATest {
         ) // invalid because the empty String is used in 'initializeOrderEvaluation' and therefore
         // reserved
 
-        assertFailsWith<IllegalStateException>(
+        assertFailsWith<IllegalArgumentException>(
             message = "The empty String is a reserved op for DFAs.",
             block = { DFA(setOf(q1, q2)) }
         )
@@ -68,7 +68,7 @@ class DFATest {
             Edge(op = NFA.EPSILON, nextState = q2)
         ) // invalid because a DFA must not contain epsilon edges
 
-        assertFailsWith<IllegalStateException>(
+        assertFailsWith<IllegalArgumentException>(
             message = "A DFA state must not contain EPSILON edges!",
             block = { DFA(setOf(q1, q2)) }
         )
@@ -86,7 +86,7 @@ class DFATest {
             Edge(op = "valid", nextState = q1)
         ) // invalid because a DFA must not contain epsilon edges
 
-        assertFailsWith<IllegalStateException>(
+        assertFailsWith<IllegalArgumentException>(
             message =
                 "State already has an outgoing edge with the same label but a different target!",
             block = { DFA(setOf(q1, q2)) }
@@ -105,7 +105,7 @@ class DFATest {
         ) // invalid because a DFA must not contain epsilon edges
         val dfa = DFA(setOf(q1, q2))
 
-        assertFailsWith<IllegalStateException>(
+        assertFailsWith<IllegalArgumentException>(
             message =
                 "State already has an outgoing edge with the same label but a different target!",
             block = {
@@ -127,7 +127,7 @@ class DFATest {
         ) // invalid because a DFA must not contain epsilon edges
         val dfa = DFA(setOf(q1, q2)) // this adds the necessary checks to [State.addEdge]
 
-        assertFailsWith<IllegalStateException>(
+        assertFailsWith<IllegalArgumentException>(
             message =
                 "State already has an outgoing edge with the same label but a different target!",
             block = {

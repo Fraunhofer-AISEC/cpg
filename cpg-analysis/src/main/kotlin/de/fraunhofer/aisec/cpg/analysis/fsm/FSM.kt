@@ -35,7 +35,9 @@ sealed class FSM(states: Set<State>) {
         get() = if (states.isEmpty()) 1 else states.maxOf { it.name } + 1
 
     init {
-        check(states.count { it.isStart } <= 1) { "Cannot create a FSM with multiple start states" }
+        require(states.count { it.isStart } <= 1) {
+            "Cannot create a FSM with multiple start states"
+        }
         for (state in states) addState(state)
     }
 
@@ -54,7 +56,7 @@ sealed class FSM(states: Set<State>) {
     private fun checkState(state: State) {
         for (edge in state.outgoingEdges) checkEdge(state, edge)
         if (state.isStart) {
-            check(states.singleOrNull { it.isStart } == null) {
+            require(states.singleOrNull { it.isStart } == null) {
                 "This FSM already has a start state."
             }
         }
