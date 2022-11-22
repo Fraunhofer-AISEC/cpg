@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,145 +27,90 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
+/**
+ * Holds the information generated during an order evaluation using the [DFAOrderEvaluator]. It is
+ * used to provide full traceability of the order evaluation in [DFA.executionTrace].
+ */
+data class Trace(val state: State, val cpgNode: Node, val edge: Edge)
+
 /** A representation of a deterministic finite automaton (DFA). */
-class DFA : Cloneable {
-    companion object {
-        @JvmStatic val EPSILON: String = "ε"
+class DFA(states: Set<State> = setOf()) : FSM(states) {
+    private val _executionTrace = mutableListOf<Trace>()
+    val executionTrace: List<Trace>
+        get() = _executionTrace
+    val currentState: State?
+        get() = executionTrace.lastOrNull()?.edge?.nextState ?: states.singleOrNull { it.isStart }
+
+    /** True, if the DFA is currently in an accepting state. */
+    val isAccepted: Boolean
+        get() = currentState?.isAcceptingState == true
+
+    override fun checkEdge(state: State, edge: Edge) {
+        require(edge.op != NFA.EPSILON) { "A DFA state must not contain EPSILON edges!" }
+        require(edge.op != "") {
+            "The empty String is a reserved op for DFAs."
+        } // reserved for [initializeOrderEvaluation]
+        require(
+            state.outgoingEdges.none { e -> e.matches(edge) && e.nextState != edge.nextState }
+        ) { "State already has an outgoing edge with the same label but a different target!" }
     }
 
-    var states = mutableSetOf<State>()
-    private var stateCounter = 1
-    var currentState: State? = null
-    var executionTrace = mutableListOf<Triple<State, Node, BaseOpEdge>>()
-
     /**
-     * Creates an edge between two nodes with a given label (operator and optional base).
+     * Associates the start state with a [cpgNode].
      *
-     * It checks if [from] already has an outgoing edge with the same [base] and [op] but to another
-     * target node. If so, it does not add the edge end returns `false`, otherwise it creates the
-     * edge and returns `true`.
+     * Must be called before calling [makeTransitionWithOp] to initialize the order evaluation.
      */
-    fun addEdge(from: State, to: State, op: String, base: String?): Boolean {
-        states.add(from)
-        states.add(to)
-
-        if (from.outgoingEdges.any { e -> e.matches(base, op) && e.nextState != to }) {
-            throw FSMBuilderException(
-                "State already has an outgoing edge with the same label but a different target!"
-            )
+    fun initializeOrderEvaluation(cpgNode: Node) {
+        val startState = states.singleOrNull { it.isStart }
+        checkNotNull(startState) {
+            "To perform an order evaluation on a DFA, the DFA must have a start state. This DFA does not have a start state."
         }
-        from.addOutgoingEdge(BaseOpEdge(op, base, to))
-        return true
-    }
-
-    /** Generates a new state and adds it to this FSM. */
-    fun addState(isStart: Boolean = false, isAcceptingState: Boolean = false): State {
-        val newState = State("q$stateCounter", isStart, isAcceptingState)
-        if (isStart) {
-            currentState = newState
-        }
-        states.add(newState)
-        stateCounter++
-        return newState
-    }
-
-    /**
-     * Generates the string representing this FSM in DOT format. This allows a simple visualization
-     * of the resulting automaton.
-     */
-    fun toDotString(): String {
-        var str = "digraph fsm {\n\t\"\" [shape=point];\n"
-        var edges = ""
-        for (s in states) {
-            str +=
-                if (s.isAcceptingState) {
-                    "\t${s.name} [shape=doublecircle];\n"
-                } else {
-                    "\t${s.name} [shape=circle];\n"
-                }
-            if (s.isStart) {
-                edges += "\t\"\" -> ${s.name};\n"
-            }
-
-            for (e in s.outgoingEdges) {
-                edges += "\t${s.name} -> ${e.nextState.name} [label=\"${e.toDotLabel()}\"];\n"
-            }
-        }
-        return "$str$edges}"
+        _executionTrace.add(
+            Trace(state = startState, cpgNode = cpgNode, edge = Edge("", nextState = startState))
+        )
     }
 
     /**
      * Checks if the transition with operator [op] is possible from the current state of the FSM. If
      * so, it updates the state of the FSM and returns `true`. If no transition is possible, returns
-     * `false`. Collects the old state, the edge and the cpg [node] in the [executionTrace]
+     * `false`. Collects the old state, the edge and the [cpgNode] in the [executionTrace] in a
+     * [Trace] and appends it to the [executionTrace]
+     *
+     * Before calling this, initialize the orderEvaluation with [initializeOrderEvaluation]
      */
-    fun makeTransitionWithOp(op: String, node: Node): Boolean {
-        if (currentState == null) {
-            throw Exception(
-                "Cannot make transition because the FSM does not have a starting state!"
-            )
+    fun makeTransitionWithOp(op: String, cpgNode: Node): Boolean {
+        checkNotNull(currentState) {
+            "Cannot perform a transition because the FSM does not have a starting state!"
+        }
+        check(executionTrace.isNotEmpty()) {
+            "Before performing transitions, you must call [initializeOrderEvaluation] first."
         }
 
-        var newState = currentState?.nextNodeWithLabelOp(op)
-        val retVal = newState != null
-        while (newState != null) {
-            executionTrace.add(Triple(currentState!!, node, newState.second))
-            currentState = newState.first
-            // Directly follow the ε edges.
-            newState = currentState?.nextNodeWithLabelOp(EPSILON)
-        }
-        return retVal
+        val possibleEdges = currentState!!.outgoingEdges.filter { e -> e.op == op }
+        val edgeToFollow = possibleEdges.singleOrNull()
+        return if (edgeToFollow != null) {
+            _executionTrace.add(
+                Trace(state = currentState!!, cpgNode = cpgNode, edge = edgeToFollow)
+            )
+            true
+        } else false
     }
 
-    /** Copies the FSM to enable multiple independent branches of execution. */
-    public override fun clone(): DFA {
-        val newDFA = DFA()
-        val startingState = this.states.first { it.isStart }
-        newDFA.states = startingState.cloneRecursively()
-        val newStart = newDFA.states.first { it.isStart }
-        newDFA.executionTrace = mutableListOf()
-        newDFA.stateCounter = stateCounter
-        if (executionTrace.size > 0) {
-            newDFA.currentState = newStart
-            newDFA.executionTrace.add(
-                Triple(newStart, executionTrace[0].second, BaseOpEdge(EPSILON, "", newStart))
+    /** Create a shallow copy */
+    override fun copy() = DFA(states = states)
+
+    /** Creates a deep copy the DFA to enable multiple independent branches of execution. */
+    override fun deepCopy(): DFA {
+        val newDFA = super.deepCopy() as DFA
+
+        // for a DFA, we must also copy the executionTrace
+        for (trace in executionTrace) {
+            val traceState = newDFA.states.single { it.name == trace.state.name }
+            val traceNextState = newDFA.states.single { it.name == trace.edge.nextState.name }
+            newDFA._executionTrace.add(
+                trace.copy(state = traceState, edge = trace.edge.copy(nextState = traceNextState))
             )
-            for (t in this.executionTrace.subList(1, executionTrace.size)) {
-                val traceState = newDFA.states.first { it.name == t.first.name }
-                newDFA.executionTrace.add(
-                    Triple(
-                        traceState,
-                        t.second,
-                        traceState.nextNodeWithLabelOp(t.third.op)!!.second
-                    )
-                )
-            }
         }
-        newDFA.currentState = newDFA.states.firstOrNull { it.name == this.currentState?.name }
         return newDFA
-    }
-
-    /** Checks if the FSM is currently in an accepting state. */
-    fun isAccepted(): Boolean {
-        return currentState?.isAcceptingState == true
-    }
-
-    override fun equals(other: Any?): Boolean {
-        val res =
-            other != null &&
-                other is DFA &&
-                other.currentState == currentState &&
-                other.stateCounter == stateCounter &&
-                other.states == states
-        if (res) {
-            for (s in states) {
-                val otherState = (other as DFA).states.first { otherS -> s.name == otherS.name }
-                if (otherState.outgoingEdges != s.outgoingEdges) {
-                    return false
-                }
-            }
-        }
-
-        return res
     }
 }
