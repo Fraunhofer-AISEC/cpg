@@ -189,9 +189,9 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         val memberExpression =
             newMemberExpression(
+                name,
                 base,
                 UnknownType.getUnknownType(language),
-                name,
                 ".",
                 this.frontend.getCodeFromRawNode(node)
             )

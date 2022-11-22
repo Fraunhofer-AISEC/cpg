@@ -354,6 +354,7 @@ public class DeclarationHandler
               null,
               null,
               null,
+              null,
               false);
       field.setImplicit(true);
 
