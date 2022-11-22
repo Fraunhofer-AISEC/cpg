@@ -42,7 +42,7 @@ class NfaToDfaConversionTest {
      *
      * The NFA can be converted to .dot format using: [NFA.toDotString].
      */
-    fun `test simple sequence order`() {
+    fun testSequenceOrder() {
         val nfa = NFA()
         val q0 = nfa.addState(isStart = true)
         val q1 = nfa.addState()
@@ -68,7 +68,7 @@ class NfaToDfaConversionTest {
      *
      * The NFA can be converted to .dot format using: [NFA.toDotString].
      */
-    fun `test simple order with branch`() {
+    fun testOrderWithBranch() {
         val nfa = NFA()
         val q0 = nfa.addState(isStart = true)
         val q1 = nfa.addState()
@@ -95,7 +95,7 @@ class NfaToDfaConversionTest {
      *
      * The NFA can be converted to .dot format using: [NFA.toDotString].
      */
-    fun `test simple order with maybe qualifier`() {
+    fun testOrderWithMaybeQualifier() {
         val nfa = NFA()
         val q0 = nfa.addState(isStart = true, isAcceptingState = true)
         val q1 = nfa.addState()
@@ -117,7 +117,7 @@ class NfaToDfaConversionTest {
      *
      * The NFA can be converted to .dot format using: [NFA.toDotString].
      */
-    fun `test simple order with option qualifier`() {
+    fun testOrderWithOptionQualifier() {
         val nfa = NFA()
         val q0 = nfa.addState(isStart = true, isAcceptingState = true)
         val q1 = nfa.addState()

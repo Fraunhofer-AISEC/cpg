@@ -28,8 +28,9 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 import kotlin.test.*
 
 class DFATest {
+    /** Tests whether it is possible to create a valid DFA. */
     @Test
-    fun `test DFA creation with valid state`() {
+    fun testValidDfaCreation() {
         val q1 = State(name = 1, isStart = true)
         val q2 = State(name = 2, isAcceptingState = true)
         q1.addEdge(Edge(op = "valid", nextState = q2))
@@ -39,8 +40,12 @@ class DFATest {
         assertTrue(q2 in dfa.states)
     }
 
+    /**
+     * Test that a DFA cannot be instantiated with a state containing an edge with an empty string
+     * as an op. The empty string is reserved for [DFA.initializeOrderEvaluation]
+     */
     @Test
-    fun `test DFA creation with invalid edge (empty string) in given state`() {
+    fun testDfaRejectEdgeWithEmptyOp() {
         val q1 = State(name = 1, isStart = true)
         val q2 = State(name = 2, isAcceptingState = true)
         q1.addEdge(
@@ -54,8 +59,9 @@ class DFATest {
         )
     }
 
+    /** Test that a DFA cannot be instantiated with a state containing an epsilon edge. */
     @Test
-    fun `test DFA creation with invalid edge (epsilon) in given state`() {
+    fun testDfaRejectEpsilonEdge() {
         val q1 = State(name = 1, isStart = true)
         val q2 = State(name = 2, isAcceptingState = true)
         q1.addEdge(
@@ -68,8 +74,9 @@ class DFATest {
         )
     }
 
+    /** Tests that a DFA cannot be created with states containing non-deterministic connections. */
     @Test
-    fun `test DFA creation with non-deterministic edges`() {
+    fun testDfaRejectNonDeterministicEdges() {
         val q1 = State(name = 1, isStart = true)
         val q2 = State(name = 2, isAcceptingState = true)
         q1.addEdge(
@@ -86,8 +93,11 @@ class DFATest {
         )
     }
 
+    /**
+     * Tests that [State.edgeCheck] is correctly set in [DFA.addState] and used in [DFA.addEdge].
+     */
     @Test
-    fun `test adding invalid edge to DFA with addEdge`() {
+    fun testEdgeCheckInState() {
         val q1 = State(name = 1, isStart = true)
         val q2 = State(name = 2, isAcceptingState = true)
         q1.addEdge(
@@ -107,8 +117,9 @@ class DFATest {
         )
     }
 
+    /** Tests that [State.edgeCheck] is actually used in [State.addEdge]. */
     @Test
-    fun `test adding invalid edge to DFA state`() {
+    fun testStateAddEdge() {
         val q1 = State(name = 1, isStart = true)
         val q2 = State(name = 2, isAcceptingState = true)
         q1.addEdge(

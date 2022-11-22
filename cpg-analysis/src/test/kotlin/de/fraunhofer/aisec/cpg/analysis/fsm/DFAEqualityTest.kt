@@ -30,12 +30,12 @@ import kotlin.test.*
 
 /**
  * Tests whether the [DFA.equals] method works as expected and correctly identifies whether two DFAs
- * accept the same language. If this test fails, the [NfaDfaConstructionTest] suite will also fail.
+ * accept the same language.
  */
 class DFAEqualityTest {
     @Test
     /** Tests an empty DFA */
-    fun `test empty DFA`() {
+    fun testEmptyDfa() {
         assertFailsWith<IllegalStateException>(
             message = "In order to compare to FSMs, both must have exactly one start state.",
             block = { DFA() == DFA() }
@@ -44,7 +44,7 @@ class DFAEqualityTest {
 
     @Test
     /** Tests a DFA with a single state */
-    fun `test DFA with a single state`() {
+    fun testDfaWithSingleState() {
         val dfa1 = DFA(setOf(State(1, isStart = true)))
         val dfa2 = DFA(setOf(State(2, isStart = true)))
 
@@ -53,7 +53,7 @@ class DFAEqualityTest {
 
     @Test
     /** Tests a DFA with isomorphic states (exactly the same DFA but with different state names) */
-    fun `test isomorphic DFA`() {
+    fun testIsomorphicDfa() {
         val getStates = { offset: Int ->
             val q4 = State(4 + offset, isAcceptingState = true)
             val q3 = State(3 + offset).apply { addEdge(Edge("to4", nextState = q4)) }
@@ -76,7 +76,7 @@ class DFAEqualityTest {
      * Tests a DFA and its equivalent minimal DFA. Uses the two DFAs depicted
      * [here](https://en.wikipedia.org/wiki/DFA_minimization)
      */
-    fun `test bloated and minimal DFA`() {
+    fun testMinimalDfaEquality() {
         val q6 = State(6) // f
         val q5 = State(5, isAcceptingState = true) // e
         val q4 = State(4, isAcceptingState = true) // d
@@ -122,7 +122,7 @@ class DFAEqualityTest {
 
     @Test
     /** Tests whether we can correctly flag non-equivalent DFAs. */
-    fun `test non equivalent DFA`() {
+    fun testNonEquivalentDfa() {
         val q6 = State(6) // f
         val q5 = State(5, isAcceptingState = true) // e
         val q4 = State(4, isAcceptingState = true) // d
@@ -170,7 +170,7 @@ class DFAEqualityTest {
 
     @Test
     /** Tests whether we can correctly flag non-equivalent DFAs a second time. */
-    fun `test DFA with a single difference`() {
+    fun testDfaWithSingleDifference() {
         // construct another DFA that does not accept the same language
 
         val q3 = State(3).apply { addEdge(Edge("1", nextState = this)) } // a,b
@@ -207,7 +207,7 @@ class DFAEqualityTest {
     /**
      * Tests whether the current state is correctly used to determine whether two DFAs are equal.
      */
-    fun `test DFA equality with different current state`() {
+    fun testDfaEqualityWithCurrentState() {
         val getDfa = {
             val dfa = DFA()
             val q1 = dfa.addState(isStart = true)

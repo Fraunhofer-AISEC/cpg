@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
 import kotlin.test.*
-import org.junit.jupiter.api.assertThrows
 
 class FSMTest {
     private val simpleStringRepresentation =
@@ -50,29 +49,31 @@ class FSMTest {
             "\tq5 -> q4 [label=\"v.update()\"];\n" +
             "}"
 
+    /** Tests the correct generation of a .dot string from a [NFA]. */
     @Test
-    fun `test toDotString method`() {
-        val dfa = DFA()
-        val q1 = dfa.addState(isStart = true)
-        val q2 = dfa.addState(isAcceptingState = true)
-        val q3 = dfa.addState(isAcceptingState = true)
-        val q4 = dfa.addState()
-        val q5 = dfa.addState(isAcceptingState = true)
-        dfa.addEdge(q1, Edge("create()", "v", q2))
-        dfa.addEdge(q2, Edge("check_whole_msg()", "v", q3))
-        dfa.addEdge(q2, Edge("update()", "v", q4))
-        dfa.addEdge(q2, Edge("check_after_update()", "v", q5))
-        dfa.addEdge(q3, Edge("check_whole_msg()", "v", q3))
-        dfa.addEdge(q4, Edge("update()", "v", q4))
-        dfa.addEdge(q4, Edge("check_after_update()", "v", q5))
-        dfa.addEdge(q5, Edge("check_after_update()", "v", q5))
-        dfa.addEdge(q5, Edge("update()", "v", q4))
+    fun testDotStringCreation() {
+        val nfa = NFA()
+        val q1 = nfa.addState(isStart = true)
+        val q2 = nfa.addState(isAcceptingState = true)
+        val q3 = nfa.addState(isAcceptingState = true)
+        val q4 = nfa.addState()
+        val q5 = nfa.addState(isAcceptingState = true)
+        nfa.addEdge(q1, Edge("create()", "v", q2))
+        nfa.addEdge(q2, Edge("check_whole_msg()", "v", q3))
+        nfa.addEdge(q2, Edge("update()", "v", q4))
+        nfa.addEdge(q2, Edge("check_after_update()", "v", q5))
+        nfa.addEdge(q3, Edge("check_whole_msg()", "v", q3))
+        nfa.addEdge(q4, Edge("update()", "v", q4))
+        nfa.addEdge(q4, Edge("check_after_update()", "v", q5))
+        nfa.addEdge(q5, Edge("check_after_update()", "v", q5))
+        nfa.addEdge(q5, Edge("update()", "v", q4))
 
-        assertEquals(simpleStringRepresentation, dfa.toDotString())
+        assertEquals(simpleStringRepresentation, nfa.toDotString())
     }
 
+    /** Tests the [NFA.deepCopy] method. */
     @Test
-    fun `test deepcopy`() {
+    fun testDeepcopy() {
         val dfa = DFA()
         val q1 = dfa.addState(isStart = true)
         val q2 = dfa.addState(isAcceptingState = true)
@@ -107,17 +108,5 @@ class FSMTest {
 
         assertNotEquals(dfa, dfaCopy)
         assertEquals(dfa.executionTrace, dfa.deepCopy().executionTrace)
-    }
-
-    @Test
-    fun `test deterministic checks in DFA addEdge`() {
-        val dfa = DFA()
-        val q1 = dfa.addState(isStart = true)
-        val q2 = dfa.addState(isAcceptingState = true)
-        val q3 = dfa.addState()
-        dfa.addEdge(q1, Edge("create()", "v", q2))
-        dfa.addEdge(q2, Edge("check_whole_msg()", "v", q3))
-        assertThrows<IllegalStateException> { dfa.addEdge(q1, Edge("create()", "v", q3)) }
-        assertFalse(dfa.isAccepted)
     }
 }
