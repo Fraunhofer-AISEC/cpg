@@ -32,7 +32,7 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
  * - [isAcceptingState] indicates if this State accepts the FSM (in our case, this means that the
  * order of statements was correct).
  */
-sealed class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = false) {
+class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = false) {
     /**
      * Must only be changed through [FSM.changeStateProperty] as soon as they are part of a [FSM].
      */
@@ -52,11 +52,19 @@ sealed class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolea
         internal set
 
     /** Must only be changed through [addEdge]. */
-    protected val _outgoingEdges: MutableSet<Edge> = mutableSetOf()
+    private val _outgoingEdges: MutableSet<Edge> = mutableSetOf()
     val outgoingEdges: Set<Edge>
         get() = _outgoingEdges
 
-    open fun addEdge(edge: Edge) {
+    /**
+     * Set by the [FSM] when this state is added to a [FSM]. This lambda should throw an exception
+     * in case the edge is not allowed in the [FSM]. Once set by the [FSM], it is called in
+     * [addEdge].
+     */
+    internal var edgeCheck: ((Edge) -> Unit)? = null
+
+    fun addEdge(edge: Edge) {
+        edgeCheck?.let { it(edge) }
         _outgoingEdges.add(edge)
     }
 
@@ -73,11 +81,14 @@ sealed class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolea
     }
 
     /** Create a shallow copy */
-    protected abstract fun copy(
+    fun copy(
         name: Int = this.name,
         isStart: Boolean = this.isStart,
         isAcceptingState: Boolean = this.isAcceptingState
-    ): State
+    ) =
+        State(name = name, isStart = isStart, isAcceptingState = isAcceptingState).apply {
+            outgoingEdges.forEach { addEdge(it) }
+        }
 
     fun deepCopy(currentStates: MutableSet<State> = mutableSetOf()): MutableSet<State> {
         if (currentStates.contains(this)) {
@@ -98,46 +109,4 @@ sealed class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolea
         }
         return currentStates
     }
-}
-
-/**
- * A simple class representing a state in a DFA.
- * - [name] is the name of the State and must be unique for the FSM.
- * - [isStart] indicates if it is the starting state.
- * - [isAcceptingState] indicates if this State accepts the FSM (in our case, this means that the
- * order of statements was correct).
- */
-class DfaState
-internal constructor(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = false) :
-    State(name = name, isStart = isStart, isAcceptingState = isAcceptingState) {
-    override fun addEdge(edge: Edge) {
-        check(edge.op != NFA.EPSILON) { "A DFA must not contain EPSILON edges!" }
-        check(outgoingEdges.none { e -> e.matches(edge) && e.nextState != edge.nextState }) {
-            "State already has an outgoing edge with the same label but a different target!"
-        }
-        _outgoingEdges.add(edge)
-    }
-
-    /** Create a shallow copy */
-    override fun copy(name: Int, isStart: Boolean, isAcceptingState: Boolean) =
-        DfaState(name = name, isStart = isStart, isAcceptingState = isAcceptingState).apply {
-            this@DfaState.outgoingEdges.forEach { addEdge(it) }
-        }
-}
-
-/**
- * A simple class representing a state in a NFA.
- * - [name] is the name of the State and must be unique for the FSM.
- * - [isStart] indicates if it is the starting state.
- * - [isAcceptingState] indicates if this State accepts the FSM (in our case, this means that the
- * order of statements was correct).
- */
-class NfaState
-internal constructor(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = false) :
-    State(name = name, isStart = isStart, isAcceptingState = isAcceptingState) {
-    /** Create a shallow copy */
-    override fun copy(name: Int, isStart: Boolean, isAcceptingState: Boolean) =
-        NfaState(name = name, isStart = isStart, isAcceptingState = isAcceptingState).apply {
-            this@NfaState.outgoingEdges.forEach { addEdge(it) }
-        }
 }

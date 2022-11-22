@@ -30,7 +30,7 @@ sealed class FSM(states: Set<State>) {
     private val _states: MutableSet<State> = mutableSetOf()
     val states: Set<State>
         get() = _states
-    protected val nextStateName
+    private val nextStateName
         get() = if (states.isEmpty()) 1 else states.maxOf { it.name } + 1
 
     init {
@@ -44,18 +44,51 @@ sealed class FSM(states: Set<State>) {
      */
     override fun equals(other: Any?) = if (other is FSM) acceptsSameLanguage(this, other) else false
 
-    /** Generates a new state and adds it to this FSM. */
-    abstract fun addState(isStart: Boolean = false, isAcceptingState: Boolean = false): State
+    /**
+     * This function is set as [State.edgeCheck] inside [addState]. In case the [edge] must not be
+     * added to the [state], this function must throw an exception.
+     */
+    open fun checkEdge(state: State, edge: Edge) {}
 
-    protected fun addState(state: State) {
-        if (!_states.contains(state)) {
-            if (state.isStart) {
-                check(states.singleOrNull { it.isStart } == null) {
-                    "This FSM already has a start state."
-                }
+    private fun checkState(state: State) {
+        for (edge in state.outgoingEdges) checkEdge(state, edge)
+        if (state.isStart) {
+            check(states.singleOrNull { it.isStart } == null) {
+                "This FSM already has a start state."
             }
+        }
+    }
+
+    /** Generates a new state and adds it to this FSM. */
+    fun addState(isStart: Boolean = false, isAcceptingState: Boolean = false): State {
+        val newState =
+            State(name = nextStateName, isStart = isStart, isAcceptingState = isAcceptingState)
+        addState(newState)
+        return newState
+    }
+
+    /**
+     * States are differentiated by their name. Therefore, adding an already existing state a second
+     * time will override the previous state.
+     */
+    protected fun addState(state: State) {
+        if (state !in states) {
+            checkState(state) // assert that the state can be added to this FSM
+            state.edgeCheck = { edge: Edge ->
+                checkEdge(state, edge)
+            } // tell the state what kind of edges to accept
             _states.add(state)
         }
+    }
+
+    /** Creates an edge between two nodes with a given label (operator and optional base). */
+    fun addEdge(from: State, edge: Edge) {
+        addState(from)
+        from.addEdge(
+            edge
+        ) // because [addState] sets [State.edgeCheck], the state now checks whether the edge can be
+        // added to this FSM
+        addState(edge.nextState)
     }
 
     /**
@@ -116,13 +149,6 @@ sealed class FSM(states: Set<State>) {
         }
     }
 
-    /** Creates an edge between two nodes with a given label (operator and optional base). */
-    open fun addEdge(from: State, edge: Edge) {
-        addState(from)
-        addState(edge.nextState)
-        from.addEdge(edge)
-    }
-
     /**
      * Generates the string representing this FSM in DOT format. This allows a simple visualization
      * of the resulting automaton.
@@ -148,7 +174,8 @@ sealed class FSM(states: Set<State>) {
         return "$str$edges}"
     }
 
-    protected abstract fun copy(): FSM
+    /** Creates a shallow copy. */
+    abstract fun copy(): FSM
 
     /** Creates a deep copy of this FSM to enable multiple independent branches of execution. */
     open fun deepCopy(): FSM {

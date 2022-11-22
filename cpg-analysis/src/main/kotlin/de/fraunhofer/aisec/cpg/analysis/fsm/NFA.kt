@@ -31,14 +31,6 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
         @JvmStatic val EPSILON: String = "ε"
     }
 
-    /** Create a new state and add it to this NFA. Returns the newly created state. */
-    override fun addState(isStart: Boolean, isAcceptingState: Boolean): State {
-        val newState =
-            NfaState(name = nextStateName, isStart = isStart, isAcceptingState = isAcceptingState)
-        addState(newState)
-        return newState
-    }
-
     /** Create a shallow copy */
     override fun copy() = NFA(states = states)
 
@@ -54,7 +46,8 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
          * by ε-transitions from any of the states in the set)
          */
         fun getEpsilonClosure(states: MutableSet<State>): Set<State> {
-            for (epsilonEdges in states.map { it.outgoingEdges.filter { it.op == EPSILON } }) {
+            for (epsilonEdges in
+                states.map { state -> state.outgoingEdges.filter { edge -> edge.op == EPSILON } }) {
                 states.addAll(getEpsilonClosure(epsilonEdges.map { it.nextState }.toMutableSet()))
             }
             return states
@@ -101,7 +94,7 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
             // and group them by their 'name' (the base and op attributes)
             val allPossibleEdges =
                 epsilonClosure
-                    .flatMap { it.outgoingEdges.filter { it.op != EPSILON } }
+                    .flatMap { state -> state.outgoingEdges.filter { edge -> edge.op != EPSILON } }
                     .groupBy { it.base to it.op }
             // then we follow each transition/edge for the current epsilonClosure
             for ((transitionBaseToOp, edges) in allPossibleEdges) {

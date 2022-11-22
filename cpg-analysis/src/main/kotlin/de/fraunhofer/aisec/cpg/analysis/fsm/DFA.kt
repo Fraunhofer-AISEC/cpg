@@ -41,12 +41,14 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
     val isAccepted: Boolean
         get() = currentState?.isAcceptingState == true
 
-    /** Create a new state and add it to this NFA. Returns the newly created state. */
-    override fun addState(isStart: Boolean, isAcceptingState: Boolean): State {
-        val newState =
-            DfaState(name = nextStateName, isStart = isStart, isAcceptingState = isAcceptingState)
-        addState(newState)
-        return newState
+    override fun checkEdge(state: State, edge: Edge) {
+        check(edge.op != NFA.EPSILON) { "A DFA state must not contain EPSILON edges!" }
+        check(edge.op != "") {
+            "The empty String is a reserved op for DFAs."
+        } // reserved for [initializeOrderEvaluation]
+        check(state.outgoingEdges.none { e -> e.matches(edge) && e.nextState != edge.nextState }) {
+            "State already has an outgoing edge with the same label but a different target!"
+        }
     }
 
     /**
@@ -60,11 +62,7 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
             "To perform an order evaluation on a DFA, the DFA must have a start state. This DFA does not have a start state."
         }
         _executionTrace.add(
-            Trace(
-                state = startState,
-                cpgNode = cpgNode,
-                edge = Edge(NFA.EPSILON, nextState = startState)
-            )
+            Trace(state = startState, cpgNode = cpgNode, edge = Edge("", nextState = startState))
         )
     }
 

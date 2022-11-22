@@ -45,8 +45,8 @@ class DFAEqualityTest {
     @Test
     /** Tests a DFA with a single state */
     fun `test DFA with a single state`() {
-        val dfa1 = DFA(setOf(DfaState(1, isStart = true)))
-        val dfa2 = DFA(setOf(DfaState(2, isStart = true)))
+        val dfa1 = DFA(setOf(State(1, isStart = true)))
+        val dfa2 = DFA(setOf(State(2, isStart = true)))
 
         assertEquals(dfa1, dfa2)
     }
@@ -55,11 +55,11 @@ class DFAEqualityTest {
     /** Tests a DFA with isomorphic states (exactly the same DFA but with different state names) */
     fun `test isomorphic DFA`() {
         val getStates = { offset: Int ->
-            val q4 = DfaState(4 + offset, isAcceptingState = true)
-            val q3 = DfaState(3 + offset).apply { addEdge(Edge("to4", nextState = q4)) }
-            val q2 = DfaState(2 + offset).apply { addEdge(Edge("to4", nextState = q4)) }
+            val q4 = State(4 + offset, isAcceptingState = true)
+            val q3 = State(3 + offset).apply { addEdge(Edge("to4", nextState = q4)) }
+            val q2 = State(2 + offset).apply { addEdge(Edge("to4", nextState = q4)) }
             val q1 =
-                DfaState(1 + offset, isStart = true).apply {
+                State(1 + offset, isStart = true).apply {
                     addEdge(Edge("to2", nextState = q2))
                     addEdge(Edge("to3", nextState = q3))
                 }
@@ -77,12 +77,12 @@ class DFAEqualityTest {
      * [here](https://en.wikipedia.org/wiki/DFA_minimization)
      */
     fun `test bloated and minimal DFA`() {
-        val q6 = DfaState(6) // f
-        val q5 = DfaState(5, isAcceptingState = true) // e
-        val q4 = DfaState(4, isAcceptingState = true) // d
-        val q3 = DfaState(3, isAcceptingState = true) // c
-        val q2 = DfaState(2) // b
-        val q1 = DfaState(1, isStart = true) // a
+        val q6 = State(6) // f
+        val q5 = State(5, isAcceptingState = true) // e
+        val q4 = State(4, isAcceptingState = true) // d
+        val q3 = State(3, isAcceptingState = true) // c
+        val q2 = State(2) // b
+        val q1 = State(1, isStart = true) // a
 
         q1.addEdge(Edge("0", nextState = q2))
         q1.addEdge(Edge("1", nextState = q3))
@@ -101,17 +101,17 @@ class DFAEqualityTest {
 
         // construct the equivalent minimal DFA
         val state33 =
-            DfaState(3).apply {
+            State(3).apply {
                 addEdge(Edge("1", nextState = this))
                 addEdge(Edge("0", nextState = this))
             } // a,b
         val state22 =
-            DfaState(2, isAcceptingState = true).apply {
+            State(2, isAcceptingState = true).apply {
                 addEdge(Edge("0", nextState = this))
                 addEdge(Edge("1", nextState = state33))
             } // c,d,e
         val state11 =
-            DfaState(1, isStart = true).apply {
+            State(1, isStart = true).apply {
                 addEdge(Edge("0", nextState = this))
                 addEdge(Edge("1", nextState = state22))
             } // f
@@ -123,12 +123,12 @@ class DFAEqualityTest {
     @Test
     /** Tests whether we can correctly flag non-equivalent DFAs. */
     fun `test non equivalent DFA`() {
-        val q6 = DfaState(6) // f
-        val q5 = DfaState(5, isAcceptingState = true) // e
-        val q4 = DfaState(4, isAcceptingState = true) // d
-        val q3 = DfaState(3, isAcceptingState = true) // c
-        val q2 = DfaState(2) // b
-        val q1 = DfaState(1, isStart = true) // a
+        val q6 = State(6) // f
+        val q5 = State(5, isAcceptingState = true) // e
+        val q4 = State(4, isAcceptingState = true) // d
+        val q3 = State(3, isAcceptingState = true) // c
+        val q2 = State(2) // b
+        val q1 = State(1, isStart = true) // a
 
         q1.addEdge(Edge("0", nextState = q2))
         q1.addEdge(Edge("1", nextState = q3))
@@ -147,19 +147,19 @@ class DFAEqualityTest {
 
         // construct another DFA that does not accept the same language
         val q33 =
-            DfaState(3).apply {
+            State(3).apply {
                 addEdge(
                     Edge("1", nextState = this)
                 ) // this is where an equivalent DFA would need an additional Edge("0",
                 // nextState=this)
             } // a,b
         val q22 =
-            DfaState(2, isAcceptingState = true).apply {
+            State(2, isAcceptingState = true).apply {
                 addEdge(Edge("0", nextState = this))
                 addEdge(Edge("1", nextState = q33))
             } // c,d,e
         val q11 =
-            DfaState(1, isStart = true).apply {
+            State(1, isStart = true).apply {
                 addEdge(Edge("0", nextState = this))
                 addEdge(Edge("1", nextState = q22))
             } // f
@@ -173,28 +173,28 @@ class DFAEqualityTest {
     fun `test DFA with a single difference`() {
         // construct another DFA that does not accept the same language
 
-        val q3 = DfaState(3).apply { addEdge(Edge("1", nextState = this)) } // a,b
+        val q3 = State(3).apply { addEdge(Edge("1", nextState = this)) } // a,b
         val q2 =
-            DfaState(2, isAcceptingState = true).apply {
+            State(2, isAcceptingState = true).apply {
                 addEdge(Edge("0", nextState = this))
                 addEdge(Edge("1", nextState = q3))
             } // c,d,e
         val q1 =
-            DfaState(1, isStart = true).apply {
+            State(1, isStart = true).apply {
                 addEdge(Edge("0", nextState = this))
                 addEdge(Edge("1", nextState = q2))
             } // f
         val dfa1 = DFA(setOf(q1, q2, q3))
 
         // construct another DFA that does not accept the same language
-        val state33 = DfaState(3).apply { addEdge(Edge("0", nextState = this)) } // a,b
+        val state33 = State(3).apply { addEdge(Edge("0", nextState = this)) } // a,b
         val state22 =
-            DfaState(2, isAcceptingState = true).apply {
+            State(2, isAcceptingState = true).apply {
                 addEdge(Edge("0", nextState = this))
                 addEdge(Edge("1", nextState = state33))
             } // c,d,e
         val state11 =
-            DfaState(1, isStart = true).apply {
+            State(1, isStart = true).apply {
                 addEdge(Edge("0", nextState = this))
                 addEdge(Edge("1", nextState = state22))
             } // f
