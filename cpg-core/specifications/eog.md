@@ -63,5 +63,96 @@ flowchart LR
   
 ```
 
+## CallExpression
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child["base"]
+  parent(["CallExpression"]) --EOG--> next:::outer
+  child --EOG--> arg1["Argument(i-1)"]
+  arg1--EOG--> arg2["Argument(i)"]
+  arg2["Argument(i)"] --EOG--> parent
+  parent -.-> child
+  parent -."arguments(n)".-> arg1
+  parent -."arguments(n)".-> arg2
+
+```
+
+## MemberExpression
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child
+  parent(["MemberExpression"]) --EOG--> next:::outer
+  parent -.-> child["base"]
+  child --EOG--> parent
+
+```
+## ArraySubscriptionExpression
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child
+  child --EOG--> child2["subscriptExpression"]
+  parent(["ArraySubscriptionExpression"]) --EOG--> next:::outer
+  parent -.-> child["arrayExpression"]
+  parent -.-> child2
+  child2 --EOG--> parent
+
+```
+## ArrayCreationExpression
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["dimension(i-1)"]
+  child1 --EOG--> child2["dimension(i)"]
+  child2 --EOG--> initializer
+  parent(["ArrayCreationExpression"]) --EOG--> next:::outer
+  parent -.-> child1
+  parent -.-> child2
+  parent -.-> initializer
+  initializer --EOG--> parent
+
+```
+## DeclarationStatement
+
+Here the EOG is only drawn to the child component if that component is a VariableDeclaration, not if it is a FunctionDeclaration.
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child
+  parent(["DeclarationStatement"]) --EOG--> next:::outer
+  parent -.-> (child["VariableDeclaration"])
+  child --EOG--> parent
+
+```
+## ReturnStatement
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child
+  parent(["VariableDeclaration"]) --EOG--> next:::outer
+  parent -.-> child["initializer"]
+  child --EOG--> parent
+
+```
+
+## FunctionDeclaration
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  holder([StatementHolder])-."statements(n)".->sblock1["StaticStatement(i-1)"]
+  holder([StatementHolder])-."statements(n)".->sblock2["StaticStatement(i)"]
+  holder-."statements(n)".->nblock1["NonStaticStatement(i-1)"]
+  holder-."statements(n)".->nblock2["NonStaticStatement(i)"]
+  holder--EOG-->sblock1
+  sblock1--EOG-->sblock2
+  holder--EOG-->nblock1
+  nblock1--EOG-->nblock2
+  
+```
+
   
 
