@@ -40,13 +40,13 @@ jobs:
           ./build.sh
       - name: Archive cpgo library (amd64)
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: libcpgo-amd64.dylib
           path: cpg-language-go/src/main/resources/libcpgo-amd64.dylib
       - name: Archive cpgo library (arm64)
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: libcpgo-arm64.dylib
           path: cpg-language-go/src/main/resources/libcpgo-arm64.dylib
@@ -133,7 +133,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Archive test reports
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: test
           path: "**/build/reports/tests"
