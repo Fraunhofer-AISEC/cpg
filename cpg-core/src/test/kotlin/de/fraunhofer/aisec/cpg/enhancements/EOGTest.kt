@@ -1027,8 +1027,7 @@ internal class EOGTest : BaseTest() {
             result.refs[
                     { l: DeclaredReferenceExpression ->
                         l.location?.region?.startLine == 8 && l.name == "a"
-                    }
-                ]
+                    }]
         assertNotNull(a)
         val b = result.refs[{ it.location?.region?.startLine == 7 && it.name == "b" }]
         assertNotNull(b)
