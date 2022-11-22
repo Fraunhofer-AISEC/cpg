@@ -70,6 +70,7 @@ class DFGPass : Pass() {
             is MemberExpression -> handleMemberExpression(node, inferDfgForUnresolvedSymbols)
             is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
             is ExpressionList -> handleExpressionList(node)
+            is NewExpression -> handleNewExpression(node)
             // We keep the logic for the InitializerListExpression in that class because the
             // performance would decrease too much.
             // is InitializerListExpression -> handleInitializerListExpression(node)
@@ -188,6 +189,14 @@ class DFGPass : Pass() {
      */
     private fun handleExpressionList(node: ExpressionList) {
         node.expressions.lastOrNull()?.let { node.addPrevDFG(it) }
+    }
+
+    /**
+     * Adds the DFG edge to an [NewExpression]. The data of the initializer flow to the whole
+     * expression.
+     */
+    private fun handleNewExpression(node: NewExpression) {
+        node.initializer?.let { node.addPrevDFG(it) }
     }
 
     /**
