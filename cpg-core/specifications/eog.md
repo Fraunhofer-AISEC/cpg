@@ -399,8 +399,8 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["condition"]
   child1 --EOG--> parent(["ConditionalExpression"])
-  parent --EOG--> child2["thenExpr"]
-  parent --EOG--> child3["elseExpr"]
+  parent --EOG:true--> child2["thenExpr"]
+  parent --EOG:false--> child3["elseExpr"]
   child2 --EOG--> next:::outer
   child3 --EOG--> next:::outer
   parent -.-> child1
@@ -415,8 +415,8 @@ flowchart LR
   prev:::outer --EOG--> child1["statement"]
   child1 --EOG--> child2["condition"]
   child2 --EOG--> parent(["DoStatement"])
-  parent --EOG--> next:::outer
-  parent --EOG--> child1
+  parent --EOG:false--> next:::outer
+  parent --EOG:true--> child1
   parent -.-> child1
   parent -.-> child2
 
@@ -429,8 +429,8 @@ flowchart LR
   prev:::outer --EOG--> child2["conditionDeclaration"]
   child1 --EOG--> parent
   child2 --EOG--> parent
-  parent(["WhileStatement"]) --EOG--> child3["statement"]
-  parent --EOG--> next:::outer
+  parent(["WhileStatement"]) --EOG:true--> child3["statement"]
+  parent --EOG:false--> next:::outer
   child3 --EOG--> child1
   child3 --EOG--> child2
   parent -.-> child1
@@ -445,8 +445,8 @@ flowchart LR
   prev:::outer --EOG--> child1["iterable"]
   child1 --EOG--> child2["variable"]
   child2 --EOG--> parent
-  parent(["ForEachStatement"]) --EOG--> child3["statement"]
-  parent --EOG--> next:::outer
+  parent(["ForEachStatement"]) --EOG:true--> child3["statement"]
+  parent --EOG:false--> next:::outer
   child3 --EOG--> child1
   child3 --EOG--> child2
   parent -.-> child1
@@ -464,8 +464,8 @@ flowchart LR
   child1 --EOG--> child3["conditionDeclaration"]
   child2 --EOG--> parent
   child3 --EOG--> parent
-  parent(["ForStatement"]) --EOG--> child4["statement"]
-  parent --EOG--> next:::outer
+  parent(["ForStatement"]) --EOG:true--> child4["statement"]
+  parent --EOG:false--> next:::outer
   child4 --EOG--> child5["iterationStatement"]
   child5 --EOG--> child2
   child5 --EOG--> child3
@@ -480,8 +480,8 @@ flowchart LR
   child1 --EOG--> child3["conditionDeclaration"]
   child2 --EOG--> parent
   child3 --EOG--> parent
-  parent(["ifStatement"]) --EOG--> child4["thenStatement"]
-  parent --EOG--> child5["elseStatement"]
+  parent(["ifStatement"]) --EOG:true--> child4["thenStatement"]
+  parent --EOG:false--> child5["elseStatement"]
   parent --EOG--> next:::outer
   child4 --EOG--> next:::outer
   child5 --EOG--> next:::outer
