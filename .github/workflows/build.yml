@@ -14,7 +14,7 @@ jobs:
   code-compliance:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: Fraunhofer-AISEC/codyze-action@v2.3
         with:
           markDirectory: cpg-core/src/main/mark
@@ -23,7 +23,7 @@ jobs:
   build-cpgo-osx:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of SonarQube analysis
       - name: Setup Go
@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-cpgo-osx
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of SonarQube analysis
       - uses: actions/setup-java@v3
