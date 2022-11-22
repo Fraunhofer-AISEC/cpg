@@ -49,7 +49,9 @@ class ExpressionTest {
                 listOf(topLevel.resolve("type_assert.go").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
         assertNotNull(tu)
 
         val main = tu.byNameOrNull<NamespaceDeclaration>("main")
