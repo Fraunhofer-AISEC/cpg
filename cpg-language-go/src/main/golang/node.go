@@ -33,6 +33,10 @@ import (
 
 type Node jnigi.ObjectRef
 
+const CPGPackage = "de/fraunhofer/aisec/cpg"
+const GraphPackage = CPGPackage + "/graph"
+const NodeClass = GraphPackage + "/Node"
+
 func (n *Node) Cast(className string) *jnigi.ObjectRef {
 	return (*jnigi.ObjectRef)(n).Cast(className)
 }

@@ -71,13 +71,13 @@ func (frontend *GoLanguageFrontend) NewFieldDeclaration(fset *token.FileSet, ast
 }
 
 func (frontend *GoLanguageFrontend) NewDeclaration(typ string, fset *token.FileSet, astNode ast.Node, name string, args ...any) *jnigi.ObjectRef {
-	var node = jnigi.NewObjectRef(fmt.Sprintf("de/fraunhofer/aisec/cpg/graph/declarations/%s", typ))
+	var node = jnigi.NewObjectRef(fmt.Sprintf("%s/%s", cpg.DeclarationsPackage, typ))
 
 	// Prepend the frontend and the name as the receiver and the first argument
-	args = append([]any{frontend.Cast("de/fraunhofer/aisec/cpg/graph/MetadataProvider"), cpg.NewString(name)}, args...)
+	args = append([]any{frontend.Cast(MetadataProviderClass), cpg.NewString(name)}, args...)
 
 	err := env.CallStaticMethod(
-		"de/fraunhofer/aisec/cpg/graph/DeclarationBuilderKt",
+		cpg.GraphPackage+"/DeclarationBuilderKt",
 		fmt.Sprintf("new%s", typ), node,
 		args...,
 	)

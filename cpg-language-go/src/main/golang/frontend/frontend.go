@@ -61,7 +61,7 @@ func (g *GoLanguageFrontend) GetCodeFromRawNode(fset *token.FileSet, astNode ast
 }
 
 func (g *GoLanguageFrontend) GetScopeManager() *cpg.ScopeManager {
-	var scope = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/passes/scopes/ScopeManager")
+	var scope = jnigi.NewObjectRef(cpg.ScopeManagerClass)
 	err := g.GetField(env, "scopeManager", scope)
 	if err != nil {
 		log.Fatal(err)
@@ -72,7 +72,7 @@ func (g *GoLanguageFrontend) GetScopeManager() *cpg.ScopeManager {
 
 func (g *GoLanguageFrontend) getLog() (logger *jnigi.ObjectRef, err error) {
 	logger = jnigi.NewObjectRef("org/slf4j/Logger")
-	err = env.GetStaticField("de/fraunhofer/aisec/cpg/frontends/LanguageFrontend", "log", logger)
+	err = env.GetStaticField(cpg.LanguageFrontendClass, "log", logger)
 
 	return
 }

@@ -43,15 +43,15 @@ func (frontend *GoLanguageFrontend) NewCastExpression(fset *token.FileSet, astNo
 }
 
 func (frontend *GoLanguageFrontend) NewMemberExpression(fset *token.FileSet, astNode ast.Node, name string, base cpg.Castable) *cpg.MemberExpression {
-	return (*cpg.MemberExpression)(frontend.NewExpression("MemberExpression", fset, astNode, cpg.NewString(name), base.Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression")))
+	return (*cpg.MemberExpression)(frontend.NewExpression("MemberExpression", fset, astNode, cpg.NewString(name), base.Cast(cpg.ExpressionClass)))
 }
 
 func (frontend *GoLanguageFrontend) NewMemberCallExpression(fset *token.FileSet, astNode ast.Node, name string, fqn string, base *cpg.Expression, member *cpg.Node) *cpg.MemberCallExpression {
 	return (*cpg.MemberCallExpression)(frontend.NewExpression("MemberCallExpression", fset, astNode,
 		cpg.NewString(name),
 		cpg.NewString(fqn),
-		base.Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"),
-		member.Cast("de/fraunhofer/aisec/cpg/graph/Node"),
+		base.Cast(cpg.ExpressionClass),
+		member.Cast(cpg.NodeClass),
 	))
 }
 
@@ -95,7 +95,7 @@ func (frontend *GoLanguageFrontend) NewLiteral(fset *token.FileSet, astNode ast.
 		value = value.Cast("java/lang/Object")
 	}
 
-	return (*cpg.Literal)(frontend.NewExpression("Literal", fset, astNode, value, typ.Cast("de/fraunhofer/aisec/cpg/graph/types/Type")))
+	return (*cpg.Literal)(frontend.NewExpression("Literal", fset, astNode, value, typ.Cast(cpg.TypeClass)))
 }
 
 func (frontend *GoLanguageFrontend) NewDeclaredReferenceExpression(fset *token.FileSet, astNode ast.Node, name string) *cpg.DeclaredReferenceExpression {
@@ -107,13 +107,13 @@ func (frontend *GoLanguageFrontend) NewKeyValueExpression(fset *token.FileSet, a
 }
 
 func (frontend *GoLanguageFrontend) NewExpression(typ string, fset *token.FileSet, astNode ast.Node, args ...any) *jnigi.ObjectRef {
-	var node = jnigi.NewObjectRef(fmt.Sprintf("de/fraunhofer/aisec/cpg/graph/statements/expressions/%s", typ))
+	var node = jnigi.NewObjectRef(fmt.Sprintf("%s/%s", cpg.ExpressionsPackage, typ))
 
 	// Prepend the frontend as the receiver
-	args = append([]any{frontend.Cast("de/fraunhofer/aisec/cpg/graph/MetadataProvider")}, args...)
+	args = append([]any{frontend.Cast(cpg.GraphPackage + "/MetadataProvider")}, args...)
 
 	err := env.CallStaticMethod(
-		"de/fraunhofer/aisec/cpg/graph/ExpressionBuilderKt",
+		cpg.GraphPackage+"/ExpressionBuilderKt",
 		fmt.Sprintf("new%s", typ), node,
 		args...,
 	)

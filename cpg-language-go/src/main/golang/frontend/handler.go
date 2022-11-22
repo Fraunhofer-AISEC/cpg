@@ -41,6 +41,8 @@ import (
 	"tekao.net/jnigi"
 )
 
+const MetadataProviderClass = cpg.GraphPackage + "/MetadataProvider"
+
 func getImportName(spec *ast.ImportSpec) string {
 	if spec.Name != nil {
 		return spec.Name.Name
@@ -837,7 +839,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		return this.handleMakeExpr(fset, callExpr)
 	}
 
-	isMemberExpression, err := (*jnigi.ObjectRef)(reference).IsInstanceOf(env, "de/fraunhofer/aisec/cpg/graph/statements/expressions/MemberExpression")
+	isMemberExpression, err := (*jnigi.ObjectRef)(reference).IsInstanceOf(env, cpg.MemberExpressionClass)
 	if err != nil {
 		log.Fatal(err)
 
@@ -903,8 +905,8 @@ func (this *GoLanguageFrontend) handleNewExpr(fset *token.FileSet, callExpr *ast
 	t := this.handleType(callExpr.Args[0])
 
 	// new is a pointer, so need to reference the type with a pointer
-	var pointer = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin")
-	err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", pointer)
+	var pointer = jnigi.NewObjectRef(cpg.PointerOriginClass)
+	err := env.GetStaticField(cpg.PointerOriginClass, "POINTER", pointer)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -1032,7 +1034,7 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 	// or a const field within a package at this point.
 
 	// check, if the base relates to a receiver
-	/*var method = (*cpg.MethodDeclaration)((*jnigi.ObjectRef)(this.GetScopeManager().GetCurrentFunction()).Cast("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration"))
+	/*var method = (*cpg.MethodDeclaration)((*jnigi.ObjectRef)(this.GetScopeManager().GetCurrentFunction()).Cast(MethodDeclarationClass))
 
 	if method != nil && !method.IsNil() {
 		//recv := method.GetReceiver()
@@ -1207,8 +1209,8 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 	case *ast.StarExpr:
 		t := this.handleType(v.X)
 
-		var i = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin")
-		err = env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", i)
+		var i = jnigi.NewObjectRef(cpg.PointerOriginClass)
+		err = env.GetStaticField(cpg.PointerOriginClass, "POINTER", i)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -1219,8 +1221,8 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 	case *ast.ArrayType:
 		t := this.handleType(v.Elt)
 
-		var i = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin")
-		err = env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "ARRAY", i)
+		var i = jnigi.NewObjectRef(cpg.PointerOriginClass)
+		err = env.GetStaticField(cpg.PointerOriginClass, "ARRAY", i)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -1278,7 +1280,7 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 			log.Fatal(err)
 		}
 
-		var t, err = env.NewObject("de/fraunhofer/aisec/cpg/graph/types/FunctionType",
+		var t, err = env.NewObject(cpg.FunctionTypeClass,
 			name,
 			parametersTypesList.Cast("java/util/List"),
 			returnTypesList.Cast("java/util/List"),
