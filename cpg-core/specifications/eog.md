@@ -254,7 +254,7 @@ After the execution of the statement the control flow only proceeds with the nex
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["resource(i-1)"]
-  throws::outer --EOG-->child5["catchBlock(i)"]
+  throws:::outer --EOG-->child5["catchBlock(i)"]
   child1 --EOG-->child2["resource(i)"]
   child2 --EOG-->child3["tryBlock"]
   child3 --EOG-->child4["finallyBlock"]
