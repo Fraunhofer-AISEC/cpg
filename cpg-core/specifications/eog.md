@@ -395,6 +395,9 @@ flowchart LR
 
 ```
 ## ExpressionList
+List of several expressions that aer evaluated sequentially. The resulting value is the last evaluated expression.
+Interesting fields:
+* `expressions:List<Expression>`: several expressions with sequential order.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -407,6 +410,7 @@ flowchart LR
 
 ```
 ## InitializerListExpression
+Used to initialize multiple variables or an object of multiple elements, e.g. arrays, listst.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -419,7 +423,9 @@ flowchart LR
 
 ```
 ## ConstructExpression
-
+Creates an object.
+Interesting fields:
+* `arguments:List<Expression>`: Arguments to the construction, e.g. arguments for a call to a constructor.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -433,6 +439,9 @@ flowchart LR
 ```
 ## SynchronizedStatement
 The placement of the root node between expression and executed block is such that algorithms can evaluated the expression and then encountering the information that this expression is used for synchronization.
+Interesting fields:
+* `expression:Expression`: Its evaluation returns an object that acts as a lock for synchronization.
+* `blockStatement:CompoundStatement`: Code executed while the object evaluated from `expression` is locked.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -445,6 +454,11 @@ flowchart LR
 
 ```
 ## ConditionalExpression 
+A conditional evaluation of two expression, realizing the branching pattern of an `IfStatement` on the expression level.
+Interesting fields:
+* `condition:Expression`: Executed first to decide the branch of evaluation.
+* `thenExpr:Expression`: evaluated if `condition` evaluates to `true.`
+* `elseExpr:Expression`: evaluated if `condition` evaluates to `false.`
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -459,7 +473,34 @@ flowchart LR
   parent -.-> child3
 
 ```
+## WhileStatement
+This is a classic while-loop where the condition is evaluated before every loop iteration.
+
+Note: The condition may be enclosed in a declaration, in that case the EOG will not contain a `condition` but rather a declaration of a variable where the `initializer` serves as loop condition. Uses of one or the other are currently mutually exclusive.
+Interesting fields:
+* `condition:Expression`: condition for the loop.
+* `conditionDeclaration:Declaration`: declaration of a variable with condition as initializer.
+* `statement:Statement`: body of the loop to be iterated over.
+
+
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["condition|conditionDeclaration"]
+  child1 --EOG--> parent
+  parent --EOG:false--> next:::outer
+  parent(["WhileStatement"]) --EOG:true--> child3["statement"]
+  child3 --EOG--> child1
+  parent -.-> child1
+  parent -.-> child3
+
+```
 ## DoStatement
+This is a classic do-while-loop where the condition is evaluated after every loop iteration.
+
+Interesting fields:
+* `condition:Expression`: condition for the loop.
+* `statement:Statement`: body of the loop to be iterated over.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -472,24 +513,13 @@ flowchart LR
   parent -.-> child2
 
 ```
-## WhileStatement
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> child1["condition"]
-  prev:::outer --EOG--> child2["conditionDeclaration"]
-  child1 --EOG--> parent
-  child2 --EOG--> parent
-  parent(["WhileStatement"]) --EOG:true--> child3["statement"]
-  parent --EOG:false--> next:::outer
-  child3 --EOG--> child1
-  child3 --EOG--> child2
-  parent -.-> child1
-  parent -.-> child2
-  parent -.-> child3
-
-```
 ## ForEachStatement
+This is a loop that iterates over all elements in a multielement `iterable` with the single elements bound to the declaration of `variable` whiel evaluating `statement`.
+
+Interesting fields:
+* `iterable:Statement`: elements of this iterable will trigger a loop iteration.
+* `variable:Statement`: Variable declaring Statement that binds elements to a name.
+* `statement:Statement`: Loop body to be iterated over.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -499,38 +529,49 @@ flowchart LR
   parent(["ForEachStatement"]) --EOG:true--> child3["statement"]
   parent --EOG:false--> next:::outer
   child3 --EOG--> child1
-  child3 --EOG--> child2
   parent -.-> child1
   parent -.-> child2
   parent -.-> child3
 
 ```
 ## ForStatement
+This is a classic for-loop where a statement is executed before the loop run, a condition is evaluated before every loop iteration, and a post iteration statement can be declared.
+
+Note: The condition may be enclosed in a declaration, in that case the EOG will not contain a `condition` but rather a declaration of a variable where the `initializer` serves as loop condition. Uses of one or the other are currently mutually exclusive.
+Interesting fields:
+* `initializerStatement:Statement`: statement run once, before the loop starts.
+* `condition:Expression`: condition for the loop.
+* `conditionDeclaration:Declaration`: declaration of a variable with condition as initializer.
+* `statement:Statement`: body of the loop to be iterated over.
+* `iterationStatement:Statement`: statement to be executed after each loop iteration.
 
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["initializerStatement"]
-  child1 --EOG--> child2["condition"]
-  child1 --EOG--> child3["conditionDeclaration"]
+  child1 --EOG--> child2["condition|conditionDeclaration"]
   child2 --EOG--> parent
-  child3 --EOG--> parent
   parent(["ForStatement"]) --EOG:true--> child4["statement"]
   parent --EOG:false--> next:::outer
   child4 --EOG--> child5["iterationStatement"]
   child5 --EOG--> child2
-  child5 --EOG--> child3
 
 ```
 ## IfStatement
+This is a branching statement that where the evaluation of a `condition` leads to the execution of one optional, or two mutually exclusive blocks of code.
+
+Note: The condition may be enclosed in a declaration, in that case the EOG will not contain a `condition` but rather a declaration of a variable where the `initializer` serves as branching condition. Uses of one or the other are currently mutually exclusive.
+Interesting fields:
+* `condition:Expression`: condition for the branching decision.
+* `conditionDeclaration:Declaration`: declaration of a variable with condition as initializer.
+* `thenStatement:Statement`: body of the mandatory block that is evaluated if the `condition` evaluates to `true`.
+* `elseStatement:Statement`: body of an optional block that is evaluated if the `condition` evaluates to `false`.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["initializerStatement"]
-  child1 --EOG--> child2["condition"]
-  child1 --EOG--> child3["conditionDeclaration"]
+  child1 --EOG--> child2["condition|conditionDeclaration"]
   child2 --EOG--> parent
-  child3 --EOG--> parent
   parent(["ifStatement"]) --EOG:true--> child4["thenStatement"]
   parent --EOG:false--> child5["elseStatement"]
   parent --EOG--> next:::outer
@@ -539,14 +580,21 @@ flowchart LR
 
 ```
 ## SwitchStatement
+This is a switch statement where the evaluation of a `selector` decides the netry point in a large block of code. `CaseStatements` serve as entry points and `BreakStatements` are needed to prevent all cases after the entry to be evaluated.
+
+Note: The `selector` may be enclosed in a declaration, in that case the EOG will not contain a selector but rather a declaration of a variable where the `initializer` serves as switch selector. Uses of one or the other are currently mutually exclusive.
+Interesting fields:
+* `selector:Expression`: evaluated selector needs to match the expression evaluation of the expression in a `caseStatement` or the entry will be the `defaultStatement`.
+* `selectorDeclaration:Declaration`: the declarations `initializer` serves as `selector`.
+* `statement:Statement`: body containing all entry points and statements to be executed
+* `caseStatement:Statement`: Entry point into the evaluation of the switch body if the `selector` matches its `caseExpression`.
+* `defaultStatement:Statement`: Default Entry point if no `caseExpression` matched the selector.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["initializerStatement"]
-  child1 --EOG--> child2["selector"]
-  child1 --EOG--> child3["selectorDeclaration"]
+  child1 --EOG--> child2["selector|selectorDeclaration"]
   child2 --EOG--> parent
-  child3 --EOG--> parent
   parent(["SwitchStatement"]) --EOG--> child4["caseStatement"]
   parent --EOG--> child5["defaultStatement"]
   child7["statement(n-1)"] --EOG--> child6["statement"]
