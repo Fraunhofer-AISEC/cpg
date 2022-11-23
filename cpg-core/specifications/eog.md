@@ -37,11 +37,16 @@ flowchart LR
 Whether or not a subgraph (a) or (b) is connected first, depends on the exact constuct and sometimes the language that is translated into a CPG.Note, in the following graphics we will often draw an EOG-Edge to an abstract childnode of a language construct that is an AST-Subtree. The EOG-Path through that subtree will depend on the node types of that tree and mostly start connecting one of the AST-Leaf nodes.
 
 ## FunctionDeclaration
+A function declaration is the root of an interaprocedural EOG and therefore has no incoming or outgoing edges to previous or next eog nodes. The EOG connects the code body, as well as the default values of parameters if such exist.
+Interesting fields:
+* `parameter:ParamVariableDeclaration`: Parameters of a function.
+* `defaultValue:Expression`: Default values of the parameters that have to be evaluated before body execution. These are optional and the EOG may not contain them.
+* `body:Statement`: One or multiple statements executed when this function is called.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  parent(["FunctionDeclaration"]) --EOG-->child1["default(i-1)"]
-  child1 --EOG-->child2["default(i)"]
+  parent(["FunctionDeclaration"]) --EOG-->child1["defaultValue(i-1)"]
+  child1 --EOG-->child2["defaultValue(i)"]
   child2  --EOG--> body
   parent -.-> body
   parent -."parameters(n)".->child3["parameter(i-1)"] -.->child1 
@@ -50,7 +55,7 @@ flowchart LR
 ```
   
 ## StatementHolder
-StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `CompoundStatement`. Note that code can be static or non-static (bound to an instance of a record)
+StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `CompoundStatement`. Note that code can be static or non-static (bound to an instance of a record). 
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
