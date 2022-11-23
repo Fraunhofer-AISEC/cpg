@@ -39,9 +39,9 @@ Whether or not a subgraph (a) or (b) is connected first, depends on the exact co
 ## FunctionDeclaration
 A function declaration is the root of an interaprocedural EOG and therefore has no incoming or outgoing edges to previous or next eog nodes. The EOG connects the code body, as well as the default values of parameters if such exist.
 Interesting fields:
-* `parameter:ParamVariableDeclaration`: Parameters of a function.
-* `defaultValue:Expression`: Default values of the parameters that have to be evaluated before body execution. These are optional and the EOG may not contain them.
-* `body:Statement`: One or multiple statements executed when this function is called.
+* `parameters:List<ParamVariableDeclaration>`: parameters of a function.
+* `defaultValue:Expression`: optional default values of the parameters that have to be evaluated before body execution.
+* `body:Statement`: one or multiple statements executed when this function is called.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -55,7 +55,9 @@ flowchart LR
 ```
   
 ## StatementHolder
-StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `CompoundStatement`. Note that code can be static or non-static (bound to an instance of a record). 
+StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `CompoundStatement`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non-static (bound to an instance of a record). Therefore two separate EOGs may be build. 
+Interesting fields:
+* `statements:List<Statement>`: the Code inside a holder, the individual elements are distinguished by a property marking them as `staticBlock` if they are a `CompoundStatement`.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -71,6 +73,10 @@ flowchart LR
 ```
 
 ## VariableDeclaration
+Represents the declaration of a local variable.
+Interesting fields:
+* `initializer:Expression`: the result of evaluation will initialize the variable.
+
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -82,6 +88,10 @@ flowchart LR
 ```
 
 ## CallExpression
+Represents any type of call in a program.
+Interesting fields:
+* `base:Expression`: the base in a `MemberCallExpression` or a function pointer in a `CallExpression` evaluated to determine the call target.
+* `arguments:List<Expression>`: mapped to the parameters of the call target but evaluated before the call happens.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -97,6 +107,10 @@ flowchart LR
 ```
 
 ## MemberExpression
+Access to the field in a `RecordDeclaration`.
+Interesting fields:
+* `base:Expression`: the base evaluated to determine whomes field we want to access.
+
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -107,6 +121,10 @@ flowchart LR
 
 ```
 ## ArraySubscriptionExpression
+Array access in the form of `arrayExpression[subscriptExpression]`.
+Interesting fields:
+* `arrayExpression:Expression`: array to be accessed.
+* `subscriptExpression:Expression`: index in the array.
 
 ```mermaid
 flowchart LR
@@ -120,6 +138,10 @@ flowchart LR
 
 ```
 ## ArrayCreationExpression
+Interesting fields:
+* `dimensions:List<Expression>`: multiple expression that define the size if the array dimensions.
+* `initializer:Expression`: expression for array initialization.
+
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -147,6 +169,7 @@ flowchart LR
 
 ```
 ## ReturnStatement
+End of an EOG as this is the last statement to be executed in the function.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -158,7 +181,10 @@ flowchart LR
 
 ## BinaryOperator
 
-For binary operations like `+`, `-` but also assigments `=` and `+=` wer follow the left before right order.
+For binary operations like `+`, `-` but also assigments `=` and `+=` wer follow the left before right order. the `lhs` is evaluated before the `rhs` as we assume left to right evaluation.
+Interesting fields:
+* `lhs:Expression`:left side of a binary operation.
+* `rhs:Expression`: right side of a binary operation.
 
 ```mermaid
 flowchart LR
@@ -191,6 +217,8 @@ flowchart LR
 ## CompoundStatement
 
 Represent an explizit block of statements
+Interesting fields:
+* `statements:List<Statement>`:Statements in a block of code that are evaluated sequentially.
 
 ```mermaid
 flowchart LR
@@ -205,8 +233,10 @@ flowchart LR
 ```
 
 ## UnaryOperator
-For unary operations like `!` but also writes `++` and `--`.
+For unary operations like `!` but also writing operations: `++` and `--`.
 
+Interesting fields:
+* `input:Expression`:wrapped by the unary operation.
 
 ```mermaid
 flowchart LR
@@ -220,8 +250,10 @@ flowchart LR
 
 
 ## UnaryOperator for exception throws
-Throwing of exceptions is modelled as binary operation to follow the parsing of some compilers.
+Throwing of exceptions is modelled as binary operation to follow the parsing of the CDT. The EOG continues at the an exception catching structure or a function that does a re-throw. 
 
+Interesting fields:
+* `input:Expression`:Exception to be thrown for exception handling.
 
 ```mermaid
 flowchart LR
@@ -235,14 +267,18 @@ flowchart LR
 
 
 ## AssertStatement
-
+Statement that evaluates a condition and if the condition is false, evaluates a message, this message is generalized to a `Statement` to hold everything 
+from a single string, to an Exception construction
+Interesting fields:
+* `condition:Expression`:its evaluation leads to evaluation of message and EOG termination or to the regular evaluation of the parent `AssertStatement`
+* `message:Statement`: a String message or Exception evaluated only if the assertion fails. 
 
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["condition"]
-  child1 --EOG-->child2["message"]
-  child1 --EOG-->parent
+  child1 --"EOG:false"-->child2["message"]
+  child1 --"EOG:true"-->parent
   parent([AssertStatement]) --EOG--> next:::outer
   parent -.-> child1
   parent -.-> child2
@@ -254,6 +290,11 @@ flowchart LR
 ## TryStatement
 
 After the execution of the statement the control flow only proceeds with the next statement if all exceptions were handled. If not, execution is relayed to the next outer exception handling context.
+Interesting fields:
+* `resources:List<Statement>`: initialization of values needed in the block or special objects needing cleanup.
+* `tryBlock:CompoundStatement`:the code that should be "tried", exceptions inside lead to an eog edge to the catch clauses.
+* `finallyBlock:CompoundStatement`: all EOG paths inside the `tryBlock` or the `catch` blocks will finally reach this block and evaluate it.
+* `catchBlocks:List<CompoundStatementt>`:Children of `CatchClause` (omitted here), evaluated when the exception matches the clauses condition.
 
 ```mermaid
 flowchart LR
@@ -276,6 +317,8 @@ flowchart LR
 ```
 
 ## ContinueStatement
+Execution continues at the `condition` of a node associated to a `Continuable` scope, e.g. `WhileStatement`. This is not necessarely the closest enclosing node of this type, the `ContinueStatement` may contain a label specifying the exact outer node.
+
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -284,6 +327,7 @@ flowchart LR
 
 ```
 ## BreakStatement
+Execution continues after a node associated to a `Breakable` scope, e.g. `WhileStatement`or `SwitchStatement`. This is not necessarely the closest enclosing node of this type, the `BreakStatement` may contain a label specifying the exact outer node.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -292,6 +336,10 @@ flowchart LR
 
 ```
 ## DeleteExpression
+Deletion of a specific object freeing memory or calling the destructor.
+Interesting fields:
+* `operand:Expression`: the result of the evaluation is the object to be deleted.
+
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -302,6 +350,7 @@ flowchart LR
 
 ```
 ## LabelStatement
+The `LabelStatement` itself is not added to the EOG. EOG construction is directly forwarded to the labeled statement in the `subStatement`.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -310,7 +359,8 @@ flowchart LR
   parent(["LabelStatement"]) -.-> child
 
 ```
-## GotoStatemen
+## GotoStatement
+Modelles a GotoStatement and an EOG-Edge is created to the appropriate `LabelStatement`.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -318,16 +368,7 @@ flowchart LR
   child --EOG--> labeledStatement:::outer
 
 ```
-## CaseStatement
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> child["caseExpression"]
-  child --EOG--> parent
-  parent(["CaseStatement"]) --EOG--> next:::outer
-  parent -.-> child
 
-```
 ## NewExpression
 ```mermaid
 flowchart LR
@@ -509,6 +550,19 @@ flowchart LR
   child6 -."statements(n)".-> child5
   child6 -."statements(n)".-> child7
   child6 --EOG--> next:::outer
+
+```
+## CaseStatement
+Serves as an entry point inside a `SwitchStatement`, the statements executed after entry are not children of this structure but can be found on the same AST-Hierarchy level. 
+Interesting fields:
+* `caseExpression:Expression`: serves as an entry point if its evaluation matches the `selector` evaluation in `SwitchStatement`
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child["caseExpression"]
+  child --EOG--> parent
+  parent(["CaseStatement"]) --EOG--> next:::outer
+  parent -.-> child
 
 ```
 
