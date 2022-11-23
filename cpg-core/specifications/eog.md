@@ -370,6 +370,9 @@ flowchart LR
 ```
 
 ## NewExpression
+Creates a new object, which is either an array or an instantiation of a `RecordDeclaration`. The initializer has to be evaluated to create the object.
+Interesting fields:
+* `initializer:Expression`: To be evaluated before creating a new object.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -380,6 +383,8 @@ flowchart LR
 
 ```
 ## CastExpression
+Interesting fields:
+* `expression:Expression`: An expression of a specific compile time type, cast to a specified other compile time type.
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
