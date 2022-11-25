@@ -241,6 +241,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 frontend.expressionHandler.handle(argument as IASTInitializerClause)?.let {
                     templateArguments.add(it)
                 }
+            } else if (argument is IASTIdExpression) {
+                // add to templateArguments
+                frontend.expressionHandler.handle(argument)?.let { templateArguments.add(it) }
             }
         }
         return templateArguments
@@ -343,9 +346,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         }
 
         return newMemberExpression(
+            ctx.fieldName.toString(),
             base,
             UnknownType.getUnknownType(language),
-            ctx.fieldName.toString(),
             if (ctx.isPointerDereference) "->" else ".",
             ctx.rawSignature
         )

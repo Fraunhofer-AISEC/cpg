@@ -291,8 +291,8 @@ def handle_expression_impl(self, expr):
                 self.frontend,
                 value.getName(), value.getType(), value.getCode())
         mem = ExpressionBuilderKt.newMemberExpression(
-            self.frontend, value, UnknownType.getUnknownType(),
-            expr.attr, ".", self.get_src_code(expr))
+            self.frontend, expr.attr, value, UnknownType.getUnknownType(),
+            ".", self.get_src_code(expr))
         return mem
 
     elif isinstance(expr, ast.Subscript):

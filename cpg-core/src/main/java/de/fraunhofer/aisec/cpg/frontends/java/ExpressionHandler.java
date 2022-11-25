@@ -380,11 +380,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       MemberExpression memberExpression =
           newMemberExpression(
               this,
+              fieldAccessExpr.getName().getIdentifier(),
               base,
               fieldType,
-              fieldAccessExpr.getName().getIdentifier(),
-              ".", // there is only "." in java
-              fieldAccessExpr.toString());
+              "." // there is only "." in java
+              );
       memberExpression.setStaticAccess(true);
       return memberExpression;
     }
@@ -394,12 +394,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     }
 
     return newMemberExpression(
-        this,
-        base,
-        fieldType,
-        fieldAccessExpr.getName().getIdentifier(),
-        ".",
-        fieldAccessExpr.toString());
+        this, fieldAccessExpr.getName().getIdentifier(), base, fieldType, ".");
   }
 
   private Literal handleLiteralExpression(Expression expr) {

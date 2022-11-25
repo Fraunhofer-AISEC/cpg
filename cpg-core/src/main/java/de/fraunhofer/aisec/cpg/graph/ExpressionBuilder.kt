@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 @JvmOverloads
 fun <T> MetadataProvider.newLiteral(
     value: T,
-    type: Type?,
+    type: Type? = UnknownType.getUnknownType(),
     code: String? = null,
     rawNode: Any? = null,
 ): Literal<T> {
@@ -113,7 +113,7 @@ fun MetadataProvider.newUnaryOperator(
 @JvmOverloads
 fun MetadataProvider.newNewExpression(
     code: String? = null,
-    type: Type?,
+    type: Type? = UnknownType.getUnknownType(),
     rawNode: Any? = null
 ): NewExpression {
     val node = NewExpression()
@@ -178,8 +178,8 @@ fun MetadataProvider.newConditionalExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newKeyValueExpression(
-    key: Expression?,
-    value: Expression?,
+    key: Expression? = null,
+    value: Expression? = null,
     code: String? = null,
     rawNode: Any? = null
 ): KeyValueExpression {
@@ -237,10 +237,10 @@ fun MetadataProvider.newCompoundStatementExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newCallExpression(
-    callee: Expression?,
-    fqn: String?,
+    callee: Expression? = null,
+    fqn: String? = null,
     code: String? = null,
-    template: Boolean,
+    template: Boolean = false,
     rawNode: Any? = null
 ): CallExpression {
     val node = CallExpression()
@@ -286,10 +286,10 @@ fun MetadataProvider.newMemberCallExpression(
     fqn: String?,
     base: Expression?,
     member: Node?,
-    operatorCode: String?,
+    operatorCode: String? = ".",
     code: String? = null,
     rawNode: Any? = null
-): CallExpression {
+): MemberCallExpression {
     val node = MemberCallExpression()
     node.applyMetadata(
         this,
@@ -319,10 +319,10 @@ fun MetadataProvider.newMemberCallExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newMemberExpression(
-    base: Expression,
-    memberType: Type?,
     name: String?,
-    operatorCode: String?,
+    base: Expression,
+    memberType: Type? = UnknownType.getUnknownType(),
+    operatorCode: String? = ".",
     code: String? = null,
     rawNode: Any? = null
 ): MemberExpression {

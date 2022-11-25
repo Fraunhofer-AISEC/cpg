@@ -362,6 +362,7 @@ public class DeclarationHandler
       frontend.getScopeManager().enterScope(recordDeclaration);
 
       var field = newFieldDeclaration(this, name, fieldType, null, null, null, false);
+
       field.setImplicit(true);
 
       frontend.getScopeManager().addDeclaration(field);

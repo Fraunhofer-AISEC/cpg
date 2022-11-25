@@ -45,28 +45,12 @@ type GoLanguageFrontend struct {
 	File       *ast.File
 	Module     *modfile.File
 	CommentMap ast.CommentMap
+
+	CurrentTU *cpg.TranslationUnitDeclaration
 }
 
 func InitEnv(e *jnigi.Env) {
 	env = e
-}
-
-func (g *GoLanguageFrontend) SetCurrentTU(tu *cpg.TranslationUnitDeclaration) {
-	err := g.SetField(env, "currentTU", (*jnigi.ObjectRef)(tu))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (g *GoLanguageFrontend) GetCurrentTU() *cpg.TranslationUnitDeclaration {
-	var tu = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration")
-	err := g.GetField(env, "currentTU", tu)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return (*cpg.TranslationUnitDeclaration)(tu)
 }
 
 func (g *GoLanguageFrontend) GetCodeFromRawNode(fset *token.FileSet, astNode ast.Node) string {
@@ -77,7 +61,7 @@ func (g *GoLanguageFrontend) GetCodeFromRawNode(fset *token.FileSet, astNode ast
 }
 
 func (g *GoLanguageFrontend) GetScopeManager() *cpg.ScopeManager {
-	var scope = jnigi.NewObjectRef("de/fraunhofer/aisec/cpg/passes/scopes/ScopeManager")
+	var scope = jnigi.NewObjectRef(cpg.ScopeManagerClass)
 	err := g.GetField(env, "scopeManager", scope)
 	if err != nil {
 		log.Fatal(err)
@@ -88,7 +72,7 @@ func (g *GoLanguageFrontend) GetScopeManager() *cpg.ScopeManager {
 
 func (g *GoLanguageFrontend) getLog() (logger *jnigi.ObjectRef, err error) {
 	logger = jnigi.NewObjectRef("org/slf4j/Logger")
-	err = env.GetStaticField("de/fraunhofer/aisec/cpg/frontends/LanguageFrontend", "log", logger)
+	err = env.GetStaticField(cpg.LanguageFrontendClass, "log", logger)
 
 	return
 }

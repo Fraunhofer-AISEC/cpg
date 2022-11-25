@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,64 +32,81 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
  * - [isAcceptingState] indicates if this State accepts the FSM (in our case, this means that the
  * order of statements was correct).
  */
-class State(val name: String, val isStart: Boolean = false, var isAcceptingState: Boolean = false) :
-    Cloneable {
-
-    val outgoingEdges = mutableSetOf<BaseOpEdge>()
-
-    fun addOutgoingEdge(edge: BaseOpEdge) {
-        outgoingEdges.add(edge)
-    }
+class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = false) {
+    /**
+     * Must only be changed through [FSM.changeStateProperty] as soon as they are part of a [FSM].
+     */
+    var name = name
+        internal set
 
     /**
-     * Returns a [Pair] holding the next [State] when the edge with the operation [op] is executed
-     * and the [BaseOpEdge] which is executed. If no matching edge exists for this State, returns
-     * `null`.
+     * Must only be changed through [FSM.changeStateProperty] as soon as they are part of a [FSM].
      */
-    fun nextNodeWithLabelOp(op: String): Pair<State, BaseOpEdge>? {
-        val nextStates = outgoingEdges.filter { e -> e.op == op }
-        if (nextStates.isNotEmpty()) {
-            return Pair(nextStates[0].nextState, nextStates[0])
-        }
-        return null
+    var isStart = isStart
+        internal set
+
+    /**
+     * Must only be changed through [FSM.changeStateProperty] as soon as they are part of a [FSM].
+     */
+    var isAcceptingState = isAcceptingState
+        internal set
+
+    /** Must only be changed through [addEdge]. */
+    private val _outgoingEdges: MutableSet<Edge> = mutableSetOf()
+    val outgoingEdges: Set<Edge>
+        get() = _outgoingEdges
+
+    /**
+     * Set by the [FSM] when this state is added to a [FSM]. This lambda should throw an exception
+     * in case the edge is not allowed in the [FSM]. Once set by the [FSM], it is called in
+     * [addEdge].
+     */
+    internal var edgeCheck: ((Edge) -> Unit)? = null
+
+    fun addEdge(edge: Edge) {
+        edgeCheck?.let { it(edge) }
+        _outgoingEdges.add(edge)
     }
 
+    // equals method using only the name property
     override fun equals(other: Any?): Boolean {
         return (other as? State)?.name?.equals(name) == true
     }
 
+    // hashCode method using only the name property
+    override fun hashCode() = name.hashCode()
+
     override fun toString(): String {
-        return (if (isStart) "(S) " else "") + name + (if (isAcceptingState) " (A)" else "")
+        return (if (isStart) "(S) q$name" else "q$name") + (if (isAcceptingState) " (A)" else "")
     }
 
-    public override fun clone(): State {
-        val newState = State(name, isStart, isAcceptingState)
-        newState.outgoingEdges.addAll(outgoingEdges)
-        return newState
-    }
+    /** Create a shallow copy */
+    fun copy(
+        name: Int = this.name,
+        isStart: Boolean = this.isStart,
+        isAcceptingState: Boolean = this.isAcceptingState
+    ) =
+        State(name = name, isStart = isStart, isAcceptingState = isAcceptingState).apply {
+            outgoingEdges.forEach { addEdge(it) }
+        }
 
-    fun cloneRecursively(currentStates: MutableSet<State> = mutableSetOf()): MutableSet<State> {
-        if (currentStates.any { it.name == name }) {
+    fun deepCopy(currentStates: MutableSet<State> = mutableSetOf()): MutableSet<State> {
+        if (currentStates.contains(this)) {
             return currentStates
         }
 
-        val newState = State(name, isStart, isAcceptingState)
+        val newState = copy() // get a shallow copy
+        newState._outgoingEdges
+            .clear() // and then get rid of the shallowly copied edges -> when doing a deepCopy, we
+        // must also create new edge objects
         currentStates.add(newState)
 
-        for (outE in outgoingEdges) {
-            outE.nextState.cloneRecursively(currentStates)
-            newState.outgoingEdges.add(
-                BaseOpEdge(
-                    outE.op,
-                    outE.base,
-                    currentStates.first { it.name == outE.nextState.name }
-                )
+        for (edge in outgoingEdges) {
+            edge.nextState.deepCopy(currentStates)
+            newState.addEdge(
+                edge.copy(nextState = currentStates.first { it.name == edge.nextState.name })
             )
         }
         return currentStates
-    }
-
-    override fun hashCode(): Int {
-        return name.hashCode()
     }
 }

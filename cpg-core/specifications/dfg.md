@@ -141,6 +141,20 @@ Scheme:
     initializer -- DFG --> node
   ```
 
+## NewExpression
+
+Interesting fields:
+* `initializer: Expression`: The initializer of the expression.
+
+The `initializer` flows to the whole expression.
+
+Scheme:
+  ```mermaid
+  flowchart LR
+    node([NewExpression]) -.- initializer(initializer)
+    initializer -- DFG --> node
+  ```
+
 
 ## ArraySubscriptionExpression
 

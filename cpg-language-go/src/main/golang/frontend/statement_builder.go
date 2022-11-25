@@ -27,119 +27,62 @@ package frontend
 
 import (
 	"cpg"
+	"fmt"
 	"go/ast"
 	"go/token"
-	"log"
+
+	"tekao.net/jnigi"
 )
 
 func (frontend *GoLanguageFrontend) NewCompoundStatement(fset *token.FileSet, astNode ast.Node) *cpg.CompoundStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/CompoundStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(s), astNode)
-	updateLocation(fset, (*cpg.Node)(s), astNode)
-	updateLanguage((*cpg.Node)(s), frontend)
-
-	return (*cpg.CompoundStatement)(s)
+	return (*cpg.CompoundStatement)(frontend.NewStatement("CompoundStatement", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewReturnStatement(fset *token.FileSet, astNode ast.Node) *cpg.ReturnStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/ReturnStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(s), astNode)
-	updateLocation(fset, (*cpg.Node)(s), astNode)
-	updateLanguage((*cpg.Node)(s), frontend)
-
-	return (*cpg.ReturnStatement)(s)
+	return (*cpg.ReturnStatement)(frontend.NewStatement("ReturnStatement", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewDeclarationStatement(fset *token.FileSet, astNode ast.Node) *cpg.DeclarationStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/DeclarationStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(s), astNode)
-	updateLocation(fset, (*cpg.Node)(s), astNode)
-	updateLanguage((*cpg.Node)(s), frontend)
-
-	return (*cpg.DeclarationStatement)(s)
+	return (*cpg.DeclarationStatement)(frontend.NewStatement("DeclarationStatement", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewIfStatement(fset *token.FileSet, astNode ast.Node) *cpg.IfStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/IfStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(s), astNode)
-	updateLocation(fset, (*cpg.Node)(s), astNode)
-	updateLanguage((*cpg.Node)(s), frontend)
-
-	return (*cpg.IfStatement)(s)
+	return (*cpg.IfStatement)(frontend.NewStatement("IfStatement", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewForStatement(fset *token.FileSet, astNode ast.Node) *cpg.ForStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/ForStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(s), astNode)
-	updateLocation(fset, (*cpg.Node)(s), astNode)
-	updateLanguage((*cpg.Node)(s), frontend)
-
-	return (*cpg.ForStatement)(s)
+	return (*cpg.ForStatement)(frontend.NewStatement("ForStatement", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewSwitchStatement(fset *token.FileSet, astNode ast.Node) *cpg.SwitchStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/SwitchStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(s), astNode)
-	updateLocation(fset, (*cpg.Node)(s), astNode)
-	updateLanguage((*cpg.Node)(s), frontend)
-
-	return (*cpg.SwitchStatement)(s)
+	return (*cpg.SwitchStatement)(frontend.NewStatement("SwitchStatement", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewCaseStatement(fset *token.FileSet, astNode ast.Node) *cpg.CaseStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/CaseStatement")
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	updateCode(fset, (*cpg.Node)(s), astNode)
-	updateLocation(fset, (*cpg.Node)(s), astNode)
-	updateLanguage((*cpg.Node)(s), frontend)
-
-	return (*cpg.CaseStatement)(s)
+	return (*cpg.CaseStatement)(frontend.NewStatement("CaseStatement", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewDefaultStatement(fset *token.FileSet, astNode ast.Node) *cpg.DefaultStatement {
-	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/DefaultStatement")
-	if err != nil {
-		log.Fatal(err)
+	return (*cpg.DefaultStatement)(frontend.NewStatement("DefaultStatement", fset, astNode))
+}
 
+func (frontend *GoLanguageFrontend) NewStatement(typ string, fset *token.FileSet, astNode ast.Node, args ...any) *jnigi.ObjectRef {
+	var node = jnigi.NewObjectRef(fmt.Sprintf("%s/%s", cpg.StatementsPackage, typ))
+
+	// Prepend the frontend as the receiver
+	args = append([]any{frontend.Cast(cpg.GraphPackage + "/MetadataProvider")}, args...)
+
+	err := env.CallStaticMethod(
+		cpg.GraphPackage+"/StatementBuilderKt",
+		fmt.Sprintf("new%s", typ), node,
+		args...,
+	)
+	if err != nil {
+		panic(err)
 	}
 
-	updateCode(fset, (*cpg.Node)(s), astNode)
-	updateLocation(fset, (*cpg.Node)(s), astNode)
-	updateLanguage((*cpg.Node)(s), frontend)
+	updateCode(fset, (*cpg.Node)(node), astNode)
+	updateLocation(fset, (*cpg.Node)(node), astNode)
 
-	return (*cpg.DefaultStatement)(s)
+	return node
 }

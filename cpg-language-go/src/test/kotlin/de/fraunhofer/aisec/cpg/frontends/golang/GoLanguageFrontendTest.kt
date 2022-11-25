@@ -443,7 +443,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(arg1)
         assertLocalName("myOtherFunc", arg1)
-        assertFullName("s.myOtherFunc", arg1)
+        assertFullName("p.MyStruct.myOtherFunc", arg1)
 
         assertEquals(myFunc.receiver, (arg1.base as? DeclaredReferenceExpression)?.refersTo)
     }

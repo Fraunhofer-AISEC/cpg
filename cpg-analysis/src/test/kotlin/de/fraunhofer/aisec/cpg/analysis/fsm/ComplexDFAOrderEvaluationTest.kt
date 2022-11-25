@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import de.fraunhofer.aisec.cpg.passes.IdentifierPass
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import de.fraunhofer.aisec.cpg.passes.followNextEOG
 import java.nio.file.Path
@@ -65,14 +64,15 @@ class ComplexDFAOrderEvaluationTest {
         val q5 = dfa.addState()
         val q6 = dfa.addState(isAcceptingState = true)
         val q7 = dfa.addState(isAcceptingState = true)
-        dfa.addEdge(q1, q2, "create()", "cm")
-        dfa.addEdge(q2, q3, "init()", "cm")
-        dfa.addEdge(q3, q4, "start()", "cm")
-        dfa.addEdge(q4, q5, DFA.EPSILON, "cm")
-        dfa.addEdge(q5, q5, "process()", "cm")
-        dfa.addEdge(q5, q6, "finish()", "cm")
-        dfa.addEdge(q6, q4, "start()", "cm")
-        dfa.addEdge(q6, q7, "reset()", "cm")
+        dfa.addEdge(q1, Edge("create()", "cm", q2))
+        dfa.addEdge(q2, Edge("init()", "cm", q3))
+        dfa.addEdge(q3, Edge("start()", "cm", q4))
+        dfa.addEdge(q4, Edge("process()", "cm", q5))
+        dfa.addEdge(q4, Edge("finish()", "cm", q6))
+        dfa.addEdge(q5, Edge("process()", "cm", q5))
+        dfa.addEdge(q5, Edge("finish()", "cm", q6))
+        dfa.addEdge(q6, Edge("start()", "cm", q4))
+        dfa.addEdge(q6, Edge("reset()", "cm", q7))
     }
 
     @BeforeAll
@@ -87,7 +87,6 @@ class ComplexDFAOrderEvaluationTest {
             ) {
                 it.registerLanguage<JavaLanguage>()
                     .registerPass(UnreachableEOGPass())
-                    .registerPass(IdentifierPass())
                     .registerPass(EdgeCachePass())
             }
     }
@@ -101,7 +100,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p1Decl)
-        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -124,7 +123,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p1Decl)
-        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -148,7 +147,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p1Decl)
-        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -173,7 +172,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p2Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p2Decl)
-        val consideredDecl = mutableSetOf(p2Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p2Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -200,7 +199,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p3Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p3Decl)
-        val consideredDecl = mutableSetOf(p3Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p3Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -227,7 +226,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p3Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p3Decl)
-        val consideredDecl = mutableSetOf(p3Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p3Decl.declarations[0])
 
         val nodes = mutableMapOf<Node, String>()
         nodes[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -255,7 +254,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p5Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p5Decl)
-        val consideredDecl = mutableSetOf(p5Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p5Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "init()"
@@ -278,7 +277,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p6Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p6Decl)
-        val consideredDecl = mutableSetOf(p6Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p6Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -310,7 +309,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p6Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p6Decl)
-        val consideredDecl = mutableSetOf(p6Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p6Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         val loopBody =
@@ -341,7 +340,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p7Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p7Decl)
-        val consideredDecl = mutableSetOf(p7Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p7Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -371,7 +370,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p7Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p7Decl)
-        val consideredDecl = mutableSetOf(p7Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p7Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -401,7 +400,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p8Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p8Decl)
-        val consideredDecl = mutableSetOf(p8Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p8Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -434,7 +433,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p6Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p6Decl)
-        val consideredDecl = mutableSetOf(p6Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p6Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -464,7 +463,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p1Decl)
-        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -501,7 +500,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p1Decl = functionOk.parameters[0]
         assertNotNull(p1Decl)
-        val consideredDecl = mutableSetOf(p1Decl.id!!)
+        val consideredDecl = mutableSetOf(p1Decl)
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[0]] = "init()"
@@ -541,7 +540,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p1Decl)
-        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -578,7 +577,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p1Decl)
-        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
@@ -619,7 +618,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p1Decl)
-        val consideredDecl = mutableSetOf(p1Decl.declarations[0]?.id!!)
+        val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "create()"
@@ -652,7 +651,7 @@ class ComplexDFAOrderEvaluationTest {
      * flows works. Collects the respective nodes and they can be used by the tests later.
      */
     class DummyDFAOrderEvaluator(
-        referencedVertices: Set<Long>,
+        referencedVertices: Set<Node>,
         nodesToOp: Map<Node, String>,
         thisPositionOfNode: Map<Node, Int>,
         val possibleInterprocFailures: MutableList<Node>,
@@ -671,7 +670,7 @@ class ComplexDFAOrderEvaluationTest {
                 withoutInterprocNodes.add(node)
             }
             log.error(
-                "There was a failure in the order of statements at node: ${node.id} interproceduralFlow = $interproceduralFlow"
+                "There was a failure in the order of statements at node: $node interproceduralFlow = $interproceduralFlow"
             )
         }
 
@@ -680,7 +679,7 @@ class ComplexDFAOrderEvaluationTest {
             fsm: DFA,
             interproceduralFlow: Boolean
         ) {
-            val lastNode = fsm.executionTrace[fsm.executionTrace.size - 1].second as CallExpression
+            val lastNode = fsm.executionTrace.last().cpgNode as CallExpression
             var baseOfLastNode = getBaseOfNode(lastNode)
             if (baseOfLastNode is DeclaredReferenceExpression) {
                 baseOfLastNode = baseOfLastNode.refersTo

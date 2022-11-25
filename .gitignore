@@ -21,3 +21,4 @@ logs
 *.so
 *.log
 
+gradle.properties

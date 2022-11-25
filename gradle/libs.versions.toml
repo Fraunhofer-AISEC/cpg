@@ -25,7 +25,7 @@ javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", v
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.14.0"}
 eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.26.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
-icu4j = { module = "com.ibm.icu:icu4j", version = "71.1"}
+icu4j = { module = "com.ibm.icu:icu4j", version = "72.1"}
 eclipse-cdt-core = { module = "org.eclipse.cdt:core", version = "7.2.100.202105180159"}
 commons-io = { module = "commons-io:commons-io", version = "2.11.0"}
 jetbrains-annotations = { module = "org.jetbrains:annotations", version = "23.0.0"}
@@ -36,7 +36,7 @@ llvm = { module = "org.bytedeco:llvm-platform", version = "13.0.1-1.5.7"}
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.9.1"}
-mockito = { module = "org.mockito:mockito-core", version = "4.8.1"}
+mockito = { module = "org.mockito:mockito-core", version = "4.9.0"}
 
 # plugins needed for build.gradle.kts in buildSrc
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
