@@ -467,17 +467,20 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleBinaryOperator(node: BinaryOperator) {
         createEOG(node.lhs)
-        val shortCircuitNodes = mutableListOf<Node>()
 
         // Two operators that don't evaluate the second operator if the first evaluates to a certain
         // value.
         if (node.operatorCode == "&&" || node.operatorCode == "||") {
+            val shortCircuitNodes = mutableListOf<Node>()
             shortCircuitNodes.addAll(currentEOG)
+            currentProperties[Properties.BRANCH] = node.operatorCode == "&&"
+            createEOG(node.rhs)
+            pushToEOG(node)
+            setCurrentEOGs(shortCircuitNodes)
+            currentProperties[Properties.BRANCH] = node.operatorCode != "&&"
+        } else {
+            createEOG(node.rhs)
         }
-        createEOG(node.rhs)
-        shortCircuitNodes.addAll(currentEOG)
-        setCurrentEOGs(shortCircuitNodes)
-        // push the statement itself
         pushToEOG(node)
     }
 
@@ -789,9 +792,11 @@ open class EvaluationOrderGraphPass : Pass() {
         // To have semantic information after the condition evaluation
         pushToEOG(node)
         val openConditionEOGs = ArrayList(currentEOG)
+        currentProperties[Properties.BRANCH] = true
         createEOG(node.thenExpr)
         openBranchNodes.addAll(currentEOG)
         setCurrentEOGs(openConditionEOGs)
+        currentProperties[Properties.BRANCH] = false
         createEOG(node.elseExpr)
         openBranchNodes.addAll(currentEOG)
         setCurrentEOGs(openBranchNodes)
@@ -803,7 +808,9 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.condition)
         node.addPrevDFG(node.condition)
         pushToEOG(node) // To have semantic information after the condition evaluation
+        currentProperties[Properties.BRANCH] = true
         connectCurrentToLoopStart()
+        currentProperties[Properties.BRANCH] = false
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(node, currentLoopScope)
@@ -818,6 +825,7 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.variable)
         node.addPrevDFG(node.variable)
         pushToEOG(node) // To have semantic information after the variable declaration
+        currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
         createEOG(node.statement)
         connectCurrentToLoopStart()
@@ -829,6 +837,7 @@ open class EvaluationOrderGraphPass : Pass() {
             LOGGER.error("Trying to exit foreach loop, but not in loop scope: $node")
         }
         currentEOG.addAll(tmpEOGNodes)
+        currentProperties[Properties.BRANCH] = false
     }
 
     protected fun handleForStatement(node: ForStatement) {
@@ -842,6 +851,7 @@ open class EvaluationOrderGraphPass : Pass() {
             node.conditionDeclaration
         )
         pushToEOG(node) // To have semantic information after the condition evaluation
+        currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
         createEOG(node.statement)
         createEOG(node.iterationStatement)
@@ -854,6 +864,7 @@ open class EvaluationOrderGraphPass : Pass() {
             LOGGER.error("Trying to exit for loop, but no loop scope: $node")
         }
         currentEOG.addAll(tmpEOGNodes)
+        currentProperties[Properties.BRANCH] = false
     }
 
     protected fun handleIfStatement(node: IfStatement) {
@@ -929,6 +940,7 @@ open class EvaluationOrderGraphPass : Pass() {
             node.conditionDeclaration
         )
         pushToEOG(node) // To have semantic information after the condition evaluation
+        currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
         createEOG(node.statement)
         connectCurrentToLoopStart()
@@ -942,6 +954,7 @@ open class EvaluationOrderGraphPass : Pass() {
             LOGGER.error("Trying to exit while loop, but no loop scope: $node")
         }
         currentEOG.addAll(tmpEOGNodes)
+        currentProperties[Properties.BRANCH] = false
     }
 
     companion object {
