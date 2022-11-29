@@ -31,16 +31,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
 /** The TypeScript language. */
-class TypeScriptLanguage : Language<TypeScriptLanguageFrontend>() {
+class TypeScriptLanguage :JavaScriptLanguage {
     override val fileExtensions = listOf("ts", "tsx")
-    override val namespaceDelimiter = "."
-    override val frontend: KClass<out TypeScriptLanguageFrontend> =
-        TypeScriptLanguageFrontend::class
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager
-    ): TypeScriptLanguageFrontend {
-        return TypeScriptLanguageFrontend(this, config, scopeManager)
-    }
+    
 }

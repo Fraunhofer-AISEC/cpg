@@ -31,10 +31,12 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
 /** The Go language. */
-class GoLanguage : Language<GoLanguageFrontend>() {
+open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     override val frontend: KClass<out GoLanguageFrontend> = GoLanguageFrontend::class
+    override val conjunctiveOperators =  listOf("&&")
+    override val disjunctiveOperators =  listOf("||")
 
     override fun newFrontend(
         config: TranslationConfiguration,
