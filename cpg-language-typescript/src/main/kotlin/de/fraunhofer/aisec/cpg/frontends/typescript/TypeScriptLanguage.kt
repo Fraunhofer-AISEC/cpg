@@ -33,5 +33,5 @@ import kotlin.reflect.KClass
 /** The TypeScript language. */
 class TypeScriptLanguage :JavaScriptLanguage {
     override val fileExtensions = listOf("ts", "tsx")
-    
+
 }
