@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.CallableInterface
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
@@ -467,17 +468,25 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleBinaryOperator(node: BinaryOperator) {
         createEOG(node.lhs)
-
+        val lang = node?.language
         // Two operators that don't evaluate the second operator if the first evaluates to a certain
         // value.
-        if (node.operatorCode == "&&" || node.operatorCode == "||") {
+
+        if (
+            lang != null &&
+                lang is HasShortCircuitOperators &&
+                (lang.conjunctiveOperators.contains(node.operatorCode) ||
+                    lang.disjunctiveOperators.contains(node.operatorCode))
+        ) {
             val shortCircuitNodes = mutableListOf<Node>()
             shortCircuitNodes.addAll(currentEOG)
-            currentProperties[Properties.BRANCH] = node.operatorCode == "&&"
+            currentProperties[Properties.BRANCH] =
+                lang.conjunctiveOperators.contains(node.operatorCode)
             createEOG(node.rhs)
             pushToEOG(node)
             setCurrentEOGs(shortCircuitNodes)
-            currentProperties[Properties.BRANCH] = node.operatorCode != "&&"
+            currentProperties[Properties.BRANCH] =
+                !lang.conjunctiveOperators.contains(node.operatorCode)
         } else {
             createEOG(node.rhs)
         }
