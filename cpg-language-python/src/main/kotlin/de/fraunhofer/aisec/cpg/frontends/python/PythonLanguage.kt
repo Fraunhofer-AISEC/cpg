@@ -35,8 +35,8 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
     override val fileExtensions = listOf("py")
     override val namespaceDelimiter = "."
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
-    override val conjunctiveOperators =  listOf("and")
-    override val disjunctiveOperators =  listOf("or")
+    override val conjunctiveOperators = listOf("and")
+    override val disjunctiveOperators = listOf("or")
 
     override fun newFrontend(
         config: TranslationConfiguration,
