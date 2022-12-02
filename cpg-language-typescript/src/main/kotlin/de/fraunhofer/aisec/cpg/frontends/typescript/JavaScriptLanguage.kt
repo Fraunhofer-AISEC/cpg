@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
 /** The JavaScript language. */
-class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShortCircuitOperators {
+open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShortCircuitOperators {
     override val fileExtensions = listOf("js", "jsx")
     override val namespaceDelimiter = "."
     override val frontend: KClass<out TypeScriptLanguageFrontend> =
