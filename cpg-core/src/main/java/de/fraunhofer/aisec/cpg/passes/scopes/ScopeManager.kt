@@ -251,12 +251,7 @@ class ScopeManager : ScopeProvider {
                             currentNamePrefix,
                             nodeToScope.language!!.namespaceDelimiter
                         )
-                    is TemplateDeclaration ->
-                        TemplateScope(
-                            nodeToScope,
-                            currentNamePrefix,
-                            nodeToScope.language!!.namespaceDelimiter
-                        )
+                    is TemplateDeclaration -> TemplateScope(nodeToScope)
                     is TryStatement -> TryScope(nodeToScope)
                     is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
                     else -> {

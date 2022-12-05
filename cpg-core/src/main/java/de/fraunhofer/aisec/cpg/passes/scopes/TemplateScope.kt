@@ -27,9 +27,4 @@ package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
-class TemplateScope(node: Node, currentPrefix: String, delimiter: String) :
-    NameScope(node, currentPrefix, delimiter) {
-    init {
-        namePrefix = currentPrefix
-    }
-}
+class TemplateScope(node: Node) : StructureDeclarationScope(node) {}

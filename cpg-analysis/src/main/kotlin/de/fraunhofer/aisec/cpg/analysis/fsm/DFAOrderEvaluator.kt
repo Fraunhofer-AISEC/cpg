@@ -239,9 +239,9 @@ open class DFAOrderEvaluator(
                 .toMutableList()
         if (
             node.base is DeclaredReferenceExpression &&
-            consideredBases.contains(
-                (node.base as DeclaredReferenceExpression).refersTo as Declaration
-            )
+                consideredBases.contains(
+                    (node.base as DeclaredReferenceExpression).refersTo as Declaration
+                )
         ) {
             allUsedBases.add((node.base as DeclaredReferenceExpression).refersTo)
         }
