@@ -51,20 +51,8 @@ const VariableDeclarationClass = DeclarationsPackage + "/VariableDeclaration"
 const IncludeDeclarationClass = DeclarationsPackage + "/IncludeDeclaration"
 const TranslationUnitDeclarationClass = DeclarationsPackage + "/TranslationUnitDeclaration"
 
-func (n *NamespaceDeclaration) SetName(s string) error {
-	return (*Node)(n).SetName(s)
-}
-
-func (n *IncludeDeclaration) SetName(s string) error {
-	return (*Node)(n).SetName(s)
-}
-
 func (n *IncludeDeclaration) SetFilename(s string) error {
 	return (*jnigi.ObjectRef)(n).SetField(env, "filename", NewString(s))
-}
-
-func (f *FunctionDeclaration) SetName(s string) error {
-	return (*Node)(f).SetName(s)
 }
 
 func (f *FunctionDeclaration) SetType(t *Type) {
@@ -96,10 +84,6 @@ func (f *FunctionDeclaration) SetBody(s *Statement) (err error) {
 	return
 }
 
-func (m *MethodDeclaration) SetName(s string) error {
-	return (*Node)(m).SetName(s)
-}
-
 func (m *MethodDeclaration) SetType(t *Type) {
 	(*HasType)(m).SetType(t)
 }
@@ -124,24 +108,12 @@ func (p *ParamVariableDeclaration) SetType(t *Type) {
 	(*HasType)(p).SetType(t)
 }
 
-func (p *ParamVariableDeclaration) SetName(s string) error {
-	return (*Node)(p).SetName(s)
-}
-
-func (f *FieldDeclaration) SetName(s string) error {
-	return (*Node)(f).SetName(s)
-}
-
 func (f *FieldDeclaration) SetType(t *Type) {
 	(*HasType)(f).SetType(t)
 }
 
 func (v *VariableDeclaration) SetType(t *Type) {
 	(*HasType)(v).SetType(t)
-}
-
-func (v *VariableDeclaration) SetName(s string) error {
-	return (*Node)(v).SetName(s)
 }
 
 func (v *VariableDeclaration) IsNil() bool {
@@ -167,10 +139,6 @@ func (t *TranslationUnitDeclaration) GetIncludeByName(s string) *IncludeDeclarat
 	}
 
 	return (*IncludeDeclaration)(i)
-}
-
-func (r *RecordDeclaration) SetName(s string) error {
-	return (*Node)(r).SetName(s)
 }
 
 func (r *RecordDeclaration) SetKind(s string) error {

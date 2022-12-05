@@ -34,8 +34,14 @@ import (
 	"tekao.net/jnigi"
 )
 
-func (frontend *GoLanguageFrontend) NewCallExpression(fset *token.FileSet, astNode ast.Node) *cpg.CallExpression {
-	return (*cpg.CallExpression)(frontend.NewExpression("CallExpression", fset, astNode))
+func (frontend *GoLanguageFrontend) NewCallExpression(fset *token.FileSet, astNode ast.Node, callee cpg.Castable, name string) *cpg.CallExpression {
+	if callee == nil {
+		callee = jnigi.NewObjectRef(cpg.ExpressionClass)
+	} else {
+		callee = callee.Cast(cpg.ExpressionClass)
+	}
+
+	return (*cpg.CallExpression)(frontend.NewExpression("CallExpression", fset, astNode, callee, cpg.NewString(name)))
 }
 
 func (frontend *GoLanguageFrontend) NewCastExpression(fset *token.FileSet, astNode ast.Node) *cpg.CastExpression {

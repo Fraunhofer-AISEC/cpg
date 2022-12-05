@@ -62,6 +62,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     @Transient var fullName: Name = Name(EMPTY_NAME)
 
+    /** The local name. */
+    val name: String
+        get() {
+            return fullName.localName
+        }
+
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
      * where nodes are created artificially, it may be null.

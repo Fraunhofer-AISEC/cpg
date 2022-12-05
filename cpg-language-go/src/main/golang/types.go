@@ -150,6 +150,10 @@ func (h *HasType) GetType() *Type {
 	return &t
 }
 
+func (t *Type) GetFullName() (fn *Name) {
+	return (*Node)(t.ObjectRef).GetFullName()
+}
+
 func (t *ObjectType) AddGeneric(g *Type) {
 	// Stupid workaround, since casting does not work. See
 	// https://github.com/timob/jnigi/issues/60

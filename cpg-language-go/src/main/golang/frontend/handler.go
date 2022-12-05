@@ -860,20 +860,14 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 	} else {
 		this.LogDebug("Handling regular call expression to %s", name)
 
-		c = this.NewCallExpression(fset, callExpr)
-
 		// the name is already a FQN if it contains a dot
 		pos := strings.LastIndex(name, ".")
 		if pos != -1 {
-			fqn := name
-
-			c.SetFqn(fqn)
-
 			// need to have the short name
-			c.SetName(name[pos+1:])
-		} else {
-			c.SetName(name)
+			name = name[pos+1:]
 		}
+
+		c = this.NewCallExpression(fset, callExpr, nil, name)
 	}
 
 	for _, arg := range callExpr.Args {
@@ -1115,7 +1109,7 @@ func (this *GoLanguageFrontend) handleCompositeLit(fset *token.FileSet, lit *ast
 	var typ = this.handleType(lit.Type)
 
 	if typ != nil {
-		(*cpg.Node)(c).SetName(typ.GetName())
+		(*cpg.Node)(c).SetFullName(typ.GetFullName())
 		(*cpg.Expression)(c).SetType(typ)
 	}
 
@@ -1149,7 +1143,7 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 	if ident.Name == "nil" {
 		lit := this.NewLiteral(fset, ident, nil, &cpg.UnknownType_getUnknown(lang).Type)
 
-		(*cpg.Node)(lit).SetName(ident.Name)
+		//(*cpg.Node)(lit).SetFullName(ident.Name)
 
 		return (*cpg.Expression)(lit)
 	}
