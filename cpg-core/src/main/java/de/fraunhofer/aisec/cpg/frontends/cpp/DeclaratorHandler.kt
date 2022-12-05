@@ -366,13 +366,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 UnknownType.getUnknownType(language)
             }
 
-        // Create the receiver.
+        // Create the receiver. implicitInitializerAllowed must be false, otherwise fixInitializers
+        // will create another implicit constructexpression for this variable, and we don't want
+        // this.
         val thisDeclaration =
-            newVariableDeclaration(
-                "this",
-                type = type,
-                implicitInitializerAllowed = true
-            ) // TODO: Why was this false here??
+            newVariableDeclaration("this", type = type, implicitInitializerAllowed = false)
         // Yes, this is implicit
         thisDeclaration.isImplicit = true
 
