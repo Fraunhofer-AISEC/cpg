@@ -324,41 +324,6 @@ fun MetadataProvider.newEnumConstantDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newFieldDeclaration(
-    name: Name,
-    type: Type?,
-    modifiers: List<String?>?,
-    code: String? = null,
-    location: PhysicalLocation?,
-    initializer: Expression?,
-    implicitInitializerAllowed: Boolean,
-    rawNode: Any? = null
-): FieldDeclaration {
-    val node = FieldDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
-
-    node.type = type
-    node.modifiers = modifiers
-    node.location = location
-    node.isImplicitInitializerAllowed = implicitInitializerAllowed
-    if (initializer != null) {
-        if (initializer is ArrayCreationExpression) {
-            node.setIsArray(true)
-        }
-        node.initializer = initializer
-    }
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [FieldDeclaration]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
- */
-@JvmOverloads
-fun MetadataProvider.newFieldDeclaration(
     name: String?,
     type: Type? = UnknownType.getUnknownType(),
     modifiers: List<String?>? = listOf(),

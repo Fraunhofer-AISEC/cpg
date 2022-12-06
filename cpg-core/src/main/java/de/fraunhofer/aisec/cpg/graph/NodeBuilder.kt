@@ -95,7 +95,7 @@ fun Node.applyMetadata(
     rawNode: Any?,
     codeOverride: String?,
     noFQN: Boolean = false,
-    defaultNamespace: Name? = null
+    defaultNamespace: Name? = null,
 ) {
     if (provider is CodeAndLocationProvider) {
         provider.setCodeAndLocation(this, rawNode)
@@ -146,63 +146,6 @@ fun Node.applyMetadata(
     } else {
         this.fullName =
             Name(localName ?: EMPTY_NAME, null, this.language?.namespaceDelimiter ?: ".")
-    }
-
-    if (codeOverride != null) {
-        this.code = codeOverride
-    }
-}
-
-/**
- * Applies various metadata on this [Node], based on the kind of provider in [provider]. This can
- * include:
- * - Setting [Node.code] and [Node.location], if a [CodeAndLocationProvider] is given
- * - Setting [Node.location], if a [LanguageProvider] is given
- * - Setting [Node.scope]. if a [ScopeProvider] is given
- * - Setting [Node.isInferred], if an [IsInferredProvider] is given
- *
- * Note, that one provider can implement multiple provider interfaces. Additionally, if
- * [codeOverride] is specified, the supplied source code is used to override anything from the
- * provider.
- */
-fun Node.applyMetadata(
-    provider: MetadataProvider?,
-    localName: Name = Name(EMPTY_NAME),
-    rawNode: Any?,
-    codeOverride: String?,
-    noFQN: Boolean = false,
-    defaultNamespace: Name? = null
-) {
-    if (provider is CodeAndLocationProvider) {
-        provider.setCodeAndLocation(this, rawNode)
-    }
-
-    if (provider is LanguageProvider) {
-        this.language = provider.language
-    }
-
-    if (provider is IsInferredProvider) {
-        this.isInferred = provider.isInferred
-    }
-
-    if (provider is ScopeProvider) {
-        this.scope = provider.scope
-    }
-
-    val namespace =
-        if (provider is NamespaceProvider) {
-            provider.namespace ?: defaultNamespace
-        } else {
-            defaultNamespace
-        }
-
-    if (noFQN) {
-        this.fullName = localName
-    } else {
-        var currentName = localName
-        while (currentName.parent != null) currentName = currentName.parent!!
-        currentName.parent = namespace
-        this.fullName = localName
     }
 
     if (codeOverride != null) {

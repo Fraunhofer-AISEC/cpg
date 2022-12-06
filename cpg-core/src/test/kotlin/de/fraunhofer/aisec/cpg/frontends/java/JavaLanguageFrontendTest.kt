@@ -687,5 +687,38 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         }
     }
 
+    @Test
+    fun testQualifiedThis() {
+        val file = File("src/test/resources/compiling/OuterClass.java")
+        val result = TestUtils.analyze(listOf(file), file.parentFile.toPath(), true)
+        val tu = result.translationUnits.firstOrNull()
+        assertNotNull(tu)
+
+        val outerClass = tu.records["compiling.OuterClass"]
+        assertNotNull(outerClass)
+
+        val innerClass = outerClass.records["InnerClass"]
+        assertNotNull(innerClass)
+
+        val thisOuterClass = innerClass.fields["this\$OuterClass"]
+        assertNotNull(thisOuterClass)
+
+        val evenMoreInnerClass = innerClass.records["EvenMoreInnerClass"]
+        assertNotNull(evenMoreInnerClass)
+
+        val thisInnerClass = evenMoreInnerClass.fields["this\$InnerClass"]
+        assertNotNull(thisInnerClass)
+
+        val doSomething = evenMoreInnerClass.methods["doSomething"]
+        assertNotNull(doSomething)
+
+        val binOp = doSomething.bodyOrNull<BinaryOperator>()
+        assertNotNull(binOp)
+
+        val ref = ((binOp.rhs as? MemberExpression)?.base as DeclaredReferenceExpression).refersTo
+        assertNotNull(ref)
+        assertSame(ref, thisOuterClass)
+    }
+
     private fun createTypeFrom(typename: String) = TypeParser.createFrom(typename, JavaLanguage())
 }

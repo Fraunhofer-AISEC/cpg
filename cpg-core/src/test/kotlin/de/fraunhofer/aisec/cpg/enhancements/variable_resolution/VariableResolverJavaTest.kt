@@ -202,16 +202,12 @@ internal class VariableResolverJavaTest : BaseTest() {
 
             // Inner class and its fields
             innerClass = records["variables_extended.ScopeVariables.InnerClass"]
-            implicitOuterThis =
-                innerClass.fields[
-                        "variables_extended.ScopeVariables.InnerClass.ScopeVariables.this"]
+            implicitOuterThis = innerClass.fields["this\$ScopeVariables"]
             innerVarName = innerClass.fields["varName"]
             innerStaticVarName = innerClass.fields["staticVarName"]
             function1Receiver = innerClass.methods["function1"]?.receiver
             function2Receiver = innerClass.methods["function2"]?.receiver
-            innerImpOuter =
-                innerClass.fields[
-                        "variables_extended.ScopeVariables.InnerClass.ScopeVariables.this"]
+            innerImpOuter = innerClass.fields["this\$ScopeVariables"]
             main = outerClass.methods["main"]
             outerFunction1 = outerClass.methods["function1"]
             forStatements = outerFunction1.allChildren()

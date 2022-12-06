@@ -452,8 +452,18 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     Type type = parseType(this, resolvedValueDeclaration.getQualifiedName());
 
+    String name = thisExpr.toString();
+
+    // If the typeName is specified, then this a "qualified this" and we need to handle it
+    // carefully. Basically, we are simulating the behaviour of the java compiler, in which the
+    // qualified this refers to a hidden field called "this$n", where n is the n'th enclosing outer
+    // class. Since we do not want to count, we replace the number with the simple class name.
+    if (thisExpr.getTypeName().isPresent()) {
+      name = "this$" + thisExpr.getTypeName().get().getIdentifier();
+    }
+
     DeclaredReferenceExpression thisExpression =
-        newDeclaredReferenceExpression(this, thisExpr.toString(), type, thisExpr.toString());
+        newDeclaredReferenceExpression(this, name, type, thisExpr.toString());
     frontend.setCodeAndLocation(thisExpression, thisExpr);
 
     return thisExpression;

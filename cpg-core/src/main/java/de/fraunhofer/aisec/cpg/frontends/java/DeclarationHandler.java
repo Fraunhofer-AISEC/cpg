@@ -44,7 +44,6 @@ import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.ProblemNode;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -350,18 +349,16 @@ public class DeclarationHandler
     if (frontend.getScopeManager().getCurrentScope() instanceof RecordScope) {
       // Get all the information of the outer class (its name and the respective type). We need this
       // to generate the field.
+
       var scope = (RecordScope) frontend.getScopeManager().getCurrentScope();
-      var name =
-          new Name(
-              "this",
-              Name.Companion.parse(scope.getSimpleName(), this.getLanguage()),
-              this.getLanguage().getNamespaceDelimiter()); // scope.getSimpleName() + ".this";
       var fieldType = parseType(this, scope.getScopedName());
 
       // Enter the scope of the inner class because the new field belongs there.
       frontend.getScopeManager().enterScope(recordDeclaration);
 
-      var field = newFieldDeclaration(this, name, fieldType, null, null, null, false);
+      var field =
+          newFieldDeclaration(
+              this, "this$" + scope.getSimpleName(), fieldType, null, null, null, null);
 
       field.setImplicit(true);
 
@@ -421,8 +418,7 @@ public class DeclarationHandler
             modifiers,
             variable.toString(),
             location,
-            initializer,
-            false);
+            initializer);
     frontend.getScopeManager().addDeclaration(fieldDeclaration);
 
     this.frontend.processAnnotations(fieldDeclaration, fieldDecl);
