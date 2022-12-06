@@ -103,6 +103,7 @@ class Name(
     }
 
     companion object {
+        @JvmStatic
         fun parse(fqn: String, language: Language<out LanguageFrontend>?): Name {
             return parse(
                 fqn,

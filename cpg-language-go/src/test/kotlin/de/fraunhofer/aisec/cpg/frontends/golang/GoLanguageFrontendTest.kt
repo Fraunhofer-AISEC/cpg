@@ -418,15 +418,15 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["p"]
+        assertNotNull(p)
 
-        val myStruct =
-            p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
+        val myStruct = p.records["MyStruct"]
+        assertNotNull(myStruct)
 
         val methods = myStruct.methods
-
-        val myFunc = methods.first()
-
+        val myFunc = methods.firstOrNull()
+        assertNotNull(myFunc)
         assertLocalName("MyFunc", myFunc)
 
         val body = myFunc.body as? CompoundStatement
@@ -458,31 +458,27 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["p"]
         assertNotNull(p)
 
-        val myFunc =
-            p.getDeclarationsByName("myFunc", MethodDeclaration::class.java).iterator().next()
+        val myFunc = p.methods["myFunc"]
+        assertNotNull(myFunc)
 
         val body = myFunc.body as? CompoundStatement
-
         assertNotNull(body)
 
         val binOp = body.statements.first() as? BinaryOperator
-
         assertNotNull(binOp)
 
         val lhs = binOp.lhs as? MemberExpression
-
         assertNotNull(lhs)
         assertEquals(myFunc.receiver, (lhs.base as? DeclaredReferenceExpression)?.refersTo)
         assertLocalName("Field", lhs)
         assertEquals(TypeParser.createFrom("int", GoLanguage()), lhs.type)
 
         val rhs = binOp.rhs as? DeclaredReferenceExpression
-
         assertNotNull(rhs)
-        assertLocalName("otherPackage.OtherField", rhs)
+        assertFullName("otherPackage.OtherField", rhs)
     }
 
     @Test

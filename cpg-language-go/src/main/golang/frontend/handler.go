@@ -211,7 +211,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		}
 
 		if recordType != nil {
-			var recordName = recordType.GetName()
+			var recordName = recordType.GetFullName().ToString()
 
 			// TODO: this will only find methods within the current translation unit
 			// this is a limitation that we have for C++ as well
@@ -221,7 +221,6 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 			if err != nil {
 				log.Fatal(err)
-
 			}
 
 			if record != nil && !record.IsNil() {
@@ -414,11 +413,7 @@ func (this *GoLanguageFrontend) handleImportSpec(fset *token.FileSet, importSpec
 }
 
 func (this *GoLanguageFrontend) handleIdentAsName(ident *ast.Ident) string {
-	if this.isBuiltinType(ident.Name) {
-		return ident.Name
-	} else {
-		return fmt.Sprintf("%s.%s", this.File.Name.Name, ident.Name)
-	}
+	return ident.Name
 }
 
 func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDecl *ast.TypeSpec, structType *ast.StructType) *cpg.RecordDeclaration {
@@ -1020,7 +1015,17 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 		// we need to set the name to a FQN-style, including the package scope. the call resolver will then resolve this
 		fqn := fmt.Sprintf("%s.%s", base.GetName(), selectorExpr.Sel.Name)
 
+		this.LogDebug("Trying to parse the fqn '%s'", fqn)
+
+		l, err := this.GetLanguage()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		name := cpg.Name_parse(fqn, l)
+
 		decl = this.NewDeclaredReferenceExpression(fset, selectorExpr, fqn)
+		decl.Node().SetFullName(name)
 	}
 
 	// For now we just let the VariableUsageResolver handle this. Therefore,
@@ -1191,7 +1196,9 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 	switch v := typeExpr.(type) {
 	case *ast.Ident:
 		// make it a fqn according to the current package to make things easier
-		fqn := this.handleIdentAsName(v)
+		//fqn := this.handleIdentAsName(v)
+		// TODO: use the proper name class
+		fqn := fmt.Sprintf("%s.%s", this.File.Name.Name, v.Name)
 
 		this.LogDebug("FQN type: %s", fqn)
 		return cpg.TypeParser_createFrom(fqn, lang)

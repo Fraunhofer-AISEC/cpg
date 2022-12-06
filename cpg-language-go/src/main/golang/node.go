@@ -113,3 +113,31 @@ func (n *Name) Cast(className string) *jnigi.ObjectRef {
 func (n *Name) IsArray() bool {
 	return false
 }
+
+func (n *Name) ToString() string {
+	var o = jnigi.NewObjectRef("java/lang/String")
+	_ = (*jnigi.ObjectRef)(n).CallMethod(env, "toString", o)
+
+	if o == nil {
+		return ""
+	}
+
+	var b []byte
+	err := o.CallMethod(env, "getBytes", &b)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(b)
+}
+
+func Name_parse(fqn string, l *Language) *Name {
+	var n *Name = (*Name)(jnigi.NewObjectRef(NameClass))
+	err := env.CallStaticMethod(NameClass, "parse", n, NewString(fqn), l)
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	return n
+}
