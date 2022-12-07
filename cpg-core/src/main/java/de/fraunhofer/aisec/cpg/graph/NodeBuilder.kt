@@ -94,7 +94,7 @@ fun Node.applyMetadata(
     localName: String? = EMPTY_NAME,
     rawNode: Any?,
     codeOverride: String?,
-    noFQN: Boolean = false,
+    localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
     if (provider is CodeAndLocationProvider) {
@@ -127,7 +127,7 @@ fun Node.applyMetadata(
                 this.language?.namespaceDelimiter ?: ".",
                 *(this.language?.nameSplitter ?: emptyArray())
             )
-    } else if (localName != null && !noFQN) {
+    } else if (localName != null && !localNameOnly) {
         // TODO: Shouldn't we check if the delimiter is in the local name and use Name.parse() if
         // this is the case? E.g., the namespace declarations pass the FQN
         this.fullName = Name(localName, namespace, this.language?.namespaceDelimiter ?: ".")
