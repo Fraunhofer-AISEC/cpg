@@ -1148,7 +1148,12 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 	if ident.Name == "nil" {
 		lit := this.NewLiteral(fset, ident, nil, &cpg.UnknownType_getUnknown(lang).Type)
 
-		//(*cpg.Node)(lit).SetFullName(ident.Name)
+		l, err := this.GetLanguage()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		(*cpg.Node)(lit).SetFullName(cpg.Name_parse(ident.Name, l))
 
 		return (*cpg.Expression)(lit)
 	}
@@ -1195,13 +1200,15 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 
 	switch v := typeExpr.(type) {
 	case *ast.Ident:
-		// make it a fqn according to the current package to make things easier
-		//fqn := this.handleIdentAsName(v)
-		// TODO: use the proper name class
-		//fqn := fmt.Sprintf("%s.%s", this.File.Name.Name, v.Name)
-		name := v.Name
+		var name string
+		if this.isBuiltinType(v.Name) {
+			name = v.Name
+			this.LogDebug("non-fqn type: %s", name)
+		} else {
+			name = fmt.Sprintf("%s.%s", this.File.Name.Name, v.Name)
+			this.LogDebug("fqn type: %s", name)
+		}
 
-		this.LogDebug("non-fqn type: %s", name)
 		return cpg.TypeParser_createFrom(name, lang)
 	case *ast.SelectorExpr:
 		// small shortcut

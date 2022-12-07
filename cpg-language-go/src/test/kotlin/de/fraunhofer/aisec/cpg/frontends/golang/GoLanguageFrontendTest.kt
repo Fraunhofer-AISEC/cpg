@@ -386,13 +386,9 @@ class GoLanguageFrontendTest : BaseTest() {
         myFunc = methods.first()
 
         assertLocalName("MyFunc", myFunc)
-        assertLocalName("func() string", myFunc)
+        assertLocalName("func() string", myFunc.type)
 
-        val newMyStruct =
-            p.getDeclarationsByName("NewMyStruct", FunctionDeclaration::class.java)
-                .iterator()
-                .next()
-
+        val newMyStruct = p.functions["NewMyStruct"]
         assertNotNull(newMyStruct)
 
         val body = newMyStruct.body as? CompoundStatement
@@ -488,18 +484,12 @@ class GoLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(topLevel.resolve("if.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
-
         assertNotNull(tu)
 
-        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
-
-        val main =
-            p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
-
+        val main = tu.functions["p.main"]
         assertNotNull(main)
 
         val body = main.body as? CompoundStatement
-
         assertNotNull(body)
 
         val b =
@@ -532,23 +522,16 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
-
-        val myFunc =
-            p.getDeclarationsByName("myFunc", FunctionDeclaration::class.java).iterator().next()
-
+        val myFunc = tu.functions["p.myFunc"]
         assertNotNull(myFunc)
 
         val body = myFunc.body as? CompoundStatement
-
         assertNotNull(body)
 
         val switch = body.statements.first() as? SwitchStatement
-
         assertNotNull(switch)
 
         val list = switch.statement as? CompoundStatement
-
         assertNotNull(list)
 
         val case1 = list.statements[0] as? CaseStatement
@@ -599,15 +582,13 @@ class GoLanguageFrontendTest : BaseTest() {
         val tus = result.translationUnits
         val tu = tus[0]
 
-        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["p"]
+        assertNotNull(p)
 
-        val main =
-            p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
-
+        val main = p.functions["main"]
         assertNotNull(main)
 
         val body = main.body as? CompoundStatement
-
         assertNotNull(body)
 
         val c =
@@ -649,15 +630,10 @@ class GoLanguageFrontendTest : BaseTest() {
                 true
             ) { it.registerLanguage<GoLanguage>() }
 
-        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
-
-        val main =
-            p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
-
+        val main = tu.functions["p.main"]
         assertNotNull(main)
 
-        val f = main.getBodyStatementAs(0, ForStatement::class.java)
-
+        val f = main.bodyOrNull<ForStatement>()
         assertNotNull(f)
         assertTrue(f.condition is BinaryOperator)
         assertTrue(f.statement is CompoundStatement)
@@ -685,29 +661,13 @@ class GoLanguageFrontendTest : BaseTest() {
         val tu0 = tus[0]
         assertNotNull(tu0)
 
-        val awesome =
-            tu0.getDeclarationsByName("awesome", NamespaceDeclaration::class.java).iterator().next()
-        assertNotNull(awesome)
-
-        val newAwesome =
-            awesome
-                .getDeclarationsByName("NewAwesome", FunctionDeclaration::class.java)
-                .iterator()
-                .next()
+        val newAwesome = tu0.functions["awesome.NewAwesome"]
         assertNotNull(newAwesome)
 
         val tu1 = tus[1]
         assertNotNull(tu1)
 
-        val mainNamespace =
-            tu1.getDeclarationsByName("main", NamespaceDeclaration::class.java).iterator().next()
-        assertNotNull(mainNamespace)
-
-        val main =
-            mainNamespace
-                .getDeclarationsByName("main", FunctionDeclaration::class.java)
-                .iterator()
-                .next()
+        val main = tu1.functions["main.main"]
         assertNotNull(main)
 
         val a = main.getBodyStatementAs(0, DeclarationStatement::class.java)
