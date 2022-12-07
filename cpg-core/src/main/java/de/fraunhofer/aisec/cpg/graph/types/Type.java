@@ -96,13 +96,14 @@ public abstract class Type extends Node {
       // or return value.
       // We remove all these parts (i.e., everything after the first "(") and add it back to the
       // local name later.
-      String[] splitName = typeName.split("\\(");
+      /*String[] splitName = typeName.split("\\(");
       assert (splitName.length <= 2); // For now, we assume that we have exactly one opening bracket
       Name fullName = Name.Companion.parse(splitName[0], language);
       if (splitName.length == 2) {
         fullName.setLocalName(fullName.getLocalName() + "(" + splitName[1]);
       }
-      this.setFullName(fullName);
+      this.setFullName(fullName);*/
+      this.setFullName(new Name(typeName, null, language));
     } else {
       this.setFullName(Name.Companion.parse(typeName, language));
     }

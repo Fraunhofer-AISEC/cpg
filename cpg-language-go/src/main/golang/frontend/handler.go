@@ -856,13 +856,13 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		this.LogDebug("Handling regular call expression to %s", name)
 
 		// the name is already a FQN if it contains a dot
-		pos := strings.LastIndex(name, ".")
+		/*pos := strings.LastIndex(name, ".")
 		if pos != -1 {
 			// need to have the short name
 			name = name[pos+1:]
-		}
+		}*/
 
-		c = this.NewCallExpression(fset, callExpr, nil, name)
+		c = this.NewCallExpression(fset, callExpr, reference, name)
 	}
 
 	for _, arg := range callExpr.Args {
@@ -1198,10 +1198,11 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		// make it a fqn according to the current package to make things easier
 		//fqn := this.handleIdentAsName(v)
 		// TODO: use the proper name class
-		fqn := fmt.Sprintf("%s.%s", this.File.Name.Name, v.Name)
+		//fqn := fmt.Sprintf("%s.%s", this.File.Name.Name, v.Name)
+		name := v.Name
 
-		this.LogDebug("FQN type: %s", fqn)
-		return cpg.TypeParser_createFrom(fqn, lang)
+		this.LogDebug("non-fqn type: %s", name)
+		return cpg.TypeParser_createFrom(name, lang)
 	case *ast.SelectorExpr:
 		// small shortcut
 		fqn := fmt.Sprintf("%s.%s", v.X.(*ast.Ident).Name, v.Sel.Name)
