@@ -63,9 +63,16 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @Transient var fullName: Name = Name(EMPTY_NAME)
 
     /** The local name. */
-    val name: String
+    @Deprecated(
+        message =
+            "This is a legacy feature, mostly used by non-Java languages. fullName should be used instead."
+    )
+    var name: String
         get() {
             return fullName.localName
+        }
+        set(value) {
+            fullName.localName = value
         }
 
     /**

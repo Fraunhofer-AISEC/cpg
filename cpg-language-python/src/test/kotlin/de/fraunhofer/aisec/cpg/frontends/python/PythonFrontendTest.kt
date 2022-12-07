@@ -25,10 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.assertFullName
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -195,17 +200,13 @@ class PythonFrontendTest : BaseTest() {
                 topLevel,
                 true
             ) { it.registerLanguage<PythonLanguage>() }
-
         assertNotNull(tu)
 
-        val p = tu.getDeclarationsByName("if", NamespaceDeclaration::class.java).iterator().next()
-
-        val main = p.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
-
+        val p = tu.namespaces["if"]
+        val main = p.functions["foo"]
         assertNotNull(main)
 
         val body = main.body as? CompoundStatement
-
         assertNotNull(body)
 
         val sel =
@@ -216,7 +217,6 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(TypeParser.createFrom("bool", PythonLanguage()), sel.type)
 
         val initializer = sel.initializer as? Literal<*>
-
         assertNotNull(initializer)
         assertEquals(TypeParser.createFrom("bool", PythonLanguage()), initializer.type)
         assertLocalName("True", initializer)
@@ -236,16 +236,13 @@ class PythonFrontendTest : BaseTest() {
             ) { it.registerLanguage<PythonLanguage>() }
 
         assertNotNull(tu)
-        val p =
-            tu.getDeclarationsByName("simple_class", NamespaceDeclaration::class.java)
-                .iterator()
-                .next()
+        val p = tu.namespaces["simple_class"]
         assertNotNull(p)
 
-        val cls =
-            p.getDeclarationsByName("SomeClass", RecordDeclaration::class.java).iterator().next()
+        val cls = p.records["SomeClass"]
         assertNotNull(cls)
-        val foo = p.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
+
+        val foo = p.functions["foo"]
         assertNotNull(foo)
 
         assertLocalName("SomeClass", cls)
@@ -293,15 +290,11 @@ class PythonFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("ifexpr", NamespaceDeclaration::class.java).iterator().next()
-
-        val main = p.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
-
+        val p = tu.namespaces["ifexpr"]
+        val main = p.functions["foo"]
         assertNotNull(main)
 
         val body = (main.body as? CompoundStatement)?.statements?.get(0) as? DeclarationStatement
-
         assertNotNull(body)
 
         val foo = body.singleDeclaration as? VariableDeclaration
@@ -310,7 +303,6 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(TypeParser.createFrom("int", PythonLanguage()), foo.type)
 
         val initializer = foo.initializer as? ConditionalExpression
-
         assertNotNull(initializer)
         assertEquals(TypeParser.createFrom("int", PythonLanguage()), initializer.type)
 
@@ -340,17 +332,10 @@ class PythonFrontendTest : BaseTest() {
                 topLevel,
                 true
             ) { it.registerLanguage<PythonLanguage>() }
-
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("class_fields", NamespaceDeclaration::class.java)
-                .iterator()
-                .next()
-
-        val recordFoo =
-            p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
-
+        val p = tu.namespaces["class_fields"]
+        val recordFoo = p.records["Foo"]
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
         assertEquals(recordFoo.fields.size, 4)
@@ -407,14 +392,7 @@ class PythonFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("class_self", NamespaceDeclaration::class.java)
-                .iterator()
-                .next()
-
-        val recordFoo =
-            p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
-
+        val recordFoo = tu.records["class_self.Foo"]
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
 
@@ -480,14 +458,10 @@ class PythonFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("class_ctor", NamespaceDeclaration::class.java)
-                .iterator()
-                .next()
+        val p = tu.namespaces["class_ctor"]
+        assertNotNull(p)
 
-        val recordFoo =
-            p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
-
+        val recordFoo = p.records["Foo"]
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
 
@@ -500,7 +474,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("__init__", fooCtor)
         assertLocalName("foobar", foobar)
 
-        val bar = p.getDeclarationsByName("bar", FunctionDeclaration::class.java).iterator().next()
+        val bar = p.functions["bar"]
         assertNotNull(bar)
         assertLocalName("bar", bar)
 
@@ -531,22 +505,18 @@ class PythonFrontendTest : BaseTest() {
                 topLevel,
                 true
             ) { it.registerLanguage<PythonLanguage>() }
-
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("issue432", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["issue432"]
         assertNotNull(p)
 
-        val clsCounter =
-            p.getDeclarationsByName("counter", RecordDeclaration::class.java).iterator().next()
+        val clsCounter = p.records["counter"]
         assertNotNull(clsCounter)
 
-        val methCount =
-            p.getDeclarationsByName("count", FunctionDeclaration::class.java).iterator().next()
+        val methCount = p.functions["count"]
         assertNotNull(methCount)
 
-        val clsC1 = p.getDeclarationsByName("c1", RecordDeclaration::class.java).iterator().next()
+        val clsC1 = p.records["c1"]
         assertNotNull(clsC1)
 
         // class counter
@@ -647,10 +617,10 @@ class PythonFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p = tu.getDeclarationsByName("vars", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["vars"]
         assertNotNull(p)
 
-        val clsFoo = p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
+        val clsFoo = p.records["Foo"]
         assertNotNull(clsFoo)
 
         val methBar = clsFoo.methods[0]
@@ -854,14 +824,12 @@ class PythonFrontendTest : BaseTest() {
                 topLevel,
                 true
             ) { it.registerLanguage<PythonLanguage>() }
-
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("issue598", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["issue598"]
         assertNotNull(p)
 
-        val main = p.getDeclarationsByName("main", FunctionDeclaration::class.java).first()
+        val main = p.functions["main"]
         assertNotNull(main)
 
         val mainBody = (main as? FunctionDeclaration)?.body as? CompoundStatement
