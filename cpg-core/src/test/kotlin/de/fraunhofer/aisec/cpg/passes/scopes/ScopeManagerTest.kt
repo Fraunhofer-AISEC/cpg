@@ -138,7 +138,7 @@ internal class ScopeManagerTest : BaseTest() {
         // resolve symbol
         val call =
             frontend.newCallExpression(
-                frontend.newDeclaredReferenceExpression("func1"),
+                frontend.newDeclaredReferenceExpression("A::func1"),
                 "A::func1",
                 null,
                 false
