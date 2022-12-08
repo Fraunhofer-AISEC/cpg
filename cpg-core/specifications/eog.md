@@ -15,10 +15,10 @@ The EOG is similar to the CFG `ControlFlowGraphPass`, but there are some subtle 
 
 * For methods without explicit return statement, the EOG will have an edge to a virtual return node  with line number -1 which does not exist in the original code. 
   A CFG will always end with the last reachable statement(s) and not insert any virtual return statements.
-* The EOG considers an opening blocking ("CompoundStatement", indicated by a `{`) as a separate node.
+* The EOG considers an opening blocking (`CompoundStatement`, indicated by a `{`) as a separate node.
   A CFG will rather use the first actual executable statement within the block.
-* For IF statements, the EOG treats the "if" keyword and the condition as separate nodes.
-  A CFG treats this as one "if" statement.
+* For IF statements, the EOG treats the `if` keyword and the condition as separate nodes.
+  A CFG treats this as one `if` statement.
 * The EOG considers a method header as a node.
   A CFG will consider the first executable statement of the methods as a node.
 
@@ -341,7 +341,7 @@ After the execution of the statement the control flow only proceeds with the nex
 Interesting fields:
 
 * `resources:List<Statement>`: Initialization of values needed in the block or special objects needing cleanup.
-* `tryBlock:CompoundStatement`: The code that should be "tried", exceptions inside lead to an eog edge to the catch clauses.
+* `tryBlock:CompoundStatement`: The code that should be tried, exceptions inside lead to an eog edge to the catch clauses.
 * `finallyBlock:CompoundStatement`: All EOG paths inside the `tryBlock` or the `catch` blocks will finally reach this block and evaluate it.
 * `catchBlocks:List<CompoundStatementt>`: Children of `CatchClause` (omitted here), evaluated when the exception matches the clauses condition.
 
