@@ -488,7 +488,7 @@ class PythonFrontendTest : BaseTest() {
         val fooDecl = line1.declarations[0] as? VariableDeclaration
         assertNotNull(fooDecl)
         assertLocalName("foo", fooDecl)
-        assertEquals(TypeParser.createFrom("Foo", PythonLanguage()), fooDecl.type)
+        assertFullName("class_ctor.Foo", fooDecl.type)
         val initializer = fooDecl.initializer as? ConstructExpression
         assertEquals(fooCtor, initializer?.constructor)
 
