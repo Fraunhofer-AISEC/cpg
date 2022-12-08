@@ -6,7 +6,7 @@ Every node points to a set of previously evaluated nodes (`prevEOG`) and nodes t
 The EOG edges are intraprocedural and thus differentiate from INVOKES edges.
 In the following, we summarize in which order the root node representing a language construct and its descendants in the AST tree are connected.
 
-An EOG always starts at the header of a method/function or record that holds code and ends in one (implicit) or multiple return statements.
+An EOG always starts at the header of a method/function or record that holds executable code and ends in one (implicit) or multiple return statements.
 An implicit return statement with a code location of (-1,-1) is used if the actual source code does not have an explicit return statement.
 
 A distinct EOG is drawn for any declared component that can contain code, currently: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and any subclass of `FunctionDeclaration`.
