@@ -206,7 +206,8 @@ def handle_expression_impl(self, expr):
                 name, fqn, ref.getBase(),
                 member, ".", self.get_src_code(expr))
         else:
-            # try to see, whether this refers to a known class and thus is a constructor.
+            # try to see, whether this refers to a known class and thus is a
+            # constructor.
             record = self.scopemanager.getRecordForName(
                 self.scopemanager.getCurrentScope(), name)
             if record is not None:

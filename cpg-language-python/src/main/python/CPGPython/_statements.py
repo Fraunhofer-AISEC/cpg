@@ -60,10 +60,10 @@ def handle_statement_impl(self, stmt):
                     "Expected a name, but got: %s" %
                     (type(base)), loglevel="ERROR")
             else:
-                # TODO: this probably works but is really not the best wqy to handle it
                 namespace = self.scopemanager.getCurrentNamespace()
                 tname = "%s.%s" % (namespace.toString(), base.id)
-                self.log_with_loc("Building super type using current namespace: %s" % tname)
+                self.log_with_loc("Building super type using current "
+                                  "namespace: %s" % tname)
                 t = NodeBuilderKt.parseType(self.frontend, tname)
                 bases.append(t)
         cls.setSuperClasses(bases)
