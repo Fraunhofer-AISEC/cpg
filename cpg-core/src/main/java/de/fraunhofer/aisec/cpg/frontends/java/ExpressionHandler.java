@@ -458,8 +458,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     // carefully. Basically, we are simulating the behaviour of the java compiler, in which the
     // qualified this refers to a hidden field called "this$n", where n is the n'th enclosing outer
     // class. Since we do not want to count, we replace the number with the simple class name.
-    if (thisExpr.getTypeName().isPresent()) {
-      name = "this$" + thisExpr.getTypeName().get().getIdentifier();
+    var typeName = thisExpr.getTypeName();
+    if (typeName.isPresent()) {
+      name = "this$" + typeName.get().getIdentifier();
     }
 
     DeclaredReferenceExpression thisExpression =

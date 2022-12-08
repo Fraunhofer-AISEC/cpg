@@ -310,7 +310,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
             return false
         }
         return if (location == null || other.location == null) {
-            // we do not know the exact region. Need to rely on Object equalness,
+            // we do not know the exact region. Need to rely on Object equality,
             // as a different LOC can have the same name/code/comment/file
             false
         } else
