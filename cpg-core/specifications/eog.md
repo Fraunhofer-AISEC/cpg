@@ -3,7 +3,7 @@
 The Evaluation Order Graph (EOG) is built as edges between AST nodes after the initial translation of the code to the CPG.
 Its purpose is to follow the order in which code is executed, similar to a CFG, and additionally differentiate on a finer level of granularity in which order expressions and subexpressions are evaluated.
 Every node points to a set of previously evaluated nodes (`prevEOG`) and nodes that are evaluated after (`nextEOG`).
-The EOG-Edges are intraprocedural and thus differentiate from INVOKES-Edges.
+The EOG edges are intraprocedural and thus differentiate from INVOKES edges.
 In the following, we summarize in which order the root node representing a language construct and its descendants in the AST tree are connected.
 
 An EOG always starts at the header of a method/function or record that holds code and ends in one (implicit) or multiple return statements.
@@ -25,12 +25,12 @@ The EOG is similar to the CFG `ControlFlowGraphPass`, but there are some subtle 
 ## General Structure
 
 The graphs in this specification abstract the representation of the handled graph, to formally specify how EOG edges are drawn between a parent node and the subgraphs rooted by its children.
-Therefore, a collection of AST-children are represented as abstract nodes showing the multiplicity of the node with an indicator (n), in case of sets, or as several nodes showing how the position in a list can impact the construction of an EOG, e.g., nodes (i - 1) to i.
-The EOG is constructed as postorder of the AST-traversal.
-When building the EOG for the expression a + b, the entire expression is considered evaluated after the subexpression a and the subexpression b is evaluated, therefore EOG-Edges connect nodes of (a) and (b) before reaching the parent node (+).
+Therefore, a collection of AST children are represented as abstract nodes showing the multiplicity of the node with an indicator (n), in case of sets, or as several nodes showing how the position in a list can impact the construction of an EOG, e.g., nodes (i - 1) to i.
+The EOG is constructed as postorder of the AST traversal.
+When building the EOG for the expression a + b, the entire expression is considered evaluated after the subexpression a and the subexpression b is evaluated, therefore EOG edges connect nodes of (a) and (b) before reaching the parent node (+).
 
-Note: Nodes describing the titled programing construct will be drawn round, while the rectangular nodes represent their abstract children, that can be atomic leaf nodes or deep AST-Subtrees.
-EOG-Edges to these abstract nodes always mean that a subtree expansion would be necessary to connect the target of the EOG-Edge to the right node in the subtree.
+Note: Nodes describing the titled programing construct will be drawn round, while the rectangular nodes represent their abstract children, that can be atomic leaf nodes or deep AST subtrees.
+EOG edges to these abstract nodes always mean that a subtree expansion would be necessary to connect the target of the EOG edge to the right node in the subtree.
 
 ```mermaid
 flowchart LR
@@ -44,8 +44,8 @@ flowchart LR
 ```
 
 Whether a subgraph (a) or (b) is connected first, depends on the exact construct and sometimes the language that is translated into a CPG.
-Note that, in the following graphics we will often draw an EOG-Edge to an abstract child-node of a language construct that is an AST-Subtree.
-The EOG-Path through that subtree will depend on the node types of that tree and mostly start connecting one of the AST-Leaf nodes.
+Note that, in the following graphics we will often draw an EOG edge to an abstract child node of a language construct that is an AST subtree.
+The EOG path through that subtree will depend on the node types of that tree and mostly start connecting one of the AST leaf nodes.
 
 ## FunctionDeclaration
 A function declaration is the root of an intraprocedural EOG and therefore has no incoming or outgoing edges to previous or next eog nodes. The EOG connects the code body, as well as the default values of parameters if they exist.
@@ -69,7 +69,7 @@ flowchart LR
 ```
   
 ## StatementHolder
-StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `CompoundStatement`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non-static (bound to an instance of a record). Therefore, two separate EOGs may be built. 
+StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `CompoundStatement`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non static (bound to an instance of a record). Therefore, two separate EOGs may be built. 
 
 Interesting fields:
 
@@ -557,7 +557,7 @@ flowchart LR
 ```
 
 ## WhileStatement
-This is a classic while-loop where the condition is evaluated before every loop iteration.
+This is a classic while loop where the condition is evaluated before every loop iteration.
 
 Note: The condition may be enclosed in a declaration, in that case the EOG will not contain a `condition` but rather a declaration of a variable where the `initializer` serves as loop condition. Uses of one or the other are currently mutually exclusive.
 
@@ -581,7 +581,7 @@ flowchart LR
 ```
 
 ## DoStatement
-This is a classic do-while-loop where the condition is evaluated after every loop iteration.
+This is a classic do while loop where the condition is evaluated after every loop iteration.
 
 Interesting fields:
 
@@ -709,7 +709,7 @@ flowchart LR
 
 ## CaseStatement
 
-Serves as an entry point inside a `SwitchStatement`, the statements executed after entry are not children of this structure but can be found on the same AST-hierarchy level. 
+Serves as an entry point inside a `SwitchStatement`, the statements executed after entry are not children of this structure but can be found on the same AST hierarchy level. 
 
 Interesting fields:
 
