@@ -48,7 +48,7 @@ Note that, in the following graphics we will often draw an EOG edge to an abstra
 The EOG path through that subtree will depend on the node types of that tree and mostly start connecting one of the AST leaf nodes.
 
 ## FunctionDeclaration
-A function declaration is the root of an intraprocedural EOG and therefore has no incoming or outgoing edges to previous or next eog nodes. The EOG connects the code body, as well as the default values of parameters if they exist.
+A function declaration is the start of an intraprocedural EOG and contains its end. Therefore there is no incoming or outgoing edge to `previous` or `next` eog nodes that are not in its AST subtree. The EOG connects the code body, as well as the default values of parameters if they exist.
 
 Interesting fields:
 
