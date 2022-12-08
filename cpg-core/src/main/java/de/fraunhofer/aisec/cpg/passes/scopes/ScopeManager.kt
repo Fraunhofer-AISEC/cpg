@@ -783,8 +783,7 @@ class ScopeManager : ScopeProvider {
      * @return the declaration, or null if it does not exist
      */
     fun getRecordForName(scope: Scope, name: String): RecordDeclaration? {
-        return resolve<RecordDeclaration>(scope, true) { it.fullName.toString() == name }
-            .firstOrNull()
+        return resolve<RecordDeclaration>(scope, true) { it.fullName.endsWith(name) }.firstOrNull()
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */

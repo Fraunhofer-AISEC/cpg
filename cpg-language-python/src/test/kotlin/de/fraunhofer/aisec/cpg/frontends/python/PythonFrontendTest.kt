@@ -269,7 +269,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("c1", c1)
         val ctor = (c1.initializer as? ConstructExpression)?.constructor
         assertEquals(ctor, cls.constructors.first())
-        assertEquals(TypeParser.createFrom("SomeClass", PythonLanguage()), c1.type)
+        assertFullName("simple_class.SomeClass", c1.type)
 
         assertEquals(c1, (s2.base as? DeclaredReferenceExpression)?.refersTo)
         assertEquals(1, s2.invokes.size)

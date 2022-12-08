@@ -206,15 +206,15 @@ def handle_expression_impl(self, expr):
                 name, fqn, ref.getBase(),
                 member, ".", self.get_src_code(expr))
         else:
-            # this can be a simple function call or a ctor
+            # try to see, whether this refers to a known class and thus is a constructor.
             record = self.scopemanager.getRecordForName(
                 self.scopemanager.getCurrentScope(), name)
             if record is not None:
-                self.log_with_loc("Received a record: %s" % (record))
+                self.log_with_loc("Received a record: %s" % record)
                 call = ExpressionBuilderKt.newConstructExpression(
                     self.frontend, self.get_src_code(expr))
                 call.setName(expr.func.id)
-                tpe = NodeBuilderKt.parseType(self.frontend, record.getName())
+                tpe = record.toType()
                 call.setType(tpe)
             else:
                 # TODO int, float, ...
