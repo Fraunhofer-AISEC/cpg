@@ -470,7 +470,8 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.lhs)
         val lang = node?.language
         // Two operators that don't evaluate the second operator if the first evaluates to a certain
-        // value.
+        // value. If the language has the trait of short-circuit evaluation, we check if the operatorCode
+        // is amongst the operators that leed such an evaluation.
 
         if (
             lang != null &&
@@ -480,11 +481,14 @@ open class EvaluationOrderGraphPass : Pass() {
         ) {
             val shortCircuitNodes = mutableListOf<Node>()
             shortCircuitNodes.addAll(currentEOG)
+            // Adds true or false depending on whether a conjunctive or disjunctive operator is present. 
+            // If it is not a conjunctive operator, the check above implies it is a disjunctive operator.
             currentProperties[Properties.BRANCH] =
                 lang.conjunctiveOperators.contains(node.operatorCode)
             createEOG(node.rhs)
             pushToEOG(node)
             setCurrentEOGs(shortCircuitNodes)
+            // Inverted property to assigne false when true was assigned above.
             currentProperties[Properties.BRANCH] =
                 !lang.conjunctiveOperators.contains(node.operatorCode)
         } else {
