@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
-import kotlin.reflect.KProperty
 
 /**
  * This class represents anything that can have a "Name". In the simplest case it only represents a
@@ -39,7 +38,7 @@ class Name(
     /** The local name (sometimes also called simple name) without any namespace information. */
     val localName: String,
     /** The parent name, e.g., the namespace this name lives in. */
-    var parent: Name? = null,
+    val parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
     val delimiter: String = "."
 ) : Cloneable, Comparable<Name>, CharSequence {
@@ -49,6 +48,16 @@ class Name(
         language: Language<out LanguageFrontend>?
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
 
+    /**
+     * The full string representation of this name. Since [localName] and [parent] are immutable,
+     * this is basically a cache for [toString]. Otherwise, we would need to call [toString] a lot
+     * of times, to implement the necessary functions for [CharSequence].
+     */
+    val fullName: String
+    init {
+        fullName = (if (parent != null) parent.toString() + delimiter else "") + localName
+    }
+
     public override fun clone(): Name {
         return Name(localName, parent?.clone(), delimiter)
     }
@@ -57,16 +66,10 @@ class Name(
      * Returns the string representation of this name using a fully qualified name notation with the
      * specified [delimiter].
      */
-    override fun toString() =
-        (if (parent != null) parent.toString() + delimiter else "") + localName
-
-    /** Implements kotlin propety delegation for a string getter. Returns the local name. */
-    operator fun getValue(node: Node, property: KProperty<*>) = localName
+    override fun toString() = fullName
 
     override val length: Int
-        get() {
-            return toString().length
-        }
+        get() = fullName.length
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -77,17 +80,14 @@ class Name(
             delimiter == other.delimiter
     }
 
-    override fun get(index: Int): Char {
-        return toString()[index]
-    }
+    override fun get(index: Int) = fullName[index]
 
     override fun hashCode(): Int {
         return Objects.hash(localName, parent, delimiter)
     }
 
-    override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
-        return toString().subSequence(startIndex, endIndex)
-    }
+    override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
+        fullName.subSequence(startIndex, endIndex)
 
     /**
      * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
@@ -95,8 +95,7 @@ class Name(
      */
     fun endsWith(ending: Name): Boolean {
         return this.localName == ending.localName &&
-            (ending.parent == null ||
-                this.parent != null && this.parent!!.endsWith(ending.parent!!))
+            (ending.parent == null || this.parent != null && this.parent.endsWith(ending.parent))
     }
 
     /**

@@ -789,7 +789,8 @@ public class TypeParser {
               typeName, storageValue, qualifier, generics, modifier, primitiveType, language);
     }
 
-    if (finalType.getTypeName().equals("auto") || (type.contains("auto") && !primitiveType)) {
+    if (finalType.getFullName().getLocalName().equals("auto")
+        || (type.contains("auto") && !primitiveType)) {
       // In C++17 if auto keyword is used the compiler infers the type automatically, hence we
       // are not able to find out, which type this should be, it will be resolved due to
       // dataflow
