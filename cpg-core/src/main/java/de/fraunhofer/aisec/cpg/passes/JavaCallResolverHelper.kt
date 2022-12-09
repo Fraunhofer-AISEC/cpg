@@ -51,7 +51,7 @@ fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: CallExpressi
     if (call.base?.fullName.toString() == "super") {
         // Direct superclass, either defined explicitly or java.lang.Object by default
         if (curClass.superClasses.isNotEmpty()) {
-            target = recordMap[curClass.superClasses[0].root.typeName]
+            target = recordMap[curClass.superClasses[0].root.fullName]
         } else {
             Util.warnWithFileLocation(
                 call,
@@ -92,7 +92,7 @@ fun CallResolver.handleSpecificSupertype(
         baseFullName = baseFullName.parent
     }
     baseFullName = baseFullName ?: call.base!!.fullName
-    val baseName = baseFullName.toString()
+    val baseName = baseFullName
 
     // val baseName = call.base!!.name.substring(0,
     // call.base!!.fullName.toString().lastIndexOf(".super"))
@@ -104,7 +104,7 @@ fun CallResolver.handleSpecificSupertype(
         val base = recordMap[baseName]
         if (base != null) {
             if (base.superClasses.isNotEmpty()) {
-                return recordMap[base.superClasses[0].root.typeName]
+                return recordMap[base.superClasses[0].root.fullName]
             } else {
                 Util.warnWithFileLocation(
                     call,

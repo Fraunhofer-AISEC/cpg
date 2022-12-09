@@ -117,7 +117,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         return handleUnknownFunction(
             if (containingClass != null) {
-                recordMap[containingClass.typeName]
+                recordMap[containingClass.fullName]
             } else {
                 null
             },
@@ -168,7 +168,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             refersTo == null &&
                 !current.isStaticAccess &&
                 recordDeclType != null &&
-                recordDeclType.typeName in recordMap
+                recordDeclType.fullName in recordMap
         ) {
             // Maybe we are referring to a field instead of a local var
             if (language != null && language.namespaceDelimiter in current.fullName.toString()) {
@@ -244,7 +244,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             ) {
                 if (curClass != null && curClass.superClasses.isNotEmpty()) {
                     val superType = curClass.superClasses[0]
-                    val superRecord = recordMap[superType.typeName]
+                    val superRecord = recordMap[superType.fullName]
                     if (superRecord == null) {
                         log.error(
                             "Could not find referring super type ${superType.typeName} for ${curClass.fullName} in the record map. Will set the super type to java.lang.Object"
@@ -286,7 +286,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 }
             } else if (baseTarget is RecordDeclaration) {
                 var baseType = TypeParser.createFrom(baseTarget.fullName, baseTarget.language)
-                if (baseType.typeName !in recordMap) {
+                if (baseType.fullName !in recordMap) {
                     val containingT = baseType
                     val fqnResolvedType =
                         recordMap.keys.firstOrNull {
@@ -303,7 +303,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             }
         }
         var baseType = current.base.type
-        if (baseType.typeName !in recordMap) {
+        if (baseType.fullName !in recordMap) {
             val fqnResolvedType =
                 recordMap.keys.firstOrNull {
                     it.endsWith(current.language?.namespaceDelimiter + baseType.fullName.toString())
@@ -324,8 +324,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // check if this refers to an enum
         return if (reference.type in enumMap) {
             enumMap[reference.type]
-        } else if (reference.type.typeName in recordMap) {
-            recordMap[reference.type.typeName]
+        } else if (reference.type.fullName in recordMap) {
+            recordMap[reference.type.fullName]
         } else {
             null
         }
@@ -341,9 +341,9 @@ open class VariableUsageResolver : SymbolResolverPass() {
             return null
         }
         var member: FieldDeclaration? = null
-        if (containingClass !is UnknownType && containingClass.typeName in recordMap) {
+        if (containingClass !is UnknownType && containingClass.fullName in recordMap) {
             member =
-                recordMap[containingClass.typeName]!!
+                recordMap[containingClass.fullName]!!
                     .fields
                     .filter { it.fullName.endsWith(reference.fullName) }
                     .map { it.definition }
@@ -352,8 +352,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
         if (member == null) {
             member =
                 superTypesMap
-                    .getOrDefault(containingClass.typeName, listOf())
-                    .mapNotNull { recordMap[it.typeName] }
+                    .getOrDefault(containingClass.fullName, listOf())
+                    .mapNotNull { recordMap[it.fullName] }
                     .flatMap { it.fields }
                     .filter { it.fullName.endsWith(reference.fullName) }
                     .map { it.definition }
@@ -371,7 +371,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             return handleUnknownField(base.elementType, name, type)
         }
 
-        if (base.typeName !in recordMap) {
+        if (base.fullName !in recordMap) {
             // No matching record in the map? If we should infer it, we do so, otherwise we stop.
             if (config?.inferenceConfiguration?.inferRecords != true) return null
 
@@ -384,10 +384,10 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 }
             val record = base.startInference().inferRecordDeclaration(base, currentTU, kind)
             // update the record map
-            if (record != null) recordMap[base.typeName] = record
+            if (record != null) recordMap[base.fullName] = record
         }
 
-        val recordDeclaration = recordMap[base.typeName]
+        val recordDeclaration = recordMap[base.fullName]
         if (recordDeclaration == null) {
             log.error(
                 "There is no matching record in the record map. Can't identify which field is used."

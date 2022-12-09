@@ -36,15 +36,15 @@ abstract class SymbolResolverPass : Pass() {
     protected lateinit var walker: SubgraphWalker.ScopedWalker
     lateinit var currentTU: TranslationUnitDeclaration
 
-    val recordMap = mutableMapOf<String, RecordDeclaration>()
+    val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enumMap = mutableMapOf<Type, EnumDeclaration>()
     protected val templateList = mutableListOf<TemplateDeclaration>()
-    protected val superTypesMap = mutableMapOf<String, List<Type>>()
+    protected val superTypesMap = mutableMapOf<Name, List<Type>>()
 
     /** Maps the name of the type of record declarations to its declaration. */
     protected fun findRecords(node: Node) {
         if (node is RecordDeclaration) {
-            recordMap.putIfAbsent(node.fullName.toString(), node)
+            recordMap.putIfAbsent(node.fullName, node)
         }
     }
 

@@ -111,7 +111,7 @@ open class CallResolver : SymbolResolverPass() {
     private fun fixInitializers(node: Node) {
         if (node is VariableDeclaration) {
             // check if we have the corresponding class for this type
-            val typeString = node.type.root.fullName.toString()
+            val typeString = node.type.root.fullName
             if (typeString in recordMap) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
@@ -273,7 +273,7 @@ open class CallResolver : SymbolResolverPass() {
                 call.fullName.localName.isNotEmpty() &&
                 (call.language !is CPPLanguage || shouldSearchForInvokesInParent(call))
         ) {
-            val records = possibleContainingTypes.mapNotNull { recordMap[it.root.typeName] }.toSet()
+            val records = possibleContainingTypes.mapNotNull { recordMap[it.root.fullName] }.toSet()
             invocationCandidates =
                 getInvocationCandidatesFromParents(call.fullName.localName, call, records)
                     .toMutableList()
@@ -318,11 +318,11 @@ open class CallResolver : SymbolResolverPass() {
         if (invocationCandidates.isEmpty()) {
             possibleContainingTypes
                 .mapNotNull {
-                    var record = recordMap[it.root.typeName]
+                    var record = recordMap[it.root.fullName]
                     if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
                         record = it.startInference().inferRecordDeclaration(it, currentTU)
                         // update the record map
-                        if (record != null) recordMap[it.root.typeName] = record
+                        if (record != null) recordMap[it.root.fullName] = record
                     }
                     record
                 }
@@ -343,7 +343,7 @@ open class CallResolver : SymbolResolverPass() {
     }
 
     private fun resolveConstructExpression(constructExpression: ConstructExpression) {
-        val typeName = constructExpression.type.typeName
+        val typeName = constructExpression.type.fullName
         val recordDeclaration = recordMap[typeName]
         constructExpression.instantiates = recordDeclaration
         for (template in templateList) {
@@ -385,7 +385,7 @@ open class CallResolver : SymbolResolverPass() {
 
     private fun resolveExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
         if (eci.containingClass != null) {
-            val recordDeclaration = recordMap[eci.containingClass]
+            val recordDeclaration = recordMap[Name.parse(eci.containingClass, eci.language)]
             val signature = eci.arguments.map { it.type }
             if (recordDeclaration != null) {
                 val constructor =
@@ -437,7 +437,7 @@ open class CallResolver : SymbolResolverPass() {
             curClass.staticImportStatements
                 .filter { it.endsWith(".$name") }
                 .map { it.substring(0, it.lastIndexOf('.')) }
-                .mapNotNull { recordMap[it] }
+                .mapNotNull { recordMap[Name.parse(it, call.language)] }
 
         for (recordDeclaration in containingRecords) {
             val inferred =
