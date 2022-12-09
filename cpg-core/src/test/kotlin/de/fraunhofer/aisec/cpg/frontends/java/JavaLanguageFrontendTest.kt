@@ -600,7 +600,12 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                             // take the original class and replace the name
                             val declaration =
                                 super.handleClassOrInterfaceDeclaration(classInterDecl)
-                            declaration.fullName.localName = "MySimpleClass"
+                            declaration.fullName =
+                                Name(
+                                    "MySimpleClass",
+                                    declaration.fullName.parent,
+                                    declaration.fullName.delimiter
+                                )
 
                             return declaration
                         }

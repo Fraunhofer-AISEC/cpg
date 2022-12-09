@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -48,7 +49,7 @@ fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: CallExpressi
         (call.base as DeclaredReferenceExpression?)?.refersTo = func.receiver
     }
     var target: RecordDeclaration? = null
-    if (call.base?.fullName.toString() == "super") {
+    if (call.base?.fullName.toString() == JavaLanguage().superClassKeyword) {
         // Direct superclass, either defined explicitly or java.lang.Object by default
         if (curClass.superClasses.isNotEmpty()) {
             target = recordMap[curClass.superClasses[0].root.fullName]

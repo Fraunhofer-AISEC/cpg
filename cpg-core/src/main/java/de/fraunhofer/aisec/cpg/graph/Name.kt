@@ -37,7 +37,7 @@ import kotlin.reflect.KProperty
  */
 class Name(
     /** The local name (sometimes also called simple name) without any namespace information. */
-    var localName: String,
+    val localName: String,
     /** The parent name, e.g., the namespace this name lives in. */
     var parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
@@ -62,14 +62,6 @@ class Name(
 
     /** Implements kotlin propety delegation for a string getter. Returns the local name. */
     operator fun getValue(node: Node, property: KProperty<*>) = localName
-
-    /**
-     * Implements kotlin property delegation for a string setter. Sets the local name to the
-     * supplied string.
-     */
-    operator fun setValue(node: Node, property: KProperty<*>, s: String) {
-        localName = s
-    }
 
     override val length: Int
         get() {
@@ -113,6 +105,11 @@ class Name(
      */
     fun endsWith(ending: String): Boolean {
         return this.endsWith(parse(ending, this.delimiter))
+    }
+
+    /** This function appends a string to the local name and returns a new [Name]. */
+    fun append(s: String): Name {
+        return Name(localName + s, parent, delimiter)
     }
 
     companion object {

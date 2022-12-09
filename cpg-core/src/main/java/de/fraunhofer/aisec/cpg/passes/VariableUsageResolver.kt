@@ -290,9 +290,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                     val containingT = baseType
                     val fqnResolvedType =
                         recordMap.keys.firstOrNull {
-                            it.endsWith(
-                                containingT.fullName.delimiter + containingT.fullName.toString()
-                            )
+                            it.endsWith(containingT.fullName)
                         } // TODO: Is the "." correct here for all languages?
                     if (fqnResolvedType != null) {
                         baseType = TypeParser.createFrom(fqnResolvedType, baseTarget.language)
@@ -304,10 +302,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
         var baseType = current.base.type
         if (baseType.fullName !in recordMap) {
-            val fqnResolvedType =
-                recordMap.keys.firstOrNull {
-                    it.endsWith(current.language?.namespaceDelimiter + baseType.fullName.toString())
-                }
+            val fqnResolvedType = recordMap.keys.firstOrNull { it.endsWith(baseType.fullName) }
             if (fqnResolvedType != null) {
                 baseType = TypeParser.createFrom(fqnResolvedType, baseType.language)
             }

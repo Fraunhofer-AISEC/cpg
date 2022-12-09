@@ -33,7 +33,6 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.frontend = frontend
         self.tud = DeclarationBuilderKt.newTranslationUnitDeclaration(
             self.frontend, fname, code)
-        self.tud.setName(fname)
         self.fname = fname
         self.scopemanager = frontend.getScopeManager()
         self.scopemanager.resetToGlobal(self.tud)

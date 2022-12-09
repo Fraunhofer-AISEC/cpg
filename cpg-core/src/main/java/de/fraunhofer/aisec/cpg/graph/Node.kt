@@ -67,12 +67,9 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         message =
             "This is a legacy feature, mostly used by non-Java languages. fullName should be used instead."
     )
-    var name: String
+    val name: String
         get() {
             return fullName.localName
-        }
-        set(value) {
-            fullName.localName = value
         }
 
     /**

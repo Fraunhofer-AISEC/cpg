@@ -213,8 +213,7 @@ def handle_expression_impl(self, expr):
             if record is not None:
                 self.log_with_loc("Received a record: %s" % record)
                 call = ExpressionBuilderKt.newConstructExpression(
-                    self.frontend, self.get_src_code(expr))
-                call.setName(expr.func.id)
+                    self.frontend, expr.func.id, self.get_src_code(expr))
                 tpe = record.toType()
                 call.setType(tpe)
             else:
@@ -277,7 +276,6 @@ def handle_expression_impl(self, expr):
         lit = ExpressionBuilderKt.newLiteral(
             self.frontend,
             expr.value, tpe, self.get_src_code(expr))
-        lit.setName(str(expr.value))
         return lit
 
     elif isinstance(expr, ast.Attribute):

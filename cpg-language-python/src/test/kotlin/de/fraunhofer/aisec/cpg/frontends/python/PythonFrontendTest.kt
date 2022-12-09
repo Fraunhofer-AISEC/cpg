@@ -219,7 +219,7 @@ class PythonFrontendTest : BaseTest() {
         val initializer = sel.initializer as? Literal<*>
         assertNotNull(initializer)
         assertEquals(TypeParser.createFrom("bool", PythonLanguage()), initializer.type)
-        assertLocalName("True", initializer)
+        assertEquals("True", initializer.code)
 
         val `if` = body.statements[1] as? IfStatement
         assertNotNull(`if`)

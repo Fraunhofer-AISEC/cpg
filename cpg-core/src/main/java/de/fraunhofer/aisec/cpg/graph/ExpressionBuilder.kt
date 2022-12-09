@@ -133,11 +133,12 @@ fun MetadataProvider.newNewExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newConstructExpression(
+    name: CharSequence? = EMPTY_NAME,
     code: String? = null,
     rawNode: Any? = null
 ): ConstructExpression {
     val node = ConstructExpression()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+    node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
     return node

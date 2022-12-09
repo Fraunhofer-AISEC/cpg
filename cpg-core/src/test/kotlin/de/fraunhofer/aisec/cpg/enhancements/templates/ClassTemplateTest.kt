@@ -160,7 +160,9 @@ internal class ClassTemplateTest : BaseTest() {
         val pairConstructorDeclaration =
             findByUniqueName(result.allChildren<ConstructorDeclaration>(), "Pair")
         val constructExpression =
-            findByUniquePredicate(result.allChildren()) { c: ConstructExpression -> c.code == "()" }
+            findByUniquePredicate(result.allChildren()) { c: ConstructExpression ->
+                c.code == "Pair()"
+            }
         val point1 = findByUniqueName(result.variables, "point1")
 
         // Test Template Structure
@@ -207,7 +209,7 @@ internal class ClassTemplateTest : BaseTest() {
         val pairConstructorDeclaration =
             findByUniqueName(result.allChildren<ConstructorDeclaration>(), "Pair")
         val constructExpression =
-            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "()" }
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "Pair()" }
         val literal3 = findByUniquePredicate(result.literals) { it.value == 3 && !it.isImplicit }
         val literal3Implicit =
             findByUniquePredicate(result.literals) { it.value == 3 && it.isImplicit }
@@ -308,7 +310,7 @@ internal class ClassTemplateTest : BaseTest() {
         val second = findByUniqueName(result.fields, "second")
         val point1 = findByUniqueName(result.variables, "point1")
         val constructExpression =
-            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "()" }
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "Pair()" }
         assertEquals(1, template.realization.size)
         assertEquals(pair, template.realization[0])
         assertEquals(2, template.parameters.size)
@@ -356,7 +358,7 @@ internal class ClassTemplateTest : BaseTest() {
             )
         val pair = findByUniqueName(result.records, "Pair")
         val constructExpression =
-            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "()" }
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "Pair()" }
         val literal2 = findByUniquePredicate(result.literals) { it.value == 2 && !it.isImplicit }
         assertNotNull(literal2)
         val literal2Implicit =
@@ -415,7 +417,9 @@ internal class ClassTemplateTest : BaseTest() {
         val paramA = findByUniqueName(result.parameters, "A")
         val paramB = findByUniqueName(result.parameters, "B")
         val constructExpression =
-            findByUniquePredicate(result.allChildren()) { c: ConstructExpression -> c.code == "()" }
+            findByUniquePredicate(result.allChildren()) { c: ConstructExpression ->
+                c.code == "Pair()"
+            }
         val literal1 = findByUniquePredicate(result.literals) { it.value == 1 }
         assertEquals(4, template.parameters.size)
         assertEquals(paramA, template.parameters[2])
@@ -516,7 +520,9 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(typeT, tArray.elementType)
 
         val constructExpression =
-            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "()" }
+            findByUniquePredicate(result.allChildren<ConstructExpression>()) {
+                it.code == "Array()"
+            }
         assertEquals(template, constructExpression.templateInstantiation)
         assertEquals(array, constructExpression.instantiates)
         assertLocalName("int", constructExpression.templateParameters[0])
@@ -541,7 +547,9 @@ internal class ClassTemplateTest : BaseTest() {
             )
         val array = findByUniqueName(result.records, "Array")
         val constructExpression =
-            findByUniquePredicate(result.allChildren()) { c: ConstructExpression -> c.code == "()" }
+            findByUniquePredicate(result.allChildren()) { c: ConstructExpression ->
+                c.code == "Array()"
+            }
         val literal5 =
             findByUniquePredicate(result.literals) {
                 it.value == 5 && it.location!!.region.endColumn == 41 && !it.isImplicit

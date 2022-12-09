@@ -201,7 +201,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // `new A`.
                 // Therefore, CDT does not have an explicit construct expression, so we need create
                 // an implicit one
-                initializer = newConstructExpression("()")
+                initializer =
+                    newConstructExpression(t.fullName.localName, "${t.fullName.localName}()")
                 initializer.isImplicit = true
             }
 

@@ -43,25 +43,20 @@ public class ReferenceType extends Type implements SecondOrderType {
   public ReferenceType(Type reference) {
     super();
     this.setLanguage(reference.getLanguage());
-    Name fullTypeName = reference.getFullName().clone();
-    fullTypeName.setLocalName(fullTypeName.getLocalName() + "&");
-    this.setFullName(fullTypeName);
+    this.setFullName(reference.getFullName().append("&"));
     this.reference = reference;
   }
 
   public ReferenceType(Type type, Type reference) {
     super(type);
     this.setLanguage(reference.getLanguage());
-    Name fullTypeName = reference.getFullName().clone();
-    fullTypeName.setLocalName(fullTypeName.getLocalName() + "&");
-    this.setFullName(fullTypeName);
+    this.setFullName(reference.getFullName().append("&"));
     this.reference = reference;
   }
 
   public ReferenceType(Storage storage, Qualifier qualifier, Type reference) {
     Name fullTypeName = reference.getFullName().clone();
-    fullTypeName.setLocalName(fullTypeName.getLocalName() + "&");
-    this.setFullName(fullTypeName);
+    this.setFullName(reference.getFullName().append("&"));
     this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
@@ -106,9 +101,7 @@ public class ReferenceType extends Type implements SecondOrderType {
   }
 
   public void refreshName() {
-    Name fullTypeName = getElementType().getFullName().clone();
-    fullTypeName.setLocalName(fullTypeName.getLocalName() + "&");
-    this.setFullName(fullTypeName);
+    this.setFullName(reference.getFullName().append("&"));
   }
 
   @Override

@@ -115,20 +115,22 @@ open class CallResolver : SymbolResolverPass() {
             if (typeString in recordMap) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
-                    val initializer = node.newConstructExpression("()")
+                    val initializer = node.newConstructExpression(typeString, "$typeString()")
                     initializer.isImplicit = true
                     node.initializer = initializer
                     node.templateParameters?.let {
                         addImplicitTemplateParametersToCall(it, initializer)
                     }
                 } else if (
-                    currInitializer is CallExpression &&
+                    currInitializer !is ConstructExpression &&
+                        currInitializer is CallExpression &&
                         currInitializer.fullName.localName == node.type.root.fullName.localName
                 ) {
                     // This should actually be a construct expression, not a call!
                     val arguments = currInitializer.arguments
                     val signature = arguments.map(Node::code).joinToString(", ")
-                    val initializer = node.newConstructExpression("($signature)")
+                    val initializer =
+                        node.newConstructExpression(typeString, "$typeString($signature)")
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
                     initializer.isImplicit = true
                     node.initializer = initializer

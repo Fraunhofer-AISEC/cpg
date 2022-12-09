@@ -51,30 +51,29 @@ public class PointerType extends Type implements SecondOrderType {
   public PointerType(Type elementType, PointerOrigin pointerOrigin) {
     super();
     this.setLanguage(elementType.getLanguage());
-    Name fullTypeName = elementType.getFullName().clone();
+
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      fullTypeName.setLocalName(fullTypeName.getLocalName() + "[]");
-      this.pointerOrigin = PointerOrigin.ARRAY;
+      this.setFullName(elementType.getFullName().append("[]"));
     } else {
-      fullTypeName.setLocalName(fullTypeName.getLocalName() + "*");
-      this.pointerOrigin = PointerOrigin.POINTER;
+      this.setFullName(elementType.getFullName().append("*"));
     }
-    this.setFullName(fullTypeName);
+
+    this.pointerOrigin = pointerOrigin;
     this.elementType = elementType;
   }
 
   public PointerType(Type type, Type elementType, PointerOrigin pointerOrigin) {
     super(type);
     this.setLanguage(elementType.getLanguage());
-    Name fullTypeName = elementType.getFullName().clone();
+
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      fullTypeName.setLocalName(fullTypeName.getLocalName() + "[]");
+      this.setFullName(elementType.getFullName().append("[]"));
     } else {
-      fullTypeName.setLocalName(fullTypeName.getLocalName() + "*");
+      this.setFullName(elementType.getFullName().append("*"));
     }
-    this.setFullName(fullTypeName);
-    this.elementType = elementType;
+
     this.pointerOrigin = pointerOrigin;
+    this.elementType = elementType;
   }
 
   /**
@@ -86,6 +85,7 @@ public class PointerType extends Type implements SecondOrderType {
     if (origin == null) {
       origin = PointerOrigin.ARRAY;
     }
+
     return new PointerType(this, origin);
   }
 
@@ -102,12 +102,20 @@ public class PointerType extends Type implements SecondOrderType {
     if (this.getElementType() instanceof PointerType) {
       this.getElementType().refreshNames();
     }
-    Name fullTypeName = getElementType().getFullName().clone();
-    if (this.pointerOrigin == PointerOrigin.ARRAY) {
-      fullTypeName.setLocalName(fullTypeName.getLocalName() + "[]");
+
+    String localName = elementType.getFullName().getLocalName();
+    if (pointerOrigin == PointerOrigin.ARRAY) {
+      localName += "[]";
     } else {
-      fullTypeName.setLocalName(fullTypeName.getLocalName() + "*");
+      localName += "*";
     }
+
+    var fullTypeName =
+        new Name(
+            localName,
+            elementType.getFullName().getParent(),
+            elementType.getFullName().getDelimiter());
+
     this.setFullName(fullTypeName);
   }
 
