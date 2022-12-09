@@ -194,7 +194,7 @@ class CompressLLVMPass : Pass() {
             }
             val exceptionReference =
                 catch.newDeclaredReferenceExpression(
-                    catch.parameter?.fullName.toString(),
+                    catch.parameter?.fullName,
                     catch.parameter?.type,
                     ""
                 )

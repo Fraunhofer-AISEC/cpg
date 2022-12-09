@@ -361,7 +361,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     private fun initializeAsUndef(type: Type, code: String): Expression {
         if (
             !frontend.isKnownStructTypeName(type.fullName.toString()) &&
-                !type.fullName.toString().contains("{")
+                !type.fullName.contains("{")
         ) {
             return newLiteral(null, type, code)
         } else {
@@ -389,7 +389,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     private fun initializeAsZero(type: Type, code: String): Expression {
         if (
             !frontend.isKnownStructTypeName(type.fullName.toString()) &&
-                !type.fullName.toString().contains("{")
+                !type.fullName.contains("{")
         ) {
             return newLiteral(0, type, code)
         } else {
@@ -500,7 +500,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     record =
                         frontend.scopeManager
                             .resolve<RecordDeclaration>(frontend.scopeManager.globalScope, true) {
-                                it.fullName.toString() == baseType.typeName
+                                it.fullName == baseType.fullName
                             }
                             .firstOrNull()
                     if (record != null) {

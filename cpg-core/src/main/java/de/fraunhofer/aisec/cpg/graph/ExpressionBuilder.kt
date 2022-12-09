@@ -238,7 +238,7 @@ fun MetadataProvider.newCompoundStatementExpression(
 @JvmOverloads
 fun MetadataProvider.newCallExpression(
     callee: Expression? = null,
-    fqn: String? = null,
+    fqn: CharSequence? = null,
     code: String? = null,
     template: Boolean = false,
     rawNode: Any? = null
@@ -444,7 +444,7 @@ fun MetadataProvider.newArrayCreationExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newDeclaredReferenceExpression(
-    name: String?,
+    name: CharSequence?,
     type: Type? = UnknownType.getUnknownType(),
     code: String? = null,
     rawNode: Any? = null

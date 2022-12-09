@@ -41,7 +41,7 @@ func (frontend *GoLanguageFrontend) NewCallExpression(fset *token.FileSet, astNo
 		callee = callee.Cast(cpg.ExpressionClass)
 	}
 
-	return (*cpg.CallExpression)(frontend.NewExpression("CallExpression", fset, astNode, callee, cpg.NewString(name)))
+	return (*cpg.CallExpression)(frontend.NewExpression("CallExpression", fset, astNode, callee, cpg.NewString(name).Cast("java/lang/CharSequence")))
 }
 
 func (frontend *GoLanguageFrontend) NewCastExpression(fset *token.FileSet, astNode ast.Node) *cpg.CastExpression {
@@ -105,7 +105,7 @@ func (frontend *GoLanguageFrontend) NewLiteral(fset *token.FileSet, astNode ast.
 }
 
 func (frontend *GoLanguageFrontend) NewDeclaredReferenceExpression(fset *token.FileSet, astNode ast.Node, name string) *cpg.DeclaredReferenceExpression {
-	return (*cpg.DeclaredReferenceExpression)(frontend.NewExpression("DeclaredReferenceExpression", fset, astNode, cpg.NewString(name)))
+	return (*cpg.DeclaredReferenceExpression)(frontend.NewExpression("DeclaredReferenceExpression", fset, astNode, cpg.NewString(name).Cast("java/lang/CharSequence")))
 }
 
 func (frontend *GoLanguageFrontend) NewKeyValueExpression(fset *token.FileSet, astNode ast.Node) *cpg.KeyValueExpression {

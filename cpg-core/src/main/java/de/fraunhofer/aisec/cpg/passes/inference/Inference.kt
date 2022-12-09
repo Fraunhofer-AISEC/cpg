@@ -73,7 +73,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
         }
 
         log.debug(
-            "Inferring a new function declaration $name with parameter types ${signature.map { it?.fullName.toString() }}"
+            "Inferring a new function declaration $name with parameter types ${signature.map { it?.fullName }}"
         )
 
         if (

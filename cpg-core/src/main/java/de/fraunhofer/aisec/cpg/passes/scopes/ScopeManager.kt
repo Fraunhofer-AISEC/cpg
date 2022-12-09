@@ -683,7 +683,7 @@ class ScopeManager : ScopeProvider {
                     LOGGER.error(
                         "Could not find the scope {} needed to resolve the call {}. Falling back to the current scope",
                         scopeName,
-                        call.fullName.toString()
+                        call.fullName
                     )
                     currentScope
                 } else {

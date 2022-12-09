@@ -1115,7 +1115,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleFunctionCall(instr: LLVMValueRef): Statement {
         val instrStr = frontend.getCodeFromRawNode(instr)
         val calledFunc = LLVMGetCalledValue(instr)
-        var calledFuncName = LLVMGetValueName(calledFunc).string
+        var calledFuncName: CharSequence = LLVMGetValueName(calledFunc).string
         var max = LLVMGetNumOperands(instr) - 1
         var idx = 0
 
@@ -1123,7 +1123,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Function is probably called by a local variable. For some reason, this is the last
             // operand
             val opName = frontend.getOperandValueAtIndex(instr, max)
-            calledFuncName = opName.fullName.toString()
+            calledFuncName = opName.fullName
         }
 
         var gotoCatch: GotoStatement = newGotoStatement(instrStr)
@@ -1407,7 +1407,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val functions =
             tu.declarations.filter { d ->
                 (d as? FunctionDeclaration)?.fullName != null &&
-                    (d as? FunctionDeclaration)?.fullName.toString().equals(functionName)
+                    (d as? FunctionDeclaration)?.fullName.toString() == functionName
             }
         if (functions.size != 1) {
             log.error(

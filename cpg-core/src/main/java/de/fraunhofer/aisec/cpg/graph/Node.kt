@@ -295,8 +295,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     override fun toString(): String {
         val builder = ToStringBuilder(this, TO_STRING_STYLE)
 
-        if (fullName.toString().isNotEmpty()) {
-            builder.append("name", fullName.toString())
+        if (fullName.isNotEmpty()) {
+            builder.append("name", fullName)
         }
 
         return builder.append("location", location).toString()

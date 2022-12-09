@@ -213,7 +213,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             // https://github.com/Fraunhofer-AISEC/cpg/issues/298
             val member =
                 newDeclaredReferenceExpression(
-                    memberExpression.fullName.toString(),
+                    memberExpression.fullName,
                     memberExpression.type,
                     memberExpression.fullName.toString()
                 )

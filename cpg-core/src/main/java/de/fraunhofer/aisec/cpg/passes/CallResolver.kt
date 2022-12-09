@@ -30,12 +30,9 @@ import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
 import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
 import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
-import de.fraunhofer.aisec.cpg.graph.duplicate
-import de.fraunhofer.aisec.cpg.graph.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
@@ -497,8 +494,7 @@ open class CallResolver : SymbolResolverPass() {
             )
         } else {
             recordDeclaration.methods.filter {
-                namePattern.matcher(it.fullName.toString()).matches() &&
-                    it.hasSignature(call.signature)
+                namePattern.matcher(it.fullName).matches() && it.hasSignature(call.signature)
             }
         }
     }

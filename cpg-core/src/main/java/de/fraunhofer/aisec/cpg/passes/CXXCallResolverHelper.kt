@@ -489,8 +489,7 @@ fun getTemplateInitializationSignature(
                 .type // TODO: Somehow, this should be the ParametrizedType but it's an ObjectType
         // with the same name. => The template logic fails.
         val deducedType = templateCall.arguments[i].type
-        val typeExpression =
-            templateCall.newTypeExpression(deducedType.fullName.toString(), deducedType)
+        val typeExpression = templateCall.newTypeExpression(deducedType.fullName, deducedType)
         typeExpression.isImplicit = true
         if (
             currentArgumentType is ParameterizedType &&
@@ -612,7 +611,7 @@ fun handleImplicitTemplateParameter(
         if (defaultNode is Type) {
             defaultNode =
                 functionTemplateDeclaration.newTypeExpression(
-                    defaultNode.fullName.toString(),
+                    defaultNode.fullName,
                     defaultNode,
                 )
             defaultNode.isImplicit = true
