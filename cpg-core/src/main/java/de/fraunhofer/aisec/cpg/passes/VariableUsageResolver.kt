@@ -240,7 +240,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             if (
                 current.language is HasSuperClasses &&
                     base.fullName.toString() ==
-                        (current.language as HasSuperClasses).superclassKeyword
+                        (current.language as HasSuperClasses).superClassKeyword
             ) {
                 if (curClass != null && curClass.superClasses.isNotEmpty()) {
                     val superType = curClass.superClasses[0]

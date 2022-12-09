@@ -84,11 +84,11 @@ fun CallResolver.handleSpecificSupertype(
     var baseFullName = call.base?.fullName
     while (
         baseFullName != null &&
-            baseFullName.localName != (curClass.language as HasSuperClasses).superclassKeyword
+            baseFullName.localName != (curClass.language as HasSuperClasses).superClassKeyword
     ) {
         baseFullName = baseFullName.parent
     }
-    if (baseFullName?.localName == (curClass.language as HasSuperClasses).superclassKeyword) {
+    if (baseFullName?.localName == (curClass.language as HasSuperClasses).superClassKeyword) {
         baseFullName = baseFullName.parent
     }
     baseFullName = baseFullName ?: call.base!!.fullName

@@ -52,7 +52,7 @@ abstract class SymbolResolverPass : Pass() {
     protected fun findEnums(node: Node) {
         if (node is EnumDeclaration) {
             // TODO: Use the name instead of the type.
-            val type = TypeParser.createFrom(node.fullName.toString(), node.language)
+            val type = TypeParser.createFrom(node.fullName, node.language)
             enumMap.putIfAbsent(type, node)
         }
     }
@@ -113,7 +113,7 @@ abstract class SymbolResolverPass : Pass() {
                         "(?<class>.+" +
                             Regex.escape(language.namespaceDelimiter) +
                             ")?" +
-                            (reference.language as HasSuperClasses).superclassKeyword
+                            (reference.language as HasSuperClasses).superClassKeyword
                     )
                 )
     }

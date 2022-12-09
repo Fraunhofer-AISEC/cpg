@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -54,7 +55,7 @@ import java.util.*
  * information in the graph might not be fully correct
  */
 open class TypeHierarchyResolver : Pass() {
-    protected val recordMap = mutableMapOf<String, RecordDeclaration>()
+    protected val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enums = mutableListOf<EnumDeclaration>()
 
     override fun accept(translationResult: TranslationResult) {
@@ -68,7 +69,7 @@ open class TypeHierarchyResolver : Pass() {
         }
         for (enumDecl in enums) {
             val directSupertypeRecords =
-                enumDecl.superTypes.mapNotNull { s: Type -> recordMap[s.toString()] }.toSet()
+                enumDecl.superTypes.mapNotNull { s: Type -> recordMap[s.fullName] }.toSet()
             val allSupertypes =
                 directSupertypeRecords.map { findSupertypeRecords(it) }.flatten().toSet()
             enumDecl.superTypeDeclarations = allSupertypes
@@ -84,7 +85,7 @@ open class TypeHierarchyResolver : Pass() {
             object : IVisitor<Node?>() {
                 override fun visit(child: Node) {
                     if (child is RecordDeclaration) {
-                        recordMap.putIfAbsent(child.fullName.toString(), child)
+                        recordMap.putIfAbsent(child.fullName, child)
                     } else if (child is EnumDeclaration) {
                         enums.add(child)
                     }
@@ -93,7 +94,7 @@ open class TypeHierarchyResolver : Pass() {
         )
     }
 
-    protected fun getAllMethodsFromSupertypes(
+    private fun getAllMethodsFromSupertypes(
         supertypeRecords: Set<RecordDeclaration>
     ): List<MethodDeclaration> {
         return supertypeRecords.map { it.methods }.flatten()
@@ -101,7 +102,7 @@ open class TypeHierarchyResolver : Pass() {
 
     protected fun findSupertypeRecords(recordDecl: RecordDeclaration): Set<RecordDeclaration> {
         val superTypeDeclarations =
-            recordDecl.superTypes.mapNotNull { recordMap[it.typeName] }.toSet()
+            recordDecl.superTypes.mapNotNull { recordMap[it.fullName] }.toSet()
         recordDecl.superTypeDeclarations = superTypeDeclarations
         return superTypeDeclarations
     }

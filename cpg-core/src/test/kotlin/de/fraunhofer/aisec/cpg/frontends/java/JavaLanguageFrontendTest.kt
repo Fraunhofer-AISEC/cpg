@@ -611,7 +611,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         class MyJavaLanguage : JavaLanguage() {
             override val fileExtensions = listOf("java")
             override val namespaceDelimiter = "."
-            override val superclassKeyword = "super"
+            override val superClassKeyword = "super"
             override val frontend = MyJavaLanguageFrontend::class
             override fun newFrontend(
                 config: TranslationConfiguration,

@@ -404,7 +404,7 @@ open class CallResolver : SymbolResolverPass() {
         val name = call.fullName.localName
         val nameMatches =
             curClass.staticImports.filterIsInstance<FunctionDeclaration>().filter {
-                it.fullName.toString() == name || it.fullName.localName == name
+                matchesName(it.fullName, name)
             }
         return if (nameMatches.isEmpty()) {
             false
