@@ -91,7 +91,7 @@ interface NamespaceProvider : MetadataProvider {
  */
 fun Node.applyMetadata(
     provider: MetadataProvider?,
-    localName: String? = EMPTY_NAME,
+    localName: CharSequence? = EMPTY_NAME,
     rawNode: Any?,
     codeOverride: String?,
     localNameOnly: Boolean = false,
@@ -130,7 +130,8 @@ fun Node.applyMetadata(
     } else if (localName != null && !localNameOnly) {
         // TODO: Shouldn't we check if the delimiter is in the local name and use Name.parse() if
         // this is the case? E.g., the namespace declarations pass the FQN
-        this.fullName = Name(localName, namespace, this.language?.namespaceDelimiter ?: ".")
+        this.fullName =
+            Name(localName.toString(), namespace, this.language?.namespaceDelimiter ?: ".")
     } else if (
         localName != null &&
             (this is CallExpression ||
@@ -145,7 +146,7 @@ fun Node.applyMetadata(
             )
     } else {
         this.fullName =
-            Name(localName ?: EMPTY_NAME, null, this.language?.namespaceDelimiter ?: ".")
+            Name(localName.toString() ?: EMPTY_NAME, null, this.language?.namespaceDelimiter ?: ".")
     }
 
     if (codeOverride != null) {

@@ -365,8 +365,7 @@ open class DFAOrderEvaluator(
                     it is ConstructExpression ||
                     it is VariableDeclaration
             }
-            .sortedWith(Comparator.comparing({ it.fullName.toString() }))
-            .firstOrNull()
+            .minByOrNull { it.fullName }
     }
 
     /**

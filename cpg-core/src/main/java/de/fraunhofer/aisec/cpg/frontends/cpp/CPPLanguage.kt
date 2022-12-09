@@ -106,8 +106,7 @@ class CPPLanguage :
             mutableListOf<FunctionDeclaration>(
                 *recordDeclaration.methods
                     .filter { m ->
-                        namePattern.matcher(m.fullName.toString()).matches() &&
-                            m.hasSignature(call.signature)
+                        namePattern.matcher(m.fullName).matches() && m.hasSignature(call.signature)
                     }
                     .toTypedArray()
             )
@@ -117,9 +116,7 @@ class CPPLanguage :
                 resolveWithDefaultArgs(
                     call,
                     recordDeclaration.methods.filter { m ->
-                        (namePattern
-                            .matcher(m.fullName.toString())
-                            .matches() /*&& !m.isImplicit()*/ &&
+                        (namePattern.matcher(m.fullName).matches() /*&& !m.isImplicit()*/ &&
                             call.signature.size < m.signatureTypes.size)
                     }
                 )
@@ -131,7 +128,7 @@ class CPPLanguage :
                 resolveWithImplicitCast(
                     call,
                     recordDeclaration.methods.filter { m ->
-                        namePattern.matcher(m.fullName.toString()).matches() /*&& !m.isImplicit()*/
+                        namePattern.matcher(m.fullName).matches() /*&& !m.isImplicit()*/
                     }
                 )
             )

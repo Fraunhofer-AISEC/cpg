@@ -78,7 +78,7 @@ class OutOfBoundsCheck {
                                         " when accessing index ${AttributedString(""+resolvedIndex, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()} of "
                                     )
                                     sb.append(
-                                        decl.fullName.toString(),
+                                        decl.fullName,
                                         DEFAULT.foreground(AttributedStyle.YELLOW)
                                     )
                                     sb.append(

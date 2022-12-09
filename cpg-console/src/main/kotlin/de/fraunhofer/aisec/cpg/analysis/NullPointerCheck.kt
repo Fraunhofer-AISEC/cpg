@@ -90,7 +90,7 @@ class NullPointerCheck {
                     sb.append("--- FINDING: Null pointer detected in ")
                     sb.append(node.javaClass.simpleName, DEFAULT.foreground(GREEN))
                     sb.append(" when accessing base ")
-                    sb.append(node.base?.fullName.toString(), DEFAULT.foreground(YELLOW))
+                    sb.append(node.base?.fullName, DEFAULT.foreground(YELLOW))
                     sb.append(" ---")
 
                     val header = sb.toAnsi()
@@ -104,7 +104,7 @@ class NullPointerCheck {
                     )
                     println("")
                     println(
-                        "The following path was discovered that leads to ${AttributedString(node.base?.fullName.toString(), DEFAULT.foreground(YELLOW)).toAnsi()} being null:"
+                        "The following path was discovered that leads to ${AttributedString(node.base?.fullName, DEFAULT.foreground(YELLOW)).toAnsi()} being null:"
                     )
                     for (p in resolver.path) {
 

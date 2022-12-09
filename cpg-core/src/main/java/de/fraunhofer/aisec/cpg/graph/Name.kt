@@ -42,7 +42,7 @@ class Name(
     var parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
     val delimiter: String = "."
-) : Cloneable {
+) : Cloneable, Comparable<Name>, CharSequence {
     constructor(
         localName: String,
         parent: Name? = null,
@@ -71,6 +71,11 @@ class Name(
         localName = s
     }
 
+    override val length: Int
+        get() {
+            return toString().length
+        }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Name) return false
@@ -80,8 +85,16 @@ class Name(
             delimiter == other.delimiter
     }
 
+    override fun get(index: Int): Char {
+        return toString()[index]
+    }
+
     override fun hashCode(): Int {
         return Objects.hash(localName, parent, delimiter)
+    }
+
+    override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
+        return toString().subSequence(startIndex, endIndex)
     }
 
     /**
@@ -115,7 +128,11 @@ class Name(
          * Tries to parse the given fully qualified name using the specified [delimiter] into a
          * [Name].
          */
-        fun parse(fqn: String, delimiter: String = ".", vararg splitDelimiters: String): Name {
+        fun parse(
+            fqn: CharSequence,
+            delimiter: String = ".",
+            vararg splitDelimiters: String
+        ): Name {
             val parts = fqn.split(delimiter, *splitDelimiters)
 
             var name: Name? = null
@@ -129,10 +146,15 @@ class Name(
             // Actually this should not occur, but otherwise the compiler won't let us return a
             // non-null Name
             if (name == null) {
-                return Name(fqn, null, delimiter)
+                return Name(fqn.toString(), null, delimiter)
             }
 
             return name
         }
+    }
+
+    override fun compareTo(other: Name): Int {
+        // Compare names according to the string representation of the full name
+        return this.toString().compareTo(other.toString())
     }
 }

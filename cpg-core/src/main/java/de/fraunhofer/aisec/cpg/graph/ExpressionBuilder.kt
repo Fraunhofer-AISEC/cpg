@@ -559,7 +559,7 @@ fun MetadataProvider.newDesignatedInitializerExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newTypeExpression(
-    name: String?,
+    name: CharSequence?,
     type: Type?,
     rawNode: Any? = null
 ): TypeExpression {

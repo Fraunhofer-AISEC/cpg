@@ -236,7 +236,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         for (argument in template.templateArguments) {
             if (argument is IASTTypeId) {
                 val type = parseType(argument.declSpecifier.toString())
-                templateArguments.add(newTypeExpression(type.fullName.toString(), type))
+                templateArguments.add(newTypeExpression(type.fullName, type))
             } else if (argument is IASTLiteralExpression) {
                 frontend.expressionHandler.handle(argument as IASTInitializerClause)?.let {
                     templateArguments.add(it)
