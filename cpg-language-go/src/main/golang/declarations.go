@@ -62,7 +62,7 @@ func (f *FunctionDeclaration) SetType(t *Type) {
 func (f *FunctionDeclaration) SetReturnTypes(types []*Type) (err error) {
 	var list *jnigi.ObjectRef
 
-	list, err = ListOf[*Type](types)
+	list, err = ListOf(types)
 	if err != nil {
 		return err
 	}

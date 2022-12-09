@@ -115,7 +115,7 @@ func (m *MemberExpression) GetBase() *Expression {
 	return &expr
 }
 
-func (e *Expression) GetName() string {
+func (e *Expression) GetName() *Name {
 	return (*Node)(e).GetName()
 }
 

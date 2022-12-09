@@ -211,7 +211,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		}
 
 		if recordType != nil {
-			var recordName = recordType.GetFullName()
+			var recordName = recordType.GetName()
 
 			// TODO: this will only find methods within the current translation unit
 			// this is a limitation that we have for C++ as well
@@ -435,7 +435,7 @@ func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDe
 
 			if field.Names == nil {
 				// retrieve the root type name
-				var typeName = t.GetRoot().GetName()
+				var typeName = t.GetRoot().GetName().ToString()
 
 				this.LogDebug("Handling embedded field of type %s", typeName)
 
@@ -826,7 +826,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		return nil
 	}
 
-	name := reference.GetName()
+	name := reference.GetName().GetLocalName()
 
 	if name == "new" {
 		return this.handleNewExpr(fset, callExpr)
@@ -1000,7 +1000,7 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 	// check, if this just a regular reference to a variable with a package scope and not a member expression
 	var isMemberExpression bool = true
 	for _, imp := range this.File.Imports {
-		if base.GetName() == getImportName(imp) {
+		if base.GetName().GetLocalName() == getImportName(imp) {
 			// found a package name, so this is NOT a member expression
 			isMemberExpression = false
 		}
@@ -1114,7 +1114,7 @@ func (this *GoLanguageFrontend) handleCompositeLit(fset *token.FileSet, lit *ast
 	var typ = this.handleType(lit.Type)
 
 	if typ != nil {
-		(*cpg.Node)(c).SetName(typ.GetFullName())
+		(*cpg.Node)(c).SetName(typ.GetName())
 		(*cpg.Expression)(c).SetType(typ)
 	}
 
@@ -1357,11 +1357,11 @@ func funcTypeName(paramTypes []*cpg.Type, returnTypes []*cpg.Type) string {
 	var pn []string
 
 	for _, t := range paramTypes {
-		pn = append(pn, t.GetName())
+		pn = append(pn, t.GetName().ToString())
 	}
 
 	for _, t := range returnTypes {
-		rn = append(rn, t.GetName())
+		rn = append(rn, t.GetName().ToString())
 	}
 
 	var rs string

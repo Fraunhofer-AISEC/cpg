@@ -66,7 +66,7 @@ func (n *Node) SetName(name *Name) {
 	}
 }
 
-func (n *Node) GetFullName() (fn *Name) {
+func (n *Node) GetName() (fn *Name) {
 	var o = jnigi.NewObjectRef(NameClass)
 	err := (*jnigi.ObjectRef)(n).CallMethod(env, "getName", o)
 	if err != nil {
@@ -74,18 +74,6 @@ func (n *Node) GetFullName() (fn *Name) {
 	}
 
 	return (*Name)(o)
-}
-
-// TODO: should return a name instead
-func (n *Node) GetName() string {
-	var o *Name = (*Name)(jnigi.NewObjectRef(NameClass))
-	_ = (*jnigi.ObjectRef)(n).CallMethod(env, "getName", o)
-
-	if n == nil {
-		return ""
-	}
-
-	return o.ToString()
 }
 
 func (n *Name) ConvertToGo(o *jnigi.ObjectRef) error {
@@ -109,6 +97,10 @@ func (n *Name) IsArray() bool {
 	return false
 }
 
+func (n *Name) String() string {
+	return n.ToString()
+}
+
 func (n *Name) ToString() string {
 	var o = jnigi.NewObjectRef("java/lang/String")
 	_ = (*jnigi.ObjectRef)(n).CallMethod(env, "toString", o)
@@ -119,6 +111,26 @@ func (n *Name) ToString() string {
 
 	var b []byte
 	err := o.CallMethod(env, "getBytes", &b)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(b)
+}
+
+func (n *Name) GetLocalName() string {
+	var o = jnigi.NewObjectRef("java/lang/String")
+	err := (*jnigi.ObjectRef)(n).CallMethod(env, "getLocalName", o)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if o == nil {
+		return ""
+	}
+
+	var b []byte
+	err = o.CallMethod(env, "getBytes", &b)
 	if err != nil {
 		log.Fatal(err)
 	}
