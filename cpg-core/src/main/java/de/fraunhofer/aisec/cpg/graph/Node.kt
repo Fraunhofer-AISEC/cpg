@@ -57,20 +57,10 @@ import org.slf4j.LoggerFactory
 /** The base class for all graph objects that are going to be persisted in the database. */
 open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider {
     /**
-     * This property holds the full name using our new [Name] class. In the future, we might migrate
-     * this to the [name] field. It is currently not persisted in the graph database.
+     * This property holds the full name using our new [Name] class. It is currently not persisted
+     * in the graph database.
      */
-    @Transient var fullName: Name = Name(EMPTY_NAME)
-
-    /** The local name. */
-    @Deprecated(
-        message =
-            "This is a legacy feature, mostly used by non-Java languages. fullName should be used instead."
-    )
-    val name: String
-        get() {
-            return fullName.localName
-        }
+    @Transient var name: Name = Name(EMPTY_NAME)
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
@@ -292,8 +282,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     override fun toString(): String {
         val builder = ToStringBuilder(this, TO_STRING_STYLE)
 
-        if (fullName.isNotEmpty()) {
-            builder.append("name", fullName)
+        if (name.isNotEmpty()) {
+            builder.append("name", name)
         }
 
         return builder.append("location", location).toString()
@@ -311,7 +301,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
             // as a different LOC can have the same name/code/comment/file
             false
         } else
-            fullName == other.fullName &&
+            name == other.name &&
                 code == other.code &&
                 comment == other.comment &&
                 location == other.location &&
@@ -333,7 +323,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * location already when creating the node.
      */
     override fun hashCode(): Int {
-        return Objects.hash(fullName, location, this.javaClass)
+        return Objects.hash(name, location, this.javaClass)
     }
 
     companion object {

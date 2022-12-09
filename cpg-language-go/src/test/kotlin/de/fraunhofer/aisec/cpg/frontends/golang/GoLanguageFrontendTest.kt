@@ -266,7 +266,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertLocalName("func(string) (int, error)", type)
         assertEquals(myTest.parameters.size, type.parameters.size)
         assertEquals(myTest.returnTypes.size, type.returnTypes.size)
-        assertEquals(listOf("int", "error"), type.returnTypes.map { it.fullName.localName })
+        assertEquals(listOf("int", "error"), type.returnTypes.map { it.name.localName })
 
         var body = main.body as? CompoundStatement
         assertNotNull(body)
@@ -695,11 +695,11 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(main)
         assertEquals("comment before function", main.comment)
 
-        val i = main.parameters.firstOrNull { it.fullName.localName == "i" }
+        val i = main.parameters.firstOrNull { it.name.localName == "i" }
         assertNotNull(i)
         assertEquals("comment before parameter1", i.comment)
 
-        val j = main.parameters.firstOrNull { it.fullName.localName == "j" }
+        val j = main.parameters.firstOrNull { it.name.localName == "j" }
         assertNotNull(j)
         assertEquals("comment before parameter2", j.comment)
 

@@ -53,9 +53,9 @@ public class PointerType extends Type implements SecondOrderType {
     this.setLanguage(elementType.getLanguage());
 
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      this.setFullName(elementType.getFullName().append("[]"));
+      this.setName(elementType.getName().append("[]"));
     } else {
-      this.setFullName(elementType.getFullName().append("*"));
+      this.setName(elementType.getName().append("*"));
     }
 
     this.pointerOrigin = pointerOrigin;
@@ -67,9 +67,9 @@ public class PointerType extends Type implements SecondOrderType {
     this.setLanguage(elementType.getLanguage());
 
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      this.setFullName(elementType.getFullName().append("[]"));
+      this.setName(elementType.getName().append("[]"));
     } else {
-      this.setFullName(elementType.getFullName().append("*"));
+      this.setName(elementType.getName().append("*"));
     }
 
     this.pointerOrigin = pointerOrigin;
@@ -103,7 +103,7 @@ public class PointerType extends Type implements SecondOrderType {
       this.getElementType().refreshNames();
     }
 
-    String localName = elementType.getFullName().getLocalName();
+    String localName = elementType.getName().getLocalName();
     if (pointerOrigin == PointerOrigin.ARRAY) {
       localName += "[]";
     } else {
@@ -112,11 +112,9 @@ public class PointerType extends Type implements SecondOrderType {
 
     var fullTypeName =
         new Name(
-            localName,
-            elementType.getFullName().getParent(),
-            elementType.getFullName().getDelimiter());
+            localName, elementType.getName().getParent(), elementType.getName().getDelimiter());
 
-    this.setFullName(fullTypeName);
+    this.setName(fullTypeName);
   }
 
   @Override

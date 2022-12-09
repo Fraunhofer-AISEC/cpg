@@ -68,7 +68,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         set(value) {
             field = value
             if (value != null && this.type is UnknownType) {
-                setType(TypeParser.createFrom(value.fullName, language))
+                setType(TypeParser.createFrom(value.name, language))
             }
         }
 

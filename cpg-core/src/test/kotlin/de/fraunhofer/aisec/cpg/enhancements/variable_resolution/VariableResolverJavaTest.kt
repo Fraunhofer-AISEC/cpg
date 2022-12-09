@@ -189,7 +189,7 @@ internal class VariableResolverJavaTest : BaseTest() {
                     .map(Path::toFile)
             val result = analyze(fileNames, topLevel, true)
 
-            val calls = result.calls { it.fullName.localName == "printLog" }
+            val calls = result.calls { it.name.localName == "printLog" }
             val records = result.records
 
             // Extract all Variable declarations and field declarations for matching

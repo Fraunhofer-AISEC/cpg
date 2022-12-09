@@ -76,11 +76,11 @@ object TestUtils {
     }
 
     fun <S : Node> findByUniqueName(nodes: Collection<S>, name: String): S {
-        return findByUniquePredicate(nodes) { m: S -> matchesName(m.fullName, name) }
+        return findByUniquePredicate(nodes) { m: S -> matchesName(m.name, name) }
     }
 
     fun <S : Node> findByName(nodes: Collection<S>, name: String): Collection<S> {
-        return nodes.filter { m: S -> matchesName(m.fullName, name) }
+        return nodes.filter { m: S -> matchesName(m.name, name) }
     }
 
     /**
@@ -297,10 +297,10 @@ object TestUtils {
 
 fun assertFullName(fqn: String, node: Node?, message: String? = null) {
     assertNotNull(node)
-    asserter.assertEquals(message, fqn, node.fullName.toString())
+    asserter.assertEquals(message, fqn, node.name.toString())
 }
 
 fun assertLocalName(localName: String, node: Node?, message: String? = null) {
     assertNotNull(node)
-    asserter.assertEquals(message, localName, node.fullName.localName)
+    asserter.assertEquals(message, localName, node.name.localName)
 }

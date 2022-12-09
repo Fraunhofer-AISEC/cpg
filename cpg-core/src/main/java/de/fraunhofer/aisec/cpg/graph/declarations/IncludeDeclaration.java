@@ -85,7 +85,7 @@ public class IncludeDeclaration extends Declaration {
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        .append("name", getFullName().toString())
+        .append("name", getName().toString())
         .append("filename", filename)
         .append("includes", includes)
         .append("problems", problems)

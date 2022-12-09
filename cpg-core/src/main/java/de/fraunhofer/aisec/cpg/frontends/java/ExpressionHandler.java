@@ -574,7 +574,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       var recordDeclaration = this.frontend.getScopeManager().getCurrentRecord();
 
-      if (recordDeclaration != null && recordDeclaration.getFullName().endsWith(name)) {
+      if (recordDeclaration != null && recordDeclaration.getName().endsWith(name)) {
         declaredReferenceExpression.setRefersTo(recordDeclaration);
       }
 
@@ -707,7 +707,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       // Or if the base is a reference to an import
       if (base instanceof DeclaredReferenceExpression
-          && this.frontend.getQualifiedNameFromImports(base.getFullName().toString()) != null) {
+          && this.frontend.getQualifiedNameFromImports(base.getName().toString()) != null) {
         isStatic = true;
       }
 

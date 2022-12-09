@@ -61,14 +61,10 @@ class CPPLanguage :
     ): List<FunctionDeclaration> {
         var invocationCandidates = mutableListOf<FunctionDeclaration>()
         val records =
-            possibleContainingTypes.mapNotNull { callResolver.recordMap[it.root.fullName] }.toSet()
+            possibleContainingTypes.mapNotNull { callResolver.recordMap[it.root.name] }.toSet()
         for (record in records) {
             invocationCandidates.addAll(
-                callResolver.getInvocationCandidatesFromRecord(
-                    record,
-                    call.fullName.localName,
-                    call
-                )
+                callResolver.getInvocationCandidatesFromRecord(record, call.name.localName, call)
             )
         }
         if (invocationCandidates.isEmpty()) {
@@ -106,7 +102,7 @@ class CPPLanguage :
             mutableListOf<FunctionDeclaration>(
                 *recordDeclaration.methods
                     .filter { m ->
-                        namePattern.matcher(m.fullName).matches() && m.hasSignature(call.signature)
+                        namePattern.matcher(m.name).matches() && m.hasSignature(call.signature)
                     }
                     .toTypedArray()
             )
@@ -116,7 +112,7 @@ class CPPLanguage :
                 resolveWithDefaultArgs(
                     call,
                     recordDeclaration.methods.filter { m ->
-                        (namePattern.matcher(m.fullName).matches() /*&& !m.isImplicit()*/ &&
+                        (namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/ &&
                             call.signature.size < m.signatureTypes.size)
                     }
                 )
@@ -128,7 +124,7 @@ class CPPLanguage :
                 resolveWithImplicitCast(
                     call,
                     recordDeclaration.methods.filter { m ->
-                        namePattern.matcher(m.fullName).matches() /*&& !m.isImplicit()*/
+                        namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/
                     }
                 )
             )

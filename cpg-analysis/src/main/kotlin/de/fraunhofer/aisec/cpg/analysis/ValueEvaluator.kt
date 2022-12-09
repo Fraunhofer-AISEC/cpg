@@ -58,7 +58,7 @@ open class ValueEvaluator(
     val cannotEvaluate: (Node?, ValueEvaluator) -> Any? = { node: Node?, _: ValueEvaluator ->
         // end of the line, lets just keep the expression name
         if (node != null) {
-            "{${node.fullName}}"
+            "{${node.name}}"
         } else {
             CouldNotResolve()
         }

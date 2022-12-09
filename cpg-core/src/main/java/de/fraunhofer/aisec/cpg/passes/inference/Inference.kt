@@ -73,7 +73,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
         }
 
         log.debug(
-            "Inferring a new function declaration $name with parameter types ${signature.map { it?.fullName }}"
+            "Inferring a new function declaration $name with parameter types ${signature.map { it?.name }}"
         )
 
         if (
@@ -115,7 +115,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
     fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {
         val inferred =
             newConstructorDeclaration(
-                start.fullName.localName,
+                start.name.localName,
                 "",
                 start as? RecordDeclaration,
             )
@@ -225,7 +225,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
             )
         }
 
-        val name = call.fullName.localName
+        val name = call.name.localName
         val code = call.code
         val inferred = newFunctionTemplateDeclaration(name, code)
         inferred.isInferred = true
@@ -317,7 +317,7 @@ fun TranslationUnitDeclaration.inferFunction(
 ): FunctionDeclaration {
     return Inference(this)
         .createInferredFunctionDeclaration(
-            call.fullName.localName,
+            call.name.localName,
             call.code,
             isStatic,
             call.signature,
@@ -333,7 +333,7 @@ fun RecordDeclaration.inferMethod(
 ): MethodDeclaration {
     return Inference(this)
         .createInferredFunctionDeclaration(
-            call.fullName.localName,
+            call.name.localName,
             call.code,
             isStatic,
             call.signature,

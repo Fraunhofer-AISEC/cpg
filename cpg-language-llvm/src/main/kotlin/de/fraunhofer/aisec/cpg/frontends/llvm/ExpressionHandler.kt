@@ -194,7 +194,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             }
 
         val literal = newLiteral(value, type, value.toString())
-        literal.fullName = Name(value.toString())
+        literal.name = Name(value.toString())
         return literal
     }
 
@@ -208,7 +208,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val value = LLVMConstRealGetDouble(valueRef, losesInfo)
 
         val literal = newLiteral(value, frontend.typeOf(valueRef), value.toString())
-        literal.fullName = Name(value.toString())
+        literal.name = Name(value.toString())
         return literal
     }
 
@@ -359,10 +359,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Returns a [ConstructExpression].
      */
     private fun initializeAsUndef(type: Type, code: String): Expression {
-        if (
-            !frontend.isKnownStructTypeName(type.fullName.toString()) &&
-                !type.fullName.contains("{")
-        ) {
+        if (!frontend.isKnownStructTypeName(type.name.toString()) && !type.name.contains("{")) {
             return newLiteral(null, type, code)
         } else {
             val expr: ConstructExpression = newConstructExpression(code)
@@ -387,10 +384,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Returns a [ConstructExpression].
      */
     private fun initializeAsZero(type: Type, code: String): Expression {
-        if (
-            !frontend.isKnownStructTypeName(type.fullName.toString()) &&
-                !type.fullName.contains("{")
-        ) {
+        if (!frontend.isKnownStructTypeName(type.name.toString()) && !type.name.contains("{")) {
             return newLiteral(0, type, code)
         } else {
             val expr: ConstructExpression = newConstructExpression(code)
@@ -482,7 +476,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             if (baseType is PointerType) {
                 val arrayExpr = newArraySubscriptionExpression("")
                 arrayExpr.arrayExpression = base
-                arrayExpr.fullName = Name(index.toString())
+                arrayExpr.name = Name(index.toString())
                 arrayExpr.subscriptExpression = operand
                 expr = arrayExpr
 
@@ -500,7 +494,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     record =
                         frontend.scopeManager
                             .resolve<RecordDeclaration>(frontend.scopeManager.globalScope, true) {
-                                it.fullName == baseType.fullName
+                                it.name == baseType.name
                             }
                             .firstOrNull()
                     if (record != null) {
@@ -518,7 +512,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 }
 
                 log.debug(
-                    "Trying to access a field within the record declaration of ${record.fullName}"
+                    "Trying to access a field within the record declaration of ${record.name}"
                 )
 
                 // look for the field
@@ -526,12 +520,12 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 val fieldName: String =
                     if (index is Int) {
                         field = record.fields["field_$index"]
-                        field?.fullName?.localName ?: ""
+                        field?.name?.localName ?: ""
                     } else {
                         // We won't find a field because it's accessed by a variable index.
                         // We indicate this with this array-like notation for now.
                         field = null
-                        "[${(operand as DeclaredReferenceExpression).fullName.localName}]"
+                        "[${(operand as DeclaredReferenceExpression).name.localName}]"
                     }
 
                 // our new base-type is the type of the field

@@ -98,19 +98,19 @@ public class CastExpression extends Expression implements TypeListener {
   public void setCastOperator(int operatorCode) {
     switch (operatorCode) {
       case 0:
-        setFullName(new Name("cast", null, this.getLanguage().getNamespaceDelimiter()));
+        setName(new Name("cast", null, this.getLanguage().getNamespaceDelimiter()));
         break;
       case 1:
-        setFullName(new Name("dynamic_cast", null, this.getLanguage().getNamespaceDelimiter()));
+        setName(new Name("dynamic_cast", null, this.getLanguage().getNamespaceDelimiter()));
         break;
       case 2:
-        setFullName(new Name("static_cast", null, this.getLanguage().getNamespaceDelimiter()));
+        setName(new Name("static_cast", null, this.getLanguage().getNamespaceDelimiter()));
         break;
       case 3:
-        setFullName(new Name("reinterpret_cast", null, this.getLanguage().getNamespaceDelimiter()));
+        setName(new Name("reinterpret_cast", null, this.getLanguage().getNamespaceDelimiter()));
         break;
       case 4:
-        setFullName(new Name("const_cast", null, this.getLanguage().getNamespaceDelimiter()));
+        setName(new Name("const_cast", null, this.getLanguage().getNamespaceDelimiter()));
         break;
       default:
         log.error("unknown operator {}", operatorCode);
@@ -128,7 +128,7 @@ public class CastExpression extends Expression implements TypeListener {
     CastExpression that = (CastExpression) o;
     return Objects.equals(expression, that.expression)
         && Objects.equals(castType, that.castType)
-        && Objects.equals(this.getFullName(), that.getFullName());
+        && Objects.equals(this.getName(), that.getName());
   }
 
   @Override

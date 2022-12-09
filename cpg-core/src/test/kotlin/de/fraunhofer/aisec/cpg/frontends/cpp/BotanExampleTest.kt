@@ -45,19 +45,19 @@ internal class BotanExampleTest : BaseTest() {
         val declarations = declaration.declarations
         assertEquals(5, declarations.size)
 
-        val doCrypt = declarations.firstOrNull { it.fullName.localName == "do_crypt" }
+        val doCrypt = declarations.firstOrNull { it.name.localName == "do_crypt" }
         assertTrue(doCrypt is FunctionDeclaration)
         assertLocalName("do_crypt", doCrypt)
 
-        val encrypt = declarations.firstOrNull { it.fullName.localName == "encrypt" }
+        val encrypt = declarations.firstOrNull { it.name.localName == "encrypt" }
         assertTrue(encrypt is FunctionDeclaration)
         assertLocalName("encrypt", encrypt)
 
-        val decrypt = declarations.firstOrNull { it.fullName.localName == "decrypt" }
+        val decrypt = declarations.firstOrNull { it.name.localName == "decrypt" }
         assertTrue(decrypt is FunctionDeclaration)
         assertLocalName("decrypt", decrypt)
 
-        val main = declarations.firstOrNull { it.fullName.localName == "main" }
+        val main = declarations.firstOrNull { it.name.localName == "main" }
         assertTrue(main is FunctionDeclaration)
         assertLocalName("main", main)
     }

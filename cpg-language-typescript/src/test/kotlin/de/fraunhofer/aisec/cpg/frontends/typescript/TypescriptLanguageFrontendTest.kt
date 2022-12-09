@@ -380,7 +380,7 @@ class TypeScriptLanguageFrontendTest {
 
         val onPost =
             tu.statements.firstOrNull {
-                it is MemberCallExpression && it.fullName.localName == "onPost"
+                it is MemberCallExpression && it.name.localName == "onPost"
             } as? MemberCallExpression
         assertNotNull(onPost)
 

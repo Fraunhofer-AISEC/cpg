@@ -121,7 +121,7 @@ fun Node.applyMetadata(
         }
 
     if (localName != null && this is NamespaceDeclaration) {
-        this.fullName =
+        this.name =
             Name.parse(
                 localName,
                 this.language?.namespaceDelimiter ?: ".",
@@ -130,22 +130,21 @@ fun Node.applyMetadata(
     } else if (localName != null && !localNameOnly) {
         // TODO: Shouldn't we check if the delimiter is in the local name and use Name.parse() if
         // this is the case? E.g., the namespace declarations pass the FQN
-        this.fullName =
-            Name(localName.toString(), namespace, this.language?.namespaceDelimiter ?: ".")
+        this.name = Name(localName.toString(), namespace, this.language?.namespaceDelimiter ?: ".")
     } else if (
         localName != null &&
             (this is CallExpression ||
                 this is DeclaredReferenceExpression ||
                 this is TypeExpression)
     ) {
-        this.fullName =
+        this.name =
             Name.parse(
                 localName,
                 this.language?.namespaceDelimiter ?: ".",
                 *(this.language?.nameSplitter ?: emptyArray())
             )
     } else {
-        this.fullName =
+        this.name =
             Name(localName.toString() ?: EMPTY_NAME, null, this.language?.namespaceDelimiter ?: ".")
     }
 

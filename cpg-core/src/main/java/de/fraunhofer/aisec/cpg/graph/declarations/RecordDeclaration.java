@@ -301,7 +301,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        .append("name", getFullName().toString())
+        .append("name", getName().toString())
         .append("kind", kind)
         .append("superTypeDeclarations", superTypeDeclarations)
         .append("fields", fields)
@@ -361,7 +361,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
    * @return the type
    */
   public Type toType() {
-    var type = TypeParser.createFrom(this.getFullName(), getLanguage());
+    var type = TypeParser.createFrom(this.getName(), getLanguage());
 
     if (type instanceof ObjectType) {
       // as a shortcut, directly set the record declaration. This will be otherwise done

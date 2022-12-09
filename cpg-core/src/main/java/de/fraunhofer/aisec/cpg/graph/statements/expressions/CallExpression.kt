@@ -114,11 +114,11 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             // We also want to update this node's name, based on the callee. This is purely for
             // readability reasons. We have a special handling for function pointers, where we want
             // to have the name of the variable. This might change in the future.
-            this.fullName =
+            this.name =
                 if (value is UnaryOperator && value.input.type is FunctionPointerType) {
-                    value.input.fullName
+                    value.input.name
                 } else {
-                    value?.fullName ?: Name(EMPTY_NAME)
+                    value?.name ?: Name(EMPTY_NAME)
                 }
 
             // Register the callee as a type listener for this call expressions. Once we re-design
@@ -261,12 +261,8 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             return
         }
         if (src === base) {
-            fullName =
-                Name(
-                    fullName.localName,
-                    src.getType().root.fullName,
-                    language?.namespaceDelimiter ?: "."
-                )
+            name =
+                Name(name.localName, src.getType().root.name, language?.namespaceDelimiter ?: ".")
         } else {
             val previous = type
             val types =

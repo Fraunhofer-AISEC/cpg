@@ -132,16 +132,13 @@ internal class DFGTest {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result =
             analyze(listOf(topLevel.resolve("conditional_expression.cpp").toFile()), topLevel, true)
-        val bJoin =
-            result.refs[{ it.fullName.localName == "b" && it.location?.region?.startLine == 6 }]
-        val a5 =
-            result.refs[{ it.fullName.localName == "a" && it.location?.region?.startLine == 5 }]
-        val a6 =
-            result.refs[{ it.fullName.localName == "a" && it.location?.region?.startLine == 6 }]
+        val bJoin = result.refs[{ it.name.localName == "b" && it.location?.region?.startLine == 6 }]
+        val a5 = result.refs[{ it.name.localName == "a" && it.location?.region?.startLine == 5 }]
+        val a6 = result.refs[{ it.name.localName == "a" && it.location?.region?.startLine == 6 }]
         val bCond =
             result.refs[
                     {
-                        it.fullName.localName == "b" &&
+                        it.name.localName == "b" &&
                             it.location?.region?.startLine == 5 &&
                             it.location?.region?.startColumn == 16
                     }
@@ -149,7 +146,7 @@ internal class DFGTest {
         val b2 =
             result.refs[
                     {
-                        it.fullName.localName == "b" &&
+                        it.name.localName == "b" &&
                             it.location?.region?.startLine == 5 &&
                             it.location?.region?.startColumn == 16
                     }
@@ -157,7 +154,7 @@ internal class DFGTest {
         val b3 =
             result.refs[
                     {
-                        it.fullName.localName == "b" &&
+                        it.name.localName == "b" &&
                             it.location?.region?.startLine == 5 &&
                             it.location?.region?.startColumn == 23
                     }
@@ -390,7 +387,7 @@ internal class DFGTest {
         val l3 = getLiteral(methodNodes, 3)
         val calls =
             SubgraphWalker.flattenAST(looping).filter { n: Node ->
-                n is CallExpression && n.fullName.localName == "println"
+                n is CallExpression && n.name.localName == "println"
             }
         val dfgNodes = flattenDFGGraph(calls[0].refs["a"], false)
         assertTrue(dfgNodes.contains(l0))
@@ -434,7 +431,7 @@ internal class DFGTest {
         val l4 = getLiteral(methodNodes, 4)
         val calls =
             SubgraphWalker.flattenAST(looping)
-                .filter { n: Node -> n is CallExpression && n.fullName.localName == "println" }
+                .filter { n: Node -> n is CallExpression && n.name.localName == "println" }
                 .toMutableList()
         val dfgNodesA0 = flattenDFGGraph(calls[0].refs["a"], false)
         val dfgNodesA1 = flattenDFGGraph(calls[1].refs["a"], false)

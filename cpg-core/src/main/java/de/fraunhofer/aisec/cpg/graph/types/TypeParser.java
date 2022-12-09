@@ -789,7 +789,7 @@ public class TypeParser {
               typeName, storageValue, qualifier, generics, modifier, primitiveType, language);
     }
 
-    if (finalType.getFullName().getLocalName().equals("auto")
+    if (finalType.getName().getLocalName().equals("auto")
         || (type.contains("auto") && !primitiveType)) {
       // In C++17 if auto keyword is used the compiler infers the type automatically, hence we
       // are not able to find out, which type this should be, it will be resolved due to
@@ -834,7 +834,7 @@ public class TypeParser {
     if (createdType instanceof SecondOrderType) {
       templateType =
           searchForTemplateTypes(
-              createdType.getRoot().getFullName().toString(), lang.getScopeManager());
+              createdType.getRoot().getName().toString(), lang.getScopeManager());
       if (templateType != null) {
         createdType.setRoot(templateType);
       }

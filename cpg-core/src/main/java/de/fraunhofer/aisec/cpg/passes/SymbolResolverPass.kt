@@ -44,7 +44,7 @@ abstract class SymbolResolverPass : Pass() {
     /** Maps the name of the type of record declarations to its declaration. */
     protected fun findRecords(node: Node) {
         if (node is RecordDeclaration) {
-            recordMap.putIfAbsent(node.fullName, node)
+            recordMap.putIfAbsent(node.name, node)
         }
     }
 
@@ -52,7 +52,7 @@ abstract class SymbolResolverPass : Pass() {
     protected fun findEnums(node: Node) {
         if (node is EnumDeclaration) {
             // TODO: Use the name instead of the type.
-            val type = TypeParser.createFrom(node.fullName, node.language)
+            val type = TypeParser.createFrom(node.name, node.language)
             enumMap.putIfAbsent(type, node)
         }
     }
@@ -88,7 +88,7 @@ abstract class SymbolResolverPass : Pass() {
                 // TODO(oxisto): support multiple return types
                 this.returnTypes[0]
             }
-        return this.fullName.endsWith(name) &&
+        return this.name.endsWith(name) &&
             thisReturnType == returnType &&
             this.hasSignature(signature)
     }
@@ -106,7 +106,7 @@ abstract class SymbolResolverPass : Pass() {
         val language = reference.language
 
         return language is HasSuperClasses &&
-            reference.fullName
+            reference.name
                 .toString()
                 .matches(
                     Regex(

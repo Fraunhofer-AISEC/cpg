@@ -43,7 +43,7 @@ public class StaticCallExpression extends CallExpression {
 
   public void setTargetRecord(String targetRecord) {
     this.targetRecord = targetRecord;
-    updateFqn(this.getFullName().getLocalName());
+    updateFqn(this.getName().getLocalName());
   }
 
   private void updateFqn(@NotNull String localName) {
@@ -55,7 +55,7 @@ public class StaticCallExpression extends CallExpression {
         nameSplitter = this.getLanguage().getNameSplitter();
       }
 
-      setFullName(
+      setName(
           new Name(
               localName,
               Name.Companion.parse(targetRecord, namespaceDelimiter, nameSplitter),

@@ -185,7 +185,7 @@ class CompressLLVMPass : Pass() {
             if (catch.parameter == null) {
                 val error =
                     catch.newVariableDeclaration(
-                        "e_${catch.fullName}",
+                        "e_${catch.name}",
                         UnknownType.getUnknownType(catch.language),
                         "",
                         true,
@@ -194,7 +194,7 @@ class CompressLLVMPass : Pass() {
             }
             val exceptionReference =
                 catch.newDeclaredReferenceExpression(
-                    catch.parameter?.fullName,
+                    catch.parameter?.name,
                     catch.parameter?.type,
                     ""
                 )

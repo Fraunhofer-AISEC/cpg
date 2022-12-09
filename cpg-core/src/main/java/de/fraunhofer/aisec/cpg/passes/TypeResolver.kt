@@ -228,7 +228,7 @@ open class TypeResolver : Pass() {
     fun handle(node: Node) {
         if (node is RecordDeclaration) {
             for (t in typeState.keys) {
-                if (t.fullName == node.fullName && t is ObjectType) {
+                if (t.name == node.name && t is ObjectType) {
                     // The node is the class of the type t
                     t.recordDeclaration = node
                 }

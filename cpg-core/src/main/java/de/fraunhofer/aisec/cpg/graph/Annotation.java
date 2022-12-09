@@ -45,7 +45,7 @@ public class Annotation extends Node {
   @Nullable
   public Expression getValueForName(String name) {
     return members.stream()
-        .filter(member -> member.getFullName().endsWith(name))
+        .filter(member -> member.getName().endsWith(name))
         .map(AnnotationMember::getValue)
         .findAny()
         .orElse(null);

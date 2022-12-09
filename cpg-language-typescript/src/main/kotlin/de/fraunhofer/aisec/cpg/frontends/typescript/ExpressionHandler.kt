@@ -76,7 +76,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val tag = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
         // it contains an Identifier node, we map this into the name
-        this.frontend.getIdentifierName(node).let { tag.fullName = Name("</$it>") }
+        this.frontend.getIdentifierName(node).let { tag.name = Name("</$it>") }
 
         return tag
     }
@@ -91,7 +91,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val tag = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
         // it contains an Identifier node, we map this into the name
-        this.frontend.getIdentifierName(node).let { tag.fullName = Name("<$it>") }
+        this.frontend.getIdentifierName(node).let { tag.name = Name("<$it>") }
 
         // and a container named JsxAttributes, with JsxAttribute nodes
         tag.expressions =
@@ -213,15 +213,15 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             // https://github.com/Fraunhofer-AISEC/cpg/issues/298
             val member =
                 newDeclaredReferenceExpression(
-                    memberExpression.fullName,
+                    memberExpression.name,
                     memberExpression.type,
-                    memberExpression.fullName.toString()
+                    memberExpression.name.toString()
                 )
 
             call =
                 newMemberCallExpression(
-                    memberExpression.fullName.localName,
-                    memberExpression.fullName.toString(),
+                    memberExpression.name.localName,
+                    memberExpression.name.toString(),
                     memberExpression.base,
                     member,
                     ".",

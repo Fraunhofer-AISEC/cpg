@@ -170,14 +170,14 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             if (candidates.isEmpty() && frontend.scopeManager.currentScope !is TemplateScope) {
                 log.warn(
                     "Could not find declaration of method {} in record {}",
-                    declaration.fullName,
-                    recordDeclaration.fullName
+                    declaration.name,
+                    recordDeclaration.name
                 )
             } else if (candidates.size > 1) {
                 log.warn(
                     "Found more than one candidate to connect definition of method {} in record {} to its declaration. We will comply, but this is suspicious.",
-                    declaration.fullName,
-                    recordDeclaration.fullName
+                    declaration.name,
+                    recordDeclaration.name
                 )
             }
             for (candidate in candidates) {
@@ -284,8 +284,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         frontend.scopeManager.leaveScope(templateDeclaration)
         if (templateDeclaration is FunctionTemplateDeclaration) {
             // Fix typeName
-            templateDeclaration.fullName =
-                templateDeclaration.getRealizationDeclarations()[0].fullName.clone()
+            templateDeclaration.name =
+                templateDeclaration.getRealizationDeclarations()[0].name.clone()
         } else
             (innerDeclaration as? RecordDeclaration)?.let {
                 addParameterizedTypesToRecord(templateDeclaration, it)
@@ -434,7 +434,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 if (primaryDeclaration != null) {
                     // handle typedef
                     if (
-                        primaryDeclaration.fullName.isEmpty() &&
+                        primaryDeclaration.name.isEmpty() &&
                             ctx.rawSignature.trim().startsWith("typedef")
                     ) {
                         // This is a special case, which is a common idiom in C, to typedef a
@@ -443,7 +443,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         // typedef'd name is called S. However, to make things a little bit easier
                         // we also transfer the name to the record declaration.
                         ctx.declarators.firstOrNull()?.name?.toString()?.let {
-                            primaryDeclaration?.fullName = Name.parse(it, language)
+                            primaryDeclaration?.name = Name.parse(it, language)
                             // We need to inform the later steps that we want to take the name
                             // of this declaration as the basis for the result type of the typedef
                             useNameOfDeclarator = true
@@ -482,8 +482,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 val declSpecifierToUse =
                     if (useNameOfDeclarator && declSpecifier is IASTCompositeTypeSpecifier) {
                         val copy = declSpecifier.copy()
-                        copy.name =
-                            CPPASTName(primaryDeclaration?.fullName?.toString()?.toCharArray())
+                        copy.name = CPPASTName(primaryDeclaration?.name?.toString()?.toCharArray())
                         copy
                     } else {
                         declSpecifier
@@ -635,7 +634,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 objectType.addGeneric(genericInstantiation)
                 templateParams.add(
                     newTypeExpression(
-                        genericInstantiation.fullName.toString(),
+                        genericInstantiation.name.toString(),
                         genericInstantiation,
                     )
                 )

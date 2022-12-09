@@ -211,7 +211,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		}
 
 		if recordType != nil {
-			var recordName = recordType.GetFullName().ToString()
+			var recordName = recordType.GetFullName()
 
 			// TODO: this will only find methods within the current translation unit
 			// this is a limitation that we have for C++ as well
@@ -1025,7 +1025,7 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 		name := cpg.Name_parse(fqn, l)
 
 		decl = this.NewDeclaredReferenceExpression(fset, selectorExpr, fqn)
-		decl.Node().SetFullName(name)
+		decl.Node().SetName(name)
 	}
 
 	// For now we just let the VariableUsageResolver handle this. Therefore,
@@ -1114,7 +1114,7 @@ func (this *GoLanguageFrontend) handleCompositeLit(fset *token.FileSet, lit *ast
 	var typ = this.handleType(lit.Type)
 
 	if typ != nil {
-		(*cpg.Node)(c).SetFullName(typ.GetFullName())
+		(*cpg.Node)(c).SetName(typ.GetFullName())
 		(*cpg.Expression)(c).SetType(typ)
 	}
 
@@ -1153,7 +1153,7 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 			log.Fatal(err)
 		}
 
-		(*cpg.Node)(lit).SetFullName(cpg.Name_parse(ident.Name, l))
+		(*cpg.Node)(lit).SetName(cpg.Name_parse(ident.Name, l))
 
 		return (*cpg.Expression)(lit)
 	}

@@ -483,8 +483,8 @@ class CXXLanguageFrontend(
         var type =
             when (specifier) {
                 is IASTSimpleDeclSpecifier -> {
-                    if (hint is ConstructorDeclaration && hint.fullName.parent != null) {
-                        parseType(hint.fullName.parent!!)
+                    if (hint is ConstructorDeclaration && hint.name.parent != null) {
+                        parseType(hint.name.parent!!)
                     } else {
                         // A primitive type
                         parseType(name)

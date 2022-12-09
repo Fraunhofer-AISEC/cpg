@@ -164,7 +164,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     ): MethodDeclaration {
         // Check, if it's a constructor
         val method =
-            if (name == recordDeclaration?.fullName?.localName) {
+            if (name == recordDeclaration?.name?.localName) {
                 newConstructorDeclaration(name, null, recordDeclaration, ctx)
             } else {
                 newMethodDeclaration(name, null, false, recordDeclaration, ctx)
@@ -215,7 +215,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             recordDeclaration =
                 frontend.scopeManager.getRecordForName(
                     frontend.scopeManager.currentScope!!,
-                    recordName
+                    Name.parse(recordName, language)
                 )
             declaration = createMethodOrConstructor(methodName, recordDeclaration, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {
@@ -273,7 +273,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             if (arg is ParamVariableDeclaration) {
                 // check for void type parameters
                 if (arg.type is IncompleteType) {
-                    if (arg.fullName.isNotEmpty()) {
+                    if (arg.name.isNotEmpty()) {
                         Util.warnWithFileLocation(
                             declaration,
                             log,
@@ -463,8 +463,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration.constructors.isEmpty()) {
             val constructorDeclaration =
                 newConstructorDeclaration(
-                    recordDeclaration.fullName.localName,
-                    recordDeclaration.fullName.toString(),
+                    recordDeclaration.name.localName,
+                    recordDeclaration.name.toString(),
                     recordDeclaration,
                     frontend.language
                 )

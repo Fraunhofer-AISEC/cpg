@@ -29,6 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.Name;
 
 public class UninitializedValue extends Expression {
   public UninitializedValue() {
-    setFullName(new Name("Uninitialized Value", null, this.getLanguage()));
+    setName(new Name("Uninitialized Value", null, this.getLanguage()));
   }
 }

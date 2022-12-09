@@ -45,7 +45,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
  */
 @JvmOverloads
 fun MetadataProvider.newTranslationUnitDeclaration(
-    name: String?,
+    name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
 ): TranslationUnitDeclaration {
@@ -64,7 +64,7 @@ fun MetadataProvider.newTranslationUnitDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newFunctionDeclaration(
-    name: String?,
+    name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
 ): FunctionDeclaration {
@@ -83,14 +83,14 @@ fun MetadataProvider.newFunctionDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newMethodDeclaration(
-    name: String?,
+    name: CharSequence?,
     code: String? = null,
     isStatic: Boolean = false,
     recordDeclaration: RecordDeclaration? = null,
     rawNode: Any? = null
 ): MethodDeclaration {
     val node = MethodDeclaration()
-    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDeclaration?.fullName)
+    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDeclaration?.name)
 
     node.isStatic = isStatic
     node.recordDeclaration = recordDeclaration
@@ -107,14 +107,14 @@ fun MetadataProvider.newMethodDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newConstructorDeclaration(
-    name: String?,
+    name: CharSequence?,
     code: String? = null,
     recordDeclaration: RecordDeclaration?,
     rawNode: Any? = null
 ): ConstructorDeclaration {
     val node = ConstructorDeclaration()
 
-    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDeclaration?.fullName)
+    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDeclaration?.name)
 
     node.recordDeclaration = recordDeclaration
 
@@ -130,7 +130,7 @@ fun MetadataProvider.newConstructorDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newParamVariableDeclaration(
-    name: String?,
+    name: CharSequence?,
     type: Type? = UnknownType.getUnknownType(),
     variadic: Boolean = false,
     code: String? = null,
@@ -154,7 +154,7 @@ fun MetadataProvider.newParamVariableDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newVariableDeclaration(
-    name: String?,
+    name: CharSequence?,
     type: Type? = UnknownType.getUnknownType(),
     code: String? = null,
     implicitInitializerAllowed: Boolean = false,
@@ -201,7 +201,7 @@ fun MetadataProvider.newTypedefDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newTypeParamDeclaration(
-    name: String?,
+    name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
 ): TypeParamDeclaration {
@@ -220,7 +220,7 @@ fun MetadataProvider.newTypeParamDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newRecordDeclaration(
-    name: String,
+    name: CharSequence,
     kind: String,
     code: String? = null,
     rawNode: Any? = null
@@ -242,7 +242,7 @@ fun MetadataProvider.newRecordDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newEnumDeclaration(
-    name: String?,
+    name: CharSequence?,
     code: String? = null,
     location: PhysicalLocation?,
     rawNode: Any? = null
@@ -264,7 +264,7 @@ fun MetadataProvider.newEnumDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newFunctionTemplateDeclaration(
-    name: String?,
+    name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
 ): FunctionTemplateDeclaration {
@@ -283,7 +283,7 @@ fun MetadataProvider.newFunctionTemplateDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newClassTemplateDeclaration(
-    name: String?,
+    name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
 ): ClassTemplateDeclaration {
@@ -302,7 +302,7 @@ fun MetadataProvider.newClassTemplateDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newEnumConstantDeclaration(
-    name: String?,
+    name: CharSequence?,
     code: String? = null,
     location: PhysicalLocation?,
     rawNode: Any? = null
@@ -324,7 +324,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newFieldDeclaration(
-    name: String?,
+    name: CharSequence?,
     type: Type? = UnknownType.getUnknownType(),
     modifiers: List<String?>? = listOf(),
     code: String? = null,
@@ -382,7 +382,7 @@ fun MetadataProvider.newProblemDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newIncludeDeclaration(
-    includeFilename: String,
+    includeFilename: CharSequence,
     code: String? = null,
     rawNode: Any? = null
 ): IncludeDeclaration {
@@ -390,7 +390,7 @@ fun MetadataProvider.newIncludeDeclaration(
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     val name = includeFilename.substring(includeFilename.lastIndexOf('/') + 1)
-    node.filename = includeFilename
+    node.filename = includeFilename.toString()
 
     log(node)
     return node
@@ -404,7 +404,7 @@ fun MetadataProvider.newIncludeDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newNamespaceDeclaration(
-    name: String,
+    name: CharSequence,
     code: String? = null,
     rawNode: Any? = null
 ): NamespaceDeclaration {
@@ -424,13 +424,13 @@ fun MetadataProvider.newNamespaceDeclaration(
 @JvmOverloads
 fun MetadataProvider.newUsingDirective(
     code: String? = null,
-    qualifiedName: String?,
+    qualifiedName: CharSequence?,
     rawNode: Any? = null
 ): UsingDirective {
     val node = UsingDirective()
     node.applyMetadata(this, qualifiedName, rawNode, code)
 
-    node.qualifiedName = qualifiedName
+    node.qualifiedName = qualifiedName.toString()
 
     log(node)
     return node

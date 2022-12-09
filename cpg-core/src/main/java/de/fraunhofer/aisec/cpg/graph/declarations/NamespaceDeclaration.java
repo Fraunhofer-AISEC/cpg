@@ -112,7 +112,7 @@ public class NamespaceDeclaration extends Declaration
     return getDeclarations().stream()
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
-        .filter(declaration -> Objects.equals(declaration.getFullName().toString(), name))
+        .filter(declaration -> Objects.equals(declaration.getName().toString(), name))
         .collect(Collectors.toSet());
   }
 

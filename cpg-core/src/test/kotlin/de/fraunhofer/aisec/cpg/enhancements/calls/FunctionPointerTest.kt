@@ -56,25 +56,21 @@ internal class FunctionPointerTest : BaseTest() {
         val calls = main.calls
         val noParam =
             functions[
-                {
-                    it.fullName.localName == "target" && it.parameters.isEmpty()
-                },
-                SearchModifier.UNIQUE
-            ]
+                { it.name.localName == "target" && it.parameters.isEmpty() }, SearchModifier.UNIQUE]
         findByUniquePredicate(functions) {
-            it.fullName.localName == "target" && it.parameters.isEmpty()
+            it.name.localName == "target" && it.parameters.isEmpty()
         }
         val singleParam =
             findByUniquePredicate(functions) {
-                it.fullName.localName == "target" && it.parameters.size == 1
+                it.name.localName == "target" && it.parameters.size == 1
             }
         val noParamUnknown =
             findByUniquePredicate(functions) {
-                it.fullName.localName == "fun" && it.parameters.isEmpty()
+                it.name.localName == "fun" && it.parameters.isEmpty()
             }
         val singleParamUnknown =
             findByUniquePredicate(functions) {
-                it.fullName.localName == "fun" && it.parameters.size == 1
+                it.name.localName == "fun" && it.parameters.size == 1
             }
         val pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+(\\.|::))?(?<func>.+)\\)")
         for (call in calls) {
@@ -82,7 +78,7 @@ internal class FunctionPointerTest : BaseTest() {
                 continue
             }
             var func: String
-            val callName = call.fullName.localName
+            val callName = call.name.localName
             if (!callName.contains("(")) {
                 func = callName
                 assertNotEquals("", func, "Unexpected call $func")
@@ -120,7 +116,7 @@ internal class FunctionPointerTest : BaseTest() {
             val variables = result.variables
 
             for (variable in variables) {
-                when (variable.fullName.localName) {
+                when (variable.name.localName) {
                     "no_param_unused",
                     "no_param_unused_field",
                     "no_param_unused_uninitialized" ->

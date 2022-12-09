@@ -262,7 +262,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             namespaceDeclaration?.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(recordDeclaration)
 
-        val fields = recordDeclaration.fields.map { it.fullName.localName }
+        val fields = recordDeclaration.fields.map { it.name.localName }
         assertTrue(fields.contains("field"))
 
         val method = recordDeclaration.methods[0]
@@ -331,8 +331,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         // names
         // vs. fully qualified names.
         assertTrue(
-            e?.type?.fullName?.localName == "ExtendedClass" ||
-                e?.type?.fullName?.toString() == "cast.ExtendedClass"
+            e?.type?.name?.localName == "ExtendedClass" ||
+                e?.type?.name?.toString() == "cast.ExtendedClass"
         )
 
         // b = (BaseClass) e
@@ -341,16 +341,15 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val b = stmt.getSingleDeclarationAs(VariableDeclaration::class.java)
         assertTrue(
-            b?.type?.fullName?.localName == "BaseClass" ||
-                b?.type?.fullName?.toString() == "cast.BaseClass"
+            b?.type?.name?.localName == "BaseClass" || b?.type?.name?.toString() == "cast.BaseClass"
         )
 
         // initializer
         val cast = b.initializer as? CastExpression
         assertNotNull(cast)
         assertTrue(
-            cast.type.fullName.localName == "BaseClass" ||
-                cast.type?.fullName?.toString() == "cast.BaseClass"
+            cast.type.name.localName == "BaseClass" ||
+                cast.type?.name?.toString() == "cast.BaseClass"
         )
 
         // expression itself should be a reference
@@ -535,7 +534,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             nodes
                 .stream()
                 .filter { node: Node ->
-                    (node is VariableDeclaration && "request" == node.fullName.localName)
+                    (node is VariableDeclaration && "request" == node.name.localName)
                 }
                 .map { node: Node? -> node as? VariableDeclaration? }
                 .findFirst()
@@ -600,11 +599,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                             // take the original class and replace the name
                             val declaration =
                                 super.handleClassOrInterfaceDeclaration(classInterDecl)
-                            declaration.fullName =
+                            declaration.name =
                                 Name(
                                     "MySimpleClass",
-                                    declaration.fullName.parent,
-                                    declaration.fullName.delimiter
+                                    declaration.name.parent,
+                                    declaration.name.delimiter
                                 )
 
                             return declaration

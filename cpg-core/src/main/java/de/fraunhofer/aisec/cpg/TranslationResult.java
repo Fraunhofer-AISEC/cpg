@@ -117,13 +117,13 @@ public class TranslationResult extends Node implements StatisticsHolder {
     } else if (components.isEmpty()) {
       // No component exists, so we create the new dummy component.
       swc = new Component();
-      swc.setFullName(new Name("application", null, ""));
+      swc.setName(new Name("application", null, ""));
       components.add(swc);
     } else {
       // Multiple components exist. As we don't know where to put the tu, we check if we have the
       // component we created and add it there or create a new one.
       for (var component : components) {
-        if (component.getFullName().getLocalName().equals("application")) {
+        if (component.getName().getLocalName().equals("application")) {
           swc = component;
           break;
         }
@@ -131,7 +131,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
 
       if (swc == null) {
         swc = new Component();
-        swc.setFullName(new Name("application", null, ""));
+        swc.setName(new Name("application", null, ""));
         components.add(swc);
       }
     }
@@ -195,7 +195,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
         sc ->
             result.addAll(
                 sc.getTranslationUnits().stream()
-                    .map(TranslationUnitDeclaration::getFullName)
+                    .map(TranslationUnitDeclaration::getName)
                     .map(Name::toString)
                     .collect(Collectors.toList())));
     return result;

@@ -203,7 +203,7 @@ public class StatementHandler
         frontend.getExpressionHandler().handle(forEachStmt.getIterable());
 
     if (!(variable instanceof DeclarationStatement)) {
-      log.error("Expected a DeclarationStatement but received: {}", variable.getFullName());
+      log.error("Expected a DeclarationStatement but received: {}", variable.getName());
     } else {
       statement.setVariable(variable);
     }
@@ -580,7 +580,7 @@ public class StatementHandler
     if (currentRecord == null) {
       log.error("Explicit constructor invocation has to be located inside a record declaration!");
     } else {
-      containingClass = currentRecord.getFullName().toString();
+      containingClass = currentRecord.getName().toString();
     }
 
     ExplicitConstructorInvocation node =

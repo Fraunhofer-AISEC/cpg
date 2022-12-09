@@ -260,7 +260,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         method = declaration.getDeclarationAs(1, FunctionDeclaration::class.java)
         assertEquals("function1(int, std::string, SomeType*, AnotherType&)int", method!!.signature)
 
-        val args = method.parameters.map { it.fullName.localName }
+        val args = method.parameters.map { it.name.localName }
         assertEquals(listOf("arg0", "arg1", "arg2", "arg3"), args)
 
         method = declaration.getDeclarationAs(2, FunctionDeclaration::class.java)
@@ -730,7 +730,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(inlineMethod.hasBody())
 
         val inlineConstructor = recordDeclaration.constructors[0]
-        assertEquals(recordDeclaration.fullName.localName, inlineConstructor.fullName.localName)
+        assertEquals(recordDeclaration.name.localName, inlineConstructor.name.localName)
         assertEquals(
             FunctionType(
                 "()SomeClass",
@@ -1042,7 +1042,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(locals)
 
         // Expecting x, foo, t
-        val localNames = locals.map { it.fullName.localName }.toSet()
+        val localNames = locals.map { it.name.localName }.toSet()
         assertTrue(localNames.contains("x"))
         assertTrue(localNames.contains("foo"))
         assertTrue(localNames.contains("t"))

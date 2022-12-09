@@ -106,7 +106,7 @@ public class TranslationUnitDeclaration extends Declaration
         .map(PropertyEdge::getEnd)
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
-        .filter(declaration -> Objects.equals(declaration.getFullName().toString(), name))
+        .filter(declaration -> Objects.equals(declaration.getName().toString(), name))
         .collect(Collectors.toSet());
   }
 
@@ -114,7 +114,7 @@ public class TranslationUnitDeclaration extends Declaration
   public IncludeDeclaration getIncludeByName(@NotNull String name) {
     return this.includes.stream()
         .map(PropertyEdge::getEnd)
-        .filter(declaration -> Objects.equals(declaration.getFullName().toString(), name))
+        .filter(declaration -> Objects.equals(declaration.getName().toString(), name))
         .findFirst()
         .orElse(null);
   }

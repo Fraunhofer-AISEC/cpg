@@ -415,7 +415,7 @@ class PythonFrontendTest : BaseTest() {
         val recv = bar.receiver
         assertNotNull(recv)
         assertLocalName("self", recv)
-        assertEquals(TypeParser.createFrom("Foo", PythonLanguage()), recv.type)
+        assertFullName("class_self.Foo", recv.type)
 
         assertEquals(1, bar.parameters.size)
         val i = bar.parameters.get(0)
@@ -440,7 +440,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(mem)
         assertLocalName("bar", mem)
         assertEquals(".", fooMemCall.operatorCode)
-        assertFullName("Foo.bar", fooMemCall)
+        assertFullName("class_self.Foo.bar", fooMemCall)
         assertEquals(1, fooMemCall.invokes.size)
         assertEquals(bar, fooMemCall.invokes[0])
         assertLocalName("self", fooMemCall.base)
@@ -1002,8 +1002,8 @@ class PythonFrontendTest : BaseTest() {
 
         val params = commentedNodes.filterIsInstance<ParamVariableDeclaration>()
         assertEquals(params.size, 2)
-        assertEquals("# a parameter", params.first { it.fullName.localName == "i" }.comment)
-        assertEquals("# another parameter", params.first { it.fullName.localName == "j" }.comment)
+        assertEquals("# a parameter", params.first { it.name.localName == "i" }.comment)
+        assertEquals("# another parameter", params.first { it.name.localName == "j" }.comment)
 
         val variable = commentedNodes.filterIsInstance<VariableDeclaration>()
         assertEquals(variable.size, 1)

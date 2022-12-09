@@ -74,11 +74,7 @@ internal class TypedefTest : BaseTest() {
 
         val typedefs = result.scopeManager.currentTypedefs
         val def =
-            typedefs
-                .stream()
-                .filter { it.alias.fullName.localName == "test" }
-                .findAny()
-                .orElse(null)
+            typedefs.stream().filter { it.alias.name.localName == "test" }.findAny().orElse(null)
         assertNotNull(def)
     }
 

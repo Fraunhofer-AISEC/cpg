@@ -148,7 +148,7 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend>()
         for (sc in this.config.softwareComponents.keys) {
             val component = Component()
-            component.fullName = Name(sc) // TODO: There might be a hierarchy as well
+            component.name = Name(sc) // TODO: There might be a hierarchy as well
             result.addComponent(component)
 
             var sourceLocations: List<File> = this.config.softwareComponents[sc]!!
@@ -233,7 +233,7 @@ private constructor(
                 result.components.forEach { s ->
                     s.translationUnits.forEach {
                         val bench =
-                            Benchmark(this.javaClass, "Activating types for ${it.fullName}", true)
+                            Benchmark(this.javaClass, "Activating types for ${it.name}", true)
                         result.scopeManager.activateTypes(it)
                         bench.stop()
                     }

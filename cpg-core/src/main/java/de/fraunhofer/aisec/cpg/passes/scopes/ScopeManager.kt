@@ -207,7 +207,7 @@ class ScopeManager : ScopeProvider {
         if (scope is NameScope) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
             // nodes have a FQN as their name.
-            fqnScopeMap[scope.astNode!!.fullName.toString()] = scope
+            fqnScopeMap[scope.astNode!!.name.toString()] = scope
         }
         currentScope?.let {
             it.children.add(scope)
@@ -291,7 +291,7 @@ class ScopeManager : ScopeProvider {
     private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
         val existingScope =
             currentScope?.children?.firstOrNull {
-                it is NameScope && it.scopedName == nodeToScope.fullName.toString()
+                it is NameScope && it.scopedName == nodeToScope.name.toString()
             }
 
         return if (existingScope != null) {
@@ -628,9 +628,7 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = currentScope
     ): ValueDeclaration? {
         return resolve<ValueDeclaration>(scope) {
-                if (
-                    it.fullName.endsWith(ref.fullName)
-                ) { // TODO: This place is likely to make things fail
+                if (it.name.endsWith(ref.name)) { // TODO: This place is likely to make things fail
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
                     if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
@@ -669,10 +667,10 @@ class ScopeManager : ScopeProvider {
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
-        if (call.language != null && call.fullName.parent != null) {
+        if (call.language != null && call.name.parent != null) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = call.fullName.parent.toString()
+            val scopeName = call.name.parent.toString()
 
             // TODO: proper scope selection
 
@@ -683,7 +681,7 @@ class ScopeManager : ScopeProvider {
                     LOGGER.error(
                         "Could not find the scope {} needed to resolve the call {}. Falling back to the current scope",
                         scopeName,
-                        call.fullName
+                        call.name
                     )
                     currentScope
                 } else {
@@ -691,15 +689,13 @@ class ScopeManager : ScopeProvider {
                 }
         }
 
-        return resolve(s) { it.fullName.endsWith(call.fullName) && it.hasSignature(call.signature) }
+        return resolve(s) { it.name.endsWith(call.name) && it.hasSignature(call.signature) }
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return resolve(currentScope, true) { f: FunctionDeclaration ->
-            f.fullName.endsWith(call.fullName)
-        }
+        return resolve(currentScope, true) { f: FunctionDeclaration -> f.name.endsWith(call.name) }
     }
 
     /**
@@ -770,9 +766,7 @@ class ScopeManager : ScopeProvider {
         call: CallExpression,
         scope: Scope? = currentScope
     ): List<FunctionTemplateDeclaration> {
-        return resolve(scope, true) { c: FunctionTemplateDeclaration ->
-            c.fullName.endsWith(call.fullName)
-        }
+        return resolve(scope, true) { c: FunctionTemplateDeclaration -> c.name.endsWith(call.name) }
     }
 
     /**
@@ -782,8 +776,8 @@ class ScopeManager : ScopeProvider {
      * @param name the name
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(scope: Scope, name: String): RecordDeclaration? {
-        return resolve<RecordDeclaration>(scope, true) { it.fullName.endsWith(name) }.firstOrNull()
+    fun getRecordForName(scope: Scope, name: Name): RecordDeclaration? {
+        return resolve<RecordDeclaration>(scope, true) { it.name.endsWith(name) }.firstOrNull()
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */
@@ -810,7 +804,7 @@ class ScopeManager : ScopeProvider {
                 }
             }
         )
-        LOGGER.debug("Activated {} nodes for {}", num, node.fullName)
+        LOGGER.debug("Activated {} nodes for {}", num, node.name)
 
         // For some nodes it may happen that they are not reachable via AST, but we still need to
         // set

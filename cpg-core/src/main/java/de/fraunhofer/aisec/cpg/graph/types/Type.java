@@ -62,13 +62,13 @@ public abstract class Type extends Node {
   protected Origin origin;
 
   public Type() {
-    this.setFullName(new Name("", null, this.getLanguage()));
+    this.setName(new Name("", null, this.getLanguage()));
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier(false, false, false, false);
   }
 
   public Type(String typeName) {
-    this.setFullName(Name.Companion.parse(typeName, this.getLanguage()));
+    this.setName(Name.Companion.parse(typeName, this.getLanguage()));
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier();
     this.origin = Origin.UNRESOLVED;
@@ -76,7 +76,7 @@ public abstract class Type extends Node {
 
   public Type(Type type) {
     this.storage = type.storage;
-    this.setFullName(type.getFullName().clone());
+    this.setName(type.getName().clone());
     this.qualifier =
         new Qualifier(
             type.qualifier.isConst,
@@ -103,9 +103,9 @@ public abstract class Type extends Node {
         fullName.setLocalName(fullName.getLocalName() + "(" + splitName[1]);
       }
       this.setFullName(fullName);*/
-      this.setFullName(new Name(typeName, null, language));
+      this.setName(new Name(typeName, null, language));
     } else {
-      this.setFullName(Name.Companion.parse(typeName, language));
+      this.setName(Name.Companion.parse(typeName, language));
     }
     this.setLanguage(language);
     this.storage = storage != null ? storage : Storage.AUTO;
@@ -114,7 +114,7 @@ public abstract class Type extends Node {
   }
 
   public Type(Name fullTypeName, @Nullable Storage storage, Qualifier qualifier) {
-    this.setFullName(fullTypeName.clone());
+    this.setName(fullTypeName.clone());
     this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
@@ -319,7 +319,7 @@ public abstract class Type extends Node {
   public abstract Type duplicate();
 
   public String getTypeName() {
-    return getFullName().toString();
+    return getName().toString();
   }
 
   /**
@@ -380,21 +380,21 @@ public abstract class Type extends Node {
     if (this == o) return true;
     if (!(o instanceof Type)) return false;
     Type type = (Type) o;
-    return Objects.equals(getFullName(), type.getFullName())
+    return Objects.equals(getName(), type.getName())
         && storage == type.storage
         && Objects.equals(qualifier, type.qualifier);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getFullName(), storage, qualifier);
+    return Objects.hash(getName(), storage, qualifier);
   }
 
   @NotNull
   @Override
   public String toString() {
     return new ToStringBuilder(this, TO_STRING_STYLE)
-        .append("name", getFullName().toString())
+        .append("name", getName().toString())
         .toString();
   }
 }

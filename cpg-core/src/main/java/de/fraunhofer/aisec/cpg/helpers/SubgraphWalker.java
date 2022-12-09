@@ -492,9 +492,9 @@ public class SubgraphWalker {
           // if the var is already added, all outside vars with this name are shadowed inside a
           // scope and we do not add them here
           if (val instanceof FunctionDeclaration
-              || !scopedVars.contains(val.getFullName().getLocalName())) {
+              || !scopedVars.contains(val.getName().getLocalName())) {
             result.add(val);
-            scopedVars.add(val.getFullName().getLocalName());
+            scopedVars.add(val.getName().getLocalName());
           }
         }
         currentScope = entry.getLeft();

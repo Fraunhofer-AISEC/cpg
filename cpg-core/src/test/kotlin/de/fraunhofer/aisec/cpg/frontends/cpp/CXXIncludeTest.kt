@@ -45,7 +45,7 @@ internal class CXXIncludeTest : BaseTest() {
         val file = File("src/test/resources/include.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         for (d in tu.declarations) {
-            println(d.fullName.localName + " " + d.location)
+            println(d.name.localName + " " + d.location)
         }
         assertEquals(6, tu.declarations.size)
 

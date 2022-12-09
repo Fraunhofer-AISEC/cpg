@@ -167,7 +167,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     val record = this.frontend.scopeManager.currentRecord
 
                     newConstructorDeclaration(
-                        record?.fullName?.toString() ?: "",
+                        record?.name?.toString() ?: "",
                         this.frontend.getCodeFromRawNode(node),
                         record
                     )

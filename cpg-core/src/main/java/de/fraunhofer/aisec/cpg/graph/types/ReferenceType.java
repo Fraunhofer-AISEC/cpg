@@ -43,20 +43,20 @@ public class ReferenceType extends Type implements SecondOrderType {
   public ReferenceType(Type reference) {
     super();
     this.setLanguage(reference.getLanguage());
-    this.setFullName(reference.getFullName().append("&"));
+    this.setName(reference.getName().append("&"));
     this.reference = reference;
   }
 
   public ReferenceType(Type type, Type reference) {
     super(type);
     this.setLanguage(reference.getLanguage());
-    this.setFullName(reference.getFullName().append("&"));
+    this.setName(reference.getName().append("&"));
     this.reference = reference;
   }
 
   public ReferenceType(Storage storage, Qualifier qualifier, Type reference) {
-    Name fullTypeName = reference.getFullName().clone();
-    this.setFullName(reference.getFullName().append("&"));
+    Name fullTypeName = reference.getName().clone();
+    this.setName(reference.getName().append("&"));
     this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
@@ -101,7 +101,7 @@ public class ReferenceType extends Type implements SecondOrderType {
   }
 
   public void refreshName() {
-    this.setFullName(reference.getFullName().append("&"));
+    this.setName(reference.getName().append("&"));
   }
 
   @Override
@@ -124,7 +124,7 @@ public class ReferenceType extends Type implements SecondOrderType {
         + "reference="
         + reference
         + ", typeName='"
-        + this.getFullName()
+        + this.getName()
         + '\''
         + ", storage="
         + this.getStorage()

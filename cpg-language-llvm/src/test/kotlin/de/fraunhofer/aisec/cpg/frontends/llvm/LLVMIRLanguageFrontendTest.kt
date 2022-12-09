@@ -166,7 +166,7 @@ class LLVMIRLanguageFrontendTest {
         val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
         assertNotNull(foo)
 
-        val s = foo.parameters.firstOrNull { it.fullName.localName == "s" }
+        val s = foo.parameters.firstOrNull { it.name.localName == "s" }
         assertNotNull(s)
 
         val arrayidx =
@@ -804,10 +804,7 @@ class LLVMIRLanguageFrontendTest {
                 ?.initializer as? ArraySubscriptionExpression
         assertNotNull(zInit)
         assertEquals(0L, (zInit.subscriptExpression as? Literal<*>)?.value)
-        assertEquals(
-            "x",
-            (zInit.arrayExpression as? DeclaredReferenceExpression)?.fullName?.localName
-        )
+        assertEquals("x", (zInit.arrayExpression as? DeclaredReferenceExpression)?.name?.localName)
         assertSame(origX, (zInit.arrayExpression as? DeclaredReferenceExpression)?.refersTo)
 
         // Test the assignment of y to yMod
@@ -815,10 +812,7 @@ class LLVMIRLanguageFrontendTest {
             ((mainBody.statements[3] as CompoundStatement).statements[0] as? DeclarationStatement)
                 ?.singleDeclaration as? VariableDeclaration
         assertNotNull(yModInit)
-        assertEquals(
-            "y",
-            (yModInit.initializer as? DeclaredReferenceExpression)?.fullName?.localName
-        )
+        assertEquals("y", (yModInit.initializer as? DeclaredReferenceExpression)?.name?.localName)
         assertSame(origY, (yModInit.initializer as? DeclaredReferenceExpression)?.refersTo)
         // Now, test the modification of yMod[3] = 8
         val yMod = ((mainBody.statements[3] as CompoundStatement).statements[1] as? BinaryOperator)
@@ -929,10 +923,7 @@ class LLVMIRLanguageFrontendTest {
         assertFullName("_CxxThrowException", tryStatement.tryBlock.statements[0] as? CallExpression)
         assertEquals(
             "end",
-            (tryStatement.tryBlock.statements[1] as? GotoStatement)
-                ?.targetLabel
-                ?.fullName
-                ?.localName
+            (tryStatement.tryBlock.statements[1] as? GotoStatement)?.targetLabel?.name?.localName
         )
 
         assertEquals(1, tryStatement.catchClauses.size)

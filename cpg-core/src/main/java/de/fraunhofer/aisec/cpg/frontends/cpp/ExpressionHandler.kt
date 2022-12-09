@@ -201,8 +201,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // `new A`.
                 // Therefore, CDT does not have an explicit construct expression, so we need create
                 // an implicit one
-                initializer =
-                    newConstructExpression(t.fullName.localName, "${t.fullName.localName}()")
+                initializer = newConstructExpression(t.name.localName, "${t.name.localName}()")
                 initializer.isImplicit = true
             }
 
@@ -237,7 +236,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         for (argument in template.templateArguments) {
             if (argument is IASTTypeId) {
                 val type = parseType(argument.declSpecifier.toString())
-                templateArguments.add(newTypeExpression(type.fullName, type))
+                templateArguments.add(newTypeExpression(type.name, type))
             } else if (argument is IASTLiteralExpression) {
                 frontend.expressionHandler.handle(argument as IASTInitializerClause)?.let {
                     templateArguments.add(it)
@@ -425,15 +424,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             baseTypename = baseType.typeName
             val member =
                 newDeclaredReferenceExpression(
-                    reference.fullName.localName,
+                    reference.name.localName,
                     UnknownType.getUnknownType(language),
-                    reference.fullName.localName
+                    reference.name.localName
                 )
             member.location = frontend.getLocationFromRawNode<Expression>(reference)
             callExpression =
                 newMemberCallExpression(
-                    member.fullName.localName,
-                    baseTypename + language.namespaceDelimiter + member.fullName.localName,
+                    member.name.localName,
+                    baseTypename + language.namespaceDelimiter + member.name.localName,
                     reference.base,
                     member,
                     reference.operatorCode,
@@ -448,7 +447,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                             as CPPASTTemplateId)
                         .templateName
                         .toString()
-                callExpression.fullName = Name.parse(name, language)
+                callExpression.name = Name.parse(name, language)
                 getTemplateArguments(
                         (ctx.functionNameExpression as IASTFieldReference).fieldName
                             as CPPASTTemplateId
@@ -489,12 +488,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             return reference
         } else {
             callExpression =
-                newCallExpression(
-                    reference,
-                    reference!!.fullName.toString(),
-                    ctx.rawSignature,
-                    false
-                )
+                newCallExpression(reference, reference!!.name.toString(), ctx.rawSignature, false)
         }
 
         for ((i, argument) in ctx.arguments.withIndex()) {

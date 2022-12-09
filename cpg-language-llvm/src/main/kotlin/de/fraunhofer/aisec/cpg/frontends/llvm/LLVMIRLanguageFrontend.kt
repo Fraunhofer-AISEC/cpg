@@ -240,7 +240,7 @@ class LLVMIRLanguageFrontend(
     fun isKnownStructTypeName(name: String): Boolean {
         return this.scopeManager
             .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) {
-                it.fullName.toString() == name
+                it.name.toString() == name
             }
             .isNotEmpty()
     }

@@ -69,7 +69,7 @@ open class TypeHierarchyResolver : Pass() {
         }
         for (enumDecl in enums) {
             val directSupertypeRecords =
-                enumDecl.superTypes.mapNotNull { s: Type -> recordMap[s.fullName] }.toSet()
+                enumDecl.superTypes.mapNotNull { s: Type -> recordMap[s.name] }.toSet()
             val allSupertypes =
                 directSupertypeRecords.map { findSupertypeRecords(it) }.flatten().toSet()
             enumDecl.superTypeDeclarations = allSupertypes
@@ -85,7 +85,7 @@ open class TypeHierarchyResolver : Pass() {
             object : IVisitor<Node?>() {
                 override fun visit(child: Node) {
                     if (child is RecordDeclaration) {
-                        recordMap.putIfAbsent(child.fullName, child)
+                        recordMap.putIfAbsent(child.name, child)
                     } else if (child is EnumDeclaration) {
                         enums.add(child)
                     }
@@ -101,8 +101,7 @@ open class TypeHierarchyResolver : Pass() {
     }
 
     protected fun findSupertypeRecords(recordDecl: RecordDeclaration): Set<RecordDeclaration> {
-        val superTypeDeclarations =
-            recordDecl.superTypes.mapNotNull { recordMap[it.fullName] }.toSet()
+        val superTypeDeclarations = recordDecl.superTypes.mapNotNull { recordMap[it.name] }.toSet()
         recordDecl.superTypeDeclarations = superTypeDeclarations
         return superTypeDeclarations
     }

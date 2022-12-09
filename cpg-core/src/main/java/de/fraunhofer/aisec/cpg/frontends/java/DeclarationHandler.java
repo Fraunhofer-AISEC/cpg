@@ -143,7 +143,7 @@ public class DeclarationHandler
                 .getScopeManager()
                 .firstScopeOrNull(RecordScope.class::isInstance)
                 .getAstNode()
-                .getFullName());
+                .getName());
     declaration.setType(type);
 
     // check, if constructor has body (i.e. its not abstract or something)
@@ -238,7 +238,7 @@ public class DeclarationHandler
             this,
             "this",
             recordDecl != null
-                ? parseType(this, recordDecl.getFullName())
+                ? parseType(this, recordDecl.getName())
                 : UnknownType.getUnknownType(getLanguage()),
             "this",
             false);
@@ -322,7 +322,7 @@ public class DeclarationHandler
         log.debug(
             "Member {} of type {} is something that we do not parse yet: {}",
             decl,
-            recordDeclaration.getFullName().toString(),
+            recordDeclaration.getName().toString(),
             decl.getClass().getSimpleName());
       }
     }
@@ -331,8 +331,8 @@ public class DeclarationHandler
       de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
           newConstructorDeclaration(
               this,
-              recordDeclaration.getFullName().getLocalName(),
-              recordDeclaration.getFullName().getLocalName(),
+              recordDeclaration.getName().getLocalName(),
+              recordDeclaration.getName().getLocalName(),
               recordDeclaration);
       recordDeclaration.addConstructor(constructorDeclaration);
       frontend.getScopeManager().addDeclaration(constructorDeclaration);
@@ -438,7 +438,7 @@ public class DeclarationHandler
             .map(
                 e -> (de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration) handle(e))
             .collect(Collectors.toList());
-    entries.forEach(e -> e.setType(parseType(this, enumDeclaration.getFullName())));
+    entries.forEach(e -> e.setType(parseType(this, enumDeclaration.getName())));
     enumDeclaration.setEntries(entries);
 
     List<Type> superTypes =

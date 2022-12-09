@@ -37,7 +37,7 @@ open class NameScope(node: Node, currentPrefix: String, var delimiter: String) :
 
     init {
         if (currentPrefix.isNotEmpty()) {
-            var nodeName = node.fullName.localName
+            var nodeName = node.name.localName
             // If the name already contains some form of prefix we have to remove it.
             nodeName =
                 if (nodeName.contains(delimiter))
@@ -45,12 +45,12 @@ open class NameScope(node: Node, currentPrefix: String, var delimiter: String) :
                 else nodeName
             namePrefix = currentPrefix + delimiter + nodeName
         } else {
-            namePrefix = node.fullName.localName
+            namePrefix = node.name.localName
         }
 
         astNode = node
         // Set the name so that we can use it as a namespace later
-        name = node.fullName
+        name = node.name
     }
 
     // Split scoped named by delimiter

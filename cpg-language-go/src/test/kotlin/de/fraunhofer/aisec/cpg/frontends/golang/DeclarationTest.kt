@@ -105,6 +105,6 @@ class DeclarationTest {
         // MyOtherInterface should be in the superClasses and superTypeDeclarations of MyInterface,
         // since it is embedded and thus MyInterface "extends" it
         assertContains(myInterface.superTypeDeclarations, myOtherInterface)
-        assertTrue(myInterface.superClasses.any { it.fullName == myOtherInterface.fullName })
+        assertTrue(myInterface.superClasses.any { it.name == myOtherInterface.name })
     }
 }

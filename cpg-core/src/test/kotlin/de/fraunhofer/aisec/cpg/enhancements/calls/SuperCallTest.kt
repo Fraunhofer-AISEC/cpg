@@ -131,17 +131,17 @@ internal class SuperCallTest : BaseTest() {
         val superClass = records["SuperClass"]
         assertNotNull(superClass)
         assertEquals(1, superClass.fields.size)
-        assertEquals(listOf("field"), superClass.fields.map { it.fullName.localName })
+        assertEquals(listOf("field"), superClass.fields.map { it.name.localName })
 
         val subClass = findByUniqueName(records, "SubClass")
         assertEquals(1, subClass.fields.size)
-        assertEquals(listOf("field"), subClass.fields.map { it.fullName.localName })
+        assertEquals(listOf("field"), subClass.fields.map { it.name.localName })
 
         val inner = findByUniqueName(records, "SubClass.Inner")
         assertEquals(1, inner.fields.size)
         assertEquals(
             listOf("SubClass.Inner.this\$SubClass"),
-            inner.fields.map { it.fullName.toString() }
+            inner.fields.map { it.name.toString() }
         )
     }
 }

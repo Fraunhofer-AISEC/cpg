@@ -283,7 +283,7 @@ fun MetadataProvider.newExplicitConstructorInvocation(
  */
 @JvmOverloads
 fun MetadataProvider.newMemberCallExpression(
-    name: String?,
+    name: CharSequence?,
     fqn: String?,
     base: Expression?,
     member: Node?,
@@ -320,7 +320,7 @@ fun MetadataProvider.newMemberCallExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newMemberExpression(
-    name: String?,
+    name: CharSequence?,
     base: Expression,
     memberType: Type? = UnknownType.getUnknownType(),
     operatorCode: String? = ".",
@@ -346,7 +346,7 @@ fun MetadataProvider.newMemberExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newStaticCallExpression(
-    name: String?,
+    name: CharSequence?,
     fqn: String?,
     code: String? = null,
     targetRecord: String?,
@@ -606,7 +606,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.annotations = this.annotations
     duplicate.comment = this.comment
     duplicate.file = this.file
-    duplicate.fullName = this.fullName.clone()
+    duplicate.name = this.name.clone()
     duplicate.nextDFG = this.nextDFG
     duplicate.prevDFG = this.prevDFG
     duplicate.nextEOG = this.nextEOG
@@ -617,7 +617,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
 
 fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
     val duplicate = TypeExpression()
-    duplicate.fullName = this.fullName.clone()
+    duplicate.name = this.name.clone()
     duplicate.language = this.language
     duplicate.type = this.type
     duplicate.isImplicit = implicit

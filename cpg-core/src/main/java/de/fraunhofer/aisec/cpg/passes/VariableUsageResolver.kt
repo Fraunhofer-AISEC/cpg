@@ -100,7 +100,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // Without FunctionPointerType, we cannot resolve function pointers
         val fptrType = reference.type as? FunctionPointerType ?: return null
 
-        var functionName = reference.fullName.localName
+        var functionName = reference.name.localName
         val matcher =
             Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(functionName)
         if (matcher.matches()) {
@@ -117,7 +117,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         return handleUnknownFunction(
             if (containingClass != null) {
-                recordMap[containingClass.fullName]
+                recordMap[containingClass.name]
             } else {
                 null
             },
@@ -157,7 +157,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // else current.refersTo!!
         var recordDeclType: Type? = null
         if (currentClass != null) {
-            recordDeclType = TypeParser.createFrom(currentClass.fullName, currentClass.language)
+            recordDeclType = TypeParser.createFrom(currentClass.name, currentClass.language)
         }
         if (current.type is FunctionPointerType && refersTo == null) {
             refersTo = resolveFunctionPtr(recordDeclType, current)
@@ -168,10 +168,10 @@ open class VariableUsageResolver : SymbolResolverPass() {
             refersTo == null &&
                 !current.isStaticAccess &&
                 recordDeclType != null &&
-                recordDeclType.fullName in recordMap
+                recordDeclType.name in recordMap
         ) {
             // Maybe we are referring to a field instead of a local var
-            if (language != null && language.namespaceDelimiter in current.fullName.toString()) {
+            if (language != null && language.namespaceDelimiter in current.name.toString()) {
                 recordDeclType = getEnclosingTypeOf(current)
             }
             val field = resolveMember(recordDeclType, current)
@@ -185,7 +185,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         if (
             refersTo == null &&
                 language != null &&
-                language.namespaceDelimiter in current.fullName.toString()
+                language.namespaceDelimiter in current.name.toString()
         ) {
             recordDeclType = getEnclosingTypeOf(current)
             val field = resolveMember(recordDeclType, current)
@@ -199,7 +199,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             Util.warnWithFileLocation(
                 current,
                 log,
-                "Did not find a declaration for ${current.fullName}"
+                "Did not find a declaration for ${current.name}"
             )
         }
     }
@@ -224,7 +224,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 java.lang.String.join(language.namespaceDelimiter, path.subList(0, path.size - 1)),
                 true
             )*/
-            val parentName = (current.fullName.parent ?: current.fullName).toString()
+            val parentName = (current.name.parent ?: current.name).toString()
             return TypeParser.createFrom(parentName, language)
         } else {
             return UnknownType.getUnknownType()
@@ -239,15 +239,14 @@ open class VariableUsageResolver : SymbolResolverPass() {
             val base = current.base as DeclaredReferenceExpression
             if (
                 current.language is HasSuperClasses &&
-                    base.fullName.toString() ==
-                        (current.language as HasSuperClasses).superClassKeyword
+                    base.name.toString() == (current.language as HasSuperClasses).superClassKeyword
             ) {
                 if (curClass != null && curClass.superClasses.isNotEmpty()) {
                     val superType = curClass.superClasses[0]
-                    val superRecord = recordMap[superType.fullName]
+                    val superRecord = recordMap[superType.name]
                     if (superRecord == null) {
                         log.error(
-                            "Could not find referring super type ${superType.typeName} for ${curClass.fullName} in the record map. Will set the super type to java.lang.Object"
+                            "Could not find referring super type ${superType.typeName} for ${curClass.name} in the record map. Will set the super type to java.lang.Object"
                         )
                         // TODO: Should be more generic!
                         base.type = TypeParser.createFrom(Any::class.java.name, current.language)
@@ -278,19 +277,18 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 base.refersTo = baseTarget
             }
             if (baseTarget is EnumDeclaration) {
-                val memberTarget =
-                    baseTarget.entries.firstOrNull { it.fullName.endsWith(current.fullName) }
+                val memberTarget = baseTarget.entries.firstOrNull { it.name.endsWith(current.name) }
                 if (memberTarget != null) {
                     current.refersTo = memberTarget
                     return
                 }
             } else if (baseTarget is RecordDeclaration) {
-                var baseType = TypeParser.createFrom(baseTarget.fullName, baseTarget.language)
-                if (baseType.fullName !in recordMap) {
+                var baseType = TypeParser.createFrom(baseTarget.name, baseTarget.language)
+                if (baseType.name !in recordMap) {
                     val containingT = baseType
                     val fqnResolvedType =
                         recordMap.keys.firstOrNull {
-                            it.endsWith(containingT.fullName)
+                            it.endsWith(containingT.name)
                         } // TODO: Is the "." correct here for all languages?
                     if (fqnResolvedType != null) {
                         baseType = TypeParser.createFrom(fqnResolvedType, baseTarget.language)
@@ -301,8 +299,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
             }
         }
         var baseType = current.base.type
-        if (baseType.fullName !in recordMap) {
-            val fqnResolvedType = recordMap.keys.firstOrNull { it.endsWith(baseType.fullName) }
+        if (baseType.name !in recordMap) {
+            val fqnResolvedType = recordMap.keys.firstOrNull { it.endsWith(baseType.name) }
             if (fqnResolvedType != null) {
                 baseType = TypeParser.createFrom(fqnResolvedType, baseType.language)
             }
@@ -319,8 +317,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // check if this refers to an enum
         return if (reference.type in enumMap) {
             enumMap[reference.type]
-        } else if (reference.type.fullName in recordMap) {
-            recordMap[reference.type.fullName]
+        } else if (reference.type.name in recordMap) {
+            recordMap[reference.type.name]
         } else {
             null
         }
@@ -336,27 +334,27 @@ open class VariableUsageResolver : SymbolResolverPass() {
             return null
         }
         var member: FieldDeclaration? = null
-        if (containingClass !is UnknownType && containingClass.fullName in recordMap) {
+        if (containingClass !is UnknownType && containingClass.name in recordMap) {
             member =
-                recordMap[containingClass.fullName]!!
+                recordMap[containingClass.name]!!
                     .fields
-                    .filter { it.fullName.endsWith(reference.fullName) }
+                    .filter { it.name.endsWith(reference.name) }
                     .map { it.definition }
                     .firstOrNull()
         }
         if (member == null) {
             member =
                 superTypesMap
-                    .getOrDefault(containingClass.fullName, listOf())
-                    .mapNotNull { recordMap[it.fullName] }
+                    .getOrDefault(containingClass.name, listOf())
+                    .mapNotNull { recordMap[it.name] }
                     .flatMap { it.fields }
-                    .filter { it.fullName.endsWith(reference.fullName) }
+                    .filter { it.name.endsWith(reference.name) }
                     .map { it.definition }
                     .firstOrNull()
         }
         // Attention: using orElse instead of orElseGet will always invoke unknown declaration
         // handling!
-        return member ?: handleUnknownField(containingClass, reference.fullName, reference.type)
+        return member ?: handleUnknownField(containingClass, reference.name, reference.type)
     }
 
     // TODO(oxisto): Move to inference class
@@ -366,7 +364,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             return handleUnknownField(base.elementType, name, type)
         }
 
-        if (base.fullName !in recordMap) {
+        if (base.name !in recordMap) {
             // No matching record in the map? If we should infer it, we do so, otherwise we stop.
             if (config?.inferenceConfiguration?.inferRecords != true) return null
 
@@ -379,10 +377,10 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 }
             val record = base.startInference().inferRecordDeclaration(base, currentTU, kind)
             // update the record map
-            if (record != null) recordMap[base.fullName] = record
+            if (record != null) recordMap[base.name] = record
         }
 
-        val recordDeclaration = recordMap[base.fullName]
+        val recordDeclaration = recordMap[base.name]
         if (recordDeclaration == null) {
             log.error(
                 "There is no matching record in the record map. Can't identify which field is used."
@@ -390,7 +388,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             return null
         }
 
-        val target = recordDeclaration.fields.firstOrNull { it.fullName.endsWith(name) }
+        val target = recordDeclaration.fields.firstOrNull { it.name.endsWith(name) }
 
         return if (target != null) {
             target

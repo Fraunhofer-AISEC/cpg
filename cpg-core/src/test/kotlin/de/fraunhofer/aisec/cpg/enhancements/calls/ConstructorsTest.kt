@@ -86,15 +86,15 @@ internal class ConstructorsTest : BaseTest() {
         val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg =
             findByUniquePredicate(constructors) {
-                it.parameters.size == 0 && it.fullName.localName == "A"
+                it.parameters.size == 0 && it.name.localName == "A"
             }
         val singleArg =
             findByUniquePredicate(constructors) {
-                it.parameters.size == 1 && it.fullName.localName == "A"
+                it.parameters.size == 1 && it.name.localName == "A"
             }
         val twoArgs =
             findByUniquePredicate(constructors) {
-                it.parameters.size == 2 && it.fullName.localName == "A"
+                it.parameters.size == 2 && it.name.localName == "A"
             }
         val variables = result.variables
         val a1 = findByUniqueName(variables, "a1")
@@ -187,7 +187,7 @@ internal class ConstructorsTest : BaseTest() {
         val variables = result.variables
         val twoDefaultArg =
             findByUniquePredicate(constructors) {
-                it.defaultParameters.size == 2 && it.fullName.localName == "D"
+                it.defaultParameters.size == 2 && it.name.localName == "D"
             }
         assertNotNull(twoDefaultArg)
 
@@ -242,7 +242,7 @@ internal class ConstructorsTest : BaseTest() {
         val variables = result.variables
         val singleDefaultArg =
             findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
-                c.parameters.size == 2 && c.fullName.localName == "E"
+                c.parameters.size == 2 && c.name.localName == "E"
             }
         val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val e1 = findByUniqueName(variables, "e1")
@@ -287,7 +287,7 @@ internal class ConstructorsTest : BaseTest() {
         val variables = result.variables
         val implicitConstructor =
             findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
-                c.fullName.localName == "I"
+                c.name.localName == "I"
             }
         val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val i1 = findByUniqueName(variables, "i1")
@@ -306,7 +306,7 @@ internal class ConstructorsTest : BaseTest() {
 
         val implicitConstructorWithDefault =
             findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
-                c.fullName.localName == "H"
+                c.name.localName == "H"
             }
         val h1 = findByUniqueName(variables, "h1")
         assertTrue(h1.initializer is ConstructExpression)

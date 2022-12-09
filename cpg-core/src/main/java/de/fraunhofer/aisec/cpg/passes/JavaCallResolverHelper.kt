@@ -49,10 +49,10 @@ fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: CallExpressi
         (call.base as DeclaredReferenceExpression?)?.refersTo = func.receiver
     }
     var target: RecordDeclaration? = null
-    if (call.base?.fullName.toString() == JavaLanguage().superClassKeyword) {
+    if (call.base?.name.toString() == JavaLanguage().superClassKeyword) {
         // Direct superclass, either defined explicitly or java.lang.Object by default
         if (curClass.superClasses.isNotEmpty()) {
-            target = recordMap[curClass.superClasses[0].root.fullName]
+            target = recordMap[curClass.superClasses[0].root.name]
         } else {
             Util.warnWithFileLocation(
                 call,
@@ -82,7 +82,7 @@ fun CallResolver.handleSpecificSupertype(
     // TODO: Somehow, the old expression looks as if the super could be somewhere in the middle of
     // the name. I think this doesn't make much sense. If that was not the intention, just remove
     // the while loop.
-    var baseFullName = call.base?.fullName
+    var baseFullName = call.base?.name
     while (
         baseFullName != null &&
             baseFullName.localName != (curClass.language as HasSuperClasses).superClassKeyword
@@ -92,7 +92,7 @@ fun CallResolver.handleSpecificSupertype(
     if (baseFullName?.localName == (curClass.language as HasSuperClasses).superClassKeyword) {
         baseFullName = baseFullName.parent
     }
-    baseFullName = baseFullName ?: call.base!!.fullName
+    baseFullName = baseFullName ?: call.base!!.name
     val baseName = baseFullName
 
     // val baseName = call.base!!.name.substring(0,
@@ -105,7 +105,7 @@ fun CallResolver.handleSpecificSupertype(
         val base = recordMap[baseName]
         if (base != null) {
             if (base.superClasses.isNotEmpty()) {
-                return recordMap[base.superClasses[0].root.fullName]
+                return recordMap[base.superClasses[0].root.name]
             } else {
                 Util.warnWithFileLocation(
                     call,
