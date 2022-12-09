@@ -487,8 +487,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // this really is a cast expression in disguise
             return reference
         } else {
-            callExpression =
-                newCallExpression(reference, reference!!.name.toString(), ctx.rawSignature, false)
+            callExpression = newCallExpression(reference, reference?.name, ctx.rawSignature, false)
         }
 
         for ((i, argument) in ctx.arguments.withIndex()) {
