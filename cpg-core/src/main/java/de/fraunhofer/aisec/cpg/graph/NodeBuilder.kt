@@ -144,8 +144,7 @@ fun Node.applyMetadata(
                 *(this.language?.nameSplitter ?: emptyArray())
             )
     } else {
-        this.name =
-            Name(localName.toString() ?: EMPTY_NAME, null, this.language?.namespaceDelimiter ?: ".")
+        this.name = Name(localName.toString(), null, this.language?.namespaceDelimiter ?: ".")
     }
 
     if (codeOverride != null) {

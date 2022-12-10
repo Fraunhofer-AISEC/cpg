@@ -28,11 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -121,7 +118,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             } else {
                 null
             },
-            functionName,
+            reference.language.parseName(functionName),
             fptrType
         )
     }
@@ -131,7 +128,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         parent: Node?,
         current: Node
     ) {
-        var language = current.language
+        val language = current.language
 
         if (current !is DeclaredReferenceExpression || current is MemberExpression) return
         if (
@@ -417,7 +414,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
      */
     private fun handleUnknownFunction(
         declarationHolder: RecordDeclaration?,
-        name: String,
+        name: Name,
         fctPtrType: FunctionPointerType
     ): FunctionDeclaration {
         // Try to find the function or method in the list of existing functions.

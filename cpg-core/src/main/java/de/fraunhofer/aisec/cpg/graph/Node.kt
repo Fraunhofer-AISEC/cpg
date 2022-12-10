@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
+import de.fraunhofer.aisec.cpg.helpers.NameConverter
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
@@ -49,7 +50,6 @@ import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -60,7 +60,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * This property holds the full name using our new [Name] class. It is currently not persisted
      * in the graph database.
      */
-    @Transient var name: Name = Name(EMPTY_NAME)
+    @Convert(NameConverter::class) var name: Name = Name(EMPTY_NAME)
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases

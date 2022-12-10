@@ -55,7 +55,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
         get() = start.language
 
     fun createInferredFunctionDeclaration(
-        name: String?,
+        name: CharSequence?,
         code: String?,
         isStatic: Boolean,
         signature: List<Type?>,

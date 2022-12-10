@@ -151,6 +151,10 @@ class Name(
 
     override fun compareTo(other: Name): Int {
         // Compare names according to the string representation of the full name
-        return this.toString().compareTo(other.toString())
+        return fullName.compareTo(other.toString())
     }
+}
+
+fun Language<out LanguageFrontend>?.parseName(fqn: CharSequence): Name {
+    return Name.parse(fqn, this?.namespaceDelimiter ?: ".", *(this?.nameSplitter ?: arrayOf()))
 }

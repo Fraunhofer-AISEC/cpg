@@ -64,20 +64,9 @@ abstract class SymbolResolverPass : Pass() {
         }
     }
 
-    /**
-     * Checks if the function has the given [name], and returnType and signature specified in
-     * [fctPtrType].
-     */
-    protected fun FunctionDeclaration.matches(
-        name: String,
-        fctPtrType: FunctionPointerType
-    ): Boolean {
-        return this.matches(name, fctPtrType.returnType, fctPtrType.parameters)
-    }
-
     /** Checks if the function has the given [name], [returnType] and [signature] */
     protected fun FunctionDeclaration.matches(
-        name: String,
+        name: Name,
         returnType: Type,
         signature: List<Type?>
     ): Boolean {
