@@ -36,12 +36,15 @@ open class CLanguage :
     HasStructs,
     HasFunctionPointers,
     HasQualifier,
-    HasElaboratedTypeSpecifier {
+    HasElaboratedTypeSpecifier,
+    HasShortCircuitOperators {
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
     override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
     override val qualifiers = listOf("const", "volatile", "restrict", "atomic")
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
+    override val conjunctiveOperators = listOf("&&")
+    override val disjunctiveOperators = listOf("||")
 
     override fun newFrontend(
         config: TranslationConfiguration,

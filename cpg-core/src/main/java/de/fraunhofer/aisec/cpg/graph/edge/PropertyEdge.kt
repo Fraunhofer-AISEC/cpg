@@ -116,6 +116,13 @@ open class PropertyEdge<T : Node> : Persistable {
         return properties == obj.properties
     }
 
+    /**
+     * Checks if the properties of the edge contain the given properties with the specified values.
+     */
+    fun containsProperties(props: Map<Properties, Any?>): Boolean {
+        return properties.entries.containsAll(props.entries)
+    }
+
     override fun hashCode(): Int {
         return Objects.hash(end, properties)
     }

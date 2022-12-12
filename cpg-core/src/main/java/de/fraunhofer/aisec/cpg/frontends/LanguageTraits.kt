@@ -144,3 +144,14 @@ interface HasElaboratedTypeSpecifier : LanguageTrait {
 interface HasUnknownType : LanguageTrait {
     val unknownTypeString: List<String>
 }
+
+/**
+ * A language trait, that specifies that this language has binary operators that will short-circuit
+ * evaluation if the logical result is already known: '&&', '||' in Java or 'and','or' in Python
+ */
+interface HasShortCircuitOperators : LanguageTrait {
+    // '&&', 'and', '^'
+    val conjunctiveOperators: List<String>
+    // '||', 'or', 'v'
+    val disjunctiveOperators: List<String>
+}
