@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
-import org.slf4j.Logger
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
@@ -47,141 +46,95 @@ import java.util.function.Predicate
 import java.util.stream.Collectors
 import java.util.stream.IntStream
 import java.util.stream.Stream
+import org.slf4j.Logger
 
 object Util {
     /**
-     * Filters the nodes in the AST subtree at root `node` for Nodes with the specified
-     * code.
+     * Filters the nodes in the AST subtree at root `node` for Nodes with the specified code.
      *
      * @param node root of the subtree that is searched.
      * @param searchCode exact code that a node needs to have.
      * @return a list of nodes with the specified String.
      */
     fun subnodesOfCode(node: Node?, searchCode: String): List<Node> {
-        return SubgraphWalker.flattenAST(node).stream()
+        return SubgraphWalker.flattenAST(node)
+            .stream()
             .filter { n: Node -> n.code != null && n.code == searchCode }
             .collect(Collectors.toList())
     }
 
-    fun eogConnect(cn: Connect, en: Edge, n: Node, cr: Connect, vararg refs: Node?): Boolean {
-        return eogConnect(Quantifier.ALL, cn, en, n, cr, *refs)
-    }
-
-    fun eogConnect(q: Quantifier, cn: Connect, en: Edge, n: Node, vararg refs: Node?): Boolean {
-        return eogConnect(q, cn, en, n, Connect.SUBTREE, *refs)
-    }
-
-    fun eogConnect(q: Quantifier, en: Edge, n: Node, cr: Connect, vararg refs: Node?): Boolean {
-        return eogConnect(q, Connect.SUBTREE, en, n, cr, *refs)
-    }
-
-    fun eogConnect(cn: Connect, en: Edge, n: Node, vararg refs: Node?): Boolean {
-        return eogConnect(Quantifier.ALL, cn, en, n, Connect.SUBTREE, *refs)
-    }
-
-    fun eogConnect(q: Quantifier, en: Edge, n: Node, vararg refs: Node?): Boolean {
-        return eogConnect(q, Connect.SUBTREE, en, n, Connect.SUBTREE, *refs)
-    }
-
-    fun eogConnect(en: Edge, n: Node, cr: Connect, vararg refs: Node?): Boolean {
-        return eogConnect(Quantifier.ALL, Connect.SUBTREE, en, n, cr, *refs)
-    }
-
-    fun eogConnect(en: Edge, n: Node, vararg refs: Node?): Boolean {
-        return eogConnect(Quantifier.ALL, Connect.SUBTREE, en, n, Connect.SUBTREE, *refs)
-    }
-
-    /** EOGConnect with no properties specified.  */
-    fun eogConnect(
-        q: Quantifier, cn: Connect, en: Edge, n: Node, cr: Connect, vararg refs: Node?
-    ): Boolean {
-        return eogConnect(
-            q,
-            cn,
-            en,
-            n,
-            cr,
-            HashMap<Properties?, Any?>(),
-            *refs
-        )
-    }
-
     /**
-     * Checks if the Node `n` connects to the nodes in `refs` over the CPGS EOG
-     * graph edges that depict the evaluation order. The parameter q defines if all edges of interest
-     * to node must connect to an edge in refs or one is enough, cn and cr define whether the passed
-     * AST nodes themselves are used to search the connections or the EOG Border nodes in the AST
-     * subnode. Finally, en defines whether the EOG edges go * from n to r in refs or the inverse.
+     * Checks if the Node `n` connects to the nodes in `refs` over the CPGS EOG graph edges that
+     * depict the evaluation order. The parameter q defines if all edges of interest to node must
+     * connect to an edge in refs or one is enough, cn and cr define whether the passed AST nodes
+     * themselves are used to search the connections or the EOG Border nodes in the AST subnode.
+     * Finally, en defines whether the EOG edges go * from n to r in refs or the inverse.
      *
-     * @param q - The quantifier, all or any node of n must connect to refs, defaults to ALL.
-     * @param cn - NODE if n itself is the node to connect or SUBTREE if the EOG borders are of
-     * interest. Defaults to SUBTREE
-     * @param en - The Edge direction and therefore the borders of n to connect to refs
-     * @param n - Node of interest
-     * @param cr - NODE if refs nodes itself are the nodes to connect or SUBTREE if the EOG borders
-     * are of interest
-     * @param refs - Multiple reference nodes that can be passed as varargs
+     * @param q
+     * - The quantifier, all or any node of n must connect to refs, defaults to ALL.
+     * @param cn
+     * - NODE if n itself is the node to connect or SUBTREE if the EOG borders are of interest.
+     * Defaults to SUBTREE
+     * @param en
+     * - The Edge direction and therefore the borders of n to connect to refs
+     * @param n
+     * - Node of interest
+     * @param cr
+     * - NODE if refs nodes itself are the nodes to connect or SUBTREE if the EOG borders are of
+     * interest
+     * @param refs
+     * - Multiple reference nodes that can be passed as varargs
      * @return true if all/any of the connections from node connect to n.
      */
     fun eogConnect(
-        q: Quantifier,
-        cn: Connect,
+        q: Quantifier = Quantifier.ALL,
+        cn: Connect = Connect.SUBTREE,
         en: Edge,
         n: Node,
-        cr: Connect,
-        props: Map<Properties?, Any?>?,
-        vararg refs: Node
+        cr: Connect = Connect.SUBTREE,
+        props: Map<Properties, Any?> = mutableMapOf(),
+        refs: List<Node>
     ): Boolean {
         var nodeSide = java.util.List.of(n)
         val er = if (en == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
-        var refSide = Arrays.asList(*refs)
-        nodeSide = if (cn == Connect.SUBTREE) {
-            val border = SubgraphWalker.getEOGPathEdges(n)
-            if (en == Edge.ENTRIES) border.entries.stream()
-                .flatMap { r: Node ->
-                    r.prevEOGEdges.stream()
-                        .filter(Predicate<PropertyEdge<Node?>> { e: PropertyEdge<Node?> -> e.containsProperties(props) })
-                        .map(PropertyEdge::start)
+        var refSide = refs
+        nodeSide =
+            if (cn == Connect.SUBTREE) {
+                val border = SubgraphWalker.getEOGPathEdges(n)
+                if (en == Edge.ENTRIES)
+                    border.entries.flatMap {
+                        it.prevEOGEdges.filter { it.containsProperties(props) }.map { it.start }
+                    }
+                else border.exits
+            } else {
+                nodeSide.flatMap {
+                    if (en == Edge.ENTRIES)
+                        it.prevEOGEdges.filter { it.containsProperties(props) }.map { it.start }
+                    else listOf(it)
                 }
-                .collect(Collectors.toList()) else border.exits
-        } else {
-            nodeSide.stream()
-                .flatMap { node: Node ->
-                    if (en == Edge.ENTRIES) node.prevEOGEdges.stream()
-                        .filter(Predicate<PropertyEdge<Node?>> { e: PropertyEdge<Node?> -> e.containsProperties(props) })
-                        .map(PropertyEdge::start) else java.util.List.of(node).stream()
+            }
+        refSide =
+            if (cr == Connect.SUBTREE) {
+                val borders = refs.map { n: Node? -> SubgraphWalker.getEOGPathEdges(n) }
+
+                borders.flatMap { border: SubgraphWalker.Border ->
+                    if (Edge.ENTRIES == er)
+                        border.entries.flatMap { r: Node ->
+                            r.prevEOGEdges.filter { it.containsProperties(props) }.map { it.start }
+                        }
+                    else border.exits
                 }
-                .collect(Collectors.toList())
-        }
-        refSide = if (cr == Connect.SUBTREE) {
-            val borders = Arrays.stream(refs).map { n: Node? -> SubgraphWalker.getEOGPathEdges(n) }
-                .collect(Collectors.toList())
-            borders.stream()
-                .flatMap { border: SubgraphWalker.Border ->
-                    if (Edge.ENTRIES == er) border.entries.stream()
-                        .flatMap { r: Node ->
-                            r.prevEOGEdges.stream()
-                                .filter(Predicate<PropertyEdge<Node?>> { e: PropertyEdge<Node?> ->
-                                    e.containsProperties(
-                                        props
-                                    )
-                                })
-                                .map(PropertyEdge::start)
-                        } else border.exits.stream()
+            } else {
+                refSide.flatMap { node: Node ->
+                    if (er == Edge.ENTRIES)
+                        node.prevEOGEdges.filter { it.containsProperties(props) }.map { it.start }
+                    else java.util.List.of(node)
                 }
-                .collect(Collectors.toList())
-        } else {
-            refSide.stream()
-                .flatMap { node: Node ->
-                    if (er == Edge.ENTRIES) node.prevEOGEdges.stream()
-                        .filter(Predicate<PropertyEdge<Node?>> { e: PropertyEdge<Node?> -> e.containsProperties(props) })
-                        .map(PropertyEdge::start) else java.util.List.of(node).stream()
-                }
-                .collect(Collectors.toList())
-        }
+            }
         val refNodes = refSide
-        return if (Quantifier.ANY == q) nodeSide.stream()
-            .anyMatch { o: Node -> refNodes.contains(o) } else refNodes.containsAll(nodeSide)
+        return if (Quantifier.ANY == q)
+            nodeSide.stream().anyMatch { o: Node -> refNodes.contains(o) }
+        else refNodes.containsAll(nodeSide)
     }
 
     @Throws(IOException::class)
@@ -196,18 +149,7 @@ object Util {
         }
     }
 
-    fun <T> distinctByIdentity(): Predicate<T> {
-        val seen: MutableMap<Any, Boolean> = IdentityHashMap()
-        return Predicate { t: T ->
-            if (seen.containsKey(t)) {
-                return@Predicate false
-            } else {
-                seen[t] = true
-                return@Predicate true
-            }
-        }
-    }
-
+    @JvmStatic
     fun <T> distinctBy(by: Function<in T, *>): Predicate<T> {
         val seen: MutableSet<Any> = HashSet()
         return Predicate { t: T -> seen.add(by.apply(t)) }
@@ -222,41 +164,64 @@ object Util {
         }
     }
 
+    @JvmStatic
     fun <S> warnWithFileLocation(
-        lang: LanguageFrontend, astNode: S, log: Logger, format: String?, vararg arguments: Any?
+        lang: LanguageFrontend,
+        astNode: S,
+        log: Logger,
+        format: String?,
+        vararg arguments: Any?
     ) {
         log.warn(
-            String.format("%s: %s", PhysicalLocation.locationLink(lang.getLocationFromRawNode(astNode)), format),
+            String.format(
+                "%s: %s",
+                PhysicalLocation.locationLink(lang.getLocationFromRawNode(astNode)),
+                format
+            ),
             *arguments
         )
     }
 
+    @JvmStatic
     fun <S> errorWithFileLocation(
-        lang: LanguageFrontend, astNode: S, log: Logger, format: String?, vararg arguments: Any?
+        lang: LanguageFrontend,
+        astNode: S,
+        log: Logger,
+        format: String?,
+        vararg arguments: Any?
     ) {
         log.error(
-            String.format("%s: %s", PhysicalLocation.locationLink(lang.getLocationFromRawNode(astNode)), format),
+            String.format(
+                "%s: %s",
+                PhysicalLocation.locationLink(lang.getLocationFromRawNode(astNode)),
+                format
+            ),
             *arguments
         )
     }
 
-    fun warnWithFileLocation(
-        node: Node, log: Logger, format: String?, vararg arguments: Any?
-    ) {
-        log.warn(String.format("%s: %s", PhysicalLocation.locationLink(node.location), format), *arguments)
+    @JvmStatic
+    fun warnWithFileLocation(node: Node, log: Logger, format: String?, vararg arguments: Any?) {
+        log.warn(
+            String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
+            *arguments
+        )
     }
 
-    fun errorWithFileLocation(
-        node: Node, log: Logger, format: String?, vararg arguments: Any?
-    ) {
-        log.error(String.format("%s: %s", PhysicalLocation.locationLink(node.location), format), *arguments)
+    @JvmStatic
+    fun errorWithFileLocation(node: Node, log: Logger, format: String?, vararg arguments: Any?) {
+        log.error(
+            String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
+            *arguments
+        )
     }
 
     /**
      * Split a String into multiple parts by using one or more delimiter characters. Any delimiters
      * that are surrounded by matching opening and closing brackets are skipped. E.g. "a,(b,c)" will
-     * result in a list containing "a" and "(b,c)" when splitting on commas. Empty parts are ignored,
-     * so when splitting "a,,,,(b,c)", the same result is returned as in the previous example.
+     * result in a list containing "a" and "(b,c)" when splitting on commas. Empty parts are
+     * ignored, so when splitting "a,,,,(b,c)", the same result is returned as in the previous
+     * example.
      *
      * @param toSplit The input String
      * @param delimiters A String containing all characters that should be treated as delimiters
@@ -302,6 +267,7 @@ object Util {
      * @param original The String to clean
      * @return The modified version without excess parentheses
      */
+    @JvmStatic
     fun removeRedundantParentheses(original: String): String {
         val result = original.toCharArray()
         val marker = '\uffff'
@@ -315,7 +281,9 @@ object Util {
                     if (matching == 0 && i == original.length - 1) {
                         result[i] = marker
                         result[matching] = result[i]
-                    } else if (matching > 0 && result[matching - 1] == '(' && result[i + 1] == ')') {
+                    } else if (
+                        matching > 0 && result[matching - 1] == '(' && result[i + 1] == ')'
+                    ) {
                         result[i] = marker
                         result[matching] = result[i]
                     }
@@ -351,7 +319,11 @@ object Util {
      * @param arguments The call's arguments to be connected to the target's parameters
      */
     fun attachCallParameters(target: FunctionDeclaration, arguments: List<Expression?>) {
-        target.parameterEdges.sort(Comparator.comparing { pe: PropertyEdge<ParamVariableDeclaration> -> pe.end.argumentIndex })
+        target.parameterEdges.sortWith(
+            Comparator.comparing { pe: PropertyEdge<ParamVariableDeclaration> ->
+                pe.end.argumentIndex
+            }
+        )
         var j = 0
         while (j < arguments.size) {
             val parameters = target.parameters
@@ -374,7 +346,7 @@ object Util {
     }
 
     // TODO(oxisto): Remove at some point and directly use name class
-    fun getSimpleName(language: Language<out LanguageFrontend?>?, name: String): String {
+    fun getSimpleName(language: Language<out LanguageFrontend>?, name: String): String {
         var name = name
         if (language != null) {
             val delimiter = language.namespaceDelimiter
@@ -386,7 +358,7 @@ object Util {
     }
 
     // TODO(oxisto): Remove at some point and directly use name class
-    fun getParentName(language: Language<out LanguageFrontend?>?, name: String): String {
+    fun getParentName(language: Language<out LanguageFrontend>?, name: String): String {
         var name = name
         if (language != null) {
             val delimiter = language.namespaceDelimiter
@@ -406,14 +378,18 @@ object Util {
     fun detachCallParameters(target: FunctionDeclaration, arguments: List<Expression?>) {
         for (param in target.parameters) {
             // A param could be variadic, so multiple arguments could be set as incoming DFG
-            param.prevDFG.stream().filter { o: Node? -> arguments.contains(o) }
+            param.prevDFG
+                .stream()
+                .filter { o: Node? -> arguments.contains(o) }
                 .forEach { next: Node? -> param.removeNextDFG(next) }
         }
     }
 
+    @JvmStatic
     fun <T> reverse(input: Stream<T>): Stream<T> {
         val temp = input.toArray()
-        return IntStream.range(0, temp.size).mapToObj { i: Int -> temp[temp.size - i - 1] } as Stream<T>
+        return IntStream.range(0, temp.size).mapToObj { i: Int -> temp[temp.size - i - 1] }
+            as Stream<T>
     }
 
     /**
@@ -426,29 +402,34 @@ object Util {
     fun getAdjacentDFGNodes(n: Node?, incoming: Boolean): MutableList<Node> {
         val subnodes = SubgraphWalker.getAstChildren(n)
         val adjacentNodes: MutableList<Node>
-        adjacentNodes = if (incoming) {
-            subnodes.stream()
-                .filter { prevCandidate: Node -> prevCandidate.nextDFG.contains(n) }
-                .collect(Collectors.toList())
-        } else {
-            subnodes.stream()
-                .filter { nextCandidate: Node -> nextCandidate.prevDFG.contains(n) }
-                .collect(Collectors.toList())
-        }
+        adjacentNodes =
+            if (incoming) {
+                subnodes
+                    .stream()
+                    .filter { prevCandidate: Node -> prevCandidate.nextDFG.contains(n) }
+                    .collect(Collectors.toList())
+            } else {
+                subnodes
+                    .stream()
+                    .filter { nextCandidate: Node -> nextCandidate.prevDFG.contains(n) }
+                    .collect(Collectors.toList())
+            }
         return adjacentNodes
     }
 
     /**
-     * Connects the node `n` with the node `branchingExp` if present or with the
-     * node `branchingDecl`. The assumption is that only `branchingExp` or
-     * `branchingDecl` are present, e.g. C++.
+     * Connects the node `n` with the node `branchingExp` if present or with the node
+     * `branchingDecl`. The assumption is that only `branchingExp` or `branchingDecl` are present,
+     * e.g. C++.
      *
      * @param n
      * @param branchingExp
      * @param branchingDecl
      */
     fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
-        n: Node, branchingExp: Node?, branchingDecl: Node?
+        n: Node,
+        branchingExp: Node?,
+        branchingDecl: Node?
     ) {
         var conditionNodes: MutableList<Node> = ArrayList()
         if (branchingExp != null) {
@@ -457,22 +438,21 @@ object Util {
         } else if (branchingDecl != null) {
             conditionNodes = getAdjacentDFGNodes(branchingDecl, true)
         }
-        conditionNodes.forEach(Consumer { prev: Node? ->
-            n.addPrevDFG(
-                prev!!
-            )
-        })
+        conditionNodes.forEach(Consumer { prev: Node? -> n.addPrevDFG(prev!!) })
     }
 
     enum class Connect {
-        NODE, SUBTREE
+        NODE,
+        SUBTREE
     }
 
     enum class Quantifier {
-        ANY, ALL
+        ANY,
+        ALL
     }
 
     enum class Edge {
-        ENTRIES, EXITS
+        ENTRIES,
+        EXITS
     }
 }
