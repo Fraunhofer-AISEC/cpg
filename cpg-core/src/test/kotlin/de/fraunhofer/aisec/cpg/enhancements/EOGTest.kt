@@ -253,22 +253,42 @@ internal class EOGTest : BaseTest() {
                 Util.eogConnect(
                     q = Util.Quantifier.ALL,
                     cn = Connect.SUBTREE,
-                    en = Util.Edge.EXITS,
-                    n = bo.lhs,
+                    en = Util.Edge.ENTRIES,
+                    n = bo.rhs,
                     cr = Connect.SUBTREE,
                     props = mutableMapOf(Properties.BRANCH to (bo.operatorCode == "&&")),
-                    refs = listOf(bo.rhs)
+                    refs = listOf(bo.lhs)
                 )
             )
             assertTrue(
                 Util.eogConnect(
                     q = Util.Quantifier.ALL,
-                    cn = Connect.SUBTREE,
-                    en = Util.Edge.EXITS,
-                    n = bo.lhs,
-                    cr = Connect.NODE,
-                    props = mutableMapOf(Properties.BRANCH to (bo.operatorCode == "||")),
-                    refs = listOf(bo)
+                    cn = Connect.NODE,
+                    en = Util.Edge.ENTRIES,
+                    n = bo,
+                    cr = Connect.SUBTREE,
+                    refs = listOf(bo.lhs, bo.rhs)
+                )
+            )
+            assertTrue(
+                Util.eogConnect(
+                    q = Util.Quantifier.ANY,
+                    cn = Connect.NODE,
+                    en = Util.Edge.ENTRIES,
+                    n = bo,
+                    cr = Connect.SUBTREE,
+                    refs = listOf(bo.rhs)
+                )
+            )
+            assertTrue(
+                Util.eogConnect(
+                    q = Util.Quantifier.ANY,
+                    cn = Connect.NODE,
+                    en = Util.Edge.ENTRIES,
+                    n = bo,
+                    cr = Connect.SUBTREE,
+                    props = mutableMapOf(Properties.BRANCH to (bo.operatorCode != "&&")),
+                    refs = listOf(bo.lhs)
                 )
             )
             assertTrue(bo.lhs.nextEOG.size == 2)
@@ -326,7 +346,6 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs,
                 cr = Connect.SUBTREE,
-                props = mutableMapOf(Properties.BRANCH to true),
                 refs = listOf(fs.statement, prints[1])
             )
         )

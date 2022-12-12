@@ -82,6 +82,8 @@ object Util {
      * @param cr
      * - NODE if refs nodes itself are the nodes to connect or SUBTREE if the EOG borders are of
      * interest
+     * @param props
+     * - All edges must have these properties set to the provided value
      * @param refs
      * - Multiple reference nodes that can be passed as varargs
      * @return true if all/any of the connections from node connect to n.
@@ -101,16 +103,20 @@ object Util {
         nodeSide =
             if (cn == Connect.SUBTREE) {
                 val border = SubgraphWalker.getEOGPathEdges(n)
-                if (en == Edge.ENTRIES)
-                    border.entries.flatMap {
-                        it.prevEOGEdges.filter { it.containsProperties(props) }.map { it.start }
-                    }
-                else border.exits
+                if (en == Edge.ENTRIES) {
+                    val pe = border.entries.flatMap { r: Node -> r.prevEOGEdges }
+                    if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
+                        return false
+                    pe.filter { it.containsProperties(props) }.map { it.start }
+                } else border.exits
             } else {
                 nodeSide.flatMap {
-                    if (en == Edge.ENTRIES)
-                        it.prevEOGEdges.filter { it.containsProperties(props) }.map { it.start }
-                    else listOf(it)
+                    if (en == Edge.ENTRIES) {
+                        val pe = it.prevEOGEdges
+                        if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
+                            return false
+                        pe.filter { it.containsProperties(props) }.map { it.start }
+                    } else listOf(it)
                 }
             }
         refSide =
@@ -118,17 +124,21 @@ object Util {
                 val borders = refs.map { n: Node? -> SubgraphWalker.getEOGPathEdges(n) }
 
                 borders.flatMap { border: SubgraphWalker.Border ->
-                    if (Edge.ENTRIES == er)
-                        border.entries.flatMap { r: Node ->
-                            r.prevEOGEdges.filter { it.containsProperties(props) }.map { it.start }
-                        }
-                    else border.exits
+                    if (Edge.ENTRIES == er) {
+                        val pe = border.entries.flatMap { r: Node -> r.prevEOGEdges }
+                        if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
+                            return false
+                        pe.filter { it.containsProperties(props) }.map { it.start }
+                    } else border.exits
                 }
             } else {
                 refSide.flatMap { node: Node ->
-                    if (er == Edge.ENTRIES)
-                        node.prevEOGEdges.filter { it.containsProperties(props) }.map { it.start }
-                    else java.util.List.of(node)
+                    if (er == Edge.ENTRIES) {
+                        val pe = node.prevEOGEdges
+                        if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
+                            return false
+                        pe.filter { it.containsProperties(props) }.map { it.start }
+                    } else java.util.List.of(node)
                 }
             }
         val refNodes = refSide
