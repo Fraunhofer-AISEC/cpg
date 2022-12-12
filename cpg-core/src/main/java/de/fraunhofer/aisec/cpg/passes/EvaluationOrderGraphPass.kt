@@ -468,12 +468,11 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleBinaryOperator(node: BinaryOperator) {
         createEOG(node.lhs)
-        val lang = node?.language
+        val lang = node.language
         // Two operators that don't evaluate the second operator if the first evaluates to a certain
         // value. If the language has the trait of short-circuit evaluation, we check if the
         // operatorCode
         // is amongst the operators that leed such an evaluation.
-
         if (
             lang != null &&
                 lang is HasShortCircuitOperators &&
