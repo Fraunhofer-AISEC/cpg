@@ -37,7 +37,7 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
     override val namespaceDelimiter = "."
     override val frontend: KClass<out TypeScriptLanguageFrontend> =
         TypeScriptLanguageFrontend::class
-    override val conjunctiveOperators = listOf("&&", "&&=", "??=")
+    override val conjunctiveOperators = listOf("&&", "&&=", "??", "??=")
     override val disjunctiveOperators = listOf("||", "||=")
 
     override fun newFrontend(
