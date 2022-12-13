@@ -188,7 +188,6 @@ open class EvaluationOrderGraphPass : Pass() {
         }
         map[EmptyStatement::class.java] = CallableInterface { handleDefault(it as EmptyStatement) }
         map[Literal::class.java] = CallableInterface { handleDefault(it) }
-        map[UninitializedValue::class.java] = CallableInterface { handleDefault(it) }
         map[DefaultStatement::class.java] = CallableInterface { handleDefault(it) }
         map[TypeIdExpression::class.java] = CallableInterface { handleDefault(it) }
         map[DeclaredReferenceExpression::class.java] = CallableInterface { handleDefault(it) }

@@ -679,4 +679,20 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     private fun createTypeFrom(typename: String) = TypeParser.createFrom(typename, JavaLanguage())
+
+    @Test
+    fun testForEach() {
+        val file = File("src/test/resources/compiling/ForEach.java")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+
+        val p = tu.namespaces["compiling"]
+        val forEachClass = p.records["compiling.ForEach"]
+        val forIterator = forEachClass.methods["forIterator"]
+        assertNotNull(forIterator)
+
+        val forEach = forIterator.bodyOrNull<ForEachStatement>()
+        assertNotNull(forEach)
+
+        assertContains(forEach.variable.prevDFG, forEach.iterable)
+    }
 }
