@@ -38,7 +38,26 @@ class LoopScope(loopStatement: Statement) :
     var starts: List<Node> = ArrayList()
 
     /** Statements that constitute the start of the Loop condition evaluation, mostly of size 1 */
-    var conditions: List<Node> = ArrayList()
+    val conditions: List<Node>
+        get() =
+            when (val node = astNode) {
+                is WhileStatement ->
+                    mutableListOf(node.condition, node.conditionDeclaration).filterNotNull()
+                is ForStatement -> mutableListOf(node.condition).filterNotNull()
+                is ForEachStatement -> mutableListOf(node.variable).filterNotNull()
+                is DoStatement -> mutableListOf(node.condition).filterNotNull()
+                null -> {
+                    LOGGER.error("Ast node of loop scope is null.")
+                    mutableListOf()
+                }
+                else -> {
+                    LOGGER.error(
+                        "Currently the component {} is not supported as loop scope.",
+                        node.javaClass
+                    )
+                    mutableListOf()
+                }
+            }
     private val breaks = mutableListOf<BreakStatement>()
     private val continues = mutableListOf<ContinueStatement>()
     override fun addBreakStatement(breakStatement: BreakStatement) {
