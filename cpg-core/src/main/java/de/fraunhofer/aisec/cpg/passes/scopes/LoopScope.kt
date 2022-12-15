@@ -46,7 +46,8 @@ class LoopScope(loopStatement: Statement) :
                 is ForStatement -> mutableListOf(node.condition).filterNotNull()
                 is ForEachStatement -> mutableListOf(node.variable).filterNotNull()
                 is DoStatement -> mutableListOf(node.condition).filterNotNull()
-                null -> {
+                is AssertStatement -> mutableListOf(node.condition).filterNotNull()
+                    null -> {
                     LOGGER.error("Ast node of loop scope is null.")
                     mutableListOf()
                 }
