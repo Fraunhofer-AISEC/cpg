@@ -746,7 +746,9 @@ open class EvaluationOrderGraphPass : Pass() {
         currentEOG.addAll(loopScope.breakStatements)
         val continues = ArrayList(loopScope.continueStatements)
         if (continues.isNotEmpty()) {
-            loopScope.conditions.forEach { node -> addMultipleIncomingEOGEdges(continues, node) }
+            val conditions =
+                loopScope.conditions.map { SubgraphWalker.getEOGPathEdges(it).entries }.flatten()
+            conditions.forEach { node -> addMultipleIncomingEOGEdges(continues, node) }
         }
     }
 
