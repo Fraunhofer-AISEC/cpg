@@ -35,7 +35,37 @@ class LoopScope(loopStatement: Statement) :
     /**
      * Statements that constitute the start of the Loop depending on the used pass, mostly of size 1
      */
-    var starts: List<Node> = ArrayList()
+    val starts: List<Node>
+        get() =
+            when (val loopStatement = astNode) {
+                is WhileStatement -> {
+                    if (loopStatement.conditionDeclaration != null)
+                        SubgraphWalker.getEOGPathEdges(loopStatement.conditionDeclaration).entries
+                    else if (loopStatement.condition != null)
+                        SubgraphWalker.getEOGPathEdges(loopStatement.condition).entries
+                    else SubgraphWalker.getEOGPathEdges(loopStatement.statement).entries
+                }
+                is ForStatement -> {
+                    if (loopStatement.conditionDeclaration != null)
+                        SubgraphWalker.getEOGPathEdges(loopStatement.conditionDeclaration).entries
+                    else if (loopStatement.condition != null)
+                        SubgraphWalker.getEOGPathEdges(loopStatement.condition).entries
+                    else SubgraphWalker.getEOGPathEdges(loopStatement.statement).entries
+                }
+                is ForEachStatement -> {
+                    SubgraphWalker.getEOGPathEdges(loopStatement).entries
+                }
+                is DoStatement -> {
+                    SubgraphWalker.getEOGPathEdges(loopStatement.statement).entries
+                }
+                else -> {
+                    LOGGER.error(
+                        "Currently the component {} is not supported as loop scope.",
+                        astNode!!.javaClass
+                    )
+                    ArrayList()
+                }
+            }
 
     /** Statements that constitute the start of the Loop condition evaluation, mostly of size 1 */
     val conditions: List<Node>
@@ -74,41 +104,6 @@ class LoopScope(loopStatement: Statement) :
 
     override val continueStatements: List<ContinueStatement>
         get() = continues
-
-    fun starts(): List<Node> {
-        return when (astNode) {
-            is WhileStatement -> {
-                val ws = astNode as WhileStatement
-                if (ws.conditionDeclaration != null)
-                    return SubgraphWalker.getEOGPathEdges(ws.conditionDeclaration).entries
-                else if (ws.condition != null)
-                    return SubgraphWalker.getEOGPathEdges(ws.condition).entries
-                SubgraphWalker.getEOGPathEdges(ws.statement).entries
-            }
-            is ForStatement -> {
-                val fs = astNode as ForStatement
-                if (fs.conditionDeclaration != null)
-                    return SubgraphWalker.getEOGPathEdges(fs.conditionDeclaration).entries
-                else if (fs.condition != null)
-                    return SubgraphWalker.getEOGPathEdges(fs.condition).entries
-                SubgraphWalker.getEOGPathEdges(fs.statement).entries
-            }
-            is ForEachStatement -> {
-                val fs = astNode as ForEachStatement
-                SubgraphWalker.getEOGPathEdges(fs).entries
-            }
-            is DoStatement -> {
-                SubgraphWalker.getEOGPathEdges((astNode as DoStatement).statement).entries
-            }
-            else -> {
-                LOGGER.error(
-                    "Currently the component {} is not supported as loop scope.",
-                    astNode!!.javaClass
-                )
-                ArrayList()
-            }
-        }
-    }
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(LoopScope::class.java)

@@ -761,7 +761,7 @@ open class EvaluationOrderGraphPass : Pass() {
             LOGGER.error("I am unexpectedly not in a loop, cannot add edge to loop start")
             return
         }
-        loopScope.starts().forEach { node -> addMultipleIncomingEOGEdges(currentEOG, node) }
+        loopScope.starts.forEach { node -> addMultipleIncomingEOGEdges(currentEOG, node) }
     }
 
     /**
