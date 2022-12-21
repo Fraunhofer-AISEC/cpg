@@ -746,15 +746,8 @@ open class EvaluationOrderGraphPass : Pass() {
         currentEOG.addAll(loopScope.breakStatements)
         val continues = ArrayList(loopScope.continueStatements)
         if (continues.isNotEmpty()) {
-            val condition =
-                when (loopStatement) {
-                    is DoStatement -> loopStatement.condition
-                    is ForStatement -> loopStatement.condition
-                    is WhileStatement -> loopStatement.condition
-                    is AssertStatement -> loopStatement.condition
-                    else -> loopStatement // ForEachStatement
-                }
-            val conditions = SubgraphWalker.getEOGPathEdges(condition).entries
+            val conditions =
+                loopScope.conditions.map { SubgraphWalker.getEOGPathEdges(it).entries }.flatten()
             conditions.forEach { node -> addMultipleIncomingEOGEdges(continues, node) }
         }
     }
@@ -768,7 +761,7 @@ open class EvaluationOrderGraphPass : Pass() {
             LOGGER.error("I am unexpectedly not in a loop, cannot add edge to loop start")
             return
         }
-        loopScope.starts().forEach { node -> addMultipleIncomingEOGEdges(currentEOG, node) }
+        loopScope.starts.forEach { node -> addMultipleIncomingEOGEdges(currentEOG, node) }
     }
 
     /**
