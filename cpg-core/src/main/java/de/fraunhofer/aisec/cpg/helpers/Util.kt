@@ -97,7 +97,7 @@ object Util {
         props: Map<Properties, Any?> = mutableMapOf(),
         refs: List<Node>
     ): Boolean {
-        var nodeSide = java.util.List.of(n)
+        var nodeSide = listOf(n)
         val er = if (en == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
         var refSide = refs
         nodeSide =
