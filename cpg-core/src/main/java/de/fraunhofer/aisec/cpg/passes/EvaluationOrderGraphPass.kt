@@ -857,12 +857,16 @@ open class EvaluationOrderGraphPass : Pass() {
             node.condition,
             node.conditionDeclaration
         )
+
         pushToEOG(node) // To have semantic information after the condition evaluation
         currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
-        createEOG(node.statement)
-        createEOG(node.iterationStatement)
+
+        node.statement?.let { createEOG(it) }
+        node.iterationStatement?.let { createEOG(it) }
+
         connectCurrentToLoopStart()
+
         currentEOG.clear()
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
