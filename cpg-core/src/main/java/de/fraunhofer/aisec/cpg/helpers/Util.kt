@@ -92,11 +92,15 @@ object Util {
         q: Quantifier = Quantifier.ALL,
         cn: Connect = Connect.SUBTREE,
         en: Edge,
-        n: Node,
+        n: Node?,
         cr: Connect = Connect.SUBTREE,
         props: Map<Properties, Any?> = mutableMapOf(),
         refs: List<Node>
     ): Boolean {
+        if (n == null) {
+            return false
+        }
+
         var nodeSide = listOf(n)
         val er = if (en == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
         var refSide = refs
@@ -142,8 +146,7 @@ object Util {
                 }
             }
         val refNodes = refSide
-        return if (Quantifier.ANY == q)
-            nodeSide.stream().anyMatch { o: Node -> refNodes.contains(o) }
+        return if (Quantifier.ANY == q) nodeSide.any { o -> refNodes.contains(o) }
         else refNodes.containsAll(nodeSide)
     }
 
