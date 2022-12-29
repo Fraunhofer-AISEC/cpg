@@ -52,7 +52,9 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
         } // reserved for [initializeOrderEvaluation]
         require(
             state.outgoingEdges.none { e -> e.matches(edge) && e.nextState != edge.nextState }
-        ) { "State already has an outgoing edge with the same label but a different target!" }
+        ) {
+            "State already has an outgoing edge with the same label but a different target!"
+        }
     }
 
     /**

@@ -59,13 +59,11 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
 
         val dfa = DFA() // new empty DFA which is incrementally extended
         val epsilonClosures =
-            mutableMapOf<
-                Set<State>, State
-            >() // used to remember which DFA state an ε-closure of NFA states maps to
+            mutableMapOf<Set<State>, State>(
+            ) // used to remember which DFA state an ε-closure of NFA states maps to
         val statesToExplore =
-            ArrayDeque<
-                Pair<State, Set<State>>
-            >() // a queue to remember which states still have to be explored
+            ArrayDeque<Pair<State, Set<State>>>(
+            ) // a queue to remember which states still have to be explored
 
         // Set up the basis on which to explore the current NFA
         // start with finding the ε-closures of the starting state
