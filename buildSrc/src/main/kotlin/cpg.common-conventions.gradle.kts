@@ -120,7 +120,7 @@ kotlin {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn")
+        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-Xuse-k2")
     }
 }
 

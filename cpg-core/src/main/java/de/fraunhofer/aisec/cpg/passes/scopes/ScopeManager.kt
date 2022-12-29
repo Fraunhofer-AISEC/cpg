@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -790,16 +791,17 @@ class ScopeManager : ScopeProvider {
     fun activateTypes(node: Node) {
         val num = AtomicInteger()
         val typeCache = TypeManager.getInstance().typeCache
+
+        val sm = this
+
         node.accept(
             { x: Node? -> Strategy.AST_FORWARD(x!!) },
             object : IVisitor<Node?>() {
                 override fun visit(n: Node) {
                     if (n is HasType) {
                         val typeNode = n as HasType
-                        typeCache.getOrDefault(typeNode, emptyList()).forEach { t: Type? ->
-                            (n as HasType).type =
-                                TypeManager.getInstance()
-                                    .resolvePossibleTypedef(t, this@ScopeManager)
+                        typeCache.getOrDefault(typeNode, emptyList()).forEach { t ->
+                            (n as HasType).type = resolvePossibleTypedef(t)
                         }
                         typeCache.remove(n as HasType)
                         num.getAndIncrement()
@@ -813,11 +815,22 @@ class ScopeManager : ScopeProvider {
         // set
         // their type to the requested value
         typeCache.forEach { (n: HasType, types: List<Type>) ->
-            types.forEach(
-                Consumer { t: Type? ->
-                    n.type = TypeManager.getInstance().resolvePossibleTypedef(t, this)
-                }
-            )
+            types.forEach(Consumer { t -> n.type = resolvePossibleTypedef(t) })
+        }
+    }
+
+    fun resolvePossibleTypedef(alias: Type): Type {
+        val finalToCheck = alias.root
+        val applicable =
+            this.currentTypedefs
+                .stream()
+                .filter { t: TypedefDeclaration -> t.alias.root == finalToCheck }
+                .findAny()
+                .map { obj: TypedefDeclaration -> obj.type }
+        return if (applicable.isEmpty) {
+            alias
+        } else {
+            TypeParser.reWrapType(alias, applicable.get())
         }
     }
 }

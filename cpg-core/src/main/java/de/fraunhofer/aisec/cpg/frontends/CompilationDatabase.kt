@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import java.io.File
 import java.nio.file.Paths
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * A compilation database contains necessary information about the include paths and possible

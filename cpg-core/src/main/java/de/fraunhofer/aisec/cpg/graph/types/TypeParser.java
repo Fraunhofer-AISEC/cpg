@@ -829,7 +829,7 @@ public class TypeParser {
     finalType = typeManager.registerType(finalType);
 
     if (resolveAlias && scopeManager != null) {
-      return typeManager.registerType(typeManager.resolvePossibleTypedef(finalType, scopeManager));
+      return typeManager.registerType(scopeManager.resolvePossibleTypedef(finalType));
     }
 
     return finalType;

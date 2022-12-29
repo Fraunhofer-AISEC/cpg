@@ -657,21 +657,6 @@ public class TypeManager {
     return typedef;
   }
 
-  public Type resolvePossibleTypedef(Type alias, ScopeManager scopeManager) {
-    Type finalToCheck = alias.getRoot();
-    Optional<Type> applicable =
-        scopeManager.getCurrentTypedefs().stream()
-            .filter(t -> t.getAlias().getRoot().equals(finalToCheck))
-            .findAny()
-            .map(TypedefDeclaration::getType);
-
-    if (applicable.isEmpty()) {
-      return alias;
-    } else {
-      return TypeParser.reWrapType(alias, applicable.get());
-    }
-  }
-
   private static class Ancestor {
 
     private final RecordDeclaration recordDeclaration;

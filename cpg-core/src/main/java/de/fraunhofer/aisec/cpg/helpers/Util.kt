@@ -34,16 +34,11 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
-import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.IOException
-import java.io.InputStream
-import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.function.Consumer
 import java.util.function.Function
 import java.util.function.Predicate
-import java.util.stream.Collectors
 import java.util.stream.IntStream
 import java.util.stream.Stream
 import org.slf4j.Logger
@@ -57,10 +52,9 @@ object Util {
      * @return a list of nodes with the specified String.
      */
     fun subnodesOfCode(node: Node?, searchCode: String): List<Node> {
-        return SubgraphWalker.flattenAST(node)
-            .stream()
-            .filter { n: Node -> n.code != null && n.code == searchCode }
-            .collect(Collectors.toList())
+        return SubgraphWalker.flattenAST(node).filter { n: Node ->
+            n.code != null && n.code == searchCode
+        }
     }
 
     /**
@@ -142,21 +136,8 @@ object Util {
                 }
             }
         val refNodes = refSide
-        return if (Quantifier.ANY == q)
-            nodeSide.stream().anyMatch { o: Node -> refNodes.contains(o) }
+        return if (Quantifier.ANY == q) nodeSide.any { o: Node -> refNodes.contains(o) }
         else refNodes.containsAll(nodeSide)
-    }
-
-    @Throws(IOException::class)
-    fun inputStreamToString(inputStream: InputStream): String {
-        ByteArrayOutputStream().use { result ->
-            val buffer = ByteArray(1024)
-            var length: Int
-            while (inputStream.read(buffer).also { length = it } != -1) {
-                result.write(buffer, 0, length)
-            }
-            return result.toString(StandardCharsets.UTF_8)
-        }
     }
 
     @JvmStatic
@@ -227,50 +208,6 @@ object Util {
     }
 
     /**
-     * Split a String into multiple parts by using one or more delimiter characters. Any delimiters
-     * that are surrounded by matching opening and closing brackets are skipped. E.g. "a,(b,c)" will
-     * result in a list containing "a" and "(b,c)" when splitting on commas. Empty parts are
-     * ignored, so when splitting "a,,,,(b,c)", the same result is returned as in the previous
-     * example.
-     *
-     * @param toSplit The input String
-     * @param delimiters A String containing all characters that should be treated as delimiters
-     * @return A list of all parts of the input, as divided by any delimiter
-     */
-    fun splitLeavingParenthesisContents(toSplit: String, delimiters: String): List<String> {
-        val result: MutableList<String> = ArrayList()
-        var openParentheses = 0
-        var currPart = StringBuilder()
-        for (c in toSplit.toCharArray()) {
-            if (c == '(') {
-                openParentheses++
-                currPart.append(c)
-            } else if (c == ')') {
-                if (openParentheses > 0) {
-                    openParentheses--
-                }
-                currPart.append(c)
-            } else if (delimiters.contains("" + c)) {
-                if (openParentheses == 0) {
-                    val toAdd = currPart.toString().strip()
-                    if (!toAdd.isEmpty()) {
-                        result.add(currPart.toString().strip())
-                    }
-                    currPart = StringBuilder()
-                } else {
-                    currPart.append(c)
-                }
-            } else {
-                currPart.append(c)
-            }
-        }
-        if (currPart.length > 0) {
-            result.add(currPart.toString().strip())
-        }
-        return result
-    }
-
-    /**
      * Removes pairs of parentheses that do not provide any further separation. E.g. "(foo)" results
      * in "foo" and "(((foo))((bar)))" in "(foo)(bar)", whereas "(foo)(bar)" stays the same.
      *
@@ -282,7 +219,7 @@ object Util {
         val result = original.toCharArray()
         val marker = '\uffff'
         val openingParentheses: Deque<Int> = ArrayDeque()
-        for (i in 0 until original.length) {
+        for (i in original.indices) {
             val c = original[i]
             when (c) {
                 '(' -> openingParentheses.push(i)
@@ -301,25 +238,6 @@ object Util {
             }
         }
         return String(result).replace("" + marker, "")
-    }
-
-    fun containsOnOuterLevel(input: String, marker: Char): Boolean {
-        var openParentheses = 0
-        var openTemplate = 0
-        for (c in input.toCharArray()) {
-            if (c == '(') {
-                openParentheses++
-            } else if (c == ')') {
-                openParentheses--
-            } else if (c == '<') {
-                openTemplate++
-            } else if (c == '>') {
-                openTemplate--
-            } else if (c == marker && openParentheses == 0 && openTemplate == 0) {
-                return true
-            }
-        }
-        return false
     }
 
     /**
@@ -379,22 +297,6 @@ object Util {
         return name
     }
 
-    /**
-     * Inverse operation of [.attachCallParameters]
-     *
-     * @param target
-     * @param arguments
-     */
-    fun detachCallParameters(target: FunctionDeclaration, arguments: List<Expression?>) {
-        for (param in target.parameters) {
-            // A param could be variadic, so multiple arguments could be set as incoming DFG
-            param.prevDFG
-                .stream()
-                .filter { o: Node? -> arguments.contains(o) }
-                .forEach { next: Node? -> param.removeNextDFG(next) }
-        }
-    }
-
     @JvmStatic
     fun <T> reverse(input: Stream<T>): Stream<T> {
         val temp = input.toArray()
@@ -411,20 +313,13 @@ object Util {
      */
     fun getAdjacentDFGNodes(n: Node?, incoming: Boolean): MutableList<Node> {
         val subnodes = SubgraphWalker.getAstChildren(n)
-        val adjacentNodes: MutableList<Node>
-        adjacentNodes =
+        val adjacentNodes =
             if (incoming) {
-                subnodes
-                    .stream()
-                    .filter { prevCandidate: Node -> prevCandidate.nextDFG.contains(n) }
-                    .collect(Collectors.toList())
+                subnodes.filter { prevCandidate: Node -> prevCandidate.nextDFG.contains(n) }
             } else {
-                subnodes
-                    .stream()
-                    .filter { nextCandidate: Node -> nextCandidate.prevDFG.contains(n) }
-                    .collect(Collectors.toList())
+                subnodes.filter { nextCandidate: Node -> nextCandidate.prevDFG.contains(n) }
             }
-        return adjacentNodes
+        return adjacentNodes.toMutableList()
     }
 
     /**
