@@ -57,7 +57,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("literal.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -107,7 +109,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("function.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -195,7 +199,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("if.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -234,7 +240,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("simple_class.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
         val p =
@@ -290,7 +298,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("ifexpr.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -340,7 +350,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("class_fields.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -404,7 +416,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("class_self.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -477,7 +491,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("class_ctor.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -531,7 +547,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("issue432.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -644,7 +662,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("vars.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -746,7 +766,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("literal.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -774,7 +796,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("literal.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -816,7 +840,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("multi_level_mem_call.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -854,7 +880,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("issue598.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -893,7 +921,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("issue615.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -962,7 +992,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("issue473.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -1017,7 +1049,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("comments.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>().matchCommentsToNodes(true) }
+            ) {
+                it.registerLanguage<PythonLanguage>().matchCommentsToNodes(true)
+            }
 
         assertNotNull(tu)
 

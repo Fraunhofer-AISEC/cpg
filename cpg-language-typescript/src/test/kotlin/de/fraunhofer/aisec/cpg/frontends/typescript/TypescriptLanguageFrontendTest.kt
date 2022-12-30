@@ -52,7 +52,9 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("function.ts").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<TypeScriptLanguage>() }
+            ) {
+                it.registerLanguage<TypeScriptLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -87,7 +89,9 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("function.js").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<JavaScriptLanguage>() }
+            ) {
+                it.registerLanguage<JavaScriptLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -122,7 +126,9 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("simple.jsx").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<JavaScriptLanguage>() }
+            ) {
+                it.registerLanguage<JavaScriptLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -150,7 +156,9 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("fetch.ts").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<TypeScriptLanguage>() }
+            ) {
+                it.registerLanguage<TypeScriptLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -253,7 +261,9 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<TypeScriptLanguage>() }
+            ) {
+                it.registerLanguage<TypeScriptLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -313,7 +323,9 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("function-component.tsx").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<TypeScriptLanguage>() }
+            ) {
+                it.registerLanguage<TypeScriptLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -340,7 +352,9 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("decorator.ts").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<TypeScriptLanguage>() }
+            ) {
+                it.registerLanguage<TypeScriptLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -373,7 +387,9 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("lambda.js").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<JavaScriptLanguage>() }
+            ) {
+                it.registerLanguage<JavaScriptLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -401,13 +417,17 @@ class TypeScriptLanguageFrontendTest {
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<TypeScriptLanguage>() }
+            ) {
+                it.registerLanguage<TypeScriptLanguage>()
+            }
         val functionTu =
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("function.ts").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<TypeScriptLanguage>() }
+            ) {
+                it.registerLanguage<TypeScriptLanguage>()
+            }
 
         assertNotNull(componentTU)
         assertNotNull(functionTu)

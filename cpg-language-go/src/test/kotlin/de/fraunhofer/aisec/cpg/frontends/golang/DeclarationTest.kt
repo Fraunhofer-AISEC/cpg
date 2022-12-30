@@ -43,7 +43,9 @@ class DeclarationTest {
                 listOf(topLevel.resolve("unnamed.go").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
         assertNotNull(tu)
 
         val main = tu.byNameOrNull<NamespaceDeclaration>("main")
@@ -66,7 +68,9 @@ class DeclarationTest {
                 listOf(topLevel.resolve("unnamed.go").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
         assertNotNull(tu)
 
         val main = tu.byNameOrNull<NamespaceDeclaration>("main")
@@ -89,7 +93,9 @@ class DeclarationTest {
                 listOf(topLevel.resolve("embed.go").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
         assertNotNull(tu)
 
         val main = tu.byNameOrNull<NamespaceDeclaration>("main")

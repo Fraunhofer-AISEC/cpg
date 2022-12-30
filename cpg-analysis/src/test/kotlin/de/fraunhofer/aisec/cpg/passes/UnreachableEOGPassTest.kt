@@ -54,7 +54,9 @@ class UnreachableEOGPassTest {
                 listOf(topLevel.resolve("Unreachability.java").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<JavaLanguage>().registerPass(UnreachableEOGPass()) }
+            ) {
+                it.registerLanguage<JavaLanguage>().registerPass(UnreachableEOGPass())
+            }
     }
 
     @Test
