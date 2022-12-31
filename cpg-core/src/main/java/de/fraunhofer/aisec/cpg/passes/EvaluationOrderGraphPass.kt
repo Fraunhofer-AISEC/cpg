@@ -265,7 +265,7 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
         // analyze the initializer
-        node.initializer?.let { createEOG(it) }
+        createEOG(node.initializer)
         pushToEOG(node)
     }
 
@@ -325,7 +325,7 @@ open class EvaluationOrderGraphPass : Pass() {
         pushToEOG(node)
 
         // analyze the body
-        node.body?.let { createEOG(it) }
+        createEOG(node.body)
 
         val currentScope = scopeManager.currentScope
         if (currentScope !is FunctionScope) {
@@ -371,7 +371,16 @@ open class EvaluationOrderGraphPass : Pass() {
         currentEOG.clear()
     }
 
-    private fun createEOG(node: Node) {
+    /**
+     * Tries to create the necessary EOG edges for the [node] (if it is non-null) by looking up the
+     * appropriate handler function of the node's class in [map] and calling it.
+     */
+    private fun createEOG(node: Node?) {
+        if (node == null) {
+            // nothing to do
+            return
+        }
+
         intermediateNodes.add(node)
         var toHandle: Class<*> = node.javaClass
         var callable = map[toHandle]
@@ -423,9 +432,9 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleArrayCreationExpression(node: ArrayCreationExpression) {
         for (dimension in node.dimensions) {
-            dimension?.let { createEOG(it) }
+            createEOG(dimension)
         }
-        node.initializer?.let { createEOG(it) }
+        createEOG(node.initializer)
         pushToEOG(node)
     }
 
@@ -456,7 +465,7 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleReturnStatement(node: ReturnStatement) {
         // analyze the return value
-        node.returnValue?.let { createEOG(it) }
+        createEOG(node.returnValue)
 
         // push the statement itself
         pushToEOG(node)
@@ -470,8 +479,7 @@ open class EvaluationOrderGraphPass : Pass() {
         val lang = node.language
         // Two operators that don't evaluate the second operator if the first evaluates to a certain
         // value. If the language has the trait of short-circuit evaluation, we check if the
-        // operatorCode
-        // is amongst the operators that leed such an evaluation.
+        // operatorCode is amongst the operators that leed such an evaluation.
         if (
             lang != null &&
                 lang is HasShortCircuitOperators &&
@@ -567,7 +575,7 @@ open class EvaluationOrderGraphPass : Pass() {
     protected fun handleAssertStatement(node: AssertStatement) {
         createEOG(node.condition)
         val openConditionEOGs = ArrayList(currentEOG)
-        node.message?.let { createEOG(it) }
+        createEOG(node.message)
         setCurrentEOGs(openConditionEOGs)
         pushToEOG(node)
     }
@@ -679,7 +687,7 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleNewExpression(node: NewExpression) {
-        node.initializer?.let { createEOG(it) }
+        createEOG(node.initializer)
         pushToEOG(node)
     }
 
@@ -849,20 +857,24 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleForStatement(node: ForStatement) {
         scopeManager.enterScope(node)
-        node.initializerStatement?.let { createEOG(it) }
-        node.conditionDeclaration?.let { createEOG(it) }
-        node.condition?.let { createEOG(it) }
+        createEOG(node.initializerStatement)
+        createEOG(node.conditionDeclaration)
+        createEOG(node.condition)
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
             node.conditionDeclaration
         )
+
         pushToEOG(node) // To have semantic information after the condition evaluation
         currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
+
         createEOG(node.statement)
         createEOG(node.iterationStatement)
+
         connectCurrentToLoopStart()
+
         currentEOG.clear()
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
@@ -877,9 +889,9 @@ open class EvaluationOrderGraphPass : Pass() {
     protected fun handleIfStatement(node: IfStatement) {
         val openBranchNodes = mutableListOf<Node>()
         scopeManager.enterScopeIfExists(node)
-        node.initializerStatement?.let { createEOG(it) }
-        node.conditionDeclaration?.let { createEOG(it) }
-        node.condition?.let { createEOG(it) }
+        createEOG(node.initializerStatement)
+        createEOG(node.conditionDeclaration)
+        createEOG(node.condition)
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
@@ -904,9 +916,9 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleSwitchStatement(node: SwitchStatement) {
         scopeManager.enterScopeIfExists(node)
-        node.initializerStatement?.let { createEOG(it) }
-        node.selectorDeclaration?.let { createEOG(it) }
-        node.selector?.let { createEOG(it) }
+        createEOG(node.initializerStatement)
+        createEOG(node.selectorDeclaration)
+        createEOG(node.selector)
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.getSelector(),
@@ -939,8 +951,8 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleWhileStatement(node: WhileStatement) {
         scopeManager.enterScope(node)
-        node.conditionDeclaration?.let { createEOG(it) }
-        node.condition?.let { createEOG(it) }
+        createEOG(node.conditionDeclaration)
+        createEOG(node.condition)
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,

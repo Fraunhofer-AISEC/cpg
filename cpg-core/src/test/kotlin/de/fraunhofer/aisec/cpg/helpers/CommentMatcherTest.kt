@@ -116,7 +116,7 @@ class CommentMatcherTest {
         CommentMatcher().matchCommentToNode(comment9, Region(18, 16, 18, 48), tu)
         assertTrue(printStatement.comment?.contains(comment8) == true)
         // TODO The second comment doesn't belong to the print but to the loop body
-        assertTrue(forLoop.statement.comment?.contains(comment9) == true)
+        assertTrue((forLoop.statement as? CompoundStatement)?.comment?.contains(comment9) == true)
 
         assertNull(mainMethod.comment)
     }

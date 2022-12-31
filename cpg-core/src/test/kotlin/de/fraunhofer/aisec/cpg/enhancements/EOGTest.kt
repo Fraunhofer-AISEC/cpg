@@ -321,7 +321,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = prints[0],
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.initializerStatement)
+                refs = listOfNotNull(fs.initializerStatement)
             )
         )
         assertTrue(
@@ -329,7 +329,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.initializerStatement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.condition)
+                refs = listOfNotNull(fs.condition)
             )
         )
         assertTrue(
@@ -346,7 +346,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.statement, prints[1])
+                refs = listOfNotNull(fs.statement, prints[1])
             )
         )
         assertTrue(
@@ -354,7 +354,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.statement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.iterationStatement)
+                refs = listOfNotNull(fs.iterationStatement)
             )
         )
         assertTrue(
@@ -362,7 +362,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.iterationStatement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.condition)
+                refs = listOfNotNull(fs.condition)
             )
         )
         fs = fstat[1]
@@ -381,7 +381,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = prints[1],
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.initializerStatement)
+                refs = listOfNotNull(fs.initializerStatement)
             )
         )
         assertTrue(
@@ -389,7 +389,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.initializerStatement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.condition)
+                refs = listOfNotNull(fs.condition)
             )
         )
         assertTrue(
@@ -405,7 +405,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.statement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.iterationStatement)
+                refs = listOfNotNull(fs.iterationStatement)
             )
         )
         assertTrue(
@@ -413,7 +413,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.iterationStatement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.condition)
+                refs = listOfNotNull(fs.condition)
             )
         )
         assertTrue(
@@ -454,7 +454,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = prints[0],
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.initializerStatement)
+                refs = listOfNotNull(fs.initializerStatement)
             )
         )
         assertTrue(
@@ -462,7 +462,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.initializerStatement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.conditionDeclaration)
+                refs = listOfNotNull(fs.conditionDeclaration)
             )
         )
         assertTrue(
@@ -478,7 +478,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.statement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.iterationStatement)
+                refs = listOfNotNull(fs.iterationStatement)
             )
         )
         assertTrue(
@@ -486,7 +486,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.iterationStatement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.conditionDeclaration)
+                refs = listOfNotNull(fs.conditionDeclaration)
             )
         )
         assertTrue(
@@ -515,7 +515,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = prints[1],
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.initializerStatement)
+                refs = listOfNotNull(fs.initializerStatement)
             )
         )
         assertTrue(
@@ -523,7 +523,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.initializerStatement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.condition)
+                refs = listOfNotNull(fs.condition)
             )
         )
         assertTrue(
@@ -539,7 +539,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.statement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.iterationStatement)
+                refs = listOfNotNull(fs.iterationStatement)
             )
         )
         assertTrue(
@@ -547,7 +547,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.iterationStatement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.condition)
+                refs = listOfNotNull(fs.condition)
             )
         )
         assertTrue(
@@ -576,7 +576,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = prints[3],
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.initializerStatement)
+                refs = listOfNotNull(fs.initializerStatement)
             )
         )
         assertTrue(
@@ -584,7 +584,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.initializerStatement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.condition)
+                refs = listOfNotNull(fs.condition)
             )
         )
         assertTrue(
@@ -600,7 +600,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.statement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.iterationStatement)
+                refs = listOfNotNull(fs.iterationStatement)
             )
         )
         assertTrue(
@@ -608,7 +608,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.iterationStatement,
                 cr = Connect.SUBTREE,
-                refs = listOf(fs.condition)
+                refs = listOfNotNull(fs.condition)
             )
         )
         assertTrue(

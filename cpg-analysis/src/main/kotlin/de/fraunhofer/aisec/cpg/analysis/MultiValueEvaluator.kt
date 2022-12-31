@@ -250,7 +250,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         if (loop == null || loop.condition !is BinaryOperator) return setOf()
 
         var loopVar: Number? =
-            evaluateInternal(loop.initializerStatement.declarations.first(), depth) as? Number
+            evaluateInternal(loop.initializerStatement?.declarations?.first(), depth) as? Number
                 ?: return setOf()
 
         val cond = loop.condition as BinaryOperator
