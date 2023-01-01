@@ -96,8 +96,8 @@ class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = fal
         }
 
         val newState = copy() // get a shallow copy
-        newState._outgoingEdges.clear(
-        ) // and then get rid of the shallowly copied edges -> when doing a deepCopy, we
+        newState._outgoingEdges
+            .clear() // and then get rid of the shallowly copied edges -> when doing a deepCopy, we
         // must also create new edge objects
         currentStates.add(newState)
 
