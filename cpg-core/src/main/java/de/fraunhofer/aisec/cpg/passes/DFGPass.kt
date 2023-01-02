@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -79,6 +80,7 @@ class DFGPass : Pass() {
             is UnaryOperator -> handleUnaryOperator(node)
             // Statements
             is ReturnStatement -> handleReturnStatement(node)
+            is ForEachStatement -> handleForEachStatement(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
@@ -139,6 +141,14 @@ class DFGPass : Pass() {
      */
     private fun handleReturnStatement(node: ReturnStatement) {
         node.returnValue?.let { node.addPrevDFG(it) }
+    }
+
+    /**
+     * Adds the DFG edge for a [ForEachStatement]. The data flows from the
+     * [ForEachStatement.iterable] to the [ForEachStatement.variable].
+     */
+    private fun handleForEachStatement(node: ForEachStatement) {
+        node.variable.addPrevDFG(node.iterable)
     }
 
     /**

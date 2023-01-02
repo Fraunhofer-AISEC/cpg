@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.CallableInterface
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
@@ -187,7 +188,6 @@ open class EvaluationOrderGraphPass : Pass() {
         }
         map[EmptyStatement::class.java] = CallableInterface { handleDefault(it as EmptyStatement) }
         map[Literal::class.java] = CallableInterface { handleDefault(it) }
-        map[UninitializedValue::class.java] = CallableInterface { handleDefault(it) }
         map[DefaultStatement::class.java] = CallableInterface { handleDefault(it) }
         map[TypeIdExpression::class.java] = CallableInterface { handleDefault(it) }
         map[DeclaredReferenceExpression::class.java] = CallableInterface { handleDefault(it) }
@@ -265,7 +265,7 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
         // analyze the initializer
-        node.initializer?.let { createEOG(it) }
+        createEOG(node.initializer)
         pushToEOG(node)
     }
 
@@ -325,7 +325,7 @@ open class EvaluationOrderGraphPass : Pass() {
         pushToEOG(node)
 
         // analyze the body
-        node.body?.let { createEOG(it) }
+        createEOG(node.body)
 
         val currentScope = scopeManager.currentScope
         if (currentScope !is FunctionScope) {
@@ -371,7 +371,16 @@ open class EvaluationOrderGraphPass : Pass() {
         currentEOG.clear()
     }
 
-    private fun createEOG(node: Node) {
+    /**
+     * Tries to create the necessary EOG edges for the [node] (if it is non-null) by looking up the
+     * appropriate handler function of the node's class in [map] and calling it.
+     */
+    private fun createEOG(node: Node?) {
+        if (node == null) {
+            // nothing to do
+            return
+        }
+
         intermediateNodes.add(node)
         var toHandle: Class<*> = node.javaClass
         var callable = map[toHandle]
@@ -423,9 +432,9 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleArrayCreationExpression(node: ArrayCreationExpression) {
         for (dimension in node.dimensions) {
-            dimension?.let { createEOG(it) }
+            createEOG(dimension)
         }
-        node.initializer?.let { createEOG(it) }
+        createEOG(node.initializer)
         pushToEOG(node)
     }
 
@@ -456,7 +465,7 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleReturnStatement(node: ReturnStatement) {
         // analyze the return value
-        node.returnValue?.let { createEOG(it) }
+        createEOG(node.returnValue)
 
         // push the statement itself
         pushToEOG(node)
@@ -467,17 +476,33 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleBinaryOperator(node: BinaryOperator) {
         createEOG(node.lhs)
-        val shortCircuitNodes = mutableListOf<Node>()
-
+        val lang = node.language
         // Two operators that don't evaluate the second operator if the first evaluates to a certain
-        // value.
-        if (node.operatorCode == "&&" || node.operatorCode == "||") {
+        // value. If the language has the trait of short-circuit evaluation, we check if the
+        // operatorCode is amongst the operators that leed such an evaluation.
+        if (
+            lang != null &&
+                lang is HasShortCircuitOperators &&
+                (lang.conjunctiveOperators.contains(node.operatorCode) ||
+                    lang.disjunctiveOperators.contains(node.operatorCode))
+        ) {
+            val shortCircuitNodes = mutableListOf<Node>()
             shortCircuitNodes.addAll(currentEOG)
+            // Adds true or false depending on whether a conjunctive or disjunctive operator is
+            // present.
+            // If it is not a conjunctive operator, the check above implies it is a disjunctive
+            // operator.
+            currentProperties[Properties.BRANCH] =
+                lang.conjunctiveOperators.contains(node.operatorCode)
+            createEOG(node.rhs)
+            pushToEOG(node)
+            setCurrentEOGs(shortCircuitNodes)
+            // Inverted property to assigne false when true was assigned above.
+            currentProperties[Properties.BRANCH] =
+                !lang.conjunctiveOperators.contains(node.operatorCode)
+        } else {
+            createEOG(node.rhs)
         }
-        createEOG(node.rhs)
-        shortCircuitNodes.addAll(currentEOG)
-        setCurrentEOGs(shortCircuitNodes)
-        // push the statement itself
         pushToEOG(node)
     }
 
@@ -550,7 +575,7 @@ open class EvaluationOrderGraphPass : Pass() {
     protected fun handleAssertStatement(node: AssertStatement) {
         createEOG(node.condition)
         val openConditionEOGs = ArrayList(currentEOG)
-        node.message?.let { createEOG(it) }
+        createEOG(node.message)
         setCurrentEOGs(openConditionEOGs)
         pushToEOG(node)
     }
@@ -662,7 +687,7 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleNewExpression(node: NewExpression) {
-        node.initializer?.let { createEOG(it) }
+        createEOG(node.initializer)
         pushToEOG(node)
     }
 
@@ -729,15 +754,8 @@ open class EvaluationOrderGraphPass : Pass() {
         currentEOG.addAll(loopScope.breakStatements)
         val continues = ArrayList(loopScope.continueStatements)
         if (continues.isNotEmpty()) {
-            val condition =
-                when (loopStatement) {
-                    is DoStatement -> loopStatement.condition
-                    is ForStatement -> loopStatement.condition
-                    is WhileStatement -> loopStatement.condition
-                    is AssertStatement -> loopStatement.condition
-                    else -> loopStatement // ForEachStatement
-                }
-            val conditions = SubgraphWalker.getEOGPathEdges(condition).entries
+            val conditions =
+                loopScope.conditions.map { SubgraphWalker.getEOGPathEdges(it).entries }.flatten()
             conditions.forEach { node -> addMultipleIncomingEOGEdges(continues, node) }
         }
     }
@@ -751,7 +769,7 @@ open class EvaluationOrderGraphPass : Pass() {
             LOGGER.error("I am unexpectedly not in a loop, cannot add edge to loop start")
             return
         }
-        loopScope.starts().forEach { node -> addMultipleIncomingEOGEdges(currentEOG, node) }
+        loopScope.starts.forEach { node -> addMultipleIncomingEOGEdges(currentEOG, node) }
     }
 
     /**
@@ -789,9 +807,11 @@ open class EvaluationOrderGraphPass : Pass() {
         // To have semantic information after the condition evaluation
         pushToEOG(node)
         val openConditionEOGs = ArrayList(currentEOG)
+        currentProperties[Properties.BRANCH] = true
         createEOG(node.thenExpr)
         openBranchNodes.addAll(currentEOG)
         setCurrentEOGs(openConditionEOGs)
+        currentProperties[Properties.BRANCH] = false
         createEOG(node.elseExpr)
         openBranchNodes.addAll(currentEOG)
         setCurrentEOGs(openBranchNodes)
@@ -803,7 +823,9 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.condition)
         node.addPrevDFG(node.condition)
         pushToEOG(node) // To have semantic information after the condition evaluation
+        currentProperties[Properties.BRANCH] = true
         connectCurrentToLoopStart()
+        currentProperties[Properties.BRANCH] = false
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(node, currentLoopScope)
@@ -818,6 +840,7 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.variable)
         node.addPrevDFG(node.variable)
         pushToEOG(node) // To have semantic information after the variable declaration
+        currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
         createEOG(node.statement)
         connectCurrentToLoopStart()
@@ -829,23 +852,29 @@ open class EvaluationOrderGraphPass : Pass() {
             LOGGER.error("Trying to exit foreach loop, but not in loop scope: $node")
         }
         currentEOG.addAll(tmpEOGNodes)
+        currentProperties[Properties.BRANCH] = false
     }
 
     protected fun handleForStatement(node: ForStatement) {
         scopeManager.enterScope(node)
-        node.initializerStatement?.let { createEOG(it) }
-        node.conditionDeclaration?.let { createEOG(it) }
-        node.condition?.let { createEOG(it) }
+        createEOG(node.initializerStatement)
+        createEOG(node.conditionDeclaration)
+        createEOG(node.condition)
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
             node.conditionDeclaration
         )
+
         pushToEOG(node) // To have semantic information after the condition evaluation
+        currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
+
         createEOG(node.statement)
         createEOG(node.iterationStatement)
+
         connectCurrentToLoopStart()
+
         currentEOG.clear()
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
@@ -854,14 +883,15 @@ open class EvaluationOrderGraphPass : Pass() {
             LOGGER.error("Trying to exit for loop, but no loop scope: $node")
         }
         currentEOG.addAll(tmpEOGNodes)
+        currentProperties[Properties.BRANCH] = false
     }
 
     protected fun handleIfStatement(node: IfStatement) {
         val openBranchNodes = mutableListOf<Node>()
         scopeManager.enterScopeIfExists(node)
-        node.initializerStatement?.let { createEOG(it) }
-        node.conditionDeclaration?.let { createEOG(it) }
-        node.condition?.let { createEOG(it) }
+        createEOG(node.initializerStatement)
+        createEOG(node.conditionDeclaration)
+        createEOG(node.condition)
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
@@ -886,9 +916,9 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleSwitchStatement(node: SwitchStatement) {
         scopeManager.enterScopeIfExists(node)
-        node.initializerStatement?.let { createEOG(it) }
-        node.selectorDeclaration?.let { createEOG(it) }
-        node.selector?.let { createEOG(it) }
+        createEOG(node.initializerStatement)
+        createEOG(node.selectorDeclaration)
+        createEOG(node.selector)
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.getSelector(),
@@ -921,14 +951,15 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleWhileStatement(node: WhileStatement) {
         scopeManager.enterScope(node)
-        node.conditionDeclaration?.let { createEOG(it) }
-        node.condition?.let { createEOG(it) }
+        createEOG(node.conditionDeclaration)
+        createEOG(node.condition)
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
             node.conditionDeclaration
         )
         pushToEOG(node) // To have semantic information after the condition evaluation
+        currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
         createEOG(node.statement)
         connectCurrentToLoopStart()
@@ -942,6 +973,7 @@ open class EvaluationOrderGraphPass : Pass() {
             LOGGER.error("Trying to exit while loop, but no loop scope: $node")
         }
         currentEOG.addAll(tmpEOGNodes)
+        currentProperties[Properties.BRANCH] = false
     }
 
     companion object {

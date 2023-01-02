@@ -26,16 +26,19 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
 /** The JavaScript language. */
-class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>() {
+open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShortCircuitOperators {
     override val fileExtensions = listOf("js", "jsx")
     override val namespaceDelimiter = "."
     override val frontend: KClass<out TypeScriptLanguageFrontend> =
         TypeScriptLanguageFrontend::class
+    override val conjunctiveOperators = listOf("&&", "&&=", "??", "??=")
+    override val disjunctiveOperators = listOf("||", "||=")
 
     override fun newFrontend(
         config: TranslationConfiguration,

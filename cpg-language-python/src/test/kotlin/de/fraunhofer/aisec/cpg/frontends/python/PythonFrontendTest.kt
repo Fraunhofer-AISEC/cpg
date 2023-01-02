@@ -61,8 +61,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("literal.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p =
@@ -111,8 +112,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("function.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p =
@@ -199,7 +201,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("if.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p = tu.namespaces["if"]
@@ -233,9 +237,11 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("simple_class.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
+
         val p = tu.namespaces["simple_class"]
         assertNotNull(p)
 
@@ -286,8 +292,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("ifexpr.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p = tu.namespaces["ifexpr"]
@@ -331,7 +338,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("class_fields.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p = tu.namespaces["class_fields"]
@@ -388,8 +397,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("class_self.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val recordFoo = tu.records["class_self.Foo"]
@@ -454,8 +464,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("class_ctor.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p = tu.namespaces["class_ctor"]
@@ -504,7 +515,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("issue432.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p = tu.namespaces["issue432"]
@@ -613,8 +626,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("vars.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p = tu.namespaces["vars"]
@@ -715,8 +729,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("literal.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p =
@@ -743,8 +758,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("literal.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p =
@@ -785,8 +801,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("multi_level_mem_call.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p =
@@ -823,7 +840,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("issue598.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p = tu.namespaces["issue598"]
@@ -860,8 +879,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("issue615.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p =
@@ -929,15 +949,16 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("issue473.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>() }
-
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
         assertNotNull(tu)
 
         val p =
             tu.getDeclarationsByName("issue473", NamespaceDeclaration::class.java).iterator().next()
         assertNotNull(p)
 
-        val ifStmt = p.statements.get(0) as? IfStatement
+        val ifStmt = p.statements[0] as? IfStatement
         assertNotNull(ifStmt)
         val ifCond = ifStmt.condition as? BinaryOperator
         assertNotNull(ifCond)
@@ -952,7 +973,7 @@ class PythonFrontendTest : BaseTest() {
 
         // phr = {"user_id": user_id} | content
         val phrDeclaration =
-            (ifThen.statements.get(0) as? DeclarationStatement)?.declarations?.get(0)
+            (ifThen.statements[0] as? DeclarationStatement)?.declarations?.get(0)
                 as? VariableDeclaration
         assertNotNull(phrDeclaration)
         assertLocalName("phr", phrDeclaration)
@@ -963,13 +984,13 @@ class PythonFrontendTest : BaseTest() {
 
         // z = {"user_id": user_id}
         val elseStmt1 =
-            (ifElse.statements.get(0) as? DeclarationStatement)?.declarations?.get(0)
+            (ifElse.statements[0] as? DeclarationStatement)?.declarations?.get(0)
                 as? VariableDeclaration
         assertNotNull(elseStmt1)
         assertLocalName("z", elseStmt1)
 
         // phr = {**z, **content}
-        val elseStmt2 = ifElse.statements.get(1) as? BinaryOperator
+        val elseStmt2 = ifElse.statements[1] as? BinaryOperator
         assertNotNull(elseStmt2)
         assertEquals("=", elseStmt2.operatorCode)
         val elseStmt2Rhs = elseStmt2.rhs as? InitializerListExpression
@@ -984,8 +1005,9 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("comments.py").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<PythonLanguage>().matchCommentsToNodes(true) }
-
+            ) {
+                it.registerLanguage<PythonLanguage>().matchCommentsToNodes(true)
+            }
         assertNotNull(tu)
 
         val commentedNodes = SubgraphWalker.flattenAST(tu).filter { it.comment != null }
@@ -1015,17 +1037,14 @@ class PythonFrontendTest : BaseTest() {
 
         val kvs = commentedNodes.filterIsInstance<KeyValueExpression>()
         assertEquals(kvs.size, 2)
-        assertEquals(kvs.filter { it.code?.contains("a") ?: false }.first().comment, "# a entry")
-        assertEquals(kvs.filter { it.code?.contains("b") ?: false }.first().comment, "# b entry")
+        assertEquals(kvs.first { it.code?.contains("a") ?: false }.comment, "# a entry")
+        assertEquals(kvs.first { it.code?.contains("b") ?: false }.comment, "# b entry")
 
         val declStmts = commentedNodes.filterIsInstance<DeclarationStatement>()
         assertEquals(declStmts.size, 2)
+        assertEquals(declStmts.first { it.location?.region?.startLine == 3 }.comment, "# a number")
         assertEquals(
-            declStmts.filter { it.location?.region?.startLine == 3 }.first().comment,
-            "# a number"
-        )
-        assertEquals(
-            declStmts.filter { it.location?.region?.startLine == 16 }.first().comment,
+            declStmts.first { it.location?.region?.startLine == 16 }.comment,
             "# comment end"
         )
     }

@@ -114,7 +114,9 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("construct.go").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -576,7 +578,9 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
 
         assertNotNull(result)
         val tus = result.translationUnits
@@ -628,7 +632,9 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
 
         val main = tu.functions["p.main"]
         assertNotNull(main)
@@ -653,7 +659,9 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
 
         assertNotNull(result)
         val tus = result.translationUnits
