@@ -94,7 +94,7 @@ interface NamespaceProvider : MetadataProvider {
  */
 fun Node.applyMetadata(
     provider: MetadataProvider?,
-    localName: CharSequence? = EMPTY_NAME,
+    name: CharSequence? = EMPTY_NAME,
     rawNode: Any? = null,
     codeOverride: String? = null,
     localNameOnly: Boolean = false,
@@ -123,13 +123,17 @@ fun Node.applyMetadata(
             defaultNamespace
         }
 
-    if (localName != null) {
+    if (name != null) {
         val language = this.language
 
         // Let's check, if this is an FQN by any chance. Then we need to parse the name. In the
         // future, we might do that differently.
-        if (language != null && localName.contains(language.namespaceDelimiter)) {
-            this.name = Name.parse(localName, language.namespaceDelimiter, *language.nameSplitter)
+        if (language != null && name.contains(language.namespaceDelimiter)) {
+            this.name = language.parseName(name)
+        } else if (name is Name) {
+            // The name could already be a real "name" (of our Name class). In this case we can just
+            // set the name. This is preferred over parsing an FQN.
+            this.name = name
         } else {
             // Otherwise, a local name is supplied. Some nodes only have a local name. In this case,
             // we create a new name with the supplied (local) name and set the parent to null.
@@ -140,7 +144,7 @@ fun Node.applyMetadata(
                     namespace
                 }
 
-            this.name = Name(localName.toString(), parent, language?.namespaceDelimiter ?: ".")
+            this.name = Name(name.toString(), parent, language?.namespaceDelimiter ?: ".")
         }
     }
 

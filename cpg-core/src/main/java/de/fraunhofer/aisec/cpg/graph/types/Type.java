@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.types;
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Name;
+import de.fraunhofer.aisec.cpg.graph.NameKt;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -92,20 +93,9 @@ public abstract class Type extends Node {
       Qualifier qualifier,
       Language<? extends LanguageFrontend> language) {
     if (this instanceof FunctionType) {
-      // Function types need a special treatment because they can have many fqns e.g. in the params
-      // or return value.
-      // We remove all these parts (i.e., everything after the first "(") and add it back to the
-      // local name later.
-      /*String[] splitName = typeName.split("\\(");
-      assert (splitName.length <= 2); // For now, we assume that we have exactly one opening bracket
-      Name fullName = Name.Companion.parse(splitName[0], language);
-      if (splitName.length == 2) {
-        fullName.setLocalName(fullName.getLocalName() + "(" + splitName[1]);
-      }
-      this.setFullName(fullName);*/
       this.setName(new Name(typeName, null, language));
     } else {
-      this.setName(Name.Companion.parse(typeName, language));
+      this.setName(NameKt.parseName(language, typeName));
     }
     this.setLanguage(language);
     this.storage = storage != null ? storage : Storage.AUTO;
