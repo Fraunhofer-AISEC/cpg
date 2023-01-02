@@ -160,14 +160,21 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tryStatement = main.bodyOrNull<TryStatement>(0)
         assertNotNull(tryStatement)
 
+        var scope = tryStatement.scope
+        assertNotNull(scope)
+
         // should have 3 catch clauses
         val catchClauses = tryStatement.catchClauses
         assertEquals(3, catchClauses.size)
+
+        val firstCatch = catchClauses.firstOrNull()
+        assertNotNull(firstCatch)
+
+        scope = firstCatch.scope
+        assertNotNull(scope)
+
         // first exception type was? resolved, so we can expect a FQN
-        assertEquals(
-            createTypeFrom("java.lang.NumberFormatException"),
-            catchClauses[0].parameter?.type
-        )
+        assertEquals(createTypeFrom("java.lang.NumberFormatException"), firstCatch.parameter?.type)
         // second one could not be resolved so we do not have an FQN
         assertEquals(createTypeFrom("NotResolvableTypeException"), catchClauses[1].parameter?.type)
         // third type should have been resolved through the import
@@ -176,6 +183,9 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         // and 1 finally
         val finallyBlock = tryStatement.finallyBlock
         assertNotNull(finallyBlock)
+
+        scope = finallyBlock.scope
+        assertNotNull(scope)
     }
 
     @Test
