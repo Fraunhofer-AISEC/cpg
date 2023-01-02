@@ -288,6 +288,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testNamespaceDeclaration() {
+        val file = File("src/test/resources/compiling/subpackage/Test.java")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        assertNotNull(tu)
+    }
+
+    @Test
     fun testSwitch() {
         val file = File("src/test/resources/cfg/Switch.java")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)

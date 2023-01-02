@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
@@ -73,6 +72,10 @@ interface ScopeProvider : MetadataProvider {
     val scope: Scope?
 }
 
+/**
+ * This interface denotes that the class is able to provide the current namespace. The
+ * [applyMetadata] will use this information to set the parent of a [Name].
+ */
 interface NamespaceProvider : MetadataProvider {
     val namespace: Name?
 }
@@ -92,8 +95,8 @@ interface NamespaceProvider : MetadataProvider {
 fun Node.applyMetadata(
     provider: MetadataProvider?,
     localName: CharSequence? = EMPTY_NAME,
-    rawNode: Any?,
-    codeOverride: String?,
+    rawNode: Any? = null,
+    codeOverride: String? = null,
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
@@ -120,31 +123,25 @@ fun Node.applyMetadata(
             defaultNamespace
         }
 
-    if (localName != null && this is NamespaceDeclaration) {
-        this.name =
-            Name.parse(
-                localName,
-                this.language?.namespaceDelimiter ?: ".",
-                *(this.language?.nameSplitter ?: emptyArray())
-            )
-    } else if (localName != null && !localNameOnly) {
-        // TODO: Shouldn't we check if the delimiter is in the local name and use Name.parse() if
-        // this is the case? E.g., the namespace declarations pass the FQN
-        this.name = Name(localName.toString(), namespace, this.language?.namespaceDelimiter ?: ".")
-    } else if (
-        localName != null &&
-            (this is CallExpression ||
-                this is DeclaredReferenceExpression ||
-                this is TypeExpression)
-    ) {
-        this.name =
-            Name.parse(
-                localName,
-                this.language?.namespaceDelimiter ?: ".",
-                *(this.language?.nameSplitter ?: emptyArray())
-            )
-    } else {
-        this.name = Name(localName.toString(), null, this.language?.namespaceDelimiter ?: ".")
+    if (localName != null) {
+        val language = this.language
+
+        // Let's check, if this is an FQN by any chance. Then we need to parse the name. In the
+        // future, we might do that differently.
+        if (language != null && localName.contains(language.namespaceDelimiter)) {
+            this.name = Name.parse(localName, language.namespaceDelimiter, *language.nameSplitter)
+        } else {
+            // Otherwise, a local name is supplied. Some nodes only have a local name. In this case,
+            // we create a new name with the supplied (local) name and set the parent to null.
+            val parent =
+                if (localNameOnly) {
+                    null
+                } else {
+                    namespace
+                }
+
+            this.name = Name(localName.toString(), parent, language?.namespaceDelimiter ?: ".")
+        }
     }
 
     if (codeOverride != null) {

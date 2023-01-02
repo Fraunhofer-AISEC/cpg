@@ -301,7 +301,6 @@ fun MetadataProvider.newMemberCallExpression(
         },
         rawNode,
         code,
-        true
     )
 
     node.base = base
