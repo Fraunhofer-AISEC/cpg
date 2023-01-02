@@ -387,9 +387,7 @@ fun MetadataProvider.newIncludeDeclaration(
     rawNode: Any? = null
 ): IncludeDeclaration {
     val node = IncludeDeclaration()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
-
-    val name = includeFilename.substring(includeFilename.lastIndexOf('/') + 1)
+    node.applyMetadata(this, includeFilename, rawNode, code, true)
     node.filename = includeFilename.toString()
 
     log(node)

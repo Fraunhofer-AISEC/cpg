@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
-import de.fraunhofer.aisec.cpg.graph.Name;
 import java.util.Objects;
 
 /**
@@ -55,7 +54,6 @@ public class ReferenceType extends Type implements SecondOrderType {
   }
 
   public ReferenceType(Storage storage, Qualifier qualifier, Type reference) {
-    Name fullTypeName = reference.getName().clone();
     this.setName(reference.getName().append("&"));
     this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;

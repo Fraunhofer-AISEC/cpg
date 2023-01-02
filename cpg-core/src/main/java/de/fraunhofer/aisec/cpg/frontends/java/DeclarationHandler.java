@@ -322,7 +322,7 @@ public class DeclarationHandler
         log.debug(
             "Member {} of type {} is something that we do not parse yet: {}",
             decl,
-            recordDeclaration.getName().toString(),
+            recordDeclaration.getName(),
             decl.getClass().getSimpleName());
       }
     }

@@ -478,7 +478,7 @@ class CXXLanguageFrontend(
         // Retrieve the "name" of this type, including qualifiers.
         // TODO: In the future, we should parse the qualifiers, such as const here, instead of in
         //  the TypeParser
-        var name = ASTStringUtil.getSignatureString(specifier, null)
+        val name = ASTStringUtil.getSignatureString(specifier, null)
 
         var type =
             when (specifier) {
@@ -491,8 +491,6 @@ class CXXLanguageFrontend(
                     }
                 }
                 is IASTNamedTypeSpecifier -> {
-                    val nameDecl = specifier.name
-
                     TypeParser.createFrom(name, true, this)
                 }
                 is IASTCompositeTypeSpecifier -> {

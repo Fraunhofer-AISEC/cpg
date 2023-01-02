@@ -46,6 +46,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class TranslationResult extends Node implements StatisticsHolder {
   public static final String SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend";
+  public static final String APPLICATION_LOCAL_NAME = "application";
   private final TranslationManager translationManager;
 
   /**
@@ -117,13 +118,13 @@ public class TranslationResult extends Node implements StatisticsHolder {
     } else if (components.isEmpty()) {
       // No component exists, so we create the new dummy component.
       swc = new Component();
-      swc.setName(new Name("application", null, ""));
+      swc.setName(new Name(APPLICATION_LOCAL_NAME, null, ""));
       components.add(swc);
     } else {
       // Multiple components exist. As we don't know where to put the tu, we check if we have the
       // component we created and add it there or create a new one.
       for (var component : components) {
-        if (component.getName().getLocalName().equals("application")) {
+        if (component.getName().getLocalName().equals(APPLICATION_LOCAL_NAME)) {
           swc = component;
           break;
         }
@@ -131,7 +132,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
 
       if (swc == null) {
         swc = new Component();
-        swc.setName(new Name("application", null, ""));
+        swc.setName(new Name(APPLICATION_LOCAL_NAME, null, ""));
         components.add(swc);
       }
     }
