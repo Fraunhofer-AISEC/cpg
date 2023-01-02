@@ -215,7 +215,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             recordDeclaration =
                 frontend.scopeManager.getRecordForName(
                     frontend.scopeManager.currentScope!!,
-                    Name.parse(recordName, language)
+                    language.parseName(recordName)
                 )
             declaration = createMethodOrConstructor(methodName, recordDeclaration, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {

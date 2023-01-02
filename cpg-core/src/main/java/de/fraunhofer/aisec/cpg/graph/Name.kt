@@ -155,6 +155,10 @@ class Name(
     }
 }
 
+/**
+ * A small utility extension function that uses the namespace information in a [Language] to parse a
+ * fully qualified name.
+ */
 fun Language<out LanguageFrontend>?.parseName(fqn: CharSequence): Name {
     return Name.parse(fqn, this?.namespaceDelimiter ?: ".", *(this?.nameSplitter ?: arrayOf()))
 }

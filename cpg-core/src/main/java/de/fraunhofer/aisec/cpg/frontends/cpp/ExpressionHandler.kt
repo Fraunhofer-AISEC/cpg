@@ -447,7 +447,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                             as CPPASTTemplateId)
                         .templateName
                         .toString()
-                callExpression.name = Name.parse(name, language)
+                callExpression.name = language.parseName(name)
                 getTemplateArguments(
                         (ctx.functionNameExpression as IASTFieldReference).fieldName
                             as CPPASTTemplateId

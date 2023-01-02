@@ -69,7 +69,7 @@ public abstract class Type extends Node {
   }
 
   public Type(String typeName) {
-    this.setName(Name.Companion.parse(typeName, this.getLanguage()));
+    this.setName(NameKt.parseName(this.getLanguage(), typeName));
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier();
     this.origin = Origin.UNRESOLVED;
