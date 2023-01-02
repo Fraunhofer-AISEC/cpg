@@ -73,7 +73,7 @@ fun matchesName(name: Name?, lookup: String): Boolean {
         return false
     } else if (name.delimiter in lookup) {
         // We have an FQN
-        val lookupName = Name.parse(lookup, name.delimiter)
+        val lookupName = parseName(lookup, name.delimiter)
         name == lookupName || name.localName == lookup
         // TODO: There are some cases where the local name is actually the FQN. We have to fix this.
     } else {

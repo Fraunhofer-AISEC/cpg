@@ -60,7 +60,7 @@ internal class NameTest {
     fun testParse() {
         val fqn = "std::string"
 
-        val name = Name.parse(fqn, "::")
+        val name = parseName(fqn, "::")
         assertEquals(fqn, name.toString())
     }
 

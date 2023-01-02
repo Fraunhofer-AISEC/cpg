@@ -387,7 +387,7 @@ open class CallResolver : SymbolResolverPass() {
 
     private fun resolveExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
         if (eci.containingClass != null) {
-            val recordDeclaration = recordMap[Name.parse(eci.containingClass, eci.language)]
+            val recordDeclaration = recordMap[eci.language.parseName(eci.containingClass)]
             val signature = eci.arguments.map { it.type }
             if (recordDeclaration != null) {
                 val constructor =
@@ -439,7 +439,7 @@ open class CallResolver : SymbolResolverPass() {
             curClass.staticImportStatements
                 .filter { it.endsWith(".$name") }
                 .map { it.substring(0, it.lastIndexOf('.')) }
-                .mapNotNull { recordMap[Name.parse(it, call.language)] }
+                .mapNotNull { recordMap[call.language.parseName(it)] }
 
         for (recordDeclaration in containingRecords) {
             val inferred =

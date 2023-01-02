@@ -1022,7 +1022,7 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 			log.Fatal(err)
 		}
 
-		name := cpg.Name_parse(fqn, l)
+		name := l.ParseName(fqn)
 
 		decl = this.NewDeclaredReferenceExpression(fset, selectorExpr, fqn)
 		decl.Node().SetName(name)
@@ -1153,7 +1153,7 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 			log.Fatal(err)
 		}
 
-		(*cpg.Node)(lit).SetName(cpg.Name_parse(ident.Name, l))
+		(*cpg.Node)(lit).SetName(l.ParseName(ident.Name))
 
 		return (*cpg.Expression)(lit)
 	}

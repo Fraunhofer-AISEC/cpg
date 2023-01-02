@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.parseName
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 
 class NameConverter : CompositeAttributeConverter<Name> {
@@ -46,6 +47,6 @@ class NameConverter : CompositeAttributeConverter<Name> {
     }
 
     override fun toEntityAttribute(value: MutableMap<String, *>): Name {
-        return Name.parse(value[FIELD_FULL_NAME].toString(), value[FIELD_NAME_DELIMITER].toString())
+        return parseName(value[FIELD_FULL_NAME].toString(), value[FIELD_NAME_DELIMITER].toString())
     }
 }

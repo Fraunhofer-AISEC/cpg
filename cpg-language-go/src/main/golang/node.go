@@ -38,6 +38,7 @@ const CPGPackage = "de/fraunhofer/aisec/cpg"
 const GraphPackage = CPGPackage + "/graph"
 const NodeClass = GraphPackage + "/Node"
 const NameClass = GraphPackage + "/Name"
+const NameKtClass = GraphPackage + "/NameKt"
 
 func (n *Node) Cast(className string) *jnigi.ObjectRef {
 	return (*jnigi.ObjectRef)(n).Cast(className)
@@ -136,15 +137,4 @@ func (n *Name) GetLocalName() string {
 	}
 
 	return string(b)
-}
-
-func Name_parse(fqn string, l *Language) *Name {
-	var n *Name = (*Name)(jnigi.NewObjectRef(NameClass))
-	err := env.CallStaticMethod(NameClass, "parse", n, NewString(fqn), l)
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	return n
 }

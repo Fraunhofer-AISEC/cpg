@@ -103,50 +103,12 @@ class Name(
      * has no parent any more).
      */
     fun endsWith(ending: String): Boolean {
-        return this.endsWith(parse(ending, this.delimiter))
+        return this.endsWith(parseName(ending, this.delimiter))
     }
 
     /** This function appends a string to the local name and returns a new [Name]. */
     fun append(s: String): Name {
         return Name(localName + s, parent, delimiter)
-    }
-
-    companion object {
-        @JvmStatic
-        fun parse(fqn: String, language: Language<out LanguageFrontend>?): Name {
-            return parse(
-                fqn,
-                language?.namespaceDelimiter ?: ".",
-                *(language?.nameSplitter ?: arrayOf())
-            )
-        }
-        /**
-         * Tries to parse the given fully qualified name using the specified [delimiter] into a
-         * [Name].
-         */
-        fun parse(
-            fqn: CharSequence,
-            delimiter: String = ".",
-            vararg splitDelimiters: String
-        ): Name {
-            val parts = fqn.split(delimiter, *splitDelimiters)
-
-            var name: Name? = null
-            for (part in parts) {
-                val localName = part.replace(")", "").replace("*", "")
-                if (localName.isNotEmpty()) {
-                    name = Name(localName, name, delimiter)
-                }
-            }
-
-            // Actually this should not occur, but otherwise the compiler won't let us return a
-            // non-null Name
-            if (name == null) {
-                return Name(fqn.toString(), null, delimiter)
-            }
-
-            return name
-        }
     }
 
     override fun compareTo(other: Name): Int {
@@ -160,5 +122,26 @@ class Name(
  * fully qualified name.
  */
 fun Language<out LanguageFrontend>?.parseName(fqn: CharSequence): Name {
-    return Name.parse(fqn, this?.namespaceDelimiter ?: ".", *(this?.nameSplitter ?: arrayOf()))
+    return parseName(fqn, this?.namespaceDelimiter ?: ".", *(this?.nameSplitter ?: arrayOf()))
+}
+
+/** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
+fun parseName(fqn: CharSequence, delimiter: String = ".", vararg splitDelimiters: String): Name {
+    val parts = fqn.split(delimiter, *splitDelimiters)
+
+    var name: Name? = null
+    for (part in parts) {
+        val localName = part.replace(")", "").replace("*", "")
+        if (localName.isNotEmpty()) {
+            name = Name(localName, name, delimiter)
+        }
+    }
+
+    // Actually this should not occur, but otherwise the compiler won't let us return a
+    // non-null Name
+    if (name == null) {
+        return Name(fqn.toString(), null, delimiter)
+    }
+
+    return name
 }
