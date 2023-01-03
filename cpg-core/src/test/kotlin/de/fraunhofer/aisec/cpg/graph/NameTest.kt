@@ -57,11 +57,18 @@ internal class NameTest {
     }
 
     @Test
-    fun testParse() {
+    fun testParseName() {
         val fqn = "std::string"
 
         val name = parseName(fqn, "::")
         assertEquals(fqn, name.toString())
+    }
+
+    @Test
+    fun testEndsWith() {
+        val name = parseName("A.B")
+        assertTrue(name.endsWith("B"))
+        assertTrue(name.endsWith("A.B"))
     }
 
     @Test

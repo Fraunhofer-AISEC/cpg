@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.matchesName
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -76,11 +75,11 @@ object TestUtils {
     }
 
     fun <S : Node> findByUniqueName(nodes: Collection<S>, name: String): S {
-        return findByUniquePredicate(nodes) { m: S -> matchesName(m.name, name) }
+        return findByUniquePredicate(nodes) { m: S -> m.name.endsWith(name) }
     }
 
     fun <S : Node> findByName(nodes: Collection<S>, name: String): Collection<S> {
-        return nodes.filter { m: S -> matchesName(m.name, name) }
+        return nodes.filter { m: S -> m.name.endsWith(name) }
     }
 
     /**

@@ -68,26 +68,12 @@ inline fun <reified T : Node> Node.dfgFrom(): List<T> {
     return this.prevDFG.toList().filterIsInstance<T>()
 }
 
-fun matchesName(name: Name?, lookup: String): Boolean {
-    return if (name == null) {
-        return false
-    } else if (name.delimiter in lookup) {
-        // We have an FQN
-        val lookupName = parseName(lookup, name.delimiter)
-        name == lookupName || name.localName == lookup
-        // TODO: There are some cases where the local name is actually the FQN. We have to fix this.
-    } else {
-        // No FQN, only check the local name
-        name.localName == lookup
-    }
-}
-
 /** This function returns the *first* node that matches the name on the supplied list of nodes. */
 fun <T : Node> Collection<T>?.byNameOrNull(lookup: String, modifier: SearchModifier): T? {
     return if (modifier == SearchModifier.NONE) {
-        this?.firstOrNull { matchesName(it.name, lookup) }
+        this?.firstOrNull { it.name.endsWith(lookup) }
     } else {
-        val nodes = this?.filter { matchesName(it.name, lookup) } ?: listOf()
+        val nodes = this?.filter { it.name.endsWith(lookup) } ?: listOf()
         if (nodes.size > 1) {
             throw NoSuchElementException("result is not unique")
         }
@@ -138,7 +124,7 @@ operator fun <T : Node> Collection<T>.invoke(predicate: (T) -> Boolean): List<T>
 
 /** A shortcut to filter a list of nodes by their name. */
 operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
-    return this.filter { matchesName(it.name, lookup) }
+    return this.filter { it.name.endsWith(lookup) }
 }
 
 inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
@@ -156,13 +142,13 @@ inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
 
         base =
             this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
-                matchesName((it as? Node)?.name, baseName)
+                (it as Node).name.endsWith(baseName)
             }
                 ?: return null
         lookup = name.split(".")[1]
     }
 
-    return base.declarations.filterIsInstance<T>().firstOrNull { matchesName(it.name, lookup) }
+    return base.declarations.filterIsInstance<T>().firstOrNull { it.name.endsWith(lookup) }
 }
 
 @Throws(DeclarationNotFound::class)
@@ -506,7 +492,7 @@ val Node?.refs: List<DeclaredReferenceExpression>
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
     return SubgraphWalker.flattenAST(this).filter { node ->
-        (node as? CallExpression)?.invokes?.any { matchesName(it.name, name) } == true
+        (node as? CallExpression)?.invokes?.any { it.name.endsWith(name) } == true
     } as List<CallExpression>
 }
 
@@ -546,13 +532,6 @@ fun Node.controlledBy(): List<Node> {
         }
     }
     return result
-}
-
-/**
- * Filters a list of [CallExpression]s for expressions which call a method with the given [name].
- */
-fun List<CallExpression>.filterByName(name: String): List<CallExpression> {
-    return this.filter { n -> n.invokes.any { matchesName(it.name, name) } }
 }
 
 /**

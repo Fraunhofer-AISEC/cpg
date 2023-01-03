@@ -260,7 +260,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
         }
     }
 
-    override fun getDeclarations(): List<Declaration> {
+    override fun getDeclarations(): MutableList<Declaration> {
         val list = ArrayList<Declaration>()
         list.addAll(parameters)
         list.addAll(records)
