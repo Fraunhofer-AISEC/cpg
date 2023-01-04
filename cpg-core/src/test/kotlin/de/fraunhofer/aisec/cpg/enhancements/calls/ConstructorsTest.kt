@@ -75,7 +75,7 @@ internal class ConstructorsTest : BaseTest() {
 
         val a4 = findByUniqueName(variables, "a4")
         assertNotNull(a4)
-        assertTrue(a4.initializer is UninitializedValue)
+        assertNull(a4.initializer)
     }
 
     @Test

@@ -199,13 +199,17 @@ private constructor(
                                     """
 #include "${topLevel.relativize(it.toPath())}"
 
-""".trimIndent()
+"""
+                                        .trimIndent()
                                 )
                             } else {
-                                writer.write("""
+                                writer.write(
+                                    """
 #include "${it.absolutePath}"
 
-""".trimIndent())
+"""
+                                        .trimIndent()
+                                )
                             }
                         }
                     }

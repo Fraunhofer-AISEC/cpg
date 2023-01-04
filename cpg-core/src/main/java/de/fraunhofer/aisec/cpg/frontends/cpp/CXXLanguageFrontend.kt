@@ -585,7 +585,9 @@ class CXXLanguageFrontend(
                     FunctionDeclaration.COMMA + FunctionDeclaration.WHITESPACE,
                     FunctionDeclaration.BRACKET_LEFT,
                     FunctionDeclaration.BRACKET_RIGHT
-                ) { it.typeName } + type.typeName
+                ) {
+                    it.typeName
+                } + type.typeName
             type =
                 FunctionType(name, paramTypes, listOf(type), language, type.qualifier, type.storage)
         }

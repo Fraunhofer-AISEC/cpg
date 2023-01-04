@@ -141,24 +141,21 @@ internal class DFGTest {
                         it.name == "b" &&
                             it.location?.region?.startLine == 5 &&
                             it.location?.region?.startColumn == 16
-                    }
-                ]
+                    }]
         val b2 =
             result.refs[
                     {
                         it.name == "b" &&
                             it.location?.region?.startLine == 5 &&
                             it.location?.region?.startColumn == 16
-                    }
-                ]
+                    }]
         val b3 =
             result.refs[
                     {
                         it.name == "b" &&
                             it.location?.region?.startLine == 5 &&
                             it.location?.region?.startColumn == 23
-                    }
-                ]
+                    }]
         assertNotNull(bJoin)
         assertNotNull(bCond)
         assertNotNull(b2)

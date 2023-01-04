@@ -112,7 +112,9 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("construct.go").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -441,7 +443,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(arg1)
         assertEquals("myOtherFunc", arg1.name)
-        assertEquals("s.myOtherFunc", arg1.fqn)
+        assertEquals("p.MyStruct.myOtherFunc", arg1.fqn)
 
         assertEquals(myFunc.receiver, (arg1.base as? DeclaredReferenceExpression)?.refersTo)
     }
@@ -595,7 +597,9 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
 
         assertNotNull(result)
         val tus = result.translationUnits
@@ -649,7 +653,9 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
 
@@ -679,7 +685,9 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            ) { it.registerLanguage<GoLanguage>() }
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
 
         assertNotNull(result)
         val tus = result.translationUnits

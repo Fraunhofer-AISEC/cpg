@@ -194,7 +194,9 @@ class MultiValueEvaluatorTest {
                 listOf(topLevel.resolve("cfexample.cpp").toFile()),
                 topLevel,
                 true
-            ) { it.registerPass(EdgeCachePass()) }
+            ) {
+                it.registerPass(EdgeCachePass())
+            }
 
         assertNotNull(tu)
 

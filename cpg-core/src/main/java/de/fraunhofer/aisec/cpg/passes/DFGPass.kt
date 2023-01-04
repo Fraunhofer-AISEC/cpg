@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -70,6 +71,7 @@ class DFGPass : Pass() {
             is MemberExpression -> handleMemberExpression(node, inferDfgForUnresolvedSymbols)
             is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
             is ExpressionList -> handleExpressionList(node)
+            is NewExpression -> handleNewExpression(node)
             // We keep the logic for the InitializerListExpression in that class because the
             // performance would decrease too much.
             // is InitializerListExpression -> handleInitializerListExpression(node)
@@ -78,6 +80,7 @@ class DFGPass : Pass() {
             is UnaryOperator -> handleUnaryOperator(node)
             // Statements
             is ReturnStatement -> handleReturnStatement(node)
+            is ForEachStatement -> handleForEachStatement(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
@@ -141,6 +144,14 @@ class DFGPass : Pass() {
     }
 
     /**
+     * Adds the DFG edge for a [ForEachStatement]. The data flows from the
+     * [ForEachStatement.iterable] to the [ForEachStatement.variable].
+     */
+    private fun handleForEachStatement(node: ForEachStatement) {
+        node.variable.addPrevDFG(node.iterable)
+    }
+
+    /**
      * Adds the DFG edges for an [UnaryOperator]. The data flow from the input to this node and, in
      * case of the operators "++" and "--" also from the node back to the input.
      */
@@ -188,6 +199,14 @@ class DFGPass : Pass() {
      */
     private fun handleExpressionList(node: ExpressionList) {
         node.expressions.lastOrNull()?.let { node.addPrevDFG(it) }
+    }
+
+    /**
+     * Adds the DFG edge to an [NewExpression]. The data of the initializer flow to the whole
+     * expression.
+     */
+    private fun handleNewExpression(node: NewExpression) {
+        node.initializer?.let { node.addPrevDFG(it) }
     }
 
     /**

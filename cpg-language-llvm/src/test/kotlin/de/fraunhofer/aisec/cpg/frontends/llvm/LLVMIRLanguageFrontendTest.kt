@@ -63,7 +63,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("vector_poison.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         assertEquals(1, tu.declarations.size)
 
@@ -90,7 +92,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("integer_ops.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         assertEquals(2, tu.declarations.size)
 
@@ -136,7 +140,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("struct.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -225,7 +231,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("switch_case.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
@@ -284,7 +292,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("br.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         assertEquals(2, tu.declarations.size)
 
@@ -361,7 +371,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
         assertNotNull(foo)
@@ -397,7 +409,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
         assertNotNull(foo)
@@ -448,7 +462,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
         assertNotNull(foo)
@@ -472,7 +488,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("literal_struct.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -510,7 +528,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("global_local_var.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -559,7 +579,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("alloca.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -599,7 +621,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("undef_insertvalue.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         assertNotNull(tu)
 
@@ -648,7 +672,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("try_catch.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         val throwingFoo = tu.byNameOrNull<FunctionDeclaration>("throwingFoo")
 
@@ -700,7 +726,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("loopPhi.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
         val main = tu.byNameOrNull<FunctionDeclaration>("loopPhi")
         assertNotNull(main)
     }
@@ -713,7 +741,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("phi.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
@@ -768,7 +798,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("vector.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
@@ -879,7 +911,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("fence.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
@@ -907,7 +941,9 @@ class LLVMIRLanguageFrontendTest {
                 listOf(topLevel.resolve("exceptions.ll").toFile()),
                 topLevel,
                 true
-            ) { it.registerLanguage<LLVMIRLanguage>() }
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
 
         val funcF = tu.byNameOrNull<FunctionDeclaration>("f")
         assertNotNull(funcF)

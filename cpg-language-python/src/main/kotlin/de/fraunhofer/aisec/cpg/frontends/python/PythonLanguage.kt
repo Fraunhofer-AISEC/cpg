@@ -26,15 +26,18 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
 /** The Python language. */
-class PythonLanguage : Language<PythonLanguageFrontend>() {
+class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperators {
     override val fileExtensions = listOf("py")
     override val namespaceDelimiter = "."
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
+    override val conjunctiveOperators = listOf("and")
+    override val disjunctiveOperators = listOf("or")
 
     override fun newFrontend(
         config: TranslationConfiguration,
