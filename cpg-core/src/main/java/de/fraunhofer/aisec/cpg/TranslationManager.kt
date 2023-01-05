@@ -148,7 +148,7 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend>()
         for (sc in this.config.softwareComponents.keys) {
             val component = Component()
-            component.name = Name(sc) // TODO: There might be a hierarchy as well
+            component.name = Name(sc)
             result.addComponent(component)
 
             var sourceLocations: List<File> = this.config.softwareComponents[sc]!!

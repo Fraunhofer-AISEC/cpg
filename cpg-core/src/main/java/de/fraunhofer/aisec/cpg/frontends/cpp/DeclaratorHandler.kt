@@ -438,7 +438,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         val recordDeclaration =
             newRecordDeclaration(
-                // frontend.currentNamePrefixWithDelimiter +
                 ctx.name.toString(),
                 kind,
                 ctx.rawSignature,
