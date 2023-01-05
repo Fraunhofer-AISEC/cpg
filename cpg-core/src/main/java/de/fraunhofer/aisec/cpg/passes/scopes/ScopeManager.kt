@@ -65,7 +65,7 @@ class ScopeManager : ScopeProvider {
     private val scopeMap: MutableMap<Node?, Scope> = IdentityHashMap()
 
     /** A lookup map for each scope and its associated FQN. */
-    private val fqnScopeMap: MutableMap<String, NameScope> = mutableMapOf() // IdentityHashMap()
+    private val fqnScopeMap: MutableMap<String, NameScope> = mutableMapOf()
 
     /** The currently active scope. */
     var currentScope: Scope? = null

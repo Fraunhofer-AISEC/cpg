@@ -29,6 +29,14 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.parseName
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 
+/**
+ * This converter can be used in a Neo4J session to persist the [Name] class into its components:
+ * - fully qualified name
+ * - local name
+ * - the delimiter
+ *
+ * Additionally, it converts the aforementioned Neo4J attributes in a node back into a [Name].
+ */
 class NameConverter : CompositeAttributeConverter<Name> {
 
     companion object {

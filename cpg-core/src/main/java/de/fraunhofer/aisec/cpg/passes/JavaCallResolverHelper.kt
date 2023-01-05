@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -79,21 +78,7 @@ fun CallResolver.handleSpecificSupertype(
     curClass: RecordDeclaration,
     call: CallExpression
 ): RecordDeclaration? {
-    // TODO: Somehow, the old expression looks as if the super could be somewhere in the middle of
-    // the name. I think this doesn't make much sense. If that was not the intention, just remove
-    // the while loop.
-    var baseFullName = call.base?.name
-    while (
-        baseFullName != null &&
-            baseFullName.localName != (curClass.language as HasSuperClasses).superClassKeyword
-    ) {
-        baseFullName = baseFullName.parent
-    }
-    if (baseFullName?.localName == (curClass.language as HasSuperClasses).superClassKeyword) {
-        baseFullName = baseFullName.parent
-    }
-    baseFullName = baseFullName ?: call.base!!.name
-    val baseName = baseFullName
+    val baseName = call.base?.name?.parent ?: return null
 
     if (TypeParser.createFrom(baseName, curClass.language) in curClass.implementedInterfaces) {
         // Basename is an interface -> BaseName.super refers to BaseName itself
@@ -113,5 +98,6 @@ fun CallResolver.handleSpecificSupertype(
             }
         }
     }
+
     return null
 }

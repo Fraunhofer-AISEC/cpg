@@ -855,13 +855,6 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 	} else {
 		this.LogDebug("Handling regular call expression to %s", name)
 
-		// the name is already a FQN if it contains a dot
-		/*pos := strings.LastIndex(name, ".")
-		if pos != -1 {
-			// need to have the short name
-			name = name[pos+1:]
-		}*/
-
 		c = this.NewCallExpression(fset, callExpr, reference, name)
 	}
 
