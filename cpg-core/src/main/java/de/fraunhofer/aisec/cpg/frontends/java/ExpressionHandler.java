@@ -732,8 +732,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         }
 
         callExpression =
-            newStaticCallExpression(
-                this, name, qualifiedName, methodCallExpr.toString(), targetClass);
+            newStaticCallExpression(this, qualifiedName, methodCallExpr.toString(), targetClass);
       }
     } else {
       var ref = newDeclaredReferenceExpression(this, name);

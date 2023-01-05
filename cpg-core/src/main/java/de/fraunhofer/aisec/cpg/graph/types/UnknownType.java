@@ -43,7 +43,6 @@ public class UnknownType extends Type {
 
   private UnknownType() {
     super();
-    // this.setName("UNKNOWN");
     this.setName(new Name("UNKNOWN", null, this.getLanguage()));
   }
 

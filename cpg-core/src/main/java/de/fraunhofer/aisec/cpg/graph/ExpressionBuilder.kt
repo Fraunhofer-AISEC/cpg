@@ -345,7 +345,6 @@ fun MetadataProvider.newMemberExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newStaticCallExpression(
-    name: CharSequence?,
     fqn: String?,
     code: String? = null,
     targetRecord: String?,
