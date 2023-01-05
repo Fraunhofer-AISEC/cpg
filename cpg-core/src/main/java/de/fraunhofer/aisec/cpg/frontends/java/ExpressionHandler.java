@@ -120,8 +120,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
    */
   private Statement handleArrayCreationExpr(Expression expr) {
     ArrayCreationExpr arrayCreationExpr = (ArrayCreationExpr) expr;
-    ArrayCreationExpression creationExpression =
-        newArrayCreationExpression(frontend.getLanguage(), expr.toString());
+    ArrayCreationExpression creationExpression = newArrayCreationExpression(this, expr.toString());
 
     // in Java, an array creation expression either specifies an initializer or dimensions
 
@@ -780,7 +779,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       code = code.substring(4); // remove "new "
     }
 
-    ConstructExpression ctor = newConstructExpression(frontend.getLanguage(), code);
+    ConstructExpression ctor = newConstructExpression(this, code);
     ctor.setType(t);
     frontend.setCodeAndLocation(ctor, expr);
 

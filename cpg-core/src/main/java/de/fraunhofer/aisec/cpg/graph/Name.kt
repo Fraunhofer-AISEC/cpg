@@ -122,7 +122,7 @@ class Name(
  * fully qualified name.
  */
 fun Language<out LanguageFrontend>?.parseName(fqn: CharSequence): Name {
-    return parseName(fqn, this?.namespaceDelimiter ?: ".", *(this?.nameSplitter ?: arrayOf()))
+    return parseName(fqn, this?.namespaceDelimiter ?: ".")
 }
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
