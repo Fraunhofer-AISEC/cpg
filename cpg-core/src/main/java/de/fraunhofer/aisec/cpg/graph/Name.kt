@@ -100,7 +100,7 @@ class Name(
 
     /**
      * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
-     * has no parent any more).
+     * has no parent anymore).
      */
     fun endsWith(ending: String): Boolean {
         return this.endsWith(parseName(ending, this.delimiter))

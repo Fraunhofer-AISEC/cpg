@@ -76,7 +76,7 @@ public class TranslationUnitDeclaration extends Declaration
    * @param i the index
    * @param clazz the class
    * @param <T> the type of the class
-   * @return the declaration or null, if it the declaration can not be cast to the class
+   * @return the declaration or null, if it can not be cast to the class
    */
   @Nullable
   public <T extends Declaration> T getDeclarationAs(int i, Class<T> clazz) {

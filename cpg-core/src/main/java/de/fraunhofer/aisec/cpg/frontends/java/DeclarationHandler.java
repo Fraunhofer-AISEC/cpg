@@ -146,7 +146,7 @@ public class DeclarationHandler
                 .getName());
     declaration.setType(type);
 
-    // check, if constructor has body (i.e. its not abstract or something)
+    // check, if constructor has body (i.e. it's not abstract or something)
     BlockStmt body = constructorDecl.getBody();
 
     addImplicitReturn(body);
@@ -254,10 +254,6 @@ public class DeclarationHandler
     String fqn = classInterDecl.getNameAsString();
 
     // Todo adapt name using a new type of scope "Namespace/Package scope"
-    // if (packageDeclaration != null) {
-    //  name = packageDeclaration.getNameAsString() + "." + name;
-    // }
-    // fqn = getAbsoluteName(fqn);
 
     // add a type declaration
     RecordDeclaration recordDeclaration =

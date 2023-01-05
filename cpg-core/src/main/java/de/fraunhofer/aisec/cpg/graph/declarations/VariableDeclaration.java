@@ -169,7 +169,7 @@ public class VariableDeclaration extends ValueDeclaration
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .append("name", getName().toString())
+        .append("name", getName())
         .append("location", getLocation())
         .append("initializer", initializer)
         .toString();

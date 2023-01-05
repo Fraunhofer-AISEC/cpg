@@ -63,7 +63,7 @@ public abstract class Type extends Node {
   protected Origin origin;
 
   public Type() {
-    this.setName(new Name("", null, this.getLanguage()));
+    this.setName(new Name(EMPTY_NAME, null, this.getLanguage()));
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier(false, false, false, false);
   }
@@ -383,8 +383,6 @@ public abstract class Type extends Node {
   @NotNull
   @Override
   public String toString() {
-    return new ToStringBuilder(this, TO_STRING_STYLE)
-        .append("name", getName().toString())
-        .toString();
+    return new ToStringBuilder(this, TO_STRING_STYLE).append("name", getName()).toString();
   }
 }

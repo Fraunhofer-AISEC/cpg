@@ -718,7 +718,7 @@ public class TypeManager {
     @Override
     public String toString() {
       return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-          .append("record", recordDeclaration.getName().toString())
+          .append("record", recordDeclaration.getName())
           .append("depth", depth)
           .toString();
     }
