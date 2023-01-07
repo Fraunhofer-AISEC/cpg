@@ -345,21 +345,23 @@ public class DeclarationHandler
     if (frontend.getScopeManager().getCurrentScope() instanceof RecordScope) {
       // Get all the information of the outer class (its name and the respective type). We need this
       // to generate the field.
-
       var scope = (RecordScope) frontend.getScopeManager().getCurrentScope();
-      var fieldType = parseType(this, scope.getScopedName());
 
-      // Enter the scope of the inner class because the new field belongs there.
-      frontend.getScopeManager().enterScope(recordDeclaration);
+      if (scope.getName() != null) {
+        var fieldType = parseType(this, scope.getName());
 
-      var field =
-          newFieldDeclaration(
-              this, "this$" + scope.getSimpleName(), fieldType, null, null, null, null);
+        // Enter the scope of the inner class because the new field belongs there.
+        frontend.getScopeManager().enterScope(recordDeclaration);
 
-      field.setImplicit(true);
+        var field =
+            newFieldDeclaration(
+                this, "this$" + scope.getName().getLocalName(), fieldType, null, null, null, null);
 
-      frontend.getScopeManager().addDeclaration(field);
-      frontend.getScopeManager().leaveScope(recordDeclaration);
+        field.setImplicit(true);
+
+        frontend.getScopeManager().addDeclaration(field);
+        frontend.getScopeManager().leaveScope(recordDeclaration);
+      }
     }
 
     return recordDeclaration;

@@ -239,12 +239,7 @@ class ScopeManager : ScopeProvider {
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
                     is IfStatement -> ValueDeclarationScope(nodeToScope)
                     is CatchClause -> ValueDeclarationScope(nodeToScope)
-                    is RecordDeclaration ->
-                        RecordScope(
-                            nodeToScope,
-                            currentNamespace?.toString() ?: "",
-                            nodeToScope.language!!.namespaceDelimiter
-                        )
+                    is RecordDeclaration -> RecordScope(nodeToScope)
                     is TemplateDeclaration -> TemplateScope(nodeToScope)
                     is TryStatement -> TryScope(nodeToScope)
                     is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
@@ -298,11 +293,7 @@ class ScopeManager : ScopeProvider {
             // does not need to push a new scope
             null
         } else {
-            NameScope(
-                nodeToScope,
-                currentNamespace?.toString() ?: "",
-                nodeToScope.language!!.namespaceDelimiter
-            )
+            NameScope(nodeToScope)
         }
     }
 
@@ -666,12 +657,12 @@ class ScopeManager : ScopeProvider {
         if (call.language != null && call.name.parent != null) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = call.name.parent.toString()
+            val scopeName = call.name.parent
 
             // TODO: proper scope selection
 
             // this is a scoped call. we need to explicitly jump to that particular scope
-            val scopes = filterScopes { (it is NameScope && it.scopedName == scopeName) }
+            val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
                     LOGGER.error(

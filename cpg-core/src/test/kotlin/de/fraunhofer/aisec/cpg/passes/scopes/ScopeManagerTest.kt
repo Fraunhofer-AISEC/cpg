@@ -118,7 +118,7 @@ internal class ScopeManagerTest : BaseTest() {
         final.mergeFrom(listOf(s1, s2))
 
         // in the final scope manager, there should only be one NameScope "A"
-        val scopes = final.filterScopes { it.scopedName == "A" }
+        val scopes = final.filterScopes { it.name.toString() == "A" }
         assertEquals(1, scopes.size)
 
         val scopeA = scopes.firstOrNull() as? NameScope
