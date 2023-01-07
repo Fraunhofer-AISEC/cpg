@@ -207,15 +207,6 @@ abstract class LanguageFrontend(
     }
 
     abstract fun <S, T> setComment(s: S, ctx: T)
-    val currentNamePrefixWithDelimiter: String
-        get() {
-            val prefix = scopeManager.currentNamePrefix
-            return if (prefix.isEmpty()) {
-                ""
-            } else {
-                prefix + language.namespaceDelimiter
-            }
-        }
 
     companion object {
         // Allow non-Java frontends to access the logger (i.e. jep)

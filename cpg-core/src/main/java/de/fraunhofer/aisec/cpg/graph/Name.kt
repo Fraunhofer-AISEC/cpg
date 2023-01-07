@@ -145,3 +145,12 @@ fun parseName(fqn: CharSequence, delimiter: String = ".", vararg splitDelimiters
 
     return name
 }
+
+/** Returns a new [Name] based on the [localName] and the current name as parent. */
+fun Name?.fqn(localName: String): Name {
+    return if (this == null) {
+        Name(localName)
+    } else {
+        Name(localName, this, this.delimiter)
+    }
+}

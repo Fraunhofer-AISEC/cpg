@@ -103,12 +103,6 @@ class ScopeManager : ScopeProvider {
     val currentTypedefs: Collection<TypedefDeclaration>
         get() = this.getCurrentTypedefs(currentScope)
 
-    val currentNamePrefix: String
-        get() {
-            val namedScope = this.firstScopeIsInstanceOrNull<NameScope>()
-            return if (namedScope is NameScope) namedScope.namePrefix else ""
-        }
-
     val currentNamespace: Name?
         get() {
             val namedScope = this.firstScopeIsInstanceOrNull<NameScope>()
@@ -248,7 +242,7 @@ class ScopeManager : ScopeProvider {
                     is RecordDeclaration ->
                         RecordScope(
                             nodeToScope,
-                            currentNamePrefix,
+                            currentNamespace?.toString() ?: "",
                             nodeToScope.language!!.namespaceDelimiter
                         )
                     is TemplateDeclaration -> TemplateScope(nodeToScope)
@@ -267,7 +261,7 @@ class ScopeManager : ScopeProvider {
         // push the new scope
         if (newScope != null) {
             pushScope(newScope)
-            newScope.scopedName = currentNamePrefix
+            newScope.scopedName = currentNamespace?.toString()
         } else {
             currentScope = scopeMap[nodeToScope]
         }
@@ -290,9 +284,7 @@ class ScopeManager : ScopeProvider {
      */
     private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
         val existingScope =
-            currentScope?.children?.firstOrNull {
-                it is NameScope && it.scopedName == nodeToScope.name.toString()
-            }
+            currentScope?.children?.firstOrNull { it is NameScope && it.name == nodeToScope.name }
 
         return if (existingScope != null) {
             // update the AST node to this namespace declaration
@@ -306,7 +298,11 @@ class ScopeManager : ScopeProvider {
             // does not need to push a new scope
             null
         } else {
-            NameScope(nodeToScope, currentNamePrefix, nodeToScope.language!!.namespaceDelimiter)
+            NameScope(
+                nodeToScope,
+                currentNamespace?.toString() ?: "",
+                nodeToScope.language!!.namespaceDelimiter
+            )
         }
     }
 

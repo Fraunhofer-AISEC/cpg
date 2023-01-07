@@ -424,7 +424,7 @@ public class DeclarationHandler
 
   public de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration handleEnumDeclaration(
       com.github.javaparser.ast.body.EnumDeclaration enumDecl) {
-    String name = getAbsoluteName(enumDecl.getNameAsString());
+    String name = enumDecl.getNameAsString();
     PhysicalLocation location = this.frontend.getLocationFromRawNode(enumDecl);
 
     de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration enumDeclaration =
@@ -468,11 +468,5 @@ public class DeclarationHandler
       AnnotationMemberDeclaration annotationMemberDecl) {
     return new ProblemDeclaration(
         "AnnotationMemberDeclaration not supported yet", ProblemNode.ProblemType.TRANSLATION);
-  }
-
-  private String getAbsoluteName(String name) {
-    String prefix = frontend.getScopeManager().getCurrentNamePrefix();
-    name = (prefix.length() > 0 ? prefix + getLanguage().getNamespaceDelimiter() : "") + name;
-    return name;
   }
 }

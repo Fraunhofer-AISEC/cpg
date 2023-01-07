@@ -155,18 +155,18 @@ internal class ScopeManagerTest : BaseTest() {
             CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s)
         s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
 
-        assertEquals("", s.currentNamePrefix)
+        assertNull(s.currentNamespace)
 
         val namespaceA = frontend.newNamespaceDeclaration("A", null)
         s.enterScope(namespaceA)
 
-        assertEquals("A", s.currentNamePrefix)
+        assertEquals("A", s.currentNamespace.toString())
 
-        // nested namespace A::B. the name needs to be a FQN
-        val namespaceB = frontend.newNamespaceDeclaration("A::B", null)
+        // nested namespace A::B
+        val namespaceB = frontend.newNamespaceDeclaration("B", null)
         s.enterScope(namespaceB)
 
-        assertEquals("A::B", s.currentNamePrefix)
+        assertEquals("A::B", s.currentNamespace.toString())
 
         val func = frontend.newFunctionDeclaration("func", null)
         s.addDeclaration(func)

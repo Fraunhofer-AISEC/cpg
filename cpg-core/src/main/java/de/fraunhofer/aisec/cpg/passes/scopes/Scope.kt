@@ -35,14 +35,16 @@ import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
  */
 abstract class Scope(open var astNode: Node?) {
 
-    // FQN Name currently valid
+    /** FQN Name currently valid */
     var scopedName: String? = null
 
-    // The real new name
+    /** The real new name */
     var name: Name? = null
 
-    /* Scopes are nested and therefore have a parent child relationship, this two members will help
-    navigate through the scopes,e.g. when looking up variables */
+    /**
+     * Scopes are nested and therefore have a parent child relationship, this two members will help
+     * navigate through the scopes,e.g. when looking up variables.
+     */
     var parent: Scope? = null
     var children = mutableListOf<Scope>()
     var labelStatements = mutableMapOf<String, LabelStatement>()
