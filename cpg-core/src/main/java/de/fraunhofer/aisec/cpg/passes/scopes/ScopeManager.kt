@@ -88,7 +88,7 @@ class ScopeManager : ScopeProvider {
         get() = this.firstScopeOrNull { it is RecordScope } != null
 
     val globalScope: GlobalScope?
-        get() = this.firstScopeIsInstanceOrNull()
+        get() = scopeMap[null] as? GlobalScope
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: CompoundStatement?
@@ -124,11 +124,7 @@ class ScopeManager : ScopeProvider {
      * @param toMerge The scope managers to merge into this one
      */
     fun mergeFrom(toMerge: Collection<ScopeManager>) {
-        val globalScopes =
-            toMerge
-                .map { s: ScopeManager -> s.scopeMap[null] }
-                .filter { obj: Scope? -> GlobalScope::class.java.isInstance(obj) }
-                .map { obj: Scope? -> GlobalScope::class.java.cast(obj) }
+        val globalScopes = toMerge.mapNotNull { it.globalScope }
         val currGlobalScope = scopeMap[null]
         if (currGlobalScope !is GlobalScope) {
             LOGGER.error("Scope for null node is not a GlobalScope or is null")
@@ -443,20 +439,6 @@ class ScopeManager : ScopeProvider {
         return scopeMap.values.filter(predicate).distinct()
     }
 
-    /**
-     * This function filters scopes according to [predicate] and makes them unique according to
-     * [uniqueProperty].
-     *
-     * @param predicate the search predicate
-     * @param uniqueProperty the unique property to run a distinct filter on
-     */
-    fun <T> filterScopesDistinctBy(
-        predicate: (Scope) -> Boolean,
-        uniqueProperty: (Scope) -> T
-    ): List<Scope> {
-        return scopeMap.values.filter(predicate).distinctBy(uniqueProperty)
-    }
-
     /** This function returns the [Scope] associated with a node. */
     fun lookupScope(node: Node): Scope? {
         return scopeMap[node]
@@ -487,7 +469,7 @@ class ScopeManager : ScopeProvider {
             val labelStatement = getLabelStatement(breakStatement.label)
             if (labelStatement != null) {
                 val scope = lookupScope(labelStatement.subStatement)
-                (scope as Breakable?)!!.addBreakStatement(breakStatement)
+                (scope as Breakable?)?.addBreakStatement(breakStatement)
             }
         }
     }
@@ -512,7 +494,7 @@ class ScopeManager : ScopeProvider {
             val labelStatement = getLabelStatement(continueStatement.label)
             if (labelStatement != null) {
                 val scope = lookupScope(labelStatement.subStatement)
-                (scope as Continuable?)!!.addContinueStatement(continueStatement)
+                (scope as Continuable?)?.addContinueStatement(continueStatement)
             }
         }
     }
@@ -570,7 +552,7 @@ class ScopeManager : ScopeProvider {
         scope.addTypedef(typedef)
 
         if (scope.astNode == null) {
-            lang!!.currentTU!!.addTypedef(typedef)
+            lang?.currentTU?.addTypedef(typedef)
         } else {
             scope.astNode?.addTypedef(typedef)
         }
@@ -775,7 +757,7 @@ class ScopeManager : ScopeProvider {
         val num = AtomicInteger()
         val typeCache = TypeManager.getInstance().typeCache
         node.accept(
-            { x: Node? -> Strategy.AST_FORWARD(x!!) },
+            { Strategy.AST_FORWARD(it) },
             object : IVisitor<Node?>() {
                 override fun visit(n: Node) {
                     if (n is HasType) {
