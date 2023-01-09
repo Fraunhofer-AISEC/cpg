@@ -53,14 +53,11 @@ class Name(
      * this is basically a cache for [toString]. Otherwise, we would need to call [toString] a lot
      * of times, to implement the necessary functions for [CharSequence].
      */
-    val fullName: String
-    init {
-        fullName = (if (parent != null) parent.toString() + delimiter else "") + localName
+    private val fullName: String by lazy {
+        (if (parent != null) parent.toString() + delimiter else "") + localName
     }
 
-    public override fun clone(): Name {
-        return Name(localName, parent?.clone(), delimiter)
-    }
+    public override fun clone(): Name = Name(localName, parent?.clone(), delimiter)
 
     /**
      * Returns the string representation of this name using a fully qualified name notation with the
@@ -68,8 +65,7 @@ class Name(
      */
     override fun toString() = fullName
 
-    override val length: Int
-        get() = fullName.length
+    override val length = fullName.length
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -82,9 +78,7 @@ class Name(
 
     override fun get(index: Int) = fullName[index]
 
-    override fun hashCode(): Int {
-        return Objects.hash(localName, parent, delimiter)
-    }
+    override fun hashCode() = Objects.hash(localName, parent, delimiter)
 
     override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
         fullName.subSequence(startIndex, endIndex)
@@ -93,37 +87,29 @@ class Name(
      * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
      * has no parent anymore).
      */
-    fun endsWith(ending: Name): Boolean {
-        return this.localName == ending.localName &&
+    fun endsWith(ending: Name): Boolean = this.localName == ending.localName &&
             (ending.parent == null || this.parent != null && this.parent.endsWith(ending.parent))
-    }
 
     /**
      * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
      * has no parent anymore).
      */
-    fun endsWith(ending: String): Boolean {
-        return this.endsWith(parseName(ending, this.delimiter))
-    }
+    fun endsWith(ending: String) = this.endsWith(parseName(ending, this.delimiter))
 
     /** This function appends a string to the local name and returns a new [Name]. */
-    fun append(s: String): Name {
-        return Name(localName + s, parent, delimiter)
-    }
+    fun append(s: String) = Name(localName + s, parent, delimiter)
 
-    override fun compareTo(other: Name): Int {
-        // Compare names according to the string representation of the full name
-        return fullName.compareTo(other.toString())
-    }
+    /** Compare names according to the string representation of the [fullName]. */
+    override fun compareTo(other: Name) = fullName.compareTo(other.toString())
 }
 
 /**
  * A small utility extension function that uses the namespace information in a [Language] to parse a
  * fully qualified name.
  */
-fun Language<out LanguageFrontend>?.parseName(fqn: CharSequence): Name {
-    return parseName(fqn, this?.namespaceDelimiter ?: ".")
-}
+fun Language<out LanguageFrontend>?.parseName(fqn: CharSequence) =
+    parseName(fqn, this?.namespaceDelimiter ?: ".")
+
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
 fun parseName(fqn: CharSequence, delimiter: String = ".", vararg splitDelimiters: String): Name {
@@ -147,10 +133,9 @@ fun parseName(fqn: CharSequence, delimiter: String = ".", vararg splitDelimiters
 }
 
 /** Returns a new [Name] based on the [localName] and the current name as parent. */
-fun Name?.fqn(localName: String): Name {
-    return if (this == null) {
+fun Name?.fqn(localName: String) =
+    if (this == null) {
         Name(localName)
     } else {
         Name(localName, this, this.delimiter)
     }
-}
