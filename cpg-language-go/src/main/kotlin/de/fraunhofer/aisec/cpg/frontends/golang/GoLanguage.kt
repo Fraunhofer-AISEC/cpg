@@ -40,7 +40,6 @@ open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators
     override val disjunctiveOperators = listOf("||")
     override val stringTypes = setOf("string")
 
-
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager
