@@ -43,6 +43,7 @@ open class JavaLanguage :
     override val fileExtensions = listOf("java")
     override val namespaceDelimiter = "."
     override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
+    override val stringTypes = setOf("java.lang.String")
     override val superclassKeyword = "super"
     override val qualifiers = listOf("final", "volatile")
     override val unknownTypeString = listOf("var")

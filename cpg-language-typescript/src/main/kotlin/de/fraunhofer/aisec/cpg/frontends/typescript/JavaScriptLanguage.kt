@@ -39,6 +39,7 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
         TypeScriptLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&", "&&=", "??", "??=")
     override val disjunctiveOperators = listOf("||", "||=")
+    override val stringTypes = setOf("String")
 
     override fun newFrontend(
         config: TranslationConfiguration,

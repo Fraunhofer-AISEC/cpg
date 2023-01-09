@@ -31,6 +31,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
 import kotlin.reflect.KClass
@@ -58,6 +61,13 @@ abstract class Language<T : LanguageFrontend> : Node() {
     open val primitiveTypes: Set<String>
         get() = setOf("byte", "short", "int", "long", "float", "double", "boolean", "char")
 
+    /** The string type(s) of this language */
+    abstract val stringTypes: Set<String>
+
+    /** The arithmetic operations of this language */
+    open val arithmeticOperations: Set<String>
+        get() = setOf("+", "-", "*", "/", "%", "<<", ">>")
+
     /** Creates a new [LanguageFrontend] object to parse the language. */
     abstract fun newFrontend(
         config: TranslationConfiguration,
@@ -71,6 +81,51 @@ abstract class Language<T : LanguageFrontend> : Node() {
 
     init {
         this.also { this.language = it }
+    }
+
+    /**
+     * Determines how to propagate types across binary operations since these may differ among the
+     * programming languages.
+     */
+    open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type? {
+        if (operation.operatorCode == "==" || operation.operatorCode == "===") {
+            // A comparison, so we return the type "boolean"
+            return TypeParser.createFrom("boolean", this)
+        }
+
+        return when (operation.operatorCode) {
+            "+" ->
+                if (
+                    operation.lhs.type.toString() in primitiveTypes &&
+                        operation.rhs.type.toString() in primitiveTypes
+                ) {
+                    // primitive type 1 + primitive type 2 => primitive type 1
+                    operation.lhs.type
+                } else if (operation.lhs.type.toString() in stringTypes) {
+                    // string + anything => string
+                    operation.lhs.type
+                } else if (operation.rhs.type.toString() in stringTypes) {
+                    // anything + string => string
+                    operation.rhs.type
+                } else {
+                    null
+                }
+            "-",
+            "*",
+            "/",
+            "<<",
+            ">>" ->
+                if (
+                    operation.lhs.type.toString() in primitiveTypes &&
+                        operation.rhs.type.toString() in primitiveTypes
+                ) {
+                    // primitive type 1 OP primitive type 2 => primitive type 1
+                    operation.lhs.type
+                } else {
+                    null
+                }
+            else -> null // We don't know what is this thing
+        }
     }
 }
 

@@ -41,6 +41,7 @@ open class CLanguage :
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
     override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
+    override val stringTypes = setOf<String>()
     override val qualifiers = listOf("const", "volatile", "restrict", "atomic")
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
     override val conjunctiveOperators = listOf("&&")

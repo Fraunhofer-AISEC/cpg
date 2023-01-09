@@ -38,6 +38,7 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
+    override val stringTypes = setOf("str")
 
     override fun newFrontend(
         config: TranslationConfiguration,

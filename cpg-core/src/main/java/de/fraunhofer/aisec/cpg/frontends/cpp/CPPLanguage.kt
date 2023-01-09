@@ -44,6 +44,7 @@ class CPPLanguage :
     CLanguage(), HasDefaultArguments, HasTemplates, HasComplexCallResolution, HasClasses {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
+    override val stringTypes = setOf("std::string")
 
     /**
      * @param call

@@ -38,6 +38,8 @@ open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators
     override val frontend: KClass<out GoLanguageFrontend> = GoLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
+    override val stringTypes = setOf("string")
+
 
     override fun newFrontend(
         config: TranslationConfiguration,

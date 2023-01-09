@@ -57,7 +57,7 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
                 "x86_fp80",
                 "ppc_fp128"
             )
-
+    override val stringTypes = setOf<String>() // It depends mostly on the programming language
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager
