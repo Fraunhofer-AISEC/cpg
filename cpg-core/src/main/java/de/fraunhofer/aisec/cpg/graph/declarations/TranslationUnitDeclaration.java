@@ -63,7 +63,7 @@ public class TranslationUnitDeclaration extends Declaration
   @Relationship(value = "NAMESPACES", direction = "OUTGOING")
   @SubGraph("AST")
   @NotNull
-  private final List<PropertyEdge<Declaration>> namespaces = new ArrayList<>();
+  private final List<PropertyEdge<NamespaceDeclaration>> namespaces = new ArrayList<>();
 
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
@@ -140,12 +140,12 @@ public class TranslationUnitDeclaration extends Declaration
   }
 
   @NotNull
-  public List<Declaration> getNamespaces() {
+  public List<NamespaceDeclaration> getNamespaces() {
     return unwrap(this.namespaces);
   }
 
   @NotNull
-  public List<PropertyEdge<Declaration>> getNamespacesPropertyEdge() {
+  public List<PropertyEdge<NamespaceDeclaration>> getNamespacesPropertyEdge() {
     return this.namespaces;
   }
 
@@ -153,7 +153,7 @@ public class TranslationUnitDeclaration extends Declaration
     if (declaration instanceof IncludeDeclaration) {
       addIfNotContains(includes, (IncludeDeclaration) declaration);
     } else if (declaration instanceof NamespaceDeclaration) {
-      addIfNotContains(namespaces, declaration);
+      addIfNotContains(namespaces, (NamespaceDeclaration) declaration);
     }
 
     addIfNotContains(declarations, declaration);

@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -66,39 +67,39 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p = tu.namespaces["literal"] as? NamespaceDeclaration
+        val p = tu.namespaces["literal"]
         assertNotNull(p)
         assertLocalName("literal", p)
 
-        val b = p.declarations["b"] as? VariableDeclaration
+        val b = p.variables["b"]
         assertNotNull(b)
         assertLocalName("b", b)
         assertEquals(TypeParser.createFrom("bool", PythonLanguage()), b.type)
 
-        val i = p.declarations["i"] as? VariableDeclaration
+        val i = p.variables["i"]
         assertNotNull(i)
         assertLocalName("i", i)
         assertEquals(TypeParser.createFrom("int", PythonLanguage()), i.type)
 
-        val f = p.declarations["f"] as? VariableDeclaration
+        val f = p.variables["f"]
         assertNotNull(f)
         assertLocalName("f", f)
         assertEquals(TypeParser.createFrom("float", PythonLanguage()), f.type)
 
         /*
         TODO: implement support for complex numbers
-        val c = p.declarations["c"] as? VariableDeclaration
+        val c = p.variables["c"]
         assertNotNull(c)
         assertLocalName("c", c)
         assertEquals(TypeParser.createFrom("complex", PythonLanguage()), c.type)
         */
 
-        val t = p.declarations["t"] as? VariableDeclaration
+        val t = p.variables["t"]
         assertNotNull(t)
         assertLocalName("t", t)
         assertEquals(TypeParser.createFrom("str", PythonLanguage()), t.type)
 
-        val n = p.declarations["n"] as? VariableDeclaration
+        val n = p.variables["n"]
         assertNotNull(n)
         assertLocalName("n", n)
         assertEquals(TypeParser.createFrom("None", PythonLanguage()), n.type)
@@ -117,7 +118,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p = tu.namespaces["function"] as? NamespaceDeclaration
+        val p = tu.namespaces["function"]
         assertNotNull(p)
 
         val foo = p.declarations.first() as? FunctionDeclaration
@@ -733,7 +734,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p = tu.namespaces["literal"] as? NamespaceDeclaration
+        val p = tu.namespaces["literal"]
         assertNotNull(p)
 
         assertLocalName("b", p.declarations[0] as? VariableDeclaration)
@@ -761,33 +762,15 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p = tu.namespaces["literal"] as? NamespaceDeclaration
+        val p = tu.namespaces["literal"]
         assertNotNull(p)
 
-        assertEquals(
-            Region(1, 1, 1, 9),
-            (p.declarations[0] as? VariableDeclaration)?.location?.region
-        )
-        assertEquals(
-            Region(1, 5, 1, 9),
-            (p.declarations[0] as? VariableDeclaration)?.initializer?.location?.region
-        )
-        assertEquals(
-            Region(2, 1, 2, 7),
-            (p.declarations[1] as? VariableDeclaration)?.location?.region
-        )
-        assertEquals(
-            Region(3, 1, 3, 8),
-            (p.declarations[2] as? VariableDeclaration)?.location?.region
-        )
-        assertEquals(
-            Region(5, 1, 5, 12),
-            (p.declarations[3] as? VariableDeclaration)?.location?.region
-        )
-        assertEquals(
-            Region(6, 1, 6, 9),
-            (p.declarations[4] as? VariableDeclaration)?.location?.region
-        )
+        assertEquals(Region(1, 1, 1, 9), (p.variables[0]).location?.region)
+        assertEquals(Region(1, 5, 1, 9), (p.variables[0]).initializer?.location?.region)
+        assertEquals(Region(2, 1, 2, 7), (p.variables[1]).location?.region)
+        assertEquals(Region(3, 1, 3, 8), (p.variables[2]).location?.region)
+        assertEquals(Region(5, 1, 5, 12), (p.variables[3]).location?.region)
+        assertEquals(Region(6, 1, 6, 9), (p.variables[4]).location?.region)
     }
 
     @Test
@@ -803,11 +786,11 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p = tu.namespaces["multi_level_mem_call"] as? NamespaceDeclaration
+        val p = tu.namespaces["multi_level_mem_call"]
         assertNotNull(p)
 
         // foo = bar.baz.zzz("hello")
-        val foo = p.declarations["foo"] as? VariableDeclaration
+        val foo = p.variables["foo"]
         assertNotNull(foo)
 
         val initializer = foo.initializer as? MemberCallExpression
@@ -878,20 +861,20 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p = tu.namespaces["issue615"] as? NamespaceDeclaration
+        val p = tu.namespaces["issue615"]
         assertNotNull(p)
 
         assertEquals(1, p.declarations.size)
         assertEquals(2, p.statements.size)
 
         // test = [(1, 2, 3)]
-        val testDeclaration = p.declarations[0] as? VariableDeclaration
+        val testDeclaration = p.variables[0]
         assertNotNull(testDeclaration)
         assertLocalName("test", testDeclaration)
         val testDeclStmt = p.statements[0] as? DeclarationStatement
         assertNotNull(testDeclStmt)
         assertEquals(1, testDeclStmt.declarations.size)
-        assertEquals(testDeclaration, testDeclStmt.declarations[0] as? VariableDeclaration)
+        assertEquals(testDeclaration, testDeclStmt.variables[0])
 
         /* for loop:
         for t1, t2, t3 in test:
@@ -947,7 +930,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p = tu.namespaces["issue473"] as? NamespaceDeclaration
+        val p = tu.namespaces["issue473"]
         assertNotNull(p)
 
         val ifStmt = p.statements[0] as? IfStatement
