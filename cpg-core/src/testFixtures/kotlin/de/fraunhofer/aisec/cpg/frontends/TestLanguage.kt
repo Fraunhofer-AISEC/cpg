@@ -41,6 +41,7 @@ class TestLanguage : Language<TestLanguageFrontend>() {
     override val fileExtensions: List<String> = listOf()
     override val namespaceDelimiter: String = "."
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
+    override val stringTypes = setOf("String")
 
     override fun newFrontend(
         config: TranslationConfiguration,

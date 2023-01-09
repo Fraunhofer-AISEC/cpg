@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
 import kotlin.reflect.KClass
@@ -87,7 +88,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
      * Determines how to propagate types across binary operations since these may differ among the
      * programming languages.
      */
-    open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type? {
+    open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
         if (operation.operatorCode == "==" || operation.operatorCode == "===") {
             // A comparison, so we return the type "boolean"
             return TypeParser.createFrom("boolean", this)
@@ -96,19 +97,19 @@ abstract class Language<T : LanguageFrontend> : Node() {
         return when (operation.operatorCode) {
             "+" ->
                 if (
-                    operation.lhs.type.toString() in primitiveTypes &&
-                        operation.rhs.type.toString() in primitiveTypes
+                    operation.lhs?.type?.name?.toString() in primitiveTypes &&
+                        operation.rhs?.type?.name?.toString() in primitiveTypes
                 ) {
                     // primitive type 1 + primitive type 2 => primitive type 1
                     operation.lhs.type
-                } else if (operation.lhs.type.toString() in stringTypes) {
+                } else if (operation.lhs?.type?.name?.toString() in stringTypes) {
                     // string + anything => string
                     operation.lhs.type
-                } else if (operation.rhs.type.toString() in stringTypes) {
+                } else if (operation.rhs?.type?.name?.toString() in stringTypes) {
                     // anything + string => string
                     operation.rhs.type
                 } else {
-                    null
+                    UnknownType.getUnknownType(this)
                 }
             "-",
             "*",
@@ -116,15 +117,15 @@ abstract class Language<T : LanguageFrontend> : Node() {
             "<<",
             ">>" ->
                 if (
-                    operation.lhs.type.toString() in primitiveTypes &&
-                        operation.rhs.type.toString() in primitiveTypes
+                    operation.lhs?.type?.name?.toString() in primitiveTypes &&
+                        operation.rhs?.type?.name?.toString() in primitiveTypes
                 ) {
                     // primitive type 1 OP primitive type 2 => primitive type 1
                     operation.lhs.type
                 } else {
-                    null
+                    UnknownType.getUnknownType(this)
                 }
-            else -> null // We don't know what is this thing
+            else -> UnknownType.getUnknownType(this) // We don't know what is this thing
         }
     }
 }

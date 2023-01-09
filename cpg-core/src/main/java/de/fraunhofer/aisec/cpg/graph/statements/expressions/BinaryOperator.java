@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.Nullable;
@@ -163,7 +164,7 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
       setType(TypeParser.createFrom("java.lang.String", getLanguage()), root);
     } else {
       Type resultingType = getLanguage().propagateTypeOfBinaryOperation(this);
-      if (resultingType != null) {
+      if (!(resultingType instanceof UnknownType)) {
         setType(resultingType, root);
       }
     }
