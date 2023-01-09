@@ -66,40 +66,39 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("literal", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["literal"] as? NamespaceDeclaration
         assertNotNull(p)
         assertLocalName("literal", p)
 
-        val b = p.getDeclarationsByName("b", VariableDeclaration::class.java).iterator().next()
+        val b = p.declarations["b"] as? VariableDeclaration
         assertNotNull(b)
         assertLocalName("b", b)
         assertEquals(TypeParser.createFrom("bool", PythonLanguage()), b.type)
 
-        val i = p.getDeclarationsByName("i", VariableDeclaration::class.java).iterator().next()
+        val i = p.declarations["i"] as? VariableDeclaration
         assertNotNull(i)
         assertLocalName("i", i)
         assertEquals(TypeParser.createFrom("int", PythonLanguage()), i.type)
 
-        val f = p.getDeclarationsByName("f", VariableDeclaration::class.java).iterator().next()
+        val f = p.declarations["f"] as? VariableDeclaration
         assertNotNull(f)
         assertLocalName("f", f)
         assertEquals(TypeParser.createFrom("float", PythonLanguage()), f.type)
 
         /*
         TODO: implement support for complex numbers
-        val c = p.getDeclarationsByName("c", VariableDeclaration::class.java).iterator().next()
+        val c = p.declarations["c"] as? VariableDeclaration
         assertNotNull(c)
         assertLocalName("c", c)
         assertEquals(TypeParser.createFrom("complex", PythonLanguage()), c.type)
-         */
+        */
 
-        val t = p.getDeclarationsByName("t", VariableDeclaration::class.java).iterator().next()
+        val t = p.declarations["t"] as? VariableDeclaration
         assertNotNull(t)
         assertLocalName("t", t)
         assertEquals(TypeParser.createFrom("str", PythonLanguage()), t.type)
 
-        val n = p.getDeclarationsByName("n", VariableDeclaration::class.java).iterator().next()
+        val n = p.declarations["n"] as? VariableDeclaration
         assertNotNull(n)
         assertLocalName("n", n)
         assertEquals(TypeParser.createFrom("None", PythonLanguage()), n.type)
@@ -118,8 +117,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("function", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["function"] as? NamespaceDeclaration
         assertNotNull(p)
 
         val foo = p.declarations.first() as? FunctionDeclaration
@@ -429,7 +427,7 @@ class PythonFrontendTest : BaseTest() {
         assertFullName("class_self.Foo", recv.type)
 
         assertEquals(1, bar.parameters.size)
-        val i = bar.parameters.get(0)
+        val i = bar.parameters[0]
         assertNotNull(i)
 
         assertLocalName("i", i)
@@ -735,8 +733,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("literal", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["literal"] as? NamespaceDeclaration
         assertNotNull(p)
 
         assertLocalName("b", p.declarations[0] as? VariableDeclaration)
@@ -764,8 +761,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("literal", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["literal"] as? NamespaceDeclaration
         assertNotNull(p)
 
         assertEquals(
@@ -807,17 +803,14 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("multi_level_mem_call", NamespaceDeclaration::class.java)
-                .iterator()
-                .next()
+        val p = tu.namespaces["multi_level_mem_call"] as? NamespaceDeclaration
         assertNotNull(p)
 
         // foo = bar.baz.zzz("hello")
-        val foo = p.getDeclarationsByName("foo", VariableDeclaration::class.java)
+        val foo = p.declarations["foo"] as? VariableDeclaration
         assertNotNull(foo)
 
-        val initializer = foo.first()?.initializer as? MemberCallExpression
+        val initializer = foo.initializer as? MemberCallExpression
         assertNotNull(initializer)
 
         assertLocalName("zzz", initializer)
@@ -885,8 +878,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("issue615", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["issue615"] as? NamespaceDeclaration
         assertNotNull(p)
 
         assertEquals(1, p.declarations.size)
@@ -955,8 +947,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val p =
-            tu.getDeclarationsByName("issue473", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.namespaces["issue473"] as? NamespaceDeclaration
         assertNotNull(p)
 
         val ifStmt = p.statements[0] as? IfStatement
