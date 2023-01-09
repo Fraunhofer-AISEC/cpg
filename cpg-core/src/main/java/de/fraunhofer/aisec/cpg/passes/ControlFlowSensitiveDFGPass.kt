@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -231,8 +232,14 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 // The next nodes match. Now check the last writes for each declaration.
                 var allWritesMatch = true
                 for ((lastWriteDecl, lastWriteList) in newPair.second) {
-                    // We will generate the same "prev DFG" with the item that is already in the
-                    // list
+
+                    // We ignore FieldDeclarations because we cannot be sure how interprocedural
+                    // data flows affect the field. Handling them in the state would only blow up
+                    // the number of paths unnecessarily.
+                    if (lastWriteDecl is FieldDeclaration) continue
+
+                    // Will we generate the same "prev DFG" with the item that is already in the
+                    // list?
                     allWritesMatch =
                         allWritesMatch &&
                             existingPair.second[lastWriteDecl]?.last() == lastWriteList.last()
