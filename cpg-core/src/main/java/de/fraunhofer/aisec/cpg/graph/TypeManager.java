@@ -316,7 +316,7 @@ public class TypeManager {
         && newType instanceof ObjectType
         && ((ObjectType) type).getGenerics() != null
         && ((ObjectType) newType).getGenerics() != null
-        && type.getName().toString().equals(newType.getName().toString())) {
+        && type.getName().equals(newType.getName())) {
       return containsParameterizedType(((ObjectType) newType).getGenerics())
           && !(containsParameterizedType(((ObjectType) type).getGenerics()));
     }
