@@ -87,11 +87,12 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(TypeParser.createFrom("float", PythonLanguage()), f.type)
 
         /*
+        TODO: implement support for complex numbers
         val c = p.getDeclarationsByName("c", VariableDeclaration::class.java).iterator().next()
         assertNotNull(c)
         assertLocalName("c", c)
-        assertEquals(TypeParser.createFrom("complex", false), c.type)
-        */
+        assertEquals(TypeParser.createFrom("complex", PythonLanguage()), c.type)
+         */
 
         val t = p.getDeclarationsByName("t", VariableDeclaration::class.java).iterator().next()
         assertNotNull(t)
