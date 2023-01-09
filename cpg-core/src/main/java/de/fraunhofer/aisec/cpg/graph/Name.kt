@@ -87,7 +87,8 @@ class Name(
      * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
      * has no parent anymore).
      */
-    fun endsWith(ending: Name): Boolean = this.localName == ending.localName &&
+    fun endsWith(ending: Name): Boolean =
+        this.localName == ending.localName &&
             (ending.parent == null || this.parent != null && this.parent.endsWith(ending.parent))
 
     /**
@@ -109,7 +110,6 @@ class Name(
  */
 fun Language<out LanguageFrontend>?.parseName(fqn: CharSequence) =
     parseName(fqn, this?.namespaceDelimiter ?: ".")
-
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
 fun parseName(fqn: CharSequence, delimiter: String = ".", vararg splitDelimiters: String): Name {
