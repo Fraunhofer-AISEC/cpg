@@ -254,7 +254,7 @@ open class JavaLanguageFrontend(
                     // this is not strictly true. This could also be a function of a superclass,
                     // but is the best we can do for now. If the superclass would be known,
                     // this would already be resolved by the Java resolver
-                    scopeManager.fqn(callExpr.nameAsString).toString()
+                    fqn(callExpr.nameAsString).toString()
                 } else {
                     scope.get().toString() + "." + callExpr.nameAsString
                 }
@@ -268,7 +268,7 @@ open class JavaLanguageFrontend(
                 // check if this is a "specific" static import (not of the type 'import static
                 // x.y.Z.*')
                 val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
-                fromImport ?: scopeManager.fqn(callExpr.nameAsString).toString()
+                fromImport ?: fqn(callExpr.nameAsString).toString()
                 // this is not strictly true. This could also be a function of a superclass or from
                 // a static asterisk import
             }
@@ -283,13 +283,13 @@ open class JavaLanguageFrontend(
                     }
                 }
                 if (scope.get().toString() == THIS) {
-                    scopeManager.fqn(callExpr.nameAsString).toString()
+                    fqn(callExpr.nameAsString).toString()
                 } else {
                     scope.get().toString() + "." + callExpr.nameAsString
                 }
             } else {
                 val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
-                fromImport ?: scopeManager.fqn(callExpr.nameAsString).toString()
+                fromImport ?: fqn(callExpr.nameAsString).toString()
             }
         }
     }

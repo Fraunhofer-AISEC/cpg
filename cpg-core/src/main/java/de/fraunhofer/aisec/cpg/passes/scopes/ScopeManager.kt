@@ -783,8 +783,7 @@ class ScopeManager : ScopeProvider {
         LOGGER.debug("Activated {} nodes for {}", num, node.name)
 
         // For some nodes it may happen that they are not reachable via AST, but we still need to
-        // set
-        // their type to the requested value
+        // set their type to the requested value
         typeCache.forEach { (n: HasType, types: List<Type>) ->
             types.forEach(
                 Consumer { t: Type? ->
@@ -792,10 +791,5 @@ class ScopeManager : ScopeProvider {
                 }
             )
         }
-    }
-
-    /** Returns a new [Name] based on the [localName] and the current namespace as parent. */
-    fun fqn(localName: String): Name {
-        return this.currentNamespace.fqn(localName)
     }
 }

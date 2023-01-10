@@ -205,3 +205,8 @@ fun LanguageProvider.parseType(name: String) = TypeParser.createFrom(name, langu
  * since we are moving away from the [TypeParser] altogether.
  */
 fun LanguageProvider.parseType(name: Name) = TypeParser.createFrom(name, language)
+
+/** Returns a new [Name] based on the [localName] and the current namespace as parent. */
+fun NamespaceProvider.fqn(localName: String): Name {
+    return this.namespace.fqn(localName)
+}
