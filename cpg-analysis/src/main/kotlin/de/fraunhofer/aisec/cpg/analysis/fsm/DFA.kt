@@ -67,7 +67,7 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
         checkNotNull(startState) {
             "To perform an order evaluation on a DFA, the DFA must have a start state. This DFA does not have a start state."
         }
-        _executionTrace.clear() // necessary when re-using the same [DFA] object for multiple order evaluations
+        _executionTrace.clear() // for using the same [DFA] object for multiple order evaluations
         _executionTrace.add(
             Trace(state = startState, cpgNode = cpgNode, edge = Edge("", nextState = startState))
         )
