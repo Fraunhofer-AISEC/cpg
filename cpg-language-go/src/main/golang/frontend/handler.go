@@ -221,7 +221,6 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 			if err != nil {
 				log.Fatal(err)
-
 			}
 
 			if record != nil && !record.IsNil() {
@@ -414,11 +413,7 @@ func (this *GoLanguageFrontend) handleImportSpec(fset *token.FileSet, importSpec
 }
 
 func (this *GoLanguageFrontend) handleIdentAsName(ident *ast.Ident) string {
-	if this.isBuiltinType(ident.Name) {
-		return ident.Name
-	} else {
-		return fmt.Sprintf("%s.%s", this.File.Name.Name, ident.Name)
-	}
+	return ident.Name
 }
 
 func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDecl *ast.TypeSpec, structType *ast.StructType) *cpg.RecordDeclaration {
@@ -440,7 +435,7 @@ func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDe
 
 			if field.Names == nil {
 				// retrieve the root type name
-				var typeName = t.GetRoot().GetName()
+				var typeName = t.GetRoot().GetName().ToString()
 
 				this.LogDebug("Handling embedded field of type %s", typeName)
 
@@ -831,7 +826,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		return nil
 	}
 
-	name := reference.GetName()
+	name := reference.GetName().GetLocalName()
 
 	if name == "new" {
 		return this.handleNewExpr(fset, callExpr)
@@ -860,20 +855,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 	} else {
 		this.LogDebug("Handling regular call expression to %s", name)
 
-		c = this.NewCallExpression(fset, callExpr)
-
-		// the name is already a FQN if it contains a dot
-		pos := strings.LastIndex(name, ".")
-		if pos != -1 {
-			fqn := name
-
-			c.SetFqn(fqn)
-
-			// need to have the short name
-			c.SetName(name[pos+1:])
-		} else {
-			c.SetName(name)
-		}
+		c = this.NewCallExpression(fset, callExpr, reference, name)
 	}
 
 	for _, arg := range callExpr.Args {
@@ -1011,7 +993,7 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 	// check, if this just a regular reference to a variable with a package scope and not a member expression
 	var isMemberExpression bool = true
 	for _, imp := range this.File.Imports {
-		if base.GetName() == getImportName(imp) {
+		if base.GetName().GetLocalName() == getImportName(imp) {
 			// found a package name, so this is NOT a member expression
 			isMemberExpression = false
 		}
@@ -1026,7 +1008,17 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 		// we need to set the name to a FQN-style, including the package scope. the call resolver will then resolve this
 		fqn := fmt.Sprintf("%s.%s", base.GetName(), selectorExpr.Sel.Name)
 
+		this.LogDebug("Trying to parse the fqn '%s'", fqn)
+
+		l, err := this.GetLanguage()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		name := l.ParseName(fqn)
+
 		decl = this.NewDeclaredReferenceExpression(fset, selectorExpr, fqn)
+		decl.Node().SetName(name)
 	}
 
 	// For now we just let the VariableUsageResolver handle this. Therefore,
@@ -1149,7 +1141,12 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 	if ident.Name == "nil" {
 		lit := this.NewLiteral(fset, ident, nil, &cpg.UnknownType_getUnknown(lang).Type)
 
-		(*cpg.Node)(lit).SetName(ident.Name)
+		l, err := this.GetLanguage()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		(*cpg.Node)(lit).SetName(l.ParseName(ident.Name))
 
 		return (*cpg.Expression)(lit)
 	}
@@ -1196,11 +1193,16 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 
 	switch v := typeExpr.(type) {
 	case *ast.Ident:
-		// make it a fqn according to the current package to make things easier
-		fqn := this.handleIdentAsName(v)
+		var name string
+		if this.isBuiltinType(v.Name) {
+			name = v.Name
+			this.LogDebug("non-fqn type: %s", name)
+		} else {
+			name = fmt.Sprintf("%s.%s", this.File.Name.Name, v.Name)
+			this.LogDebug("fqn type: %s", name)
+		}
 
-		this.LogDebug("FQN type: %s", fqn)
-		return cpg.TypeParser_createFrom(fqn, lang)
+		return cpg.TypeParser_createFrom(name, lang)
 	case *ast.SelectorExpr:
 		// small shortcut
 		fqn := fmt.Sprintf("%s.%s", v.X.(*ast.Ident).Name, v.Sel.Name)
@@ -1348,11 +1350,11 @@ func funcTypeName(paramTypes []*cpg.Type, returnTypes []*cpg.Type) string {
 	var pn []string
 
 	for _, t := range paramTypes {
-		pn = append(pn, t.GetName())
+		pn = append(pn, t.GetName().ToString())
 	}
 
 	for _, t := range returnTypes {
-		rn = append(rn, t.GetName())
+		rn = append(rn, t.GetName().ToString())
 	}
 
 	var rs string

@@ -146,7 +146,7 @@ public class DeclarationHandler
                 .getName());
     declaration.setType(type);
 
-    // check, if constructor has body (i.e. its not abstract or something)
+    // check, if constructor has body (i.e. it's not abstract or something)
     BlockStmt body = constructorDecl.getBody();
 
     addImplicitReturn(body);
@@ -210,7 +210,7 @@ public class DeclarationHandler
     var type = FunctionType.computeType(functionDeclaration);
     functionDeclaration.setType(type);
 
-    // check, if method has body (i.e. its not abstract or something)
+    // check, if method has body (i.e., it's not abstract or something)
     Optional<BlockStmt> o = methodDecl.getBody();
 
     if (o.isEmpty()) {
@@ -254,10 +254,6 @@ public class DeclarationHandler
     String fqn = classInterDecl.getNameAsString();
 
     // Todo adapt name using a new type of scope "Namespace/Package scope"
-    // if (packageDeclaration != null) {
-    //  name = packageDeclaration.getNameAsString() + "." + name;
-    // }
-    fqn = getAbsoluteName(fqn);
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
@@ -330,7 +326,10 @@ public class DeclarationHandler
     if (recordDeclaration.getConstructors().isEmpty()) {
       de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
           newConstructorDeclaration(
-              this, recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
+              this,
+              recordDeclaration.getName().getLocalName(),
+              recordDeclaration.getName().getLocalName(),
+              recordDeclaration);
       recordDeclaration.addConstructor(constructorDeclaration);
       frontend.getScopeManager().addDeclaration(constructorDeclaration);
     }
@@ -344,23 +343,25 @@ public class DeclarationHandler
     // (OuterClass.this.someFunction()). This is the same as the java compiler does. The reference
     // is stored as an implicit field.
     if (frontend.getScopeManager().getCurrentScope() instanceof RecordScope) {
+      // Get all the information of the outer class (its name and the respective type). We need this
+      // to generate the field.
       var scope = (RecordScope) frontend.getScopeManager().getCurrentScope();
 
-      var field =
-          newFieldDeclaration(
-              this,
-              scope.getSimpleName() + ".this",
-              parseType(this, scope.getScopedName()),
-              null,
-              null,
-              null,
-              null,
-              false);
-      field.setImplicit(true);
+      if (scope.getName() != null) {
+        var fieldType = parseType(this, scope.getName());
 
-      frontend.getScopeManager().enterScope(recordDeclaration);
-      frontend.getScopeManager().addDeclaration(field);
-      frontend.getScopeManager().leaveScope(recordDeclaration);
+        // Enter the scope of the inner class because the new field belongs there.
+        frontend.getScopeManager().enterScope(recordDeclaration);
+
+        var field =
+            newFieldDeclaration(
+                this, "this$" + scope.getName().getLocalName(), fieldType, null, null, null, null);
+
+        field.setImplicit(true);
+
+        frontend.getScopeManager().addDeclaration(field);
+        frontend.getScopeManager().leaveScope(recordDeclaration);
+      }
     }
 
     return recordDeclaration;
@@ -415,8 +416,7 @@ public class DeclarationHandler
             modifiers,
             variable.toString(),
             location,
-            initializer,
-            false);
+            initializer);
     frontend.getScopeManager().addDeclaration(fieldDeclaration);
 
     this.frontend.processAnnotations(fieldDeclaration, fieldDecl);
@@ -426,7 +426,7 @@ public class DeclarationHandler
 
   public de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration handleEnumDeclaration(
       com.github.javaparser.ast.body.EnumDeclaration enumDecl) {
-    String name = getAbsoluteName(enumDecl.getNameAsString());
+    String name = enumDecl.getNameAsString();
     PhysicalLocation location = this.frontend.getLocationFromRawNode(enumDecl);
 
     de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration enumDeclaration =
@@ -470,11 +470,5 @@ public class DeclarationHandler
       AnnotationMemberDeclaration annotationMemberDecl) {
     return new ProblemDeclaration(
         "AnnotationMemberDeclaration not supported yet", ProblemNode.ProblemType.TRANSLATION);
-  }
-
-  private String getAbsoluteName(String name) {
-    String prefix = frontend.getScopeManager().getCurrentNamePrefix();
-    name = (prefix.length() > 0 ? prefix + getLanguage().getNamespaceDelimiter() : "") + name;
-    return name;
   }
 }

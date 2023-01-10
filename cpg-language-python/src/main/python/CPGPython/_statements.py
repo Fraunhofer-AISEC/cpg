@@ -51,13 +51,8 @@ def handle_statement_impl(self, stmt):
     elif isinstance(stmt, ast.AsyncFunctionDef):
         return self.handle_function_or_method(stmt)
     elif isinstance(stmt, ast.ClassDef):
-        # TODO: NodeBuilder requires a "kind" parameters. Setting this to
-        # "class" would automagically create a "this" receiver field.
-        # However, the receiver can have any name in python (and even different
-        # names per method).
         cls = DeclarationBuilderKt.newRecordDeclaration(
-            self.frontend, stmt.name, "", self.get_src_code(stmt))
-        self.scopemanager.enterScope(cls)
+            self.frontend, stmt.name, "class", self.get_src_code(stmt))
         bases = []
         for base in stmt.bases:
             if not isinstance(base, ast.Name):
@@ -65,10 +60,15 @@ def handle_statement_impl(self, stmt):
                     "Expected a name, but got: %s" %
                     (type(base)), loglevel="ERROR")
             else:
-                tname = "%s" % (base.id)
+                namespace = self.scopemanager.getCurrentNamespace()
+                tname = "%s.%s" % (namespace.toString(), base.id)
+                self.log_with_loc("Building super type using current "
+                                  "namespace: %s" % tname)
                 t = NodeBuilderKt.parseType(self.frontend, tname)
                 bases.append(t)
         cls.setSuperClasses(bases)
+
+        self.scopemanager.enterScope(cls)
         for keyword in stmt.keywords:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         for s in stmt.body:

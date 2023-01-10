@@ -62,7 +62,7 @@ public class TypeManager {
       Collections.synchronizedMap(new IdentityHashMap<>());
 
   @NotNull
-  private final Map<String, RecordDeclaration> typeToRecord =
+  private final Map<Type, RecordDeclaration> typeToRecord =
       Collections.synchronizedMap(new HashMap<>());
 
   /**
@@ -103,7 +103,7 @@ public class TypeManager {
     if (this.recordToTypeParameters.containsKey(recordDeclaration)) {
       for (ParameterizedType parameterizedType :
           this.recordToTypeParameters.get(recordDeclaration)) {
-        if (parameterizedType.getName().equals(name)) {
+        if (parameterizedType.getName().toString().equals(name)) {
           return parameterizedType;
         }
       }
@@ -136,7 +136,7 @@ public class TypeManager {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
       for (ParameterizedType parameterizedType :
           this.templateToTypeParameters.get(templateDeclaration)) {
-        if (parameterizedType.getName().equals(name)) {
+        if (parameterizedType.getName().toString().equals(name)) {
           return parameterizedType;
         }
       }
@@ -252,12 +252,13 @@ public class TypeManager {
   }
 
   public boolean typeExists(String name) {
-    return firstOrderTypes.stream().anyMatch(type -> type.getRoot().getName().equals(name));
+    return firstOrderTypes.stream()
+        .anyMatch(type -> type.getRoot().getName().toString().equals(name));
   }
 
   private TypeManager() {}
 
-  public static TypeManager getInstance() {
+  public static @NotNull TypeManager getInstance() {
     return instance;
   }
 
@@ -292,7 +293,7 @@ public class TypeManager {
   }
 
   /**
-   * @param generics
+   * @param generics the list of parameter types
    * @return true if the generics contain parameterized Types
    */
   public boolean containsParameterizedType(List<Type> generics) {
@@ -453,7 +454,9 @@ public class TypeManager {
 
     for (var child : globalScope.getChildren()) {
       if (child instanceof RecordScope && child.getAstNode() instanceof RecordDeclaration) {
-        typeToRecord.put(child.getAstNode().getName(), (RecordDeclaration) child.getAstNode());
+        typeToRecord.put(
+            ((RecordDeclaration) child.getAstNode()).toType(),
+            (RecordDeclaration) child.getAstNode());
       }
 
       // HACKY HACK HACK
@@ -461,7 +464,8 @@ public class TypeManager {
         for (var child2 : child.getChildren()) {
           if (child2 instanceof RecordScope && child2.getAstNode() instanceof RecordDeclaration) {
             typeToRecord.put(
-                child2.getAstNode().getName(), (RecordDeclaration) child2.getAstNode());
+                ((RecordDeclaration) child2.getAstNode()).toType(),
+                (RecordDeclaration) child2.getAstNode());
           }
         }
       }
@@ -469,7 +473,7 @@ public class TypeManager {
 
     List<Set<Ancestor>> allAncestors =
         types.stream()
-            .map(t -> typeToRecord.getOrDefault(t.getTypeName(), null))
+            .map(t -> typeToRecord.getOrDefault(t, null))
             .filter(Objects::nonNull)
             .map(r -> getAncestors(r, 0))
             .collect(Collectors.toList());
@@ -533,7 +537,7 @@ public class TypeManager {
     }
     Set<Ancestor> ancestors =
         recordDeclaration.getSuperTypes().stream()
-            .map(s -> typeToRecord.getOrDefault(s.getTypeName(), null))
+            .map(s -> typeToRecord.getOrDefault(s, null))
             .filter(Objects::nonNull)
             .map(s -> getAncestors(s, depth + 1))
             .flatMap(Collection::stream)

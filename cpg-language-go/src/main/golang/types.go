@@ -64,11 +64,6 @@ func (*Type) IsArray() bool {
 	return false
 }
 
-func (t *Type) GetName() string {
-	// A little bit hacky until we also convert node to a struct
-	return (*Node)(t.ObjectRef).GetName()
-}
-
 type ObjectType struct {
 	Type
 }
@@ -148,6 +143,10 @@ func (h *HasType) GetType() *Type {
 	}
 
 	return &t
+}
+
+func (t *Type) GetName() (fn *Name) {
+	return (*Node)(t.ObjectRef).GetName()
 }
 
 func (t *ObjectType) AddGeneric(g *Type) {

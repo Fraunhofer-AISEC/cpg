@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
+import de.fraunhofer.aisec.cpg.helpers.NameConverter
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
@@ -49,7 +50,6 @@ import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -57,17 +57,10 @@ import org.slf4j.LoggerFactory
 /** The base class for all graph objects that are going to be persisted in the database. */
 open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider {
     /**
-     * This property holds the full name using our new [Name] class. In the future, we might migrate
-     * this to the [name] field. It is currently not persisted in the graph database.
+     * This property holds the full name using our new [Name] class. It is currently not persisted
+     * in the graph database.
      */
-    @Transient val fullName: Name = Name(EMPTY_NAME)
-
-    /**
-     * A human-readable name. It is backed by the [fullName] and is set to [Name.localName]
-     * automatically using a kotlin property delegator. We need to exclude the delegated field from
-     * graph database persistence.
-     */
-    @delegate:Transient open var name by fullName
+    @Convert(NameConverter::class) var name: Name = Name(EMPTY_NAME)
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
@@ -289,7 +282,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     override fun toString(): String {
         val builder = ToStringBuilder(this, TO_STRING_STYLE)
 
-        if (name != "") {
+        if (name.isNotEmpty()) {
             builder.append("name", name)
         }
 
@@ -304,7 +297,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
             return false
         }
         return if (location == null || other.location == null) {
-            // we do not know the exact region. Need to rely on Object equalness,
+            // we do not know the exact region. Need to rely on Object equality,
             // as a different LOC can have the same name/code/comment/file
             false
         } else

@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -72,7 +73,7 @@ class CallResolverTest : BaseTest() {
 
     private fun ensureNoUnknownClassDummies(records: List<RecordDeclaration>) {
         val callsRecord = findByUniqueName(records, "Calls")
-        assertTrue(records.stream().noneMatch { it.name == "Unknown" })
+        assertTrue(records.stream().noneMatch { it.name.localName == "Unknown" })
 
         val unknownCall = findByUniqueName(callsRecord.calls, "unknownTarget")
         assertEquals(listOf<Any>(), unknownCall.invokes)
@@ -88,7 +89,7 @@ class CallResolverTest : BaseTest() {
         assertEquals(1, result.translationUnits.size)
         val tu = result.translationUnits[0]
         for (declaration in tu.declarations) {
-            assertNotEquals("invoke", declaration.name)
+            assertNotEquals("invoke", declaration.name.localName)
         }
         val callExpressions = result.calls
         val invoke = findByUniqueName(callExpressions, "invoke")
@@ -172,7 +173,8 @@ class CallResolverTest : BaseTest() {
         testOverriding(records)
 
         // Test functions (not methods!)
-        val functions = result.functions { it.name == "functionTarget" && it !is MethodDeclaration }
+        val functions =
+            result.functions { it.name.localName == "functionTarget" && it !is MethodDeclaration }
         val calls = findByName(result.calls, "functionTarget")
         checkCalls(intType, stringType, functions, calls)
         ensureNoUnknownClassDummies(records)
@@ -198,25 +200,25 @@ class CallResolverTest : BaseTest() {
         val calc = findByUniqueName(callExpressions, "calc")
         val calcFunctionDeclaration =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
-                f.name == "calc" && !f.isInferred
+                f.name.localName == "calc" && !f.isInferred
             }
         assertEquals(1, calc.invokes.size)
         assertEquals(calcFunctionDeclaration, calc.invokes[0])
         assertTrue(calc.arguments[0] is CastExpression)
         assertEquals(2.0, ((calc.arguments[0] as CastExpression).expression as Literal<*>).value)
-        assertEquals("int", (calc.arguments[0] as CastExpression).castType.name)
+        assertLocalName("int", (calc.arguments[0] as CastExpression).castType)
 
         // Check resolution of doSmth
         val doSmth = findByUniqueName(callExpressions, "doSmth")
         val doSmthFunctionDeclaration =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
-                f.name == "doSmth" && !f.isInferred
+                f.name.localName == "doSmth" && !f.isInferred
             }
         assertEquals(1, doSmth.invokes.size)
         assertEquals(doSmthFunctionDeclaration, doSmth.invokes[0])
         assertTrue(doSmth.arguments[0] is CastExpression)
         assertEquals(10.0, ((doSmth.arguments[0] as CastExpression).expression as Literal<*>).value)
-        assertEquals("int", (doSmth.arguments[0] as CastExpression).castType.name)
+        assertLocalName("int", (doSmth.arguments[0] as CastExpression).castType)
     }
 
     @Test
@@ -256,7 +258,8 @@ class CallResolverTest : BaseTest() {
         for (func in functionDeclarations) {
             assertFalse(func.isImplicit)
             assertTrue(
-                func.parameters[0].type.name == "int" || func.parameters[0].type.name == "float"
+                func.parameters[0].type.name.localName == "int" ||
+                    func.parameters[0].type.name.localName == "float"
             )
         }
         // Check Cast
@@ -282,11 +285,11 @@ class CallResolverTest : BaseTest() {
         val functionDeclarations = result.functions
         val displayDeclaration =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
-                f.name == "display" && !f.isDefinition && !f.isImplicit
+                f.name.localName == "display" && !f.isDefinition && !f.isImplicit
             }
         val displayDefinition =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
-                f.name == "display" && f.isDefinition && !f.isImplicit
+                f.name.localName == "display" && f.isDefinition && !f.isImplicit
             }
 
         // Check defines edge
@@ -338,7 +341,7 @@ class CallResolverTest : BaseTest() {
             }
         assertEquals(2, display.invokes.size)
         assertTrue(display.invokes.contains(displayDeclaration))
-        assertEquals("count", displayCount.arguments[0].name)
+        assertLocalName("count", displayCount.arguments[0])
         assertEquals("'$'", displayCount.arguments[1].code)
 
         val display10 =
@@ -351,7 +354,7 @@ class CallResolverTest : BaseTest() {
         assertEquals(1, display10.arguments.size)
         assertTrue(display10.arguments[0] is CastExpression)
         assertEquals("10.0", (display10.arguments[0] as CastExpression).expression.code)
-        assertEquals("int", (display10.arguments[0] as CastExpression).castType.name)
+        assertLocalName("int", (display10.arguments[0] as CastExpression).castType)
     }
 
     @Test
@@ -369,7 +372,7 @@ class CallResolverTest : BaseTest() {
         val functionDeclarations = result.functions
         val displayFunction =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
-                f.name == "display" && !f.isImplicit
+                f.name.localName == "display" && !f.isImplicit
             }
         val literalStar = findByUniquePredicate(result.literals) { it.value == '*' }
         val literal3 = findByUniquePredicate(result.literals) { it.value == 3 }
@@ -417,7 +420,7 @@ class CallResolverTest : BaseTest() {
         assertEquals(displayFunction, displayCount.invokes[0])
         assertTrue(displayCount.arguments[0] is Literal<*>)
         assertEquals('$', (displayCount.arguments[0] as Literal<*>).value)
-        assertEquals("count", displayCount.arguments[1].name)
+        assertLocalName("count", displayCount.arguments[1])
     }
 
     @Test
@@ -433,11 +436,11 @@ class CallResolverTest : BaseTest() {
         val functionDeclarations = result.functions
         val addFunction =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
-                f.name == "add" && !f.isInferred
+                f.name.localName == "add" && !f.isInferred
             }
         val addFunctionInferred =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
-                f.name == "add" && f.isInferred
+                f.name.localName == "add" && f.isInferred
             }
 
         // Check call add();
@@ -505,9 +508,11 @@ class CallResolverTest : BaseTest() {
 
         // Check calc call
         val calc =
-            findByUniquePredicate(functionDeclarations) { it.name == "calc" && !it.isImplicit }
-        val callCalc = findByUniquePredicate(calls) { it.name == "calc" }
-        val x = findByUniquePredicate(declaredReferenceExpressions) { it.name == "x" }
+            findByUniquePredicate(functionDeclarations) {
+                it.name.localName == "calc" && !it.isImplicit
+            }
+        val callCalc = findByUniquePredicate(calls) { it.name.localName == "calc" }
+        val x = findByUniquePredicate(declaredReferenceExpressions) { it.name.localName == "x" }
         val literal5 = findByUniquePredicate(result.literals) { it.value == 5 }
         assertEquals(1, callCalc.invokes.size)
         assertEquals(calc, callCalc.invokes[0])
@@ -517,9 +522,10 @@ class CallResolverTest : BaseTest() {
         // Check doSmth call
         val doSmth =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
-                f.name == "doSmth" && !f.isImplicit
+                f.name.localName == "doSmth" && !f.isImplicit
             }
-        val callDoSmth = findByUniquePredicate(calls) { f: CallExpression -> f.name == "doSmth" }
+        val callDoSmth =
+            findByUniquePredicate(calls) { f: CallExpression -> f.name.localName == "doSmth" }
         val literal1 = findByUniquePredicate(result.literals) { it.value == 1 }
         val literal2 = findByUniquePredicate(result.literals) { it.value == 2 }
         assertEquals(1, callDoSmth.invokes.size)
@@ -544,7 +550,7 @@ class CallResolverTest : BaseTest() {
         val functionDeclarations = result.functions
         assertEquals(2, functionDeclarations.size)
         assertEquals(1, calls[0].invokes.size)
-        assertEquals("f", calls[0].invokes[0].name)
+        assertLocalName("f", calls[0].invokes[0])
     }
 
     @Test
@@ -563,7 +569,7 @@ class CallResolverTest : BaseTest() {
         assertEquals(2, functionDeclarations.size)
         assertEquals(1, calls[0].invokes.size)
         assertFalse(calls[0].invokes[0].isImplicit)
-        assertEquals("g", calls[0].invokes[0].name)
+        assertLocalName("g", calls[0].invokes[0])
     }
 
     private fun testScopedFunctionResolutionFunctionGlobal(
@@ -676,7 +682,7 @@ class CallResolverTest : BaseTest() {
         val methodDeclarations = result.methods
         val calcOverload: FunctionDeclaration =
             findByUniquePredicate(methodDeclarations) { c: MethodDeclaration ->
-                c.recordDeclaration!!.name == "Overload" && c !is ConstructorDeclaration
+                c.recordDeclaration!!.name.localName == "Overload" && c !is ConstructorDeclaration
             }
 
         // This call must resolve to implicit cast of the overloaded class and not to the base class
@@ -690,7 +696,7 @@ class CallResolverTest : BaseTest() {
         assertEquals(1, calcInt.invokes.size)
         assertEquals(calcOverload, calcInt.invokes[0])
         assertTrue(calcInt.arguments[0] is CastExpression)
-        assertEquals("double", (calcInt.arguments[0] as CastExpression).castType.name)
+        assertLocalName("double", (calcInt.arguments[0] as CastExpression).castType)
         val calcDouble =
             findByUniquePredicate(calls) { c: CallExpression ->
                 if (c.location != null) {
@@ -705,7 +711,7 @@ class CallResolverTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testCXXMethodResolutionStopOnFirstOccurrence() {
+    fun testCXXMethodResolutionDoNotStopOnFirstOccurrence() {
         val result =
             TestUtils.analyze(
                 listOf(
@@ -722,11 +728,6 @@ class CallResolverTest : BaseTest() {
             )
         val calls = result.calls
 
-        /*
-         This call cannot be resolved to the overloaded calc because the signature doesn't match.
-         However it also cannot be resolved to the base because due to the overloaded matching name it
-         stops searching for an invocation
-        */
         val calcCall =
             findByUniquePredicate(calls) {
                 if (it.location != null) {
@@ -735,7 +736,7 @@ class CallResolverTest : BaseTest() {
                 false
             }
         assertEquals(1, calcCall.invokes.size)
-        assertTrue(calcCall.invokes[0].isInferred)
+        assertFalse(calcCall.invokes[0].isInferred)
     }
 
     @Test

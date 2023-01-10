@@ -167,9 +167,9 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     val record = this.frontend.scopeManager.currentRecord
 
                     newConstructorDeclaration(
-                        record?.name ?: "",
+                        record?.name?.toString() ?: "",
                         this.frontend.getCodeFromRawNode(node),
-                        record,
+                        record
                     )
                 }
                 else -> newFunctionDeclaration(name, this.frontend.getCodeFromRawNode(node))

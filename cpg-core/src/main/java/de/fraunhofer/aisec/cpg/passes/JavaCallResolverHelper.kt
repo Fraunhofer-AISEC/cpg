@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -47,10 +48,10 @@ fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: CallExpressi
         (call.base as DeclaredReferenceExpression?)?.refersTo = func.receiver
     }
     var target: RecordDeclaration? = null
-    if (call.base!!.name == "super") {
+    if (call.base?.name.toString() == JavaLanguage().superClassKeyword) {
         // Direct superclass, either defined explicitly or java.lang.Object by default
         if (curClass.superClasses.isNotEmpty()) {
-            target = recordMap[curClass.superClasses[0].root.typeName]
+            target = recordMap[curClass.superClasses[0].root.name]
         } else {
             Util.warnWithFileLocation(
                 call,
@@ -77,7 +78,8 @@ fun CallResolver.handleSpecificSupertype(
     curClass: RecordDeclaration,
     call: CallExpression
 ): RecordDeclaration? {
-    val baseName = call.base!!.name.substring(0, call.base!!.name.lastIndexOf(".super"))
+    val baseName = call.base?.name?.parent ?: return null
+
     if (TypeParser.createFrom(baseName, curClass.language) in curClass.implementedInterfaces) {
         // Basename is an interface -> BaseName.super refers to BaseName itself
         return recordMap[baseName]
@@ -86,7 +88,7 @@ fun CallResolver.handleSpecificSupertype(
         val base = recordMap[baseName]
         if (base != null) {
             if (base.superClasses.isNotEmpty()) {
-                return recordMap[base.superClasses[0].root.typeName]
+                return recordMap[base.superClasses[0].root.name]
             } else {
                 Util.warnWithFileLocation(
                     call,
@@ -96,5 +98,6 @@ fun CallResolver.handleSpecificSupertype(
             }
         }
     }
+
     return null
 }

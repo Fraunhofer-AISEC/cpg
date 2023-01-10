@@ -41,6 +41,16 @@ func NewString(s string) *jnigi.ObjectRef {
 	return o
 }
 
+func NewCharSequence(s string) *jnigi.ObjectRef {
+	o, err := env.NewObject("java/lang/String", []byte(s))
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	return o.Cast("java/lang/CharSequence")
+}
+
 func NewBoolean(b bool) *jnigi.ObjectRef {
 	// TODO: Use Boolean.valueOf
 	o, err := env.NewObject("java/lang/Boolean", b)

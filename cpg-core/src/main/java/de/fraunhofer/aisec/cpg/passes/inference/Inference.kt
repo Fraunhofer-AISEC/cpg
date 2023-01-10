@@ -55,7 +55,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
         get() = start.language
 
     fun createInferredFunctionDeclaration(
-        name: String?,
+        name: CharSequence?,
         code: String?,
         isStatic: Boolean,
         signature: List<Type?>,
@@ -115,7 +115,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
     fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {
         val inferred =
             newConstructorDeclaration(
-                start.name,
+                start.name.localName,
                 "",
                 start as? RecordDeclaration,
             )
@@ -225,7 +225,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
             )
         }
 
-        val name = call.name
+        val name = call.name.localName
         val code = call.code
         val inferred = newFunctionTemplateDeclaration(name, code)
         inferred.isInferred = true
@@ -317,7 +317,7 @@ fun TranslationUnitDeclaration.inferFunction(
 ): FunctionDeclaration {
     return Inference(this)
         .createInferredFunctionDeclaration(
-            call.name,
+            call.name.localName,
             call.code,
             isStatic,
             call.signature,
@@ -333,7 +333,7 @@ fun RecordDeclaration.inferMethod(
 ): MethodDeclaration {
     return Inference(this)
         .createInferredFunctionDeclaration(
-            call.name,
+            call.name.localName,
             call.code,
             isStatic,
             call.signature,

@@ -75,11 +75,11 @@ object TestUtils {
     }
 
     fun <S : Node> findByUniqueName(nodes: Collection<S>, name: String): S {
-        return findByUniquePredicate(nodes) { m: S -> m.name == name }
+        return findByUniquePredicate(nodes) { m: S -> m.name.lastPartsMatch(name) }
     }
 
     fun <S : Node> findByName(nodes: Collection<S>, name: String): Collection<S> {
-        return nodes.filter { m: S -> m.name == name }
+        return nodes.filter { m: S -> m.name.lastPartsMatch(name) }
     }
 
     /**
@@ -259,7 +259,7 @@ object TestUtils {
         } else {
             assertTrue(usingNode is DeclaredReferenceExpression)
             val reference = usingNode as? DeclaredReferenceExpression
-            assertEquals(reference?.refersTo, usedNode)
+            assertEquals(usedNode, reference?.refersTo)
         }
     }
 
@@ -280,8 +280,7 @@ object TestUtils {
         assertNotNull(usingNode)
         if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
             // Assumtion here is that the target of the member portion of the expression and not the
-            // base
-            // is resolved
+            // base is resolved
             assertUsageOf(usingNode, usedMember)
         } else {
             assertTrue(usingNode is MemberExpression)
@@ -293,4 +292,14 @@ object TestUtils {
             assertUsageOf(memberExpression.refersTo, usedMember)
         }
     }
+}
+
+fun assertFullName(fqn: String, node: Node?, message: String? = null) {
+    assertNotNull(node)
+    asserter.assertEquals(message, fqn, node.name.toString())
+}
+
+fun assertLocalName(localName: String, node: Node?, message: String? = null) {
+    assertNotNull(node)
+    asserter.assertEquals(message, localName, node.name.localName)
 }

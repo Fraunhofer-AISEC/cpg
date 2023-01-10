@@ -164,7 +164,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     ): MethodDeclaration {
         // Check, if it's a constructor
         val method =
-            if (name == recordDeclaration?.name) {
+            if (name == recordDeclaration?.name?.localName) {
                 newConstructorDeclaration(name, null, recordDeclaration, ctx)
             } else {
                 newMethodDeclaration(name, null, false, recordDeclaration, ctx)
@@ -215,7 +215,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             recordDeclaration =
                 frontend.scopeManager.getRecordForName(
                     frontend.scopeManager.currentScope!!,
-                    recordName
+                    language.parseName(recordName)
                 )
             declaration = createMethodOrConstructor(methodName, recordDeclaration, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {
@@ -366,7 +366,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 UnknownType.getUnknownType(language)
             }
 
-        // Create the receiver.
+        // Create the receiver. implicitInitializerAllowed must be false, otherwise fixInitializers
+        // will create another implicit constructexpression for this variable, and we don't want
+        // this.
         val thisDeclaration =
             newVariableDeclaration("this", type = type, implicitInitializerAllowed = false)
         // Yes, this is implicit
@@ -436,7 +438,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         val recordDeclaration =
             newRecordDeclaration(
-                frontend.currentNamePrefixWithDelimiter + ctx.name.toString(),
+                ctx.name.toString(),
                 kind,
                 ctx.rawSignature,
             )
@@ -460,8 +462,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration.constructors.isEmpty()) {
             val constructorDeclaration =
                 newConstructorDeclaration(
-                    recordDeclaration.name,
-                    recordDeclaration.name,
+                    recordDeclaration.name.localName,
+                    recordDeclaration.name.toString(),
                     recordDeclaration,
                     frontend.language
                 )

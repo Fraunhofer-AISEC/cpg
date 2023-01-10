@@ -58,7 +58,6 @@ import org.eclipse.cdt.core.parser.IncludeFileContentProvider
 import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.ASTTranslationUnit
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
@@ -479,30 +478,19 @@ class CXXLanguageFrontend(
         // Retrieve the "name" of this type, including qualifiers.
         // TODO: In the future, we should parse the qualifiers, such as const here, instead of in
         //  the TypeParser
-        var name = ASTStringUtil.getSignatureString(specifier, null)
+        val name = ASTStringUtil.getSignatureString(specifier, null)
 
         var type =
             when (specifier) {
                 is IASTSimpleDeclSpecifier -> {
-                    if (hint is ConstructorDeclaration) {
-                        parseType(hint.name)
+                    if (hint is ConstructorDeclaration && hint.name.parent != null) {
+                        parseType(hint.name.parent!!)
                     } else {
                         // A primitive type
                         parseType(name)
                     }
                 }
                 is IASTNamedTypeSpecifier -> {
-                    val nameDecl = specifier.name
-                    name =
-                        if (nameDecl is CPPASTQualifiedName) {
-                            // For some reason the legacy type system does not keep the language
-                            // specific namespace delimiters, and for backwards compatibility, we
-                            // are keeping this behaviour (for now).
-                            name.replace("::", ".")
-                        } else {
-                            name
-                        }
-
                     TypeParser.createFrom(name, true, this)
                 }
                 is IASTCompositeTypeSpecifier -> {

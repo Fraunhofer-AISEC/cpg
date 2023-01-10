@@ -28,10 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -99,9 +97,9 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // Without FunctionPointerType, we cannot resolve function pointers
         val fptrType = reference.type as? FunctionPointerType ?: return null
 
-        var functionName = reference.name
+        var functionName = reference.name.localName
         val matcher =
-            Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.name)
+            Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(functionName)
         if (matcher.matches()) {
             val cls = matcher.group("class")
             functionName = matcher.group("function")
@@ -116,11 +114,11 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         return handleUnknownFunction(
             if (containingClass != null) {
-                recordMap[containingClass.typeName]
+                recordMap[containingClass.name]
             } else {
                 null
             },
-            functionName,
+            reference.language.parseName(functionName),
             fptrType
         )
     }
@@ -130,7 +128,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         parent: Node?,
         current: Node
     ) {
-        var language = current.language
+        val language = current.language
 
         if (current !is DeclaredReferenceExpression || current is MemberExpression) return
         if (
@@ -167,10 +165,10 @@ open class VariableUsageResolver : SymbolResolverPass() {
             refersTo == null &&
                 !current.isStaticAccess &&
                 recordDeclType != null &&
-                recordDeclType.typeName in recordMap
+                recordDeclType.name in recordMap
         ) {
             // Maybe we are referring to a field instead of a local var
-            if (language != null && language.namespaceDelimiter in current.name) {
+            if (language != null && language.namespaceDelimiter in current.name.toString()) {
                 recordDeclType = getEnclosingTypeOf(current)
             }
             val field = resolveMember(recordDeclType, current)
@@ -181,7 +179,11 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         // TODO: we need to do proper scoping (and merge it with the code above), but for now
         // this just enables CXX static fields
-        if (refersTo == null && language != null && language.namespaceDelimiter in current.name) {
+        if (
+            refersTo == null &&
+                language != null &&
+                language.namespaceDelimiter in current.name.toString()
+        ) {
             recordDeclType = getEnclosingTypeOf(current)
             val field = resolveMember(recordDeclType, current)
             if (field != null) {
@@ -219,7 +221,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 java.lang.String.join(language.namespaceDelimiter, path.subList(0, path.size - 1)),
                 true
             )*/
-            val parentName = Util.getParentName(language, current.name)
+            val parentName = (current.name.parent ?: current.name).toString()
             return TypeParser.createFrom(parentName, language)
         } else {
             return UnknownType.getUnknownType()
@@ -234,11 +236,11 @@ open class VariableUsageResolver : SymbolResolverPass() {
             val base = current.base as DeclaredReferenceExpression
             if (
                 current.language is HasSuperClasses &&
-                    base.name == (current.language as HasSuperClasses).superclassKeyword
+                    base.name.toString() == (current.language as HasSuperClasses).superClassKeyword
             ) {
                 if (curClass != null && curClass.superClasses.isNotEmpty()) {
                     val superType = curClass.superClasses[0]
-                    val superRecord = recordMap[superType.typeName]
+                    val superRecord = recordMap[superType.name]
                     if (superRecord == null) {
                         log.error(
                             "Could not find referring super type ${superType.typeName} for ${curClass.name} in the record map. Will set the super type to java.lang.Object"
@@ -272,20 +274,18 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 base.refersTo = baseTarget
             }
             if (baseTarget is EnumDeclaration) {
-                val name = current.name
-                val memberTarget = baseTarget.entries.firstOrNull { it.name == name }
+                val memberTarget =
+                    baseTarget.entries.firstOrNull { it.name.lastPartsMatch(current.name) }
                 if (memberTarget != null) {
                     current.refersTo = memberTarget
                     return
                 }
             } else if (baseTarget is RecordDeclaration) {
                 var baseType = TypeParser.createFrom(baseTarget.name, baseTarget.language)
-                if (baseType.typeName !in recordMap) {
+                if (baseType.name !in recordMap) {
                     val containingT = baseType
                     val fqnResolvedType =
-                        recordMap.keys.firstOrNull {
-                            it.endsWith("." + containingT.name)
-                        } // TODO: Is the "." correct here for all languages?
+                        recordMap.keys.firstOrNull { it.lastPartsMatch(containingT.name) }
                     if (fqnResolvedType != null) {
                         baseType = TypeParser.createFrom(fqnResolvedType, baseTarget.language)
                     }
@@ -295,8 +295,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
             }
         }
         var baseType = current.base.type
-        if (baseType.typeName !in recordMap) {
-            val fqnResolvedType = recordMap.keys.firstOrNull { it.endsWith("." + baseType.name) }
+        if (baseType.name !in recordMap) {
+            val fqnResolvedType = recordMap.keys.firstOrNull { it.lastPartsMatch(baseType.name) }
             if (fqnResolvedType != null) {
                 baseType = TypeParser.createFrom(fqnResolvedType, baseType.language)
             }
@@ -313,8 +313,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // check if this refers to an enum
         return if (reference.type in enumMap) {
             enumMap[reference.type]
-        } else if (reference.type.typeName in recordMap) {
-            recordMap[reference.type.typeName]
+        } else if (reference.type.name in recordMap) {
+            recordMap[reference.type.name]
         } else {
             null
         }
@@ -329,23 +329,22 @@ open class VariableUsageResolver : SymbolResolverPass() {
             // this in the call resolver instead
             return null
         }
-        val simpleName = Util.getSimpleName(reference.language, reference.name)
         var member: FieldDeclaration? = null
-        if (containingClass !is UnknownType && containingClass.typeName in recordMap) {
+        if (containingClass !is UnknownType && containingClass.name in recordMap) {
             member =
-                recordMap[containingClass.typeName]!!
+                recordMap[containingClass.name]!!
                     .fields
-                    .filter { it.name == simpleName }
+                    .filter { it.name.lastPartsMatch(reference.name) }
                     .map { it.definition }
                     .firstOrNull()
         }
         if (member == null) {
             member =
                 superTypesMap
-                    .getOrDefault(containingClass.typeName, listOf())
-                    .mapNotNull { recordMap[it.typeName] }
+                    .getOrDefault(containingClass.name, listOf())
+                    .mapNotNull { recordMap[it.name] }
                     .flatMap { it.fields }
-                    .filter { it.name == simpleName }
+                    .filter { it.name.lastPartsMatch(reference.name) }
                     .map { it.definition }
                     .firstOrNull()
         }
@@ -355,13 +354,13 @@ open class VariableUsageResolver : SymbolResolverPass() {
     }
 
     // TODO(oxisto): Move to inference class
-    private fun handleUnknownField(base: Type, name: String, type: Type): FieldDeclaration? {
+    private fun handleUnknownField(base: Type, name: Name, type: Type): FieldDeclaration? {
         // unwrap a potential pointer-type
         if (base is PointerType) {
             return handleUnknownField(base.elementType, name, type)
         }
 
-        if (base.typeName !in recordMap) {
+        if (base.name !in recordMap) {
             // No matching record in the map? If we should infer it, we do so, otherwise we stop.
             if (config?.inferenceConfiguration?.inferRecords != true) return null
 
@@ -374,10 +373,10 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 }
             val record = base.startInference().inferRecordDeclaration(base, currentTU, kind)
             // update the record map
-            if (record != null) recordMap[base.typeName] = record
+            if (record != null) recordMap[base.name] = record
         }
 
-        val recordDeclaration = recordMap[base.typeName]
+        val recordDeclaration = recordMap[base.name]
         if (recordDeclaration == null) {
             log.error(
                 "There is no matching record in the record map. Can't identify which field is used."
@@ -385,14 +384,14 @@ open class VariableUsageResolver : SymbolResolverPass() {
             return null
         }
 
-        val target = recordDeclaration.fields.firstOrNull { it.name == name }
+        val target = recordDeclaration.fields.firstOrNull { it.name.lastPartsMatch(name) }
 
         return if (target != null) {
             target
         } else {
             val declaration =
                 recordDeclaration.newFieldDeclaration(
-                    name,
+                    name.localName,
                     type,
                     listOf<String>(),
                     "",
@@ -414,7 +413,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
      */
     private fun handleUnknownFunction(
         declarationHolder: RecordDeclaration?,
-        name: String,
+        name: Name,
         fctPtrType: FunctionPointerType
     ): FunctionDeclaration {
         // Try to find the function or method in the list of existing functions.

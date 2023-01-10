@@ -39,7 +39,7 @@ import kotlin.reflect.KClass
  */
 class TestLanguage : Language<TestLanguageFrontend>() {
     override val fileExtensions: List<String> = listOf()
-    override val namespaceDelimiter: String = "."
+    override val namespaceDelimiter: String = "::"
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
 
     override fun newFrontend(

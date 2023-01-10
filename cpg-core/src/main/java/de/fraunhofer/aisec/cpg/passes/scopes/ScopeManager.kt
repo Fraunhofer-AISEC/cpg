@@ -65,7 +65,7 @@ class ScopeManager : ScopeProvider {
     private val scopeMap: MutableMap<Node?, Scope> = IdentityHashMap()
 
     /** A lookup map for each scope and its associated FQN. */
-    private val fqnScopeMap: MutableMap<String, NameScope> = IdentityHashMap()
+    private val fqnScopeMap: MutableMap<String, NameScope> = mutableMapOf()
 
     /** The currently active scope. */
     var currentScope: Scope? = null
@@ -88,7 +88,7 @@ class ScopeManager : ScopeProvider {
         get() = this.firstScopeOrNull { it is RecordScope } != null
 
     val globalScope: GlobalScope?
-        get() = this.firstScopeIsInstanceOrNull()
+        get() = scopeMap[null] as? GlobalScope
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: CompoundStatement?
@@ -103,10 +103,10 @@ class ScopeManager : ScopeProvider {
     val currentTypedefs: Collection<TypedefDeclaration>
         get() = this.getCurrentTypedefs(currentScope)
 
-    val currentNamePrefix: String
+    val currentNamespace: Name?
         get() {
             val namedScope = this.firstScopeIsInstanceOrNull<NameScope>()
-            return if (namedScope is NameScope) namedScope.namePrefix else ""
+            return if (namedScope is NameScope) namedScope.name else null
         }
 
     init {
@@ -124,11 +124,7 @@ class ScopeManager : ScopeProvider {
      * @param toMerge The scope managers to merge into this one
      */
     fun mergeFrom(toMerge: Collection<ScopeManager>) {
-        val globalScopes =
-            toMerge
-                .map { s: ScopeManager -> s.scopeMap[null] }
-                .filter { obj: Scope? -> GlobalScope::class.java.isInstance(obj) }
-                .map { obj: Scope? -> GlobalScope::class.java.cast(obj) }
+        val globalScopes = toMerge.mapNotNull { it.globalScope }
         val currGlobalScope = scopeMap[null]
         if (currGlobalScope !is GlobalScope) {
             LOGGER.error("Scope for null node is not a GlobalScope or is null")
@@ -201,7 +197,7 @@ class ScopeManager : ScopeProvider {
         if (scope is NameScope) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
             // nodes have a FQN as their name.
-            fqnScopeMap[scope.astNode!!.name] = scope
+            fqnScopeMap[scope.astNode!!.name.toString()] = scope
         }
         currentScope?.let {
             it.children.add(scope)
@@ -239,18 +235,8 @@ class ScopeManager : ScopeProvider {
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
                     is IfStatement -> ValueDeclarationScope(nodeToScope)
                     is CatchClause -> ValueDeclarationScope(nodeToScope)
-                    is RecordDeclaration ->
-                        RecordScope(
-                            nodeToScope,
-                            currentNamePrefix,
-                            nodeToScope.language!!.namespaceDelimiter
-                        )
-                    is TemplateDeclaration ->
-                        TemplateScope(
-                            nodeToScope,
-                            currentNamePrefix,
-                            nodeToScope.language!!.namespaceDelimiter
-                        )
+                    is RecordDeclaration -> RecordScope(nodeToScope)
+                    is TemplateDeclaration -> TemplateScope(nodeToScope)
                     is TryStatement -> TryScope(nodeToScope)
                     is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
                     else -> {
@@ -266,7 +252,7 @@ class ScopeManager : ScopeProvider {
         // push the new scope
         if (newScope != null) {
             pushScope(newScope)
-            newScope.scopedName = currentNamePrefix
+            newScope.scopedName = currentNamespace?.toString()
         } else {
             currentScope = scopeMap[nodeToScope]
         }
@@ -289,9 +275,7 @@ class ScopeManager : ScopeProvider {
      */
     private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
         val existingScope =
-            currentScope?.children?.firstOrNull {
-                it is NameScope && it.scopedName == nodeToScope.name
-            }
+            currentScope?.children?.firstOrNull { it is NameScope && it.name == nodeToScope.name }
 
         return if (existingScope != null) {
             // update the AST node to this namespace declaration
@@ -305,7 +289,7 @@ class ScopeManager : ScopeProvider {
             // does not need to push a new scope
             null
         } else {
-            NameScope(nodeToScope, currentNamePrefix, nodeToScope.language!!.namespaceDelimiter)
+            NameScope(nodeToScope)
         }
     }
 
@@ -455,20 +439,6 @@ class ScopeManager : ScopeProvider {
         return scopeMap.values.filter(predicate).distinct()
     }
 
-    /**
-     * This function filters scopes according to [predicate] and makes them unique according to
-     * [uniqueProperty].
-     *
-     * @param predicate the search predicate
-     * @param uniqueProperty the unique property to run a distinct filter on
-     */
-    fun <T> filterScopesDistinctBy(
-        predicate: (Scope) -> Boolean,
-        uniqueProperty: (Scope) -> T
-    ): List<Scope> {
-        return scopeMap.values.filter(predicate).distinctBy(uniqueProperty)
-    }
-
     /** This function returns the [Scope] associated with a node. */
     fun lookupScope(node: Node): Scope? {
         return scopeMap[node]
@@ -499,7 +469,7 @@ class ScopeManager : ScopeProvider {
             val labelStatement = getLabelStatement(breakStatement.label)
             if (labelStatement != null) {
                 val scope = lookupScope(labelStatement.subStatement)
-                (scope as Breakable?)!!.addBreakStatement(breakStatement)
+                (scope as Breakable?)?.addBreakStatement(breakStatement)
             }
         }
     }
@@ -524,7 +494,7 @@ class ScopeManager : ScopeProvider {
             val labelStatement = getLabelStatement(continueStatement.label)
             if (labelStatement != null) {
                 val scope = lookupScope(labelStatement.subStatement)
-                (scope as Continuable?)!!.addContinueStatement(continueStatement)
+                (scope as Continuable?)?.addContinueStatement(continueStatement)
             }
         }
     }
@@ -582,7 +552,7 @@ class ScopeManager : ScopeProvider {
         scope.addTypedef(typedef)
 
         if (scope.astNode == null) {
-            lang!!.currentTU!!.addTypedef(typedef)
+            lang?.currentTU?.addTypedef(typedef)
         } else {
             scope.astNode?.addTypedef(typedef)
         }
@@ -627,7 +597,9 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = currentScope
     ): ValueDeclaration? {
         return resolve<ValueDeclaration>(scope) {
-                if (it.name == ref.name) {
+                if (
+                    it.name.lastPartsMatch(ref.name)
+                ) { // TODO: This place is likely to make things fail
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
                     if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
@@ -643,7 +615,7 @@ class ScopeManager : ScopeProvider {
                             return@resolve true
                         }
                     } else {
-                        return@resolve true
+                        return@resolve it !is FunctionDeclaration
                     }
                 }
 
@@ -665,26 +637,22 @@ class ScopeManager : ScopeProvider {
     ): List<FunctionDeclaration> {
         var s = scope
 
-        val fqn = call.fqn
-
         // First, we need to check, whether we have some kind of scoping.
-        if (
-            call.language != null && fqn != null && fqn.contains(call.language!!.namespaceDelimiter)
-        ) {
+        if (call.language != null && call.name.parent != null) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = fqn.substring(0, fqn.lastIndexOf(call.language!!.namespaceDelimiter))
+            val scopeName = call.name.parent
 
             // TODO: proper scope selection
 
             // this is a scoped call. we need to explicitly jump to that particular scope
-            val scopes = filterScopes { (it is NameScope && it.scopedName == scopeName) }
+            val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
                     LOGGER.error(
                         "Could not find the scope {} needed to resolve the call {}. Falling back to the current scope",
                         scopeName,
-                        call.fqn
+                        call.name
                     )
                     currentScope
                 } else {
@@ -692,13 +660,15 @@ class ScopeManager : ScopeProvider {
                 }
         }
 
-        return resolve(s) { it.name == call.name && it.hasSignature(call.signature) }
+        return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return resolve(currentScope, true) { f: FunctionDeclaration -> f.name == call.name }
+        return resolve(currentScope, true) { f: FunctionDeclaration ->
+            f.name.lastPartsMatch(call.name)
+        }
     }
 
     /**
@@ -769,7 +739,9 @@ class ScopeManager : ScopeProvider {
         call: CallExpression,
         scope: Scope? = currentScope
     ): List<FunctionTemplateDeclaration> {
-        return resolve(scope, true) { c: FunctionTemplateDeclaration -> c.name == call.name }
+        return resolve(scope, true) { c: FunctionTemplateDeclaration ->
+            c.name.lastPartsMatch(call.name)
+        }
     }
 
     /**
@@ -779,8 +751,9 @@ class ScopeManager : ScopeProvider {
      * @param name the name
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(scope: Scope, name: String): RecordDeclaration? {
-        return resolve<RecordDeclaration>(scope, true) { it.name == name }.firstOrNull()
+    fun getRecordForName(scope: Scope, name: Name): RecordDeclaration? {
+        return resolve<RecordDeclaration>(scope, true) { it.name.lastPartsMatch(name) }
+            .firstOrNull()
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */
@@ -791,7 +764,7 @@ class ScopeManager : ScopeProvider {
         val num = AtomicInteger()
         val typeCache = TypeManager.getInstance().typeCache
         node.accept(
-            { x: Node? -> Strategy.AST_FORWARD(x!!) },
+            { Strategy.AST_FORWARD(it) },
             object : IVisitor<Node?>() {
                 override fun visit(n: Node) {
                     if (n is HasType) {
@@ -810,8 +783,7 @@ class ScopeManager : ScopeProvider {
         LOGGER.debug("Activated {} nodes for {}", num, node.name)
 
         // For some nodes it may happen that they are not reachable via AST, but we still need to
-        // set
-        // their type to the requested value
+        // set their type to the requested value
         typeCache.forEach { (n: HasType, types: List<Type>) ->
             types.forEach(
                 Consumer { t: Type? ->

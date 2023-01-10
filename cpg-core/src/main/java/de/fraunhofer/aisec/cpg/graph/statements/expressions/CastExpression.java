@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -95,24 +96,29 @@ public class CastExpression extends Expression implements TypeListener {
   }
 
   public void setCastOperator(int operatorCode) {
+    String localName = null;
     switch (operatorCode) {
       case 0:
-        setName("cast");
+        localName = "cast";
         break;
       case 1:
-        setName("dynamic_cast");
+        localName = "dynamic_cast";
         break;
       case 2:
-        setName("static_cast");
+        localName = "static_cast";
         break;
       case 3:
-        setName("reinterpret_cast");
+        localName = "reinterpret_cast";
         break;
       case 4:
-        setName("const_cast");
+        localName = "const_cast";
         break;
       default:
         log.error("unknown operator {}", operatorCode);
+    }
+
+    if (localName != null) {
+      setName(new Name(localName, null, this.getLanguage()));
     }
   }
 
@@ -125,9 +131,7 @@ public class CastExpression extends Expression implements TypeListener {
       return false;
     }
     CastExpression that = (CastExpression) o;
-    return Objects.equals(expression, that.expression)
-        && Objects.equals(castType, that.castType)
-        && Objects.equals(this.getName(), that.getName());
+    return Objects.equals(expression, that.expression) && Objects.equals(castType, that.castType);
   }
 
   @Override

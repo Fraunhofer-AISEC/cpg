@@ -36,24 +36,22 @@ abstract class SymbolResolverPass : Pass() {
     protected lateinit var walker: SubgraphWalker.ScopedWalker
     lateinit var currentTU: TranslationUnitDeclaration
 
-    val recordMap = mutableMapOf<String, RecordDeclaration>()
+    val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enumMap = mutableMapOf<Type, EnumDeclaration>()
     protected val templateList = mutableListOf<TemplateDeclaration>()
-    protected val superTypesMap = mutableMapOf<String, List<Type>>()
+    protected val superTypesMap = mutableMapOf<Name, List<Type>>()
 
     /** Maps the name of the type of record declarations to its declaration. */
     protected fun findRecords(node: Node) {
         if (node is RecordDeclaration) {
-            // The type name is not the same as the node's name! So, we have to be careful when
-            // using the map!
-            val type = TypeParser.createFrom(node.name, node.language)
-            recordMap.putIfAbsent(type.typeName, node)
+            recordMap.putIfAbsent(node.name, node)
         }
     }
 
     /** Maps the type of enums to its declaration. */
     protected fun findEnums(node: Node) {
         if (node is EnumDeclaration) {
+            // TODO: Use the name instead of the type.
             val type = TypeParser.createFrom(node.name, node.language)
             enumMap.putIfAbsent(type, node)
         }
@@ -66,20 +64,9 @@ abstract class SymbolResolverPass : Pass() {
         }
     }
 
-    /**
-     * Checks if the function has the given [name], and returnType and signature specified in
-     * [fctPtrType].
-     */
-    protected fun FunctionDeclaration.matches(
-        name: String,
-        fctPtrType: FunctionPointerType
-    ): Boolean {
-        return this.matches(name, fctPtrType.returnType, fctPtrType.parameters)
-    }
-
     /** Checks if the function has the given [name], [returnType] and [signature] */
     protected fun FunctionDeclaration.matches(
-        name: String,
+        name: Name,
         returnType: Type,
         signature: List<Type?>
     ): Boolean {
@@ -90,7 +77,9 @@ abstract class SymbolResolverPass : Pass() {
                 // TODO(oxisto): support multiple return types
                 this.returnTypes[0]
             }
-        return this.name == name && thisReturnType == returnType && this.hasSignature(signature)
+        return this.name.lastPartsMatch(name) &&
+            thisReturnType == returnType &&
+            this.hasSignature(signature)
     }
 
     protected fun collectSupertypes() {
@@ -106,14 +95,16 @@ abstract class SymbolResolverPass : Pass() {
         val language = reference.language
 
         return language is HasSuperClasses &&
-            reference.name.matches(
-                Regex(
-                    "(?<class>.+" +
-                        Regex.escape(language.namespaceDelimiter) +
-                        ")?" +
-                        (reference.language as HasSuperClasses).superclassKeyword
+            reference.name
+                .toString()
+                .matches(
+                    Regex(
+                        "(?<class>.+" +
+                            Regex.escape(language.namespaceDelimiter) +
+                            ")?" +
+                            (reference.language as HasSuperClasses).superClassKeyword
+                    )
                 )
-            )
     }
 
     override fun cleanup() {

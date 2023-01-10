@@ -168,7 +168,8 @@ open class TypeResolver : Pass() {
                 if (subType.isFirstOrderType) {
                     typeState.keys
                 } else {
-                    typeState[subType.root]!!
+                    typeState.computeIfAbsent(subType.root, ::mutableListOf)
+                    // typeState[subType.root]!!
                 }
             val unique = trackedTypes.firstOrNull { it == subType }
             // TODO Why do we only take the first one even if we don't add it?
@@ -227,7 +228,7 @@ open class TypeResolver : Pass() {
     fun handle(node: Node) {
         if (node is RecordDeclaration) {
             for (t in typeState.keys) {
-                if (t.typeName == node.name && t is ObjectType) {
+                if (t.name == node.name && t is ObjectType) {
                     // The node is the class of the type t
                     t.recordDeclaration = node
                 }

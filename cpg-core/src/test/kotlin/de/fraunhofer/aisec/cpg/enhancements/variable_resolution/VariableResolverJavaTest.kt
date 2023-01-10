@@ -189,7 +189,7 @@ internal class VariableResolverJavaTest : BaseTest() {
                     .map(Path::toFile)
             val result = analyze(fileNames, topLevel, true)
 
-            val calls = result.calls { it.name == "printLog" }
+            val calls = result.calls { it.name.localName == "printLog" }
             val records = result.records
 
             // Extract all Variable declarations and field declarations for matching
@@ -202,12 +202,12 @@ internal class VariableResolverJavaTest : BaseTest() {
 
             // Inner class and its fields
             innerClass = records["variables_extended.ScopeVariables.InnerClass"]
-            implicitOuterThis = innerClass.fields["ScopeVariables.this"]
+            implicitOuterThis = innerClass.fields["this\$ScopeVariables"]
             innerVarName = innerClass.fields["varName"]
             innerStaticVarName = innerClass.fields["staticVarName"]
             function1Receiver = innerClass.methods["function1"]?.receiver
             function2Receiver = innerClass.methods["function2"]?.receiver
-            innerImpOuter = innerClass.fields["ScopeVariables.this"]
+            innerImpOuter = innerClass.fields["this\$ScopeVariables"]
             main = outerClass.methods["main"]
             outerFunction1 = outerClass.methods["function1"]
             forStatements = outerFunction1.allChildren()

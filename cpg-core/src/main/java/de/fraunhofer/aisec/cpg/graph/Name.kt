@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
-import kotlin.reflect.KProperty
 
 /**
  * This class represents anything that can have a "Name". In the simplest case it only represents a
@@ -35,29 +36,36 @@ import kotlin.reflect.KProperty
  */
 class Name(
     /** The local name (sometimes also called simple name) without any namespace information. */
-    var localName: String,
-    /** The parent name, e.g,. the namespace this name lives in. */
-    var parent: Name? = null,
+    val localName: String,
+    /** The parent name, e.g., the namespace this name lives in. */
+    val parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
     val delimiter: String = "."
-) {
+) : Cloneable, Comparable<Name>, CharSequence {
+    constructor(
+        localName: String,
+        parent: Name? = null,
+        language: Language<out LanguageFrontend>?
+    ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
+
+    /**
+     * The full string representation of this name. Since [localName] and [parent] are immutable,
+     * this is basically a cache for [toString]. Otherwise, we would need to call [toString] a lot
+     * of times, to implement the necessary functions for [CharSequence].
+     */
+    private val fullName: String by lazy {
+        (if (parent != null) parent.toString() + delimiter else "") + localName
+    }
+
+    public override fun clone(): Name = Name(localName, parent?.clone(), delimiter)
+
     /**
      * Returns the string representation of this name using a fully qualified name notation with the
      * specified [delimiter].
      */
-    override fun toString() =
-        (if (parent != null) parent.toString() + delimiter else "") + localName
+    override fun toString() = fullName
 
-    /** Implements kotlin propety delegation for a string getter. Returns the local name. */
-    operator fun getValue(node: Node, property: KProperty<*>) = localName
-
-    /**
-     * Implements kotlin property delegation for a string setter. Sets the local name to the
-     * supplied string.
-     */
-    operator fun setValue(node: Node, property: KProperty<*>, s: String) {
-        localName = s
-    }
+    override val length = fullName.length
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -68,30 +76,67 @@ class Name(
             delimiter == other.delimiter
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(localName, parent, delimiter)
-    }
+    override fun get(index: Int) = fullName[index]
 
-    companion object {
-        /**
-         * Tries to parse the given fully qualified name using the specified [delimiter] into a
-         * [Name].
-         */
-        fun parse(fqn: String, delimiter: String = "."): Name {
-            val parts = fqn.split(delimiter)
+    override fun hashCode() = Objects.hash(localName, parent, delimiter)
 
-            var name: Name? = null
-            for (part in parts) {
-                name = Name(part, name, delimiter)
-            }
+    override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
+        fullName.subSequence(startIndex, endIndex)
 
-            // Actually this should not occur, but otherwise the compiler won't let us return a
-            // non-null Name
-            if (name == null) {
-                return Name(fqn, null, delimiter)
-            }
+    /**
+     * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
+     * has no parent anymore).
+     */
+    fun lastPartsMatch(ending: Name): Boolean =
+        this.localName == ending.localName &&
+            (ending.parent == null ||
+                this.parent != null && this.parent.lastPartsMatch(ending.parent))
 
-            return name
+    /**
+     * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
+     * has no parent anymore).
+     */
+    fun lastPartsMatch(ending: String) = this.lastPartsMatch(parseName(ending, this.delimiter))
+
+    /** This function appends a string to the local name and returns a new [Name]. */
+    fun append(s: String) = Name(localName + s, parent, delimiter)
+
+    /** Compare names according to the string representation of the [fullName]. */
+    override fun compareTo(other: Name) = fullName.compareTo(other.toString())
+}
+
+/**
+ * A small utility extension function that uses the namespace information in a [Language] to parse a
+ * fully qualified name.
+ */
+fun Language<out LanguageFrontend>?.parseName(fqn: CharSequence) =
+    parseName(fqn, this?.namespaceDelimiter ?: ".")
+
+/** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
+fun parseName(fqn: CharSequence, delimiter: String = ".", vararg splitDelimiters: String): Name {
+    val parts = fqn.split(delimiter, *splitDelimiters)
+
+    var name: Name? = null
+    for (part in parts) {
+        val localName = part.replace(")", "").replace("*", "")
+        if (localName.isNotEmpty()) {
+            name = Name(localName, name, delimiter)
         }
     }
+
+    // Actually this should not occur, but otherwise the compiler won't let us return a
+    // non-null Name
+    if (name == null) {
+        return Name(fqn.toString(), null, delimiter)
+    }
+
+    return name
 }
+
+/** Returns a new [Name] based on the [localName] and the current name as parent. */
+fun Name?.fqn(localName: String) =
+    if (this == null) {
+        Name(localName)
+    } else {
+        Name(localName, this, this.delimiter)
+    }

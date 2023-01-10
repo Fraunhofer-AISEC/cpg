@@ -28,30 +28,15 @@ package de.fraunhofer.aisec.cpg.passes.scopes
 import de.fraunhofer.aisec.cpg.graph.Node
 
 /**
- * A scope which acts as a namespace with a certain prefix. This could be a package or other
- * structural elements, like a class. In the latter case, the derived [RecordScope] should be used.
+ * A scope which acts as a namespace with a certain name, which is prefixed to all local names
+ * declared in it. This could be a package or other structural elements, like a class. In the latter
+ * case, the derived [RecordScope] should be used.
  */
-open class NameScope(node: Node, currentPrefix: String, var delimiter: String) :
-    StructureDeclarationScope(node) {
-    var namePrefix: String = ""
+open class NameScope(node: Node) : StructureDeclarationScope(node) {
 
     init {
-        if (currentPrefix.isNotEmpty()) {
-            var nodeName = node.name
-            // If the name already contains some form of prefix we have to remove it.
-            nodeName =
-                if (nodeName.contains(delimiter))
-                    nodeName.substring(nodeName.lastIndexOf(delimiter) + delimiter.length)
-                else nodeName
-            namePrefix = currentPrefix + delimiter + nodeName
-        } else {
-            namePrefix = node.name
-        }
-
         astNode = node
+        // Set the name so that we can use it as a namespace later
+        name = node.name
     }
-
-    // Split scoped named by delimiter
-    val simpleName: String?
-        get() = scopedName?.split(delimiter)?.lastOrNull { it.isNotEmpty() }
 }

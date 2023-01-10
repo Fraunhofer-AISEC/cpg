@@ -76,7 +76,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val tag = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
         // it contains an Identifier node, we map this into the name
-        this.frontend.getIdentifierName(node).let { tag.name = "</$it>" }
+        this.frontend.getIdentifierName(node).let { tag.name = Name("</$it>") }
 
         return tag
     }
@@ -91,7 +91,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val tag = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
         // it contains an Identifier node, we map this into the name
-        this.frontend.getIdentifierName(node).let { tag.name = "<$it>" }
+        this.frontend.getIdentifierName(node).let { tag.name = Name("<$it>") }
 
         // and a container named JsxAttributes, with JsxAttribute nodes
         tag.expressions =
@@ -215,28 +215,24 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 newDeclaredReferenceExpression(
                     memberExpression.name,
                     memberExpression.type,
-                    memberExpression.name
+                    memberExpression.name.toString()
                 )
 
-            // TODO: fqn - how?
-            val fqn = memberExpression.name
             call =
                 newMemberCallExpression(
-                    memberExpression.name,
-                    fqn,
+                    memberExpression.name.localName,
+                    memberExpression.name.toString(),
                     memberExpression.base,
                     member,
                     ".",
                     this.frontend.getCodeFromRawNode(node)
                 )
         } else {
-            val name = this.frontend.getIdentifierName(node)
-
             // TODO: fqn - how?
-            val fqn = name
+            val fqn = this.frontend.getIdentifierName(node)
             // regular function call
 
-            val ref = newDeclaredReferenceExpression(name)
+            val ref = newDeclaredReferenceExpression(fqn)
 
             call = newCallExpression(ref, fqn, this.frontend.getCodeFromRawNode(node), false)
         }

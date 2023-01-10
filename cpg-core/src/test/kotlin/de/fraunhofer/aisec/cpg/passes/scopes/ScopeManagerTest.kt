@@ -117,14 +117,14 @@ internal class ScopeManagerTest : BaseTest() {
             CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), final)
         final.mergeFrom(listOf(s1, s2))
 
-        // in the final scope manager, the should only be one NameScope "A"
-        val scopes = final.filterScopes { it.scopedName == "A" }
+        // in the final scope manager, there should only be one NameScope "A"
+        val scopes = final.filterScopes { it.name.toString() == "A" }
         assertEquals(1, scopes.size)
 
         val scopeA = scopes.firstOrNull() as? NameScope
         assertNotNull(scopeA)
 
-        // should also be able to look-up via the FQN
+        // should also be able to look up via the FQN
         assertEquals(scopeA, final.lookupScope("A"))
 
         // and it should contain both functions from the different file in the same namespace
@@ -138,7 +138,7 @@ internal class ScopeManagerTest : BaseTest() {
         // resolve symbol
         val call =
             frontend.newCallExpression(
-                frontend.newDeclaredReferenceExpression("func1"),
+                frontend.newDeclaredReferenceExpression("A::func1"),
                 "A::func1",
                 null,
                 false
@@ -155,18 +155,18 @@ internal class ScopeManagerTest : BaseTest() {
             CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s)
         s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
 
-        assertEquals("", s.currentNamePrefix)
+        assertNull(s.currentNamespace)
 
         val namespaceA = frontend.newNamespaceDeclaration("A", null)
         s.enterScope(namespaceA)
 
-        assertEquals("A", s.currentNamePrefix)
+        assertEquals("A", s.currentNamespace.toString())
 
-        // nested namespace A::B. the name needs to be a FQN
-        val namespaceB = frontend.newNamespaceDeclaration("A::B", null)
+        // nested namespace A::B
+        val namespaceB = frontend.newNamespaceDeclaration("B", null)
         s.enterScope(namespaceB)
 
-        assertEquals("A::B", s.currentNamePrefix)
+        assertEquals("A::B", s.currentNamespace.toString())
 
         val func = frontend.newFunctionDeclaration("func", null)
         s.addDeclaration(func)

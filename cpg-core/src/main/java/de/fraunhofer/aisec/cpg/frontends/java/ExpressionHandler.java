@@ -52,7 +52,6 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -448,8 +447,19 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     Type type = parseType(this, resolvedValueDeclaration.getQualifiedName());
 
+    String name = thisExpr.toString();
+
+    // If the typeName is specified, then this a "qualified this" and we need to handle it
+    // carefully. Basically, we are simulating the behaviour of the java compiler, in which the
+    // qualified this refers to a hidden field called "this$n", where n is the n'th enclosing outer
+    // class. Since we do not want to count, we replace the number with the simple class name.
+    var typeName = thisExpr.getTypeName();
+    if (typeName.isPresent()) {
+      name = "this$" + typeName.get().getIdentifier();
+    }
+
     DeclaredReferenceExpression thisExpression =
-        newDeclaredReferenceExpression(this, thisExpr.toString(), type, thisExpr.toString());
+        newDeclaredReferenceExpression(this, name, type, thisExpr.toString());
     frontend.setCodeAndLocation(thisExpression, thisExpr);
 
     return thisExpression;
@@ -559,7 +569,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       var recordDeclaration = this.frontend.getScopeManager().getCurrentRecord();
 
-      if (recordDeclaration != null && Objects.equals(recordDeclaration.getName(), name)) {
+      if (recordDeclaration != null && recordDeclaration.getName().lastPartsMatch(name)) {
         declaredReferenceExpression.setRefersTo(recordDeclaration);
       }
 
@@ -692,7 +702,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       // Or if the base is a reference to an import
       if (base instanceof DeclaredReferenceExpression
-          && this.frontend.getQualifiedNameFromImports(base.getName()) != null) {
+          && this.frontend.getQualifiedNameFromImports(base.getName().toString()) != null) {
         isStatic = true;
       }
 
@@ -721,8 +731,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         }
 
         callExpression =
-            newStaticCallExpression(
-                this, name, qualifiedName, methodCallExpr.toString(), targetClass);
+            newStaticCallExpression(this, qualifiedName, methodCallExpr.toString(), targetClass);
       }
     } else {
       var ref = newDeclaredReferenceExpression(this, name);

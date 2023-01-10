@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.graph.Name;
 import java.util.Objects;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -50,26 +51,29 @@ public class PointerType extends Type implements SecondOrderType {
   public PointerType(Type elementType, PointerOrigin pointerOrigin) {
     super();
     this.setLanguage(elementType.getLanguage());
+
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      this.setName(elementType.getName() + "[]");
-      this.pointerOrigin = PointerOrigin.ARRAY;
+      this.setName(elementType.getName().append("[]"));
     } else {
-      this.setName(elementType.getName() + "*");
-      this.pointerOrigin = PointerOrigin.POINTER;
+      this.setName(elementType.getName().append("*"));
     }
+
+    this.pointerOrigin = pointerOrigin;
     this.elementType = elementType;
   }
 
   public PointerType(Type type, Type elementType, PointerOrigin pointerOrigin) {
     super(type);
     this.setLanguage(elementType.getLanguage());
+
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      this.setName(elementType.getName() + "[]");
+      this.setName(elementType.getName().append("[]"));
     } else {
-      this.setName(elementType.getName() + "*");
+      this.setName(elementType.getName().append("*"));
     }
-    this.elementType = elementType;
+
     this.pointerOrigin = pointerOrigin;
+    this.elementType = elementType;
   }
 
   /**
@@ -81,6 +85,7 @@ public class PointerType extends Type implements SecondOrderType {
     if (origin == null) {
       origin = PointerOrigin.ARRAY;
     }
+
     return new PointerType(this, origin);
   }
 
@@ -97,11 +102,19 @@ public class PointerType extends Type implements SecondOrderType {
     if (this.getElementType() instanceof PointerType) {
       this.getElementType().refreshNames();
     }
-    if (this.pointerOrigin == PointerOrigin.ARRAY) {
-      this.setName(this.getElementType().getName() + "[]");
+
+    String localName = elementType.getName().getLocalName();
+    if (pointerOrigin == PointerOrigin.ARRAY) {
+      localName += "[]";
     } else {
-      this.setName(this.getElementType().getName() + "*");
+      localName += "*";
     }
+
+    var fullTypeName =
+        new Name(
+            localName, elementType.getName().getParent(), elementType.getName().getDelimiter());
+
+    this.setName(fullTypeName);
   }
 
   @Override

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements
 import com.github.javaparser.utils.Pair
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -68,7 +69,7 @@ internal class JavaVsCppTest : BaseTest() {
 
         val decl = tu.declarations[0]
         assertTrue(decl is RecordDeclaration)
-        assertEquals("Simple", decl.name)
+        assertLocalName("Simple", decl)
         assertEquals(2, decl.methods.size)
         assertEquals("class", decl.kind)
 
