@@ -75,11 +75,11 @@ object TestUtils {
     }
 
     fun <S : Node> findByUniqueName(nodes: Collection<S>, name: String): S {
-        return findByUniquePredicate(nodes) { m: S -> m.name.endsWith(name) }
+        return findByUniquePredicate(nodes) { m: S -> m.name.lastPartsMatch(name) }
     }
 
     fun <S : Node> findByName(nodes: Collection<S>, name: String): Collection<S> {
-        return nodes.filter { m: S -> m.name.endsWith(name) }
+        return nodes.filter { m: S -> m.name.lastPartsMatch(name) }
     }
 
     /**

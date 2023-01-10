@@ -274,7 +274,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 base.refersTo = baseTarget
             }
             if (baseTarget is EnumDeclaration) {
-                val memberTarget = baseTarget.entries.firstOrNull { it.name.endsWith(current.name) }
+                val memberTarget =
+                    baseTarget.entries.firstOrNull { it.name.lastPartsMatch(current.name) }
                 if (memberTarget != null) {
                     current.refersTo = memberTarget
                     return
@@ -284,9 +285,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 if (baseType.name !in recordMap) {
                     val containingT = baseType
                     val fqnResolvedType =
-                        recordMap.keys.firstOrNull {
-                            it.endsWith(containingT.name)
-                        } // TODO: Is the "." correct here for all languages?
+                        recordMap.keys.firstOrNull { it.lastPartsMatch(containingT.name) }
                     if (fqnResolvedType != null) {
                         baseType = TypeParser.createFrom(fqnResolvedType, baseTarget.language)
                     }
@@ -297,7 +296,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
         var baseType = current.base.type
         if (baseType.name !in recordMap) {
-            val fqnResolvedType = recordMap.keys.firstOrNull { it.endsWith(baseType.name) }
+            val fqnResolvedType = recordMap.keys.firstOrNull { it.lastPartsMatch(baseType.name) }
             if (fqnResolvedType != null) {
                 baseType = TypeParser.createFrom(fqnResolvedType, baseType.language)
             }
@@ -335,7 +334,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             member =
                 recordMap[containingClass.name]!!
                     .fields
-                    .filter { it.name.endsWith(reference.name) }
+                    .filter { it.name.lastPartsMatch(reference.name) }
                     .map { it.definition }
                     .firstOrNull()
         }
@@ -345,7 +344,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                     .getOrDefault(containingClass.name, listOf())
                     .mapNotNull { recordMap[it.name] }
                     .flatMap { it.fields }
-                    .filter { it.name.endsWith(reference.name) }
+                    .filter { it.name.lastPartsMatch(reference.name) }
                     .map { it.definition }
                     .firstOrNull()
         }
@@ -385,7 +384,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             return null
         }
 
-        val target = recordDeclaration.fields.firstOrNull { it.name.endsWith(name) }
+        val target = recordDeclaration.fields.firstOrNull { it.name.lastPartsMatch(name) }
 
         return if (target != null) {
             target

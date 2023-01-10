@@ -569,7 +569,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       var recordDeclaration = this.frontend.getScopeManager().getCurrentRecord();
 
-      if (recordDeclaration != null && recordDeclaration.getName().endsWith(name)) {
+      if (recordDeclaration != null && recordDeclaration.getName().lastPartsMatch(name)) {
         declaredReferenceExpression.setRefersTo(recordDeclaration);
       }
 

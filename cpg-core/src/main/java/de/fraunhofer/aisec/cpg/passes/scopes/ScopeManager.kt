@@ -597,7 +597,9 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = currentScope
     ): ValueDeclaration? {
         return resolve<ValueDeclaration>(scope) {
-                if (it.name.endsWith(ref.name)) { // TODO: This place is likely to make things fail
+                if (
+                    it.name.lastPartsMatch(ref.name)
+                ) { // TODO: This place is likely to make things fail
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
                     if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
@@ -658,13 +660,15 @@ class ScopeManager : ScopeProvider {
                 }
         }
 
-        return resolve(s) { it.name.endsWith(call.name) && it.hasSignature(call.signature) }
+        return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return resolve(currentScope, true) { f: FunctionDeclaration -> f.name.endsWith(call.name) }
+        return resolve(currentScope, true) { f: FunctionDeclaration ->
+            f.name.lastPartsMatch(call.name)
+        }
     }
 
     /**
@@ -735,7 +739,9 @@ class ScopeManager : ScopeProvider {
         call: CallExpression,
         scope: Scope? = currentScope
     ): List<FunctionTemplateDeclaration> {
-        return resolve(scope, true) { c: FunctionTemplateDeclaration -> c.name.endsWith(call.name) }
+        return resolve(scope, true) { c: FunctionTemplateDeclaration ->
+            c.name.lastPartsMatch(call.name)
+        }
     }
 
     /**
@@ -746,7 +752,8 @@ class ScopeManager : ScopeProvider {
      * @return the declaration, or null if it does not exist
      */
     fun getRecordForName(scope: Scope, name: Name): RecordDeclaration? {
-        return resolve<RecordDeclaration>(scope, true) { it.name.endsWith(name) }.firstOrNull()
+        return resolve<RecordDeclaration>(scope, true) { it.name.lastPartsMatch(name) }
+            .firstOrNull()
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */

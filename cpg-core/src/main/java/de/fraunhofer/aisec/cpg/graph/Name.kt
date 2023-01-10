@@ -87,15 +87,16 @@ class Name(
      * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
      * has no parent anymore).
      */
-    fun endsWith(ending: Name): Boolean =
+    fun lastPartsMatch(ending: Name): Boolean =
         this.localName == ending.localName &&
-            (ending.parent == null || this.parent != null && this.parent.endsWith(ending.parent))
+            (ending.parent == null ||
+                this.parent != null && this.parent.lastPartsMatch(ending.parent))
 
     /**
      * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
      * has no parent anymore).
      */
-    fun endsWith(ending: String) = this.endsWith(parseName(ending, this.delimiter))
+    fun lastPartsMatch(ending: String) = this.lastPartsMatch(parseName(ending, this.delimiter))
 
     /** This function appends a string to the local name and returns a new [Name]. */
     fun append(s: String) = Name(localName + s, parent, delimiter)

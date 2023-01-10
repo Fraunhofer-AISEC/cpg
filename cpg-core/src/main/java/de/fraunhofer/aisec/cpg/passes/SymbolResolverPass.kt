@@ -77,7 +77,7 @@ abstract class SymbolResolverPass : Pass() {
                 // TODO(oxisto): support multiple return types
                 this.returnTypes[0]
             }
-        return this.name.endsWith(name) &&
+        return this.name.lastPartsMatch(name) &&
             thisReturnType == returnType &&
             this.hasSignature(signature)
     }

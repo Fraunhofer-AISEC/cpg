@@ -67,8 +67,8 @@ internal class NameTest {
     @Test
     fun testEndsWith() {
         val name = parseName("A.B")
-        assertTrue(name.endsWith("B"))
-        assertTrue(name.endsWith("A.B"))
+        assertTrue(name.lastPartsMatch("B"))
+        assertTrue(name.lastPartsMatch("A.B"))
     }
 
     @Test

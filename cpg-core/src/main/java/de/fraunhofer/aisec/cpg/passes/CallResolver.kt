@@ -198,7 +198,7 @@ open class CallResolver : SymbolResolverPass() {
         // but it isn't
         val funcPointer =
             walker.getDeclarationForScope(call) { v ->
-                v.type is FunctionPointerType && v.name.endsWith(call.name)
+                v.type is FunctionPointerType && v.name.lastPartsMatch(call.name)
             }
         if (!funcPointer.isPresent) {
             // function pointers are handled by extra pass
@@ -406,7 +406,7 @@ open class CallResolver : SymbolResolverPass() {
         val name = call.name.localName
         val nameMatches =
             curClass.staticImports.filterIsInstance<FunctionDeclaration>().filter {
-                it.name.endsWith(name)
+                it.name.lastPartsMatch(name)
             }
         return if (nameMatches.isEmpty()) {
             false

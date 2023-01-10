@@ -71,9 +71,9 @@ inline fun <reified T : Node> Node.dfgFrom(): List<T> {
 /** This function returns the *first* node that matches the name on the supplied list of nodes. */
 fun <T : Node> Collection<T>?.byNameOrNull(lookup: String, modifier: SearchModifier): T? {
     return if (modifier == SearchModifier.NONE) {
-        this?.firstOrNull { it.name.endsWith(lookup) }
+        this?.firstOrNull { it.name.lastPartsMatch(lookup) }
     } else {
-        val nodes = this?.filter { it.name.endsWith(lookup) } ?: listOf()
+        val nodes = this?.filter { it.name.lastPartsMatch(lookup) } ?: listOf()
         if (nodes.size > 1) {
             throw NoSuchElementException("result is not unique")
         }
@@ -124,7 +124,7 @@ operator fun <T : Node> Collection<T>.invoke(predicate: (T) -> Boolean): List<T>
 
 /** A shortcut to filter a list of nodes by their name. */
 operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
-    return this.filter { it.name.endsWith(lookup) }
+    return this.filter { it.name.lastPartsMatch(lookup) }
 }
 
 inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
@@ -142,13 +142,13 @@ inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
 
         base =
             this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
-                (it as Node).name.endsWith(baseName)
+                (it as Node).name.lastPartsMatch(baseName)
             }
                 ?: return null
         lookup = name.split(".")[1]
     }
 
-    return base.declarations.filterIsInstance<T>().firstOrNull { it.name.endsWith(lookup) }
+    return base.declarations.filterIsInstance<T>().firstOrNull { it.name.lastPartsMatch(lookup) }
 }
 
 @Throws(DeclarationNotFound::class)
@@ -492,7 +492,7 @@ val Node?.refs: List<DeclaredReferenceExpression>
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
     return SubgraphWalker.flattenAST(this).filter { node ->
-        (node as? CallExpression)?.invokes?.any { it.name.endsWith(name) } == true
+        (node as? CallExpression)?.invokes?.any { it.name.lastPartsMatch(name) } == true
     } as List<CallExpression>
 }
 
