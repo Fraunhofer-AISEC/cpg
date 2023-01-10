@@ -101,6 +101,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 Pair(node, mutableMapOf())
             )
 
+        val alreadyProcessed = mutableSetOf<Pair<Node, Map<Declaration, Node>>>()
+
         // Different points which could be the cause of a loop (in a non-broken program). We
         // consider ForStatements, WhileStatements, ForEachStatements, DoStatements and
         // GotoStatements
@@ -110,6 +112,15 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         while (worklist.isNotEmpty()) {
             // The node we will analyze now and the map of the last write statements to a variable.
             val (currentNode, previousWrites) = worklist.removeFirst()
+            if (
+                !alreadyProcessed.add(
+                    Pair(currentNode, previousWrites.mapValues { (_, v) -> v.last() })
+                )
+            ) {
+                // The entry did already exist. This means that the changes won't have any effects
+                // and we don't have to run the loop.
+                continue
+            }
             // We will set this if we write to a variable
             var writtenDecl: Declaration? = null
             var currentWritten = currentNode
@@ -208,10 +219,9 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     .filter { it.getProperty(Properties.UNREACHABLE) != true }
                     .map { it.end }
                     .forEach {
-                        // currentNode.nextEOG.forEach {
                         val newPair = Pair(it, copyMap(previousWrites))
-                        if (!worklistHasSimilarPair(worklist, newPair)) worklist.add(newPair)
-                        // if (newPair !in worklist) worklist.add(newPair)
+                        if (!worklistHasSimilarPair(worklist, alreadyProcessed, newPair))
+                            worklist.add(newPair)
                     }
             }
         }
@@ -225,13 +235,19 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      */
     private fun worklistHasSimilarPair(
         worklist: MutableList<Pair<Node, MutableMap<Declaration, MutableList<Node>>>>,
+        alreadyProcessed: MutableSet<Pair<Node, Map<Declaration, Node>>>,
         newPair: Pair<Node, MutableMap<Declaration, MutableList<Node>>>
     ): Boolean {
+        // We collect all states in the worklist which are only a subset of the new pair. We will
+        // remove them to avoid unnecessary computations.
+        val subsets = mutableSetOf<Pair<Node, MutableMap<Declaration, MutableList<Node>>>>()
+        val newPairLastMap = newPair.second.mapValues { (_, v) -> v.last() }
         for (existingPair in worklist) {
             if (existingPair.first == newPair.first) {
                 // The next nodes match. Now check the last writes for each declaration.
                 var allWritesMatch = true
-                for ((lastWriteDecl, lastWriteList) in newPair.second) {
+                var allExistingWritesMatch = true
+                for ((lastWriteDecl, lastWriteList) in newPairLastMap) {
 
                     // We ignore FieldDeclarations because we cannot be sure how interprocedural
                     // data flows affect the field. Handling them in the state would only blow up
@@ -242,13 +258,36 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     // list?
                     allWritesMatch =
                         allWritesMatch &&
-                            existingPair.second[lastWriteDecl]?.last() == lastWriteList.last()
+                            existingPair.second[lastWriteDecl]?.last() == lastWriteList
+                    // All last writes which exist in the "existing pair" match but we have new
+                    // declarations in the current one
+                    allExistingWritesMatch =
+                        allExistingWritesMatch &&
+                            (lastWriteDecl !in existingPair.second ||
+                                existingPair.second[lastWriteDecl]?.last() == lastWriteList)
                 }
                 // We found a matching pair in the worklist? Done. Otherwise, maybe there's another
                 // pair...
                 if (allWritesMatch) return true
+                // The new state is a superset of the old one? We delete the old one.
+                if (allExistingWritesMatch) {
+                    subsets.add(existingPair)
+                }
             }
         }
+
+        // Check the "subsets" again, and add the missing declarations
+        if (subsets.isNotEmpty()) {
+            for (s in subsets) {
+                for ((k, v) in newPair.second) {
+                    if (k !in s.second) {
+                        s.second[k] = v
+                    }
+                }
+            }
+            return true // We cover it in the respective subsets, so do not add this state again.
+        }
+
         return false
     }
 
