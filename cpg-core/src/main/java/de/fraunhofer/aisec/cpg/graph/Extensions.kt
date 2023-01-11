@@ -396,7 +396,37 @@ fun Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
 }
 
 /**
- * Returns a list of edges which are form the evaluation order between the starting node [this] and
+ * Returns a list of edges which are from the evaluation order between the starting node [this] and
+ * an edge fulfilling [predicate]. If the return value is not `null`, a path from [this] to such an
+ * edge is **possible but not mandatory**.
+ *
+ * It returns only a single possible path even if multiple paths are possible.
+ */
+fun Node.followNextEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
+    val path = mutableListOf<PropertyEdge<*>>()
+
+    for (edge in this.nextEOGEdges) {
+        val target = edge.end
+
+        path.add(edge)
+
+        if (predicate(edge)) {
+            return path
+        }
+
+        val subPath = target.followNextEOG(predicate)
+        if (subPath != null) {
+            path.addAll(subPath)
+
+            return path
+        }
+    }
+
+    return null
+}
+
+/**
+ * Returns a list of edges which are from the evaluation order between the starting node [this] and
  * an edge fulfilling [predicate]. If the return value is not `null`, a path from [this] to such an
  * edge is **possible but not mandatory**.
  *
