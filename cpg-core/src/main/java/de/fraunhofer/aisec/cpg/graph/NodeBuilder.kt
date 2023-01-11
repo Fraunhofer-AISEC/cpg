@@ -126,16 +126,17 @@ fun Node.applyMetadata(
     if (name != null) {
         val language = this.language
 
-        // Let's check, if this is an FQN by any chance. Then we need to parse the name. In the
-        // future, we might do that differently.
-        if (language != null && name.contains(language.namespaceDelimiter)) {
-            this.name = language.parseName(name)
-        } else if (name is Name) {
-            // The name could already be a real "name" (of our Name class). In this case we can just
-            // set the name. This is preferred over parsing an FQN.
+        // The name could already be a real "name" (of our Name class). In this case we can just set
+        // the name (if it is qualified). This is preferred over passing an FQN as
+        // CharSequence/String.
+        if (name is Name && name.isQualified()) {
             this.name = name
+        } else if (language != null && name.contains(language.namespaceDelimiter)) {
+            // Let's check, if this is an FQN as string / char sequence by any chance. Then we need
+            // to parse the name. In the future, we might drop compatibility for this
+            this.name = language.parseName(name)
         } else {
-            // Otherwise, a local name is supplied. Some nodes only have a local name. In this case,
+            // Otherwise, a local name is supplied. Some nodes only want a local name. In this case,
             // we create a new name with the supplied (local) name and set the parent to null.
             val parent =
                 if (localNameOnly) {

@@ -157,14 +157,20 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         return declaration
     }
 
+    /**
+     * A small utility function that creates a [ConstructorDeclaration] if the local names of the
+     * function and its [RecordDeclaration] match. Otherwise, a [MethodDeclaration] with the
+     * appropriate [name] will be created.
+     */
     private fun createMethodOrConstructor(
-        name: CharSequence,
+        name: Name,
         recordDeclaration: RecordDeclaration?,
         ctx: IASTNode,
     ): MethodDeclaration {
-        // Check, if it's a constructor
+        // Check, if it's a constructor. This is the case if the local names of the function and the
+        // record declaration match
         val method =
-            if (name == recordDeclaration?.name?.localName) {
+            if (name.localName == recordDeclaration?.name?.localName) {
                 newConstructorDeclaration(name, null, recordDeclaration, ctx)
             } else {
                 newMethodDeclaration(name, null, false, recordDeclaration, ctx)
@@ -178,18 +184,19 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // treats these levels as separate declarators, so we need to get to the bottom for the
         // actual name...
         val (nameDecl: IASTDeclarator, hasPointer) = ctx.realName()
-        var name = nameDecl.name.toString()
+        var name = parseName(nameDecl.name.toString())
 
         // Attention! This might actually be a function pointer (requires at least one level of
         // parentheses and a pointer operator)
         if (nameDecl !== ctx && hasPointer) {
-            return handleFunctionPointer(ctx, name)
+            return handleFunctionPointer(ctx, name.toString())
         }
 
         /*
          * As always, there are some special cases to consider and one of those are C++ operators.
          * They are regarded as functions and eclipse CDT for some reason introduces a whitespace in the function name, which will complicate things later on
-         */ if (name.startsWith("operator")) {
+         */
+        if (name.startsWith("operator")) {
             name = name.replace(" ", "")
         }
         val declaration: FunctionDeclaration
@@ -204,26 +211,16 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // Check for function definitions that are really methods and constructors, i.e. if they
         // contain a scope operator
-        if (name.contains(language.namespaceDelimiter)) {
-            // In this case, we can already build a FQN name
-            val fqn = parseName(name)
+        val parent = name.parent
+        if (parent != null) {
+            // In this case, the name contains a qualifier, and we can try to check, if we have a
+            // matching record declaration for the parent name
             val scope = frontend.scopeManager.currentScope
-
-            // Try to check, if we have a matching record declaration for the parent name
-            if (scope != null && fqn.parent != null) {
-                recordDeclaration =
-                    fqn.parent.let { frontend.scopeManager.getRecordForName(scope, it) }
+            if (scope != null) {
+                recordDeclaration = frontend.scopeManager.getRecordForName(scope, parent)
             }
 
-            // If we have a valid record, we can delegate the FQN'ing of the method to the node
-            // builder (just to be safe),
-            if (recordDeclaration != null) {
-                declaration =
-                    createMethodOrConstructor(fqn.localName, recordDeclaration, ctx.parent)
-            } else {
-                // otherwise, we can use our already built FQN
-                declaration = createMethodOrConstructor(fqn, null, ctx.parent)
-            }
+            declaration = createMethodOrConstructor(name, null, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {
             // if it is inside a record scope, it is a method
             recordDeclaration = frontend.scopeManager.currentRecord
@@ -337,7 +334,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // We recognize an ambiguity here, but cannot solve it at the moment
         if (
-            name != "" &&
+            name.isNotEmpty() &&
                 ctx.parent is CPPASTDeclarator &&
                 declaration.body == null &&
                 frontend.scopeManager.currentFunction != null

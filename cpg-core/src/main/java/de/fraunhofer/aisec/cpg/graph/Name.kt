@@ -102,8 +102,23 @@ class Name(
     /** This function appends a string to the local name and returns a new [Name]. */
     fun append(s: String) = Name(localName + s, parent, delimiter)
 
+    /**
+     * This functions replaces all occurrences of [oldValue] with [newValue] in the local name and
+     * returns a new [Name].
+     */
+    fun replace(oldValue: String, newValue: String) =
+        Name(localName.replace(oldValue, newValue), parent, delimiter)
+
     /** Compare names according to the string representation of the [fullName]. */
     override fun compareTo(other: Name) = fullName.compareTo(other.toString())
+
+    /**
+     * A name can be considered as "qualified", if it has any specified [parent]. Otherwise, only
+     * the [localName] is specified and the name is "unqualified".
+     */
+    fun isQualified(): Boolean {
+        return parent != null
+    }
 }
 
 /**
