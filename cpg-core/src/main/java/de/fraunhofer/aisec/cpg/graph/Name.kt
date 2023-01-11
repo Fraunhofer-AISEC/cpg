@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
@@ -106,14 +107,15 @@ class Name(
 }
 
 /**
- * A small utility extension function that uses the namespace information in a [Language] to parse a
- * fully qualified name.
+ * A small utility extension function that uses the language information in a [LanguageProvider]
+ * (such as a [Node], a [Language], a [LanguageFrontend] or a [Handler]) to parse a fully qualified
+ * name.
  */
-fun Language<out LanguageFrontend>?.parseName(fqn: CharSequence) =
-    parseName(fqn, this?.namespaceDelimiter ?: ".")
+fun LanguageProvider?.parseName(fqn: CharSequence) =
+    parseName(fqn, this?.language?.namespaceDelimiter ?: ".")
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
-fun parseName(fqn: CharSequence, delimiter: String = ".", vararg splitDelimiters: String): Name {
+internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimiters: String): Name {
     val parts = fqn.split(delimiter, *splitDelimiters)
 
     var name: Name? = null

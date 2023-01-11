@@ -158,7 +158,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun createMethodOrConstructor(
-        name: String,
+        name: CharSequence,
         recordDeclaration: RecordDeclaration?,
         ctx: IASTNode,
     ): MethodDeclaration {
@@ -202,22 +202,28 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             !(frontend.scopeManager.currentRecord != null ||
                 frontend.scopeManager.currentScope is TemplateScope)
 
-        // check for function definitions that are really methods and constructors, i.e. if they
+        // Check for function definitions that are really methods and constructors, i.e. if they
         // contain a scope operator
         if (name.contains(language.namespaceDelimiter)) {
-            val rr = name.split(language.namespaceDelimiter).toTypedArray()
-            val recordName =
-                java.lang.String.join(
-                    language.namespaceDelimiter,
-                    listOf(*rr).subList(0, rr.size - 1)
-                )
-            val methodName = rr[rr.size - 1]
-            recordDeclaration =
-                frontend.scopeManager.getRecordForName(
-                    frontend.scopeManager.currentScope!!,
-                    language.parseName(recordName)
-                )
-            declaration = createMethodOrConstructor(methodName, recordDeclaration, ctx.parent)
+            // In this case, we can already build a FQN name
+            val fqn = parseName(name)
+            val scope = frontend.scopeManager.currentScope
+
+            // Try to check, if we have a matching record declaration for the parent name
+            if (scope != null && fqn.parent != null) {
+                recordDeclaration =
+                    fqn.parent.let { frontend.scopeManager.getRecordForName(scope, it) }
+            }
+
+            // If we have a valid record, we can delegate the FQN'ing of the method to the node
+            // builder (just to be safe),
+            if (recordDeclaration != null) {
+                declaration =
+                    createMethodOrConstructor(fqn.localName, recordDeclaration, ctx.parent)
+            } else {
+                // otherwise, we can use our already built FQN
+                declaration = createMethodOrConstructor(fqn, null, ctx.parent)
+            }
         } else if (frontend.scopeManager.isInRecord) {
             // if it is inside a record scope, it is a method
             recordDeclaration = frontend.scopeManager.currentRecord

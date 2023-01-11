@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -673,8 +674,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testRecordDeclaration() {
         val file = File("src/test/resources/cxx/recordstmt.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val recordDeclaration = declaration.getDeclarationAs(0, RecordDeclaration::class.java)
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+
+        val recordDeclaration = tu.records.firstOrNull()
         assertNotNull(recordDeclaration)
         assertLocalName("SomeClass", recordDeclaration)
         assertEquals("class", recordDeclaration.kind)
@@ -742,8 +744,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         )
         assertTrue(inlineConstructor.hasBody())
 
-        val constructorDefinition =
-            declaration.getDeclarationAs(3, ConstructorDeclaration::class.java)
+        val constructorDefinition = tu.getDeclarationAs(3, ConstructorDeclaration::class.java)
         assertNotNull(constructorDefinition)
         assertEquals(1, constructorDefinition.parameters.size)
         assertEquals(createTypeFrom("int", true), constructorDefinition.parameters[0].type)
@@ -764,10 +765,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(constructorDefinition, constructorDeclaration.definition)
 
         val main =
-            declaration
-                .getDeclarationsByName("main", FunctionDeclaration::class.java)
-                .iterator()
-                .next()
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
         assertNotNull(main)
 
         val methodCallWithConstant = main.getBodyStatementAs(2, CallExpression::class.java)
@@ -775,6 +773,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val arg = methodCallWithConstant.arguments[0]
         assertSame(constant, (arg as DeclaredReferenceExpression).refersTo)
+
+        val anotherMethod = tu.methods["anotherMethod"]
+        assertNotNull(anotherMethod)
+        assertFullName("OtherClass::anotherMethod", anotherMethod)
     }
 
     @Test
