@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
@@ -41,7 +41,7 @@ import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
  * @param curClass The class containing the call
  * @param call The call to be resolved
  */
-fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: CallExpression) {
+fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: MemberCallExpression) {
     // We need to connect this super reference to the receiver of this method
     val func = scopeManager.currentFunction
     if (func is MethodDeclaration) {
@@ -76,7 +76,7 @@ fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: CallExpressi
 
 fun CallResolver.handleSpecificSupertype(
     curClass: RecordDeclaration,
-    call: CallExpression
+    call: MemberCallExpression
 ): RecordDeclaration? {
     val baseName = call.base?.name?.parent ?: return null
 
