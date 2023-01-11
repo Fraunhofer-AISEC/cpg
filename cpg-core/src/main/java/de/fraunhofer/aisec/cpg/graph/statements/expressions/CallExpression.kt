@@ -48,7 +48,7 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
-open class CallExpression : Expression(), HasType.TypeListener, HasBase, SecondaryTypeEdge {
+open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdge {
     /** Connection to its [FunctionDeclaration]. This will be populated by the [CallResolver]. */
     @Relationship(value = "INVOKES", direction = Relationship.OUTGOING)
     @PopulatedByPass(CallResolver::class)
@@ -85,19 +85,6 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
      * [argumentsEdges].
      */
     var arguments by PropertyEdgeDelegate(CallExpression::argumentsEdges)
-
-    /**
-     * The base object. This is marked as an AST child, because this is required for a
-     * [MemberCallExpression]. Be aware that for simple calls the implicit "this" base is not part
-     * of the original AST, but we treat it as such for better consistency
-     */
-    @field:SubGraph("AST")
-    override var base: Expression? = null
-        set(value) {
-            field?.unregisterTypeListener(this)
-            field = value
-            value?.registerTypeListener(this)
-        }
 
     /**
      * The expression that is being "called". This is currently not yet used in the [CallResolver]
@@ -260,47 +247,43 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
-        if (src === base) {
+        /*if (src === base) {
             name =
-                Name(name.localName, src.getType().root.name, language?.namespaceDelimiter ?: ".")
-        } else {
-            val previous = type
-            val types =
-                invokesRelationship.map(PropertyEdge<FunctionDeclaration>::end).mapNotNull {
-                    // TODO(oxisto): Support multiple return values
-                    it.returnTypes.firstOrNull()
-                }
-            val alternative = if (types.isNotEmpty()) types[0] else null
-            val commonType =
-                TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
-            val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-
-            subTypes.remove(oldType)
-            subTypes.addAll(types)
-            setType(commonType, root)
-            setPossibleSubTypes(subTypes, root)
-            if (previous != type) {
-                type.typeOrigin = Type.Origin.DATAFLOW
+                Name(name.localName, src.type.root.name, language?.namespaceDelimiter ?: ".")
+        } else {*/
+        val previous = type
+        val types =
+            invokesRelationship.map(PropertyEdge<FunctionDeclaration>::end).mapNotNull {
+                // TODO(oxisto): Support multiple return values
+                it.returnTypes.firstOrNull()
             }
+        val alternative = if (types.isNotEmpty()) types[0] else null
+        val commonType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
+        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
+
+        subTypes.remove(oldType)
+        subTypes.addAll(types)
+        setType(commonType, root)
+        setPossibleSubTypes(subTypes, root)
+        if (previous != type) {
+            type.typeOrigin = Type.Origin.DATAFLOW
         }
+        // }
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: List<HasType>) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
-        if (src !== base) {
-            val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-            subTypes.addAll(src.possibleSubTypes)
-            setPossibleSubTypes(subTypes, root)
-        }
+        // if (src !== base) {
+        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
+        subTypes.addAll(src.possibleSubTypes)
+        setPossibleSubTypes(subTypes, root)
+        // }
     }
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("base", base)
-            .toString()
+        return ToStringBuilder(this, TO_STRING_STYLE).appendSuper(super.toString()).toString()
     }
 
     override fun equals(other: Any?): Boolean {
@@ -316,7 +299,6 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             propertyEqualsList(argumentsEdges, other.argumentsEdges)) &&
             invokes == other.invokes &&
             propertyEqualsList(invokesRelationship, other.invokesRelationship)) &&
-            base == other.base &&
             templateParameters == other.templateParameters &&
             propertyEqualsList(templateParametersEdges, other.templateParametersEdges)) &&
             templateInstantiation == other.templateInstantiation &&

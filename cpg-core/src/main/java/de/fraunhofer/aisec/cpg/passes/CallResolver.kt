@@ -167,7 +167,8 @@ open class CallResolver : SymbolResolverPass() {
 
     private fun handleCallExpression(curClass: RecordDeclaration?, call: CallExpression) {
         if (
-            call.base is DeclaredReferenceExpression &&
+            call is MemberCallExpression &&
+                call.base is DeclaredReferenceExpression &&
                 isSuperclassReference(call.base as DeclaredReferenceExpression)
         ) {
             handleSuperCall(curClass!!, call)
