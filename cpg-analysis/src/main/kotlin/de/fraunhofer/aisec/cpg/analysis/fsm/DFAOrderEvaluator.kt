@@ -57,7 +57,7 @@ import org.slf4j.LoggerFactory
  */
 open class DFAOrderEvaluator(
     var consideredBases: Set<Node>,
-    var nodeToRelevantMethod: Map<Node, String>,
+    var nodeToRelevantMethod: Map<Node, Set<String>>,
     var thisPositionOfNode: Map<Node, Int> = mapOf(),
     var eliminateUnreachableCode: Boolean = true
 ) {
@@ -292,7 +292,7 @@ open class DFAOrderEvaluator(
         node: CallExpression,
         eogPath: String,
         interproceduralFlows: MutableMap<String, Boolean>
-    ): Pair<String, String>? {
+    ): Pair<String, Set<String>>? {
         // The "base" node, on which the DFA is based on. Ideally, this is a variable declaration in
         // the end.
         var base = getBaseOfNode(node)
