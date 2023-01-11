@@ -215,12 +215,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (parent != null) {
             // In this case, the name contains a qualifier, and we can try to check, if we have a
             // matching record declaration for the parent name
-            val scope = frontend.scopeManager.currentScope
-            if (scope != null) {
-                recordDeclaration = frontend.scopeManager.getRecordForName(scope, parent)
-            }
+            recordDeclaration =
+                frontend.scopeManager.currentScope?.let {
+                    frontend.scopeManager.getRecordForName(it, parent)
+                }
 
-            declaration = createMethodOrConstructor(name, null, ctx.parent)
+            declaration = createMethodOrConstructor(name, recordDeclaration, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {
             // if it is inside a record scope, it is a method
             recordDeclaration = frontend.scopeManager.currentRecord
