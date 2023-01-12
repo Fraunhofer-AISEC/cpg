@@ -187,9 +187,7 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
     when (node) {
         is MemberCallExpression -> {
             // only color the member
-            node.member?.let {
-                list.addAll(getFanciesFor(node, it))
-            }
+            node.member?.let { list.addAll(getFanciesFor(node, it)) }
 
             return list
         }

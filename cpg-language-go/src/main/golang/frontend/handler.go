@@ -849,8 +849,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 
 		this.LogDebug("Fun is a member call to %s", name)
 
-		member := this.NewDeclaredReferenceExpression(fset, nil, name)
-		m := this.NewMemberCallExpression(fset, callExpr, name, fqn, (*cpg.MemberExpression)(reference).GetBase(), member.Node())
+		m := this.NewMemberCallExpression(fset, callExpr, name, fqn, (*cpg.MemberExpression)(reference).GetBase(), (*cpg.Node)(reference))
 
 		c = (*cpg.CallExpression)(m)
 	} else {
