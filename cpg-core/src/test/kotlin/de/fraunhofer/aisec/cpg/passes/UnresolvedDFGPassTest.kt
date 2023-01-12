@@ -55,7 +55,7 @@ class UnresolvedDFGPassTest {
             }
 
         // Flow from base to return value
-        val firstCall = result.calls { it.name == "get" }[0]
+        val firstCall = result.calls { it.name.localName == "get" }[0]
         val osDecl = result.variables["os"]
         assertEquals(1, firstCall.prevDFG.size)
         assertEquals(
@@ -64,7 +64,7 @@ class UnresolvedDFGPassTest {
         )
 
         // Flow from base and argument to return value
-        val callWithParam = result.calls { it.name == "get" }[1]
+        val callWithParam = result.calls { it.name.localName == "get" }[1]
         assertEquals(2, callWithParam.prevDFG.size)
         assertEquals(
             osDecl,
@@ -78,7 +78,7 @@ class UnresolvedDFGPassTest {
         // No specific flows for resolved functions
         // => Goes through the method declaration and then follows the instructions in the method's
         // implementation
-        val knownCall = result.calls { it.name == "knownFunction" }[0]
+        val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
         assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }
@@ -97,18 +97,18 @@ class UnresolvedDFGPassTest {
             }
 
         // No flow from base to return value
-        val firstCall = result.calls { it.name == "get" }[0]
+        val firstCall = result.calls { it.name.localName == "get" }[0]
         val osDecl = result.variables["os"]
         assertEquals(0, firstCall.prevDFG.size)
 
         // No flow from base or argument to return value
-        val callWithParam = result.calls { it.name == "get" }[1]
+        val callWithParam = result.calls { it.name.localName == "get" }[1]
         assertEquals(0, callWithParam.prevDFG.size)
 
         // No specific flows for resolved functions
         // => Goes through the method declaration and then follows the instructions in the method's
         // implementation
-        val knownCall = result.calls { it.name == "knownFunction" }[0]
+        val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
         assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }

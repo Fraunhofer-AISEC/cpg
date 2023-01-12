@@ -94,7 +94,7 @@ class ScopeVariables{
                     printLog("func1_outer_instance_varName", scopeVariables.varName);
                     printLog("func1_outer_static_staticVarName", ScopeVariables::staticVarName);
                     printLog("func1_inner_static_staticVarName", ScopeVariables::InnerClass::staticVarName); // Can i remove the ScopeVariables:: ??
-                // There is no speciall reference to the outer-class like ClassName.this.varname as in Java
+                // There is no special reference to the outer-class like ClassName.this.varname as in Java
 
                 }
 
@@ -107,7 +107,7 @@ class ScopeVariables{
                     printLog("func2_outer_instance_varName_with_shadows", scopeVariables.varName);
                     printLog("func2_outer_static_staticVarName_with_shadows", ScopeVariables::staticVarName);
                     printLog("func2_inner_static_staticVarName_with_shadows", ScopeVariables::InnerClass::staticVarName); // Can i remove the ScopeVariables:: ??
-                // There is no speciall reference to the outer-class like ClassName.this.varname as in Java
+                // There is no special reference to the outer-class like ClassName.this.varname as in Java
 
                 }
 

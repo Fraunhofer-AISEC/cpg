@@ -234,6 +234,7 @@ open class JavaLanguageFrontend(
         }
     }
 
+    // TODO: Return a Name instead of a String
     fun getQualifiedMethodNameAsGoodAsPossible(callExpr: MethodCallExpr): String {
         return try {
             callExpr.resolve().qualifiedName
@@ -253,7 +254,7 @@ open class JavaLanguageFrontend(
                     // this is not strictly true. This could also be a function of a superclass,
                     // but is the best we can do for now. If the superclass would be known,
                     // this would already be resolved by the Java resolver
-                    scopeManager.currentNamePrefix + "." + callExpr.nameAsString
+                    fqn(callExpr.nameAsString).toString()
                 } else {
                     scope.get().toString() + "." + callExpr.nameAsString
                 }
@@ -267,7 +268,7 @@ open class JavaLanguageFrontend(
                 // check if this is a "specific" static import (not of the type 'import static
                 // x.y.Z.*')
                 val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
-                fromImport ?: (scopeManager.currentNamePrefix + "." + callExpr.nameAsString)
+                fromImport ?: fqn(callExpr.nameAsString).toString()
                 // this is not strictly true. This could also be a function of a superclass or from
                 // a static asterisk import
             }
@@ -282,13 +283,13 @@ open class JavaLanguageFrontend(
                     }
                 }
                 if (scope.get().toString() == THIS) {
-                    scopeManager.currentNamePrefix + "." + callExpr.nameAsString
+                    fqn(callExpr.nameAsString).toString()
                 } else {
                     scope.get().toString() + "." + callExpr.nameAsString
                 }
             } else {
                 val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
-                fromImport ?: (scopeManager.currentNamePrefix + "." + callExpr.nameAsString)
+                fromImport ?: fqn(callExpr.nameAsString).toString()
             }
         }
     }
@@ -363,11 +364,12 @@ open class JavaLanguageFrontend(
      * @return the FQN
      */
     private fun getFQNInCurrentPackage(simpleName: String): String {
+        // TODO: Somehow we cannot use scopeManager.currentNamespace. not sure why
         val theScope =
             scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDeclaration }
                 ?: return simpleName
         // If scope is null we are in a default package
-        return theScope.scopedName + language.namespaceDelimiter + simpleName
+        return theScope.name?.fqn(simpleName).toString()
     }
 
     private fun getTypeFromImportIfPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {

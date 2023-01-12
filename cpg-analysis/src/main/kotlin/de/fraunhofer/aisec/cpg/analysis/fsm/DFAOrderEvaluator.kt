@@ -246,8 +246,7 @@ open class DFAOrderEvaluator(
             allUsedBases.add((node.base as DeclaredReferenceExpression).refersTo)
         }
 
-        val prefixedBases = allUsedBases.map { "$eogPath|${it?.name}.$it" }
-        return prefixedBases
+        return allUsedBases.map { "$eogPath|${it?.name}.$it" }
     }
 
     /**
@@ -306,6 +305,7 @@ open class DFAOrderEvaluator(
             // We add the path as prefix to the base in order to differentiate between
             // the different paths of execution which both can use the same base.
             val prefixedBase = "$eogPath|${base.name}.$base"
+
             if (base is ParamVariableDeclaration) {
                 // The base was the parameter of the function? We have an inter-procedural flow!
                 interproceduralFlows[prefixedBase] = true
@@ -365,8 +365,7 @@ open class DFAOrderEvaluator(
                     it is ConstructExpression ||
                     it is VariableDeclaration
             }
-            .sortedWith(Comparator.comparing(Node::name))
-            .firstOrNull()
+            .minByOrNull { it.name }
     }
 
     /**

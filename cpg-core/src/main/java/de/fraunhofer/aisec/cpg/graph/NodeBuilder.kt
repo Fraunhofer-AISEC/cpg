@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -72,6 +73,14 @@ interface ScopeProvider : MetadataProvider {
 }
 
 /**
+ * This interface denotes that the class is able to provide the current namespace. The
+ * [applyMetadata] will use this information to set the parent of a [Name].
+ */
+interface NamespaceProvider : MetadataProvider {
+    val namespace: Name?
+}
+
+/**
  * Applies various metadata on this [Node], based on the kind of provider in [provider]. This can
  * include:
  * - Setting [Node.code] and [Node.location], if a [CodeAndLocationProvider] is given
@@ -83,7 +92,14 @@ interface ScopeProvider : MetadataProvider {
  * [codeOverride] is specified, the supplied source code is used to override anything from the
  * provider.
  */
-fun Node.applyMetadata(provider: MetadataProvider?, rawNode: Any?, codeOverride: String?) {
+fun Node.applyMetadata(
+    provider: MetadataProvider?,
+    name: CharSequence? = EMPTY_NAME,
+    rawNode: Any? = null,
+    codeOverride: String? = null,
+    localNameOnly: Boolean = false,
+    defaultNamespace: Name? = null,
+) {
     if (provider is CodeAndLocationProvider) {
         provider.setCodeAndLocation(this, rawNode)
     }
@@ -98,6 +114,39 @@ fun Node.applyMetadata(provider: MetadataProvider?, rawNode: Any?, codeOverride:
 
     if (provider is ScopeProvider) {
         this.scope = provider.scope
+    }
+
+    val namespace =
+        if (provider is NamespaceProvider) {
+            provider.namespace ?: defaultNamespace
+        } else {
+            defaultNamespace
+        }
+
+    if (name != null) {
+        val language = this.language
+
+        // The name could already be a real "name" (of our Name class). In this case we can just set
+        // the name (if it is qualified). This is preferred over passing an FQN as
+        // CharSequence/String.
+        if (name is Name && name.isQualified()) {
+            this.name = name
+        } else if (language != null && name.contains(language.namespaceDelimiter)) {
+            // Let's check, if this is an FQN as string / char sequence by any chance. Then we need
+            // to parse the name. In the future, we might drop compatibility for this
+            this.name = language.parseName(name)
+        } else {
+            // Otherwise, a local name is supplied. Some nodes only want a local name. In this case,
+            // we create a new name with the supplied (local) name and set the parent to null.
+            val parent =
+                if (localNameOnly) {
+                    null
+                } else {
+                    namespace
+                }
+
+            this.name = Name(name.toString(), parent, language?.namespaceDelimiter ?: ".")
+        }
     }
 
     if (codeOverride != null) {
@@ -118,9 +167,7 @@ fun MetadataProvider.newAnnotation(
     rawNode: Any? = null
 ): Annotation {
     val node = Annotation()
-    node.applyMetadata(this, rawNode, code)
-
-    node.name = name ?: Node.EMPTY_NAME
+    node.applyMetadata(this, name, rawNode, code)
 
     log(node)
     return node
@@ -140,9 +187,8 @@ fun MetadataProvider.newAnnotationMember(
     rawNode: Any? = null
 ): AnnotationMember {
     val node = AnnotationMember()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code)
 
-    node.name = name ?: Node.EMPTY_NAME
     node.value = value
 
     log(node)
@@ -154,3 +200,14 @@ fun MetadataProvider.newAnnotationMember(
  * since we are moving away from the [TypeParser] altogether.
  */
 fun LanguageProvider.parseType(name: String) = TypeParser.createFrom(name, language)
+
+/**
+ * Provides a nice alias to [TypeParser.createFrom]. In the future, this should not be used anymore
+ * since we are moving away from the [TypeParser] altogether.
+ */
+fun LanguageProvider.parseType(name: Name) = TypeParser.createFrom(name, language)
+
+/** Returns a new [Name] based on the [localName] and the current namespace as parent. */
+fun NamespaceProvider.fqn(localName: String): Name {
+    return this.namespace.fqn(localName)
+}

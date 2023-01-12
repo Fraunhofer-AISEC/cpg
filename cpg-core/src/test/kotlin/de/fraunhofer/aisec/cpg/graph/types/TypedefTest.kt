@@ -73,7 +73,8 @@ internal class TypedefTest : BaseTest() {
         assertEquals(uintfp1.type, uintfp2.type)
 
         val typedefs = result.scopeManager.currentTypedefs
-        val def = typedefs.stream().filter { it.alias.name == "test" }.findAny().orElse(null)
+        val def =
+            typedefs.stream().filter { it.alias.name.localName == "test" }.findAny().orElse(null)
         assertNotNull(def)
     }
 

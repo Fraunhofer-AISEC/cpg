@@ -73,10 +73,6 @@ func (e *Expression) SetType(t *Type) {
 	(*HasType)(e).SetType(t)
 }
 
-func (c *CallExpression) SetName(s string) {
-	(*Node)(c).SetName(s)
-}
-
 func (c *CallExpression) SetFqn(s string) {
 	(*jnigi.ObjectRef)(c).SetField(env, "fqn", NewString(s))
 }
@@ -87,10 +83,6 @@ func (c *CastExpression) SetExpression(e *Expression) {
 
 func (c *CastExpression) SetCastType(t *Type) {
 	(*jnigi.ObjectRef)(c).CallMethod(env, "setCastType", nil, t)
-}
-
-func (c *MemberCallExpression) SetName(s string) {
-	(*Node)(c).SetName(s)
 }
 
 func (c *MemberCallExpression) SetFqn(s string) {
@@ -123,7 +115,7 @@ func (m *MemberExpression) GetBase() *Expression {
 	return &expr
 }
 
-func (e *Expression) GetName() string {
+func (e *Expression) GetName() *Name {
 	return (*Node)(e).GetName()
 }
 
@@ -174,10 +166,6 @@ func (l *Literal) SetValue(value interface{}) {
 	// basic types should be just fine, i guess?
 
 	(*jnigi.ObjectRef)(l).SetField(env, "value", value)
-}
-
-func (r *DeclaredReferenceExpression) SetName(s string) {
-	(*Node)(r).SetName(s)
 }
 
 func (r *DeclaredReferenceExpression) SetRefersTo(d *Declaration) {

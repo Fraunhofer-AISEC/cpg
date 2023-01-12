@@ -26,10 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.graph.CodeAndLocationProvider
-import de.fraunhofer.aisec.cpg.graph.LanguageProvider
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.ScopeProvider
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -52,7 +49,12 @@ abstract class LanguageFrontend(
     override val language: Language<out LanguageFrontend>,
     val config: TranslationConfiguration,
     scopeManager: ScopeManager
-) : ProcessedListener(), CodeAndLocationProvider, LanguageProvider, ScopeProvider {
+) :
+    ProcessedListener(),
+    CodeAndLocationProvider,
+    LanguageProvider,
+    ScopeProvider,
+    NamespaceProvider {
     var scopeManager: ScopeManager = scopeManager
         set(scopeManager) {
             field = scopeManager
@@ -205,20 +207,19 @@ abstract class LanguageFrontend(
     }
 
     abstract fun <S, T> setComment(s: S, ctx: T)
-    val currentNamePrefixWithDelimiter: String
-        get() {
-            val prefix = scopeManager.currentNamePrefix
-            return if (prefix.isEmpty()) {
-                ""
-            } else {
-                prefix + language.namespaceDelimiter
-            }
-        }
 
     companion object {
         // Allow non-Java frontends to access the logger (i.e. jep)
         val log = LoggerFactory.getLogger(LanguageFrontend::class.java)
     }
 
-    override val scope: Scope? = this.scopeManager.currentScope
+    override val scope: Scope?
+        get() {
+            return this.scopeManager.currentScope
+        }
+
+    override val namespace: Name?
+        get() {
+            return this.scopeManager.currentNamespace
+        }
 }

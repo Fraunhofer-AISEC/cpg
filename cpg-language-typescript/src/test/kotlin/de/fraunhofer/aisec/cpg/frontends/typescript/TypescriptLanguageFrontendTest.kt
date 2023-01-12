@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -64,11 +65,11 @@ class TypeScriptLanguageFrontendTest {
         assertEquals(2, functions.size)
 
         val someFunction = functions.first()
-        assertEquals("someFunction", someFunction.name)
+        assertLocalName("someFunction", someFunction)
         assertEquals(TypeParser.createFrom("Number", TypeScriptLanguage()), someFunction.type)
 
         val someOtherFunction = functions.last()
-        assertEquals("someOtherFunction", someOtherFunction.name)
+        assertLocalName("someOtherFunction", someOtherFunction)
         assertEquals(TypeParser.createFrom("Number", TypeScriptLanguage()), someOtherFunction.type)
 
         val parameters = someOtherFunction.parameters
@@ -77,7 +78,7 @@ class TypeScriptLanguageFrontendTest {
         assertEquals(1, parameters.size)
 
         val parameter = parameters.first()
-        assertEquals("s", parameter.name)
+        assertLocalName("s", parameter)
         assertEquals(TypeParser.createFrom("String", TypeScriptLanguage()), parameter.type)
     }
 
@@ -104,10 +105,10 @@ class TypeScriptLanguageFrontendTest {
         assertEquals(2, functions.size)
 
         val someFunction = functions.first()
-        assertEquals("someFunction", someFunction.name)
+        assertLocalName("someFunction", someFunction)
 
         val someOtherFunction = functions.last()
-        assertEquals("someOtherFunction", someOtherFunction.name)
+        assertLocalName("someOtherFunction", someOtherFunction)
 
         val parameters = someOtherFunction.parameters
         assertNotNull(parameters)
@@ -115,7 +116,7 @@ class TypeScriptLanguageFrontendTest {
         assertEquals(1, parameters.size)
 
         val parameter = parameters.first()
-        assertEquals("s", parameter.name)
+        assertLocalName("s", parameter)
     }
 
     @Test
@@ -145,7 +146,7 @@ class TypeScriptLanguageFrontendTest {
 
         val tag = jsx.expressions.firstOrNull()
         assertNotNull(tag)
-        assertEquals("<div>", tag.name)
+        assertLocalName("<div>", tag)
     }
 
     @Test
@@ -171,15 +172,15 @@ class TypeScriptLanguageFrontendTest {
         val preventDefault = function.getBodyStatementAs(0, MemberCallExpression::class.java)
         assertNotNull(preventDefault)
 
-        assertEquals("preventDefault", preventDefault.name)
-        assertEquals("event", preventDefault.base?.name)
+        assertLocalName("preventDefault", preventDefault)
+        assertLocalName("event", preventDefault.base)
 
         val apiUrl =
             function.getBodyStatementAs(1, DeclarationStatement::class.java)?.singleDeclaration
                 as? VariableDeclaration
         assertNotNull(apiUrl)
 
-        assertNotNull("apiUrl", apiUrl.name)
+        assertLocalName("apiUrl", apiUrl)
 
         val literalInitializer = apiUrl.initializer as? Literal<*>
         assertNotNull(literalInitializer)
@@ -191,7 +192,7 @@ class TypeScriptLanguageFrontendTest {
                 as? VariableDeclaration
         assertNotNull(token)
 
-        assertNotNull("token", token.name)
+        assertLocalName("token", token)
 
         val callInitializer = token.initializer as? CallExpression
         assertNotNull(callInitializer)
@@ -210,7 +211,7 @@ class TypeScriptLanguageFrontendTest {
         val refArg = fetch.arguments.first() as? DeclaredReferenceExpression
         assertNotNull(refArg)
 
-        assertEquals("apiUrl", refArg.name)
+        assertLocalName("apiUrl", refArg)
         assertSame(apiUrl, refArg.refersTo)
 
         var objectArg = fetch.arguments.last() as? InitializerListExpression
@@ -221,7 +222,7 @@ class TypeScriptLanguageFrontendTest {
         var keyValue = objectArg.initializers.first() as? KeyValueExpression
         assertNotNull(keyValue)
 
-        assertEquals("method", (keyValue.key as? DeclaredReferenceExpression)?.name)
+        assertLocalName("method", keyValue.key as? DeclaredReferenceExpression)
         assertEquals("POST", (keyValue.value as? Literal<*>)?.value)
 
         keyValue = objectArg.initializers.last() as? KeyValueExpression
@@ -239,7 +240,7 @@ class TypeScriptLanguageFrontendTest {
         assertEquals("Authorization", (keyValue.key as? Literal<*>)?.value)
         assertEquals("Bearer \${token}", (keyValue.value as? Literal<*>)?.value)
 
-        assertEquals("then", chainedCall.name)
+        assertLocalName("then", chainedCall)
 
         val funcArg = chainedCall.arguments.firstOrNull() as? LambdaExpression
         assertNotNull(funcArg)
@@ -250,7 +251,7 @@ class TypeScriptLanguageFrontendTest {
 
         val param = arrowFunction.parameters.firstOrNull()
         assertNotNull(param)
-        assertNotNull("res", param.name)
+        assertLocalName("res", param)
     }
 
     @Test
@@ -270,37 +271,37 @@ class TypeScriptLanguageFrontendTest {
         val user = tu.getDeclarationsByName("User", RecordDeclaration::class.java).iterator().next()
         assertNotNull(user)
         assertEquals("interface", user.kind)
-        assertEquals("User", user.name)
+        assertLocalName("User", user)
 
         assertEquals(4, user.fields.size)
 
         val lastName = user.fields.lastOrNull()
         assertNotNull(lastName)
-        assertEquals("lastName", lastName.name)
+        assertLocalName("lastName", lastName)
         assertEquals(TypeParser.createFrom("string", TypeScriptLanguage()), lastName.type)
 
         val usersState =
             tu.getDeclarationsByName("UsersState", RecordDeclaration::class.java).iterator().next()
         assertNotNull(user)
         assertEquals("interface", usersState.kind)
-        assertEquals("UsersState", usersState.name)
+        assertLocalName("UsersState", usersState)
 
         assertEquals(1, usersState.fields.size)
 
         val users = usersState.fields.firstOrNull()
         assertNotNull(users)
-        assertEquals("users", users.name)
+        assertLocalName("users", users)
         assertEquals(TypeParser.createFrom("User[]", TypeScriptLanguage()), users.type)
 
         val usersComponent =
             tu.getDeclarationsByName("Users", RecordDeclaration::class.java).iterator().next()
         assertNotNull(usersComponent)
-        assertEquals("Users", usersComponent.name)
+        assertLocalName("Users", usersComponent)
         assertEquals(1, usersComponent.constructors.size)
         assertEquals(/*2*/ 3 /* because of a dummy node */, usersComponent.methods.size)
         assertEquals(/*0*/ 2 /* because of dummy nodes */, usersComponent.fields.size)
 
-        val render = usersComponent.methods.firstOrNull { it.name == "render" }
+        val render = usersComponent.methods["render"]
         assertNotNull(render)
 
         val returnStmt = render.getBodyStatementAs(1, ReturnStatement::class.java)
@@ -312,7 +313,7 @@ class TypeScriptLanguageFrontendTest {
 
         val tag = jsx.expressions.firstOrNull()
         assertNotNull(tag)
-        assertEquals("<div>", tag.name)
+        assertLocalName("<div>", tag)
     }
 
     @Test
@@ -341,7 +342,7 @@ class TypeScriptLanguageFrontendTest {
 
         val validateForm = declStatement.singleDeclaration as? FunctionDeclaration
         assertNotNull(validateForm)
-        assertEquals("validateForm", validateForm.name)
+        assertLocalName("validateForm", validateForm)
     }
 
     @Test
@@ -361,18 +362,18 @@ class TypeScriptLanguageFrontendTest {
         val myClass =
             tu.getDeclarationsByName("MyClass", RecordDeclaration::class.java).iterator().next()
         assertNotNull(myClass)
-        assertEquals("awesome", myClass.annotations.firstOrNull()?.name)
+        assertLocalName("awesome", myClass.annotations.firstOrNull())
 
         val method = myClass.methods.firstOrNull()
         assertNotNull(method)
-        assertEquals("dontcall", method.annotations.firstOrNull()?.name)
+        assertLocalName("dontcall", method.annotations.firstOrNull())
 
         val field = myClass.fields["something"]
         assertNotNull(field)
 
         val annotation = field.annotations.firstOrNull()
         assertNotNull(annotation)
-        assertEquals("sensitive", annotation.name)
+        assertLocalName("sensitive", annotation)
 
         val member = annotation.members.firstOrNull()
         assertNotNull(member)
@@ -394,8 +395,9 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(tu)
 
         val onPost =
-            tu.statements.firstOrNull { it is MemberCallExpression && it.name == "onPost" }
-                as? MemberCallExpression
+            tu.statements.firstOrNull {
+                it is MemberCallExpression && it.name.localName == "onPost"
+            } as? MemberCallExpression
         assertNotNull(onPost)
 
         val lambda = onPost.arguments.drop(1).firstOrNull() as? LambdaExpression
@@ -405,8 +407,8 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(func)
 
         assertEquals(2, func.parameters.size)
-        assertEquals("req", func.parameters.firstOrNull()?.name)
-        assertEquals("res", func.parameters[1].name)
+        assertLocalName("req", func.parameters.firstOrNull())
+        assertLocalName("res", func.parameters[1])
     }
 
     @Test
@@ -440,7 +442,7 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(i)
         assertEquals("Comment on constructor", i.comment)
 
-        val j = users.methods.firstOrNull { it.name == "componentDidMount" }
+        val j = users.methods["componentDidMount"]
         assertNotNull(j)
         assertEquals("Multiline comment inside of a file", j.comment)
 

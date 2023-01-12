@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg;
 
 import de.fraunhofer.aisec.cpg.graph.Component;
+import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
@@ -45,6 +46,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class TranslationResult extends Node implements StatisticsHolder {
   public static final String SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend";
+  public static final String APPLICATION_LOCAL_NAME = "application";
   private final TranslationManager translationManager;
 
   /**
@@ -116,13 +118,13 @@ public class TranslationResult extends Node implements StatisticsHolder {
     } else if (components.isEmpty()) {
       // No component exists, so we create the new dummy component.
       swc = new Component();
-      swc.setName("application");
+      swc.setName(new Name(APPLICATION_LOCAL_NAME, null, ""));
       components.add(swc);
     } else {
       // Multiple components exist. As we don't know where to put the tu, we check if we have the
       // component we created and add it there or create a new one.
       for (var component : components) {
-        if (component.getName().equals("application")) {
+        if (component.getName().getLocalName().equals(APPLICATION_LOCAL_NAME)) {
           swc = component;
           break;
         }
@@ -130,7 +132,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
 
       if (swc == null) {
         swc = new Component();
-        swc.setName("application");
+        swc.setName(new Name(APPLICATION_LOCAL_NAME, null, ""));
         components.add(swc);
       }
     }
@@ -195,6 +197,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
             result.addAll(
                 sc.getTranslationUnits().stream()
                     .map(TranslationUnitDeclaration::getName)
+                    .map(Name::toString)
                     .collect(Collectors.toList())));
     return result;
   }

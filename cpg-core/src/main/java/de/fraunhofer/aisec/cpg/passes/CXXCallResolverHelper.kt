@@ -154,8 +154,7 @@ fun checkMostCommonImplicitCast(
             val otherCast = implicitCastTargets[i]
             if (currentCast != null && otherCast != null && currentCast != otherCast) {
                 // If we have multiple function targets with different implicit casts, we have
-                // an
-                // ambiguous call, and we can't have a single cast
+                // an ambiguous call, and we can't have a single cast
                 val contradictoryCast = CastExpression()
                 contradictoryCast.isImplicit = true
                 contradictoryCast.castType = UnknownType.getUnknownType(currentCast.language)
@@ -239,10 +238,10 @@ fun resolveConstructorWithDefaults(
 fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: String?): Boolean {
     val namePattern =
         Pattern.compile(
-            "(" + Pattern.quote(recordDeclaration!!.name) + "\\.)?" + Pattern.quote(name)
+            "(" + Pattern.quote(recordDeclaration!!.name.toString()) + "\\.)?" + Pattern.quote(name)
         )
     val invocationCandidate =
-        recordDeclaration.methods.filter { namePattern.matcher(it.name).matches() }
+        recordDeclaration.methods.filter { namePattern.matcher(it.name.toString()).matches() }
     return invocationCandidate.isEmpty()
 }
 

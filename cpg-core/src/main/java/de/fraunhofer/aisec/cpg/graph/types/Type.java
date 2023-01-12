@@ -25,6 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.frontends.Language;
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.Name;
+import de.fraunhofer.aisec.cpg.graph.NameKt;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -59,13 +63,13 @@ public abstract class Type extends Node {
   protected Origin origin;
 
   public Type() {
-    this.setName("");
+    this.setName(new Name(EMPTY_NAME, null, this.getLanguage()));
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier(false, false, false, false);
   }
 
   public Type(String typeName) {
-    this.setName(typeName);
+    this.setName(NameKt.parseName(this.getLanguage(), typeName));
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier();
     this.origin = Origin.UNRESOLVED;
@@ -73,7 +77,7 @@ public abstract class Type extends Node {
 
   public Type(Type type) {
     this.storage = type.storage;
-    this.setName(type.getName());
+    this.setName(type.getName().clone());
     this.qualifier =
         new Qualifier(
             type.qualifier.isConst,
@@ -83,8 +87,24 @@ public abstract class Type extends Node {
     this.origin = type.origin;
   }
 
-  public Type(String typeName, @Nullable Storage storage, Qualifier qualifier) {
-    this.setName(typeName);
+  public Type(
+      String typeName,
+      @Nullable Storage storage,
+      Qualifier qualifier,
+      Language<? extends LanguageFrontend> language) {
+    if (this instanceof FunctionType) {
+      this.setName(new Name(typeName, null, language));
+    } else {
+      this.setName(NameKt.parseName(language, typeName));
+    }
+    this.setLanguage(language);
+    this.storage = storage != null ? storage : Storage.AUTO;
+    this.qualifier = qualifier;
+    this.origin = Origin.UNRESOLVED;
+  }
+
+  public Type(Name fullTypeName, @Nullable Storage storage, Qualifier qualifier) {
+    this.setName(fullTypeName.clone());
     this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
@@ -260,8 +280,8 @@ public abstract class Type extends Node {
   public void refreshNames() {}
 
   /**
-   * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until Object-
-   * Incomplete- FunctionPtrType is reached
+   * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a
+   * Object-, Incomplete-, or FunctionPtrType is reached.
    *
    * @return root Type
    */
@@ -289,7 +309,7 @@ public abstract class Type extends Node {
   public abstract Type duplicate();
 
   public String getTypeName() {
-    return getName();
+    return getName().toString();
   }
 
   /**

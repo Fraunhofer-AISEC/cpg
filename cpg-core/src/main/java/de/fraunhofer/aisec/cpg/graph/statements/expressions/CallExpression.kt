@@ -118,7 +118,7 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
                 if (value is UnaryOperator && value.input.type is FunctionPointerType) {
                     value.input.name
                 } else {
-                    value?.name ?: ""
+                    value?.name ?: Name(EMPTY_NAME)
                 }
 
             // Register the callee as a type listener for this call expressions. Once we re-design
@@ -126,8 +126,6 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             // expressions listens for the type of the callee.
             field?.registerTypeListener(this)
         }
-
-    var fqn: String? = null
 
     fun setArgument(index: Int, argument: Expression) {
         argumentsEdges[index].end = argument
@@ -263,7 +261,8 @@ open class CallExpression : Expression(), HasType.TypeListener, HasBase, Seconda
             return
         }
         if (src === base) {
-            fqn = src.getType().root.typeName + "." + name
+            name =
+                Name(name.localName, src.getType().root.name, language?.namespaceDelimiter ?: ".")
         } else {
             val previous = type
             val types =

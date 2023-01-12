@@ -106,20 +106,22 @@ open class ImportResolver : Pass() {
     }
 
     protected fun getOrCreateMembers(base: EnumDeclaration, name: String): Set<ValueDeclaration> {
-        return base.entries.filter { it.name == name }.toSet()
+        return base.entries.filter { it.name.localName == name }.toSet()
     }
 
     protected fun getOrCreateMembers(base: RecordDeclaration, name: String): Set<ValueDeclaration> {
-        val memberMethods = base.methods.filter { it.name.endsWith(name) }.toMutableSet()
+        val memberMethods = base.methods.filter { it.name.localName.endsWith(name) }.toMutableSet()
 
         // add methods from superclasses
         memberMethods.addAll(
-            base.superTypeDeclarations.flatMap { it.methods }.filter { it.name.endsWith(name) }
+            base.superTypeDeclarations
+                .flatMap { it.methods }
+                .filter { it.name.localName.endsWith(name) }
         )
-        val memberFields = base.fields.filter { it.name == name }.toMutableSet()
+        val memberFields = base.fields.filter { it.name.localName == name }.toMutableSet()
         // add fields from superclasses
         memberFields.addAll(
-            base.superTypeDeclarations.flatMap { it.fields }.filter { it.name == name }
+            base.superTypeDeclarations.flatMap { it.fields }.filter { it.name.localName == name }
         )
 
         // now it gets weird: you can import a field and a number of methods that have the same
@@ -159,9 +161,9 @@ open class ImportResolver : Pass() {
                 override fun visit(child: Node) {
                     if (child is RecordDeclaration) {
                         records.add(child)
-                        importables.putIfAbsent(child.name, child)
+                        importables.putIfAbsent(child.name.toString(), child)
                     } else if (child is EnumDeclaration) {
-                        importables.putIfAbsent(child.name, child)
+                        importables.putIfAbsent(child.name.toString(), child)
                     }
                 }
             }

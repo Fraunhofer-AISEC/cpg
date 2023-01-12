@@ -74,7 +74,7 @@ func (frontend *GoLanguageFrontend) NewDeclaration(typ string, fset *token.FileS
 	var node = jnigi.NewObjectRef(fmt.Sprintf("%s/%s", cpg.DeclarationsPackage, typ))
 
 	// Prepend the frontend and the name as the receiver and the first argument
-	args = append([]any{frontend.Cast(MetadataProviderClass), cpg.NewString(name)}, args...)
+	args = append([]any{frontend.Cast(MetadataProviderClass), cpg.NewCharSequence(name)}, args...)
 
 	err := env.CallStaticMethod(
 		cpg.GraphPackage+"/DeclarationBuilderKt",

@@ -239,7 +239,9 @@ class LLVMIRLanguageFrontend(
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
         return this.scopeManager
-            .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) { it.name == name }
+            .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) {
+                it.name.toString() == name
+            }
             .isNotEmpty()
     }
 

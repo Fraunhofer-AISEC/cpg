@@ -32,17 +32,16 @@ import (
 )
 
 type Node jnigi.ObjectRef
+type Name jnigi.ObjectRef
 
 const CPGPackage = "de/fraunhofer/aisec/cpg"
 const GraphPackage = CPGPackage + "/graph"
 const NodeClass = GraphPackage + "/Node"
+const NameClass = GraphPackage + "/Name"
+const NameKtClass = GraphPackage + "/NameKt"
 
 func (n *Node) Cast(className string) *jnigi.ObjectRef {
 	return (*jnigi.ObjectRef)(n).Cast(className)
-}
-
-func (n *Node) SetName(s string) error {
-	return (*jnigi.ObjectRef)(n).CallMethod(env, "setName", nil, NewString(s))
 }
 
 func (n *Node) SetLanguge(l *Language) error {
@@ -61,9 +60,51 @@ func (n *Node) SetLocation(location *PhysicalLocation) error {
 	return (*jnigi.ObjectRef)(n).SetField(env, "location", (*jnigi.ObjectRef)(location))
 }
 
-func (n *Node) GetName() string {
+func (n *Node) SetName(name *Name) {
+	err := (*jnigi.ObjectRef)(n).CallMethod(env, "setName", nil, name)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (n *Node) GetName() (fn *Name) {
+	var o = jnigi.NewObjectRef(NameClass)
+	err := (*jnigi.ObjectRef)(n).CallMethod(env, "getName", o)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*Name)(o)
+}
+
+func (n *Name) ConvertToGo(o *jnigi.ObjectRef) error {
+	*n = (Name)(*o)
+	return nil
+}
+
+func (n *Name) ConvertToJava() (obj *jnigi.ObjectRef, err error) {
+	return (*jnigi.ObjectRef)(n), nil
+}
+
+func (n *Name) GetClassName() string {
+	return NameClass
+}
+
+func (n *Name) Cast(className string) *jnigi.ObjectRef {
+	return (*jnigi.ObjectRef)(n).Cast(className)
+}
+
+func (n *Name) IsArray() bool {
+	return false
+}
+
+func (n *Name) String() string {
+	return n.ToString()
+}
+
+func (n *Name) ToString() string {
 	var o = jnigi.NewObjectRef("java/lang/String")
-	_ = (*jnigi.ObjectRef)(n).CallMethod(env, "getName", o)
+	_ = (*jnigi.ObjectRef)(n).CallMethod(env, "toString", o)
 
 	if o == nil {
 		return ""
@@ -71,6 +112,26 @@ func (n *Node) GetName() string {
 
 	var b []byte
 	err := o.CallMethod(env, "getBytes", &b)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(b)
+}
+
+func (n *Name) GetLocalName() string {
+	var o = jnigi.NewObjectRef("java/lang/String")
+	err := (*jnigi.ObjectRef)(n).CallMethod(env, "getLocalName", o)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if o == nil {
+		return ""
+	}
+
+	var b []byte
+	err = o.CallMethod(env, "getBytes", &b)
 	if err != nil {
 		log.Fatal(err)
 	}

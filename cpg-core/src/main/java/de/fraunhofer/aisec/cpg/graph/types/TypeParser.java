@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.types;
 import de.fraunhofer.aisec.cpg.frontends.*;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage;
+import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.ArrayList;
@@ -327,9 +328,6 @@ public class TypeParser {
    */
   @NotNull
   public static List<String> separate(@NotNull String type) {
-
-    // Remove :: CPP operator, use . instead
-    type = type.replace("::", ".");
     type = type.split("=")[0];
 
     // Guarantee that there is no arbitrary number of whitespaces
@@ -502,20 +500,6 @@ public class TypeParser {
    */
   private static String removeAccessModifier(@NotNull String type) {
     return type.replaceAll("public|private|protected", "").trim();
-  }
-
-  /**
-   * Replaces the Scope Resolution Operator (::) in C++ by . for a consistent parsing
-   *
-   * @param type provided typeString
-   * @return typeString which uses . instead of the substring :: if CPP is the current language
-   *     <p>TODO: Remove this function, this is not a good idea!
-   * @deprecated
-   */
-  @Deprecated
-  private static String replaceScopeResolutionOperator(
-      @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
-    return (language instanceof CPPLanguage) ? type.replace("::", ".").trim() : type;
   }
 
   /**
@@ -726,8 +710,6 @@ public class TypeParser {
 
     // Preprocessing of the typeString
     type = removeAccessModifier(type);
-    // Remove CPP :: Operator
-    type = replaceScopeResolutionOperator(type, language);
 
     // Determine if inner class
 
@@ -807,7 +789,8 @@ public class TypeParser {
               typeName, storageValue, qualifier, generics, modifier, primitiveType, language);
     }
 
-    if (finalType.getTypeName().equals("auto") || (type.contains("auto") && !primitiveType)) {
+    if (finalType.getName().getLocalName().equals("auto")
+        || (type.contains("auto") && !primitiveType)) {
       // In C++17 if auto keyword is used the compiler infers the type automatically, hence we
       // are not able to find out, which type this should be, it will be resolved due to
       // dataflow
@@ -850,7 +833,8 @@ public class TypeParser {
 
     if (createdType instanceof SecondOrderType) {
       templateType =
-          searchForTemplateTypes(createdType.getRoot().getName(), lang.getScopeManager());
+          searchForTemplateTypes(
+              createdType.getRoot().getName().toString(), lang.getScopeManager());
       if (templateType != null) {
         createdType.setRoot(templateType);
       }
@@ -894,5 +878,11 @@ public class TypeParser {
   public static Type createFrom(
       @NotNull String type, Language<? extends LanguageFrontend> language) {
     return createFrom(type, language, false, null);
+  }
+
+  /** Parses the type from a string and the supplied language. */
+  @NotNull
+  public static Type createFrom(@NotNull Name name, Language<? extends LanguageFrontend> language) {
+    return createFrom(name.toString(), language, false, null);
   }
 }

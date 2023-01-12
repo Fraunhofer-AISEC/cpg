@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -147,7 +148,7 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend>()
         for (sc in this.config.softwareComponents.keys) {
             val component = Component()
-            component.name = sc
+            component.name = Name(sc)
             result.addComponent(component)
 
             var sourceLocations: List<File> = this.config.softwareComponents[sc]!!

@@ -25,6 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.assertFullName
+import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -54,10 +57,40 @@ internal class NameTest {
     }
 
     @Test
-    fun testParse() {
+    fun testParseName() {
         val fqn = "std::string"
 
-        val name = Name.parse(fqn, "::")
+        val name = parseName(fqn, "::")
         assertEquals(fqn, name.toString())
+    }
+
+    @Test
+    fun testEndsWith() {
+        val name = parseName("A.B", ".")
+        assertTrue(name.lastPartsMatch("B"))
+        assertTrue(name.lastPartsMatch("A.B"))
+    }
+
+    @Test
+    fun testParentNames() {
+        with(TestLanguageFrontend()) {
+            val tu = newTranslationUnitDeclaration("file.extension")
+            this.scopeManager.resetToGlobal(tu)
+
+            val func = newFunctionDeclaration("main")
+            assertLocalName("main", func)
+
+            val myClass = newRecordDeclaration("MyClass", "class")
+            assertLocalName("MyClass", myClass)
+
+            this.scopeManager.enterScope(myClass)
+
+            val method =
+                newMethodDeclaration("doSomething", isStatic = false, recordDeclaration = myClass)
+            assertLocalName("doSomething", method)
+            assertFullName("MyClass::doSomething", method)
+
+            this.scopeManager.leaveScope(myClass)
+        }
     }
 }

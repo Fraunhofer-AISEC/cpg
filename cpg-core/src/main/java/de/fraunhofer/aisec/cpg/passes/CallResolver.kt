@@ -30,12 +30,9 @@ import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
 import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
 import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
-import de.fraunhofer.aisec.cpg.graph.duplicate
-import de.fraunhofer.aisec.cpg.graph.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
@@ -118,19 +115,22 @@ open class CallResolver : SymbolResolverPass() {
             if (typeString in recordMap) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
-                    val initializer = node.newConstructExpression("()")
+                    val initializer = node.newConstructExpression(typeString, "$typeString()")
                     initializer.isImplicit = true
                     node.initializer = initializer
                     node.templateParameters?.let {
                         addImplicitTemplateParametersToCall(it, initializer)
                     }
                 } else if (
-                    currInitializer is CallExpression && currInitializer.name == typeString
+                    currInitializer !is ConstructExpression &&
+                        currInitializer is CallExpression &&
+                        currInitializer.name.localName == node.type.root.name.localName
                 ) {
                     // This should actually be a construct expression, not a call!
                     val arguments = currInitializer.arguments
                     val signature = arguments.map(Node::code).joinToString(", ")
-                    val initializer = node.newConstructExpression("($signature)")
+                    val initializer =
+                        node.newConstructExpression(typeString, "$typeString($signature)")
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
                     initializer.isImplicit = true
                     node.initializer = initializer
@@ -198,7 +198,7 @@ open class CallResolver : SymbolResolverPass() {
         // but it isn't
         val funcPointer =
             walker.getDeclarationForScope(call) { v ->
-                v.type is FunctionPointerType && v.name == call.name
+                v.type is FunctionPointerType && v.name.lastPartsMatch(call.name)
             }
         if (!funcPointer.isPresent) {
             // function pointers are handled by extra pass
@@ -272,17 +272,13 @@ open class CallResolver : SymbolResolverPass() {
         // Find invokes by supertypes
         if (
             invocationCandidates.isEmpty() &&
+                call.name.localName.isNotEmpty() &&
                 (call.language !is CPPLanguage || shouldSearchForInvokesInParent(call))
         ) {
-            val nameParts =
-                call.name.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            if (nameParts.isNotEmpty()) {
-                val records =
-                    possibleContainingTypes.mapNotNull { recordMap[it.root.typeName] }.toSet()
-                invocationCandidates =
-                    getInvocationCandidatesFromParents(nameParts[nameParts.size - 1], call, records)
-                        .toMutableList()
-            }
+            val records = possibleContainingTypes.mapNotNull { recordMap[it.root.name] }.toSet()
+            invocationCandidates =
+                getInvocationCandidatesFromParents(call.name.localName, call, records)
+                    .toMutableList()
         }
         createMethodDummies(invocationCandidates, possibleContainingTypes, call)
         call.invokes = invocationCandidates
@@ -324,11 +320,11 @@ open class CallResolver : SymbolResolverPass() {
         if (invocationCandidates.isEmpty()) {
             possibleContainingTypes
                 .mapNotNull {
-                    var record = recordMap[it.root.typeName]
+                    var record = recordMap[it.root.name]
                     if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
                         record = it.startInference().inferRecordDeclaration(it, currentTU)
                         // update the record map
-                        if (record != null) recordMap[it.root.typeName] = record
+                        if (record != null) recordMap[it.root.name] = record
                     }
                     record
                 }
@@ -349,7 +345,7 @@ open class CallResolver : SymbolResolverPass() {
     }
 
     private fun resolveConstructExpression(constructExpression: ConstructExpression) {
-        val typeName = constructExpression.type.typeName
+        val typeName = constructExpression.type.name
         val recordDeclaration = recordMap[typeName]
         constructExpression.instantiates = recordDeclaration
         for (template in templateList) {
@@ -391,7 +387,7 @@ open class CallResolver : SymbolResolverPass() {
 
     private fun resolveExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
         if (eci.containingClass != null) {
-            val recordDeclaration = recordMap[eci.containingClass]
+            val recordDeclaration = recordMap[eci.parseName(eci.containingClass)]
             val signature = eci.arguments.map { it.type }
             if (recordDeclaration != null) {
                 val constructor =
@@ -407,10 +403,10 @@ open class CallResolver : SymbolResolverPass() {
         call: CallExpression,
         curClass: RecordDeclaration
     ): Boolean {
-        val name = call.name.substring(call.name.lastIndexOf('.') + 1)
+        val name = call.name.localName
         val nameMatches =
             curClass.staticImports.filterIsInstance<FunctionDeclaration>().filter {
-                it.name == name || it.name.endsWith(".$name")
+                it.name.lastPartsMatch(name)
             }
         return if (nameMatches.isEmpty()) {
             false
@@ -443,7 +439,7 @@ open class CallResolver : SymbolResolverPass() {
             curClass.staticImportStatements
                 .filter { it.endsWith(".$name") }
                 .map { it.substring(0, it.lastIndexOf('.')) }
-                .mapNotNull { recordMap[it] }
+                .mapNotNull { recordMap[call.parseName(it)] }
 
         for (recordDeclaration in containingRecords) {
             val inferred =
@@ -486,7 +482,11 @@ open class CallResolver : SymbolResolverPass() {
 
         val namePattern =
             Pattern.compile(
-                "(" + Pattern.quote(recordDeclaration.name) + "\\.)?" + Pattern.quote(name)
+                "(" +
+                    Pattern.quote(recordDeclaration.name.toString()) +
+                    Regex.escape(recordDeclaration.language!!.namespaceDelimiter) +
+                    ")?" +
+                    Pattern.quote(name)
             )
         return if (call.language is HasComplexCallResolution) {
             (call.language as HasComplexCallResolution).refineInvocationCandidatesFromRecord(

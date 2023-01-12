@@ -60,10 +60,10 @@ class CPPLanguage :
     ): List<FunctionDeclaration> {
         var invocationCandidates = mutableListOf<FunctionDeclaration>()
         val records =
-            possibleContainingTypes.mapNotNull { callResolver.recordMap[it.root.typeName] }.toSet()
+            possibleContainingTypes.mapNotNull { callResolver.recordMap[it.root.name] }.toSet()
         for (record in records) {
             invocationCandidates.addAll(
-                callResolver.getInvocationCandidatesFromRecord(record, call.name, call)
+                callResolver.getInvocationCandidatesFromRecord(record, call.name.localName, call)
             )
         }
         if (invocationCandidates.isEmpty()) {

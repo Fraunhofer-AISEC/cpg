@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import de.fraunhofer.aisec.cpg.graph.Name;
+import de.fraunhofer.aisec.cpg.graph.NameKt;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import org.jetbrains.annotations.NotNull;
 
@@ -40,23 +42,21 @@ public class StaticCallExpression extends CallExpression {
     return targetRecord;
   }
 
-  @Override
-  public void setName(@NotNull String name) {
-    super.setName(name);
-    updateFqn();
-  }
-
   public void setTargetRecord(String targetRecord) {
     this.targetRecord = targetRecord;
-    updateFqn();
+    updateFqn(this.getName().getLocalName());
   }
 
-  private void updateFqn() {
-    if (targetRecord != null
-        && !targetRecord.isEmpty()
-        && getName() != null
-        && !getName().isEmpty()) {
-      setFqn(targetRecord + "." + getName());
+  private void updateFqn(@NotNull String localName) {
+    if (targetRecord != null && !targetRecord.isEmpty() && !localName.isEmpty()) {
+      var namespaceDelimiter = ".";
+      if (this.getLanguage() != null) {
+        namespaceDelimiter = this.getLanguage().getNamespaceDelimiter();
+      }
+
+      setName(
+          new Name(
+              localName, NameKt.parseName(this.getLanguage(), targetRecord), namespaceDelimiter));
     }
   }
 }

@@ -34,8 +34,14 @@ import (
 	"tekao.net/jnigi"
 )
 
-func (frontend *GoLanguageFrontend) NewCallExpression(fset *token.FileSet, astNode ast.Node) *cpg.CallExpression {
-	return (*cpg.CallExpression)(frontend.NewExpression("CallExpression", fset, astNode))
+func (frontend *GoLanguageFrontend) NewCallExpression(fset *token.FileSet, astNode ast.Node, callee cpg.Castable, name string) *cpg.CallExpression {
+	if callee == nil {
+		callee = jnigi.NewObjectRef(cpg.ExpressionClass)
+	} else {
+		callee = callee.Cast(cpg.ExpressionClass)
+	}
+
+	return (*cpg.CallExpression)(frontend.NewExpression("CallExpression", fset, astNode, callee, cpg.NewCharSequence(name)))
 }
 
 func (frontend *GoLanguageFrontend) NewCastExpression(fset *token.FileSet, astNode ast.Node) *cpg.CastExpression {
@@ -43,12 +49,12 @@ func (frontend *GoLanguageFrontend) NewCastExpression(fset *token.FileSet, astNo
 }
 
 func (frontend *GoLanguageFrontend) NewMemberExpression(fset *token.FileSet, astNode ast.Node, name string, base cpg.Castable) *cpg.MemberExpression {
-	return (*cpg.MemberExpression)(frontend.NewExpression("MemberExpression", fset, astNode, cpg.NewString(name), base.Cast(cpg.ExpressionClass)))
+	return (*cpg.MemberExpression)(frontend.NewExpression("MemberExpression", fset, astNode, cpg.NewCharSequence(name), base.Cast(cpg.ExpressionClass)))
 }
 
 func (frontend *GoLanguageFrontend) NewMemberCallExpression(fset *token.FileSet, astNode ast.Node, name string, fqn string, base *cpg.Expression, member *cpg.Node) *cpg.MemberCallExpression {
 	return (*cpg.MemberCallExpression)(frontend.NewExpression("MemberCallExpression", fset, astNode,
-		cpg.NewString(name),
+		cpg.NewCharSequence(name),
 		cpg.NewString(fqn),
 		base.Cast(cpg.ExpressionClass),
 		member.Cast(cpg.NodeClass),
@@ -99,7 +105,7 @@ func (frontend *GoLanguageFrontend) NewLiteral(fset *token.FileSet, astNode ast.
 }
 
 func (frontend *GoLanguageFrontend) NewDeclaredReferenceExpression(fset *token.FileSet, astNode ast.Node, name string) *cpg.DeclaredReferenceExpression {
-	return (*cpg.DeclaredReferenceExpression)(frontend.NewExpression("DeclaredReferenceExpression", fset, astNode, cpg.NewString(name)))
+	return (*cpg.DeclaredReferenceExpression)(frontend.NewExpression("DeclaredReferenceExpression", fset, astNode, cpg.NewCharSequence(name)))
 }
 
 func (frontend *GoLanguageFrontend) NewKeyValueExpression(fset *token.FileSet, astNode ast.Node) *cpg.KeyValueExpression {

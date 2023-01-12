@@ -63,7 +63,7 @@ public class TranslationUnitDeclaration extends Declaration
   @Relationship(value = "NAMESPACES", direction = "OUTGOING")
   @SubGraph("AST")
   @NotNull
-  private final List<PropertyEdge<Declaration>> namespaces = new ArrayList<>();
+  private final List<PropertyEdge<NamespaceDeclaration>> namespaces = new ArrayList<>();
 
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
@@ -76,7 +76,7 @@ public class TranslationUnitDeclaration extends Declaration
    * @param i the index
    * @param clazz the class
    * @param <T> the type of the class
-   * @return the declaration or null, if it the declaration can not be cast to the class
+   * @return the declaration or null, if it can not be cast to the class
    */
   @Nullable
   public <T extends Declaration> T getDeclarationAs(int i, Class<T> clazz) {
@@ -106,7 +106,7 @@ public class TranslationUnitDeclaration extends Declaration
         .map(PropertyEdge::getEnd)
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
-        .filter(declaration -> Objects.equals(declaration.getName(), name))
+        .filter(declaration -> Objects.equals(declaration.getName().toString(), name))
         .collect(Collectors.toSet());
   }
 
@@ -114,7 +114,7 @@ public class TranslationUnitDeclaration extends Declaration
   public IncludeDeclaration getIncludeByName(@NotNull String name) {
     return this.includes.stream()
         .map(PropertyEdge::getEnd)
-        .filter(declaration -> Objects.equals(declaration.getName(), name))
+        .filter(declaration -> Objects.equals(declaration.getName().toString(), name))
         .findFirst()
         .orElse(null);
   }
@@ -140,12 +140,12 @@ public class TranslationUnitDeclaration extends Declaration
   }
 
   @NotNull
-  public List<Declaration> getNamespaces() {
+  public List<NamespaceDeclaration> getNamespaces() {
     return unwrap(this.namespaces);
   }
 
   @NotNull
-  public List<PropertyEdge<Declaration>> getNamespacesPropertyEdge() {
+  public List<PropertyEdge<NamespaceDeclaration>> getNamespacesPropertyEdge() {
     return this.namespaces;
   }
 
@@ -153,7 +153,7 @@ public class TranslationUnitDeclaration extends Declaration
     if (declaration instanceof IncludeDeclaration) {
       addIfNotContains(includes, (IncludeDeclaration) declaration);
     } else if (declaration instanceof NamespaceDeclaration) {
-      addIfNotContains(namespaces, declaration);
+      addIfNotContains(namespaces, (NamespaceDeclaration) declaration);
     }
 
     addIfNotContains(declarations, declaration);

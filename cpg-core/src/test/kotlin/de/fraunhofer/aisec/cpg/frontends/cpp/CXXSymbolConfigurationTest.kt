@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -63,7 +64,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         // not know)
         val dre = binaryOperator.getRhsAs(DeclaredReferenceExpression::class.java)
         assertNotNull(dre)
-        assertEquals("HELLO_WORLD", dre.name)
+        assertLocalName("HELLO_WORLD", dre)
 
         binaryOperator = funcDecl.getBodyStatementAs(1, BinaryOperator::class.java)
         assertNotNull(binaryOperator)
@@ -72,7 +73,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         // we do not know)
         val call = binaryOperator.getRhsAs(CallExpression::class.java)
         assertNotNull(call)
-        assertEquals("INCREASE", call.name)
+        assertLocalName("INCREASE", call)
     }
 
     @Test

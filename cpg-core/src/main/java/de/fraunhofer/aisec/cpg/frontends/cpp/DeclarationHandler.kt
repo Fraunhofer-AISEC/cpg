@@ -87,9 +87,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * into a [NamespaceDeclaration].
      */
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
-        // Build a FQN out of the current scope prefix
-        val fqn = frontend.currentNamePrefixWithDelimiter + ctx.name.toString()
-        val declaration = newNamespaceDeclaration(fqn, frontend.getCodeFromRawNode(ctx))
+        val declaration =
+            newNamespaceDeclaration(ctx.name.toString(), frontend.getCodeFromRawNode(ctx))
 
         frontend.scopeManager.addDeclaration(declaration)
 
@@ -284,7 +283,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         frontend.scopeManager.leaveScope(templateDeclaration)
         if (templateDeclaration is FunctionTemplateDeclaration) {
             // Fix typeName
-            templateDeclaration.name = templateDeclaration.getRealizationDeclarations()[0].name
+            templateDeclaration.name =
+                templateDeclaration.getRealizationDeclarations()[0].name.clone()
         } else
             (innerDeclaration as? RecordDeclaration)?.let {
                 addParameterizedTypesToRecord(templateDeclaration, it)
@@ -442,7 +442,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         // typedef'd name is called S. However, to make things a little bit easier
                         // we also transfer the name to the record declaration.
                         ctx.declarators.firstOrNull()?.name?.toString()?.let {
-                            primaryDeclaration?.name = it
+                            primaryDeclaration?.name = parseName(it)
                             // We need to inform the later steps that we want to take the name
                             // of this declaration as the basis for the result type of the typedef
                             useNameOfDeclarator = true
@@ -481,7 +481,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 val declSpecifierToUse =
                     if (useNameOfDeclarator && declSpecifier is IASTCompositeTypeSpecifier) {
                         val copy = declSpecifier.copy()
-                        copy.name = CPPASTName(primaryDeclaration?.name?.toCharArray())
+                        copy.name = CPPASTName(primaryDeclaration?.name?.toString()?.toCharArray())
                         copy
                     } else {
                         declSpecifier
@@ -633,7 +633,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 objectType.addGeneric(genericInstantiation)
                 templateParams.add(
                     newTypeExpression(
-                        genericInstantiation.name,
+                        genericInstantiation.name.toString(),
                         genericInstantiation,
                     )
                 )

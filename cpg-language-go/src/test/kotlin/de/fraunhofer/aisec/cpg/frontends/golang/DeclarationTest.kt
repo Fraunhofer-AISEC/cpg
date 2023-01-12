@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -82,7 +83,7 @@ class DeclarationTest {
 
         val param = myGlobalFunc.parameters.firstOrNull()
         assertNotNull(param)
-        assertEquals("", param.name)
+        assertFullName("", param)
     }
 
     @Test

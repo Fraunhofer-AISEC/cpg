@@ -115,7 +115,7 @@ class ShortcutsTest {
 
         assertEquals(
             listOf((main.body as CompoundStatement).statements[1] as MemberCallExpression),
-            expected.filterByName("print")
+            expected("print")
         )
     }
 

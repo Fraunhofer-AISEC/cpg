@@ -48,7 +48,7 @@ internal class StaticImportsTest : BaseTest() {
         assertNotNull(call)
         assertEquals(listOf(test), call.invokes)
 
-        val testFields = result.fields { it.name == "test" }
+        val testFields = result.fields { it.name.localName == "test" }
         assertEquals(1, testFields.size)
 
         val staticField = testFields.firstOrNull()
@@ -71,13 +71,13 @@ internal class StaticImportsTest : BaseTest() {
         val b = records["B", SearchModifier.UNIQUE]
 
         for (call in main.calls) {
-            when (call.name) {
+            when (call.name.localName) {
                 "a" -> {
                     assertEquals(listOf(findByUniqueName(methods, "a")), call.invokes)
                     assertTrue((call.invokes[0] as MethodDeclaration).isStatic)
                 }
                 "b" -> {
-                    val bs = methods { it.name == "b" && it.isStatic }
+                    val bs = methods { it.name.localName == "b" && it.isStatic }
                     assertEquals(call.invokes, bs { it.hasSignature(call.signature) })
                 }
                 "nonStatic" -> {

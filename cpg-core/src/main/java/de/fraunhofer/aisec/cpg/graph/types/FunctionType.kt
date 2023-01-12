@@ -46,10 +46,9 @@ class FunctionType : Type {
         language: Language<out LanguageFrontend>?,
         qualifier: Qualifier = Qualifier(),
         storage: Storage = Storage.AUTO
-    ) : super(typeName, storage, qualifier) {
+    ) : super(typeName, storage, qualifier, language) {
         this.parameters = parameters
         this.returnTypes = returnTypes
-        this.language = language
     }
 
     constructor() : super()

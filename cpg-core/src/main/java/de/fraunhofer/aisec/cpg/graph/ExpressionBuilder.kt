@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -46,7 +47,7 @@ fun <T> MetadataProvider.newLiteral(
     rawNode: Any? = null,
 ): Literal<T> {
     val node = Literal<T>()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.value = value
     node.type = type
@@ -68,9 +69,8 @@ fun MetadataProvider.newBinaryOperator(
     rawNode: Any? = null
 ): BinaryOperator {
     val node = BinaryOperator()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, operatorCode, rawNode, code, true)
 
-    node.name = operatorCode
     node.operatorCode = operatorCode
 
     log(node)
@@ -93,10 +93,9 @@ fun MetadataProvider.newUnaryOperator(
     rawNode: Any? = null
 ): UnaryOperator {
     val node = UnaryOperator()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, operatorType, rawNode, code, true)
 
     node.operatorCode = operatorType
-    node.name = operatorType
     node.isPostfix = postfix
     node.isPrefix = prefix
 
@@ -118,7 +117,7 @@ fun MetadataProvider.newNewExpression(
     rawNode: Any? = null
 ): NewExpression {
     val node = NewExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.type = type
 
@@ -134,11 +133,12 @@ fun MetadataProvider.newNewExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newConstructExpression(
+    name: CharSequence? = EMPTY_NAME,
     code: String? = null,
     rawNode: Any? = null
 ): ConstructExpression {
     val node = ConstructExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
     return node
@@ -160,7 +160,7 @@ fun MetadataProvider.newConditionalExpression(
     rawNode: Any? = null
 ): ConditionalExpression {
     val node = ConditionalExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.condition = condition
     node.thenExpr = thenExpr
@@ -185,7 +185,7 @@ fun MetadataProvider.newKeyValueExpression(
     rawNode: Any? = null
 ): KeyValueExpression {
     val node = KeyValueExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.key = key
     node.value = value
@@ -206,7 +206,7 @@ fun MetadataProvider.newLambdaExpression(
     rawNode: Any? = null
 ): LambdaExpression {
     val node = LambdaExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
     return node
@@ -224,7 +224,7 @@ fun MetadataProvider.newCompoundStatementExpression(
     rawNode: Any? = null
 ): CompoundStatementExpression {
     val node = CompoundStatementExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
     return node
@@ -239,16 +239,15 @@ fun MetadataProvider.newCompoundStatementExpression(
 @JvmOverloads
 fun MetadataProvider.newCallExpression(
     callee: Expression? = null,
-    fqn: String? = null,
+    fqn: CharSequence? = null,
     code: String? = null,
     template: Boolean = false,
     rawNode: Any? = null
 ): CallExpression {
     val node = CallExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, fqn, rawNode, code, true)
 
     node.callee = callee
-    node.fqn = fqn
     node.template = template
 
     log(node)
@@ -268,7 +267,7 @@ fun MetadataProvider.newExplicitConstructorInvocation(
     rawNode: Any? = null
 ): ExplicitConstructorInvocation {
     val node = ExplicitConstructorInvocation()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.containingClass = containingClass
 
@@ -284,7 +283,7 @@ fun MetadataProvider.newExplicitConstructorInvocation(
  */
 @JvmOverloads
 fun MetadataProvider.newMemberCallExpression(
-    name: String?,
+    name: CharSequence?,
     fqn: String?,
     base: Expression?,
     member: Node?,
@@ -293,10 +292,17 @@ fun MetadataProvider.newMemberCallExpression(
     rawNode: Any? = null
 ): MemberCallExpression {
     val node = MemberCallExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(
+        this,
+        if (fqn.isNullOrEmpty()) {
+            name
+        } else {
+            fqn
+        },
+        rawNode,
+        code,
+    )
 
-    node.name = name ?: Node.EMPTY_NAME
-    node.fqn = fqn
     node.base = base
     node.member = member
     node.operatorCode = operatorCode
@@ -313,7 +319,7 @@ fun MetadataProvider.newMemberCallExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newMemberExpression(
-    name: String?,
+    name: CharSequence?,
     base: Expression,
     memberType: Type? = UnknownType.getUnknownType(),
     operatorCode: String? = ".",
@@ -321,9 +327,8 @@ fun MetadataProvider.newMemberExpression(
     rawNode: Any? = null
 ): MemberExpression {
     val node = MemberExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, true)
 
-    node.name = name ?: Node.EMPTY_NAME
     node.setBase(base)
     node.operatorCode = operatorCode
     node.type = memberType
@@ -340,17 +345,14 @@ fun MetadataProvider.newMemberExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newStaticCallExpression(
-    name: String?,
     fqn: String?,
     code: String? = null,
     targetRecord: String?,
     rawNode: Any? = null
 ): StaticCallExpression {
     val node = StaticCallExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, fqn, rawNode, code, true)
 
-    node.name = name ?: Node.EMPTY_NAME
-    node.fqn = fqn
     node.targetRecord = targetRecord
 
     log(node)
@@ -366,7 +368,7 @@ fun MetadataProvider.newStaticCallExpression(
 @JvmOverloads
 fun MetadataProvider.newCastExpression(code: String? = null, rawNode: Any? = null): CastExpression {
     val node = CastExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
     return node
@@ -387,9 +389,8 @@ fun MetadataProvider.newTypeIdExpression(
     rawNode: Any? = null
 ): TypeIdExpression {
     val node = TypeIdExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, operatorCode, rawNode, code, true)
 
-    node.name = operatorCode
     node.operatorCode = operatorCode
     node.type = type
     node.referencedType = referencedType
@@ -410,7 +411,7 @@ fun MetadataProvider.newArraySubscriptionExpression(
     rawNode: Any? = null
 ): ArraySubscriptionExpression {
     val node = ArraySubscriptionExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
     return node
@@ -428,7 +429,7 @@ fun MetadataProvider.newArrayCreationExpression(
     rawNode: Any? = null
 ): ArrayCreationExpression {
     val node = ArrayCreationExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
     return node
@@ -442,15 +443,14 @@ fun MetadataProvider.newArrayCreationExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newDeclaredReferenceExpression(
-    name: String?,
+    name: CharSequence?,
     type: Type? = UnknownType.getUnknownType(),
     code: String? = null,
     rawNode: Any? = null
 ): DeclaredReferenceExpression {
     val node = DeclaredReferenceExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, true)
 
-    node.name = name ?: Node.EMPTY_NAME
     node.type = type
 
     log(node)
@@ -471,7 +471,7 @@ fun MetadataProvider.newArrayRangeExpression(
     rawNode: Any? = null
 ): ArrayRangeExpression {
     val node = ArrayRangeExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.floor = floor
     node.ceiling = ceil
@@ -492,7 +492,7 @@ fun MetadataProvider.newDeleteExpression(
     rawNode: Any? = null
 ): DeleteExpression {
     val node = DeleteExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
     return node
@@ -507,7 +507,7 @@ fun MetadataProvider.newDeleteExpression(
 @JvmOverloads
 fun MetadataProvider.newExpressionList(code: String? = null, rawNode: Any? = null): ExpressionList {
     val node = ExpressionList()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
     return node
@@ -526,7 +526,7 @@ fun MetadataProvider.newInitializerListExpression(
     rawNode: Any? = null
 ): InitializerListExpression {
     val node = InitializerListExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
     return node
@@ -544,7 +544,7 @@ fun MetadataProvider.newDesignatedInitializerExpression(
     rawNode: Any? = null
 ): DesignatedInitializerExpression {
     val node = DesignatedInitializerExpression()
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
     return node
@@ -558,14 +558,13 @@ fun MetadataProvider.newDesignatedInitializerExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newTypeExpression(
-    name: String?,
+    name: CharSequence?,
     type: Type?,
     rawNode: Any? = null
 ): TypeExpression {
     val node = TypeExpression()
-    node.applyMetadata(this, rawNode, null)
+    node.applyMetadata(this, name, rawNode, null)
 
-    node.name = name ?: Node.EMPTY_NAME
     node.type = type
 
     log(node)
@@ -586,7 +585,7 @@ fun MetadataProvider.newProblemExpression(
     rawNode: Any? = null
 ): ProblemExpression {
     val node = ProblemExpression(problem, type)
-    node.applyMetadata(this, rawNode, code)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
     return node
@@ -605,7 +604,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.annotations = this.annotations
     duplicate.comment = this.comment
     duplicate.file = this.file
-    duplicate.name = this.name
+    duplicate.name = this.name.clone()
     duplicate.nextDFG = this.nextDFG
     duplicate.prevDFG = this.prevDFG
     duplicate.nextEOG = this.nextEOG
@@ -616,7 +615,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
 
 fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
     val duplicate = TypeExpression()
-    duplicate.name = this.name
+    duplicate.name = this.name.clone()
     duplicate.language = this.language
     duplicate.type = this.type
     duplicate.isImplicit = implicit

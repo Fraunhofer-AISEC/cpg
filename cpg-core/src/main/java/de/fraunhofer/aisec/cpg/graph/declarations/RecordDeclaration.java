@@ -27,10 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.StatementHolder;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
@@ -88,20 +85,6 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
 
   @org.neo4j.ogm.annotation.Relationship
   private Set<ValueDeclaration> staticImports = new HashSet<>();
-
-  /**
-   * It is important to set this name to a full qualified name (FQN).
-   *
-   * @param name the FQN
-   */
-  @Override
-  public void setName(@NotNull String name) {
-    // special case for record declarations! Constructor names need to match
-    super.setName(name);
-    for (PropertyEdge<ConstructorDeclaration> constructorEdge : constructors) {
-      constructorEdge.getEnd().setName(name);
-    }
-  }
 
   public String getKind() {
     return kind;

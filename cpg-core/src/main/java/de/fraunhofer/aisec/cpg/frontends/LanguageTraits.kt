@@ -117,7 +117,7 @@ interface HasSuperClasses : LanguageTrait {
      * Determines which keyword is used to access functions, etc. of the superclass of an object
      * (often "super).
      */
-    val superclassKeyword: String
+    val superClassKeyword: String
 }
 
 /**

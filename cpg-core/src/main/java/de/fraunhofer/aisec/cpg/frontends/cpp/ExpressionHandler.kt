@@ -201,7 +201,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // `new A`.
                 // Therefore, CDT does not have an explicit construct expression, so we need create
                 // an implicit one
-                initializer = newConstructExpression("()")
+                initializer = newConstructExpression(t.name.localName, "${t.name.localName}()")
                 initializer.isImplicit = true
             }
 
@@ -424,15 +424,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             baseTypename = baseType.typeName
             val member =
                 newDeclaredReferenceExpression(
-                    reference.name,
+                    reference.name.localName,
                     UnknownType.getUnknownType(language),
-                    reference.name
+                    reference.name.localName
                 )
-            member.location = frontend.getLocationFromRawNode<Expression>(reference)
+            member.location = frontend.getLocationFromRawNode(ctx.functionNameExpression)
             callExpression =
                 newMemberCallExpression(
-                    member.name,
-                    baseTypename + "." + member.name,
+                    member.name.localName,
+                    baseTypename + language.namespaceDelimiter + member.name.localName,
                     reference.base,
                     member,
                     reference.operatorCode,
@@ -447,7 +447,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                             as CPPASTTemplateId)
                         .templateName
                         .toString()
-                callExpression.name = name
+                callExpression.name = language.parseName(name)
                 getTemplateArguments(
                         (ctx.functionNameExpression as IASTFieldReference).fieldName
                             as CPPASTTemplateId
@@ -487,26 +487,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // this really is a cast expression in disguise
             return reference
         } else {
-            var fqn = reference!!.name
-            var name = fqn
-            if (name.contains("::")) {
-                name = name.substring(name.lastIndexOf("::") + 2)
-            }
-            if (name.contains("<")) {
-                // The characters < and > are not allowed in identifier names, as they denote the
-                // usage of a
-                // template
-                name = name.substring(0, name.indexOf("<"))
-            }
-            fqn = fqn.replace("::", ".")
-            // FIXME this is only true if we are in a namespace! If we are in a class, this is
-            // wrong!
-            //  happens again in l367
-            // String fullNamePrefix = lang.getScopeManager().getFullNamePrefix();
-            // if (!fullNamePrefix.isEmpty()) {
-            //  fqn = fullNamePrefix + "." + fqn;
-            // }
-            callExpression = newCallExpression(reference, fqn, ctx.rawSignature, false)
+            callExpression = newCallExpression(reference, reference?.name, ctx.rawSignature, false)
         }
 
         for ((i, argument) in ctx.arguments.withIndex()) {

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import java.util.*
 
 /**
  * Represents a key / value pair, often found in languages that allow associative arrays or objects,
@@ -55,6 +56,10 @@ class KeyValueExpression : Expression() {
             return false
         }
 
-        return super.equals(other) && name == other.name && value == other.value
+        return super.equals(other) && key == other.key && value == other.value
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), key, value)
     }
 }
