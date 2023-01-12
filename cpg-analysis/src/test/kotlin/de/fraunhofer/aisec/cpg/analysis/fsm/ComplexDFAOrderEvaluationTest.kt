@@ -108,8 +108,8 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
         nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -132,8 +132,8 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("process()")
         nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -157,8 +157,8 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("finish()")
         nodesToOp[(functionOk.body as CompoundStatement).statements[6]] = setOf("reset()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -184,8 +184,8 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[7]] = setOf("process()")
         nodesToOp[(functionOk.body as CompoundStatement).statements[8]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p2Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p2Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -211,8 +211,8 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[7]] = setOf("process()")
         nodesToOp[(functionOk.body as CompoundStatement).statements[8]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p3Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p3Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -239,8 +239,8 @@ class ComplexDFAOrderEvaluationTest {
         nodes[(functionOk.body as CompoundStatement).statements[8]] = setOf("finish()")
         nodes[(functionOk.body as CompoundStatement).statements[9]] = setOf("reset()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodes)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p3Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodes)
+        val everythingOk = orderEvaluator.evaluateOrder(p3Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -262,8 +262,8 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("process()")
         nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p5Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p5Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
@@ -293,8 +293,8 @@ class ComplexDFAOrderEvaluationTest {
 
         nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("reset()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p6Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p6Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
@@ -324,8 +324,8 @@ class ComplexDFAOrderEvaluationTest {
 
         nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("reset()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p6Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p6Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
@@ -355,8 +355,8 @@ class ComplexDFAOrderEvaluationTest {
 
         nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("reset()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p7Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p7Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
@@ -385,8 +385,8 @@ class ComplexDFAOrderEvaluationTest {
 
         nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("reset()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p7Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p7Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -418,8 +418,8 @@ class ComplexDFAOrderEvaluationTest {
 
         nodesToOp[(functionOk.body as CompoundStatement).statements[7]] = setOf("reset()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p8Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p8Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -448,8 +448,8 @@ class ComplexDFAOrderEvaluationTest {
 
         nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("reset()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p6Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p6Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -474,13 +474,14 @@ class ComplexDFAOrderEvaluationTest {
         val withoutInterprocNodes = mutableListOf<Node>()
         val orderEvaluator =
             DummyDFAOrderEvaluator(
+                dfa,
                 consideredDecl,
                 nodesToOp,
                 mutableMapOf(),
                 afterInterprocNodes,
                 withoutInterprocNodes
             )
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+        val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
         assertContains(
@@ -511,6 +512,7 @@ class ComplexDFAOrderEvaluationTest {
         val withoutInterprocNodes = mutableListOf<Node>()
         val orderEvaluator =
             DummyDFAOrderEvaluator(
+                dfa,
                 consideredDecl,
                 nodesToOp,
                 mutableMapOf(),
@@ -520,7 +522,7 @@ class ComplexDFAOrderEvaluationTest {
         // We cannot use p1Decl as start of the analysis because it has no nextEOG edges. Instead,
         // we want to start with the first instruction of the function.
         val everythingOk =
-            orderEvaluator.evaluateOrder(dfa, (functionOk.body as CompoundStatement).statements[0])
+            orderEvaluator.evaluateOrder((functionOk.body as CompoundStatement).statements[0])
 
         assertFalse(everythingOk, "Expected incorrect order")
         assertContains(
@@ -551,13 +553,14 @@ class ComplexDFAOrderEvaluationTest {
         val withoutInterprocNodes = mutableListOf<Node>()
         val orderEvaluator =
             DummyDFAOrderEvaluator(
+                dfa,
                 consideredDecl,
                 nodesToOp,
                 mutableMapOf(),
                 possibleInterprocFailures,
                 withoutInterprocNodes
             )
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+        val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
         assertContains(
@@ -588,13 +591,14 @@ class ComplexDFAOrderEvaluationTest {
         val withoutInterprocNodes = mutableListOf<Node>()
         val orderEvaluator =
             DummyDFAOrderEvaluator(
+                dfa,
                 consideredDecl,
                 nodesToOp,
                 mutableMapOf(),
                 afterInterprocNodes,
                 withoutInterprocNodes
             )
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+        val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
         assertContains(
@@ -629,13 +633,14 @@ class ComplexDFAOrderEvaluationTest {
         val withoutInterprocNodes = mutableListOf<Node>()
         val orderEvaluator =
             DummyDFAOrderEvaluator(
+                dfa,
                 consideredDecl,
                 nodesToOp,
                 mutableMapOf(),
                 afterInterprocNodes,
                 withoutInterprocNodes
             )
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p1Decl)
+        val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
         assertTrue(afterInterprocNodes.isEmpty(), "All nodes clearly violate the rule")
@@ -651,12 +656,13 @@ class ComplexDFAOrderEvaluationTest {
      * flows works. Collects the respective nodes and they can be used by the tests later.
      */
     class DummyDFAOrderEvaluator(
+        dfa: DFA,
         referencedVertices: Set<Node>,
         nodesToOp: Map<Node, Set<String>>,
         thisPositionOfNode: Map<Node, Int>,
         val possibleInterprocFailures: MutableList<Node>,
         val withoutInterprocNodes: MutableList<Node>
-    ) : DFAOrderEvaluator(referencedVertices, nodesToOp, thisPositionOfNode) {
+    ) : DFAOrderEvaluator(dfa, referencedVertices, nodesToOp, thisPositionOfNode) {
         private val log: Logger = LoggerFactory.getLogger(DummyDFAOrderEvaluator::class.java)
 
         override fun actionMissingTransitionForNode(

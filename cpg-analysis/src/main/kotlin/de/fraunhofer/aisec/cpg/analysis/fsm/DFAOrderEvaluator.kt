@@ -43,10 +43,11 @@ import org.slf4j.LoggerFactory
 /**
  * This class uses a [DFA] to evaluate if the order of statements in the CPG is correct. It needs
  * the following inputs:
+ * - [dfa]: Describes the desired correct order of nodes
  * - [consideredBases]: A set of the IDs of nodes (typically the [VariableDeclaration]) which are
  * considered.
  * - [nodeToRelevantMethod]: A mapping between CPG nodes and their operators used by the respective
- * edges in the DFA. Currently, we only consider [CallExpression]s. If a node is not contained in
+ * edges in the [dfa]. Currently, we only consider [CallExpression]s. If a node is not contained in
  * this list, it is not considered by the evaluation as we assume that the method is not relevant.
  * - [thisPositionOfNode]: If a non-object oriented language was used, this is a map from CPG nodes
  * (i.e., the [CallExpression]) to the argument position serving as base of the operation.
@@ -56,10 +57,11 @@ import org.slf4j.LoggerFactory
  * results which may occur in unreachable code.
  */
 open class DFAOrderEvaluator(
-    var consideredBases: Set<Node>,
-    var nodeToRelevantMethod: Map<Node, Set<String>>,
-    var thisPositionOfNode: Map<Node, Int> = mapOf(),
-    var eliminateUnreachableCode: Boolean = true
+    val dfa: DFA,
+    val consideredBases: Set<Node>,
+    val nodeToRelevantMethod: Map<Node, Set<String>>,
+    val thisPositionOfNode: Map<Node, Int> = mapOf(),
+    val eliminateUnreachableCode: Boolean = true
 ) {
     private val nodeToEOGPathSet = mutableMapOf<Node, MutableSet<String>>()
     private val log: Logger = LoggerFactory.getLogger(DFAOrderEvaluator::class.java)
@@ -115,7 +117,7 @@ open class DFAOrderEvaluator(
      * `false`, if it is correct, the method returns `true`. The flag [stopOnWrongBase] makes the
      * FSM stop evaluation of a base if an unexpected operation was observed for that base.
      */
-    fun evaluateOrder(dfa: DFA, startNode: Node, stopOnWrongBase: Boolean = true): Boolean {
+    fun evaluateOrder(startNode: Node, stopOnWrongBase: Boolean = true): Boolean {
         // First dummy edge to simulate that we are in the start state.
         dfa.initializeOrderEvaluation(startNode)
 

@@ -93,8 +93,8 @@ class SimpleDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("start()")
         nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -115,8 +115,8 @@ class SimpleDFAOrderEvaluationTest {
         // We do not model the call to foo() because it does not exist in our model.
         nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -148,8 +148,8 @@ class SimpleDFAOrderEvaluationTest {
         // We do not model the call to foo() because it does not exist in our model.
         nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -172,8 +172,8 @@ class SimpleDFAOrderEvaluationTest {
         // We do not model the call to foo() because it does not exist in our model.
         nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("set_key()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredBases, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, pDecl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredBases, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(pDecl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
@@ -192,8 +192,8 @@ class SimpleDFAOrderEvaluationTest {
         val nodesToOp = mutableMapOf<Node, Set<String>>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("start()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredBases, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p2Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredBases, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p2Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
@@ -217,8 +217,8 @@ class SimpleDFAOrderEvaluationTest {
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
         nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p3Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p3Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
@@ -244,8 +244,8 @@ class SimpleDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("start()")
         nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
