@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -108,9 +109,9 @@ class FunctionPointerCallResolver : Pass() {
      * [MemberCallExpression.member] field needs to have a [FunctionPointerType].
      */
     private fun handleMemberCallExpression(call: MemberCallExpression) {
-        val member = call.member
-        if (member is HasType && (member as HasType).type is FunctionPointerType) {
-            handleFunctionPointerCall(call, call.member)
+        val callee = call.callee
+        if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
+            handleFunctionPointerCall(call, callee.rhs)
         }
     }
 

@@ -447,26 +447,20 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     )
                     .forEach { callExpression.addTemplateParameter(it) }
             }
-        } else if (reference is BinaryOperator && reference.operatorCode == ".") {
-            // We have a dot operator that was not classified as a member expression. This happens
-            // when dealing with function pointer calls that happen on an explicit object.
-            //
-            // Therefore, we need to convert the RHS of the binary operator to a MemberExpression
-            // with a base of LHS.
-            val member =
-                newMemberExpression(
-                    reference.rhs.name,
-                    reference.lhs,
-                    reference.rhs.type,
-                    reference.operatorCode,
-                    reference.code
-                )
+        } else if (
+            reference is BinaryOperator &&
+                (reference.operatorCode == ".*" || reference.operatorCode == "->*")
+        ) {
+            // This is a function pointer call to a class method. We keep this as a binary operator
+            // with the .* or ->* operator code, so that we can resolve this later in the
+            // FunctionPointerCallResolver
             callExpression =
                 newMemberCallExpression(
                     ctx.functionNameExpression.rawSignature,
                     "",
+                    // TODO: remove
                     reference.lhs,
-                    member,
+                    reference,
                     reference.operatorCode,
                     ctx.rawSignature
                 )
@@ -588,8 +582,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             IASTBinaryExpression.op_binaryOrAssign -> operatorCode = "|="
             IASTBinaryExpression.op_equals -> operatorCode = "=="
             IASTBinaryExpression.op_notequals -> operatorCode = "!="
-            IASTBinaryExpression.op_pmdot -> operatorCode = "."
-            IASTBinaryExpression.op_pmarrow -> operatorCode = "->"
+            IASTBinaryExpression.op_pmdot -> operatorCode = ".*"
+            IASTBinaryExpression.op_pmarrow -> operatorCode = "->*"
             IASTBinaryExpression.op_max -> operatorCode = ">?"
             IASTBinaryExpression.op_min -> operatorCode = "?<"
             IASTBinaryExpression.op_ellipses -> operatorCode = "..."

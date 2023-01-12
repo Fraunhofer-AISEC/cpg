@@ -176,11 +176,14 @@ open class CallResolver : SymbolResolverPass() {
         }
 
         if (call is MemberCallExpression) {
-            val member = call.member
-            if (!(member is HasType && (member as HasType).type is FunctionPointerType)) {
-                // function pointers are handled by extra pass
-                handleMethodCall(curClass, call)
+            val callee = call.callee
+
+            // Check, if this is a function pointer call (which is handled by an extra pass)
+            if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
+                return
             }
+
+            handleMethodCall(curClass, call)
             return
         }
         if (call.instantiatesTemplate() && call.language is HasTemplates) {
