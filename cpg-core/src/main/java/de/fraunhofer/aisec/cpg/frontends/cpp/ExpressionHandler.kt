@@ -422,19 +422,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             val baseType: Type = reference.base.type.root
             assert(baseType !is SecondOrderType)
             baseTypename = baseType.typeName
-            val member =
-                newDeclaredReferenceExpression(
-                    reference.name.localName,
-                    UnknownType.getUnknownType(language),
-                    reference.name.localName
-                )
-            member.location = frontend.getLocationFromRawNode(ctx.functionNameExpression)
             callExpression =
                 newMemberCallExpression(
-                    member.name.localName,
-                    baseTypename + language.namespaceDelimiter + member.name.localName,
+                    reference.name.localName,
+                    baseType.name.fqn(reference.name.localName).toString(),
                     reference.base,
-                    member,
+                    reference,
                     reference.operatorCode,
                     ctx.rawSignature
                 )
@@ -456,13 +449,24 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         } else if (reference is BinaryOperator && reference.operatorCode == ".") {
             // We have a dot operator that was not classified as a member expression. This happens
-            // when dealing with function pointer calls that happen on an explicit object
+            // when dealing with function pointer calls that happen on an explicit object.
+            //
+            // Therefore, we need to convert the RHS of the binary operator to a MemberExpression
+            // with a base of LHS.
+            val member =
+                newMemberExpression(
+                    reference.rhs.name,
+                    reference.lhs,
+                    reference.rhs.type,
+                    reference.operatorCode,
+                    reference.code
+                )
             callExpression =
                 newMemberCallExpression(
                     ctx.functionNameExpression.rawSignature,
                     "",
                     reference.lhs,
-                    reference.rhs,
+                    member,
                     reference.operatorCode,
                     ctx.rawSignature
                 )
