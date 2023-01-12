@@ -34,13 +34,13 @@ import java.util.*
  * `obj.toString()`. The type of the [callee] property should be a [MemberExpression] (unless a
  * translation error occurred).
  */
-class MemberCallExpression : CallExpression() {
+class MemberCallExpression : CallExpression(), HasBase {
     /**
      * The base object. Be aware that for simple calls the implicit "this" base is not part of the
      * original AST, but we treat it as such for better consistency
      */
     @field:SubGraph("AST")
-    var base: Expression? = null
+    override var base: Expression? = null
         set(value) {
             field?.unregisterTypeListener(this)
             field = value

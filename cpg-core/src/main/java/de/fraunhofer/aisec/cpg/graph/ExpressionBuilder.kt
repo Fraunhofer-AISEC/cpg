@@ -307,8 +307,8 @@ fun MetadataProvider.newMemberCallExpression(
     node.member = member
 
     // TODO: Remove once fully converted
-    if (member is MemberExpression) {
-        node.callee = member
+    if (member is MemberExpression || member is BinaryOperator && member.operatorCode == ".*") {
+        node.callee = member as? Expression
     } else {
         throw UnsupportedOperationException("member must be a member expression")
     }

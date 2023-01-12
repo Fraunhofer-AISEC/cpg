@@ -191,7 +191,7 @@ open class DFAOrderEvaluator(
                             interproceduralFlows[baseAndOp.first] = false
                         }
                     }
-                } else if (node is CallExpression) {
+                } else if (node is MemberCallExpression) {
                     // This is a call to another method which is not relevant.
                     // We might miss some interprocedural flows here.
                     // We set the flag interproceduralFlow to keep track of this issue.
@@ -231,7 +231,7 @@ open class DFAOrderEvaluator(
      * Checks if the call expression [node] has a considered base as an argument. If so, this base
      * could be used inside the function called and we might miss transitions in the DFA.
      */
-    private fun callUsesInterestingBase(node: CallExpression, eogPath: String): List<String> {
+    private fun callUsesInterestingBase(node: MemberCallExpression, eogPath: String): List<String> {
         val allUsedBases =
             node.arguments
                 .map { arg -> (arg as? DeclaredReferenceExpression)?.refersTo }

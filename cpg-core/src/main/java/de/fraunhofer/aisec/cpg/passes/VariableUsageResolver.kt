@@ -99,7 +99,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // Without FunctionPointerType, we cannot resolve function pointers
         val fptrType = reference.type as? FunctionPointerType ?: return null
 
-        var functionName = reference.name.localName
+        var functionName = reference.name.toString()
+        // TODO: This can probably be improved
         val matcher =
             Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(functionName)
         if (matcher.matches()) {
