@@ -654,8 +654,8 @@ class ComplexDFAOrderEvaluationTest {
         referencedVertices: Set<Node>,
         nodesToOp: Map<Node, String>,
         thisPositionOfNode: Map<Node, Int>,
-        val possibleInterprocFailures: MutableList<Node>,
-        val withoutInterprocNodes: MutableList<Node>
+        private val possibleInterprocFailures: MutableList<Node>,
+        private val withoutInterprocNodes: MutableList<Node>
     ) : DFAOrderEvaluator(referencedVertices, nodesToOp, thisPositionOfNode) {
         private val log: Logger = LoggerFactory.getLogger(DummyDFAOrderEvaluator::class.java)
 
