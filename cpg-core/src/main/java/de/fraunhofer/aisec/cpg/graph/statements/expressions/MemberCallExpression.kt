@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 
 /**
@@ -66,5 +66,25 @@ class MemberCallExpression : CallExpression() {
 
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode(), base)
+    }
+
+    override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
+        if (!TypeManager.isTypeSystemActive()) {
+            return
+        }
+        if (src === base) {
+            name = Name(name.localName, src.type.root.name, language?.namespaceDelimiter ?: ".")
+        } else {
+            super.typeChanged(src, root, oldType)
+        }
+    }
+
+    override fun possibleSubTypesChanged(src: HasType, root: List<HasType>) {
+        if (!TypeManager.isTypeSystemActive()) {
+            return
+        }
+        if (src !== base) {
+            super.possibleSubTypesChanged(src, root)
+        }
     }
 }
