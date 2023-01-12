@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
@@ -101,19 +102,35 @@ class Name(
     /** This function appends a string to the local name and returns a new [Name]. */
     fun append(s: String) = Name(localName + s, parent, delimiter)
 
+    /**
+     * This functions replaces all occurrences of [oldValue] with [newValue] in the local name and
+     * returns a new [Name].
+     */
+    fun replace(oldValue: String, newValue: String) =
+        Name(localName.replace(oldValue, newValue), parent, delimiter)
+
     /** Compare names according to the string representation of the [fullName]. */
     override fun compareTo(other: Name) = fullName.compareTo(other.toString())
+
+    /**
+     * A name can be considered as "qualified", if it has any specified [parent]. Otherwise, only
+     * the [localName] is specified and the name is "unqualified".
+     */
+    fun isQualified(): Boolean {
+        return parent != null
+    }
 }
 
 /**
- * A small utility extension function that uses the namespace information in a [Language] to parse a
- * fully qualified name.
+ * A small utility extension function that uses the language information in a [LanguageProvider]
+ * (such as a [Node], a [Language], a [LanguageFrontend] or a [Handler]) to parse a fully qualified
+ * name.
  */
-fun Language<out LanguageFrontend>?.parseName(fqn: CharSequence) =
-    parseName(fqn, this?.namespaceDelimiter ?: ".")
+fun LanguageProvider?.parseName(fqn: CharSequence) =
+    parseName(fqn, this?.language?.namespaceDelimiter ?: ".")
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
-fun parseName(fqn: CharSequence, delimiter: String = ".", vararg splitDelimiters: String): Name {
+internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimiters: String): Name {
     val parts = fqn.split(delimiter, *splitDelimiters)
 
     var name: Name? = null

@@ -42,6 +42,7 @@ import (
 )
 
 const MetadataProviderClass = cpg.GraphPackage + "/MetadataProvider"
+const LanguageProviderClass = cpg.GraphPackage + "/LanguageProvider"
 
 func getImportName(spec *ast.ImportSpec) string {
 	if spec.Name != nil {
@@ -1010,12 +1011,7 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 
 		this.LogDebug("Trying to parse the fqn '%s'", fqn)
 
-		l, err := this.GetLanguage()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		name := l.ParseName(fqn)
+		name := this.ParseName(fqn)
 
 		decl = this.NewDeclaredReferenceExpression(fset, selectorExpr, fqn)
 		decl.Node().SetName(name)
@@ -1141,12 +1137,7 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 	if ident.Name == "nil" {
 		lit := this.NewLiteral(fset, ident, nil, &cpg.UnknownType_getUnknown(lang).Type)
 
-		l, err := this.GetLanguage()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		(*cpg.Node)(lit).SetName(l.ParseName(ident.Name))
+		(*cpg.Node)(lit).SetName(this.ParseName(ident.Name))
 
 		return (*cpg.Expression)(lit)
 	}
@@ -1342,6 +1333,16 @@ func (this *GoLanguageFrontend) isBuiltinType(s string) bool {
 	default:
 		return false
 	}
+}
+
+func (this *GoLanguageFrontend) ParseName(fqn string) *cpg.Name {
+	var n *cpg.Name = (*cpg.Name)(jnigi.NewObjectRef(cpg.NameClass))
+	err := env.CallStaticMethod(cpg.NameKtClass, "parseName", n, this.Cast(LanguageProviderClass), cpg.NewCharSequence(fqn))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return n
 }
 
 // funcTypeName produces a Go-style function type name such as `func(int, string) string` or `func(int) (error, string)`

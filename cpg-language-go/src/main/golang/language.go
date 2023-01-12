@@ -26,8 +26,6 @@
 package cpg
 
 import (
-	"log"
-
 	"tekao.net/jnigi"
 )
 
@@ -54,14 +52,4 @@ func (l *Language) GetClassName() string {
 
 func (l *Language) IsArray() bool {
 	return false
-}
-
-func (l *Language) ParseName(fqn string) *Name {
-	var n *Name = (*Name)(jnigi.NewObjectRef(NameClass))
-	err := env.CallStaticMethod(NameKtClass, "parseName", n, l, NewCharSequence(fqn))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return n
 }
