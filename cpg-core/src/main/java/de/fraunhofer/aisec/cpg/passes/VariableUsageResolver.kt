@@ -79,7 +79,9 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         for (tu in result.translationUnits) {
             walker.clearCallbacks()
-            walker.registerHandler { curClass, _, node -> resolveFieldUsages(curClass, node) }
+            walker.registerHandler { curClass, parent, node ->
+                resolveFieldUsages(curClass, parent, node)
+            }
             walker.iterate(tu)
         }
         for (tu in result.translationUnits) {
@@ -228,8 +230,20 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
     }
 
-    private fun resolveFieldUsages(curClass: RecordDeclaration?, current: Node) {
-        if (current !is MemberExpression) return
+    private fun resolveFieldUsages(curClass: RecordDeclaration?, parent: Node?, current: Node) {
+        if (current !is MemberExpression) {
+            return
+        }
+
+        // For legacy reasons, method and field resolving is split between the VariableUsageResolver
+        // and the CallResolver. Since we are trying to merge these two, the first step was to have
+        // the callee/member field of a MemberCallExpression set to a MemberExpression. This means
+        // however, that these will show up in this callback function. To not mess with legacy code
+        // (yet), we are ignoring all MemberExpressions whose parents are MemberCallExpressions in
+        // this function for now.
+        if (parent is MemberCallExpression) {
+            return
+        }
 
         var baseTarget: Declaration? = null
         if (current.base is DeclaredReferenceExpression) {

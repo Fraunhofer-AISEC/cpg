@@ -707,9 +707,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       }
 
       if (!isStatic) {
-        DeclaredReferenceExpression member =
-            newDeclaredReferenceExpression(
-                this, name, UnknownType.getUnknownType(getLanguage()), "");
+        var member =
+            newMemberExpression(this, name, base, UnknownType.getUnknownType(getLanguage()), "");
 
         frontend.setCodeAndLocation(
             member,
