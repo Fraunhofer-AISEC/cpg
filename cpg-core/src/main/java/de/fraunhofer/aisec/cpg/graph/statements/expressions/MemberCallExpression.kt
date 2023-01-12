@@ -47,7 +47,7 @@ class MemberCallExpression : CallExpression() {
             value?.registerTypeListener(this)
         }
 
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     @Deprecated("The member field is deprecated. Instead the callee property should be used")
     var member: Node? = null
 
