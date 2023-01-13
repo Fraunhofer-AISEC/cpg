@@ -746,4 +746,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         assertContains(forEach.variable.prevDFG, forEach.iterable)
     }
+
+    @Test
+    fun testImport() {
+        val file = File("src/test/resources/components/ImportTest.java")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        assertNotNull(tu)
+    }
 }
