@@ -774,7 +774,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     } else {
       thisType = UnknownType.getUnknownType(getLanguage());
     }
-    base = newDeclaredReferenceExpression(this, "this", thisType);
+    base = newDeclaredReferenceExpression(this, "this", thisType, "this");
     base.setImplicit(true);
 
     return base;
