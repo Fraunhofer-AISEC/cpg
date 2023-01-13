@@ -94,18 +94,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      * [DeclaredReferenceExpression.refersTo] is intentionally left empty. It is not filled by the
      * [VariableUsageResolver].
      */
-    @field:SubGraph("AST")
-    var callee: Expression? = null
-        set(value) {
-            field?.unregisterTypeListener(this)
-
-            field = value
-
-            // Register the callee as a type listener for this call expressions. Once we re-design
-            // call resolution, we need to probably do this in the opposite way so that the call
-            // expressions listens for the type of the callee.
-            field?.registerTypeListener(this)
-        }
+    @field:SubGraph("AST") var callee: Expression? = null
 
     /**
      * The [Name] of this call expression, based on its [callee].
@@ -259,10 +248,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
-        /*if (src === base) {
-            name =
-                Name(name.localName, src.type.root.name, language?.namespaceDelimiter ?: ".")
-        } else {*/
+
         val previous = type
         val types =
             invokesRelationship.map(PropertyEdge<FunctionDeclaration>::end).mapNotNull {
@@ -280,18 +266,16 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW
         }
-        // }
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: List<HasType>) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
-        // if (src !== base) {
+
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
         subTypes.addAll(src.possibleSubTypes)
         setPossibleSubTypes(subTypes, root)
-        // }
     }
 
     override fun toString(): String {
