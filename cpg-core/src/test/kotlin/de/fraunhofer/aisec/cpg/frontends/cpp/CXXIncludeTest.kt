@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -241,7 +242,7 @@ internal class CXXIncludeTest : BaseTest() {
     @Throws(Exception::class)
     fun testLoadIncludes() {
         val file = File("src/test/resources/include.cpp")
-        val translationUnitDeclarations =
+        val tus =
             analyzeWithBuilder(
                 TranslationConfiguration.builder()
                     .sourceLocations(listOf(file))
@@ -251,11 +252,10 @@ internal class CXXIncludeTest : BaseTest() {
                     .defaultLanguages()
                     .failOnError(true)
             )
-        assertNotNull(translationUnitDeclarations)
+        assertNotNull(tus)
 
-        // first one should NOT be a class (since it is defined in the header)
-        val recordDeclaration =
-            translationUnitDeclarations[0].getDeclarationAs(0, RecordDeclaration::class.java)
-        assertNull(recordDeclaration)
+        // the tu should not contain any classes, since they are defined in the header (which are
+        // not loaded)
+        assertTrue(tus.firstOrNull().records.isEmpty())
     }
 }

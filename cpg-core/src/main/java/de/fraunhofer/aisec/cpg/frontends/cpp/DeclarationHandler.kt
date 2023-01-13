@@ -442,7 +442,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         // typedef'd name is called S. However, to make things a little bit easier
                         // we also transfer the name to the record declaration.
                         ctx.declarators.firstOrNull()?.name?.toString()?.let {
-                            primaryDeclaration?.name = language.parseName(it)
+                            primaryDeclaration?.name = parseName(it)
                             // We need to inform the later steps that we want to take the name
                             // of this declaration as the basis for the result type of the typedef
                             useNameOfDeclarator = true

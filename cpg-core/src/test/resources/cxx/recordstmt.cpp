@@ -36,3 +36,7 @@ int main() {
   s.method();
   s.method(SomeClass::CONSTANT);
 }
+
+int OtherClass::anotherMethod() {
+    return 1;
+}

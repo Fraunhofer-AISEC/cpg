@@ -118,7 +118,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             } else {
                 null
             },
-            reference.language.parseName(functionName),
+            reference.parseName(functionName),
             fptrType
         )
     }
