@@ -113,7 +113,9 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
                 value?.name ?: Name(EMPTY_NAME)
             }
         }
-        set(_) {}
+        set(_) {
+            // read-only
+        }
 
     fun setArgument(index: Int, argument: Expression) {
         argumentsEdges[index].end = argument
