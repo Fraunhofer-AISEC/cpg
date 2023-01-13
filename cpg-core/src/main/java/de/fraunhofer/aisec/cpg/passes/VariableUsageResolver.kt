@@ -134,15 +134,6 @@ open class VariableUsageResolver : SymbolResolverPass() {
         val language = current.language
 
         if (current !is DeclaredReferenceExpression || current is MemberExpression) return
-        if (
-            parent is MemberCallExpression &&
-                current === parent.member &&
-                current.type !is FunctionPointerType
-        ) {
-            // members of a MemberCallExpression are no variables to be resolved, unless we have
-            // a function pointer call
-            return
-        }
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this

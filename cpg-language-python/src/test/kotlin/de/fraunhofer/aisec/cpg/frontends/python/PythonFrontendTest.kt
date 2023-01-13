@@ -446,7 +446,8 @@ class PythonFrontendTest : BaseTest() {
         val fooMemCall =
             (foo.body as? CompoundStatement)?.statements?.get(0) as? MemberCallExpression
         assertNotNull(fooMemCall)
-        val mem = fooMemCall.member as? DeclaredReferenceExpression
+
+        val mem = fooMemCall.callee as? MemberExpression
         assertNotNull(mem)
         assertLocalName("bar", mem)
         assertEquals(".", fooMemCall.operatorCode)
@@ -804,7 +805,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(baseBase)
         assertLocalName("bar", baseBase)
 
-        val member = initializer.member as? DeclaredReferenceExpression
+        val member = initializer.callee as? MemberExpression
         assertNotNull(member)
         assertLocalName("zzz", member)
     }

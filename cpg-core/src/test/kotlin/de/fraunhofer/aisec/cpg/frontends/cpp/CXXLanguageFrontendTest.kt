@@ -1378,6 +1378,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val noParamCall = main.mcalls[0]
         assertNotNull(noParamCall)
         assertInvokes(noParamCall, targetNoParam)
+        assertFullName("MyClass::*no_param", noParamCall)
 
         var callee = noParamCall.callee as? BinaryOperator
         assertNotNull(callee)
@@ -1387,6 +1388,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val singleParamCall = main.mcalls[1]
         assertNotNull(singleParamCall)
         assertInvokes(singleParamCall, targetSingleParam)
+        assertFullName("MyClass::*single_param", singleParamCall)
 
         callee = singleParamCall.callee as? BinaryOperator
         assertNotNull(callee)

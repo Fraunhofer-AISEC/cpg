@@ -47,10 +47,6 @@ class MemberCallExpression : CallExpression(), HasBase {
             value?.registerTypeListener(this)
         }
 
-    @field:SubGraph("AST")
-    @Deprecated("The member field is deprecated. Instead the callee property should be used")
-    var member: Node? = null
-
     var operatorCode: String? = null
 
     override fun equals(other: Any?): Boolean {
@@ -72,8 +68,10 @@ class MemberCallExpression : CallExpression(), HasBase {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
+
         if (src === base) {
-            name = Name(name.localName, src.type.root.name, language?.namespaceDelimiter ?: ".")
+            // update the name
+            updateName()
         } else {
             super.typeChanged(src, root, oldType)
         }
