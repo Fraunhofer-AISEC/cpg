@@ -101,18 +101,39 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             // We also want to update this node's name, based on the callee. This is purely for
             // readability reasons. We have a special handling for function pointers, where we want
             // to have the name of the variable. This might change in the future.
-            this.name =
-                if (value is UnaryOperator && value.input.type is FunctionPointerType) {
-                    value.input.name
-                } else {
-                    value?.name ?: Name(EMPTY_NAME)
-                }
+            updateName()
 
             // Register the callee as a type listener for this call expressions. Once we re-design
             // call resolution, we need to probably do this in the opposite way so that the call
             // expressions listens for the type of the callee.
             field?.registerTypeListener(this)
         }
+
+    /**
+     * A small utility function that updates the [Name] of this call expression, based on its
+     * [callee].
+     * * For simple calls, this is just the name of the [callee], e.g., a reference to a function
+     * * For simple function pointers we want to prefix a *
+     * * For class based function pointers we want to build a name like MyClass::*pointer
+     *
+     * This should be triggered, if either the [callee] changes or the type of this expression
+     * changes, e.g., if the type of a previously unknown callee is now known.
+     */
+    protected fun updateName() {
+        val value = callee
+        this.name =
+            if (value is UnaryOperator && value.input.type is FunctionPointerType) {
+                value.input.name
+            } else if (value is BinaryOperator && value.rhs.type is FunctionPointerType) {
+                value.lhs.type.name.fqn("*" + value.rhs.name.localName)
+            } else if (value is MemberExpression) {
+                // TODO: this code should actually be part of the member expression and we should
+                //  just refer to its name here
+                value.base.type.name.fqn(value.name.localName)
+            } else {
+                value?.name ?: Name(EMPTY_NAME)
+            }
+    }
 
     fun setArgument(index: Int, argument: Expression) {
         argumentsEdges[index].end = argument

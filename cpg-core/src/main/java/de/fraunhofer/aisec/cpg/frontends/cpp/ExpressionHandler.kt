@@ -345,8 +345,17 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             return newProblemExpression("base of field is null")
         }
 
+        // We need some special handling for templates (of course). Since we only want the basic
+        // name without any arguments as a name
+        val name =
+            if (ctx.fieldName is CPPASTTemplateId) {
+                (ctx.fieldName as CPPASTTemplateId).templateName.toString()
+            } else {
+                ctx.fieldName.toString()
+            }
+
         return newMemberExpression(
-            ctx.fieldName.toString(),
+            name,
             base,
             UnknownType.getUnknownType(language),
             if (ctx.isPointerDereference) "->" else ".",
@@ -456,7 +465,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // FunctionPointerCallResolver
             callExpression =
                 newMemberCallExpression(
-                    ctx.functionNameExpression.rawSignature,
+                    "",
                     "",
                     // TODO: remove
                     reference.lhs,

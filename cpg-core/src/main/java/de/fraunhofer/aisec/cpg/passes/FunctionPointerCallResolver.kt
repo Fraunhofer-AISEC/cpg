@@ -106,7 +106,8 @@ class FunctionPointerCallResolver : Pass() {
 
     /**
      * Resolves function pointers in a [MemberCallExpression]. In this case the
-     * [MemberCallExpression.member] field needs to have a [FunctionPointerType].
+     * [MemberCallExpression.callee] field is a binary operator on which [BinaryOperator.rhs] needs
+     * to have a [FunctionPointerType].
      */
     private fun handleMemberCallExpression(call: MemberCallExpression) {
         val callee = call.callee

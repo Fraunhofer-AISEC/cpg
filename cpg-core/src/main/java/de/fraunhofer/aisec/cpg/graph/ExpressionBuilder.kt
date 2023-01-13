@@ -286,7 +286,7 @@ fun MetadataProvider.newMemberCallExpression(
     name: CharSequence?,
     fqn: String?,
     base: Expression?,
-    member: Node?,
+    callee: Expression?,
     operatorCode: String? = ".",
     code: String? = null,
     rawNode: Any? = null
@@ -304,15 +304,7 @@ fun MetadataProvider.newMemberCallExpression(
     )
 
     node.base = base
-    node.member = member
-
-    // TODO: Remove once fully converted
-    if (member is MemberExpression || member is BinaryOperator && member.operatorCode == ".*") {
-        node.callee = member as? Expression
-    } else {
-        throw UnsupportedOperationException("member must be a member expression")
-    }
-
+    node.callee = callee
     node.operatorCode = operatorCode
 
     log(node)
