@@ -287,7 +287,6 @@ fun MetadataProvider.newMemberCallExpression(
     fqn: String?,
     base: Expression?,
     callee: Expression?,
-    operatorCode: String? = ".",
     code: String? = null,
     rawNode: Any? = null,
     static: Boolean = false
@@ -306,7 +305,7 @@ fun MetadataProvider.newMemberCallExpression(
 
     node.base = base
     node.callee = callee
-    node.operatorCode = operatorCode
+    // node.operatorCode = operatorCode
     node.isStatic = static
 
     log(node)

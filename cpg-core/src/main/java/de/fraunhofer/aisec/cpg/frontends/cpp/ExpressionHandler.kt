@@ -434,7 +434,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     baseType.name.fqn(reference.name.localName).toString(),
                     reference.base,
                     reference,
-                    reference.operatorCode,
                     ctx.rawSignature
                 )
             if (
@@ -467,7 +466,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     // TODO: remove
                     reference.lhs,
                     reference,
-                    reference.operatorCode,
                     ctx.rawSignature
                 )
         } else if (reference is UnaryOperator && reference.operatorCode == "*") {
