@@ -32,12 +32,13 @@ import java.util.*
 /**
  * Represents a [CallExpression] to an [Expression], which is a member of an object. For example
  * `obj.toString()`. The type of the [callee] property should be a [MemberExpression] (unless a
- * translation error occurred).
+ * translation error occurred). One notable exception are function pointer calls to class methods in
+ * C++, in which the callee is a [BinaryOperator] with a `.*` operator.
  */
 class MemberCallExpression : CallExpression(), HasBase {
     /**
-     * The base object. Be aware that for simple calls the implicit "this" base is not part of the
-     * original AST, but we treat it as such for better consistency
+     * The base object. This is basically a shortcut to accessing the base of the [callee], in case
+     * it is a [MemberExpression].
      */
     @field:SubGraph("AST")
     override var base: Expression? = null
@@ -47,7 +48,20 @@ class MemberCallExpression : CallExpression(), HasBase {
             value?.registerTypeListener(this)
         }
 
-    var operatorCode: String? = null
+    val operatorCode: String?
+        get() {
+            return when (val it = callee) {
+                is MemberExpression -> {
+                    return it.operatorCode
+                }
+                is BinaryOperator -> {
+                    return it.operatorCode
+                }
+                else -> {
+                    null
+                }
+            }
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

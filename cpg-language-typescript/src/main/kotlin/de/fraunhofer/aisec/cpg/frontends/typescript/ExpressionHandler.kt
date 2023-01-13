@@ -216,7 +216,6 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                     memberExpression.name.toString(),
                     memberExpression.base,
                     memberExpression,
-                    ".",
                     this.frontend.getCodeFromRawNode(node)
                 )
         } else {
