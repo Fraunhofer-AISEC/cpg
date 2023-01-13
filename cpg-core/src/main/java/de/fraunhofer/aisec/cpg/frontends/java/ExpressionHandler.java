@@ -729,8 +729,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         methodCallExpr
             .getName()); // This will also overwrite the code set to the empty string set above
     callExpression =
-        newMemberCallExpression(
-            this, name, qualifiedName, base, member, methodCallExpr.toString(), expr, isStatic);
+        newMemberCallExpression(this, member, isStatic, methodCallExpr.toString(), expr);
     callExpression.setType(parseType(this, typeString));
 
     NodeList<Expression> arguments = methodCallExpr.getArguments();

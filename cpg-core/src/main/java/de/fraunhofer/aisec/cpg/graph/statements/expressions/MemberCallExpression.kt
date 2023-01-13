@@ -37,15 +37,13 @@ import java.util.*
  */
 class MemberCallExpression : CallExpression(), HasBase {
     /**
-     * The base object. This is basically a shortcut to accessing the base of the [callee], in case
-     * it is a [MemberExpression].
+     * The base object. This is basically a shortcut to accessing the base of the [callee], if it
+     * has one (i.e., if it implements [HasBase]) This is the case for example, if it is a
+     * [MemberExpression].
      */
-    @field:SubGraph("AST")
-    override var base: Expression? = null
-        set(value) {
-            field?.unregisterTypeListener(this)
-            field = value
-            value?.registerTypeListener(this)
+    override val base: Expression?
+        get() {
+            return (callee as? HasBase)?.base
         }
 
     val operatorCode: String?

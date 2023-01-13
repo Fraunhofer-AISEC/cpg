@@ -194,14 +194,9 @@ def handle_expression_impl(self, expr):
         name = ref.getName()
 
         if self.is_member_expression(ref):
-            base_name = ref.getBase().getName()
-
-            fqn = "%s.%s" % (base_name, name)
-
             call = ExpressionBuilderKt.newMemberCallExpression(
                 self.frontend,
-                name, fqn, ref.getBase(),
-                ref, ".", self.get_src_code(expr))
+                ref, False, self.get_src_code(expr))
         else:
             # try to see, whether this refers to a known class and thus is a
             # constructor.

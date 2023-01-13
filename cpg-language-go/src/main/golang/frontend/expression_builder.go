@@ -52,11 +52,8 @@ func (frontend *GoLanguageFrontend) NewMemberExpression(fset *token.FileSet, ast
 	return (*cpg.MemberExpression)(frontend.NewExpression("MemberExpression", fset, astNode, cpg.NewCharSequence(name), base.Cast(cpg.ExpressionClass)))
 }
 
-func (frontend *GoLanguageFrontend) NewMemberCallExpression(fset *token.FileSet, astNode ast.Node, name string, fqn string, base *cpg.Expression, callee *cpg.Expression) *cpg.MemberCallExpression {
+func (frontend *GoLanguageFrontend) NewMemberCallExpression(fset *token.FileSet, astNode ast.Node, callee *cpg.Expression) *cpg.MemberCallExpression {
 	return (*cpg.MemberCallExpression)(frontend.NewExpression("MemberCallExpression", fset, astNode,
-		cpg.NewCharSequence(name),
-		cpg.NewString(fqn),
-		base.Cast(cpg.ExpressionClass),
 		callee.Cast(cpg.ExpressionClass),
 	))
 }

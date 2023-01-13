@@ -212,11 +212,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
             call =
                 newMemberCallExpression(
-                    memberExpression.name.localName,
-                    memberExpression.name.toString(),
-                    memberExpression.base,
                     memberExpression,
-                    this.frontend.getCodeFromRawNode(node)
+                    code = this.frontend.getCodeFromRawNode(node)
                 )
         } else {
             // TODO: fqn - how?
