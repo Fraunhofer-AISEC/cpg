@@ -30,5 +30,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 /** Specifies that a certain node has a base on which it executes an operation. */
 interface HasBase {
 
+    /** The base. */
     val base: Expression?
+
+    /**
+     * The operator that is used to access the base. Usually either `.` or `->`, but some languages
+     * offer additional operator codes.
+     */
+    val operatorCode: String?
 }

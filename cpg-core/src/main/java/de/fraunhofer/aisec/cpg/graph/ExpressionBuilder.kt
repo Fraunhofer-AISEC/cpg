@@ -71,7 +71,7 @@ fun MetadataProvider.newBinaryOperator(
     val node = BinaryOperator()
     node.applyMetadata(this, operatorCode, rawNode, code, true)
 
-    node.operatorCode = operatorCode
+    node.setOperatorCode(operatorCode)
 
     log(node)
 

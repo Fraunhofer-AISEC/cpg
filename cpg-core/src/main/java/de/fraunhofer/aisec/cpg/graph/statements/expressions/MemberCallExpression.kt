@@ -26,19 +26,21 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 
 /**
- * Represents a [CallExpression] to an [Expression], which is a member of an object. For example
- * `obj.toString()`. The type of the [callee] property should be a [MemberExpression] (unless a
- * translation error occurred). One notable exception are function pointer calls to class methods in
- * C++, in which the callee is a [BinaryOperator] with a `.*` operator.
+ * Represents a [CallExpression] to something which is a member of an object (the [base]). For
+ * example `obj.toString()`. The type of the [callee] property should be a [MemberExpression]
+ * (unless a translation error occurred). One notable exception are function pointer calls to class
+ * methods in C++, in which the callee is a [BinaryOperator] with a `.*` operator.
+ *
+ * While this node implements [HasBase], this is basically just a shortcut to access the base of the
+ * underlying [callee] property, if appropriate.
  */
 class MemberCallExpression : CallExpression(), HasBase {
     /**
      * The base object. This is basically a shortcut to accessing the base of the [callee], if it
-     * has one (i.e., if it implements [HasBase]) This is the case for example, if it is a
+     * has one (i.e., if it implements [HasBase]). This is the case for example, if it is a
      * [MemberExpression].
      */
     override val base: Expression?
@@ -46,19 +48,14 @@ class MemberCallExpression : CallExpression(), HasBase {
             return (callee as? HasBase)?.base
         }
 
-    val operatorCode: String?
+    /**
+     * The operator code to access the base object. This is basically a shortcut to accessing the
+     * base of the [callee], if it has one (i.e., if it implements [HasBase]). This is the case for
+     * example, if it is a [MemberExpression].
+     */
+    override val operatorCode: String?
         get() {
-            return when (val it = callee) {
-                is MemberExpression -> {
-                    return it.operatorCode
-                }
-                is BinaryOperator -> {
-                    return it.operatorCode
-                }
-                else -> {
-                    null
-                }
-            }
+            return (callee as? HasBase)?.operatorCode
         }
 
     override fun equals(other: Any?): Boolean {
@@ -74,24 +71,5 @@ class MemberCallExpression : CallExpression(), HasBase {
 
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode(), base)
-    }
-
-    override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
-            return
-        }
-
-        if (src !== base) {
-            super.typeChanged(src, root, oldType)
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: List<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
-            return
-        }
-        if (src !== base) {
-            super.possibleSubTypesChanged(src, root)
-        }
     }
 }
