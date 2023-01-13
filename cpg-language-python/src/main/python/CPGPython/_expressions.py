@@ -303,9 +303,10 @@ def handle_expression_impl(self, expr):
             self.frontend, expr.id, UnknownType.getUnknownType(),
             self.get_src_code(expr))
 
-        # Take a little shortcut and set refersTo, in case this is a method receiver.
-        # This allows us to play more nicely with member (call) expressions on the current class,
-        # since then their base type is known.
+        # Take a little shortcut and set refersTo, in case this is a method
+        # receiver. This allows us to play more nicely with member (call)
+        # expressions on the current class, since then their base type is
+        # known.
         current_function = self.scopemanager.getCurrentFunction()
         if self.is_method_declaration(current_function):
             recv = current_function.getReceiver()

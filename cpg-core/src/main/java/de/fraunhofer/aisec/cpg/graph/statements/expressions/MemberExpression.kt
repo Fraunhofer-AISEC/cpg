@@ -48,7 +48,7 @@ class MemberExpression : DeclaredReferenceExpression(), HasBase {
             value.registerTypeListener(this)
         }
 
-    var operatorCode: String? = null
+    override var operatorCode: String? = null
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
