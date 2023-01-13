@@ -798,7 +798,7 @@ class QueryTest {
     }
 
     @Test
-    fun testClomplexDFGAndEOGRequirement() {
+    fun testComplexDFGAndEOGRequirement() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/query/ComplexDataflow.java"))
@@ -851,7 +851,7 @@ class QueryTest {
     }
 
     @Test
-    fun testClomplexDFGAndEOGRequirement2() {
+    fun testComplexDFGAndEOGRequirement2() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/query/ComplexDataflow2.java"))
