@@ -662,7 +662,13 @@ class ComplexDFAOrderEvaluationTest {
         thisPositionOfNode: Map<Node, Int>,
         val possibleInterprocFailures: MutableList<Node>,
         val withoutInterprocNodes: MutableList<Node>
-    ) : DFAOrderEvaluator(dfa, referencedVertices, nodesToOp, thisPositionOfNode) {
+    ) :
+        DFAOrderEvaluator(
+            dfa = dfa,
+            consideredBases = referencedVertices,
+            nodeToRelevantMethod = nodesToOp,
+            thisPositionOfNode = thisPositionOfNode
+        ) {
         private val log: Logger = LoggerFactory.getLogger(DummyDFAOrderEvaluator::class.java)
 
         override fun actionMissingTransitionForNode(
