@@ -283,30 +283,21 @@ fun MetadataProvider.newExplicitConstructorInvocation(
  */
 @JvmOverloads
 fun MetadataProvider.newMemberCallExpression(
-    name: CharSequence?,
-    fqn: String?,
-    base: Expression?,
     callee: Expression?,
+    isStatic: Boolean = false,
     code: String? = null,
-    rawNode: Any? = null,
-    static: Boolean = false
+    rawNode: Any? = null
 ): MemberCallExpression {
     val node = MemberCallExpression()
     node.applyMetadata(
         this,
-        if (fqn.isNullOrEmpty()) {
-            name
-        } else {
-            fqn
-        },
+        null, // the name will be updated later based on the callee
         rawNode,
         code,
     )
 
-    node.base = base
     node.callee = callee
-    // node.operatorCode = operatorCode
-    node.isStatic = static
+    node.isStatic = isStatic
 
     log(node)
     return node

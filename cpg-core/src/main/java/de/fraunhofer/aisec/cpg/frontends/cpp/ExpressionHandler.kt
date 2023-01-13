@@ -428,14 +428,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         if (reference is MemberExpression) {
             val baseType: Type = reference.base.type.root
             assert(baseType !is SecondOrderType)
-            callExpression =
-                newMemberCallExpression(
-                    reference.name.localName,
-                    baseType.name.fqn(reference.name.localName).toString(),
-                    reference.base,
-                    reference,
-                    ctx.rawSignature
-                )
+            callExpression = newMemberCallExpression(reference, code = ctx.rawSignature)
             if (
                 (ctx.functionNameExpression as? IASTFieldReference)?.fieldName is CPPASTTemplateId
             ) {
@@ -459,15 +452,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // This is a function pointer call to a class method. We keep this as a binary operator
             // with the .* or ->* operator code, so that we can resolve this later in the
             // FunctionPointerCallResolver
-            callExpression =
-                newMemberCallExpression(
-                    "",
-                    "",
-                    // TODO: remove
-                    reference.lhs,
-                    reference,
-                    ctx.rawSignature
-                )
+            callExpression = newMemberCallExpression(reference, code = ctx.rawSignature)
         } else if (reference is UnaryOperator && reference.operatorCode == "*") {
             // Classic C-style function pointer call -> let's extract the target
             callExpression = newCallExpression(reference, "", reference.code, false)
