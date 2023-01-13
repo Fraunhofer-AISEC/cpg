@@ -49,9 +49,10 @@ import org.slf4j.LoggerFactory
  * - [nodeToRelevantMethod]: A mapping between CPG nodes and their operators used by the respective
  * edges in the [dfa]. Currently, we only consider [CallExpression]s. If a node is not contained in
  * this list, it is not considered by the evaluation as we assume that the method is not relevant.
- * - [consideredResetNodes]: These nodes reset the order evaluation such that e.g., a reassignment of a variable with a
- * new object is handled correctly. In this case, the constructor node must be part of the [consideredResetNodes].
- * This allows the [DFAOrderEvaluator] to detect that in such a case,
+ * - [consideredResetNodes]: These nodes reset the order evaluation such that e.g., a reassignment
+ * of a variable with a new object is handled correctly. In this case, the constructor node must be
+ * part of the [consideredResetNodes]. This allows the [DFAOrderEvaluator] to detect that in such a
+ * case,
  * ```
  *        (1) Botan p7 = new Botan(2);
  *        (2) p7.start(iv);
