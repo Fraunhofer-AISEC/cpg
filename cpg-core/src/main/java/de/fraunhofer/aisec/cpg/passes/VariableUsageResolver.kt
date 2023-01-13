@@ -233,7 +233,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // however, that these will show up in this callback function. To not mess with legacy code
         // (yet), we are ignoring all MemberExpressions whose parents are MemberCallExpressions in
         // this function for now.
-        if (parent is MemberCallExpression) {
+        if (parent is MemberCallExpression && parent.callee == current) {
             return
         }
 
