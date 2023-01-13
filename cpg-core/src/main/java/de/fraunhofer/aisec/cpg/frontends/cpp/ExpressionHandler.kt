@@ -426,11 +426,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val reference = handle(ctx.functionNameExpression)
         val callExpression: CallExpression
         if (reference is MemberExpression) {
-            val baseTypename: String
-            // Pointer types contain * or []. We do not want that here.
             val baseType: Type = reference.base.type.root
             assert(baseType !is SecondOrderType)
-            baseTypename = baseType.typeName
             callExpression =
                 newMemberCallExpression(
                     reference.name.localName,

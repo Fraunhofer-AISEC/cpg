@@ -686,7 +686,7 @@ class ScopeManager : ScopeProvider {
     inline fun <reified T : Declaration> resolve(
         searchScope: Scope?,
         stopIfFound: Boolean = false,
-        predicate: (T) -> Boolean
+        noinline predicate: (T) -> Boolean
     ): List<T> {
         var scope = searchScope
         val declarations = mutableListOf<T>()

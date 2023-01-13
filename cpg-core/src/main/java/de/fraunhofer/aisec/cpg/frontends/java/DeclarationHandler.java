@@ -301,13 +301,13 @@ public class DeclarationHandler
       } else if (decl instanceof com.github.javaparser.ast.body.MethodDeclaration) {
         de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration md =
             (de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration) handle(decl);
-        recordDeclaration.addMethod(md);
+        frontend.getScopeManager().addDeclaration(md);
       } else if (decl instanceof com.github.javaparser.ast.body.ConstructorDeclaration) {
         de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration c =
             (de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration) handle(decl);
-        recordDeclaration.addConstructor(c);
+        frontend.getScopeManager().addDeclaration(c);
       } else if (decl instanceof com.github.javaparser.ast.body.ClassOrInterfaceDeclaration) {
-        recordDeclaration.addDeclaration(handle(decl));
+        frontend.getScopeManager().addDeclaration(handle(decl));
       } else if (decl instanceof com.github.javaparser.ast.body.InitializerDeclaration) {
         InitializerDeclaration id = (InitializerDeclaration) decl;
         CompoundStatement initializerBlock =

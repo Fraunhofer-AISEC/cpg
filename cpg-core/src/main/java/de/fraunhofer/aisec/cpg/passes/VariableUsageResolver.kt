@@ -300,7 +300,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 return
             }
         }
-        var baseType = current.base.type
+        var baseType = current.base?.type ?: UnknownType.getUnknownType(current.language)
         if (baseType.name !in recordMap) {
             val fqnResolvedType = recordMap.keys.firstOrNull { it.lastPartsMatch(baseType.name) }
             if (fqnResolvedType != null) {
