@@ -49,6 +49,18 @@ import org.slf4j.LoggerFactory
  * - [nodeToRelevantMethod]: A mapping between CPG nodes and their operators used by the respective
  * edges in the [dfa]. Currently, we only consider [CallExpression]s. If a node is not contained in
  * this list, it is not considered by the evaluation as we assume that the method is not relevant.
+ * - [consideredResetNodes]: These nodes reset the order evaluation such that e.g., a reassignment of a variable with a
+ * new object is handled correctly. In this case, the constructor node must be part of the [consideredResetNodes].
+ * This allows the [DFAOrderEvaluator] to detect that in such a case,
+ * ```
+ *        (1) Botan p7 = new Botan(2);
+ *        (2) p7.start(iv);
+ *        (3) p7.finish(buf);
+ *
+ *        (4) p7 = new Botan(3);
+ *        (5) p7.start(iv);
+ * ```
+ * (4) should actually start a new order evaluation.
  * - [thisPositionOfNode]: If a non-object oriented language was used, this is a map from CPG nodes
  * (i.e., the [CallExpression]) to the argument position serving as base of the operation.
  *
@@ -60,6 +72,7 @@ open class DFAOrderEvaluator(
     val dfa: DFA,
     val consideredBases: Set<Node>,
     val nodeToRelevantMethod: Map<Node, Set<String>>,
+    val consideredResetNodes: Set<Node> = emptySet(),
     val thisPositionOfNode: Map<Node, Int> = mapOf(),
     val eliminateUnreachableCode: Boolean = true
 ) {
@@ -153,10 +166,39 @@ open class DFAOrderEvaluator(
             // try to make the transition in the DFA and retrieve the next nodes
             // to process for each of the paths.
             for (eogPath in eogPathSet) {
+                // Handle 'reset nodes'.
+                if (node in consideredResetNodes) {
+                    val baseAndOp =
+                        getBaseAndOpOfNode(node as CallExpression, eogPath, interproceduralFlows)
+                    if (baseAndOp != null) {
+                        val (base, _) = baseAndOp
+                        // get the DFA associated with this base
+                        val dfa = baseToFSM.computeIfAbsent(base) { dfa.deepCopy() }
+
+                        if (dfa.isAccepted) {
+                            actionAcceptingTermination(
+                                base,
+                                dfa,
+                                interproceduralFlows[base] == true
+                            )
+                        } else if (dfa.currentState?.isStart == true) {
+                            // nothing to do here, we just want to continue with the next nodes in
+                            // the EOG
+                        } else {
+                            actionNonAcceptingTermination(
+                                base,
+                                dfa,
+                                interproceduralFlows[base] == true
+                            )
+                            isValidOrder = false
+                        }
+                        dfa.initializeOrderEvaluation(node)
+                    }
+                }
                 // Currently, we only handle CallExpressions as "operation".
                 // Check if the current node is of interest for the DFA.
                 // This is the case if the map nodesToOp contains the node.
-                if (node is CallExpression && nodeToRelevantMethod.contains(node)) {
+                else if (node is CallExpression && nodeToRelevantMethod.contains(node)) {
                     val baseAndOp = getBaseAndOpOfNode(node, eogPath, interproceduralFlows)
 
                     if (
@@ -255,24 +297,21 @@ open class DFAOrderEvaluator(
      * Returns the "base" node belonging to [node], on which the DFA is based on. Ideally, this is a
      * variable declaration in the end.
      */
-    fun getBaseOfNode(node: CallExpression): Node? {
-        val base =
-            when {
-                node is MemberCallExpression -> node.base
-                node is ConstructExpression -> node.astParent?.getSuitableDFGTarget()
-                node.thisPosition != null ->
-                    node.getBaseOfCallExpressionUsingArgument(node.thisPosition!!)
-                else -> {
-                    val dfgTarget = node.getSuitableDFGTarget()
-                    if (dfgTarget != null && dfgTarget is ConstructExpression) {
-                        dfgTarget.getSuitableDFGTarget()
-                    } else {
-                        dfgTarget
-                    }
+    fun getBaseOfNode(node: CallExpression) =
+        when {
+            node is MemberCallExpression -> node.base
+            node is ConstructExpression -> node.astParent?.getSuitableDFGTarget()
+            node.thisPosition != null ->
+                node.getBaseOfCallExpressionUsingArgument(node.thisPosition!!)
+            else -> {
+                val dfgTarget = node.getSuitableDFGTarget()
+                if (dfgTarget != null && dfgTarget is ConstructExpression) {
+                    dfgTarget.getSuitableDFGTarget()
+                } else {
+                    dfgTarget
                 }
             }
-        return base
-    }
+        }
 
     /**
      * Returns a [Pair] holding the "base" and the "operator" of the function/method call happening
@@ -324,13 +363,10 @@ open class DFAOrderEvaluator(
         return null
     }
 
-    private fun Node.addEogPath(path: String) {
+    private fun Node.addEogPath(path: String) =
         nodeToEOGPathSet.computeIfAbsent(this) { mutableSetOf() }.add(path)
-    }
 
-    private fun Node.getEogPaths(): Set<String>? {
-        return nodeToEOGPathSet[this]
-    }
+    private fun Node.getEogPaths() = nodeToEOGPathSet[this]
 
     /**
      * If it's not an object-oriented language, we need to retrieve the base in a different way.
