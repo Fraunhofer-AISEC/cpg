@@ -289,7 +289,8 @@ fun MetadataProvider.newMemberCallExpression(
     callee: Expression?,
     operatorCode: String? = ".",
     code: String? = null,
-    rawNode: Any? = null
+    rawNode: Any? = null,
+    static: Boolean = false
 ): MemberCallExpression {
     val node = MemberCallExpression()
     node.applyMetadata(
@@ -306,6 +307,7 @@ fun MetadataProvider.newMemberCallExpression(
     node.base = base
     node.callee = callee
     node.operatorCode = operatorCode
+    node.static = static
 
     log(node)
     return node
@@ -329,31 +331,9 @@ fun MetadataProvider.newMemberExpression(
     val node = MemberExpression()
     node.applyMetadata(this, name, rawNode, code, true)
 
-    node.setBase(base)
+    node.base = base
     node.operatorCode = operatorCode
     node.type = memberType
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [StaticCallExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newStaticCallExpression(
-    fqn: String?,
-    code: String? = null,
-    targetRecord: String?,
-    rawNode: Any? = null
-): StaticCallExpression {
-    val node = StaticCallExpression()
-    node.applyMetadata(this, fqn, rawNode, code, true)
-
-    node.targetRecord = targetRecord
 
     log(node)
     return node

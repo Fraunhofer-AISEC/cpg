@@ -86,6 +86,8 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      */
     var arguments by PropertyEdgeDelegate(CallExpression::argumentsEdges)
 
+    var static: Boolean = false
+
     /**
      * The expression that is being "called". This is currently not yet used in the [CallResolver]
      * but will be in the future. In most cases, this is a [DeclaredReferenceExpression] and its
@@ -127,9 +129,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             } else if (value is BinaryOperator && value.rhs.type is FunctionPointerType) {
                 value.lhs.type.name.fqn("*" + value.rhs.name.localName)
             } else if (value is MemberExpression) {
-                // TODO: this code should actually be part of the member expression and we should
-                //  just refer to its name here
-                value.base.type.name.fqn(value.name.localName)
+                value.name
             } else {
                 value?.name ?: Name(EMPTY_NAME)
             }

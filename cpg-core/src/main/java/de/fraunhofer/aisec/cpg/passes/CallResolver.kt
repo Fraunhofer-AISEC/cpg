@@ -467,10 +467,6 @@ open class CallResolver : SymbolResolverPass() {
             val base = node.base!!
             possibleTypes.add(base.type)
             possibleTypes.addAll(base.possibleSubTypes)
-        } else if (node is StaticCallExpression) {
-            if (node.targetRecord != null) {
-                possibleTypes.add(TypeParser.createFrom(node.targetRecord, node.language))
-            }
         } else if (curClass != null) {
             possibleTypes.add(TypeParser.createFrom(curClass.name, curClass.language))
         }

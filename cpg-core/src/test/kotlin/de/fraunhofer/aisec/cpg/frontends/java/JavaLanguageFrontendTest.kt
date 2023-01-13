@@ -140,6 +140,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         // should contain a single statement
         val sce = forEachStatement.statement as? MemberCallExpression
         assertNotNull(sce)
+
         assertLocalName("println", sce)
         assertFullName("java.io.PrintStream.println", sce)
     }
@@ -557,13 +558,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val call = initializer as? MemberCallExpression
         assertLocalName("get", call)
-        val staticCall =
-            nodes
-                .stream()
-                .filter { node: Node? -> node is StaticCallExpression }
-                .map { node: Node? -> node as? StaticCallExpression? }
-                .findFirst()
-                .orElse(null)
+        val staticCall = nodes.filterIsInstance<CallExpression>().firstOrNull { it.static }
         assertNotNull(staticCall)
         assertLocalName("doSomethingStatic", staticCall)
     }

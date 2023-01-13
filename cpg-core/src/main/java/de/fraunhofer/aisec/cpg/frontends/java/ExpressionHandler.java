@@ -706,32 +706,24 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         isStatic = true;
       }
 
-      if (!isStatic) {
-        var member =
-            newMemberExpression(this, name, base, UnknownType.getUnknownType(getLanguage()), "");
+      var member =
+          newMemberExpression(this, name, base, UnknownType.getUnknownType(getLanguage()), "");
 
-        frontend.setCodeAndLocation(
-            member,
-            methodCallExpr
-                .getName()); // This will also overwrite the code set to the empty string set above
-        callExpression =
-            newMemberCallExpression(
-                this, name, qualifiedName, base, member, ".", methodCallExpr.toString());
-      } else {
-        String targetClass;
-        if (resolved != null) {
-          targetClass = resolved.declaringType().getQualifiedName();
-        } else {
-          targetClass = this.frontend.getQualifiedNameFromImports(scopeName);
-        }
-
-        if (targetClass == null) {
-          targetClass = scopeName;
-        }
-
-        callExpression =
-            newStaticCallExpression(this, qualifiedName, methodCallExpr.toString(), targetClass);
-      }
+      frontend.setCodeAndLocation(
+          member,
+          methodCallExpr
+              .getName()); // This will also overwrite the code set to the empty string set above
+      callExpression =
+          newMemberCallExpression(
+              this,
+              name,
+              qualifiedName,
+              base,
+              member,
+              ".",
+              methodCallExpr.toString(),
+              expr,
+              isStatic);
     } else {
       var ref = newDeclaredReferenceExpression(this, name);
       callExpression =
