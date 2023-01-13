@@ -467,6 +467,10 @@ open class CallResolver : SymbolResolverPass() {
             val base = node.base!!
             possibleTypes.add(base.type)
             possibleTypes.addAll(base.possibleSubTypes)
+        } else {
+            // This could be a C++ member call with an implicit this (which we do not create), so
+            // lets add the current class to the possible list
+            scopeManager.currentRecord?.toType()?.let { possibleTypes.add(it) }
         }
 
         return possibleTypes
