@@ -121,7 +121,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      * This should be triggered, if either the [callee] changes or the type of this expression
      * changes, e.g., if the type of a previously unknown callee is now known.
      */
-    protected fun updateName() {
+    fun updateName() {
         val value = callee
         this.name =
             if (value is UnaryOperator && value.input.type is FunctionPointerType) {

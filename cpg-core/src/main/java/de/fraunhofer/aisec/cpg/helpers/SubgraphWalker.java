@@ -357,7 +357,6 @@ public class SubgraphWalker {
     // declarationScope -> (parentScope, declarations)
     private final Map<Node, Pair<Node, List<ValueDeclaration>>>
         nodeToParentBlockAndContainedValueDeclarations = new IdentityHashMap<>();
-    private final Deque<RecordDeclaration> currentClass = new ArrayDeque<>();
     private IterativeGraphWalker walker;
 
     private final ScopeManager scopeManager;
@@ -372,9 +371,7 @@ public class SubgraphWalker {
 
     /**
      * Callback function(s) getting three arguments: the type of the class we're currently in, the
-     * root node of the current declaration scope, the currently visited node. The declaration scope
-     * root can be passed to {@link ScopedWalker#getAllDeclarationsForScope} in order to retrieve
-     * the currently available declarations.
+     * root node of the current declaration scope, the currently visited node.
      */
     private final List<TriConsumer<RecordDeclaration, Node, Node>> handlers = new ArrayList<>();
 
@@ -407,42 +404,14 @@ public class SubgraphWalker {
 
       Node parent = walker.getBacklog().peek();
 
-      if (current instanceof RecordDeclaration && current != currentClass.peek()) {
-        currentClass.push(
-            (RecordDeclaration)
-                current); // we can be in an inner class, so we remember this as a stack
-      }
-
       // TODO: actually we should not handle this in handleNode but have something similar to
       // onScopeEnter because the method declaration already correctly sets the scope
 
-      // methods can also contain record scopes
-      if (current instanceof MethodDeclaration) {
-        RecordDeclaration recordDeclaration = ((MethodDeclaration) current).getRecordDeclaration();
-        if (recordDeclaration != null && recordDeclaration != currentClass.peek()) {
-          currentClass.push(recordDeclaration);
-        }
-      }
-
-      handler.accept(currentClass.peek(), parent, current);
+      handler.accept(scopeManager.getCurrentRecord(), parent, current);
     }
 
     private void leaveScope(Node exiting) {
-      if (exiting instanceof RecordDeclaration) { // leave a class
-        currentClass.pop();
-      }
-
       scopeManager.leaveScope(exiting);
-    }
-
-    /**
-     * Deprecated because this is MAJORLY broken in scenarios where we have external method
-     * declarations, such as in CXX.
-     */
-    @Nullable
-    @Deprecated
-    public RecordDeclaration getCurrentClass() {
-      return currentClass.isEmpty() ? null : currentClass.peek();
     }
 
     public void collectDeclarations(Node current) {
@@ -474,32 +443,6 @@ public class SubgraphWalker {
               .add((ValueDeclaration) current);
         }
       }
-    }
-
-    public List<ValueDeclaration> getAllDeclarationsForScope(Node scope) {
-      List<ValueDeclaration> result = new ArrayList<>();
-      Node currentScope = scope;
-
-      Set<String> scopedVars = new HashSet<>();
-
-      // get all declarations from the current scope and all its parent scopes
-      while (currentScope != null
-          && nodeToParentBlockAndContainedValueDeclarations.containsKey(scope)) {
-        Pair<Node, List<ValueDeclaration>> entry =
-            nodeToParentBlockAndContainedValueDeclarations.get(currentScope);
-        for (ValueDeclaration val : entry.getRight()) {
-          // make sure that we only add the variable for the current scope.
-          // if the var is already added, all outside vars with this name are shadowed inside a
-          // scope and we do not add them here
-          if (val instanceof FunctionDeclaration
-              || !scopedVars.contains(val.getName().getLocalName())) {
-            result.add(val);
-            scopedVars.add(val.getName().getLocalName());
-          }
-        }
-        currentScope = entry.getLeft();
-      }
-      return result;
     }
 
     /**

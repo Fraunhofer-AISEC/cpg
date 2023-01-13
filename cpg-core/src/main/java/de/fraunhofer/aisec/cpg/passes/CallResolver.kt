@@ -258,20 +258,11 @@ open class CallResolver : SymbolResolverPass() {
     }
 
     fun handleMethodCall(curClass: RecordDeclaration?, call: CallExpression) {
-        val possibleContainingTypes = getPossibleContainingTypes(call, curClass)
-
-        // Find overridden invokes
-        var invocationCandidates =
-            call.invokes
-                .map { getOverridingCandidates(possibleContainingTypes, it) }
-                .flatten()
-                .toMutableList()
+        val possibleContainingTypes = getPossibleContainingTypes(call)
 
         // Find function targets
-        if (invocationCandidates.isEmpty()) {
-            invocationCandidates =
-                retrieveInvocationCandidatesFromCall(call, curClass, possibleContainingTypes)
-        }
+        var invocationCandidates =
+            retrieveInvocationCandidatesFromCall(call, curClass, possibleContainingTypes)
 
         // Find invokes by supertypes
         if (
@@ -284,6 +275,15 @@ open class CallResolver : SymbolResolverPass() {
                 getInvocationCandidatesFromParents(call.name.localName, call, records)
                     .toMutableList()
         }
+
+        // Add overridden invokes
+        invocationCandidates.addAll(
+            invocationCandidates
+                .map { getOverridingCandidates(possibleContainingTypes, it) }
+                .flatten()
+                .toMutableList()
+        )
+
         createMethodDummies(invocationCandidates, possibleContainingTypes, call)
         call.invokes = invocationCandidates
     }
@@ -461,15 +461,14 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    private fun getPossibleContainingTypes(node: Node?, curClass: RecordDeclaration?): Set<Type> {
+    private fun getPossibleContainingTypes(node: Node?): Set<Type> {
         val possibleTypes = mutableSetOf<Type>()
         if (node is MemberCallExpression) {
             val base = node.base!!
             possibleTypes.add(base.type)
             possibleTypes.addAll(base.possibleSubTypes)
-        } else if (curClass != null) {
-            possibleTypes.add(TypeParser.createFrom(curClass.name, curClass.language))
         }
+
         return possibleTypes
     }
 

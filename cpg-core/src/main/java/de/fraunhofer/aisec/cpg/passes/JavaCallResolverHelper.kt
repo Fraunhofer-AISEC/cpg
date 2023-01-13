@@ -36,20 +36,29 @@ import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
 
 /**
  * Handle calls in the form of `super.call()` or `ClassName.super.call() ` * , conforming to JLS13
- * §15.12.1
+ * §15.12.1.
+ *
+ * This function basically sets the correct type of the [DeclaredReferenceExpression] containing the
+ * "super" keyword. Afterwards, we can use the regular [CallResolver.handleMethodCall] to resolve
+ * the [MemberCallExpression].
  *
  * @param curClass The class containing the call
  * @param call The call to be resolved
  */
 fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: MemberCallExpression) {
-    // We need to connect this super reference to the receiver of this method
+    // Because the "super" keyword still refers to "this" (but casted to another class), we still
+    // need to connect the super reference to the receiver of this method.
     val func = scopeManager.currentFunction
     if (func is MethodDeclaration) {
         (call.base as DeclaredReferenceExpression?)?.refersTo = func.receiver
     }
+
+    // In the next step we can "cast" the base to the correct type, by setting the base
     var target: RecordDeclaration? = null
+
+    // In case the reference is just called "super", this is a direct superclass, either defined
+    // explicitly or java.lang.Object by default
     if (call.base?.name.toString() == JavaLanguage().superClassKeyword) {
-        // Direct superclass, either defined explicitly or java.lang.Object by default
         if (curClass.superClasses.isNotEmpty()) {
             target = recordMap[curClass.superClasses[0].root.name]
         } else {
@@ -64,13 +73,23 @@ fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: MemberCallEx
         // interface that is implemented
         target = handleSpecificSupertype(curClass, call)
     }
+
     if (target != null) {
         val superType = target.toType()
-        // Explicitly set the type of the call's base to the super type
-        call.base!!.type = superType
+        // Explicitly set the type of the call's base to the super type, basically "casting" the
+        // "this" object to the super class
+        call.base?.type = superType
         // And set the possible subtypes, to ensure, that really only our super type is in there
-        call.base!!.updatePossibleSubtypes(listOf(superType))
-        handleMethodCall(target, call)
+        call.base?.updatePossibleSubtypes(listOf(superType))
+
+        // TODO: this is a hack, because it seems that the order in which the type listeners are
+        //  updated is not consistent. So we need to make sure that the MemberCallExpression is
+        //  really updated after the member expression. Once we fix that we should make updateName()
+        //  private
+        call.updateName()
+
+        // Afterwards, we can resolve the call as usual
+        handleMethodCall(curClass, call)
     }
 }
 
