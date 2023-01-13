@@ -56,7 +56,12 @@ internal class StaticImportsTest : BaseTest() {
         assertTrue(staticField.modifiers.contains("static"))
 
         val memberExpressions = main.allChildren<MemberExpression>()
-        val usage = findByUniqueName(memberExpressions, "test")
+        // we have two member expressions, one to the field and one to the method
+        assertEquals(2, memberExpressions.size)
+
+        // we want the one to the field
+        val usage = memberExpressions[{ it.type.name.localName == "int" }]
+        assertNotNull(usage)
         assertEquals(staticField, usage.refersTo)
     }
 
