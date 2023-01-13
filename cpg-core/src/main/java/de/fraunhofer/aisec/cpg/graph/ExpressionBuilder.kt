@@ -307,7 +307,7 @@ fun MetadataProvider.newMemberCallExpression(
     node.base = base
     node.callee = callee
     node.operatorCode = operatorCode
-    node.static = static
+    node.isStatic = static
 
     log(node)
     return node

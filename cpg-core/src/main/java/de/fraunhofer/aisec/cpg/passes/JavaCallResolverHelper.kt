@@ -82,12 +82,6 @@ fun CallResolver.handleSuperCall(curClass: RecordDeclaration, call: MemberCallEx
         // And set the possible subtypes, to ensure, that really only our super type is in there
         call.base?.updatePossibleSubtypes(listOf(superType))
 
-        // TODO: this is a hack, because it seems that the order in which the type listeners are
-        //  updated is not consistent. So we need to make sure that the MemberCallExpression is
-        //  really updated after the member expression. Once we fix that we should make updateName()
-        //  private
-        call.updateName()
-
         // Afterwards, we can resolve the call as usual
         handleMethodCall(curClass, call)
     }

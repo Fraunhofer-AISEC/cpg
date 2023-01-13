@@ -60,7 +60,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * This property holds the full name using our new [Name] class. It is currently not persisted
      * in the graph database.
      */
-    @Convert(NameConverter::class) var name: Name = Name(EMPTY_NAME)
+    @Convert(NameConverter::class) open var name: Name = Name(EMPTY_NAME)
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases

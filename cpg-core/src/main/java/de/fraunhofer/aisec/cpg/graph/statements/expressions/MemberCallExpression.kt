@@ -69,10 +69,7 @@ class MemberCallExpression : CallExpression(), HasBase {
             return
         }
 
-        if (src === base) {
-            // update the name
-            updateName()
-        } else {
+        if (src !== base) {
             super.typeChanged(src, root, oldType)
         }
     }

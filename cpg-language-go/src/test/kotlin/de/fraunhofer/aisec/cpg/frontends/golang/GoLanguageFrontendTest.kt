@@ -71,7 +71,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val nameEntry = map.initializers.firstOrNull() as? KeyValueExpression
         assertNotNull(nameEntry)
 
-        assertLocalName("string[]", nameEntry.value as? ConstructExpression)
+        assertLocalName("string[]", (nameEntry.value as? ConstructExpression)?.type)
     }
 
     @Test

@@ -86,7 +86,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      */
     var arguments by PropertyEdgeDelegate(CallExpression::argumentsEdges)
 
-    var static: Boolean = false
+    var isStatic: Boolean = false
 
     /**
      * The expression that is being "called". This is currently not yet used in the [CallResolver]
@@ -100,10 +100,6 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             field?.unregisterTypeListener(this)
 
             field = value
-            // We also want to update this node's name, based on the callee. This is purely for
-            // readability reasons. We have a special handling for function pointers, where we want
-            // to have the name of the variable. This might change in the future.
-            updateName()
 
             // Register the callee as a type listener for this call expressions. Once we re-design
             // call resolution, we need to probably do this in the opposite way so that the call
@@ -112,28 +108,23 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         }
 
     /**
-     * A small utility function that updates the [Name] of this call expression, based on its
-     * [callee].
+     * The [Name] of this call expression, based on its [callee].
      * * For simple calls, this is just the name of the [callee], e.g., a reference to a function
      * * For simple function pointers we want to prefix a *
      * * For class based function pointers we want to build a name like MyClass::*pointer
-     *
-     * This should be triggered, if either the [callee] changes or the type of this expression
-     * changes, e.g., if the type of a previously unknown callee is now known.
      */
-    fun updateName() {
-        val value = callee
-        this.name =
-            if (value is UnaryOperator && value.input.type is FunctionPointerType) {
+    override var name: Name
+        get() {
+            val value = callee
+            return if (value is UnaryOperator && value.input.type is FunctionPointerType) {
                 value.input.name
             } else if (value is BinaryOperator && value.rhs.type is FunctionPointerType) {
                 value.lhs.type.name.fqn("*" + value.rhs.name.localName)
-            } else if (value is MemberExpression) {
-                value.name
             } else {
                 value?.name ?: Name(EMPTY_NAME)
             }
-    }
+        }
+        set(_) {}
 
     fun setArgument(index: Int, argument: Expression) {
         argumentsEdges[index].end = argument
