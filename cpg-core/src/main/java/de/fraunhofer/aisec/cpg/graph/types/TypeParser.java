@@ -498,8 +498,12 @@ public class TypeParser {
    * @param type provided typeString
    * @return typeString without access modifier
    */
-  private static String removeAccessModifier(@NotNull String type) {
-    return type.replaceAll("public|private|protected", "").trim();
+  private static String removeAccessModifier(
+      @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
+    for (String modifier : language.getAccessModifiers()) {
+      type = type.replaceAll(modifier, "");
+    }
+    return type.trim();
   }
 
   /**
@@ -709,7 +713,7 @@ public class TypeParser {
     }
 
     // Preprocessing of the typeString
-    type = removeAccessModifier(type);
+    type = removeAccessModifier(type, language);
 
     // Determine if inner class
 
@@ -730,28 +734,30 @@ public class TypeParser {
     // long long int (only primitive types)
     typeBlocks = joinPrimitive(typeBlocks, language);
 
-    List<String> qualifierList = new ArrayList<>();
-    List<String> storageList = new ArrayList<>();
+    Type.Qualifier qualifier = new Type.Qualifier(false, false, false, false);
+    List<Type.Storage> storageList = new ArrayList<>();
 
     // Handle preceding qualifier or storage specifier to the type name e.g. static const int
     int counter = 0;
+
     for (String part : typeBlocks) {
-      if (isQualifierSpecifier(part, language)) {
-        qualifierList.add(part);
-        counter++;
-      } else if (isStorageSpecifier(part, language)) {
-        storageList.add(part);
-        counter++;
-      } else if (isElaboratedTypeSpecifier(part, language)) {
-        // ignore elaborated types for now
+      var specifier = language.asStorageSpecifier(part);
+      if (specifier != null) {
+        storageList.add(specifier);
         counter++;
       } else {
-        break;
+        if (language.updateQualifier(part, qualifier)) {
+          counter++;
+        } else if (isElaboratedTypeSpecifier(part, language)) {
+          // ignore elaborated types for now
+          counter++;
+        } else {
+          break;
+        }
       }
     }
 
-    Type.Storage storageValue = calcStorage(storageList);
-    Type.Qualifier qualifier = calcQualifier(qualifierList, null);
+    Type.Storage storageValue = storageList.size() > 0 ? storageList.get(0) : Type.Storage.AUTO;
 
     // Once all preceding known keywords (if any) are handled the next word must be the TypeName
     if (counter >= typeBlocks.size()) {
@@ -767,7 +773,11 @@ public class TypeParser {
     // Check if type is FunctionPointer
     Matcher funcptr = getFunctionPtrMatcher(typeBlocks.subList(counter, typeBlocks.size()));
 
-    if (funcptr != null) {
+    finalType = language.getTypeOf(typeName, modifier);
+    if (finalType != null) {
+      finalType.setQualifier(qualifier);
+      finalType.setStorage(storageValue);
+    } else if (funcptr != null) {
       Type returnType = createFrom(typeName, language);
       List<Type> parameterList = getParameterList(funcptr.group("args"), language);
 

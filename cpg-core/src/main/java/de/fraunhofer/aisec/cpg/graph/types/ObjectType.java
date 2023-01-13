@@ -68,7 +68,7 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
 
   /**
    * ObjectTypes can have a modifier if they are primitive datatypes. The default is signed for
-   * primitive data types if there is no more information provided. In case of non primitive
+   * primitive data types if there is no more information provided. In case of non-primitive
    * datatypes the modifier is NOT_APPLICABLE
    */
   public enum Modifier {
@@ -77,7 +77,7 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
     NOT_APPLICABLE,
   }
 
-  private final Modifier modifier;
+  protected Modifier modifier;
   // Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
   private RecordDeclaration recordDeclaration = null;
 

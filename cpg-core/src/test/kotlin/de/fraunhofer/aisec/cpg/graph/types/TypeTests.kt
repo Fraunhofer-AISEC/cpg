@@ -373,14 +373,13 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         val parameterList =
             listOf<Type>(
-                ObjectType(
+                IntegerType(
                     "int",
                     Type.Storage.AUTO,
                     Type.Qualifier(),
-                    emptyList(),
                     ObjectType.Modifier.SIGNED,
-                    true,
-                    CPPLanguage()
+                    CPPLanguage(),
+                    32
                 )
             )
         var expected: Type =
@@ -404,14 +403,13 @@ internal class TypeTests : BaseTest() {
         expected =
             PointerType(
                 PointerType(
-                    ObjectType(
+                    IntegerType(
                         "char",
                         Type.Storage.AUTO,
                         Type.Qualifier(),
-                        emptyList(),
-                        ObjectType.Modifier.SIGNED,
-                        true,
-                        CPPLanguage()
+                        ObjectType.Modifier.NOT_APPLICABLE,
+                        CPPLanguage(),
+                        8
                     ),
                     PointerType.PointerOrigin.ARRAY
                 ),
@@ -425,14 +423,13 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             PointerType(
-                ObjectType(
+                IntegerType(
                     "char",
                     Type.Storage.AUTO,
                     Type.Qualifier(),
-                    emptyList(),
-                    ObjectType.Modifier.SIGNED,
-                    true,
-                    CPPLanguage()
+                    ObjectType.Modifier.NOT_APPLICABLE,
+                    CPPLanguage(),
+                    8
                 ),
                 PointerType.PointerOrigin.POINTER
             )
@@ -453,14 +450,13 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             PointerType(
-                ObjectType(
+                IntegerType(
                     "char",
                     Type.Storage.AUTO,
                     Type.Qualifier(true, false, false, false),
-                    emptyList(),
-                    ObjectType.Modifier.SIGNED,
-                    true,
-                    CPPLanguage()
+                    ObjectType.Modifier.NOT_APPLICABLE,
+                    CPPLanguage(),
+                    8
                 ),
                 PointerType.PointerOrigin.POINTER
             )
@@ -471,14 +467,13 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             PointerType(
-                ObjectType(
+                IntegerType(
                     "char",
                     Type.Storage.AUTO,
                     Type.Qualifier(false, false, false, false),
-                    emptyList(),
-                    ObjectType.Modifier.SIGNED,
-                    true,
-                    CPPLanguage()
+                    ObjectType.Modifier.NOT_APPLICABLE,
+                    CPPLanguage(),
+                    8
                 ),
                 PointerType.PointerOrigin.POINTER
             )
@@ -490,14 +485,13 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             PointerType(
-                ObjectType(
+                IntegerType(
                     "char",
                     Type.Storage.AUTO,
                     Type.Qualifier(true, false, false, false),
-                    emptyList(),
-                    ObjectType.Modifier.SIGNED,
-                    true,
-                    CPPLanguage()
+                    ObjectType.Modifier.NOT_APPLICABLE,
+                    CPPLanguage(),
+                    8
                 ),
                 PointerType.PointerOrigin.POINTER
             )
@@ -510,14 +504,13 @@ internal class TypeTests : BaseTest() {
         expected =
             PointerType(
                 PointerType(
-                    ObjectType(
+                    IntegerType(
                         "char",
                         Type.Storage.STATIC,
                         Type.Qualifier(true, false, false, false),
-                        emptyList(),
-                        ObjectType.Modifier.SIGNED,
-                        true,
-                        CPPLanguage()
+                        ObjectType.Modifier.NOT_APPLICABLE,
+                        CPPLanguage(),
+                        8
                     ),
                     PointerType.PointerOrigin.POINTER
                 ),
@@ -533,14 +526,13 @@ internal class TypeTests : BaseTest() {
             PointerType(
                 PointerType(
                     PointerType(
-                        ObjectType(
+                        IntegerType(
                             "char",
                             Type.Storage.STATIC,
                             Type.Qualifier(true, false, false, false),
-                            emptyList(),
-                            ObjectType.Modifier.SIGNED,
-                            true,
-                            CPPLanguage()
+                            ObjectType.Modifier.NOT_APPLICABLE,
+                            CPPLanguage(),
+                            8
                         ),
                         PointerType.PointerOrigin.POINTER
                     ),
@@ -555,14 +547,13 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         var generics: MutableList<Type?> = ArrayList()
         generics.add(
-            ObjectType(
+            IntegerType(
                 "int",
                 Type.Storage.AUTO,
                 Type.Qualifier(),
-                emptyList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
+                CPPLanguage(),
+                8
             )
         )
         expected =
@@ -581,14 +572,13 @@ internal class TypeTests : BaseTest() {
         typeString = "long long int"
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
-            ObjectType(
+            IntegerType(
                 "long long int",
                 Type.Storage.AUTO,
                 Type.Qualifier(),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
+                CPPLanguage(),
+                64
             )
         assertEquals(expected, result)
 
@@ -596,27 +586,25 @@ internal class TypeTests : BaseTest() {
         typeString = "unsigned int"
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
-            ObjectType(
+            IntegerType(
                 "int",
                 Type.Storage.AUTO,
                 Type.Qualifier(),
-                ArrayList(),
                 ObjectType.Modifier.UNSIGNED,
-                true,
-                CPPLanguage()
+                CPPLanguage(),
+                32
             )
         assertEquals(expected, result)
         typeString = "signed int"
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
-            ObjectType(
+            IntegerType(
                 "int",
                 Type.Storage.AUTO,
                 Type.Qualifier(),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
+                CPPLanguage(),
+                32
             )
         assertEquals(expected, result)
         typeString = "A a"
@@ -635,14 +623,13 @@ internal class TypeTests : BaseTest() {
 
         // Test 11: Unsigned + const + compound primitive Types
         expected =
-            ObjectType(
+            IntegerType(
                 "long long int",
                 Type.Storage.AUTO,
                 Type.Qualifier(true, false, false, false),
-                ArrayList(),
                 ObjectType.Modifier.UNSIGNED,
-                true,
-                CPPLanguage()
+                CPPLanguage(),
+                64
             )
         typeString = "const unsigned long long int a = 1"
         result = TypeParser.createFrom(typeString, CPPLanguage())
@@ -671,14 +658,13 @@ internal class TypeTests : BaseTest() {
             ReferenceType(
                 Type.Storage.AUTO,
                 Type.Qualifier(true, false, false, false),
-                ObjectType(
+                IntegerType(
                     "int",
                     Type.Storage.AUTO,
                     Type.Qualifier(),
-                    ArrayList(),
                     ObjectType.Modifier.SIGNED,
-                    true,
-                    CPPLanguage()
+                    CPPLanguage(),
+                    32
                 )
             )
         assertEquals(expected, result)

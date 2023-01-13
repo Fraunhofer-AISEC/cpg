@@ -30,8 +30,15 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.Type.Qualifier
+import de.fraunhofer.aisec.cpg.graph.types.Type.Storage
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
 import kotlin.reflect.KClass
@@ -59,12 +66,84 @@ abstract class Language<T : LanguageFrontend> : Node() {
     open val primitiveTypes: Set<String>
         get() = setOf("byte", "short", "int", "long", "float", "double", "boolean", "char")
 
+    /** The access modifiers of this programming language */
+    open val accessModifiers: Set<String>
+        get() = setOf("public", "protected", "private")
+
     /** Creates a new [LanguageFrontend] object to parse the language. */
     abstract fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager = ScopeManager(),
         typeManager: TypeManager = TypeManager()
     ): T
+
+    open fun getTypeOf(typeString: String, modifier: ObjectType.Modifier): Type? {
+        return when (typeString) {
+            "byte" -> IntegerType(typeString, 8, this, modifier)
+            "short" -> IntegerType(typeString, 16, this, modifier)
+            "int" -> IntegerType(typeString, 32, this, modifier)
+            "long" -> IntegerType(typeString, 64, this, modifier)
+            "long long int" -> IntegerType(typeString, 64, this, modifier)
+            "float" -> FloatingPointType(typeString, 32, this, modifier)
+            "double" -> FloatingPointType(typeString, 64, this, modifier)
+            "boolean" -> IntegerType(typeString, 1, this, modifier)
+            "char" -> IntegerType(typeString, 8, this, ObjectType.Modifier.NOT_APPLICABLE)
+            else -> null
+        }
+    }
+
+    // TODO: These are language specific too.
+    private val VOLATILE_QUALIFIER = "volatile"
+    private val FINAL_QUALIFIER = "final"
+    private val CONST_QUALIFIER = "const"
+    private val RESTRICT_QUALIFIER = "restrict"
+    private val ATOMIC_QUALIFIER = "atomic"
+
+    open fun updateQualifier(qualifierString: String, old: Qualifier): Boolean {
+        if (this !is HasQualifier || qualifierString !in qualifiers) {
+            return false
+        }
+        val qualifier = old
+        when (qualifierString) {
+            FINAL_QUALIFIER,
+            CONST_QUALIFIER -> {
+                qualifier.isConst = true
+                return true
+            }
+            VOLATILE_QUALIFIER -> {
+                qualifier.isVolatile = true
+                return true
+            }
+            RESTRICT_QUALIFIER -> {
+                qualifier.isRestrict = true
+
+                return true
+            }
+            ATOMIC_QUALIFIER -> {
+                qualifier.isAtomic = true
+
+                return true
+            }
+        }
+
+        return false
+    }
+
+    open fun asStorageSpecifier(specifier: String): Storage? {
+        // TODO: Which of these affect which language? Probably, we should separate it more clearly.
+        // I'm also wondering why we actually need this information.
+        if (specifier.uppercase() == "STATIC") {
+            return Storage.STATIC
+        } else if (specifier.uppercase() == "EXTERN") {
+            return Storage.EXTERN
+        } else if (specifier.uppercase() == "REGISTER") {
+            return Storage.REGISTER
+        } else if (specifier.uppercase() == "AUTO" && this is CPPLanguage) {
+            return Storage.AUTO
+        } else {
+            return null
+        }
+    }
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
     fun handlesFile(file: File): Boolean {
