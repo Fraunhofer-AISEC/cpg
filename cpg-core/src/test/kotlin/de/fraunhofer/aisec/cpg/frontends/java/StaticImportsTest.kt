@@ -35,12 +35,23 @@ import java.nio.file.Path
 import kotlin.test.*
 
 internal class StaticImportsTest : BaseTest() {
-    private val topLevel = Path.of("src", "test", "resources", "staticImports")
+    private val topLevel = Path.of("src", "test", "resources", "java", "staticImports")
 
     @Test
     @Throws(Exception::class)
     fun testSingleStaticImport() {
-        val result = analyze("java", topLevel.resolve("single"), true)
+        val result =
+            analyze(
+                listOf(
+                    // we want JavaParser to analyze both files so that resolving works
+                    topLevel.resolve("single/A.java").toFile(),
+                    topLevel.resolve("single/B.java").toFile()
+                ),
+                // we need to specify the root of the folder so that the JavaParser correctly
+                // resolve the package
+                topLevel,
+                true
+            )
         val methods = result.methods
         val test = findByUniqueName(methods, "test")
         val main = findByUniqueName(methods, "main")

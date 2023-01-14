@@ -302,7 +302,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
           } else {
             name = scope.asNameExpr().getNameAsString();
           }
-          String qualifiedNameFromImports = this.frontend.getQualifiedNameFromImports(name);
+          var qualifiedNameFromImports = this.frontend.getQualifiedNameFromImports(name);
           if (qualifiedNameFromImports != null) {
             baseType = parseType(this, qualifiedNameFromImports);
           } else {
@@ -335,7 +335,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         } else {
           name = scope.asFieldAccessExpr().getNameAsString();
         }
-        String qualifiedNameFromImports = this.frontend.getQualifiedNameFromImports(name);
+        var qualifiedNameFromImports = this.frontend.getQualifiedNameFromImports(name);
         Type baseType;
         if (qualifiedNameFromImports != null) {
           baseType = parseType(this, qualifiedNameFromImports);
@@ -503,6 +503,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     //          nameExpr.getNameAsString(), new Type(UNKNOWN_TYPE), nameExpr.toString());
     //    }
 
+    var name = NameKt.parseName(this, nameExpr.getNameAsString());
+
     try {
       ResolvedValueDeclaration symbol = nameExpr.resolve();
 
@@ -551,21 +553,20 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       }
     } catch (UnsolvedSymbolException ex) {
       String typeString;
+
       if (ex.getName().startsWith("We are unable to find the value declaration corresponding to")) {
         typeString = nameExpr.getNameAsString();
       } else {
         typeString = this.frontend.recoverTypeFromUnsolvedException(ex);
       }
+
       Type t;
       if (typeString == null) {
-        t = parseType(this, "UNKNOWN3"); // TODO: What's this? UNKNOWN3??
-        log.info("Unresolved symbol: {}", nameExpr.getNameAsString());
+        t = UnknownType.getUnknownType(getLanguage());
       } else {
         t = parseType(this, typeString);
         t.setTypeOrigin(Type.Origin.GUESSED);
       }
-
-      var name = nameExpr.getNameAsString();
 
       DeclaredReferenceExpression declaredReferenceExpression =
           newDeclaredReferenceExpression(this, name, t, nameExpr.toString());
@@ -682,6 +683,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       log.debug("Could not resolve method {}", methodCallExpr);
     }
 
+    // Or if the base is a reference to an import
+    if (this.frontend.getQualifiedNameFromImports(qualifiedName) != null) {
+      isStatic = true;
+    }
+
     de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression base;
     // the scope could either be a variable or also the class name (static call!)
     // thus, only because the scope is present, this is not automatically a member call
@@ -694,12 +700,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
           && ((DeclaredReferenceExpression) base).getRefersTo() instanceof RecordDeclaration) {
         isStatic = true;
       }
-
-      // Or if the base is a reference to an import
-      if (base instanceof DeclaredReferenceExpression
-          && this.frontend.getQualifiedNameFromImports(base.getName().toString()) != null) {
-        isStatic = true;
-      }
     } else {
       // If the call does not have any base, there are two possibilities:
       // a) The "this" could be omitted, making it a member call to the current class
@@ -709,8 +709,14 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       if (isStatic) {
         // In case this is a static call, we need some additional information from the resolved
         // method
-        var baseName = NameKt.parseName(this, resolved.declaringType().getQualifiedName());
-        var baseType = parseType(this, baseName);
+        Type baseType;
+        de.fraunhofer.aisec.cpg.graph.Name baseName;
+        if (resolved != null) {
+          baseName = NameKt.parseName(this, resolved.declaringType().getQualifiedName());
+        } else {
+          baseName = NameKt.parseName(this, qualifiedName).getParent();
+        }
+        baseType = parseType(this, baseName);
 
         base = newDeclaredReferenceExpression(this, baseName, baseType);
       } else {

@@ -245,7 +245,7 @@ open class JavaLanguageFrontend(
                 if (expression is NameExpr) {
                     // try to look for imports matching the name
                     // i.e. a static call
-                    val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
+                    val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)?.toString()
                     if (fromImport != null) {
                         return fromImport
                     }
@@ -260,14 +260,13 @@ open class JavaLanguageFrontend(
                 }
             } else {
                 // if the method is a static method of a resolvable class, the .resolve() would have
-                // worked.
-                // but, the following can still be false, if the superclass implements callExpr, but
-                // is not
-                // available for analysis
+                // worked. but, the following can still be false, if the superclass implements
+                // callExpr, but
+                // is not available for analysis
 
                 // check if this is a "specific" static import (not of the type 'import static
                 // x.y.Z.*')
-                val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
+                val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)?.toString()
                 fromImport ?: fqn(callExpr.nameAsString).toString()
                 // this is not strictly true. This could also be a function of a superclass or from
                 // a static asterisk import
@@ -277,7 +276,7 @@ open class JavaLanguageFrontend(
             if (scope.isPresent) {
                 val expression = scope.get()
                 if (expression is NameExpr) {
-                    val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
+                    val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)?.toString()
                     if (fromImport != null) {
                         return fromImport
                     }
@@ -288,7 +287,7 @@ open class JavaLanguageFrontend(
                     scope.get().toString() + "." + callExpr.nameAsString
                 }
             } else {
-                val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
+                val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)?.toString()
                 fromImport ?: fqn(callExpr.nameAsString).toString()
             }
         }
@@ -308,31 +307,32 @@ open class JavaLanguageFrontend(
             if (qualifier.startsWith("We are unable to find") || qualifier.startsWith("Solving ")) {
                 return null
             }
-            val fromImport = getQualifiedNameFromImports(qualifier)
+            val fromImport = getQualifiedNameFromImports(qualifier)?.toString()
             return fromImport ?: getFQNInCurrentPackage(qualifier)
         }
         log.debug("Unable to resolve qualified name from exception")
         return null
     }
 
-    fun getQualifiedNameFromImports(className: String?): String? {
+    fun getQualifiedNameFromImports(className: String?): Name? {
         if (context != null && className != null) {
-            val potentialClassNames: MutableList<String> = ArrayList()
-            var prefix = StringBuilder()
-            for (s in className.split("\\.").toTypedArray()) {
-                potentialClassNames.add(prefix.toString() + s)
-                prefix.append(s).append(".")
-            }
-            // see if we can make the qualifier more precise using the imports
-            for (importDeclaration in context!!.imports) {
-                for (cn in potentialClassNames) {
-                    if (importDeclaration.name.asString().endsWith(".$cn")) {
-                        prefix = StringBuilder(importDeclaration.name.asString())
-                        return prefix.substring(0, prefix.lastIndexOf(cn)) + className
-                    }
+            val name = parseName(className)
+
+            // See if we can make the qualifier more precise using the imports
+            for (importDeclaration in context?.imports ?: listOf()) {
+                // Skip asterisk imports, otherwise the name comparison below will get confused
+                // and we are looking for directly imported classes here only
+                if (importDeclaration.isAsterisk) {
+                    continue
+                }
+
+                val importName = parseName(importDeclaration.nameAsString)
+                if (importName.endsWith(name)) {
+                    return importName
                 }
             }
         }
+
         return null
     }
 
