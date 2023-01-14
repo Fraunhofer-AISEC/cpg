@@ -1,3 +1,6 @@
+package compiling;
+
+import compiling.subpackage.*;
 /**
  * Tests for different ways of providing argument to method calls.
  *
@@ -29,6 +32,13 @@ public class CT {
 
 		// MethodCallExpression as argument
 		c.bar(c.red());
+
+		// Intentionally create a variable that has the same name as an imported package,
+		// because we had an issue with confusion
+		CT subpackage = new CT();
+
+		// This is just a regular member call
+		subpackage.bar(1);
 	}
 
 	private void bar(int constant) {

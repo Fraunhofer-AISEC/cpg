@@ -449,9 +449,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         assertNotNull(tu)
 
-        val count = SubgraphWalker.flattenAST(tu).count { it is MemberCallExpression }
-
-        assertEquals(6, count)
+        assertEquals(7, tu.mcalls.size)
+        assertTrue(tu.mcalls.all { !it.isStatic })
     }
 
     @Test
@@ -745,12 +744,5 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(forEach)
 
         assertContains(forEach.variable.prevDFG, forEach.iterable)
-    }
-
-    @Test
-    fun testImport() {
-        val file = File("src/test/resources/components/ImportTest.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        assertNotNull(tu)
     }
 }
