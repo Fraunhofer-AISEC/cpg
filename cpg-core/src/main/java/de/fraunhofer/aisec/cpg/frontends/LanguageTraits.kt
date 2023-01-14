@@ -53,7 +53,7 @@ interface HasTemplates : LanguageTrait {
         applyInference: Boolean,
         scopeManager: ScopeManager,
         currentTU: TranslationUnitDeclaration
-    ): Boolean
+    ): Pair<Boolean, List<FunctionDeclaration>>
 }
 
 /**
@@ -71,7 +71,7 @@ interface HasComplexCallResolution : LanguageTrait {
         call: CallExpression,
         scopeManager: ScopeManager,
         currentTU: TranslationUnitDeclaration
-    )
+    ): List<FunctionDeclaration>
 
     fun refineMethodCallResolution(
         curClass: RecordDeclaration?,

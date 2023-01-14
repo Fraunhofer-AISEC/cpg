@@ -161,6 +161,13 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
       // String + any other type results in a String
       getPossibleSubTypes().clear();
       setType(TypeParser.createFrom("java.lang.String", getLanguage()), root);
+    } else if ((this.operatorCode.equals(".*") || this.operatorCode.equals("->*"))
+        && src != null
+        && src == this.rhs) {
+      // Propagate the function pointer type to the expression itself. This helps us later in the
+      // call resolver, when trying to determine, whether this is a regular call or a function
+      // pointer call.
+      setType(src.getPropagationType(), root);
     }
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Type.Origin.DATAFLOW);
