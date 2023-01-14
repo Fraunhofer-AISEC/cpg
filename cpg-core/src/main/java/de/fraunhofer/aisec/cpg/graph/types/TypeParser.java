@@ -55,98 +55,8 @@ public class TypeParser {
       Pattern.compile(
           "(?:(?<functionptr>[\\h(]+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*[\\h)]+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
 
-  private static final String VOLATILE_QUALIFIER = "volatile";
-  private static final String FINAL_QUALIFIER = "final";
-  private static final String CONST_QUALIFIER = "const";
-  private static final String RESTRICT_QUALIFIER = "restrict";
-  private static final String ATOMIC_QUALIFIER = "atomic";
-
   private TypeParser() {
     throw new IllegalStateException("Do not instantiate the TypeParser");
-  }
-
-  /**
-   * Infers corresponding qualifier information for the type depending on the keywords.
-   *
-   * @param typeString list of found keywords
-   * @param old previous qualifier information which is completed with newer qualifier information
-   * @return Type.Qualifier
-   */
-  public static Type.Qualifier calcQualifier(List<String> typeString, Type.Qualifier old) {
-    boolean constantFlag = false;
-    boolean volatileFlag = false;
-    boolean restrictFlag = false;
-    boolean atomicFlag = false;
-
-    if (old != null) {
-      constantFlag = old.isConst();
-      volatileFlag = old.isVolatile();
-      restrictFlag = old.isRestrict();
-      atomicFlag = old.isAtomic();
-    }
-
-    for (String part : typeString) {
-      switch (part) {
-        case FINAL_QUALIFIER:
-        case CONST_QUALIFIER:
-          constantFlag = true;
-          break;
-
-        case VOLATILE_QUALIFIER:
-          volatileFlag = true;
-          break;
-
-        case RESTRICT_QUALIFIER:
-          restrictFlag = true;
-          break;
-
-        case ATOMIC_QUALIFIER:
-          atomicFlag = true;
-          break;
-        default:
-          // do nothing
-      }
-    }
-
-    return new Type.Qualifier(constantFlag, volatileFlag, restrictFlag, atomicFlag);
-  }
-
-  /**
-   * Infers the corresponding storage type depending on the present storage keyword. Default AUTO
-   *
-   * @param typeString List of storage keywords
-   * @return Storage
-   */
-  public static Type.Storage calcStorage(List<String> typeString) {
-    for (String part : typeString) {
-      try {
-        return Type.Storage.valueOf(part.toUpperCase());
-      } catch (IllegalArgumentException ignored) {
-        // continue in case of illegalArgumentException
-      }
-    }
-    return Type.Storage.AUTO;
-  }
-
-  public static boolean isStorageSpecifier(
-      String specifier, Language<? extends LanguageFrontend> language) {
-    // TODO: Convert to language trait
-    if (language instanceof CLanguage || language instanceof CPPLanguage) {
-      return specifier.equalsIgnoreCase("STATIC");
-    } else {
-      try {
-        Type.Storage.valueOf(specifier.toUpperCase());
-        return true;
-      } catch (IllegalArgumentException e) {
-        return false;
-      }
-    }
-  }
-
-  protected static boolean isQualifierSpecifier(
-      String qualifier, Language<? extends LanguageFrontend> language) {
-    return language instanceof HasQualifier
-        && ((HasQualifier) language).getQualifiers().contains(qualifier);
   }
 
   /**
@@ -161,11 +71,6 @@ public class TypeParser {
       String specifier, Language<? extends LanguageFrontend> language) {
     return language instanceof HasElaboratedTypeSpecifier
         && ((HasElaboratedTypeSpecifier) language).getElaboratedTypeSpecifier().contains(specifier);
-  }
-
-  public static boolean isKnownSpecifier(
-      String specifier, Language<? extends LanguageFrontend> language) {
-    return isQualifierSpecifier(specifier, language) || isStorageSpecifier(specifier, language);
   }
 
   /**
@@ -451,19 +356,13 @@ public class TypeParser {
       return resolveBracketExpression(finalType, subBracketExpression, language);
     }
 
-    if (isStorageSpecifier(part, language)) {
-      List<String> specifiers = new ArrayList<>();
-      specifiers.add(part);
-      finalType.setStorage(calcStorage(specifiers));
+    Type.Storage storageSpecifier = language.asStorageSpecifier(part);
+    if (storageSpecifier != null) {
+      finalType.setStorage(storageSpecifier);
       return finalType;
     }
 
-    if (isQualifierSpecifier(part, language)) {
-      List<String> qualifiers = new ArrayList<>();
-      qualifiers.add(part);
-      finalType.setQualifier(calcQualifier(qualifiers, finalType.getQualifier()));
-      return finalType;
-    }
+    language.updateQualifier(part, finalType.getQualifier());
 
     return finalType;
   }
@@ -645,18 +544,10 @@ public class TypeParser {
         bracketExpressions.add(part);
       }
 
-      // Check storage and qualifiers specifierd that are defined after the typeName e.g. int const
-      if (isStorageSpecifier(part, language)) {
-        List<String> specifiers = new ArrayList<>();
-        specifiers.add(part);
-        finalType.setStorage(calcStorage(specifiers));
-      }
-
-      if (isQualifierSpecifier(part, language)) {
-        List<String> qualifiers = new ArrayList<>();
-        qualifiers.add(part);
-        finalType.setQualifier(calcQualifier(qualifiers, finalType.getQualifier()));
-      }
+      // Check storage and qualifier specifiers that are defined after the typeName e.g. int const
+      Type.Storage storageSpecifier = language.asStorageSpecifier(part);
+      if (storageSpecifier != null) finalType.setStorage(storageSpecifier);
+      language.updateQualifier(part, finalType.getQualifier());
     }
     return finalType;
   }
