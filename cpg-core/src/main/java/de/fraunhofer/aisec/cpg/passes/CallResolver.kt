@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateIn
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
 import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
@@ -95,7 +96,7 @@ open class CallResolver : SymbolResolverPass() {
             walker.iterate(tu)
         }
         walker.clearCallbacks()
-        walker.registerHandler { node, _ -> resolve(node) }
+        walker.registerHandler { node, _ -> handleNode(node) }
         for (tu in translationResult.translationUnits) {
             walker.iterate(tu)
         }
@@ -140,83 +141,110 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun resolve(node: Node) {
+    protected fun handleNode(node: Node) {
         when (node) {
             is TranslationUnitDeclaration -> {
                 currentTU = node
             }
             is ExplicitConstructorInvocation -> {
-                resolveExplicitConstructorInvocation(node)
+                handleExplicitConstructorInvocation(node)
             }
             is ConstructExpression -> {
                 // We might have call expressions inside our arguments, so in order to correctly
                 // resolve this call's signature, we need to make sure any call expression arguments
                 // are fully resolved
-                resolveArguments(node)
-                resolveConstructExpression(node)
+                handleArguments(node)
+                handleConstructExpression(node)
             }
             is CallExpression -> {
                 // We might have call expressions inside our arguments, so in order to correctly
                 // resolve this call's signature, we need to make sure any call expression arguments
                 // are fully resolved
-                resolveArguments(node)
+                handleArguments(node)
                 handleCallExpression(scopeManager.currentRecord, node)
             }
         }
     }
 
     private fun handleCallExpression(curClass: RecordDeclaration?, call: CallExpression) {
-        if (
-            call is MemberCallExpression &&
-                call.base is DeclaredReferenceExpression &&
-                isSuperclassReference(call.base as DeclaredReferenceExpression)
-        ) {
-            handleSuperCall(curClass!!, call)
+        // Function pointers are handled by extra pass, so we are not resolving them here
+        if (call.callee?.type is FunctionPointerType) {
             return
         }
 
-        if (call is MemberCallExpression) {
-            val callee = call.callee
+        // At this point, we decide what to do based on the callee property
+        val callee = call.callee
 
-            // Check, if this is a function pointer call (which is handled by an extra pass)
-            if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
-                return
+        // With one exception. If the language supports templates and if this is a template call, we
+        // delegate it to the language. In the future, we definitely want to do this in a smarter
+        // way
+        val candidates =
+            if (call.instantiatesTemplate() && call.language is HasTemplates) {
+                val (_, candidates) =
+                    (call.language as HasTemplates).handleTemplateFunctionCalls(
+                        curClass,
+                        call,
+                        true,
+                        scopeManager,
+                        currentTU
+                    )
+
+                candidates
+            } else {
+                resolveCallee(callee, curClass, call) ?: return
             }
 
-            handleMethodCall(curClass, call)
-            return
-        }
-        if (call.instantiatesTemplate() && call.language is HasTemplates) {
-            (call.language as HasTemplates).handleTemplateFunctionCalls(
-                curClass,
-                call,
-                true,
-                scopeManager,
-                currentTU
-            )
-            return
-        }
+        // Set the INVOKES edge to our candidates
+        call.invokes = candidates
 
-        // we could be referring to a function pointer even though it is not a member call if the
-        // usual function pointer syntax (*fp)() has been omitted: fp(). Looks like a normal call,
-        // but it isn't
-        val funcPointer =
-            walker.getDeclarationForScope(call) { v ->
-                v.type is FunctionPointerType && v.name.lastPartsMatch(call.name)
-            }
-        if (!funcPointer.isPresent) {
-            // function pointers are handled by extra pass
-            handleNormalCalls(curClass, call)
+        // Additionally, also set the REFERS_TO of the callee. In the future, we might make more
+        // resolution decisions based on the callee itself. Unfortunately we can only set one here,
+        // so we will take the first one
+        if (callee is DeclaredReferenceExpression) {
+            callee.refersTo = candidates.firstOrNull()
         }
     }
 
-    private fun resolveArguments(call: CallExpression) {
+    /**
+     * Resolves [call] to a list of [FunctionDeclaration] nodes, based on the
+     * [CallExpression.callee] property.
+     *
+     * In case a resolution is not possible, `null` can be returned.
+     */
+    private fun resolveCallee(
+        callee: Expression?,
+        curClass: RecordDeclaration?,
+        call: CallExpression
+    ): List<FunctionDeclaration>? {
+        return when (callee) {
+            is MemberExpression -> resolveMemberCallee(callee, curClass, call)
+            is DeclaredReferenceExpression -> resolveReferenceCallee(callee, curClass, call)
+            null -> {
+                Util.warnWithFileLocation(
+                    call,
+                    log,
+                    "Call expression without callee, maybe because of a parsing error"
+                )
+                null
+            }
+            else -> {
+                Util.errorWithFileLocation(
+                    call,
+                    log,
+                    "Could not resolve callee of unsupported type ${callee.javaClass}"
+                )
+                null
+            }
+        }
+    }
+
+    private fun handleArguments(call: CallExpression) {
         val worklist: Deque<Node> = ArrayDeque()
         call.arguments.forEach { worklist.push(it) }
         while (!worklist.isEmpty()) {
             val curr = worklist.pop()
             if (curr is CallExpression) {
-                resolve(curr)
+                handleNode(curr)
             } else {
                 val it = Strategy.AST_FORWARD(curr)
                 while (it.hasNext()) {
@@ -229,15 +257,22 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected open fun handleNormalCalls(curClass: RecordDeclaration?, call: CallExpression) {
+    /**
+     * Resolves a [CallExpression.callee] of type [DeclaredReferenceExpression] to a possible list
+     * of [FunctionDeclaration] nodes.
+     */
+    fun resolveReferenceCallee(
+        callee: DeclaredReferenceExpression,
+        curClass: RecordDeclaration?,
+        call: CallExpression
+    ): List<FunctionDeclaration> {
         if (curClass == null) {
-            // Handle function (not method) calls
-            // C++ allows function overloading. Make sure we have at least the same number of
-            // arguments
+            // Handle function (not method) calls. C++ allows function overloading. Make sure we
+            // have at least the same number of arguments
             if (call.language is HasComplexCallResolution) {
                 // Handle CXX normal call resolution externally, otherwise it leads to increased
                 // complexity
-                (call.language as HasComplexCallResolution).refineNormalCallResolution(
+                return (call.language as HasComplexCallResolution).refineNormalCallResolution(
                     call,
                     scopeManager,
                     currentTU
@@ -250,14 +285,35 @@ open class CallResolver : SymbolResolverPass() {
                     invocationCandidates.add(currentTU.inferFunction(call))
                 }
 
-                call.invokes = invocationCandidates
+                return invocationCandidates
             }
-        } else if (!handlePossibleStaticImport(call, curClass)) {
-            handleMethodCall(curClass, call)
+        } else {
+            return resolveMemberCallee(callee, curClass, call)
         }
     }
 
-    fun handleMethodCall(curClass: RecordDeclaration?, call: CallExpression) {
+    /**
+     * Resolves a [CallExpression.callee] of type [MemberExpression] to a possible list of
+     * [FunctionDeclaration] nodes.
+     *
+     * TODO: Change callee to MemberExpression, but we can't since resolveReferenceCallee somehow
+     * delegates resolving of regular function calls within classes to this function (meh!)
+     */
+    fun resolveMemberCallee(
+        callee: DeclaredReferenceExpression,
+        curClass: RecordDeclaration?,
+        call: CallExpression
+    ): List<FunctionDeclaration> {
+        // We need to adjust certain types of the base in case of a super call and we delegate this.
+        // If that is successful, we can continue with regular resolving
+        if (
+            callee is MemberExpression &&
+                callee.base is DeclaredReferenceExpression &&
+                isSuperclassReference(callee.base as DeclaredReferenceExpression)
+        ) {
+            handleSuperCall(callee, curClass!!)
+        }
+
         val possibleContainingTypes = getPossibleContainingTypes(call)
 
         // Find function targets
@@ -267,12 +323,12 @@ open class CallResolver : SymbolResolverPass() {
         // Find invokes by supertypes
         if (
             invocationCandidates.isEmpty() &&
-                call.name.localName.isNotEmpty() &&
-                (call.language !is CPPLanguage || shouldSearchForInvokesInParent(call))
+                callee.name.localName.isNotEmpty() &&
+                (callee.language !is CPPLanguage || shouldSearchForInvokesInParent(call))
         ) {
             val records = possibleContainingTypes.mapNotNull { recordMap[it.root.name] }.toSet()
             invocationCandidates =
-                getInvocationCandidatesFromParents(call.name.localName, call, records)
+                getInvocationCandidatesFromParents(callee.name.localName, call, records)
                     .toMutableList()
         }
 
@@ -285,7 +341,8 @@ open class CallResolver : SymbolResolverPass() {
         )
 
         createMethodDummies(invocationCandidates, possibleContainingTypes, call)
-        call.invokes = invocationCandidates
+
+        return invocationCandidates
     }
 
     private fun retrieveInvocationCandidatesFromCall(
@@ -348,7 +405,7 @@ open class CallResolver : SymbolResolverPass() {
         return scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
     }
 
-    private fun resolveConstructExpression(constructExpression: ConstructExpression) {
+    private fun handleConstructExpression(constructExpression: ConstructExpression) {
         val typeName = constructExpression.type.name
         val recordDeclaration = recordMap[typeName]
         constructExpression.instantiates = recordDeclaration
@@ -389,7 +446,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    private fun resolveExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
+    private fun handleExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
         if (eci.containingClass != null) {
             val recordDeclaration = recordMap[eci.parseName(eci.containingClass)]
             val signature = eci.arguments.map { it.type }
@@ -400,64 +457,6 @@ open class CallResolver : SymbolResolverPass() {
                 invokes.add(constructor)
                 eci.invokes = invokes
             }
-        }
-    }
-
-    private fun handlePossibleStaticImport(
-        call: CallExpression,
-        curClass: RecordDeclaration
-    ): Boolean {
-        val name = call.name.localName
-        val nameMatches =
-            curClass.staticImports.filterIsInstance<FunctionDeclaration>().filter {
-                it.name.lastPartsMatch(name)
-            }
-        return if (nameMatches.isEmpty()) {
-            false
-        } else {
-            val invokes = mutableListOf<FunctionDeclaration>()
-            val target = nameMatches.firstOrNull { it.hasSignature(call.signature) }
-            if (target == null) {
-                generateInferredStaticallyImportedMethods(call, name, invokes, curClass)
-            } else {
-                invokes.add(target)
-            }
-            call.invokes = invokes
-            true
-        }
-    }
-
-    private fun generateInferredStaticallyImportedMethods(
-        call: CallExpression,
-        name: String,
-        invokes: MutableList<FunctionDeclaration>,
-        curClass: RecordDeclaration?
-    ) {
-        // We had an import for this method name, just not the correct signature. Let's just add
-        // an inferred node to any class that might be affected
-        if (curClass == null) {
-            LOGGER.warn("Cannot generate inferred nodes for imports of a null class: $call")
-            return
-        }
-        val containingRecords =
-            curClass.staticImportStatements
-                .filter { it.endsWith(".$name") }
-                .map { it.substring(0, it.lastIndexOf('.')) }
-                .mapNotNull { recordMap[call.parseName(it)] }
-
-        for (recordDeclaration in containingRecords) {
-            val inferred =
-                recordDeclaration
-                    .startInference()
-                    .createInferredFunctionDeclaration(
-                        name,
-                        "",
-                        true,
-                        call.signature,
-                        call.type // TODO: Is this correct?
-                    )
-
-            invokes.add(inferred)
         }
     }
 

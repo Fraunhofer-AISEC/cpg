@@ -327,14 +327,13 @@ fun applyTemplateInstantiation(
     initializationSignature: Map<Declaration?, Node?>,
     initializationType: Map<Node?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: Map<Declaration, Int>
-) {
+): List<FunctionDeclaration> {
     val templateInstantiationParameters =
         mutableListOf<Node>(*orderedInitializationSignature.keys.toTypedArray())
     for ((key, value) in orderedInitializationSignature) {
         templateInstantiationParameters[value] = initializationSignature[key]!!
     }
     templateCall.templateInstantiation = functionTemplateDeclaration
-    templateCall.invokes = listOf(function)
 
     // TODO(oxisto): Support multiple return values
     // Set return Value of call if resolved
@@ -374,6 +373,8 @@ fun applyTemplateInstantiation(
             initializationSignature[declaration]!!.addNextDFG(declaration)
         }
     }
+
+    return listOf(function)
 }
 
 /**

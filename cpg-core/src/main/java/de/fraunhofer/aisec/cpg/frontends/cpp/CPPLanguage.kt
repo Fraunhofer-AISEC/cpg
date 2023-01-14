@@ -71,8 +71,10 @@ class CPPLanguage :
             invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, scopeManager))
         }
         if (invocationCandidates.isEmpty()) {
-            if (handleTemplateFunctionCalls(curClass, call, false, scopeManager, currentTU)) {
-                return call.invokes
+            val (ok, candidates) =
+                handleTemplateFunctionCalls(curClass, call, false, scopeManager, currentTU)
+            if (ok) {
+                return candidates
             } else {
                 call.templateParametersEdges = null
             }
@@ -135,8 +137,7 @@ class CPPLanguage :
         call: CallExpression,
         scopeManager: ScopeManager,
         currentTU: TranslationUnitDeclaration
-    ) {
-
+    ): List<FunctionDeclaration> {
         val invocationCandidates =
             scopeManager
                 .resolveFunctionStopScopeTraversalOnDefinition(call)
@@ -147,14 +148,15 @@ class CPPLanguage :
             invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, scopeManager))
         }
         if (invocationCandidates.isEmpty()) {
-            /*
-             Check if the call can be resolved to a function template instantiation. If it can be resolver, we
-             resolve the call. Otherwise, there won't be an inferred template, we will do an inferred
-             FunctionDeclaration instead.
-            */
+            // Check if the call can be resolved to a function template instantiation. If it can be
+            // resolver, we resolve the call. Otherwise, there won't be an inferred template, we
+            // will do an
+            // inferred FunctionDeclaration instead.
             call.templateParametersEdges = mutableListOf()
-            if (handleTemplateFunctionCalls(null, call, false, scopeManager, currentTU)) {
-                return
+            val (ok, candidates) =
+                handleTemplateFunctionCalls(null, call, false, scopeManager, currentTU)
+            if (ok) {
+                return candidates
             } else {
                 call.templateParametersEdges = null
             }
@@ -171,7 +173,7 @@ class CPPLanguage :
             invocationCandidates.add(currentTU.inferFunction(call))
         }
 
-        call.invokes = invocationCandidates
+        return invocationCandidates
     }
 
     /**
@@ -207,7 +209,7 @@ class CPPLanguage :
         applyInference: Boolean,
         scopeManager: ScopeManager,
         currentTU: TranslationUnitDeclaration
-    ): Boolean {
+    ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates = scopeManager.resolveFunctionTemplateDeclaration(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
             val initializationType =
@@ -245,15 +247,16 @@ class CPPLanguage :
                         )
                 ) {
                     // Valid Target -> Apply invocation
-                    applyTemplateInstantiation(
-                        templateCall,
-                        functionTemplateDeclaration,
-                        function,
-                        initializationSignature,
-                        initializationType,
-                        orderedInitializationSignature
-                    )
-                    return true
+                    val candidates =
+                        applyTemplateInstantiation(
+                            templateCall,
+                            functionTemplateDeclaration,
+                            function,
+                            initializationSignature,
+                            initializationType,
+                            orderedInitializationSignature
+                        )
+                    return Pair(true, candidates)
                 }
             }
         }
@@ -265,18 +268,19 @@ class CPPLanguage :
             val functionTemplateDeclaration =
                 holder.startInference().createInferredFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
-            templateCall.invokes = functionTemplateDeclaration.realization
-            val edges = templateCall.templateParametersEdges ?: return false
+            val edges = templateCall.templateParametersEdges
             // Set instantiation propertyEdges
-            for (instantiationParameter in edges) {
+            for (instantiationParameter in edges ?: listOf()) {
                 instantiationParameter.addProperty(
                     Properties.INSTANTIATION,
                     TemplateDeclaration.TemplateInitialization.EXPLICIT
                 )
             }
-            return true
+
+            return Pair(true, functionTemplateDeclaration.realization)
         }
-        return false
+
+        return Pair(false, listOf())
     }
 
     /**

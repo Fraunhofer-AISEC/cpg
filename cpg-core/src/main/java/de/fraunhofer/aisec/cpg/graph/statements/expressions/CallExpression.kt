@@ -251,6 +251,12 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             return
         }
 
+        // If this is a template, we need to ignore incoming type changes, because our template
+        // system will explicitly set the type
+        if (this.template) {
+            return
+        }
+
         val previous = type
         val types =
             invokesRelationship.map(PropertyEdge<FunctionDeclaration>::end).mapNotNull {
