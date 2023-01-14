@@ -31,6 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.parseName
 
 class IntegerType : ObjectType {
     val bitwidth: Int
+
+    constructor() : super() {
+        bitwidth = -1
+    }
+
     constructor(
         typeName: String,
         bitwidth: Int,

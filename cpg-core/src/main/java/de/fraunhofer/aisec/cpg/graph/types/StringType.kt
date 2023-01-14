@@ -30,6 +30,11 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 
 class StringType : ObjectType {
     val length: Int
+
+    constructor() : super() {
+        length = -1
+    }
+
     constructor(
         typeName: String,
         storage: Storage,
