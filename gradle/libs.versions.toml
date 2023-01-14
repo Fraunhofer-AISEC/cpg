@@ -28,7 +28,7 @@ osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
 icu4j = { module = "com.ibm.icu:icu4j", version = "72.1"}
 eclipse-cdt-core = { module = "org.eclipse.cdt:core", version = "7.2.100.202105180159"}
 commons-io = { module = "commons-io:commons-io", version = "2.11.0"}
-jetbrains-annotations = { module = "org.jetbrains:annotations", version = "23.1.0"}
+jetbrains-annotations = { module = "org.jetbrains:annotations", version = "24.0.0"}
 picocli = { module = "info.picocli:picocli", version = "4.7.0"}
 picocli-codegen = { module = "info.picocli:picocli-codegen", version = "4.7.0"}
 jep = { module = "black.ninia:jep", version = "4.1.0" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
