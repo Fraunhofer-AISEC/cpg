@@ -100,7 +100,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     // handleSimpleDeclaration
                     ctx.rawSignature,
                     implicitInitializerAllowed,
-                    frontend.language
                 )
 
             // Parse the initializer, if we have one
