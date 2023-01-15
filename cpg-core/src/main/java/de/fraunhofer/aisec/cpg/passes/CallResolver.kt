@@ -178,7 +178,7 @@ open class CallResolver : SymbolResolverPass() {
         // With one exception. If the language supports templates and if this is a template call, we
         // delegate it to the language. In the future, we definitely want to do this in a smarter
         // way
-        val candidates =
+        var candidates =
             if (call.instantiatesTemplate() && call.language is HasTemplates) {
                 val (_, candidates) =
                     (call.language as HasTemplates).handleTemplateFunctionCalls(
@@ -193,6 +193,18 @@ open class CallResolver : SymbolResolverPass() {
             } else {
                 resolveCallee(callee, curClass, call) ?: return
             }
+
+        // If we do not have any candidates at this point, we will infer one.
+        if (candidates.isEmpty()) {
+            // We need to see, whether we have any suitable base (e.g. a class) or not
+            val suitableBases = getPossibleContainingTypes(call)
+            candidates =
+                if (suitableBases.isEmpty()) {
+                    listOf(currentTU.inferFunction(call))
+                } else {
+                    createMethodDummies(suitableBases, call)
+                }
+        }
 
         // Set the INVOKES edge to our candidates
         call.invokes = candidates
@@ -266,27 +278,21 @@ open class CallResolver : SymbolResolverPass() {
         curClass: RecordDeclaration?,
         call: CallExpression
     ): List<FunctionDeclaration> {
+        val language = call.language
+
         if (curClass == null) {
             // Handle function (not method) calls. C++ allows function overloading. Make sure we
             // have at least the same number of arguments
-            if (call.language is HasComplexCallResolution) {
-                // Handle CXX normal call resolution externally, otherwise it leads to increased
-                // complexity
-                return (call.language as HasComplexCallResolution).refineNormalCallResolution(
-                    call,
-                    scopeManager,
-                    currentTU
-                )
-            } else {
-                val invocationCandidates = scopeManager.resolveFunction(call).toMutableList()
-
-                if (invocationCandidates.isEmpty()) {
-                    // If we have no candidates, we create an inferred FunctionDeclaration
-                    invocationCandidates.add(currentTU.inferFunction(call))
+            var candidates =
+                if (language is HasComplexCallResolution) {
+                    // Handle CXX normal call resolution externally, otherwise it leads to increased
+                    // complexity
+                    language.refineNormalCallResolution(call, scopeManager, currentTU)
+                } else {
+                    scopeManager.resolveFunction(call).toMutableList()
                 }
 
-                return invocationCandidates
-            }
+            return candidates
         } else {
             return resolveMemberCallee(callee, curClass, call)
         }
@@ -340,8 +346,6 @@ open class CallResolver : SymbolResolverPass() {
                 .toMutableList()
         )
 
-        createMethodDummies(invocationCandidates, possibleContainingTypes, call)
-
         return invocationCandidates
     }
 
@@ -367,31 +371,26 @@ open class CallResolver : SymbolResolverPass() {
     }
 
     /**
-     * Creates an inferred element for each RecordDeclaration if the invocationCandidates are empty
+     * Creates an inferred element for each RecordDeclaration
      *
-     * @param invocationCandidates
      * @param possibleContainingTypes
      * @param call
      */
     private fun createMethodDummies(
-        invocationCandidates: MutableList<FunctionDeclaration>,
         possibleContainingTypes: Set<Type>,
         call: CallExpression
-    ) {
-        if (invocationCandidates.isEmpty()) {
-            possibleContainingTypes
-                .mapNotNull {
-                    var record = recordMap[it.root.name]
-                    if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
-                        record = it.startInference().inferRecordDeclaration(it, currentTU)
-                        // update the record map
-                        if (record != null) recordMap[it.root.name] = record
-                    }
-                    record
+    ): List<FunctionDeclaration> {
+        return possibleContainingTypes
+            .mapNotNull {
+                var record = recordMap[it.root.name]
+                if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
+                    record = it.startInference().inferRecordDeclaration(it, currentTU)
+                    // update the record map
+                    if (record != null) recordMap[it.root.name] = record
                 }
-                .map { record -> record.inferMethod(call) }
-                .forEach { invocationCandidates.add(it) }
-        }
+                record
+            }
+            .map { record -> record.inferMethod(call) }
     }
 
     /**
