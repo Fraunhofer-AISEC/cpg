@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.frontends.HasClasses
+import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
+import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
+import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -34,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.util.regex.Pattern
@@ -165,12 +167,6 @@ class CPPLanguage :
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
             invocationCandidates.addAll(resolveWithImplicitCastFunc(call, scopeManager))
-        }
-
-        if (invocationCandidates.isEmpty()) {
-            // If we still have no candidates and our current language is c++ we create an inferred
-            // FunctionDeclaration
-            invocationCandidates.add(currentTU.inferFunction(call))
         }
 
         return invocationCandidates
