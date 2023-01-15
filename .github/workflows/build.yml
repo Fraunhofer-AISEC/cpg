@@ -33,7 +33,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: "zulu"
-          java-version: "15"
+          java-version: "17"
       - name: Build
         run: |
           cd cpg-language-go/src/main/golang
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: "zulu"
-          java-version: "15"
+          java-version: "17"
           cache: "gradle"
       - uses: actions/setup-python@v4
         with:
