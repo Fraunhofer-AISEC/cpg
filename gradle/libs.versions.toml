@@ -36,7 +36,7 @@ llvm = { module = "org.bytedeco:llvm-platform", version = "13.0.1-1.5.7"}
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.9.1"}
-mockito = { module = "org.mockito:mockito-core", version = "4.11.0"}
+mockito = { module = "org.mockito:mockito-core", version = "5.0.0"}
 
 # plugins needed for build.gradle.kts in buildSrc
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
