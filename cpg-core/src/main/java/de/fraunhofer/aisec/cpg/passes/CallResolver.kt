@@ -261,7 +261,7 @@ open class CallResolver : SymbolResolverPass() {
      * Resolves a [CallExpression.callee] of type [DeclaredReferenceExpression] to a possible list
      * of [FunctionDeclaration] nodes.
      */
-    fun resolveReferenceCallee(
+    private fun resolveReferenceCallee(
         callee: DeclaredReferenceExpression,
         curClass: RecordDeclaration?,
         call: CallExpression

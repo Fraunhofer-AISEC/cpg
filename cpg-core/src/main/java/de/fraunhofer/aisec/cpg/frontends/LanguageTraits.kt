@@ -47,6 +47,16 @@ interface LanguageTrait
 
 /** A language trait, that specifies that this language has support for templates or generics. */
 interface HasTemplates : LanguageTrait {
+
+    /**
+     * This function can be used to fine-tune the resolution of template function calls.
+     *
+     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
+     * list of possible candidates.
+     *
+     * @return a pair in which the first member denotes whether resolution was successful and the
+     * second parameter is a list of [FunctionDeclaration] candidates.
+     */
     fun handleTemplateFunctionCalls(
         curClass: RecordDeclaration?,
         templateCall: CallExpression,
@@ -67,12 +77,28 @@ interface HasDefaultArguments : LanguageTrait
  * fine-tune in the language implementation.
  */
 interface HasComplexCallResolution : LanguageTrait {
+    /**
+     * A function that can be used to fine-tune resolution of a normal (non-method) [call].
+     *
+     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
+     * list of possible candidates.
+     *
+     * @return a list of [FunctionDeclaration] candidates.
+     */
     fun refineNormalCallResolution(
         call: CallExpression,
         scopeManager: ScopeManager,
         currentTU: TranslationUnitDeclaration
     ): List<FunctionDeclaration>
 
+    /**
+     * A function that can be used to fine-tune resolution of a method [call].
+     *
+     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
+     * list of possible candidates.
+     *
+     * @return a list of [FunctionDeclaration] candidates.
+     */
     fun refineMethodCallResolution(
         curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>,
@@ -82,6 +108,15 @@ interface HasComplexCallResolution : LanguageTrait {
         callResolver: CallResolver
     ): List<FunctionDeclaration>
 
+    /**
+     * A function to fine-tune the results of [CallResolver.getInvocationCandidatesFromRecord],
+     * which retrieves a list of [FunctionDeclaration] candidates from a [RecordDeclaration].
+     *
+     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
+     * list of possible candidates.
+     *
+     * @return a list of [FunctionDeclaration] candidates.
+     */
     fun refineInvocationCandidatesFromRecord(
         recordDeclaration: RecordDeclaration,
         call: CallExpression,
