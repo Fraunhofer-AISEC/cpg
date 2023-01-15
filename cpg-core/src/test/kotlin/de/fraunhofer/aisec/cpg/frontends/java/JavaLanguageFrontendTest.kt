@@ -557,7 +557,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val call = initializer as? MemberCallExpression
         assertLocalName("get", call)
-        val staticCall = nodes.filterIsInstance<CallExpression>().firstOrNull { it.isStatic }
+        val staticCall = nodes.filterIsInstance<MemberCallExpression>().firstOrNull { it.isStatic }
         assertNotNull(staticCall)
         assertLocalName("doSomethingStatic", staticCall)
     }

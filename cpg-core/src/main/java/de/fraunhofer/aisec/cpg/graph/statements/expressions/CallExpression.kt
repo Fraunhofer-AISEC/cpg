@@ -86,8 +86,6 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      */
     var arguments by PropertyEdgeDelegate(CallExpression::argumentsEdges)
 
-    var isStatic: Boolean = false
-
     /**
      * The expression that is being "called". This is currently not yet used in the [CallResolver]
      * but will be in the future. In most cases, this is a [DeclaredReferenceExpression] and its
