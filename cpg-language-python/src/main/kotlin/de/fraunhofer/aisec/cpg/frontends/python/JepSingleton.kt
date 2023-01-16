@@ -25,17 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import java.io.File
 import java.net.JarURLConnection
+import java.nio.file.Path
 import jep.JepConfig
+import jep.JepException
 import jep.MainInterpreter
+import jep.SubInterpreter
 import org.slf4j.LoggerFactory
 
 /**
  * Takes care of configuring Jep according to some well known paths on popular operating systems.
  */
 object JepSingleton {
-    var config = JepConfig()
+    val interp: SubInterpreter
+    private var config = JepConfig()
 
     private val LOGGER = LoggerFactory.getLogger(javaClass)
 
@@ -153,6 +158,56 @@ object JepSingleton {
                     ) // this assumes that the python code is also at the library's location
                 }
             }
+        }
+
+        // load the python code
+        // check, if the cpg.py is either directly available in the current directory or in the
+        // src/main/python folder
+        val modulePath = Path.of("cpg.py")
+
+        val possibleLocations =
+            listOf(
+                Path.of(".").resolve(modulePath),
+                Path.of("src/main/python").resolve(modulePath),
+                Path.of("cpg-library/src/main/python").resolve(modulePath)
+            )
+
+        var found = false
+
+        var entryScript: Path? = null
+        possibleLocations.forEach {
+            if (it.toFile().exists()) {
+                found = true
+                entryScript = it.toAbsolutePath()
+            }
+        }
+
+        try {
+            interp = SubInterpreter(config)
+
+            val debugEgg = System.getenv("DEBUG_PYTHON_EGG")
+            val debugHost = System.getenv("DEBUG_PYTHON_HOST") ?: "localhost"
+            val debugPort = System.getenv("DEBUG_PYTHON_PORT") ?: 52190
+
+            // load script
+            if (found) {
+                interp.runScript(entryScript.toString())
+            } else {
+                // fall back to the cpg.py in the class's resources
+                val pyInitFile = classLoader.getResource("/cpg.py")
+                interp.exec(pyInitFile?.readText())
+            }
+
+            if (debugEgg != null) {
+                interp.invoke("enable_debugger", debugEgg, debugHost, debugPort)
+            }
+        } catch (e: JepException) {
+            e.printStackTrace()
+            throw TranslationException("Python failed with message: $e")
+        } catch (e: Exception) {
+            throw e
+        } finally {
+            // interp?.close()
         }
     }
 }
