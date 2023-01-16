@@ -853,14 +853,13 @@ internal class TypeTests : BaseTest() {
                 Type.Qualifier(),
                 Type.Storage.AUTO,
                 listOf<Type>(
-                    ObjectType(
+                    IntegerType(
                         "int",
                         Type.Storage.AUTO,
                         Type.Qualifier(),
-                        ArrayList(),
                         ObjectType.Modifier.SIGNED,
-                        true,
-                        CPPLanguage()
+                        CPPLanguage(),
+                        32
                     )
                 ),
                 IncompleteType(),
@@ -871,33 +870,30 @@ internal class TypeTests : BaseTest() {
                 Type.Qualifier(),
                 Type.Storage.AUTO,
                 listOf<Type>(
-                    ObjectType(
+                    IntegerType(
                         "int",
                         Type.Storage.AUTO,
                         Type.Qualifier(),
-                        ArrayList(),
                         ObjectType.Modifier.SIGNED,
-                        true,
-                        CPPLanguage()
+                        CPPLanguage(),
+                        32
                     ),
-                    ObjectType(
+                    IntegerType(
                         "long",
                         Type.Storage.AUTO,
                         Type.Qualifier(),
-                        ArrayList(),
                         ObjectType.Modifier.UNSIGNED,
-                        true,
-                        CPPLanguage()
+                        CPPLanguage(),
+                        64
                     )
                 ),
-                ObjectType(
+                IntegerType(
                     "int",
                     Type.Storage.AUTO,
                     Type.Qualifier(),
-                    ArrayList(),
                     ObjectType.Modifier.SIGNED,
-                    true,
-                    CPPLanguage()
+                    CPPLanguage(),
+                    32
                 ),
                 CPPLanguage()
             )

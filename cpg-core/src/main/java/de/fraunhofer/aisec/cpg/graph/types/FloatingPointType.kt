@@ -27,27 +27,18 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.Name
 
-class FloatingPointType : ObjectType {
-    val bitwidth: Int
-
-    constructor() : super() {
-        bitwidth = -1
-    }
+/** Instances of this class represent floating point types. */
+class FloatingPointType : NumericType {
+    constructor() : super()
 
     constructor(
         typeName: String,
-        bitwidth: Int,
+        bitWidth: Int?,
         language: Language<out LanguageFrontend>?,
         modifier: Modifier = Modifier.SIGNED
-    ) : super() {
-        name = language.parseName(typeName)
-        this.bitwidth = bitwidth
-        this.modifier = modifier
-        this.language = language
-        this.primitive = true
-    }
+    ) : super(typeName, bitWidth, language, modifier)
 
     constructor(
         typeName: String,
@@ -55,8 +46,19 @@ class FloatingPointType : ObjectType {
         qualifier: Qualifier,
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
-        bitwidth: Int
-    ) : super(typeName, storage, qualifier, listOf(), modifier, true, language) {
-        this.bitwidth = bitwidth
+        bitWidth: Int?
+    ) : super(typeName, storage, qualifier, modifier, language, bitWidth)
+
+    constructor(
+        name: Name,
+        storage: Storage,
+        qualifier: Qualifier,
+        modifier: Modifier,
+        language: Language<out LanguageFrontend>?,
+        bitWidth: Int?
+    ) : super(name, storage, qualifier, modifier, language, bitWidth)
+
+    override fun duplicate(): Type {
+        return FloatingPointType(name, storage, qualifier, modifier, language, bitWidth)
     }
 }

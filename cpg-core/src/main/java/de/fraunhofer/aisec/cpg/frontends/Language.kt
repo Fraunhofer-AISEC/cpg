@@ -64,7 +64,35 @@ abstract class Language<T : LanguageFrontend> : Node() {
 
     /** The primitive types of this language. */
     open val primitiveTypes: Set<String>
-        get() = setOf("byte", "short", "int", "long", "float", "double", "boolean", "char")
+        get() = simpleTypes.keys
+
+    open val simpleTypes: Map<String, Type> =
+        mapOf(
+            "boolean" to IntegerType("boolean", 1, this, ObjectType.Modifier.SIGNED),
+            "char" to IntegerType("char", 8, this, ObjectType.Modifier.NOT_APPLICABLE),
+            "byte" to IntegerType("byte", 8, this, ObjectType.Modifier.SIGNED),
+            "short" to IntegerType("short", 16, this, ObjectType.Modifier.SIGNED),
+            "int" to IntegerType("int", 32, this, ObjectType.Modifier.SIGNED),
+            "long" to IntegerType("long", 64, this, ObjectType.Modifier.SIGNED),
+            "long long int" to IntegerType("long long int", 64, this, ObjectType.Modifier.SIGNED),
+            "signed char" to IntegerType("signed char", 8, this, ObjectType.Modifier.SIGNED),
+            "signed byte" to IntegerType("byte", 8, this, ObjectType.Modifier.SIGNED),
+            "signed short" to IntegerType("short", 16, this, ObjectType.Modifier.SIGNED),
+            "signed int" to IntegerType("int", 32, this, ObjectType.Modifier.SIGNED),
+            "signed long" to IntegerType("long", 64, this, ObjectType.Modifier.SIGNED),
+            "signed long long int" to
+                IntegerType("long long int", 64, this, ObjectType.Modifier.SIGNED),
+            "float" to FloatingPointType("float", 32, this, ObjectType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, ObjectType.Modifier.SIGNED),
+            "unsigned char" to IntegerType("unsigned char", 8, this, ObjectType.Modifier.UNSIGNED),
+            "unsigned byte" to IntegerType("unsigned byte", 8, this, ObjectType.Modifier.UNSIGNED),
+            "unsigned short" to
+                IntegerType("unsigned short", 16, this, ObjectType.Modifier.UNSIGNED),
+            "unsigned int" to IntegerType("unsigned int", 32, this, ObjectType.Modifier.UNSIGNED),
+            "unsigned long" to IntegerType("unsigned long", 64, this, ObjectType.Modifier.UNSIGNED),
+            "unsigned long long int" to
+                IntegerType("unsigned long long int", 64, this, ObjectType.Modifier.UNSIGNED)
+        )
 
     /** The access modifiers of this programming language */
     open val accessModifiers: Set<String>
@@ -77,20 +105,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
         typeManager: TypeManager = TypeManager()
     ): T
 
-    open fun getTypeOf(typeString: String, modifier: ObjectType.Modifier): Type? {
-        return when (typeString) {
-            "byte" -> IntegerType(typeString, 8, this, modifier)
-            "short" -> IntegerType(typeString, 16, this, modifier)
-            "int" -> IntegerType(typeString, 32, this, modifier)
-            "long" -> IntegerType(typeString, 64, this, modifier)
-            "long long int" -> IntegerType(typeString, 64, this, modifier)
-            "float" -> FloatingPointType(typeString, 32, this, modifier)
-            "double" -> FloatingPointType(typeString, 64, this, modifier)
-            "boolean" -> IntegerType(typeString, 1, this, modifier)
-            "char" -> IntegerType(typeString, 8, this, ObjectType.Modifier.NOT_APPLICABLE)
-            else -> null
-        }
-    }
+    fun getSimpleTypeOf(typeString: String) = simpleTypes[typeString]?.duplicate()
 
     // TODO: These are language specific too.
     private val VOLATILE_QUALIFIER = "volatile"

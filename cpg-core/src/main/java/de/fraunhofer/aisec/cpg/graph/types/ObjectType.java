@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.types;
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -86,6 +87,21 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
 
   public ObjectType(
       String typeName,
+      Storage storage,
+      Qualifier qualifier,
+      List<Type> generics,
+      Modifier modifier,
+      boolean primitive,
+      Language<? extends LanguageFrontend> language) {
+    super(typeName, storage, qualifier, language);
+    this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
+    this.modifier = modifier;
+    this.primitive = primitive;
+    this.setLanguage(language);
+  }
+
+  public ObjectType(
+      Name typeName,
       Storage storage,
       Qualifier qualifier,
       List<Type> generics,

@@ -559,17 +559,16 @@ public class TypeParser {
     return typeName;
   }
 
-  private static ObjectType.Modifier determineModifier(
-      List<String> typeBlocks, boolean primitiveType) {
+  private static String determineModifier(List<String> typeBlocks, boolean primitiveType) {
     // Default is signed, unless unsigned keyword is specified. For other classes that are not
     // primitive this is NOT_APPLICABLE
-    ObjectType.Modifier modifier = ObjectType.Modifier.NOT_APPLICABLE;
+    String modifier = "";
     if (primitiveType) {
       if (typeBlocks.contains("unsigned")) {
-        modifier = ObjectType.Modifier.UNSIGNED;
+        modifier = "unsigned ";
         typeBlocks.remove("unsigned");
       } else {
-        modifier = ObjectType.Modifier.SIGNED;
+        modifier = "signed ";
         typeBlocks.remove("signed");
       }
     }
@@ -619,7 +618,7 @@ public class TypeParser {
 
     // Default is signed, unless unsigned keyword is specified. For other classes that are not
     // primitive this is NOT_APPLICABLE
-    ObjectType.Modifier modifier = determineModifier(typeBlocks, primitiveType);
+    String modifier = determineModifier(typeBlocks, primitiveType);
 
     // Join compound primitive types into one block i.e. types consisting of more than one word e.g.
     // long long int (only primitive types)
@@ -664,7 +663,7 @@ public class TypeParser {
     // Check if type is FunctionPointer
     Matcher funcptr = getFunctionPtrMatcher(typeBlocks.subList(counter, typeBlocks.size()));
 
-    finalType = language.getTypeOf(typeName, modifier);
+    finalType = language.getSimpleTypeOf(modifier + typeName);
     if (finalType != null) {
       finalType.setQualifier(qualifier);
       finalType.setStorage(storageValue);
@@ -687,7 +686,13 @@ public class TypeParser {
       typeName = removeGenerics(typeName);
       finalType =
           new ObjectType(
-              typeName, storageValue, qualifier, generics, modifier, primitiveType, language);
+              typeName,
+              storageValue,
+              qualifier,
+              generics,
+              ObjectType.Modifier.NOT_APPLICABLE,
+              primitiveType,
+              language);
     }
 
     if (finalType.getName().getLocalName().equals("auto")

@@ -103,11 +103,16 @@ public abstract class Type extends Node {
     this.origin = Origin.UNRESOLVED;
   }
 
-  public Type(Name fullTypeName, @Nullable Storage storage, Qualifier qualifier) {
+  public Type(
+      Name fullTypeName,
+      @Nullable Storage storage,
+      Qualifier qualifier,
+      Language<? extends LanguageFrontend> language) {
     this.setName(fullTypeName.clone());
     this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
+    this.setLanguage(language);
   }
 
   /**

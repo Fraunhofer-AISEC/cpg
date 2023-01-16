@@ -110,24 +110,22 @@ internal class FunctionTemplateTest : BaseTest() {
 
         val typeT = ParameterizedType("T", CPPLanguage())
         val intType =
-            ObjectType(
+            IntegerType(
                 "int",
                 Type.Storage.AUTO,
                 Type.Qualifier(),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
+                CPPLanguage(),
+                32
             )
         val floatType =
-            ObjectType(
+            FloatingPointType(
                 "float",
                 Type.Storage.AUTO,
                 Type.Qualifier(),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
+                CPPLanguage(),
+                32
             )
         assertEquals(typeT, typeParamDeclaration.type)
         assertEquals(intType, typeParamDeclaration.default)
@@ -237,14 +235,13 @@ internal class FunctionTemplateTest : BaseTest() {
 
         // Check template parameters
         val doubleType =
-            ObjectType(
+            FloatingPointType(
                 "double",
                 Type.Storage.AUTO,
                 Type.Qualifier(),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
+                CPPLanguage(),
+                64
             )
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)
@@ -377,14 +374,13 @@ internal class FunctionTemplateTest : BaseTest() {
 
         // Check template parameters
         val doubleType =
-            ObjectType(
+            FloatingPointType(
                 "double",
                 Type.Storage.AUTO,
                 Type.Qualifier(),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
+                CPPLanguage(),
+                64
             )
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)

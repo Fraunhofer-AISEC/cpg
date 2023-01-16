@@ -29,16 +29,23 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
 
-/** Instances of this class represent integer types. */
-class IntegerType : NumericType {
-    constructor() : super()
+/** This type collects all kind of numeric types. */
+open class NumericType : ObjectType {
+    val bitWidth: Int?
+
+    constructor() : super() {
+        bitWidth = null
+    }
 
     constructor(
         typeName: String,
         bitWidth: Int?,
         language: Language<out LanguageFrontend>?,
         modifier: Modifier = Modifier.SIGNED
-    ) : super(typeName, bitWidth, language, modifier)
+    ) : super(typeName, Storage.AUTO, Qualifier(), listOf(), modifier, true, language) {
+        this.bitWidth = bitWidth
+    }
+
     constructor(
         typeName: String,
         storage: Storage,
@@ -46,18 +53,18 @@ class IntegerType : NumericType {
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
-    ) : super(typeName, storage, qualifier, modifier, language, bitWidth)
+    ) : super(typeName, storage, qualifier, listOf(), modifier, true, language) {
+        this.bitWidth = bitWidth
+    }
 
     constructor(
-        name: Name,
+        typeName: Name,
         storage: Storage,
         qualifier: Qualifier,
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
-    ) : super(name, storage, qualifier, modifier, language, bitWidth)
-
-    override fun duplicate(): Type {
-        return IntegerType(this.name, storage, qualifier, modifier, language, bitWidth)
+    ) : super(typeName, storage, qualifier, listOf(), modifier, true, language) {
+        this.bitWidth = bitWidth
     }
 }
