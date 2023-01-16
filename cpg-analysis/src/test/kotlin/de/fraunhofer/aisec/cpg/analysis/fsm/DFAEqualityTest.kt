@@ -232,13 +232,13 @@ class DFAEqualityTest {
 
         val emptyNode = EmptyStatement()
         dfa.initializeOrderEvaluation(emptyNode)
-        dfa.makeTransitionWithOp("create()", emptyNode)
+        dfa.makeTransitionWithOp(setOf("create()"), emptyNode)
 
         assertTrue(dfa.isAccepted)
         assertNotEquals(oldDfa, dfa)
 
         oldDfa.initializeOrderEvaluation(emptyNode)
-        oldDfa.makeTransitionWithOp("create()", emptyNode)
+        oldDfa.makeTransitionWithOp(setOf("create()"), emptyNode)
         assertEquals(oldDfa, dfa)
 
         oldDfa.addEdge(

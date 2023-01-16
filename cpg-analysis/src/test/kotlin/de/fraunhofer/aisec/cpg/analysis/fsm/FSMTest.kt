@@ -104,7 +104,7 @@ class FSMTest {
 
         val emptyNode = EmptyStatement()
         dfa.initializeOrderEvaluation(emptyNode)
-        dfa.makeTransitionWithOp("create()", emptyNode)
+        dfa.makeTransitionWithOp(setOf("create()"), emptyNode)
 
         assertNotEquals(dfa, dfaCopy)
         assertEquals(dfa.executionTrace, dfa.deepCopy().executionTrace)

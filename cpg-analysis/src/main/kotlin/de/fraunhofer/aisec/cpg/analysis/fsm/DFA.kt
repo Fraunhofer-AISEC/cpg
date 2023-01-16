@@ -81,7 +81,7 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
      *
      * Before calling this, initialize the orderEvaluation with [initializeOrderEvaluation]
      */
-    fun makeTransitionWithOp(op: String, cpgNode: Node): Boolean {
+    fun makeTransitionWithOp(op: Set<String>, cpgNode: Node): Boolean {
         checkNotNull(currentState) {
             "Cannot perform a transition because the FSM does not have a starting state!"
         }
@@ -89,7 +89,7 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
             "Before performing transitions, you must call [initializeOrderEvaluation] first."
         }
 
-        val possibleEdges = currentState!!.outgoingEdges.filter { e -> e.op == op }
+        val possibleEdges = currentState!!.outgoingEdges.filter { e -> e.op in op }
         val edgeToFollow = possibleEdges.singleOrNull()
         return if (edgeToFollow != null) {
             _executionTrace.add(
