@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -74,29 +73,6 @@ object Edges {
         toMap.clear()
         fromMap.clear()
     }
-}
-
-fun Node.followNextEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
-    val path = mutableListOf<PropertyEdge<*>>()
-
-    for (edge in this.nextEOGEdges) {
-        val target = edge.end
-
-        path.add(edge)
-
-        if (predicate(edge)) {
-            return path
-        }
-
-        val subPath = target.followNextEOG(predicate)
-        if (subPath != null) {
-            path.addAll(subPath)
-
-            return path
-        }
-    }
-
-    return null
 }
 
 /**
