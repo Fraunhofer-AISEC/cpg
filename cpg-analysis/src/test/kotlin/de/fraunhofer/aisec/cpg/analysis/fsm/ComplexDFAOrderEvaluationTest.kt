@@ -285,7 +285,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val thenBranch =
             ((functionOk.body as CompoundStatement).statements[3] as? IfStatement)?.thenStatement
-                    as? CompoundStatement
+                as? CompoundStatement
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
         nodesToOp[thenBranch.statements[1]] = setOf("process()")
@@ -314,7 +314,7 @@ class ComplexDFAOrderEvaluationTest {
         val nodesToOp = mutableMapOf<Node, Set<String>>()
         val loopBody =
             ((functionOk.body as CompoundStatement).statements[1] as? WhileStatement)?.statement
-                    as? CompoundStatement
+                as? CompoundStatement
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("create()")
         nodesToOp[loopBody.statements[1]] = setOf("init()")
@@ -347,7 +347,7 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
         val loopBody =
             ((functionOk.body as CompoundStatement).statements[3] as? WhileStatement)?.statement
-                    as? CompoundStatement
+                as? CompoundStatement
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("start()")
         nodesToOp[loopBody.statements[1]] = setOf("process()")
@@ -377,7 +377,7 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
         val loopBody =
             ((functionOk.body as CompoundStatement).statements[3] as? WhileStatement)?.statement
-                    as? CompoundStatement
+                as? CompoundStatement
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("start()")
         nodesToOp[loopBody.statements[1]] = setOf("process()")
@@ -410,7 +410,7 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("finish()")
         val loopBody =
             ((functionOk.body as CompoundStatement).statements[6] as? WhileStatement)?.statement
-                    as? CompoundStatement
+                as? CompoundStatement
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("start()")
         nodesToOp[loopBody.statements[1]] = setOf("process()")
@@ -440,7 +440,7 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
         val loopBody =
             ((functionOk.body as CompoundStatement).statements[3] as DoStatement).statement
-                    as? CompoundStatement
+                as? CompoundStatement
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("start()")
         nodesToOp[loopBody.statements[1]] = setOf("process()")
@@ -699,8 +699,8 @@ class ComplexDFAOrderEvaluationTest {
             val returnStatements =
                 lastNode.followNextEOG { edge ->
                     edge.end is ReturnStatement &&
-                            ((edge.end as ReturnStatement).returnValue as? DeclaredReferenceExpression)
-                                ?.refersTo == baseOfLastNode
+                        ((edge.end as ReturnStatement).returnValue as? DeclaredReferenceExpression)
+                            ?.refersTo == baseOfLastNode
                 }
             if (returnStatements?.isNotEmpty() == true) {
                 // There was a return statement returning the respective variable. The flow of
