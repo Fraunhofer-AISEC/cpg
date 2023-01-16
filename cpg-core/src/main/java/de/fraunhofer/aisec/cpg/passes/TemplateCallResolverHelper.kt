@@ -79,7 +79,7 @@ fun addRecursiveDefaultTemplateArgs(
  * @param constructExpression containing the explicit instantiation
  * @param template containing declared template arguments
  * @param templateParametersExplicitInitialization mapping of the template parameter to the explicit
- * instantiation
+ *   instantiation
  */
 fun handleExplicitTemplateParameters(
     constructExpression: ConstructExpression,
@@ -103,9 +103,9 @@ fun handleExplicitTemplateParameters(
  * @param template Template which is instantiated by the ConstructExpression
  * @param constructExpression
  * @param templateParametersExplicitInitialization mapping of the template parameter to the explicit
- * instantiation
+ *   instantiation
  * @param templateParameterRealDefaultInitialization mapping of template parameter to its real
- * default (no recursive)
+ *   default (no recursive)
  */
 fun applyMissingParams(
     template: ClassTemplateDeclaration,
@@ -159,7 +159,7 @@ fun applyMissingParams(
  *
  * @param template containing template arguments
  * @param templateParameterRealDefaultInitialization mapping of template parameter to its real
- * default (no recursive)
+ *   default (no recursive)
  */
 fun handleDefaultTemplateParameters(
     template: ClassTemplateDeclaration,

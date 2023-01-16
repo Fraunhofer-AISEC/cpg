@@ -400,8 +400,10 @@ internal class DFGTest {
      *
      * @param nodes
      * - The list of nodes to filter for the Literal.
+     *
      * @param v
      * - The integer value expected from the Literal.
+     *
      * @return The Literal with the specified value.
      */
     private fun getLiteral(nodes: List<Node>, v: Int): Literal<*> {
@@ -455,9 +457,11 @@ internal class DFGTest {
      *
      * @param node
      * - The node that induces the DFG-subgraph for which nodes are retrieved
+     *
      * @param outgoing
      * - true if the Data-Flow from this node should be considered, false if the data-flow is to
-     * this node.
+     *   this node.
+     *
      * @return A set of nodes that are part of the data-flow
      */
     private fun flattenDFGGraph(node: Node?, outgoing: Boolean): Set<Node?> {

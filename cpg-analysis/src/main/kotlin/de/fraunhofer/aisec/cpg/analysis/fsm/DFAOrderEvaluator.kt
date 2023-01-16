@@ -45,14 +45,15 @@ import org.slf4j.LoggerFactory
  * the following inputs:
  * - [dfa]: Describes the desired correct order of nodes
  * - [consideredBases]: A set of the IDs of nodes (typically the [VariableDeclaration]) which are
- * considered.
+ *   considered.
  * - [nodeToRelevantMethod]: A mapping between CPG nodes and their operators used by the respective
- * edges in the [dfa]. Currently, we only consider [CallExpression]s. If a node is not contained in
- * this list, it is not considered by the evaluation as we assume that the method is not relevant.
+ *   edges in the [dfa]. Currently, we only consider [CallExpression]s. If a node is not contained
+ *   in this list, it is not considered by the evaluation as we assume that the method is not
+ *   relevant.
  * - [consideredResetNodes]: These nodes reset the order evaluation such that e.g., a reassignment
- * of a variable with a new object is handled correctly. In this case, the constructor node must be
- * part of the [consideredResetNodes]. This allows the [DFAOrderEvaluator] to detect that in such a
- * case,
+ *   of a variable with a new object is handled correctly. In this case, the constructor node must
+ *   be part of the [consideredResetNodes]. This allows the [DFAOrderEvaluator] to detect that in
+ *   such a case,
  * ```
  *        (1) Botan p7 = new Botan(2);
  *        (2) p7.start(iv);
@@ -61,9 +62,10 @@ import org.slf4j.LoggerFactory
  *        (4) p7 = new Botan(3);
  *        (5) p7.start(iv);
  * ```
+ *
  * (4) should actually start a new order evaluation.
  * - [thisPositionOfNode]: If a non-object oriented language was used, this is a map from CPG nodes
- * (i.e., the [CallExpression]) to the argument position serving as base of the operation.
+ *   (i.e., the [CallExpression]) to the argument position serving as base of the operation.
  *
  * To improve the results, it is useful to run [de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass]
  * prior to running the analysis and set the flag [eliminateUnreachableCode] to `true`. This removes
@@ -399,7 +401,7 @@ open class DFAOrderEvaluator(
      * statements
      *
      * TODO: The idea of returning only one of multiple elements looks quite dangerous! Why are
-     * exactly those expressions "interesting"?
+     *   exactly those expressions "interesting"?
      */
     private fun Node.getSuitableDFGTarget(): Node? {
         return this.nextDFG

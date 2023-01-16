@@ -303,7 +303,7 @@ open class CallResolver : SymbolResolverPass() {
      * [FunctionDeclaration] nodes.
      *
      * TODO: Change callee to MemberExpression, but we can't since resolveReferenceCallee somehow
-     * delegates resolving of regular function calls within classes to this function (meh!)
+     *   delegates resolving of regular function calls within classes to this function (meh!)
      */
     fun resolveMemberCallee(
         callee: DeclaredReferenceExpression,
@@ -562,8 +562,8 @@ open class CallResolver : SymbolResolverPass() {
      * @param constructExpression we want to find an invocation target for
      * @param recordDeclaration associated with the Object the ConstructExpression constructs
      * @return a ConstructDeclaration that is an invocation of the given ConstructExpression. If
-     * there is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
-     * matches the ConstructExpression.
+     *   there is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
+     *   matches the ConstructExpression.
      */
     private fun getConstructorDeclaration(
         constructExpression: ConstructExpression,
@@ -608,7 +608,7 @@ open class CallResolver : SymbolResolverPass() {
          *
          * @param templateParams of the VariableDeclaration/NewExpression
          * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
-         * ConstructExpression uses AST as well as the VariableDeclaration/NewExpression
+         *   ConstructExpression uses AST as well as the VariableDeclaration/NewExpression
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,

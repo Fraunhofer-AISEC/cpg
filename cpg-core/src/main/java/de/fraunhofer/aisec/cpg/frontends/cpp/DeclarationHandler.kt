@@ -593,7 +593,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * @param sequence
      * @return First Element of DeclarationSequence if the Sequence consist of only one element,
-     * full sequence if it contains more than one element
+     *   full sequence if it contains more than one element
      */
     private fun simplifySequence(sequence: DeclarationSequence): Declaration {
         return if (sequence.isSingle) {

@@ -46,7 +46,6 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.TypeOfDependentExpression
 
 /**
- *
  * Note: CDT expresses hierarchies in Interfaces to allow to have multi-inheritance in java. Because
  * some Expressions have sub elements of type IASTInitializerClause and in the hierarchy
  * IASTExpression extends IASTInitializerClause. The later is the appropriate Interface type for the

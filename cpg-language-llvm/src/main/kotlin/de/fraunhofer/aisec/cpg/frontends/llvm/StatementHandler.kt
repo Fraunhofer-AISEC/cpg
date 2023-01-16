@@ -801,6 +801,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * lhs = {*pointer, *pointer == cmp} // A struct of {T, i1}
      * if(*pointer == cmp) { *pointer = new }
      * ```
+     *
      * Returns a [CompoundStatement] with those two instructions or, if `lhs` doesn't exist, only
      * the if-then statement.
      */
