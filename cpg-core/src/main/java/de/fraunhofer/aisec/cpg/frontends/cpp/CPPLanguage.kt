@@ -77,9 +77,9 @@ class CPPLanguage :
                 handleTemplateFunctionCalls(curClass, call, false, scopeManager, currentTU)
             if (ok) {
                 return candidates
-            } else {
-                call.templateParametersEdges = null
             }
+
+            call.templateParametersEdges = null
         }
         if (invocationCandidates.isEmpty()) {
             // Check for usage of implicit cast
@@ -159,9 +159,9 @@ class CPPLanguage :
                 handleTemplateFunctionCalls(null, call, false, scopeManager, currentTU)
             if (ok) {
                 return candidates
-            } else {
-                call.templateParametersEdges = null
             }
+
+            call.templateParametersEdges = null
         }
         if (invocationCandidates.isEmpty()) {
             // If we don't find any candidate and our current language is c/c++ we check if there is
