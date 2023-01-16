@@ -176,6 +176,10 @@ open class DFAOrderEvaluator(
                         // get the DFA associated with this base
                         val dfa = baseToFSM.computeIfAbsent(base) { dfa.deepCopy() }
 
+                        // Encountering a reset node on [base] resets the order evaluation.
+                        // This means that the state of the [dfa] has to be evaluated and a finding
+                        // has to be generated
+                        // before continuing with another node.
                         if (dfa.isAccepted) {
                             actionAcceptingTermination(
                                 base,
@@ -193,7 +197,7 @@ open class DFAOrderEvaluator(
                             )
                             isValidOrder = false
                         }
-                        dfa.initializeOrderEvaluation(node)
+                        dfa.initializeOrderEvaluation(node) // reset the [dfa]
                     }
                 }
                 // Currently, we only handle CallExpressions as "operation".
