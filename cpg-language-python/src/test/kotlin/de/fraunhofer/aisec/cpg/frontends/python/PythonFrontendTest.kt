@@ -75,34 +75,37 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(b)
         assertLocalName("b", b)
         assertEquals(TypeParser.createFrom("bool", PythonLanguage()), b.type)
+        assertEquals(true, (b.initializer as? Literal<*>)?.value)
 
         val i = p.variables["i"]
         assertNotNull(i)
         assertLocalName("i", i)
         assertEquals(TypeParser.createFrom("int", PythonLanguage()), i.type)
+        assertEquals(42L, (i.initializer as? Literal<*>)?.value)
 
         val f = p.variables["f"]
         assertNotNull(f)
         assertLocalName("f", f)
         assertEquals(TypeParser.createFrom("float", PythonLanguage()), f.type)
+        assertEquals(1.0, (f.initializer as? Literal<*>)?.value)
 
-        /*
-        TODO: implement support for complex numbers
         val c = p.variables["c"]
         assertNotNull(c)
         assertLocalName("c", c)
         assertEquals(TypeParser.createFrom("complex", PythonLanguage()), c.type)
-        */
+        assertEquals("(3+5j)", (c.initializer as? Literal<*>)?.value)
 
         val t = p.variables["t"]
         assertNotNull(t)
         assertLocalName("t", t)
         assertEquals(TypeParser.createFrom("str", PythonLanguage()), t.type)
+        assertEquals("Hello", (t.initializer as? Literal<*>)?.value)
 
         val n = p.variables["n"]
         assertNotNull(n)
         assertLocalName("n", n)
         assertEquals(TypeParser.createFrom("None", PythonLanguage()), n.type)
+        assertEquals(null, (n.initializer as? Literal<*>)?.value)
     }
 
     @Test
@@ -723,34 +726,6 @@ class PythonFrontendTest : BaseTest() {
     }
 
     @Test
-    fun testLiterals() {
-        val topLevel = Path.of("src", "test", "resources", "python")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("literal.py").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage<PythonLanguage>()
-            }
-        assertNotNull(tu)
-
-        val p = tu.namespaces["literal"]
-        assertNotNull(p)
-
-        assertLocalName("b", p.declarations[0] as? VariableDeclaration)
-        assertEquals("True", (p.declarations[0] as? VariableDeclaration)?.initializer?.code)
-        assertLocalName("i", p.declarations[1] as? VariableDeclaration)
-        assertEquals("42", (p.declarations[1] as? VariableDeclaration)?.initializer?.code)
-        assertLocalName("f", p.declarations[2] as? VariableDeclaration)
-        assertEquals("1.0", (p.declarations[2] as? VariableDeclaration)?.initializer?.code)
-        assertLocalName("t", p.declarations[3] as? VariableDeclaration)
-        assertEquals("\"Hello\"", (p.declarations[3] as? VariableDeclaration)?.initializer?.code)
-        assertLocalName("n", p.declarations[4] as? VariableDeclaration)
-        assertEquals("None", (p.declarations[4] as? VariableDeclaration)?.initializer?.code)
-    }
-
-    @Test
     fun testRegionInCPG() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
@@ -766,12 +741,13 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["literal"]
         assertNotNull(p)
 
-        assertEquals(Region(1, 1, 1, 9), (p.variables[0]).location?.region)
-        assertEquals(Region(1, 5, 1, 9), (p.variables[0]).initializer?.location?.region)
-        assertEquals(Region(2, 1, 2, 7), (p.variables[1]).location?.region)
-        assertEquals(Region(3, 1, 3, 8), (p.variables[2]).location?.region)
-        assertEquals(Region(5, 1, 5, 12), (p.variables[3]).location?.region)
-        assertEquals(Region(6, 1, 6, 9), (p.variables[4]).location?.region)
+        assertEquals(Region(1, 1, 1, 9), (p.variables["b"])?.location?.region)
+        assertEquals(Region(1, 5, 1, 9), (p.variables["b"])?.initializer?.location?.region)
+        assertEquals(Region(2, 1, 2, 7), (p.variables["i"])?.location?.region)
+        assertEquals(Region(3, 1, 3, 8), (p.variables["f"])?.location?.region)
+        assertEquals(Region(4, 1, 4, 9), (p.variables["c"])?.location?.region)
+        assertEquals(Region(5, 1, 5, 12), (p.variables["t"])?.location?.region)
+        assertEquals(Region(6, 1, 6, 9), (p.variables["n"])?.location?.region)
     }
 
     @Test

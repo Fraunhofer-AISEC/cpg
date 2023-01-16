@@ -52,12 +52,34 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
     elif isinstance(expr, ast.BinOp):
-        opcode = self.handle_operator_code(expr.op)
-        binop = ExpressionBuilderKt.newBinaryOperator(
-            self.frontend, opcode, self.get_src_code(expr))
-        binop.setLhs(self.handle_expression(expr.left))
-        binop.setRhs(self.handle_expression(expr.right))
-        return binop
+        # This could be a simple + or a complex number 3+5j
+        lhs = self.handle_expression(expr.left)
+        rhs = self.handle_expression(expr.right)
+        if (isinstance(expr.right, ast.Constant)
+                and isinstance(expr.right.value, complex)):
+            if not (self.is_literal(lhs) and self.is_literal(rhs)):
+                print("ERROR")  # TODO
+            # we got a complex number
+            complexType = NodeBuilderKt.parseType(self.frontend, "complex")
+
+            # TODO: fix this once the CPG supports complex numbers
+            realPart = complex(lhs.getValue())
+            imagPart = complex(rhs.getValue())
+            ret = ExpressionBuilderKt.newLiteral(
+                self.frontend,
+                # currently no support for complex numbers in the java part
+                str(realPart + imagPart),
+                complexType,
+                self.get_src_code(expr),
+                expr)
+            return ret
+        else:
+            opcode = self.handle_operator_code(expr.op)
+            binop = ExpressionBuilderKt.newBinaryOperator(
+                self.frontend, opcode, self.get_src_code(expr))
+            binop.setLhs(lhs)
+            binop.setRhs(rhs)
+            return binop
     elif isinstance(expr, ast.UnaryOp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
@@ -189,7 +211,7 @@ def handle_expression_impl(self, expr):
         #
         # We parse node.func regularly using a visitor and decide what it is
         ref = self.handle_expression(expr.func)
-        self.log_with_loc("Parsed ref as %s" % (ref))
+        self.log_with_loc("Parsed ref as %s" % ref)
 
         name = ref.getName()
 
@@ -233,7 +255,7 @@ def handle_expression_impl(self, expr):
                 # TODO: keywords without args, aka **arg
                 self.log_with_loc(
                     NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        self.log_with_loc("Parsed call: %s" % (call))
+        self.log_with_loc("Parsed call: %s" % call)
         return call
 
     elif isinstance(expr, ast.FormattedValue):
@@ -245,6 +267,7 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
     elif isinstance(expr, ast.Constant):
+        resultValue = expr.value
         if isinstance(expr.value, type(None)):
             tpe = NodeBuilderKt.parseType(self.frontend, "None")
         elif isinstance(expr.value, bool):
@@ -255,6 +278,8 @@ def handle_expression_impl(self, expr):
             tpe = NodeBuilderKt.parseType(self.frontend, "float")
         elif isinstance(expr.value, complex):
             tpe = NodeBuilderKt.parseType(self.frontend, "complex")
+            # TODO: fix this once the CPG supports complex numbers
+            resultValue = str(resultValue)
         elif isinstance(expr.value, str):
             tpe = NodeBuilderKt.parseType(self.frontend, "str")
         elif isinstance(expr.value, bytes):
@@ -267,12 +292,12 @@ def handle_expression_impl(self, expr):
             tpe = UnknownType.getUnknownType()
         lit = ExpressionBuilderKt.newLiteral(
             self.frontend,
-            expr.value, tpe, self.get_src_code(expr))
+            resultValue, tpe, self.get_src_code(expr))
         return lit
 
     elif isinstance(expr, ast.Attribute):
         value = self.handle_expression(expr.value)
-        self.log_with_loc("Parsed base/value as: %s" % (value))
+        self.log_with_loc("Parsed base/value as: %s" % value)
         if self.is_declaration(value):
             self.log_with_loc(
                 ("Found a new declaration. "
