@@ -42,7 +42,9 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
+import de.fraunhofer.aisec.cpg.graph.NameKt;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
@@ -54,6 +56,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -299,7 +302,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
           } else {
             name = scope.asNameExpr().getNameAsString();
           }
-          String qualifiedNameFromImports = this.frontend.getQualifiedNameFromImports(name);
+          var qualifiedNameFromImports = this.frontend.getQualifiedNameFromImports(name);
           if (qualifiedNameFromImports != null) {
             baseType = parseType(this, qualifiedNameFromImports);
           } else {
@@ -332,7 +335,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         } else {
           name = scope.asFieldAccessExpr().getNameAsString();
         }
-        String qualifiedNameFromImports = this.frontend.getQualifiedNameFromImports(name);
+        var qualifiedNameFromImports = this.frontend.getQualifiedNameFromImports(name);
         Type baseType;
         if (qualifiedNameFromImports != null) {
           baseType = parseType(this, qualifiedNameFromImports);
@@ -500,6 +503,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     //          nameExpr.getNameAsString(), new Type(UNKNOWN_TYPE), nameExpr.toString());
     //    }
 
+    var name = NameKt.parseName(this, nameExpr.getNameAsString());
+
     try {
       ResolvedValueDeclaration symbol = nameExpr.resolve();
 
@@ -548,21 +553,20 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       }
     } catch (UnsolvedSymbolException ex) {
       String typeString;
+
       if (ex.getName().startsWith("We are unable to find the value declaration corresponding to")) {
         typeString = nameExpr.getNameAsString();
       } else {
         typeString = this.frontend.recoverTypeFromUnsolvedException(ex);
       }
+
       Type t;
       if (typeString == null) {
-        t = parseType(this, "UNKNOWN3"); // TODO: What's this? UNKNOWN3??
-        log.info("Unresolved symbol: {}", nameExpr.getNameAsString());
+        t = UnknownType.getUnknownType(getLanguage());
       } else {
         t = parseType(this, typeString);
         t.setTypeOrigin(Type.Origin.GUESSED);
       }
-
-      var name = nameExpr.getNameAsString();
 
       DeclaredReferenceExpression declaredReferenceExpression =
           newDeclaredReferenceExpression(this, name, t, nameExpr.toString());
@@ -679,66 +683,59 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       log.debug("Could not resolve method {}", methodCallExpr);
     }
 
+    // Or if the base is a reference to an import
+    if (this.frontend.getQualifiedNameFromImports(qualifiedName) != null) {
+      isStatic = true;
+    }
+
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression base;
     // the scope could either be a variable or also the class name (static call!)
     // thus, only because the scope is present, this is not automatically a member call
     if (o.isPresent()) {
       Expression scope = o.get();
-      String scopeName = null;
-
-      if (scope instanceof NameExpr) {
-        scopeName = ((NameExpr) scope).getNameAsString();
-      } else if (scope instanceof SuperExpr) {
-        scopeName = scope.toString();
-      }
-
-      de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression base =
-          (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
+      base = (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
 
       // If the base directly refers to a record, then this is a static call
       if (base instanceof DeclaredReferenceExpression
           && ((DeclaredReferenceExpression) base).getRefersTo() instanceof RecordDeclaration) {
         isStatic = true;
       }
-
-      // Or if the base is a reference to an import
-      if (base instanceof DeclaredReferenceExpression
-          && this.frontend.getQualifiedNameFromImports(base.getName().toString()) != null) {
-        isStatic = true;
-      }
-
-      if (!isStatic) {
-        DeclaredReferenceExpression member =
-            newDeclaredReferenceExpression(
-                this, name, UnknownType.getUnknownType(getLanguage()), "");
-
-        frontend.setCodeAndLocation(
-            member,
-            methodCallExpr
-                .getName()); // This will also overwrite the code set to the empty string set above
-        callExpression =
-            newMemberCallExpression(
-                this, name, qualifiedName, base, member, ".", methodCallExpr.toString());
-      } else {
-        String targetClass;
-        if (resolved != null) {
-          targetClass = resolved.declaringType().getQualifiedName();
-        } else {
-          targetClass = this.frontend.getQualifiedNameFromImports(scopeName);
-        }
-
-        if (targetClass == null) {
-          targetClass = scopeName;
-        }
-
-        callExpression =
-            newStaticCallExpression(this, qualifiedName, methodCallExpr.toString(), targetClass);
-      }
     } else {
-      var ref = newDeclaredReferenceExpression(this, name);
-      callExpression =
-          newCallExpression(this, ref, qualifiedName, methodCallExpr.toString(), false);
+      // If the call does not have any base, there are two possibilities:
+      // a) The "this" could be omitted, making it a member call to the current class
+      // b) It could refer to some method that was statically imported using an asterisks import
+      //
+      // Luckily, the resolved method already hints whether this is a static call
+      if (isStatic) {
+        // In case this is a static call, we need some additional information from the resolved
+        // method
+        Type baseType;
+        de.fraunhofer.aisec.cpg.graph.Name baseName;
+        if (resolved != null) {
+          baseName = NameKt.parseName(this, resolved.declaringType().getQualifiedName());
+        } else {
+          baseName = NameKt.parseName(this, qualifiedName).getParent();
+        }
+        baseType = parseType(this, baseName);
+
+        base = newDeclaredReferenceExpression(this, baseName, baseType);
+      } else {
+        // Since it is possible to omit the "this" keyword, some methods in java do not have a base.
+        // However, they are still scoped to the local class, meaning we should insert an implicit
+        // "this" reference, to make the life for our call resolver easier.
+        base = createImplicitThis();
+      }
     }
 
+    var member =
+        newMemberExpression(this, name, base, UnknownType.getUnknownType(getLanguage()), ".");
+
+    frontend.setCodeAndLocation(
+        member,
+        methodCallExpr
+            .getName()); // This will also overwrite the code set to the empty string set above
+    callExpression =
+        newMemberCallExpression(this, member, isStatic, methodCallExpr.toString(), expr);
     callExpression.setType(parseType(this, typeString));
 
     NodeList<Expression> arguments = methodCallExpr.getArguments();
@@ -755,6 +752,29 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     }
 
     return callExpression;
+  }
+
+  /**
+   * Creates an implicit "this" reference and already connects it to the current method receiver.
+   *
+   * @return the "this" reference expression
+   */
+  @NotNull
+  private de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression createImplicitThis() {
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression base;
+    Type thisType;
+    if (getFrontend().getScopeManager().getCurrentFunction() instanceof MethodDeclaration) {
+      thisType =
+          ((MethodDeclaration) getFrontend().getScopeManager().getCurrentFunction())
+              .getReceiver()
+              .getType();
+    } else {
+      thisType = UnknownType.getUnknownType(getLanguage());
+    }
+    base = newDeclaredReferenceExpression(this, "this", thisType, "this");
+    base.setImplicit(true);
+
+    return base;
   }
 
   private NewExpression handleObjectCreationExpr(Expression expr) {

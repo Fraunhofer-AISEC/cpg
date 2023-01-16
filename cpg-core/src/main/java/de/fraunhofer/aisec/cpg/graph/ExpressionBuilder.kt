@@ -71,7 +71,7 @@ fun MetadataProvider.newBinaryOperator(
     val node = BinaryOperator()
     node.applyMetadata(this, operatorCode, rawNode, code, true)
 
-    node.operatorCode = operatorCode
+    node.setOperatorCode(operatorCode)
 
     log(node)
 
@@ -283,29 +283,21 @@ fun MetadataProvider.newExplicitConstructorInvocation(
  */
 @JvmOverloads
 fun MetadataProvider.newMemberCallExpression(
-    name: CharSequence?,
-    fqn: String?,
-    base: Expression?,
-    member: Node?,
-    operatorCode: String? = ".",
+    callee: Expression?,
+    isStatic: Boolean = false,
     code: String? = null,
     rawNode: Any? = null
 ): MemberCallExpression {
     val node = MemberCallExpression()
     node.applyMetadata(
         this,
-        if (fqn.isNullOrEmpty()) {
-            name
-        } else {
-            fqn
-        },
+        null, // the name will be updated later based on the callee
         rawNode,
         code,
     )
 
-    node.base = base
-    node.member = member
-    node.operatorCode = operatorCode
+    node.callee = callee
+    node.isStatic = isStatic
 
     log(node)
     return node
@@ -329,31 +321,9 @@ fun MetadataProvider.newMemberExpression(
     val node = MemberExpression()
     node.applyMetadata(this, name, rawNode, code, true)
 
-    node.setBase(base)
+    node.base = base
     node.operatorCode = operatorCode
     node.type = memberType
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [StaticCallExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newStaticCallExpression(
-    fqn: String?,
-    code: String? = null,
-    targetRecord: String?,
-    rawNode: Any? = null
-): StaticCallExpression {
-    val node = StaticCallExpression()
-    node.applyMetadata(this, fqn, rawNode, code, true)
-
-    node.targetRecord = targetRecord
 
     log(node)
     return node

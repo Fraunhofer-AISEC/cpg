@@ -328,7 +328,10 @@ class DFGPass : Pass() {
      * - from all arguments to the CallExpression
      */
     private fun handleUnresolvedCalls(call: CallExpression) {
-        call.base?.let { call.addPrevDFG(it) }
+        if (call is MemberCallExpression && !call.isStatic) {
+            call.base?.let { call.addPrevDFG(it) }
+        }
+
         call.arguments.forEach { call.addPrevDFG(it) }
     }
 }

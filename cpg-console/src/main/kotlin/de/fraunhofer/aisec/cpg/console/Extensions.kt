@@ -185,18 +185,14 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
     val list = mutableListOf<Pair<AttributedStyle, Region>>()
 
     when (node) {
-        is MemberCallExpression -> {
-            // only color the member
-            list.addAll(getFanciesFor(node, node.member))
+        is MemberExpression -> {
+            // color the member
+            node.location?.let { list += Pair(styles.identifier!!, it.region) }
 
             return list
         }
         is DeclaredReferenceExpression -> {
-            if ((original as? MemberCallExpression)?.member == node) {
-                node.location?.let { list += Pair(styles.identifier!!, it.region) }
-            }
-
-            // also color it, if its on its own
+            // also color it, if it's on its own
             if (original == node) {
                 node.location?.let { list += Pair(styles.identifier!!, it.region) }
             }

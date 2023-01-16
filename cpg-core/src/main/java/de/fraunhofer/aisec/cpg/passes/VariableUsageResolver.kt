@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import java.util.regex.Pattern
 import org.slf4j.LoggerFactory
 
 /**
@@ -79,7 +78,9 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         for (tu in result.translationUnits) {
             walker.clearCallbacks()
-            walker.registerHandler { curClass, _, node -> resolveFieldUsages(curClass, node) }
+            walker.registerHandler { curClass, parent, node ->
+                resolveFieldUsages(curClass, parent, node)
+            }
             walker.iterate(tu)
         }
         for (tu in result.translationUnits) {
@@ -89,36 +90,19 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
     }
 
-    private fun resolveFunctionPtr(
-        containingClassArg: Type?,
-        reference: DeclaredReferenceExpression
-    ): ValueDeclaration? {
-        var containingClass = containingClassArg
+    private fun resolveFunctionPtr(reference: DeclaredReferenceExpression): ValueDeclaration? {
         // Without FunctionPointerType, we cannot resolve function pointers
         val fptrType = reference.type as? FunctionPointerType ?: return null
 
-        var functionName = reference.name.localName
-        val matcher =
-            Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(functionName)
-        if (matcher.matches()) {
-            val cls = matcher.group("class")
-            functionName = matcher.group("function")
-            if (cls == null) {
-                log.error(
-                    "Resolution of pointers to functions inside the current scope should have been done by the ScopeManager"
-                )
-            } else {
-                containingClass = TypeParser.createFrom(cls, reference.language)
-            }
-        }
+        val parent = reference.name.parent
 
         return handleUnknownFunction(
-            if (containingClass != null) {
-                recordMap[containingClass.name]
+            if (parent != null) {
+                recordMap[parent]
             } else {
                 null
             },
-            reference.parseName(functionName),
+            reference.name,
             fptrType
         )
     }
@@ -131,15 +115,6 @@ open class VariableUsageResolver : SymbolResolverPass() {
         val language = current.language
 
         if (current !is DeclaredReferenceExpression || current is MemberExpression) return
-        if (
-            parent is MemberCallExpression &&
-                current === parent.member &&
-                current.type !is FunctionPointerType
-        ) {
-            // members of a MemberCallExpression are no variables to be resolved, unless we have
-            // a function pointer call
-            return
-        }
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
@@ -157,7 +132,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             recordDeclType = TypeParser.createFrom(currentClass.name, currentClass.language)
         }
         if (current.type is FunctionPointerType && refersTo == null) {
-            refersTo = resolveFunctionPtr(recordDeclType, current)
+            refersTo = resolveFunctionPtr(current)
         }
 
         // only add new nodes for non-static unknown
@@ -228,8 +203,20 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
     }
 
-    private fun resolveFieldUsages(curClass: RecordDeclaration?, current: Node) {
-        if (current !is MemberExpression) return
+    private fun resolveFieldUsages(curClass: RecordDeclaration?, parent: Node?, current: Node) {
+        if (current !is MemberExpression) {
+            return
+        }
+
+        // For legacy reasons, method and field resolving is split between the VariableUsageResolver
+        // and the CallResolver. Since we are trying to merge these two, the first step was to have
+        // the callee/member field of a MemberCallExpression set to a MemberExpression. This means
+        // however, that these will show up in this callback function. To not mess with legacy code
+        // (yet), we are ignoring all MemberExpressions whose parents are MemberCallExpressions in
+        // this function for now.
+        if (parent is MemberCallExpression && parent.callee == current) {
+            return
+        }
 
         var baseTarget: Declaration? = null
         if (current.base is DeclaredReferenceExpression) {
@@ -294,7 +281,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 return
             }
         }
-        var baseType = current.base.type
+        var baseType = current.base?.type ?: UnknownType.getUnknownType(current.language)
         if (baseType.name !in recordMap) {
             val fqnResolvedType = recordMap.keys.firstOrNull { it.lastPartsMatch(baseType.name) }
             if (fqnResolvedType != null) {

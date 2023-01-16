@@ -287,7 +287,7 @@ object TestUtils {
             val memberExpression = usingNode as MemberExpression?
             assertNotNull(memberExpression)
 
-            val base: Node = memberExpression.base
+            val base = memberExpression.base
             assertUsageOf(base, usedBase)
             assertUsageOf(memberExpression.refersTo, usedMember)
         }

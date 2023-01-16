@@ -660,8 +660,8 @@ class ComplexDFAOrderEvaluationTest {
         referencedVertices: Set<Node>,
         nodesToOp: Map<Node, Set<String>>,
         thisPositionOfNode: Map<Node, Int>,
-        val possibleInterprocFailures: MutableList<Node>,
-        val withoutInterprocNodes: MutableList<Node>
+        private val possibleInterprocFailures: MutableList<Node>,
+        private val withoutInterprocNodes: MutableList<Node>
     ) :
         DFAOrderEvaluator(
             dfa = dfa,

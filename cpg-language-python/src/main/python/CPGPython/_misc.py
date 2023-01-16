@@ -115,6 +115,11 @@ def is_field_declaration(self, target):
     return target is not None and target.java_name == n
 
 
+def is_function_declaration(self, target):
+    n = CPG_JAVA + ".graph.declarations.FunctionDeclaration"
+    return target is not None and target.java_name == n
+
+
 def is_member_expression(self, target):
     n = CPG_JAVA + ".graph.statements.expressions.MemberExpression"
     return target is not None and target.java_name == n

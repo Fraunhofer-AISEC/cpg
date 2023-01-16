@@ -57,10 +57,6 @@ class NullPointerCheck {
                         handleHasBase(v)
                     }
 
-                    fun visit(v: CallExpression) {
-                        handleHasBase(v)
-                    }
-
                     fun visit(v: MemberExpression) {
                         handleHasBase(v)
                     }

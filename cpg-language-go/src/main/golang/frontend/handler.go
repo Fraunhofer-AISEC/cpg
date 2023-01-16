@@ -842,15 +842,9 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 	}
 
 	if isMemberExpression {
-		baseName := (*cpg.Node)((*cpg.MemberExpression)(reference).GetBase()).GetName()
-		// this is not 100% accurate since it should be rather the type not the base name
-		// but FQNs are really broken in the CPG so this is ok for now
-		fqn := fmt.Sprintf("%s.%s", baseName, name)
-
 		this.LogDebug("Fun is a member call to %s", name)
 
-		member := this.NewDeclaredReferenceExpression(fset, nil, name)
-		m := this.NewMemberCallExpression(fset, callExpr, name, fqn, (*cpg.MemberExpression)(reference).GetBase(), member.Node())
+		m := this.NewMemberCallExpression(fset, callExpr, reference)
 
 		c = (*cpg.CallExpression)(m)
 	} else {

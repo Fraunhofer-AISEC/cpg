@@ -194,17 +194,9 @@ def handle_expression_impl(self, expr):
         name = ref.getName()
 
         if self.is_member_expression(ref):
-            base_name = ref.getBase().getName()
-
-            fqn = "%s.%s" % (base_name, name)
-
-            member = ExpressionBuilderKt.newDeclaredReferenceExpression(
-                self.frontend,
-                name, UnknownType.getUnknownType(), self.get_src_code(expr))
             call = ExpressionBuilderKt.newMemberCallExpression(
                 self.frontend,
-                name, fqn, ref.getBase(),
-                member, ".", self.get_src_code(expr))
+                ref, False, self.get_src_code(expr))
         else:
             # try to see, whether this refers to a known class and thus is a
             # constructor.
@@ -310,6 +302,19 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newDeclaredReferenceExpression(
             self.frontend, expr.id, UnknownType.getUnknownType(),
             self.get_src_code(expr))
+
+        # Take a little shortcut and set refersTo, in case this is a method
+        # receiver. This allows us to play more nicely with member (call)
+        # expressions on the current class, since then their base type is
+        # known.
+        current_function = self.scopemanager.getCurrentFunction()
+        if self.is_method_declaration(current_function):
+            recv = current_function.getReceiver()
+            if recv is not None:
+                if expr.id == recv.getName().getLocalName():
+                    r.setRefersTo(recv)
+                    r.setType(recv.getType())
+
         return r
     elif isinstance(expr, ast.List):
         ile = ExpressionBuilderKt.newInitializerListExpression(

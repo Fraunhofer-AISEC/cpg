@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.frontends.HasClasses
+import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
+import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
+import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -34,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.util.regex.Pattern
@@ -71,11 +73,13 @@ class CPPLanguage :
             invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, scopeManager))
         }
         if (invocationCandidates.isEmpty()) {
-            if (handleTemplateFunctionCalls(curClass, call, false, scopeManager, currentTU)) {
-                return call.invokes
-            } else {
-                call.templateParametersEdges = null
+            val (ok, candidates) =
+                handleTemplateFunctionCalls(curClass, call, false, scopeManager, currentTU)
+            if (ok) {
+                return candidates
             }
+
+            call.templateParametersEdges = null
         }
         if (invocationCandidates.isEmpty()) {
             // Check for usage of implicit cast
@@ -135,8 +139,7 @@ class CPPLanguage :
         call: CallExpression,
         scopeManager: ScopeManager,
         currentTU: TranslationUnitDeclaration
-    ) {
-
+    ): List<FunctionDeclaration> {
         val invocationCandidates =
             scopeManager
                 .resolveFunctionStopScopeTraversalOnDefinition(call)
@@ -147,17 +150,18 @@ class CPPLanguage :
             invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, scopeManager))
         }
         if (invocationCandidates.isEmpty()) {
-            /*
-             Check if the call can be resolved to a function template instantiation. If it can be resolver, we
-             resolve the call. Otherwise, there won't be an inferred template, we will do an inferred
-             FunctionDeclaration instead.
-            */
+            // Check if the call can be resolved to a function template instantiation. If it can be
+            // resolver, we resolve the call. Otherwise, there won't be an inferred template, we
+            // will do an
+            // inferred FunctionDeclaration instead.
             call.templateParametersEdges = mutableListOf()
-            if (handleTemplateFunctionCalls(null, call, false, scopeManager, currentTU)) {
-                return
-            } else {
-                call.templateParametersEdges = null
+            val (ok, candidates) =
+                handleTemplateFunctionCalls(null, call, false, scopeManager, currentTU)
+            if (ok) {
+                return candidates
             }
+
+            call.templateParametersEdges = null
         }
         if (invocationCandidates.isEmpty()) {
             // If we don't find any candidate and our current language is c/c++ we check if there is
@@ -165,13 +169,7 @@ class CPPLanguage :
             invocationCandidates.addAll(resolveWithImplicitCastFunc(call, scopeManager))
         }
 
-        if (invocationCandidates.isEmpty()) {
-            // If we still have no candidates and our current language is c++ we create an inferred
-            // FunctionDeclaration
-            invocationCandidates.add(currentTU.inferFunction(call))
-        }
-
-        call.invokes = invocationCandidates
+        return invocationCandidates
     }
 
     /**
@@ -207,7 +205,7 @@ class CPPLanguage :
         applyInference: Boolean,
         scopeManager: ScopeManager,
         currentTU: TranslationUnitDeclaration
-    ): Boolean {
+    ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates = scopeManager.resolveFunctionTemplateDeclaration(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
             val initializationType =
@@ -245,15 +243,16 @@ class CPPLanguage :
                         )
                 ) {
                     // Valid Target -> Apply invocation
-                    applyTemplateInstantiation(
-                        templateCall,
-                        functionTemplateDeclaration,
-                        function,
-                        initializationSignature,
-                        initializationType,
-                        orderedInitializationSignature
-                    )
-                    return true
+                    val candidates =
+                        applyTemplateInstantiation(
+                            templateCall,
+                            functionTemplateDeclaration,
+                            function,
+                            initializationSignature,
+                            initializationType,
+                            orderedInitializationSignature
+                        )
+                    return Pair(true, candidates)
                 }
             }
         }
@@ -265,18 +264,19 @@ class CPPLanguage :
             val functionTemplateDeclaration =
                 holder.startInference().createInferredFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
-            templateCall.invokes = functionTemplateDeclaration.realization
-            val edges = templateCall.templateParametersEdges ?: return false
+            val edges = templateCall.templateParametersEdges
             // Set instantiation propertyEdges
-            for (instantiationParameter in edges) {
+            for (instantiationParameter in edges ?: listOf()) {
                 instantiationParameter.addProperty(
                     Properties.INSTANTIATION,
                     TemplateDeclaration.TemplateInitialization.EXPLICIT
                 )
             }
-            return true
+
+            return Pair(true, functionTemplateDeclaration.realization)
         }
-        return false
+
+        return Pair(false, listOf())
     }
 
     /**

@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents the Subscription or access of an array of the form <code>array[index]</code>, where
@@ -118,5 +119,11 @@ public class ArraySubscriptionExpression extends Expression implements TypeListe
   @Override
   public Expression getBase() {
     return this.arrayExpression;
+  }
+
+  @Nullable
+  @Override
+  public String getOperatorCode() {
+    return "[]";
   }
 }

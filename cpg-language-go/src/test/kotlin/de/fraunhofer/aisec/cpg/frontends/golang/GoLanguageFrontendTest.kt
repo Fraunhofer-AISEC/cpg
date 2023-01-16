@@ -57,25 +57,21 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(p)
 
         val main = p.byNameOrNull<FunctionDeclaration>("main")
-
         assertNotNull(main)
 
         val message =
             main.bodyOrNull<DeclarationStatement>(2)?.singleDeclaration as? VariableDeclaration
-
         assertNotNull(message)
 
         val map =
             ((message.initializer as? ConstructExpression)?.arguments?.firstOrNull()
                 as? InitializerListExpression)
-
         assertNotNull(map)
 
         val nameEntry = map.initializers.firstOrNull() as? KeyValueExpression
-
         assertNotNull(nameEntry)
 
-        assertLocalName("string[]", nameEntry.value as? ConstructExpression)
+        assertLocalName("string[]", (nameEntry.value as? ConstructExpression)?.type)
     }
 
     @Test
@@ -91,11 +87,9 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(p)
 
         val main = p.byNameOrNull<FunctionDeclaration>("main")
-
         assertNotNull(main)
 
         val data = main.bodyOrNull<DeclarationStatement>(0)?.singleDeclaration
-
         assertNotNull(data)
 
         // We should be able to follow the DFG backwards from the declaration to the individual
@@ -117,7 +111,6 @@ class GoLanguageFrontendTest : BaseTest() {
             ) {
                 it.registerLanguage<GoLanguage>()
             }
-
         assertNotNull(tu)
 
         val p = tu.byNameOrNull<NamespaceDeclaration>("p")
@@ -165,7 +158,6 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals(5, dimension.value)
 
         // make map
-
         stmt = main.body(2)
         assertNotNull(stmt)
 

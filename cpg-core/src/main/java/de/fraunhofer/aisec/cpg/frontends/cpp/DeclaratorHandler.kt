@@ -100,7 +100,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     // handleSimpleDeclaration
                     ctx.rawSignature,
                     implicitInitializerAllowed,
-                    frontend.language
                 )
 
             // Parse the initializer, if we have one
@@ -136,8 +135,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     ctx.rawSignature,
                     frontend.getLocationFromRawNode(ctx),
                     initializer,
-                    true,
-                    frontend.language
+                    true
                 )
             } else {
                 newFieldDeclaration(
@@ -147,8 +145,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     ctx.rawSignature,
                     frontend.getLocationFromRawNode(ctx),
                     initializer,
-                    true,
-                    frontend.language
+                    true
                 )
             }
 
@@ -344,7 +341,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently."
                 )
 
-            Util.warnWithFileLocation(frontend, ctx, log, problem.problem)
+            Util.warnWithFileLocation<IASTFunctionDeclarator>(frontend, ctx, log, problem.problem)
 
             return problem
         }
@@ -399,8 +396,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     name,
                     UnknownType.getUnknownType(language),
                     ctx.rawSignature,
-                    true,
-                    frontend.language
+                    true
                 )
             result.initializer = initializer
         } else {
@@ -420,8 +416,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     code,
                     frontend.getLocationFromRawNode(ctx),
                     initializer,
-                    true,
-                    frontend.language
+                    true
                 )
         }
 
@@ -467,8 +462,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 newConstructorDeclaration(
                     recordDeclaration.name.localName,
                     recordDeclaration.name.toString(),
-                    recordDeclaration,
-                    frontend.language
+                    recordDeclaration
                 )
 
             createMethodReceiver(constructorDeclaration)

@@ -345,8 +345,17 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             return newProblemExpression("base of field is null")
         }
 
+        // We need some special handling for templates (of course). Since we only want the basic
+        // name without any arguments as a name
+        val name =
+            if (ctx.fieldName is CPPASTTemplateId) {
+                (ctx.fieldName as CPPASTTemplateId).templateName.toString()
+            } else {
+                ctx.fieldName.toString()
+            }
+
         return newMemberExpression(
-            ctx.fieldName.toString(),
+            name,
             base,
             UnknownType.getUnknownType(language),
             if (ctx.isPointerDereference) "->" else ".",
@@ -417,27 +426,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val reference = handle(ctx.functionNameExpression)
         val callExpression: CallExpression
         if (reference is MemberExpression) {
-            val baseTypename: String
-            // Pointer types contain * or []. We do not want that here.
             val baseType: Type = reference.base.type.root
             assert(baseType !is SecondOrderType)
-            baseTypename = baseType.typeName
-            val member =
-                newDeclaredReferenceExpression(
-                    reference.name.localName,
-                    UnknownType.getUnknownType(language),
-                    reference.name.localName
-                )
-            member.location = frontend.getLocationFromRawNode(ctx.functionNameExpression)
-            callExpression =
-                newMemberCallExpression(
-                    member.name.localName,
-                    baseTypename + language.namespaceDelimiter + member.name.localName,
-                    reference.base,
-                    member,
-                    reference.operatorCode,
-                    ctx.rawSignature
-                )
+            callExpression = newMemberCallExpression(reference, code = ctx.rawSignature)
             if (
                 (ctx.functionNameExpression as? IASTFieldReference)?.fieldName is CPPASTTemplateId
             ) {
@@ -454,18 +445,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     )
                     .forEach { callExpression.addTemplateParameter(it) }
             }
-        } else if (reference is BinaryOperator && reference.operatorCode == ".") {
-            // We have a dot operator that was not classified as a member expression. This happens
-            // when dealing with function pointer calls that happen on an explicit object
-            callExpression =
-                newMemberCallExpression(
-                    ctx.functionNameExpression.rawSignature,
-                    "",
-                    reference.lhs,
-                    reference.rhs,
-                    reference.operatorCode,
-                    ctx.rawSignature
-                )
+        } else if (
+            reference is BinaryOperator &&
+                (reference.operatorCode == ".*" || reference.operatorCode == "->*")
+        ) {
+            // This is a function pointer call to a class method. We keep this as a binary operator
+            // with the .* or ->* operator code, so that we can resolve this later in the
+            // FunctionPointerCallResolver
+            callExpression = newMemberCallExpression(reference, code = ctx.rawSignature)
         } else if (reference is UnaryOperator && reference.operatorCode == "*") {
             // Classic C-style function pointer call -> let's extract the target
             callExpression = newCallExpression(reference, "", reference.code, false)
@@ -584,8 +571,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             IASTBinaryExpression.op_binaryOrAssign -> operatorCode = "|="
             IASTBinaryExpression.op_equals -> operatorCode = "=="
             IASTBinaryExpression.op_notequals -> operatorCode = "!="
-            IASTBinaryExpression.op_pmdot -> operatorCode = "."
-            IASTBinaryExpression.op_pmarrow -> operatorCode = "->"
+            IASTBinaryExpression.op_pmdot -> operatorCode = ".*"
+            IASTBinaryExpression.op_pmarrow -> operatorCode = "->*"
             IASTBinaryExpression.op_max -> operatorCode = ">?"
             IASTBinaryExpression.op_min -> operatorCode = "?<"
             IASTBinaryExpression.op_ellipses -> operatorCode = "..."

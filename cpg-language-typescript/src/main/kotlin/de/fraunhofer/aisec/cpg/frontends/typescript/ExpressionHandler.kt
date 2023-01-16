@@ -206,26 +206,14 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val propertyAccess = node.firstChild("PropertyAccessExpression")
 
         if (propertyAccess != null) {
-            val memberExpression = this.handle(propertyAccess) as MemberExpression
-
-            // we need to build a declared reference expression out of the MemberExpression, because
-            // member calls are not really handled well in the CPG. See
-            // https://github.com/Fraunhofer-AISEC/cpg/issues/298
-            val member =
-                newDeclaredReferenceExpression(
-                    memberExpression.name,
-                    memberExpression.type,
-                    memberExpression.name.toString()
-                )
+            val memberExpression =
+                this.handle(propertyAccess) as? MemberExpression
+                    ?: return ProblemExpression("node is not a member expression")
 
             call =
                 newMemberCallExpression(
-                    memberExpression.name.localName,
-                    memberExpression.name.toString(),
-                    memberExpression.base,
-                    member,
-                    ".",
-                    this.frontend.getCodeFromRawNode(node)
+                    memberExpression,
+                    code = this.frontend.getCodeFromRawNode(node)
                 )
         } else {
             // TODO: fqn - how?

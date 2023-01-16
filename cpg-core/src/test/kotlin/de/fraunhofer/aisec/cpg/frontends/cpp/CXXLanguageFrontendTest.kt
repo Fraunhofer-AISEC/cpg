@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
+import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.assertFullName
@@ -1328,6 +1329,71 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val func = call.invokes.firstOrNull()
         assertNotNull(func)
         assertFalse(func.isInferred)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testFunctionPointerToClassMethodSimple() {
+        val file = File("src/test/resources/cxx/funcptr_class_simple.cpp")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+
+        val myClass = tu.records["MyClass"]
+        assertNotNull(myClass)
+
+        val targetNoParam =
+            myClass.methods[{ it.name.localName == "target" && it.parameters.isEmpty() }]
+        assertNotNull(targetNoParam)
+
+        val targetSingleParam =
+            myClass.methods[{ it.name.localName == "target" && it.parameters.size == 1 }]
+        assertNotNull(targetSingleParam)
+
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        // three variables (the class object and two function pointers)
+        assertEquals(3, main.variables.size)
+
+        val my = main.variables["my"]
+        assertNotNull(my)
+        assertFullName("MyClass", my.type)
+
+        // ensure that our function pointer variable is connected to the method declaration via DFG
+        val noParam = main.variables["no_param"]
+        assertNotNull(noParam)
+        assertTrue(
+            noParam.followPrevDFGEdgesUntilHit { it == targetNoParam }.fulfilled.isNotEmpty()
+        )
+
+        // ensure that our function pointer variable is connected to the method declaration via DFG
+        val singleParam = main.variables["single_param"]
+        assertNotNull(singleParam)
+        assertTrue(
+            singleParam
+                .followPrevDFGEdgesUntilHit { it == targetSingleParam }
+                .fulfilled
+                .isNotEmpty()
+        )
+
+        val noParamCall = main.mcalls[0]
+        assertNotNull(noParamCall)
+        assertInvokes(noParamCall, targetNoParam)
+        assertFullName("MyClass::*no_param", noParamCall)
+
+        var callee = noParamCall.callee as? BinaryOperator
+        assertNotNull(callee)
+        assertRefersTo(callee.lhs, my)
+        assertRefersTo(callee.rhs, noParam)
+
+        val singleParamCall = main.mcalls[1]
+        assertNotNull(singleParamCall)
+        assertInvokes(singleParamCall, targetSingleParam)
+        assertFullName("MyClass::*single_param", singleParamCall)
+
+        callee = singleParamCall.callee as? BinaryOperator
+        assertNotNull(callee)
+        assertRefersTo(callee.lhs, my)
+        assertRefersTo(callee.rhs, singleParam)
     }
 
     private fun createTypeFrom(typename: String, resolveAlias: Boolean) =

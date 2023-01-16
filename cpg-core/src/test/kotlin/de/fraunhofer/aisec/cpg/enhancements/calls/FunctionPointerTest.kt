@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import java.nio.file.Path
 import java.util.*
@@ -77,8 +78,18 @@ internal class FunctionPointerTest : BaseTest() {
             if (call is ConstructExpression) {
                 continue
             }
+
+            val callee = call.callee
+
+            // check for class function pointers
+            val callName =
+                if (callee is BinaryOperator) {
+                    callee.rhs.name.localName
+                } else {
+                    call.name.localName
+                }
+
             var func: String
-            val callName = call.name.localName
             if (!callName.contains("(")) {
                 func = callName
                 assertNotEquals("", func, "Unexpected call $func")

@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.Transient;
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
  * right hand expression (rhs) and an operatorCode.
  */
-public class BinaryOperator extends Expression implements TypeListener, Assignment {
+public class BinaryOperator extends Expression implements TypeListener, Assignment, HasBase {
 
   /** The left hand expression. */
   @SubGraph("AST")
@@ -161,6 +161,13 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
       // String + any other type results in a String
       getPossibleSubTypes().clear();
       setType(TypeParser.createFrom("java.lang.String", getLanguage()), root);
+    } else if ((this.operatorCode.equals(".*") || this.operatorCode.equals("->*"))
+        && src != null
+        && src == this.rhs) {
+      // Propagate the function pointer type to the expression itself. This helps us later in the
+      // call resolver, when trying to determine, whether this is a regular call or a function
+      // pointer call.
+      setType(src.getPropagationType(), root);
     }
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Type.Origin.DATAFLOW);
@@ -227,5 +234,15 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
     return this.operatorCode.equals("=")
     /*||this.operatorCode.equals("+=") ||this.operatorCode.equals("-=")
     ||this.operatorCode.equals("/=")  ||this.operatorCode.equals("*=")*/ ;
+  }
+
+  @Nullable
+  @Override
+  public Expression getBase() {
+    if (this.operatorCode.equals(".*") || this.operatorCode.equals("->*")) {
+      return this.lhs;
+    } else {
+      return null;
+    }
   }
 }
