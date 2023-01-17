@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,23 +23,21 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg
+package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import kotlin.test.BeforeTest
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import java.util.concurrent.ConcurrentHashMap
 
-abstract class BaseTest {
-    protected var log: Logger = LoggerFactory.getLogger(this.javaClass)
+class TypeManager {
 
-    /**
-     * [TypeParser] and [LegacyTypeManager] hold static state. This needs to be cleared before all
-     * tests in order to avoid strange errors
-     */
-    @BeforeTest
-    protected fun resetPersistentState() {
-        LegacyTypeManager.reset()
+    var types = ConcurrentHashMap<Name, Type>()
+
+     fun lookup(name: Name): Type {
+        return types.getOrPut(name) {
+            return ObjectType(name)
+        }
     }
 }
+
+fun 

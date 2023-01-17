@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.HasType
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.SubGraph
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -52,11 +52,11 @@ class LambdaExpression : Expression(), HasType.TypeListener {
         }
 
     override fun typeChanged(src: HasType?, root: MutableList<HasType>?, oldType: Type?) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!LegacyTypeManager.isTypeSystemActive()) {
             return
         }
 
-        if (!TypeManager.getInstance().isUnknown(type) && src!!.propagationType == oldType) {
+        if (!LegacyTypeManager.getInstance().isUnknown(type) && src!!.propagationType == oldType) {
             return
         }
 

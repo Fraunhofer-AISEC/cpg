@@ -150,7 +150,7 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
 
   @Override
   public void typeChanged(HasType src, List<HasType> root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     Type previous = this.type;
@@ -176,7 +176,7 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
 
   @Override
   public void possibleSubTypesChanged(HasType src, List<HasType> root) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());

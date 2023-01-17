@@ -592,8 +592,9 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         class MyJavaLanguageFrontend(
             language: JavaLanguage,
             config: TranslationConfiguration,
-            scopeManager: ScopeManager
-        ) : JavaLanguageFrontend(language, config, scopeManager) {
+            scopeManager: ScopeManager,
+            typeManager: TypeManager
+        ) : JavaLanguageFrontend(language, config, scopeManager, typeManager) {
             init {
                 this.declarationHandler =
                     object : DeclarationHandler(this) {
@@ -623,9 +624,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             override val frontend = MyJavaLanguageFrontend::class
             override fun newFrontend(
                 config: TranslationConfiguration,
-                scopeManager: ScopeManager
+                scopeManager: ScopeManager,
+                typeManager: TypeManager
             ): MyJavaLanguageFrontend {
-                return MyJavaLanguageFrontend(this, config, scopeManager)
+                return MyJavaLanguageFrontend(this, config, scopeManager, typeManager)
             }
         }
 

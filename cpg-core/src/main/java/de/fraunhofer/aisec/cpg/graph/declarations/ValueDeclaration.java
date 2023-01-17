@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
@@ -64,13 +64,13 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   @Override
   public Type getType() {
     Type result;
-    if (TypeManager.isTypeSystemActive()) {
+    if (LegacyTypeManager.isTypeSystemActive()) {
       // just to make sure that we REALLY always return a valid type in case this somehow gets set
       // to null
       result = type != null ? type : UnknownType.getUnknownType();
     } else {
       result =
-          TypeManager.getInstance()
+          LegacyTypeManager.getInstance()
               .getTypeCache()
               .computeIfAbsent(this, n -> Collections.emptyList())
               .stream()
@@ -135,8 +135,8 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
   @Override
   public void setType(Type type, List<HasType> root) {
-    if (!TypeManager.isTypeSystemActive()) {
-      TypeManager.getInstance().cacheType(this, type);
+    if (!LegacyTypeManager.isTypeSystemActive()) {
+      LegacyTypeManager.getInstance().cacheType(this, type);
       return;
     }
 
@@ -146,7 +146,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
     if (type == null
         || root.contains(this)
-        || TypeManager.getInstance().isUnknown(type)
+        || LegacyTypeManager.getInstance().isUnknown(type)
         || (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType))) {
       return;
     }
@@ -166,13 +166,14 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     subTypes.add(type);
 
     this.type =
-        TypeManager.getInstance()
-            .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type));
+        LegacyTypeManager.getInstance()
+            .registerType(
+                LegacyTypeManager.getInstance().getCommonType(subTypes, this).orElse(type));
 
     List<Type> newSubtypes = new ArrayList<>();
     for (var s : subTypes) {
-      if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
-        newSubtypes.add(TypeManager.getInstance().registerType(s));
+      if (LegacyTypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
+        newSubtypes.add(LegacyTypeManager.getInstance().registerType(s));
       }
     }
 
@@ -231,8 +232,10 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
   @Override
   public List<Type> getPossibleSubTypes() {
-    if (!TypeManager.isTypeSystemActive()) {
-      return TypeManager.getInstance().getTypeCache().getOrDefault(this, Collections.emptyList());
+    if (!LegacyTypeManager.isTypeSystemActive()) {
+      return LegacyTypeManager.getInstance()
+          .getTypeCache()
+          .getOrDefault(this, Collections.emptyList());
     }
     return possibleSubTypes;
   }
@@ -241,12 +244,12 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   public void setPossibleSubTypes(List<Type> possibleSubTypes, @NotNull List<HasType> root) {
     possibleSubTypes =
         possibleSubTypes.stream()
-            .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
+            .filter(Predicate.not(LegacyTypeManager.getInstance()::isUnknown))
             .distinct()
             .collect(Collectors.toList());
 
-    if (!TypeManager.isTypeSystemActive()) {
-      possibleSubTypes.forEach(t -> TypeManager.getInstance().cacheType(this, t));
+    if (!LegacyTypeManager.isTypeSystemActive()) {
+      possibleSubTypes.forEach(t -> LegacyTypeManager.getInstance().cacheType(this, t));
       return;
     }
 

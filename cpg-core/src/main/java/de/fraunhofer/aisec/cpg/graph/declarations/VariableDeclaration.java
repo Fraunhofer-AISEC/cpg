@@ -124,10 +124,10 @@ public class VariableDeclaration extends ValueDeclaration
 
   @Override
   public void typeChanged(HasType src, List<HasType> root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
-    if (!TypeManager.getInstance().isUnknown(this.type)
+    if (!LegacyTypeManager.getInstance().isUnknown(this.type)
         && src.getPropagationType().equals(oldType)) {
       return;
     }
@@ -141,7 +141,7 @@ public class VariableDeclaration extends ValueDeclaration
       // can be ignored once we have a type
       if (isArray) {
         newType = src.getType();
-      } else if (!TypeManager.getInstance().isUnknown(this.type)) {
+      } else if (!LegacyTypeManager.getInstance().isUnknown(this.type)) {
         return;
       } else {
         newType = src.getType().dereference();
@@ -158,7 +158,7 @@ public class VariableDeclaration extends ValueDeclaration
 
   @Override
   public void possibleSubTypesChanged(HasType src, List<HasType> root) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());

@@ -50,7 +50,7 @@ fun compatibleSignatures(
         for (i in callSignature.indices) {
             if (
                 callSignature[i]!!.isPrimitive != functionSignature[i].isPrimitive &&
-                    !TypeManager.getInstance()
+                    !LegacyTypeManager.getInstance()
                         .isSupertypeOf(functionSignature[i], callSignature[i], provider)
             ) {
                 return false
@@ -576,7 +576,7 @@ fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boo
         callParameter is ObjectType
     } else if (callParameter is Expression && templateParameter is ParamVariableDeclaration) {
         callParameter.type == templateParameter.type ||
-            TypeManager.getInstance()
+            LegacyTypeManager.getInstance()
                 .isSupertypeOf(templateParameter.type, callParameter.type, callParameterArg)
     } else {
         false

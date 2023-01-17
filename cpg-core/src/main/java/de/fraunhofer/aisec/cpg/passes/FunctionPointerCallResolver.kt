@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.HasType
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -143,7 +143,7 @@ class FunctionPointerCallResolver : Pass() {
                         curr.returnTypes[0]
                     }
                 if (
-                    TypeManager.getInstance()
+                    LegacyTypeManager.getInstance()
                         .isSupertypeOf(pointerType.returnType, returnType, call) &&
                         curr.hasSignature(pointerType.parameters)
                 ) {

@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import de.fraunhofer.aisec.cpg.graph.HasInitializer;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -130,10 +130,10 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener, 
 
   @Override
   public void typeChanged(HasType src, List<HasType> root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
-    if (!TypeManager.getInstance().isUnknown(this.type)
+    if (!LegacyTypeManager.getInstance().isUnknown(this.type)
         && src.getPropagationType().equals(oldType)) {
       return;
     }
@@ -147,7 +147,7 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener, 
       // can be ignored once we have a type
       if (isArray) {
         newType = src.getType();
-      } else if (!TypeManager.getInstance().isUnknown(this.type)) {
+      } else if (!LegacyTypeManager.getInstance().isUnknown(this.type)) {
         return;
       } else {
         newType = src.getType().dereference();
@@ -164,7 +164,7 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener, 
 
   @Override
   public void possibleSubTypesChanged(HasType src, List<HasType> root) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());

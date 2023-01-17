@@ -44,8 +44,8 @@ import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager;
 import de.fraunhofer.aisec.cpg.graph.ProblemNode;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
@@ -184,7 +184,7 @@ public class DeclarationHandler
 
     for (Parameter parameter : methodDecl.getParameters()) {
       Type resolvedType =
-          TypeManager.getInstance()
+          LegacyTypeManager.getInstance()
               .getTypeParameter(
                   functionDeclaration.getRecordDeclaration(), parameter.getType().toString());
       if (resolvedType == null) {
@@ -267,7 +267,7 @@ public class DeclarationHandler
             .map(this.frontend::getTypeAsGoodAsPossible)
             .collect(Collectors.toList()));
 
-    TypeManager.getInstance()
+    LegacyTypeManager.getInstance()
         .addTypeParameter(
             recordDeclaration,
             classInterDecl.getTypeParameters().stream()
@@ -391,7 +391,7 @@ public class DeclarationHandler
     try {
       // Resolve type first with ParameterizedType
       type =
-          TypeManager.getInstance()
+          LegacyTypeManager.getInstance()
               .getTypeParameter(
                   this.frontend.getScopeManager().getCurrentRecord(),
                   variable.resolve().getType().describe());

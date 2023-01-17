@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
 import kotlin.reflect.KClass
@@ -61,7 +62,8 @@ abstract class Language<T : LanguageFrontend> : Node() {
     /** Creates a new [LanguageFrontend] object to parse the language. */
     abstract fun newFrontend(
         config: TranslationConfiguration,
-        scopeManager: ScopeManager = ScopeManager()
+        scopeManager: ScopeManager = ScopeManager(),
+        typeManager: TypeManager = TypeManager()
     ): T
 
     /** Returns true if the [file] can be handled by the frontend of this language. */

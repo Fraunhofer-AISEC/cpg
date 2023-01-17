@@ -31,7 +31,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeS
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
@@ -64,7 +64,7 @@ class JavaExternalTypeHierarchyResolver : Pass() {
             resolver.add(JavaParserTypeSolver(root))
         }
 
-        val tm = TypeManager.getInstance()
+        val tm = LegacyTypeManager.getInstance()
 
         // Iterate over all known types and add their (direct) supertypes.
         for (t in HashSet(tm.firstOrderTypes)) {
