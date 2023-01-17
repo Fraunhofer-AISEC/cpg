@@ -94,8 +94,8 @@ jobs:
             export VERSION=${VERSION:1:${#VERSION}}
             echo "Building as ${VERSION}"
           fi
-          echo "##[set-output name=version;]$VERSION"
-        id: determine_version
+          # store version in GitHub environment file
+          echo "version=$VERSION" >> $GITHUB_ENV
       - name: Install JEP
         run: |
           pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
@@ -114,7 +114,7 @@ jobs:
         with:
           name: libcpgo-amd64.dylib
           path: cpg-language-go/src/main/resources/
-      - name: Build ${{ steps.determine_version.outputs.version }}
+      - name: Build ${{ env.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
@@ -128,7 +128,7 @@ jobs:
           fi
         id: build
         env:
-          VERSION: ${{ steps.determine_version.outputs.version }}
+          VERSION: ${{ env.version }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Archive test reports
@@ -143,25 +143,21 @@ jobs:
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
           ./gradlew --no-daemon -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true publishAllModules dokkaHtmlMultiModule
         env:
-          VERSION: ${{ steps.determine_version.outputs.version }}
+          VERSION: ${{ env.version }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       - name: Publish JavaDoc
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
-        uses: JamesIves/github-pages-deploy-action@releases/v3
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: build/dokkaCustomMultiModuleOutput
+          folder: build/dokkaCustomMultiModuleOutput
       - name: "Create Release"
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         id: create_release
-        uses: actions/create-release@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ steps.determine_version.outputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ env.version }}
           draft: false
           prerelease: false
