@@ -25,6 +25,7 @@
  */
 plugins {
     id("cpg.application-conventions")
+    id("cpg.frontend-dependency-conventions")
 }
 
 publishing {
