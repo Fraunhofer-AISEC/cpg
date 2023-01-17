@@ -1,5 +1,6 @@
 plugins {
     id("cpg.library-conventions")
+    id("cpg.frontend-dependency-conventions")
 }
 
 publishing {
@@ -15,18 +16,9 @@ publishing {
     }
 }
 
-val enableGoFrontend: Boolean by rootProject.extra
-val enablePythonFrontend: Boolean by rootProject.extra
-val enableLLVMFrontend: Boolean by rootProject.extra
-val enableTypeScriptFrontend: Boolean by rootProject.extra
 
 dependencies {
     // this exposes all of our (published) modules as dependency
     api(projects.cpgCore)
     api(projects.cpgAnalysis)
-
-    if (enableGoFrontend) api(project(":cpg-language-go"))
-    if (enablePythonFrontend) api(project(":cpg-language-python"))
-    if (enableLLVMFrontend) api(project(":cpg-language-llvm"))
-    if (enableTypeScriptFrontend) api(project(":cpg-language-typescript"))
 }
