@@ -224,13 +224,11 @@ internal class TypeTests : BaseTest() {
         typeString = "private static final String a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
-            ObjectType(
-                "String",
+            StringType(
+                "java.lang.String",
                 Type.Storage.STATIC,
                 Type.Qualifier(true, false, false, false),
                 ArrayList(),
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
                 JavaLanguage()
             )
         assertEquals(expected, result)
@@ -270,17 +268,7 @@ internal class TypeTests : BaseTest() {
         typeString = "List<String> list"
         result = TypeParser.createFrom(typeString, JavaLanguage())
         var generics: MutableList<Type?> = ArrayList()
-        generics.add(
-            ObjectType(
-                "String",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ArrayList(),
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
-        )
+        generics.add(StringType("java.lang.String", JavaLanguage()))
         expected =
             ObjectType(
                 "List",
@@ -296,16 +284,7 @@ internal class TypeTests : BaseTest() {
         // Test 9: more generics
         typeString = "List<List<List<String>>, List<String>> data"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        val genericStringType =
-            ObjectType(
-                "String",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ArrayList(),
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
+        val genericStringType = StringType("java.lang.String", JavaLanguage())
         val generics3: MutableList<Type> = ArrayList()
         generics3.add(genericStringType)
         val genericElement3 =

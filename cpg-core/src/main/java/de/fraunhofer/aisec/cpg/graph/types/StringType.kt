@@ -27,28 +27,23 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Name
 
 class StringType : ObjectType {
-    val length: Int?
 
-    constructor() : super() {
-        length = null
-    }
+    constructor() : super()
 
     constructor(
         typeName: String,
         storage: Storage,
         qualifier: Qualifier,
         generics: List<Type>,
-        language: Language<out LanguageFrontend>?,
-        length: Int? = null
-    ) : super(typeName, storage, qualifier, generics, Modifier.NOT_APPLICABLE, false, language) {
-        this.length = length
-    }
+        language: Language<out LanguageFrontend>?
+    ) : super(typeName, storage, qualifier, generics, Modifier.NOT_APPLICABLE, false, language)
+
     constructor(
         typeName: String,
-        language: Language<out LanguageFrontend>?,
-        length: Int? = null
+        language: Language<out LanguageFrontend>?
     ) : super(
         typeName,
         Storage.AUTO,
@@ -57,7 +52,16 @@ class StringType : ObjectType {
         Modifier.NOT_APPLICABLE,
         false,
         language
-    ) {
-        this.length = length
+    )
+    constructor(
+        name: Name,
+        storage: Storage,
+        qualifier: Qualifier,
+        generics: List<Type>,
+        language: Language<out LanguageFrontend>?
+    ) : super(name, storage, qualifier, generics, Modifier.NOT_APPLICABLE, false, language)
+
+    override fun duplicate(): Type {
+        return StringType(name, storage, qualifier, generics, language)
     }
 }
