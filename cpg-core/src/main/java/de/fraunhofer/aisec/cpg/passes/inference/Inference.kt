@@ -196,7 +196,7 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
         name: String,
     ): TypeParamDeclaration {
         val parameterizedType = ParameterizedType(name, language)
-        TypeManager.getInstance()
+        LegacyTypeManager.getInstance()
             .addTypeParameter(start as? FunctionTemplateDeclaration, parameterizedType)
 
         val decl = newTypeParamDeclaration(name, name)

@@ -29,8 +29,8 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
@@ -81,7 +81,7 @@ public class ExpressionList extends Expression implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, List<HasType> root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     Type previous = this.type;
@@ -94,7 +94,7 @@ public class ExpressionList extends Expression implements TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, List<HasType> root) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     setPossibleSubTypes(new ArrayList<>(src.getPossibleSubTypes()), root);

@@ -42,8 +42,8 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager;
 import de.fraunhofer.aisec.cpg.graph.NameKt;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
@@ -357,7 +357,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     try {
       ResolvedValueDeclaration symbol = fieldAccessExpr.resolve();
       fieldType =
-          TypeManager.getInstance()
+          LegacyTypeManager.getInstance()
               .getTypeParameter(
                   this.frontend.getScopeManager().getCurrentRecord(),
                   symbol.asField().getType().describe());
@@ -540,7 +540,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       } else {
         // Resolve type first with ParameterizedType
         Type type =
-            TypeManager.getInstance()
+            LegacyTypeManager.getInstance()
                 .getTypeParameter(
                     this.frontend.getScopeManager().getCurrentRecord(),
                     symbol.getType().describe());

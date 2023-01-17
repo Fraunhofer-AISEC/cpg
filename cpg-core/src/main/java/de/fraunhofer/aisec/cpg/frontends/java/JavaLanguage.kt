@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
@@ -51,8 +52,9 @@ open class JavaLanguage :
 
     override fun newFrontend(
         config: TranslationConfiguration,
-        scopeManager: ScopeManager
+        scopeManager: ScopeManager,
+        typeManager: TypeManager
     ): JavaLanguageFrontend {
-        return JavaLanguageFrontend(this, config, scopeManager)
+        return JavaLanguageFrontend(this, config, scopeManager, typeManager)
     }
 }

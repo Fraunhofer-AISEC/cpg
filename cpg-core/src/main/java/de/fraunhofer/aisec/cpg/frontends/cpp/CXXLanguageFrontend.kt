@@ -76,8 +76,9 @@ import org.slf4j.LoggerFactory
 class CXXLanguageFrontend(
     language: Language<CXXLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
-) : LanguageFrontend(language, config, scopeManager) {
+    scopeManager: ScopeManager,
+    typeManager: TypeManager
+) : LanguageFrontend(language, config, scopeManager, typeManager) {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
@@ -507,7 +508,7 @@ class CXXLanguageFrontend(
                 }
             }
 
-        type = TypeManager.getInstance().registerType(type)
+        type = LegacyTypeManager.getInstance().registerType(type)
         type = this.adjustType(declarator, type)
 
         return type
@@ -589,7 +590,7 @@ class CXXLanguageFrontend(
         }
 
         // Make sure, the type manager knows about this type
-        return TypeManager.getInstance().registerType(type)
+        return LegacyTypeManager.getInstance().registerType(type)
     }
 
     companion object {

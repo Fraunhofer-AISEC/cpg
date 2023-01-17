@@ -29,9 +29,9 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
@@ -88,10 +88,10 @@ public class InitializerListExpression extends Expression implements TypeListene
 
   @Override
   public void typeChanged(HasType src, List<HasType> root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
-    if (!TypeManager.getInstance().isUnknown(this.type)
+    if (!LegacyTypeManager.getInstance().isUnknown(this.type)
         && src.getPropagationType().equals(oldType)) {
       return;
     }
@@ -106,10 +106,13 @@ public class InitializerListExpression extends Expression implements TypeListene
               .map(PropertyEdge::getEnd)
               .map(Expression::getType)
               .filter(Objects::nonNull)
-              .map(t -> TypeManager.getInstance().registerType(t.reference(PointerOrigin.ARRAY)))
+              .map(
+                  t ->
+                      LegacyTypeManager.getInstance()
+                          .registerType(t.reference(PointerOrigin.ARRAY)))
               .collect(Collectors.toSet());
       Type alternative = !types.isEmpty() ? types.iterator().next() : UnknownType.getUnknownType();
-      newType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative);
+      newType = LegacyTypeManager.getInstance().getCommonType(types, this).orElse(alternative);
       subTypes = new ArrayList<>(getPossibleSubTypes());
       subTypes.remove(oldType);
       subTypes.addAll(types);
@@ -130,7 +133,7 @@ public class InitializerListExpression extends Expression implements TypeListene
 
   @Override
   public void possibleSubTypesChanged(HasType src, List<HasType> root) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());

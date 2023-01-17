@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 import de.fraunhofer.aisec.cpg.graph.HasBase;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -73,7 +73,7 @@ public class ArraySubscriptionExpression extends Expression implements TypeListe
 
   @Override
   public void typeChanged(HasType src, List<HasType> root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     Type previous = this.type;
@@ -85,7 +85,7 @@ public class ArraySubscriptionExpression extends Expression implements TypeListe
 
   @Override
   public void possibleSubTypesChanged(HasType src, List<HasType> root) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());

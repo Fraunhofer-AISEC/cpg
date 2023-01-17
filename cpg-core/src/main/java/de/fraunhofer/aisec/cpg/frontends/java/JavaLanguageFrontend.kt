@@ -70,8 +70,9 @@ import java.util.function.Consumer
 open class JavaLanguageFrontend(
     language: Language<JavaLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
-) : LanguageFrontend(language, config, scopeManager) {
+    scopeManager: ScopeManager,
+    typeManager: TypeManager
+) : LanguageFrontend(language, config, scopeManager, typeManager) {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
@@ -343,7 +344,7 @@ open class JavaLanguageFrontend(
         return try {
             // Resolve type first with ParameterizedType
             var type: de.fraunhofer.aisec.cpg.graph.types.Type? =
-                TypeManager.getInstance()
+                LegacyTypeManager.getInstance()
                     .getTypeParameter(scopeManager.currentRecord, resolved.returnType.describe())
             if (type == null) {
                 type = parseType(resolved.returnType.describe())

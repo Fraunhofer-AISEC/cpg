@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.types;
 import de.fraunhofer.aisec.cpg.frontends.*;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage;
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager;
 import de.fraunhofer.aisec.cpg.graph.Name;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.ArrayList;
 import java.util.List;
@@ -762,7 +762,7 @@ public class TypeParser {
     counter++;
 
     Type finalType;
-    TypeManager typeManager = TypeManager.getInstance();
+    LegacyTypeManager typeManager = LegacyTypeManager.getInstance();
 
     // Check if type is FunctionPointer
     Matcher funcptr = getFunctionPtrMatcher(typeBlocks.subList(counter, typeBlocks.size()));
@@ -844,7 +844,7 @@ public class TypeParser {
   }
 
   private static Type searchForTemplateTypes(@NotNull String type, ScopeManager scopeManager) {
-    return TypeManager.getInstance()
+    return LegacyTypeManager.getInstance()
         .searchTemplateScopeForDefinedParameterizedTypes(scopeManager.getCurrentScope(), type);
   }
 

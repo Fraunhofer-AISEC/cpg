@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -198,9 +198,9 @@ object TestUtils {
 
     @Throws(IllegalAccessException::class)
     fun disableTypeManagerCleanup() {
-        val spy = Mockito.spy(TypeManager.getInstance())
+        val spy = Mockito.spy(LegacyTypeManager.getInstance())
         Mockito.doNothing().`when`(spy).cleanup()
-        FieldUtils.writeStaticField(TypeManager::class.java, "instance", spy, true)
+        FieldUtils.writeStaticField(LegacyTypeManager::class.java, "instance", spy, true)
     }
 
     /**

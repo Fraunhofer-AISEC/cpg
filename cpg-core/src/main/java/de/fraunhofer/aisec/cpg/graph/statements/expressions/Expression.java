@@ -65,13 +65,13 @@ public abstract class Expression extends Statement implements HasType {
   @Override
   public Type getType() {
     Type result;
-    if (TypeManager.isTypeSystemActive()) {
+    if (LegacyTypeManager.isTypeSystemActive()) {
       // just to make sure that we REALLY always return a valid type in case this somehow gets set
       // to null
       result = type != null ? type : UnknownType.getUnknownType();
     } else {
       result =
-          TypeManager.getInstance()
+          LegacyTypeManager.getInstance()
               .getTypeCache()
               .computeIfAbsent(this, n -> Collections.emptyList())
               .stream()
@@ -105,9 +105,9 @@ public abstract class Expression extends Statement implements HasType {
     // TODO Document this method. It is called very often (potentially for each AST node) and
     // performs less than optimal.
 
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       this.type = type;
-      TypeManager.getInstance().cacheType(this, type);
+      LegacyTypeManager.getInstance().cacheType(this, type);
       return;
     }
 
@@ -118,8 +118,8 @@ public abstract class Expression extends Statement implements HasType {
     // No (or only unknown) type given, loop detected? Stop early because there's nothing we can do.
     if (type == null
         || root.contains(this)
-        || TypeManager.getInstance().isUnknown(type)
-        || TypeManager.getInstance().stopPropagation(this.type, type)
+        || LegacyTypeManager.getInstance().isUnknown(type)
+        || LegacyTypeManager.getInstance().stopPropagation(this.type, type)
         || (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType))) {
       return;
     }
@@ -142,15 +142,16 @@ public abstract class Expression extends Statement implements HasType {
 
     // Probably tries to get something like the best supertype of all possible subtypes.
     this.type =
-        TypeManager.getInstance()
-            .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type));
+        LegacyTypeManager.getInstance()
+            .registerType(
+                LegacyTypeManager.getInstance().getCommonType(subTypes, this).orElse(type));
 
     // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
     // getting the common type??
     List<Type> newSubtypes = new ArrayList<>();
     for (var s : subTypes) {
-      if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
-        newSubtypes.add(TypeManager.getInstance().registerType(s));
+      if (LegacyTypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
+        newSubtypes.add(LegacyTypeManager.getInstance().registerType(s));
       }
     }
 
@@ -171,8 +172,10 @@ public abstract class Expression extends Statement implements HasType {
 
   @Override
   public List<Type> getPossibleSubTypes() {
-    if (!TypeManager.isTypeSystemActive()) {
-      return TypeManager.getInstance().getTypeCache().getOrDefault(this, Collections.emptyList());
+    if (!LegacyTypeManager.isTypeSystemActive()) {
+      return LegacyTypeManager.getInstance()
+          .getTypeCache()
+          .getOrDefault(this, Collections.emptyList());
     }
     return possibleSubTypes;
   }
@@ -181,18 +184,19 @@ public abstract class Expression extends Statement implements HasType {
   public void setPossibleSubTypes(List<Type> possibleSubTypes, @NotNull List<HasType> root) {
     possibleSubTypes =
         possibleSubTypes.stream()
-            .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
+            .filter(Predicate.not(LegacyTypeManager.getInstance()::isUnknown))
             .distinct()
             .collect(Collectors.toList());
 
-    if (!TypeManager.isTypeSystemActive()) {
-      possibleSubTypes.forEach(t -> TypeManager.getInstance().cacheType(this, t));
+    if (!LegacyTypeManager.isTypeSystemActive()) {
+      possibleSubTypes.forEach(t -> LegacyTypeManager.getInstance().cacheType(this, t));
       return;
     }
 
     // Loop detected or only primitive types (which cannot have a subtype)
     if (root.contains(this)
-        || (possibleSubTypes.stream().allMatch(it -> TypeManager.isPrimitive(it, getLanguage()))
+        || (possibleSubTypes.stream()
+                .allMatch(it -> LegacyTypeManager.isPrimitive(it, getLanguage()))
             && !this.possibleSubTypes.isEmpty())) {
       return;
     }

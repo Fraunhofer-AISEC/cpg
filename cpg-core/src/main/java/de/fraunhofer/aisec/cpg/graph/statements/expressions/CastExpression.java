@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager;
 import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,12 +71,13 @@ public class CastExpression extends Expression implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, List<HasType> root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     Type previous = this.type;
 
-    if (TypeManager.getInstance().isSupertypeOf(this.castType, src.getPropagationType(), this)) {
+    if (LegacyTypeManager.getInstance()
+        .isSupertypeOf(this.castType, src.getPropagationType(), this)) {
       setType(src.getPropagationType(), root);
     } else {
       resetTypes(this.getCastType());
@@ -89,7 +90,7 @@ public class CastExpression extends Expression implements TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, List<HasType> root) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     setPossibleSubTypes(new ArrayList<>(src.getPossibleSubTypes()), root);

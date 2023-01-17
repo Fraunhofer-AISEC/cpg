@@ -123,7 +123,7 @@ public class DeclaredReferenceExpression extends Expression
 
   @Override
   public void typeChanged(HasType src, List<HasType> root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     Type previous = this.type;
@@ -135,7 +135,7 @@ public class DeclaredReferenceExpression extends Expression
 
   @Override
   public void possibleSubTypesChanged(HasType src, List<HasType> root) {
-    if (!TypeManager.isTypeSystemActive()) {
+    if (!LegacyTypeManager.isTypeSystemActive()) {
       return;
     }
     List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
@@ -48,8 +49,9 @@ open class CLanguage :
 
     override fun newFrontend(
         config: TranslationConfiguration,
-        scopeManager: ScopeManager
+        scopeManager: ScopeManager,
+        typeManager: TypeManager
     ): CXXLanguageFrontend {
-        return CXXLanguageFrontend(this, config, scopeManager)
+        return CXXLanguageFrontend(this, config, scopeManager, typeManager)
     }
 }

@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -105,7 +105,7 @@ open class TypeResolver : Pass() {
     }
 
     protected fun removeDuplicateTypes() {
-        val typeManager = TypeManager.getInstance()
+        val typeManager = LegacyTypeManager.getInstance()
         // Remove duplicate firstOrderTypes
         firstOrderTypes.addAll(typeManager.firstOrderTypes)
 
@@ -239,6 +239,6 @@ open class TypeResolver : Pass() {
     override fun cleanup() {
         firstOrderTypes.clear()
         typeState.clear()
-        TypeManager.reset()
+        LegacyTypeManager.reset()
     }
 }
