@@ -1,7 +1,7 @@
 # Prerequsites
 
 * git
-* Java 11 (OpenSDK)
+* Java 17 (OpenSDK)
 
 # Build and Run
 
