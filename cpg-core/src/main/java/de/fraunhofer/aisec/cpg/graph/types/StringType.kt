@@ -46,10 +46,18 @@ class StringType : ObjectType {
         this.length = length
     }
     constructor(
-    typeName: String,
-    language: Language<out LanguageFrontend>?,
-    length: Int? = null
-    ) : super(typeName, Storage.AUTO, Qualifier(), listOf(), Modifier.NOT_APPLICABLE, false, language) {
+        typeName: String,
+        language: Language<out LanguageFrontend>?,
+        length: Int? = null
+    ) : super(
+        typeName,
+        Storage.AUTO,
+        Qualifier(),
+        listOf(),
+        Modifier.NOT_APPLICABLE,
+        false,
+        language
+    ) {
         this.length = length
     }
 }
