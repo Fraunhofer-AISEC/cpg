@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
@@ -37,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.Type.Qualifier
 import de.fraunhofer.aisec.cpg.graph.types.Type.Storage
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
@@ -67,6 +67,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
         get() = simpleTypes.keys
 
     // TODO: Maybe make this abstract?
+    @get:JsonIgnore
     open val simpleTypes: Map<String, Type> =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, ObjectType.Modifier.SIGNED),
@@ -91,7 +92,6 @@ abstract class Language<T : LanguageFrontend> : Node() {
     ): T
 
     fun getSimpleTypeOf(typeString: String) = simpleTypes[typeString]?.duplicate()
-
 
     open fun asStorageSpecifier(specifier: String): Storage? {
         // TODO: Which of these affect which language? Probably, we should separate it more clearly.

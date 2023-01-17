@@ -332,7 +332,8 @@ public abstract class Type extends Node {
       if (getLanguage() != null) {
         Storage storageSpecifier = getLanguage().asStorageSpecifier(keyword);
         if (storageSpecifier != null) this.setStorage(storageSpecifier);
-        if(getLanguage() instanceof HasQualifier) ((HasQualifier) getLanguage()).updateQualifier(keyword, this.getQualifier());
+        if (getLanguage() instanceof HasQualifier)
+          ((HasQualifier) getLanguage()).updateQualifier(keyword, this.getQualifier());
       }
     }
   }

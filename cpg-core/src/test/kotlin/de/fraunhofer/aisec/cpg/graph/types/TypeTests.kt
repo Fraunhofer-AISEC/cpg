@@ -168,14 +168,13 @@ internal class TypeTests : BaseTest() {
         var typeString = "private int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
-            ObjectType(
+            IntegerType(
                 "int",
                 Type.Storage.AUTO,
                 Type.Qualifier(),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                JavaLanguage()
+                JavaLanguage(),
+                32
             )
         assertEquals(expected, result)
 
@@ -183,14 +182,13 @@ internal class TypeTests : BaseTest() {
         typeString = "final int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
-            ObjectType(
+            IntegerType(
                 "int",
                 Type.Storage.AUTO,
                 Type.Qualifier(true, false, false, false),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                JavaLanguage()
+                JavaLanguage(),
+                32
             )
         assertEquals(expected, result)
 
@@ -198,14 +196,13 @@ internal class TypeTests : BaseTest() {
         typeString = "static int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
-            ObjectType(
+            IntegerType(
                 "int",
                 Type.Storage.STATIC,
                 Type.Qualifier(),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                JavaLanguage()
+                JavaLanguage(),
+                32
             )
         assertEquals(expected, result)
 
@@ -213,14 +210,13 @@ internal class TypeTests : BaseTest() {
         typeString = "public volatile int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
-            ObjectType(
+            IntegerType(
                 "int",
                 Type.Storage.AUTO,
                 Type.Qualifier(false, true, false, false),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                JavaLanguage()
+                JavaLanguage(),
+                32
             )
         assertEquals(expected, result)
 
@@ -243,14 +239,13 @@ internal class TypeTests : BaseTest() {
         typeString = "public final volatile int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
-            ObjectType(
+            IntegerType(
                 "int",
                 Type.Storage.AUTO,
                 Type.Qualifier(true, true, false, false),
-                ArrayList(),
                 ObjectType.Modifier.SIGNED,
-                true,
-                JavaLanguage()
+                JavaLanguage(),
+                32
             )
         assertEquals(expected, result)
 
@@ -259,14 +254,13 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
             PointerType(
-                ObjectType(
+                IntegerType(
                     "int",
                     Type.Storage.AUTO,
                     Type.Qualifier(),
-                    ArrayList(),
                     ObjectType.Modifier.SIGNED,
-                    true,
-                    JavaLanguage()
+                    JavaLanguage(),
+                    32
                 ),
                 PointerType.PointerOrigin.ARRAY
             )
@@ -587,7 +581,7 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             IntegerType(
-                "int",
+                "unsigned int",
                 Type.Storage.AUTO,
                 Type.Qualifier(),
                 ObjectType.Modifier.UNSIGNED,
@@ -624,7 +618,7 @@ internal class TypeTests : BaseTest() {
         // Test 11: Unsigned + const + compound primitive Types
         expected =
             IntegerType(
-                "long long int",
+                "unsigned long long int",
                 Type.Storage.AUTO,
                 Type.Qualifier(true, false, false, false),
                 ObjectType.Modifier.UNSIGNED,
@@ -879,7 +873,7 @@ internal class TypeTests : BaseTest() {
                         32
                     ),
                     IntegerType(
-                        "long",
+                        "unsigned long",
                         Type.Storage.AUTO,
                         Type.Qualifier(),
                         ObjectType.Modifier.UNSIGNED,

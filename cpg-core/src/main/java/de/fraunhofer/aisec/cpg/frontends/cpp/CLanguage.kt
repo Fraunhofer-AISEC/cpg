@@ -65,17 +65,17 @@ open class CLanguage :
             "signed int" to IntegerType("int", 32, this, ObjectType.Modifier.SIGNED),
             "signed long" to IntegerType("long", 64, this, ObjectType.Modifier.SIGNED),
             "signed long long int" to
-                    IntegerType("long long int", 64, this, ObjectType.Modifier.SIGNED),
+                IntegerType("long long int", 64, this, ObjectType.Modifier.SIGNED),
             "float" to FloatingPointType("float", 32, this, ObjectType.Modifier.SIGNED),
             "double" to FloatingPointType("double", 64, this, ObjectType.Modifier.SIGNED),
             "unsigned char" to IntegerType("unsigned char", 8, this, ObjectType.Modifier.UNSIGNED),
             "unsigned byte" to IntegerType("unsigned byte", 8, this, ObjectType.Modifier.UNSIGNED),
             "unsigned short" to
-                    IntegerType("unsigned short", 16, this, ObjectType.Modifier.UNSIGNED),
+                IntegerType("unsigned short", 16, this, ObjectType.Modifier.UNSIGNED),
             "unsigned int" to IntegerType("unsigned int", 32, this, ObjectType.Modifier.UNSIGNED),
             "unsigned long" to IntegerType("unsigned long", 64, this, ObjectType.Modifier.UNSIGNED),
             "unsigned long long int" to
-                    IntegerType("unsigned long long int", 64, this, ObjectType.Modifier.UNSIGNED)
+                IntegerType("unsigned long long int", 64, this, ObjectType.Modifier.UNSIGNED)
         )
 
     override fun newFrontend(

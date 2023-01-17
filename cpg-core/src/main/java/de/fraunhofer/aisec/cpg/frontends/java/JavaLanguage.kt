@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
@@ -54,8 +53,7 @@ open class JavaLanguage :
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
 
-
-    override val simpleTypes: Map<String, Type> =
+    override val simpleTypes =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, ObjectType.Modifier.SIGNED),
             "byte" to IntegerType("byte", 8, this, ObjectType.Modifier.SIGNED),

@@ -163,9 +163,7 @@ interface HasQualifier : LanguageTrait {
     /** The qualifiers which exist in the language. */
     val qualifiers: List<String>
 
-    /**
-     * Updates the [old] qualifier based on [qualifierString].
-     */
+    /** Updates the [old] qualifier based on [qualifierString]. */
     fun updateQualifier(qualifierString: String, old: Type.Qualifier): Boolean {
         if (qualifierString !in qualifiers) {
             return false
