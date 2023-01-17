@@ -39,7 +39,8 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val namespaceDelimiter = "::"
     override val frontend: KClass<out LLVMIRLanguageFrontend> = LLVMIRLanguageFrontend::class
 
-    // TODO: In theory, the integers can have any bitwidth from 1 to 1^32 bits. It's not known if they are interpreted as signed or unsigned.
+    // TODO: In theory, the integers can have any bitwidth from 1 to 1^32 bits. It's not known if
+    // they are interpreted as signed or unsigned.
     override val simpleTypes =
         mapOf(
             "i1" to IntegerType("i1", 1, this, ObjectType.Modifier.NOT_APPLICABLE),
