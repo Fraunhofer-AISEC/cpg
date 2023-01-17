@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.StringType
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
@@ -62,7 +63,9 @@ open class JavaLanguage :
             "int" to IntegerType("int", 32, this, ObjectType.Modifier.SIGNED),
             "long" to IntegerType("long", 64, this, ObjectType.Modifier.SIGNED),
             "float" to FloatingPointType("float", 32, this, ObjectType.Modifier.SIGNED),
-            "double" to FloatingPointType("double", 64, this, ObjectType.Modifier.SIGNED)
+            "double" to FloatingPointType("double", 64, this, ObjectType.Modifier.SIGNED),
+            "String" to StringType("java.lang.String", this),
+            "java.lang.String" to StringType("java.lang.String", this)
         )
 
     override fun newFrontend(

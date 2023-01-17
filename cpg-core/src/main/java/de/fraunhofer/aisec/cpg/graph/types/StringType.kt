@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 
 class StringType : ObjectType {
-    val length: Int
+    val length: Int?
 
     constructor() : super() {
-        length = -1
+        length = null
     }
 
     constructor(
@@ -41,8 +41,15 @@ class StringType : ObjectType {
         qualifier: Qualifier,
         generics: List<Type>,
         language: Language<out LanguageFrontend>?,
-        length: Int
-    ) : super(typeName, storage, qualifier, generics, Modifier.NOT_APPLICABLE, true, language) {
+        length: Int? = null
+    ) : super(typeName, storage, qualifier, generics, Modifier.NOT_APPLICABLE, false, language) {
+        this.length = length
+    }
+    constructor(
+    typeName: String,
+    language: Language<out LanguageFrontend>?,
+    length: Int? = null
+    ) : super(typeName, Storage.AUTO, Qualifier(), listOf(), Modifier.NOT_APPLICABLE, false, language) {
         this.length = length
     }
 }

@@ -650,7 +650,7 @@ public class TypeParser {
       }
     }
 
-    Type.Storage storageValue = storageList.size() > 0 ? storageList.get(0) : Type.Storage.AUTO;
+    Type.Storage storageValue = !storageList.isEmpty() ? storageList.get(0) : Type.Storage.AUTO;
 
     // Once all preceding known keywords (if any) are handled the next word must be the TypeName
     if (counter >= typeBlocks.size()) {

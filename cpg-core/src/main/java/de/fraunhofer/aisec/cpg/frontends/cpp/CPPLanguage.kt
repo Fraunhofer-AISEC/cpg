@@ -71,7 +71,8 @@ class CPPLanguage :
             "unsigned int" to IntegerType("unsigned int", 32, this, ObjectType.Modifier.UNSIGNED),
             "unsigned long" to IntegerType("unsigned long", 64, this, ObjectType.Modifier.UNSIGNED),
             "unsigned long long int" to
-                IntegerType("unsigned long long int", 64, this, ObjectType.Modifier.UNSIGNED)
+                IntegerType("unsigned long long int", 64, this, ObjectType.Modifier.UNSIGNED),
+            "std::string" to StringType("std::string", this),
         )
 
     /**
