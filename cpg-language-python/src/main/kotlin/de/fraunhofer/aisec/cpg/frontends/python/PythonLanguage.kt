@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
@@ -38,6 +40,15 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
+
+    override val simpleTypes =
+        mapOf(
+            "bool" to IntegerType("bool", 1, this, ObjectType.Modifier.NOT_APPLICABLE),
+            "int" to IntegerType("int", Integer.MAX_VALUE, this, ObjectType.Modifier.NOT_APPLICABLE), // Unlimited precision
+            "float" to FloatingPointType("float", 32, this, ObjectType.Modifier.NOT_APPLICABLE), // This depends on the implementation
+            "complex" to NumericType("complex", null, this, ObjectType.Modifier.NOT_APPLICABLE), // It's two floats
+            "str" to StringType("str", Type.Storage.AUTO, Type.Qualifier(), listOf(), this, Integer.MAX_VALUE)
+        )
 
     override fun newFrontend(
         config: TranslationConfiguration,

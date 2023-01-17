@@ -362,7 +362,7 @@ public class TypeParser {
       return finalType;
     }
 
-    language.updateQualifier(part, finalType.getQualifier());
+    if(language instanceof HasQualifier) ((HasQualifier) language).updateQualifier(part, finalType.getQualifier());
 
     return finalType;
   }
@@ -547,7 +547,7 @@ public class TypeParser {
       // Check storage and qualifier specifiers that are defined after the typeName e.g. int const
       Type.Storage storageSpecifier = language.asStorageSpecifier(part);
       if (storageSpecifier != null) finalType.setStorage(storageSpecifier);
-      language.updateQualifier(part, finalType.getQualifier());
+      if(language instanceof HasQualifier) ((HasQualifier) language).updateQualifier(part, finalType.getQualifier());
     }
     return finalType;
   }
@@ -636,7 +636,7 @@ public class TypeParser {
         storageList.add(specifier);
         counter++;
       } else {
-        if (language.updateQualifier(part, qualifier)) {
+        if (language instanceof HasQualifier && ((HasQualifier) language).updateQualifier(part, qualifier)) {
           counter++;
         } else if (isElaboratedTypeSpecifier(part, language)) {
           // ignore elaborated types for now

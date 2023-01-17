@@ -162,6 +162,37 @@ interface HasSuperClasses : LanguageTrait {
 interface HasQualifier : LanguageTrait {
     /** The qualifiers which exist in the language. */
     val qualifiers: List<String>
+
+    /**
+     * Updates the [old] qualifier based on [qualifierString].
+     */
+    fun updateQualifier(qualifierString: String, old: Type.Qualifier): Boolean {
+        if (qualifierString !in qualifiers) {
+            return false
+        }
+        val qualifier = old
+        when (qualifierString) {
+            "final",
+            "const" -> {
+                qualifier.isConst = true
+                return true
+            }
+            "volatile" -> {
+                qualifier.isVolatile = true
+                return true
+            }
+            "restrict" -> {
+                qualifier.isRestrict = true
+                return true
+            }
+            "atomic" -> {
+                qualifier.isAtomic = true
+                return true
+            }
+        }
+
+        return false
+    }
 }
 
 /**

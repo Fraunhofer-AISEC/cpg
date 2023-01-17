@@ -28,6 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
@@ -49,6 +53,19 @@ open class JavaLanguage :
     override val unknownTypeString = listOf("var")
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
+
+
+    override val simpleTypes: Map<String, Type> =
+        mapOf(
+            "boolean" to IntegerType("boolean", 1, this, ObjectType.Modifier.SIGNED),
+            "byte" to IntegerType("byte", 8, this, ObjectType.Modifier.SIGNED),
+            "char" to IntegerType("char", 16, this, ObjectType.Modifier.SIGNED),
+            "short" to IntegerType("short", 16, this, ObjectType.Modifier.SIGNED),
+            "int" to IntegerType("int", 32, this, ObjectType.Modifier.SIGNED),
+            "long" to IntegerType("long", 64, this, ObjectType.Modifier.SIGNED),
+            "float" to FloatingPointType("float", 32, this, ObjectType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, ObjectType.Modifier.SIGNED)
+        )
 
     override fun newFrontend(
         config: TranslationConfiguration,

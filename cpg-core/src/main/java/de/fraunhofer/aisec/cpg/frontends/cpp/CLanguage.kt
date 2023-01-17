@@ -28,6 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
@@ -46,6 +49,34 @@ open class CLanguage :
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
+
+    override val simpleTypes =
+        mapOf(
+            "boolean" to IntegerType("boolean", 1, this, ObjectType.Modifier.SIGNED),
+            "char" to IntegerType("char", 8, this, ObjectType.Modifier.NOT_APPLICABLE),
+            "byte" to IntegerType("byte", 8, this, ObjectType.Modifier.SIGNED),
+            "short" to IntegerType("short", 16, this, ObjectType.Modifier.SIGNED),
+            "int" to IntegerType("int", 32, this, ObjectType.Modifier.SIGNED),
+            "long" to IntegerType("long", 64, this, ObjectType.Modifier.SIGNED),
+            "long long int" to IntegerType("long long int", 64, this, ObjectType.Modifier.SIGNED),
+            "signed char" to IntegerType("signed char", 8, this, ObjectType.Modifier.SIGNED),
+            "signed byte" to IntegerType("byte", 8, this, ObjectType.Modifier.SIGNED),
+            "signed short" to IntegerType("short", 16, this, ObjectType.Modifier.SIGNED),
+            "signed int" to IntegerType("int", 32, this, ObjectType.Modifier.SIGNED),
+            "signed long" to IntegerType("long", 64, this, ObjectType.Modifier.SIGNED),
+            "signed long long int" to
+                    IntegerType("long long int", 64, this, ObjectType.Modifier.SIGNED),
+            "float" to FloatingPointType("float", 32, this, ObjectType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, ObjectType.Modifier.SIGNED),
+            "unsigned char" to IntegerType("unsigned char", 8, this, ObjectType.Modifier.UNSIGNED),
+            "unsigned byte" to IntegerType("unsigned byte", 8, this, ObjectType.Modifier.UNSIGNED),
+            "unsigned short" to
+                    IntegerType("unsigned short", 16, this, ObjectType.Modifier.UNSIGNED),
+            "unsigned int" to IntegerType("unsigned int", 32, this, ObjectType.Modifier.UNSIGNED),
+            "unsigned long" to IntegerType("unsigned long", 64, this, ObjectType.Modifier.UNSIGNED),
+            "unsigned long long int" to
+                    IntegerType("unsigned long long int", 64, this, ObjectType.Modifier.UNSIGNED)
+        )
 
     override fun newFrontend(
         config: TranslationConfiguration,

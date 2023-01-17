@@ -63,9 +63,10 @@ abstract class Language<T : LanguageFrontend> : Node() {
     abstract val frontend: KClass<out T>
 
     /** The primitive types of this language. */
-    open val primitiveTypes: Set<String>
+    val primitiveTypes: Set<String>
         get() = simpleTypes.keys
 
+    // TODO: Maybe make this abstract?
     open val simpleTypes: Map<String, Type> =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, ObjectType.Modifier.SIGNED),
@@ -74,24 +75,8 @@ abstract class Language<T : LanguageFrontend> : Node() {
             "short" to IntegerType("short", 16, this, ObjectType.Modifier.SIGNED),
             "int" to IntegerType("int", 32, this, ObjectType.Modifier.SIGNED),
             "long" to IntegerType("long", 64, this, ObjectType.Modifier.SIGNED),
-            "long long int" to IntegerType("long long int", 64, this, ObjectType.Modifier.SIGNED),
-            "signed char" to IntegerType("signed char", 8, this, ObjectType.Modifier.SIGNED),
-            "signed byte" to IntegerType("byte", 8, this, ObjectType.Modifier.SIGNED),
-            "signed short" to IntegerType("short", 16, this, ObjectType.Modifier.SIGNED),
-            "signed int" to IntegerType("int", 32, this, ObjectType.Modifier.SIGNED),
-            "signed long" to IntegerType("long", 64, this, ObjectType.Modifier.SIGNED),
-            "signed long long int" to
-                IntegerType("long long int", 64, this, ObjectType.Modifier.SIGNED),
             "float" to FloatingPointType("float", 32, this, ObjectType.Modifier.SIGNED),
             "double" to FloatingPointType("double", 64, this, ObjectType.Modifier.SIGNED),
-            "unsigned char" to IntegerType("unsigned char", 8, this, ObjectType.Modifier.UNSIGNED),
-            "unsigned byte" to IntegerType("unsigned byte", 8, this, ObjectType.Modifier.UNSIGNED),
-            "unsigned short" to
-                IntegerType("unsigned short", 16, this, ObjectType.Modifier.UNSIGNED),
-            "unsigned int" to IntegerType("unsigned int", 32, this, ObjectType.Modifier.UNSIGNED),
-            "unsigned long" to IntegerType("unsigned long", 64, this, ObjectType.Modifier.UNSIGNED),
-            "unsigned long long int" to
-                IntegerType("unsigned long long int", 64, this, ObjectType.Modifier.UNSIGNED)
         )
 
     /** The access modifiers of this programming language */
@@ -107,42 +92,6 @@ abstract class Language<T : LanguageFrontend> : Node() {
 
     fun getSimpleTypeOf(typeString: String) = simpleTypes[typeString]?.duplicate()
 
-    // TODO: These are language specific too.
-    private val VOLATILE_QUALIFIER = "volatile"
-    private val FINAL_QUALIFIER = "final"
-    private val CONST_QUALIFIER = "const"
-    private val RESTRICT_QUALIFIER = "restrict"
-    private val ATOMIC_QUALIFIER = "atomic"
-
-    open fun updateQualifier(qualifierString: String, old: Qualifier): Boolean {
-        if (this !is HasQualifier || qualifierString !in qualifiers) {
-            return false
-        }
-        val qualifier = old
-        when (qualifierString) {
-            FINAL_QUALIFIER,
-            CONST_QUALIFIER -> {
-                qualifier.isConst = true
-                return true
-            }
-            VOLATILE_QUALIFIER -> {
-                qualifier.isVolatile = true
-                return true
-            }
-            RESTRICT_QUALIFIER -> {
-                qualifier.isRestrict = true
-
-                return true
-            }
-            ATOMIC_QUALIFIER -> {
-                qualifier.isAtomic = true
-
-                return true
-            }
-        }
-
-        return false
-    }
 
     open fun asStorageSpecifier(specifier: String): Storage? {
         // TODO: Which of these affect which language? Probably, we should separate it more clearly.

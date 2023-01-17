@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.frontends.HasQualifier;
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Name;
@@ -331,7 +332,7 @@ public abstract class Type extends Node {
       if (getLanguage() != null) {
         Storage storageSpecifier = getLanguage().asStorageSpecifier(keyword);
         if (storageSpecifier != null) this.setStorage(storageSpecifier);
-        getLanguage().updateQualifier(keyword, this.getQualifier());
+        if(getLanguage() instanceof HasQualifier) ((HasQualifier) getLanguage()).updateQualifier(keyword, this.getQualifier());
       }
     }
   }
