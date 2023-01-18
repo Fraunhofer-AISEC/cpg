@@ -122,32 +122,18 @@ object JepSingleton {
                 virtualEnv = System.getenv("CPG_PYTHON_VIRTUALENV")
             }
 
+            val virtualEnvPath = "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/"
+
             val wellKnownPaths =
                 listOf(
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.12/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.12/site-packages/jep/libjep.jnilib"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.11/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.11/site-packages/jep/libjep.jnilib"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.10/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.10/site-packages/jep/libjep.jnilib"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.jnilib"
-                    ),
+                    File("${virtualEnvPath}/lib/python3.12/site-packages/jep/libjep.so"),
+                    File("${virtualEnvPath}/lib/python3.12/site-packages/jep/libjep.jnilib"),
+                    File("${virtualEnvPath}/lib/python3.11/site-packages/jep/libjep.so"),
+                    File("${virtualEnvPath}/lib/python3.11/site-packages/jep/libjep.jnilib"),
+                    File("${virtualEnvPath}/lib/python3.10/site-packages/jep/libjep.so"),
+                    File("${virtualEnvPath}/lib/python3.10/site-packages/jep/libjep.jnilib"),
+                    File("${virtualEnvPath}/lib/python3.9/site-packages/jep/libjep.so"),
+                    File("${virtualEnvPath}/lib/python3.9/site-packages/jep/libjep.jnilib"),
                     File("/usr/lib/libjep.so"),
                     File("/Library/Java/Extensions/libjep.jnilib")
                 )
