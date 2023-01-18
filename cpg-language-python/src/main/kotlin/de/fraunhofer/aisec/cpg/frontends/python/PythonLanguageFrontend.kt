@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import jep.JepException
 
-@SupportsParallelParsing(false)
+
 class PythonLanguageFrontend(
     language: Language<PythonLanguageFrontend>,
     config: TranslationConfiguration,
