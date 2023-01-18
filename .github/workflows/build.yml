@@ -118,7 +118,7 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar sonar \
+            ./gradlew --no-daemon -Pversion=$VERSION -Pexperimental -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar sonar \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
