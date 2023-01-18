@@ -60,10 +60,10 @@ jobs:
       - uses: pguyot/arm-runner-action@v2
         id: build_image
         with:
-          base_image: raspbian_lite:latest
+          base_image: raspios_lite_arm64:latest
           commands: |
             apt update
-            apt install
+            wget https://go.dev/dl/go1.19.5.linux-arm64.tar.gz && tar xfvz https://go.dev/dl/go1.19.5.linux-arm64.tar.gz
 
   build:
     runs-on: ubuntu-latest
