@@ -51,6 +51,20 @@ jobs:
           name: libcpgo-arm64.dylib
           path: cpg-language-go/src/main/resources/libcpgo-arm64.dylib
 
+  build-arm-linux-cpgo:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of SonarQube analysis
+      - uses: pguyot/arm-runner-action@v2
+        id: build_image
+        with:
+          base_image: raspbian_lite:latest
+          commands: |
+            apt update
+            apt install
+
   build:
     runs-on: ubuntu-latest
     needs: build-cpgo-osx
