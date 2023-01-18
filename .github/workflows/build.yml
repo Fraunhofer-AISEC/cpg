@@ -63,6 +63,7 @@ jobs:
           base_image: raspios_lite_arm64:latest
           commands: |
             apt update
+            apt install ca-certificates
             wget https://go.dev/dl/go1.19.5.linux-arm64.tar.gz && tar xfvz https://go.dev/dl/go1.19.5.linux-arm64.tar.gz
 
   build:
