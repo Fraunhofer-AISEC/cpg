@@ -52,7 +52,7 @@ jobs:
           path: cpg-language-go/src/main/resources/libcpgo-arm64.dylib
 
   build-arm-linux-cpgo:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
