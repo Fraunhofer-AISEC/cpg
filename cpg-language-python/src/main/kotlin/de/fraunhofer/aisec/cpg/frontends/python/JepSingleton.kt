@@ -206,8 +206,6 @@ object JepSingleton {
             throw TranslationException("Python failed with message: $e")
         } catch (e: Exception) {
             throw e
-        } finally {
-            // interp?.close()
         }
     }
 }

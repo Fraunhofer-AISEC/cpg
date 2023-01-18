@@ -23,7 +23,6 @@
 #                    \______/ \__|       \______/
 #
 from ._misc import NOT_IMPLEMENTED_MSG
-from ._misc import handle_operator_code
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
 from de.fraunhofer.aisec.cpg.graph import NodeBuilderKt
@@ -52,24 +51,32 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
     elif isinstance(expr, ast.BinOp):
-        # This could be a simple + or a complex number 3+5j
+        # This could be a simple + or a complex number like 3+5j
         lhs = self.handle_expression(expr.left)
         rhs = self.handle_expression(expr.right)
         if (isinstance(expr.right, ast.Constant)
                 and isinstance(expr.right.value, complex)):
             if not (self.is_literal(lhs) and self.is_literal(rhs)):
-                print("ERROR")  # TODO
+                self.log_with_loc(
+                    "Expected two literals. Returning a \"None\" Literal.",
+                    loglevel="ERROR")
+                return ExpressionBuilderKt(
+                    self.frontend,
+                    None,
+                    UnknownType.getUnknownType(),
+                    self.get_src_code(expr),
+                    expr)
             # we got a complex number
-            complexType = NodeBuilderKt.parseType(self.frontend, "complex")
+            complextype = NodeBuilderKt.parseType(self.frontend, "complex")
 
             # TODO: fix this once the CPG supports complex numbers
-            realPart = complex(lhs.getValue())
-            imagPart = complex(rhs.getValue())
+            realpart = complex(lhs.getValue())
+            imagpart = complex(rhs.getValue())
             ret = ExpressionBuilderKt.newLiteral(
                 self.frontend,
                 # currently no support for complex numbers in the java part
-                str(realPart + imagPart),
-                complexType,
+                str(realpart + imagpart),
+                complextype,
                 self.get_src_code(expr),
                 expr)
             return ret
@@ -96,8 +103,6 @@ def handle_expression_impl(self, expr):
             self.frontend, test, body, orelse, UnknownType.getUnknownType())
         return r
     elif isinstance(expr, ast.Dict):
-        self.log_with_loc("Handling a \"dict\": %s" %
-                          (ast.dump(expr)))
         ile = ExpressionBuilderKt.newInitializerListExpression(
             self.frontend, self.get_src_code(expr))
 
@@ -213,7 +218,7 @@ def handle_expression_impl(self, expr):
         ref = self.handle_expression(expr.func)
         self.log_with_loc("Parsed ref as %s" % ref)
 
-        name = ref.getName()
+        refname = ref.getName()
 
         if self.is_member_expression(ref):
             call = ExpressionBuilderKt.newMemberCallExpression(
@@ -223,7 +228,7 @@ def handle_expression_impl(self, expr):
             # try to see, whether this refers to a known class and thus is a
             # constructor.
             record = self.scopemanager.getRecordForName(
-                self.scopemanager.getCurrentScope(), name)
+                self.scopemanager.getCurrentScope(), refname)
             if record is not None:
                 self.log_with_loc("Received a record: %s" % record)
                 call = ExpressionBuilderKt.newConstructExpression(
@@ -232,7 +237,7 @@ def handle_expression_impl(self, expr):
                 call.setType(tpe)
             else:
                 # TODO int, float, ...
-                if name == "str" and len(expr.args) == 1:
+                if refname == "str" and len(expr.args) == 1:
                     cast = ExpressionBuilderKt.newCastExpression(
                         self.frontend, self.get_src_code(expr))
                     cast.setCastType(
@@ -243,7 +248,7 @@ def handle_expression_impl(self, expr):
                 else:
                     call = ExpressionBuilderKt.newCallExpression(
                         self.frontend,
-                        ref, name, self.get_src_code(expr))
+                        ref, refname, self.get_src_code(expr))
         for a in expr.args:
             call.addArgument(self.handle_expression(a))
         for keyword in expr.keywords:
@@ -267,7 +272,7 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
     elif isinstance(expr, ast.Constant):
-        resultValue = expr.value
+        resultvalue = expr.value
         if isinstance(expr.value, type(None)):
             tpe = NodeBuilderKt.parseType(self.frontend, "None")
         elif isinstance(expr.value, bool):
@@ -279,7 +284,7 @@ def handle_expression_impl(self, expr):
         elif isinstance(expr.value, complex):
             tpe = NodeBuilderKt.parseType(self.frontend, "complex")
             # TODO: fix this once the CPG supports complex numbers
-            resultValue = str(resultValue)
+            resultvalue = str(resultvalue)
         elif isinstance(expr.value, str):
             tpe = NodeBuilderKt.parseType(self.frontend, "str")
         elif isinstance(expr.value, bytes):
@@ -292,7 +297,7 @@ def handle_expression_impl(self, expr):
             tpe = UnknownType.getUnknownType()
         lit = ExpressionBuilderKt.newLiteral(
             self.frontend,
-            resultValue, tpe, self.get_src_code(expr))
+            resultvalue, tpe, self.get_src_code(expr))
         return lit
 
     elif isinstance(expr, ast.Attribute):
