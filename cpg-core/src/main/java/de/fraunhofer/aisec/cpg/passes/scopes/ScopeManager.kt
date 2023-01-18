@@ -792,9 +792,4 @@ class ScopeManager : ScopeProvider {
             )
         }
     }
-
-    /** Returns a new [Name] based on the [localName] and the current namespace as parent. */
-    fun fqn(localName: String): Name {
-        return this.currentNamespace.fqn(localName)
-    }
 }
