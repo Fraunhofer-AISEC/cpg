@@ -79,6 +79,8 @@ class PythonLanguageFrontend(
             throw TranslationException("Python failed with message: $e")
         } catch (e: Exception) {
             throw e
+        } finally {
+            pythonInterpreter.close()
         }
 
         return tu
