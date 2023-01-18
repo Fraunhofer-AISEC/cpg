@@ -30,7 +30,7 @@ import java.nio.file.Path
 
 class PyTempFileHolder {
     // create temporary file and folder
-    var pyZipOnDisk: Path = Files.createTempFile("cpg_python", ".zip")
+    private var pyZipOnDisk: Path = Files.createTempFile("cpg_python", ".zip")
     var pyFolder: Path = Files.createTempDirectory("cpg_python")
 
     protected fun finalize() {

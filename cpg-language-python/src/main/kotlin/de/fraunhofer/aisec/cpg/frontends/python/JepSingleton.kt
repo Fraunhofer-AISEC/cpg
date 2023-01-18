@@ -194,8 +194,7 @@ object JepSingleton {
                 interp.runScript(entryScript.toString())
             } else {
                 // fall back to the cpg.py in the class's resources
-                val pyInitFile = classLoader.getResource("/cpg.py")
-                interp.exec(pyInitFile?.readText())
+                interp.exec(classLoader.getResource("/cpg.py")?.readText())
             }
 
             if (debugEgg != null) {
