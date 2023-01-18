@@ -61,19 +61,6 @@ sonarqube {
     }
 }
 
-val publishAllModules by tasks.registering() {
-    subprojects.forEach {
-        dependsOn(it.tasks.named("publish"))
-    }
-}
-
-val publishAllModulesToMavenLocal by tasks.registering() {
-    subprojects.forEach {
-        dependsOn(it.tasks.named("publishToMavenLocal"))
-    }
-}
-
-
 //
 // Load the properties that define which frontends to include
 //
