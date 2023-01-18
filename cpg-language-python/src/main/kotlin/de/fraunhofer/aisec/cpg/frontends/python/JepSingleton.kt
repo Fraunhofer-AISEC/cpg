@@ -123,20 +123,18 @@ object JepSingleton {
             }
 
             val virtualEnvPath = "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/"
-
-            val wellKnownPaths =
-                listOf(
-                    File("${virtualEnvPath}/lib/python3.12/site-packages/jep/libjep.so"),
-                    File("${virtualEnvPath}/lib/python3.12/site-packages/jep/libjep.jnilib"),
-                    File("${virtualEnvPath}/lib/python3.11/site-packages/jep/libjep.so"),
-                    File("${virtualEnvPath}/lib/python3.11/site-packages/jep/libjep.jnilib"),
-                    File("${virtualEnvPath}/lib/python3.10/site-packages/jep/libjep.so"),
-                    File("${virtualEnvPath}/lib/python3.10/site-packages/jep/libjep.jnilib"),
-                    File("${virtualEnvPath}/lib/python3.9/site-packages/jep/libjep.so"),
-                    File("${virtualEnvPath}/lib/python3.9/site-packages/jep/libjep.jnilib"),
-                    File("/usr/lib/libjep.so"),
-                    File("/Library/Java/Extensions/libjep.jnilib")
+            val pythonVersions = listOf("3.9", "3.10", "3.11", "3.12")
+            val wellKnownPaths = mutableListOf<File>()
+            pythonVersions.forEach { version ->
+                wellKnownPaths.add(
+                    File("${virtualEnvPath}/lib/python${version}/site-packages/jep/libjep.so")
                 )
+                wellKnownPaths.add(
+                    File("${virtualEnvPath}/lib/python${version}/site-packages/jep/libjep.jnilib")
+                )
+            }
+            wellKnownPaths.add(File("/usr/lib/libjep.so"))
+            wellKnownPaths.add(File("/Library/Java/Extensions/libjep.jnilib"))
 
             wellKnownPaths.forEach {
                 if (it.exists()) {
@@ -154,7 +152,7 @@ object JepSingleton {
 
     /** Setup and configure (load the Python code and trigger the debug script) an interpreter. */
     fun getInterp(): SubInterpreter {
-        val interp: SubInterpreter = SubInterpreter(config)
+        val interp = SubInterpreter(config)
         var found = false
         // load the python code
         // check, if the cpg.py is either directly available in the current directory or in the
