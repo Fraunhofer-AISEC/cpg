@@ -39,14 +39,13 @@ import org.slf4j.LoggerFactory
  * Takes care of configuring Jep according to some well known paths on popular operating systems.
  */
 object JepSingleton {
-    val interp: SubInterpreter
     private var config = JepConfig()
+    private val classLoader = javaClass
 
     private val LOGGER = LoggerFactory.getLogger(javaClass)
 
     init {
         val tempFileHolder = PyTempFileHolder()
-        val classLoader = javaClass
         val pyInitFile = classLoader.getResource("/CPGPython/__init__.py")
 
         config.redirectStdErr(System.err)
@@ -159,7 +158,12 @@ object JepSingleton {
                 }
             }
         }
+    }
 
+    /** Setup and configure (load the Python code and trigger the debug script) an interpreter. */
+    fun getInterp(): SubInterpreter {
+        val interp: SubInterpreter = SubInterpreter(config)
+        var found = false
         // load the python code
         // check, if the cpg.py is either directly available in the current directory or in the
         // src/main/python folder
@@ -172,8 +176,6 @@ object JepSingleton {
                 Path.of("cpg-library/src/main/python").resolve(modulePath)
             )
 
-        var found = false
-
         var entryScript: Path? = null
         possibleLocations.forEach {
             if (it.toFile().exists()) {
@@ -183,7 +185,6 @@ object JepSingleton {
         }
 
         try {
-            interp = SubInterpreter(config)
 
             val debugEgg = System.getenv("DEBUG_PYTHON_EGG")
             val debugHost = System.getenv("DEBUG_PYTHON_HOST") ?: "localhost"
@@ -202,9 +203,11 @@ object JepSingleton {
             }
         } catch (e: JepException) {
             e.printStackTrace()
-            throw TranslationException("Python failed with message: $e")
+            throw TranslationException("Initializing Python failed with message: $e")
         } catch (e: Exception) {
             throw e
         }
+
+        return interp
     }
 }

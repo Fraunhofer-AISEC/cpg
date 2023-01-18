@@ -28,14 +28,12 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import jep.JepException
-
 
 class PythonLanguageFrontend(
     language: Language<PythonLanguageFrontend>,
@@ -64,14 +62,17 @@ class PythonLanguageFrontend(
     }
 
     private fun parseInternal(code: String, path: String): TranslationUnitDeclaration {
+        val pythonInterpreter = jep.getInterp()
         val tu: TranslationUnitDeclaration
         try {
             // run python function parse_code()
-            tu = jep.interp.invoke("parse_code", this, code, path) as TranslationUnitDeclaration
+            tu =
+                pythonInterpreter.invoke("parse_code", this, code, path)
+                    as TranslationUnitDeclaration
 
             if (config.matchCommentsToNodes) {
                 // Parse comments and attach to nodes
-                jep.interp.invoke("parse_comments", this, code, path, tu)
+                pythonInterpreter.invoke("parse_comments", this, code, path, tu)
             }
         } catch (e: JepException) {
             e.printStackTrace()
