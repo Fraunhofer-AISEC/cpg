@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -205,6 +206,23 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 // other steps
                 previousWrites[currentNode.refersTo]?.lastOrNull()?.let {
                     currentNode.addPrevDFG(it)
+                }
+            } else if (currentNode is ForEachStatement) {
+                // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
+                // the "normal" case won't work. We handle this case separately here...
+
+                // This is what we write to the declaration
+                val iterable = currentNode.iterable as? Expression
+
+                // We wrote something to this variable declaration
+                writtenDecl =
+                    (currentNode.variable as? DeclarationStatement)?.singleDeclaration
+                        as? VariableDeclaration
+
+                writtenDecl?.let { wd ->
+                    iterable?.let { wd.addPrevDFG(it) }
+                    // Add the variable declaration to the list of previous write nodes in this path
+                    previousWrites[wd] = mutableListOf(wd)
                 }
             }
 

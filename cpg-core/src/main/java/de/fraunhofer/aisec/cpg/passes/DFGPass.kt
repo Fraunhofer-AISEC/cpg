@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -150,11 +149,6 @@ class DFGPass : Pass() {
      */
     private fun handleForEachStatement(node: ForEachStatement) {
         node.variable.addPrevDFG(node.iterable)
-
-        (node.iterable as? Expression)?.let {
-            ((node.variable as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration)
-                ?.initializer = it
-        }
     }
 
     /**
