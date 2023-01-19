@@ -29,10 +29,12 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import java.io.File
 import java.net.JarURLConnection
 import java.nio.file.Path
+import java.nio.file.Paths
 import jep.JepConfig
 import jep.JepException
 import jep.MainInterpreter
 import jep.SubInterpreter
+import kotlin.io.path.exists
 import org.slf4j.LoggerFactory
 
 /**
@@ -122,28 +124,60 @@ object JepSingleton {
                 virtualEnv = System.getenv("CPG_PYTHON_VIRTUALENV")
             }
 
-            val virtualEnvPath = "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/"
+            val virtualEnvPath =
+                Paths.get(System.getProperty("user.home"), ".virtualenvs", "${virtualEnv}/")
             val pythonVersions = listOf("3.9", "3.10", "3.11", "3.12")
-            val wellKnownPaths = mutableListOf<File>()
+            val wellKnownPaths = mutableListOf<Path>()
             pythonVersions.forEach { version ->
+                // Linux
                 wellKnownPaths.add(
-                    File("${virtualEnvPath}/lib/python${version}/site-packages/jep/libjep.so")
+                    Paths.get(
+                        "$virtualEnvPath",
+                        "lib",
+                        "python${version}",
+                        "site-packages",
+                        "jep",
+                        "libjep.so"
+                    )
                 )
+                // Mac OS
                 wellKnownPaths.add(
-                    File("${virtualEnvPath}/lib/python${version}/site-packages/jep/libjep.jnilib")
+                    Paths.get(
+                        "$virtualEnvPath",
+                        "lib",
+                        "python${version}",
+                        "site-packages",
+                        "jep",
+                        "libjep.jnilib"
+                    )
+                )
+                // Windows TODO: is this correct?
+                wellKnownPaths.add(
+                    Paths.get(
+                        "$virtualEnvPath",
+                        "lib",
+                        "python${version}",
+                        "site-packages",
+                        "jep",
+                        "libjep.dll"
+                    )
                 )
             }
-            wellKnownPaths.add(File("/usr/lib/libjep.so"))
-            wellKnownPaths.add(File("/Library/Java/Extensions/libjep.jnilib"))
+            try {
+                wellKnownPaths.add(Paths.get("/", "usr", "lib", "libjep.so"))
+                wellKnownPaths.add(Paths.get("/", "Library", "Java", "Extensions", "libjep.jnilib"))
+            } catch (e: Exception) {
+                // noop
+            }
 
             wellKnownPaths.forEach {
                 if (it.exists()) {
                     // Jep's configuration must be set before the first instance is created. Later
                     // calls
                     // to setJepLibraryPath and co result in failures.
-                    MainInterpreter.setJepLibraryPath(it.path)
+                    MainInterpreter.setJepLibraryPath(it.toString())
                     config.addIncludePaths(
-                        it.toPath().parent.parent.toString()
+                        it.parent.parent.toString()
                     ) // this assumes that the python code is also at the library's location
                 }
             }
@@ -161,9 +195,9 @@ object JepSingleton {
 
         val possibleLocations =
             listOf(
-                Path.of(".").resolve(modulePath),
-                Path.of("src/main/python").resolve(modulePath),
-                Path.of("cpg-library/src/main/python").resolve(modulePath)
+                Paths.get(".").resolve(modulePath),
+                Paths.get("src", "main", "python").resolve(modulePath),
+                Paths.get("cpg-library", "src", "main", "python").resolve(modulePath)
             )
 
         var entryScript: Path? = null
