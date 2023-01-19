@@ -25,23 +25,27 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import java.io.File
 import java.net.JarURLConnection
+import java.nio.file.Path
 import jep.JepConfig
+import jep.JepException
 import jep.MainInterpreter
+import jep.SubInterpreter
 import org.slf4j.LoggerFactory
 
 /**
  * Takes care of configuring Jep according to some well known paths on popular operating systems.
  */
 object JepSingleton {
-    var config = JepConfig()
+    private var config = JepConfig()
+    private val classLoader = javaClass
 
     private val LOGGER = LoggerFactory.getLogger(javaClass)
 
     init {
         val tempFileHolder = PyTempFileHolder()
-        val classLoader = javaClass
         val pyInitFile = classLoader.getResource("/CPGPython/__init__.py")
 
         config.redirectStdErr(System.err)
@@ -118,29 +122,19 @@ object JepSingleton {
                 virtualEnv = System.getenv("CPG_PYTHON_VIRTUALENV")
             }
 
-            val wellKnownPaths =
-                listOf(
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.11/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.11/site-packages/jep/libjep.jnilib"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.10/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.10/site-packages/jep/libjep.jnilib"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.jnilib"
-                    ),
-                    File("/usr/lib/libjep.so"),
-                    File("/Library/Java/Extensions/libjep.jnilib")
+            val virtualEnvPath = "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/"
+            val pythonVersions = listOf("3.9", "3.10", "3.11", "3.12")
+            val wellKnownPaths = mutableListOf<File>()
+            pythonVersions.forEach { version ->
+                wellKnownPaths.add(
+                    File("${virtualEnvPath}/lib/python${version}/site-packages/jep/libjep.so")
                 )
+                wellKnownPaths.add(
+                    File("${virtualEnvPath}/lib/python${version}/site-packages/jep/libjep.jnilib")
+                )
+            }
+            wellKnownPaths.add(File("/usr/lib/libjep.so"))
+            wellKnownPaths.add(File("/Library/Java/Extensions/libjep.jnilib"))
 
             wellKnownPaths.forEach {
                 if (it.exists()) {
@@ -154,5 +148,56 @@ object JepSingleton {
                 }
             }
         }
+    }
+
+    /** Setup and configure (load the Python code and trigger the debug script) an interpreter. */
+    fun getInterp(): SubInterpreter {
+        val interp = SubInterpreter(config)
+        var found = false
+        // load the python code
+        // check, if the cpg.py is either directly available in the current directory or in the
+        // src/main/python folder
+        val modulePath = Path.of("cpg.py")
+
+        val possibleLocations =
+            listOf(
+                Path.of(".").resolve(modulePath),
+                Path.of("src/main/python").resolve(modulePath),
+                Path.of("cpg-library/src/main/python").resolve(modulePath)
+            )
+
+        var entryScript: Path? = null
+        possibleLocations.forEach {
+            if (it.toFile().exists()) {
+                found = true
+                entryScript = it.toAbsolutePath()
+            }
+        }
+
+        try {
+
+            val debugEgg = System.getenv("DEBUG_PYTHON_EGG")
+            val debugHost = System.getenv("DEBUG_PYTHON_HOST") ?: "localhost"
+            val debugPort = System.getenv("DEBUG_PYTHON_PORT") ?: 52190
+
+            // load script
+            if (found) {
+                interp.runScript(entryScript.toString())
+            } else {
+                // fall back to the cpg.py in the class's resources
+                interp.exec(classLoader.getResource("/cpg.py")?.readText())
+            }
+
+            if (debugEgg != null) {
+                interp.invoke("enable_debugger", debugEgg, debugHost, debugPort)
+            }
+        } catch (e: JepException) {
+            e.printStackTrace()
+            throw TranslationException("Initializing Python failed with message: $e")
+        } catch (e: Exception) {
+            throw e
+        }
+
+        return interp
     }
 }
