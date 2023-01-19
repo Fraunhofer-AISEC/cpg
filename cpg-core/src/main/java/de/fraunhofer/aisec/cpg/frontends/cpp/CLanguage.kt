@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -82,8 +82,8 @@ open class CLanguage :
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager,
-        typeManager: TypeManager
+        typeCache: TypeCache
     ): CXXLanguageFrontend {
-        return CXXLanguageFrontend(this, config, scopeManager, typeManager)
+        return CXXLanguageFrontend(this, config, scopeManager, typeCache)
     }
 }

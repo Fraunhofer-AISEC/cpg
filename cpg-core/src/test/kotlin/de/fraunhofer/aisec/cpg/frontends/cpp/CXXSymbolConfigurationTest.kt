@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -52,7 +52,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                     CPPLanguage(),
                     TranslationConfiguration.builder().defaultPasses().build(),
                     ScopeManager(),
-                    TypeManager()
+                    TypeCache()
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
@@ -95,7 +95,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                         .defaultPasses()
                         .build(),
                     ScopeManager(),
-                    TypeManager()
+                    TypeCache()
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)

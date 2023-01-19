@@ -33,7 +33,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -88,7 +88,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
     abstract fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager = ScopeManager(),
-        typeManager: TypeManager = TypeManager()
+        typeCache: TypeCache = TypeCache()
     ): T
 
     fun getSimpleTypeOf(typeString: String) = simpleTypes[typeString]?.duplicate()

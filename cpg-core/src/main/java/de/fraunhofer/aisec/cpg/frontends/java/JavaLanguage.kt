@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -71,8 +71,8 @@ open class JavaLanguage :
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager,
-        typeManager: TypeManager
+        typeCache: TypeCache
     ): JavaLanguageFrontend {
-        return JavaLanguageFrontend(this, config, scopeManager, typeManager)
+        return JavaLanguageFrontend(this, config, scopeManager, typeCache)
     }
 }

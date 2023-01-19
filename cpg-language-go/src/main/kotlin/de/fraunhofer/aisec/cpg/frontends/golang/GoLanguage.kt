@@ -28,21 +28,22 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
-import kotlin.reflect.KClass
 
 /** The Go language. */
 open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
-    override val frontend: KClass<out GoLanguageFrontend> = GoLanguageFrontend::class
+    override val frontend = GoLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
 
     override fun newFrontend(
         config: TranslationConfiguration,
-        scopeManager: ScopeManager
+        scopeManager: ScopeManager,
+        typeCache: TypeCache
     ): GoLanguageFrontend {
-        return GoLanguageFrontend(this, config, scopeManager)
+        return GoLanguageFrontend(this, config, scopeManager, typeCache)
     }
 }

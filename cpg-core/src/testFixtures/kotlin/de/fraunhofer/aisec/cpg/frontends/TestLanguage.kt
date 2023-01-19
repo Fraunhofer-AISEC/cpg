@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -46,7 +46,7 @@ class TestLanguage : Language<TestLanguageFrontend>() {
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager,
-        typeManager: TypeManager
+        typeCache: TypeCache
     ): TestLanguageFrontend {
         return TestLanguageFrontend()
     }
@@ -57,7 +57,7 @@ class TestLanguageFrontend :
         TestLanguage(),
         TranslationConfiguration.builder().build(),
         ScopeManager(),
-        TypeManager()
+        TypeCache()
     ) {
     override fun parse(file: File): TranslationUnitDeclaration {
         TODO("Not yet implemented")

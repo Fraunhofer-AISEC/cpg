@@ -77,8 +77,8 @@ class CXXLanguageFrontend(
     language: Language<CXXLanguageFrontend>,
     config: TranslationConfiguration,
     scopeManager: ScopeManager,
-    typeManager: TypeManager
-) : LanguageFrontend(language, config, scopeManager, typeManager) {
+    typeCache: TypeCache
+) : LanguageFrontend(language, config, scopeManager, typeCache) {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
@@ -487,7 +487,6 @@ class CXXLanguageFrontend(
                     if (hint is ConstructorDeclaration && hint.name.parent != null) {
                         parseType(hint.name.parent!!)
                     } else {
-                        newObjectType(name)
                         // A primitive type
                         parseType(name)
                     }

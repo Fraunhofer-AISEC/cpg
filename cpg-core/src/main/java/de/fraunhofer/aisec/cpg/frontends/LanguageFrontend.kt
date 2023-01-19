@@ -49,7 +49,7 @@ abstract class LanguageFrontend(
     override val language: Language<out LanguageFrontend>,
     val config: TranslationConfiguration,
     scopeManager: ScopeManager,
-    override var typeManager: TypeManager
+    override var typeManager: TypeCache
 ) :
     ProcessedListener(),
     CodeAndLocationProvider,

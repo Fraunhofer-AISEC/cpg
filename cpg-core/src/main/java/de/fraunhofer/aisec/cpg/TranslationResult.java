@@ -25,10 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg;
 
-import de.fraunhofer.aisec.cpg.graph.Component;
-import de.fraunhofer.aisec.cpg.graph.Name;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.BenchmarkResults;
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder;
@@ -74,10 +71,15 @@ public class TranslationResult extends Node implements StatisticsHolder {
    */
   @NotNull private final ScopeManager scopeManager;
 
+  @NotNull private final TypeCache typeCache;
+
   public TranslationResult(
-      TranslationManager translationManager, @NotNull ScopeManager scopeManager) {
+      TranslationManager translationManager,
+      @NotNull ScopeManager scopeManager,
+      @NotNull TypeCache typeCache) {
     this.translationManager = translationManager;
     this.scopeManager = scopeManager;
+    this.typeCache = typeCache;
   }
 
   public boolean isCancelled() {
@@ -216,5 +218,10 @@ public class TranslationResult extends Node implements StatisticsHolder {
   @NotNull
   public ScopeManager getScopeManager() {
     return scopeManager;
+  }
+
+  @NotNull
+  public TypeCache getTypeCache() {
+    return typeCache;
   }
 }

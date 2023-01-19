@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -53,8 +54,9 @@ import org.bytedeco.llvm.global.LLVM.*
 class LLVMIRLanguageFrontend(
     language: Language<LLVMIRLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
-) : LanguageFrontend(language, config, scopeManager) {
+    scopeManager: ScopeManager,
+    typeCache: TypeCache
+) : LanguageFrontend(language, config, scopeManager, typeCache) {
 
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)

@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.passes.order.*
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.util.function.Consumer
@@ -65,7 +65,7 @@ abstract class Pass protected constructor() : Consumer<TranslationResult> {
     }
 
     lateinit var scopeManager: ScopeManager
-    lateinit var typeManager: TypeManager
+    lateinit var typeCache: TypeCache
     protected var config: TranslationConfiguration? = null
 
     init {

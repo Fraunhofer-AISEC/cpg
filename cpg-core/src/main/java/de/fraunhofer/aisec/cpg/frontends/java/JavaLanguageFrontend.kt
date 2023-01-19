@@ -71,8 +71,8 @@ open class JavaLanguageFrontend(
     language: Language<JavaLanguageFrontend>,
     config: TranslationConfiguration,
     scopeManager: ScopeManager,
-    typeManager: TypeManager
-) : LanguageFrontend(language, config, scopeManager, typeManager) {
+    typeCache: TypeCache
+) : LanguageFrontend(language, config, scopeManager, typeCache) {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
