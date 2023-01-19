@@ -487,6 +487,7 @@ class CXXLanguageFrontend(
                     if (hint is ConstructorDeclaration && hint.name.parent != null) {
                         parseType(hint.name.parent!!)
                     } else {
+                        newObjectType(name)
                         // A primitive type
                         parseType(name)
                     }

@@ -33,11 +33,23 @@ class TypeManager {
 
     var types = ConcurrentHashMap<Name, Type>()
 
-     fun lookup(name: Name): Type {
-        return types.getOrPut(name) {
-            return ObjectType(name)
-        }
+    fun getOrPut(name: Name, defaultValue: () -> Type): Type {
+        return types.getOrPut(name, defaultValue)
     }
 }
 
-fun 
+interface TypeCacheProvider : LanguageProvider {
+
+    val typeManager: TypeManager
+}
+
+fun TypeCacheProvider.newObjectType(name: CharSequence): Type {
+    val fqn = this.newName(name)
+
+    return this.typeManager.getOrPut(fqn) {
+        val type = ObjectType()
+        type.applyMetadata(this, name)
+
+        return@getOrPut type
+    }
+}

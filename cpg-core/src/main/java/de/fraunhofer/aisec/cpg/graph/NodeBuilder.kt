@@ -116,41 +116,49 @@ fun Node.applyMetadata(
         this.scope = provider.scope
     }
 
-    val namespace =
-        if (provider is NamespaceProvider) {
-            provider.namespace ?: defaultNamespace
-        } else {
-            defaultNamespace
-        }
-
     if (name != null) {
-        val language = this.language
-
-        // The name could already be a real "name" (of our Name class). In this case we can just set
-        // the name (if it is qualified). This is preferred over passing an FQN as
-        // CharSequence/String.
-        if (name is Name && name.isQualified()) {
-            this.name = name
-        } else if (language != null && name.contains(language.namespaceDelimiter)) {
-            // Let's check, if this is an FQN as string / char sequence by any chance. Then we need
-            // to parse the name. In the future, we might drop compatibility for this
-            this.name = language.parseName(name)
-        } else {
-            // Otherwise, a local name is supplied. Some nodes only want a local name. In this case,
-            // we create a new name with the supplied (local) name and set the parent to null.
-            val parent =
-                if (localNameOnly) {
-                    null
-                } else {
-                    namespace
-                }
-
-            this.name = Name(name.toString(), parent, language?.namespaceDelimiter ?: ".")
-        }
+        this.name = this.newName(name, localNameOnly, defaultNamespace)
     }
 
     if (codeOverride != null) {
         this.code = codeOverride
+    }
+}
+
+fun LanguageProvider.newName(
+    name: CharSequence,
+    localNameOnly: Boolean = false,
+    defaultNamespace: Name? = null,
+): Name {
+    val namespace =
+        if (this is NamespaceProvider) {
+            this.namespace ?: defaultNamespace
+        } else {
+            defaultNamespace
+        }
+
+    val language = this.language
+
+    // The name could already be a real "name" (of our Name class). In this case we can just set
+    // the name (if it is qualified). This is preferred over passing an FQN as
+    // CharSequence/String.
+    return if (name is Name && name.isQualified()) {
+        name
+    } else if (language != null && name.contains(language.namespaceDelimiter)) {
+        // Let's check, if this is an FQN as string / char sequence by any chance. Then we need
+        // to parse the name. In the future, we might drop compatibility for this
+        language.parseName(name)
+    } else {
+        // Otherwise, a local name is supplied. Some nodes only want a local name. In this case,
+        // we create a new name with the supplied (local) name and set the parent to null.
+        val parent =
+            if (localNameOnly) {
+                null
+            } else {
+                namespace
+            }
+
+        Name(name.toString(), parent, language?.namespaceDelimiter ?: ".")
     }
 }
 
