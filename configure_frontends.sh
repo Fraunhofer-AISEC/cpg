@@ -14,7 +14,12 @@ function getProperty {
 function setProperty {
   local PROP_KEY=$1
   local PROP_VALUE=$2
-  sed -i "s/\(${PROP_KEY}[[:space:]]*=[[:space:]]*\).*\$/\1${PROP_VALUE}/" $GRADLE_PROPERTIES_FILE
+  if [[ "$(uname)" == "Darwin" ]]; then
+    sed -i '' "s/\(${PROP_KEY}[[:space:]]*=[[:space:]]*\).*\$/\1${PROP_VALUE}/" $GRADLE_PROPERTIES_FILE
+  else
+    sed -i "s/\(${PROP_KEY}[[:space:]]*=[[:space:]]*\).*\$/\1${PROP_VALUE}/" $GRADLE_PROPERTIES_FILE
+  fi
+}
 }
 
 function ask() {
