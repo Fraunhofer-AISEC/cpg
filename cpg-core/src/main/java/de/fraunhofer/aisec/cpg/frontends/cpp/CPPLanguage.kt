@@ -218,6 +218,9 @@ class CPPLanguage :
         return resolveWithDefaultArgs(call, invocationCandidates)
     }
 
+    override val startCharacter = '<'
+    override val endCharacter = '>'
+
     /**
      * @param curClass class the invoked method must be part of.
      * @param templateCall call to instantiate and invoke a function template

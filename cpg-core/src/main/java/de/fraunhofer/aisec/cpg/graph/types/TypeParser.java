@@ -151,68 +151,44 @@ public class TypeParser {
   @NotNull
   private static String fixGenerics(
       @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
-    if (type.contains("<")
-        && type.contains(">")
-        && language instanceof HasTemplates) { // TODO: Change to Trait
-      String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
+    if (language instanceof HasGenerics
+        && type.contains(((HasGenerics) language).getStartCharacter() + "")
+        && type.contains(((HasGenerics) language).getEndCharacter() + "")) {
 
-      /* Explanation from @vfsrfs:
-       * We fist extract the generic string (the substring between < and >). Then, the elaborate
-       * string can either start directly with the elaborate type specifier e.g. struct Node or it
-       * must be preceded by <, \\h (horizontal whitespace), or ,. If any other character precedes
-       * the elaborate type specifier then it is not considered to be a type specifier e.g.
-       * mystruct. Then there can be an arbitrary amount of horizontal whitespaces. This is followed
-       * by the elaborate type specifier and at least one more horizontal whitespace, which marks
-       * that it is indeed an elaborate type and not something like structMy.
-       */
-      for (String elaborate :
-          ((HasElaboratedTypeSpecifier) language).getElaboratedTypeSpecifier()) {
-        generics = generics.replaceAll("(^|(?<=[\\h,<]))\\h*(?<main>" + elaborate + "\\h+)", "");
+      char startCharacter = ((HasGenerics) language).getStartCharacter();
+      char endCharacter = ((HasGenerics) language).getEndCharacter();
+
+      String generics =
+          type.substring(type.indexOf(startCharacter) + 1, type.lastIndexOf(endCharacter));
+      if (language instanceof HasElaboratedTypeSpecifier) {
+
+        /* Explanation from @vfsrfs:
+         * We fist extract the generic string (the substring between < and >). Then, the elaborate
+         * string can either start directly with the elaborate type specifier e.g. struct Node or it
+         * must be preceded by <, \\h (horizontal whitespace), or ,. If any other character precedes
+         * the elaborate type specifier then it is not considered to be a type specifier e.g.
+         * mystruct. Then there can be an arbitrary amount of horizontal whitespaces. This is followed
+         * by the elaborate type specifier and at least one more horizontal whitespace, which marks
+         * that it is indeed an elaborate type and not something like structMy.
+         */
+        // Remove elaborate type specifiers inside the generics.
+        generics =
+            generics.replaceAll(
+                "(^|(?<=[\\h,<]))\\h*(?<main>"
+                    + String.join(
+                        "|", ((HasElaboratedTypeSpecifier) language).getElaboratedTypeSpecifier())
+                    + "\\h+)",
+                "");
       }
       type =
-          type.substring(0, type.indexOf('<') + 1)
-              + generics.trim()
-              + type.substring(type.lastIndexOf('>'));
+          type.substring(0, type.indexOf(startCharacter) + 1)
+              + generics.replaceAll("\\h", "").trim()
+              + type.substring(type.lastIndexOf(endCharacter));
+      // Remove unnecessary whitespace around the start and end characters.
+      type = type.replaceAll("\\h*(" + startCharacter + "|" + endCharacter + "\\h?)\\h*", "$1");
     }
 
-    StringBuilder out = new StringBuilder();
-    int bracketCount = 0;
-    int iterator = 0;
-    while (iterator < type.length()) {
-      switch (type.charAt(iterator)) {
-        case '<':
-          bracketCount++;
-          out.append(type.charAt(iterator));
-          break;
-
-        case '>':
-          out.append('>');
-          bracketCount--;
-          break;
-
-        case ' ':
-          if (bracketCount == 0) {
-            out.append(type.charAt(iterator));
-          }
-          break;
-
-        default:
-          out.append(type.charAt(iterator));
-          break;
-      }
-      iterator++;
-    }
-
-    String[] splitted = out.toString().split("\\<");
-    StringBuilder out2 = new StringBuilder();
-    for (String s : splitted) {
-      if (out2.length() > 0) {
-        out2.append('<');
-      }
-      out2.append(s.trim());
-    }
-
-    return out2.toString();
+    return type;
   }
 
   private static void processBlockUntilLastSplit(

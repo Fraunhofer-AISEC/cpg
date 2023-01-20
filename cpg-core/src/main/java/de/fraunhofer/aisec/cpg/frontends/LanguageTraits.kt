@@ -46,8 +46,16 @@ import java.util.regex.Pattern
 interface LanguageTrait
 
 /** A language trait, that specifies that this language has support for templates or generics. */
-interface HasTemplates : LanguageTrait {
+interface HasGenerics : LanguageTrait {
+    /** The char starting the template specific code (e.g. '<') */
+    val startCharacter: Char
 
+    /** The char ending the template specific code (e.g. '>') */
+    val endCharacter: Char
+}
+
+/** A language trait, that specifies that this language has support for templates or generics. */
+interface HasTemplates : HasGenerics {
     /**
      * This function can be used to fine-tune the resolution of template function calls.
      *

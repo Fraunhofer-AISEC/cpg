@@ -41,7 +41,7 @@ open class JavaLanguage :
     // HasComplexCallResolution,
     HasClasses,
     HasSuperClasses,
-    // HasTemplates,
+    HasGenerics,
     HasQualifier,
     HasUnknownType,
     HasShortCircuitOperators {
@@ -75,4 +75,7 @@ open class JavaLanguage :
     ): JavaLanguageFrontend {
         return JavaLanguageFrontend(this, config, scopeManager, typeCache)
     }
+
+    override val startCharacter = '<'
+    override val endCharacter = '>'
 }
