@@ -20,7 +20,6 @@ function setProperty {
     sed -i "s/\(${PROP_KEY}[[:space:]]*=[[:space:]]*\).*\$/\1${PROP_VALUE}/" $GRADLE_PROPERTIES_FILE
   fi
 }
-}
 
 function ask() {
   local _ask_answer
