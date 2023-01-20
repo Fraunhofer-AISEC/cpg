@@ -3,7 +3,9 @@
 i = 42  # a number
 
 # a function
-def foo(): # foo
+
+
+def foo():  # foo
     pass
 
 

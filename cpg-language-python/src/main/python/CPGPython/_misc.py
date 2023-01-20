@@ -143,8 +143,12 @@ def is_ctor_declaration(self, target):
 
 def is_statement(self, target):
     n = CPG_JAVA + ".graph.statements."
-    return target is not None and target.java_name.startswith(
-        n)
+    return target is not None and target.java_name.startswith(n)
+
+
+def is_literal(self, target):
+    n = CPG_JAVA + ".graph.statements.expressions.Literal"
+    return target is not None and target.java_name.startswith(n)
 
 
 def wrap_declaration_to_stmt(self, stmt):

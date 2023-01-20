@@ -56,6 +56,7 @@ class PythonASTToCPG(ast.NodeVisitor):
     from ._misc import is_variable_declaration
     from ._misc import log_with_loc
     from ._misc import wrap_declaration_to_stmt
+    from ._misc import is_literal
     from ._statements import handle_argument
     from ._statements import handle_assign
     from ._statements import handle_assign_impl
