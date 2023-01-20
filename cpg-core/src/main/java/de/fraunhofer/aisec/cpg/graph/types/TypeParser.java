@@ -158,28 +158,23 @@ public class TypeParser {
       char startCharacter = ((HasGenerics) language).getStartCharacter();
       char endCharacter = ((HasGenerics) language).getEndCharacter();
 
+      // Get the generic string between startCharacter and endCharacter.
       String generics =
           type.substring(type.indexOf(startCharacter) + 1, type.lastIndexOf(endCharacter));
       if (language instanceof HasElaboratedTypeSpecifier) {
-
-        /* Explanation from @vfsrfs:
-         * We fist extract the generic string (the substring between < and >). Then, the elaborate
-         * string can either start directly with the elaborate type specifier e.g. struct Node or it
-         * must be preceded by <, \\h (horizontal whitespace), or ,. If any other character precedes
-         * the elaborate type specifier then it is not considered to be a type specifier e.g.
-         * mystruct. Then there can be an arbitrary amount of horizontal whitespaces. This is followed
-         * by the elaborate type specifier and at least one more horizontal whitespace, which marks
-         * that it is indeed an elaborate type and not something like structMy.
+        /* We can have elaborate type specifiers (e.g. struct) inside this string. We want to remove it.
+         * We remove this specifier from the generic string.
+         * To do so, this regex checks that a specifier is preceded by "<", "," or a whitespace and is also followed by a whitespace (to avoid removing other strings by mistake).
          */
-        // Remove elaborate type specifiers inside the generics.
         generics =
             generics.replaceAll(
-                "(^|(?<=[\\h,<]))\\h*(?<main>"
+                "((^|[\\h,<])\\h*)(("
                     + String.join(
                         "|", ((HasElaboratedTypeSpecifier) language).getElaboratedTypeSpecifier())
-                    + "\\h+)",
-                "");
+                    + ")\\h+)",
+                "$1");
       }
+      // Add the generic to the original string again but also remove whitespaces in the generic.
       type =
           type.substring(0, type.indexOf(startCharacter) + 1)
               + generics.replaceAll("\\h", "").trim()
