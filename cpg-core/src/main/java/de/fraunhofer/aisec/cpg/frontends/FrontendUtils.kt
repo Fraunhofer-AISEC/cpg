@@ -87,7 +87,7 @@ class FrontendUtils {
          *
          * @param posPrefix
          * - the positional prefix, which is the string before the column and contains the column
-         * defining newline.
+         *   defining newline.
          */
         private fun getEndColumnIndex(posPrefix: String, end: Int): Int {
             var mutableEnd = end

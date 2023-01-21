@@ -50,7 +50,7 @@ class CPPLanguage :
     /**
      * @param call
      * @return FunctionDeclarations that are invocation candidates for the MethodCall call using C++
-     * resolution techniques
+     *   resolution techniques
      */
     override fun refineMethodCallResolution(
         curClass: RecordDeclaration?,
@@ -174,10 +174,10 @@ class CPPLanguage :
 
     /**
      * @param call we want to find invocation targets for by adding the default arguments to the
-     * signature
+     *   signature
      * @param scopeManager the scope manager used
      * @return list of invocation candidates that have matching signature when considering default
-     * arguments
+     *   arguments
      */
     private fun resolveWithDefaultArgsFunc(
         call: CallExpression,
@@ -194,7 +194,7 @@ class CPPLanguage :
      * @param curClass class the invoked method must be part of.
      * @param templateCall call to instantiate and invoke a function template
      * @param applyInference if the resolution was unsuccessful and applyInference is true the call
-     * will resolve to an instantiation/invocation of an inferred template
+     *   will resolve to an instantiation/invocation of an inferred template
      * @param scopeManager the scope manager used
      * @param currentTU The current translation unit
      * @return true if resolution was successful, false if not

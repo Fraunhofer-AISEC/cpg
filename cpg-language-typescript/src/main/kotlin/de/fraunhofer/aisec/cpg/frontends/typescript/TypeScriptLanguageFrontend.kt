@@ -116,6 +116,7 @@ class TypeScriptLanguageFrontend(
     /**
      * Extracts comments from the file with a regular expression and calls a best effort approach
      * function that matches them to the closes ast node in the cpg.
+     *
      * @param file The source of comments
      * @param translationUnit the ast root node which children get the comments associated to
      */

@@ -39,7 +39,7 @@ import java.util.regex.Pattern
  * @param callSignature Type signature of the CallExpression
  * @param functionSignature Type signature of the FunctionDeclaration
  * @return true if the CallExpression signature can be transformed into the FunctionDeclaration
- * signature by means of casting
+ *   signature by means of casting
  */
 fun compatibleSignatures(
     callSignature: List<Type?>,
@@ -66,7 +66,7 @@ fun compatibleSignatures(
  * @param call CallExpression
  * @param functionDeclaration FunctionDeclaration the CallExpression was resolved to
  * @return list containing the signature containing all argument types including the default
- * arguments
+ *   arguments
  */
 fun getCallSignatureWithDefaults(
     call: CallExpression,
@@ -183,7 +183,7 @@ fun applyImplicitCastToArguments(call: CallExpression, implicitCasts: List<CastE
  *
  * @param call CallExpression
  * @return List of FunctionDeclarations that are the target of the CallExpression (will be connected
- * with an invokes edge)
+ *   with an invokes edge)
  */
 fun resolveWithDefaultArgs(
     call: CallExpression,
@@ -207,8 +207,8 @@ fun resolveWithDefaultArgs(
  * @param signature of the ConstructExpression (without defaults)
  * @param recordDeclaration associated with the Object the ConstructExpression constructs
  * @return a ConstructDeclaration that matches with the signature of the ConstructExpression with
- * added default arguments. The default arguments are added to the arguments edge of the
- * ConstructExpression
+ *   added default arguments. The default arguments are added to the arguments edge of the
+ *   ConstructExpression
  */
 fun resolveConstructorWithDefaults(
     constructExpression: ConstructExpression,
@@ -233,7 +233,7 @@ fun resolveConstructorWithDefaults(
  * @param recordDeclaration
  * @param name
  * @return true if there is no method in the recordDeclaration where the name of the method matches
- * with the provided name. false otherwise
+ *   with the provided name. false otherwise
  */
 fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: String?): Boolean {
     val namePattern =
@@ -249,8 +249,9 @@ fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: St
  * @param constructExpression we want to find an invocation target for
  * @param recordDeclaration associated with the Object the ConstructExpression constructs
  * @return a ConstructDeclaration that matches the signature of the ConstructExpression by applying
- * one or more implicit casts to the primitive type arguments of the ConstructExpressions. The
- * arguments are proxied through a CastExpression to the type required by the ConstructDeclaration.
+ *   one or more implicit casts to the primitive type arguments of the ConstructExpressions. The
+ *   arguments are proxied through a CastExpression to the type required by the
+ *   ConstructDeclaration.
  */
 fun resolveConstructorWithImplicitCast(
     constructExpression: ConstructExpression,
@@ -312,12 +313,12 @@ fun resolveConstructorWithImplicitCast(
  *
  * @param templateCall call to instantiate and invoke a function template
  * @param functionTemplateDeclaration functionTemplate we have identified that should be
- * instantiated
+ *   instantiated
  * @param function FunctionDeclaration representing the realization of the template
  * @param initializationSignature mapping containing the all elements of the signature of the
- * TemplateDeclaration as key and the Type/Expression the Parameter is initialized with.
+ *   TemplateDeclaration as key and the Type/Expression the Parameter is initialized with.
  * @param initializationType mapping of the instantiation value to the instantiation type (depends
- * on resolution [TemplateDeclaration.TemplateInitialization]
+ *   on resolution [TemplateDeclaration.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  */
 fun applyTemplateInstantiation(
@@ -381,14 +382,14 @@ fun applyTemplateInstantiation(
  * Computes the implicit casts that are necessary to reach the
  *
  * @param callSignature signature of the call we want to find invocation targets for by performing
- * implicit casts
+ *   implicit casts
  * @param arguments arguments of the call
  * @param functionSignature Types of the signature of the possible invocation candidate
  * @return List containing either null on the i-th position (if the type of i-th argument of the
- * call equals the type of the i-th argument of the FunctionDeclaration) or a CastExpression on the
- * i-th position (if the argument of the call can be cast to match the type of the argument at the
- * i-th position of the FunctionDeclaration). If the list is empty the signature of the
- * FunctionDeclaration cannot be reached through implicit casts
+ *   call equals the type of the i-th argument of the FunctionDeclaration) or a CastExpression on
+ *   the i-th position (if the argument of the call can be cast to match the type of the argument at
+ *   the i-th position of the FunctionDeclaration). If the list is empty the signature of the
+ *   FunctionDeclaration cannot be reached through implicit casts
  */
 fun signatureWithImplicitCastTransformation(
     callSignature: List<Type?>,
@@ -422,9 +423,9 @@ fun signatureWithImplicitCastTransformation(
  * Gets all ParameterizedTypes from the initialization signature
  *
  * @param initialization mapping of the declaration of the template parameters to the explicit
- * values the template is instantiated with
+ *   values the template is instantiated with
  * @return mapping of the parameterized types to the corresponding TypeParamDeclaration in the
- * template
+ *   template
  */
 fun getParameterizedSignaturesFromInitialization(
     initialization: Map<Declaration?, Node?>
@@ -448,16 +449,16 @@ fun getParameterizedSignaturesFromInitialization(
  * Additionally, it fills the maps and lists mentioned below:
  *
  * @param functionTemplateDeclaration functionTemplate we have identified that should be
- * instantiated
+ *   instantiated
  * @param templateCall callExpression that instantiates the template
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends on
- * resolution [TemplateDeclaration.TemplateInitialization]
+ *   resolution [TemplateDeclaration.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
  * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
- * and the Type/Expression the Parameter is initialized with. This function returns null if the
- * {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
- * initialization -&gt; initialization not possible
+ *   and the Type/Expression the Parameter is initialized with. This function returns null if the
+ *   {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
+ *   initialization -&gt; initialization not possible
  */
 fun getTemplateInitializationSignature(
     functionTemplateDeclaration: FunctionTemplateDeclaration,
@@ -509,16 +510,17 @@ fun getTemplateInitializationSignature(
  * defaults or implicit). Additionally, it fills the maps and lists mentioned below:
  *
  * @param functionTemplateDeclaration functionTemplate we have identified that should be
- * instantiated
+ *   instantiated
  * @param templateCall callExpression that instantiates the template
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends
  * * on resolution [TemplateDeclaration.TemplateInitialization]
+ *
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
  * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
- * and the Type/Expression the Parameter is initialized with. This function returns null if the
- * {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
- * initialization -&gt; initialization not possible
+ *   and the Type/Expression the Parameter is initialized with. This function returns null if the
+ *   {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
+ *   initialization -&gt; initialization not possible
  */
 fun constructTemplateInitializationSignatureFromTemplateParameters(
     functionTemplateDeclaration: FunctionTemplateDeclaration,
@@ -563,9 +565,9 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
  * @param callParameterArg
  * @param templateParameter
  * @return If the TemplateParameter is an TypeParamDeclaration, the callParameter must be an
- * ObjectType => returns true If the TemplateParameter is a ParamVariableDeclaration, the
- * callParameterArg must be an Expression and its type must match the type of the
- * ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
+ *   ObjectType => returns true If the TemplateParameter is a ParamVariableDeclaration, the
+ *   callParameterArg must be an Expression and its type must match the type of the
+ *   ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
  */
 fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boolean {
     var callParameter = callParameterArg
@@ -590,9 +592,9 @@ fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boo
  * @param functionTemplateDeclaration functionTemplate we have identified
  * @param index position of the templateParameter we are currently handling
  * @param instantiationSignature mapping of the Declaration representing a template parameter to the
- * value that initializes that template parameter
+ *   value that initializes that template parameter
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends on
- * resolution [TemplateDeclaration.TemplateInitialization]
+ *   resolution [TemplateDeclaration.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  */
 fun handleImplicitTemplateParameter(
@@ -628,12 +630,12 @@ fun handleImplicitTemplateParameter(
 /**
  * @param function FunctionDeclaration realization of the template
  * @param parameterizedTypeResolution mapping of ParameterizedTypes to the TypeParamDeclarations
- * that define them, used to backwards resolve
+ *   that define them, used to backwards resolve
  * @param initializationSignature mapping between the ParamDeclaration of the template and the
- * corresponding instantiations
+ *   corresponding instantiations
  * @return List of Types representing the Signature of the FunctionDeclaration, but
- * ParameterizedTypes (which depend on the specific instantiation of the template) are resolved to
- * the values the Template is instantiated with.
+ *   ParameterizedTypes (which depend on the specific instantiation of the template) are resolved to
+ *   the values the Template is instantiated with.
  */
 fun getCallSignature(
     function: FunctionDeclaration,
@@ -662,11 +664,11 @@ fun getCallSignature(
 /**
  * @param functionDeclaration FunctionDeclaration realization of the template
  * @param functionDeclarationSignature Signature of the realization FunctionDeclaration, but
- * replacing the ParameterizedTypes with the ones provided in the instantiation
+ *   replacing the ParameterizedTypes with the ones provided in the instantiation
  * @param templateCallExpression CallExpression that instantiates the template
  * @param explicitInstantiation list of the explicitly instantiated type parameters
  * @return true if the instantiation of the template is compatible with the template declaration,
- * false otherwise
+ *   false otherwise
  */
 fun checkArgumentValidity(
     functionDeclaration: FunctionDeclaration,

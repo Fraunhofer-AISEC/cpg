@@ -203,7 +203,6 @@ private constructor(
      * Builds a [TranslationConfiguration].
      *
      * Example:
-     *
      * <pre>`TranslationManager.builder() .config( TranslationConfiguration.builder()
      * .sourceLocations(new File("example.cpp")) .defaultPasses() .debugParser(true) .build())
      * .build(); `</pre> *
@@ -422,7 +421,6 @@ private constructor(
          * Register all default [Pass]es.
          *
          * This will register
-         *
          * - [TypeHierarchyResolver]
          * - [JavaExternalTypeHierarchyResolver]
          * - [ImportResolver]
@@ -534,8 +532,8 @@ private constructor(
         /**
          * If true, the ASTs for the source files are parsed in parallel, but the passes afterwards
          * will still run in a single thread. This speeds up initial parsing but makes sure that
-         * further graph enrichment algorithms remain correct. Please make sure to also set [
-         * ][.typeSystemActiveInFrontend] to false to avoid probabilistic errors that appear
+         * further graph enrichment algorithms remain correct. Please make sure to also set
+         * [ ][.typeSystemActiveInFrontend] to false to avoid probabilistic errors that appear
          * depending on the parsing order.
          *
          * @param b the new value
@@ -635,26 +633,24 @@ private constructor(
 
         /**
          * This function reorders passes in order to meet their dependency requirements.
-         *
          * * soft dependencies [DependsOn] with `softDependency == true`: all passes registered as
-         * soft dependency will be executed before the current pass if they are registered
+         *   soft dependency will be executed before the current pass if they are registered
          * * hard dependencies [DependsOn] with `softDependency == false (default)`: all passes
-         * registered as hard dependency will be executed before the current pass (hard dependencies
-         * will be registered even if the user did not register them)
+         *   registered as hard dependency will be executed before the current pass (hard
+         *   dependencies will be registered even if the user did not register them)
          * * first pass [ExecuteFirst]: a pass registered as first pass will be executed in the
-         * beginning
+         *   beginning
          * * last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
          *
          * This function uses a very simple (and inefficient) logic to meet the requirements above:
-         *
          * 1. A list of all registered passes and their dependencies is build
-         * [PassWithDepsContainer.workingList]
+         *    [PassWithDepsContainer.workingList]
          * 1. All missing hard dependencies [DependsOn] are added to the
-         * [PassWithDepsContainer.workingList]
+         *    [PassWithDepsContainer.workingList]
          * 1. The first pass [ExecuteFirst] is added to the result and removed from the other passes
-         * dependencies
+         *    dependencies
          * 1. The first pass in the [workingList] without dependencies is added to the result and it
-         * is removed from the other passes dependencies
+         *    is removed from the other passes dependencies
          * 1. The above step is repeated until all passes are added to the result
          *
          * @return a sorted list of passes
