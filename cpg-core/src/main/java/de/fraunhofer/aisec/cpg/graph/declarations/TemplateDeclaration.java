@@ -49,7 +49,7 @@ public abstract class TemplateDeclaration extends Declaration implements Declara
   }
 
   /** Parameters the Template requires for instantiation */
-  @Relationship(value = "PARAMETERS", direction = "OUTGOING")
+  @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   protected List<PropertyEdge<Declaration>> parameters = new ArrayList<>();
 

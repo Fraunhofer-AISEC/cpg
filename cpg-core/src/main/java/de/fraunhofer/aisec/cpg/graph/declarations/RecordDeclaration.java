@@ -47,28 +47,28 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   /** The kind, i.e. struct, class, union or enum. */
   private String kind;
 
-  @Relationship(value = "FIELDS", direction = "OUTGOING")
+  @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<FieldDeclaration>> fields = new ArrayList<>();
 
-  @Relationship(value = "METHODS", direction = "OUTGOING")
+  @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<MethodDeclaration>> methods = new ArrayList<>();
 
-  @Relationship(value = "CONSTRUCTORS", direction = "OUTGOING")
+  @Relationship(value = "CONSTRUCTORS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<ConstructorDeclaration>> constructors = new ArrayList<>();
 
-  @Relationship(value = "RECORDS", direction = "OUTGOING")
+  @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<RecordDeclaration>> records = new ArrayList<>();
 
-  @Relationship(value = "TEMPLATES", direction = "OUTGOING")
+  @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<TemplateDeclaration>> templates = new ArrayList<>();
 
   /** The list of statements. */
-  @Relationship(value = "STATEMENTS", direction = "OUTGOING")
+  @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
   @NotNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 

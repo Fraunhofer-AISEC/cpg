@@ -40,7 +40,7 @@ import org.neo4j.ogm.annotation.Relationship;
 
 public class ExpressionList extends Expression implements TypeListener {
 
-  @Relationship(value = "SUBEXPR", direction = "OUTGOING")
+  @Relationship(value = "SUBEXPR", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<Statement>> expressions = new ArrayList<>();
 

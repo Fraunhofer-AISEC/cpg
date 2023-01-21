@@ -123,7 +123,11 @@ public class SubgraphWalker {
 
           boolean outgoing = true; // default
           if (field.getAnnotation(Relationship.class) != null) {
-            outgoing = field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
+            outgoing =
+                field
+                    .getAnnotation(Relationship.class)
+                    .direction()
+                    .equals(Relationship.Direction.OUTGOING);
           }
 
           if (PropertyEdge.checkForPropertyEdge(field, obj)) {

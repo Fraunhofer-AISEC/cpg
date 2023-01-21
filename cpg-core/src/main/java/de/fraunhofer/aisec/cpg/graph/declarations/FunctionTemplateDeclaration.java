@@ -41,7 +41,7 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
    * the expansion pass there is only a single FunctionDeclaration which is instantiated After the
    * expansion pass for each instantiation of the FunctionTemplate there will be a realization
    */
-  @Relationship(value = "REALIZATION", direction = "OUTGOING")
+  @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
   private final List<PropertyEdge<FunctionDeclaration>> realization = new ArrayList<>();
 
   public List<FunctionDeclaration> getRealization() {

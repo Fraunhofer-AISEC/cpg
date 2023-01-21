@@ -50,7 +50,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdge {
     /** Connection to its [FunctionDeclaration]. This will be populated by the [CallResolver]. */
-    @Relationship(value = "INVOKES", direction = Relationship.OUTGOING)
+    @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(CallResolver::class)
     var invokesRelationship = mutableListOf<PropertyEdge<FunctionDeclaration>>()
         protected set
@@ -76,7 +76,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
     /**
      * The list of arguments of this call expression, backed by a list of [PropertyEdge] objects.
      */
-    @Relationship(value = "ARGUMENTS", direction = Relationship.OUTGOING)
+    @Relationship(value = "ARGUMENTS", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
     var argumentsEdges = mutableListOf<PropertyEdge<Expression>>()
 
@@ -140,7 +140,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
     var template = false
 
     /** If the CallExpression instantiates a template, the call can provide template parameters. */
-    @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.OUTGOING)
+    @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
     var templateParametersEdges: MutableList<PropertyEdge<Node>>? = null
         set(value) {
@@ -158,7 +158,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      * which is instantiated. This is required by the expansion pass to access the Template
      * directly. The invokes edge will still point to the realization of the template.
      */
-    @Relationship(value = "TEMPLATE_INSTANTIATION", direction = Relationship.OUTGOING)
+    @Relationship(value = "TEMPLATE_INSTANTIATION", direction = Relationship.Direction.OUTGOING)
     var templateInstantiation: TemplateDeclaration? = null
         set(value) {
             field = value

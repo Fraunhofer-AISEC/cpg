@@ -37,11 +37,11 @@ import org.neo4j.ogm.annotation.Relationship;
 
 public class IncludeDeclaration extends Declaration {
 
-  @Relationship(value = "INCLUDES", direction = "OUTGOING")
+  @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private final List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
 
-  @Relationship(value = "PROBLEMS", direction = "OUTGOING")
+  @Relationship(value = "PROBLEMS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private final List<PropertyEdge<ProblemDeclaration>> problems = new ArrayList<>();
 

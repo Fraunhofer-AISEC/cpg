@@ -51,7 +51,7 @@ public class DeclarationStatement extends Statement {
    * The list of declarations declared or defined by this statement. It is always a list, even if it
    * only contains a single {@link Declaration}.
    */
-  @Relationship(value = "DECLARATIONS", direction = "OUTGOING")
+  @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<Declaration>> declarations = new ArrayList<>();
 
