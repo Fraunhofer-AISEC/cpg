@@ -149,7 +149,7 @@ private constructor(
         for (sc in this.config.softwareComponents.keys) {
             val component = Component()
             component.name = Name(sc)
-            result.addComponent(component)
+            result.components.add(component)
 
             var sourceLocations: List<File> = this.config.softwareComponents[sc]!!
 

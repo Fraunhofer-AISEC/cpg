@@ -67,8 +67,7 @@ public class PhysicalLocation {
     @Override
     public boolean equals(Object o) {
       if (this == o) return true;
-      if (!(o instanceof ArtifactLocation)) return false;
-      ArtifactLocation that = (ArtifactLocation) o;
+      if (!(o instanceof ArtifactLocation that)) return false;
       return Objects.equals(uri, that.uri);
     }
 
@@ -109,8 +108,7 @@ public class PhysicalLocation {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (!(o instanceof PhysicalLocation)) return false;
-    PhysicalLocation that = (PhysicalLocation) o;
+    if (!(o instanceof PhysicalLocation that)) return false;
     return Objects.equals(artifactLocation, that.artifactLocation)
         && Objects.equals(region, that.region);
   }
