@@ -139,6 +139,11 @@ public class DeclaredReferenceExpression extends Expression
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
+
+    // since we want to update the sub types, we need to exclude ourselves from the root, otherwise
+    // it won't work. What a weird and broken system!
+    root.remove(this);
+
     List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);
