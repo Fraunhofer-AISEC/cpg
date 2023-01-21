@@ -56,7 +56,7 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
    * either explicitly specify dimensions or an {@link #initializer}, which is used to calculate
    * dimensions. In the graph, this will NOT be done.
    */
-  @Relationship(value = "DIMENSIONS", direction = "OUTGOING")
+  @Relationship(value = "DIMENSIONS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<Expression>> dimensions = new ArrayList<>();
 

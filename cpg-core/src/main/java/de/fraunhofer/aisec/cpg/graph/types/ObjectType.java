@@ -81,7 +81,7 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
   // Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
   private RecordDeclaration recordDeclaration = null;
 
-  @Relationship(value = "GENERICS", direction = "OUTGOING")
+  @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
   private List<PropertyEdge<Type>> generics;
 
   public ObjectType(

@@ -43,7 +43,7 @@ public class ClassTemplateDeclaration extends TemplateDeclaration {
    * expansion pass there is only a single RecordDeclaration which is instantiated after the
    * expansion pass for each instantiation of the ClassTemplate there will be a realization
    */
-  @Relationship(value = "REALIZATION", direction = "OUTGOING")
+  @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private final List<PropertyEdge<RecordDeclaration>> realization = new ArrayList<>();
 

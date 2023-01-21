@@ -72,7 +72,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * The language of this node. This property is set in [Node.applyMetadata] by a
      * [LanguageProvider] at the time when the node is created.
      */
-    @field:Relationship(value = "Language", direction = "OUTGOING")
+    @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
     override var language: Language<out LanguageFrontend>? = null
 
@@ -100,12 +100,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     var file: String? = null
 
     /** Incoming control flow edges. */
-    @field:Relationship(value = "EOG", direction = "INCOMING")
+    @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
     var prevEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
 
     /** outgoing control flow edges. */
-    @field:Relationship(value = "EOG", direction = "OUTGOING")
+    @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
     var nextEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
 
@@ -141,10 +141,10 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
             this.nextEOGEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
         }
 
-    @field:Relationship(value = "DFG", direction = "INCOMING")
+    @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     var prevDFG: MutableSet<Node> = HashSet()
 
-    @field:Relationship(value = "DFG") var nextDFG: MutableSet<Node> = HashSet()
+    @Relationship(value = "DFG") var nextDFG: MutableSet<Node> = HashSet()
 
     var typedefs: MutableSet<TypedefDeclaration> = HashSet()
 
@@ -164,7 +164,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @field:Id @field:GeneratedValue var id: Long? = null
+    @Id @GeneratedValue var id: Long? = null
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0

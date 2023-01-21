@@ -45,7 +45,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert;
 public abstract class Type extends Node {
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
 
-  @Relationship(value = "SUPER_TYPE", direction = "OUTGOING")
+  @Relationship(value = "SUPER_TYPE", direction = Relationship.Direction.OUTGOING)
   @NotNull
   protected Set<Type> superTypes = new HashSet<>();
 

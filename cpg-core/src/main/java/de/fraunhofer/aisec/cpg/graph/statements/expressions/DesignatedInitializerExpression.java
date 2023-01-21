@@ -40,7 +40,7 @@ public class DesignatedInitializerExpression extends Expression {
   @SubGraph("AST")
   private Expression rhs;
 
-  @Relationship(value = "LHS", direction = "OUTGOING")
+  @Relationship(value = "LHS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<Expression>> lhs;
 
