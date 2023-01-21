@@ -346,24 +346,26 @@ def handle_function_or_method(self, node, record=None):
         members = []
 
         if isinstance(decorator.func, ast.Attribute):
-            # unfortunately, FQN'ing does not work here correctly because at this point
-            # the base of the MemberExpression is not yet resolved. So instead we use the
-            # ref's "code" property to have the correct name like @app.route. In the future
-            # it might make sense to have a type listener in the Annotation to correctly
-            # resolve the base
+            # unfortunately, FQN'ing does not work here correctly because at
+            # this point the base of the MemberExpression is not yet resolved.
+            # So instead we use the ref's "code" property to have the correct
+            # name like @app.route. In the future it might make sense to have
+            # a type listener in the Annotation to correctly resolve the base
             ref = self.handle_expression(decorator.func)
-            annotation = NodeBuilderKt.newAnnotation(self.frontend,
-                ref.getCode(), self.get_src_code(decorator.func))
+            annotation = NodeBuilderKt.newAnnotation(
+                self.frontend, ref.getCode(), self.get_src_code(decorator.func))
 
             # add the base as a receiver annotation
-            member = NodeBuilderKt.newAnnotationMember(self.frontend,
-                "receiver", ref.getBase(), self.get_src_code(decorator.func))
+            member = NodeBuilderKt.newAnnotationMember(
+                self.frontend, "receiver", ref.getBase(),
+                self.get_src_code(decorator.func))
 
             members.append(member)
         elif isinstance(decorator.func, ast.Name):
             ref = self.handle_expression(decorator.func)
-            annotation = NodeBuilderKt.newAnnotation(self.frontend,
-                ref.getName(), self.get_src_code(decorator.func))
+            annotation = NodeBuilderKt.newAnnotation(
+                self.frontend, ref.getName(),
+                self.get_src_code(decorator.func))
 
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
@@ -373,16 +375,16 @@ def handle_function_or_method(self, node, record=None):
             arg0 = decorator.args[0]
             value = self.handle_expression(arg0)
 
-            member = NodeBuilderKt.newAnnotationMember(self.frontend,
-                "value", value, self.get_src_code(arg0))
+            member = NodeBuilderKt.newAnnotationMember(
+                self.frontend, "value", value, self.get_src_code(arg0))
 
             members.append(member)
 
         # loop through keywords args
         for kw in decorator.keywords:
-            member = NodeBuilderKt.newAnnotationMember(self.frontend,
-                kw.arg, self.handle_expression(
-                    kw.value), self.get_src_code(kw))
+            member = NodeBuilderKt.newAnnotationMember(
+                self.frontend, kw.arg, self.handle_expression(kw.value),
+                self.get_src_code(kw))
 
             members.append(member)
 
