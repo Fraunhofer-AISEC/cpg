@@ -335,14 +335,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val initializers = mutableListOf<Expression>()
 
         for (i in 0 until length) {
-            val expr =
-                if (LLVMGetValueKind(valueRef) == LLVMConstantVectorValueKind) {
-                    // This type of vectors needs to access the elements via LLVMGetOperand(). Not
-                    // sure why but the other method crashes.
-                    handle(LLVMGetOperand(valueRef, i)) as Expression
-                } else {
-                    handle(LLVMGetElementAsConstant(valueRef, i)) as Expression
-                }
+            val expr = handle(LLVMGetAggregateElement(valueRef, i)) as Expression
 
             initializers += expr
         }
