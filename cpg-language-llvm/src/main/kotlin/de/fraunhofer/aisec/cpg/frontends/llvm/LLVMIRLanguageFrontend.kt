@@ -91,6 +91,10 @@ class LLVMIRLanguageFrontend(
         // create a new LLVM context
         ctx = LLVMContextCreate()
 
+        // disable opaque pointers, until all necessary new functions are available in the C API.
+        // See https://llvm.org/docs/OpaquePointers.html
+        LLVMContextSetOpaquePointers(ctx, 0)
+
         // allocate a buffer for a possible error message
         val errorMessage = ByteBuffer.allocate(10000)
 
