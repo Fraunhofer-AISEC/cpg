@@ -128,4 +128,113 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
         }
         return dfa
     }
+
+    /**
+     * Creates a regular expression of the NFA with the state elimination strategy. It enriches the
+     * edges to retrieve a GNFA and finally has a regex. Unfortunately, it is not optimized or super
+     * readable.
+     */
+    fun toRegex(): String {
+        fun getSelfLoopOfState(toReplace: State): String {
+            // First, we get the loop(s) to the same node.
+            var selfLoop =
+                toReplace.outgoingEdges
+                    .filter { it.nextState == toReplace && it.op != EPSILON }
+                    .joinToString("|") { it.op }
+            // EPSILON wouldn't change anything here because we put the asterisk operator around it.
+            // So, we just remove such an edge.
+            // There's a loop, so we surround it with brackets and put the * operator
+            if (selfLoop.isNotEmpty()) selfLoop = "($selfLoop)*"
+
+            return selfLoop
+        }
+
+        fun getOutgoingEdgesMap(toReplace: State): Map<State, String> {
+            // Only consider edges to other nodes.
+            val result = mutableMapOf<State, String>()
+            // We add the nodes which can be reached by EPSILON because we will have to put a ? for
+            // them (1 or 0 occurrences)
+            val withEpsilon = mutableSetOf<State>()
+            for (edge in toReplace.outgoingEdges.filter { it.nextState != toReplace }) {
+                val nodeEdge = result.computeIfAbsent(edge.nextState) { "" }
+                if (edge.op == EPSILON) {
+                    // We won't add this to the string but modify the string afterwards
+                    withEpsilon.add(edge.nextState)
+                } else {
+                    result[edge.nextState] =
+                        if (nodeEdge.isNotEmpty()) {
+                            "$nodeEdge|${edge.op}"
+                        } else {
+                            edge.op
+                        }
+                }
+            }
+            // Wrap the states with an epsilon transition with the "?" operator
+            withEpsilon.forEach {
+                if (it in result && result[it]!!.isNotEmpty()) {
+                    result[it] = "(${result[it]})?"
+                }
+            }
+            return result
+        }
+
+        fun replaceStateWithRegex(toReplace: State, remainingStates: MutableSet<State>) {
+            val selfLoop = getSelfLoopOfState(toReplace)
+            // We add the self-loop string to the front because it affects every single outgoing
+            // edge.
+            val outgoingMap =
+                getOutgoingEdgesMap(toReplace).mapValues { (_, v) ->
+                    if ("|" in v) "$selfLoop($v)" else "$selfLoop$v"
+                }
+            // Iterate over all states and their edges which have a transition to toReplace.
+            // We replace this edge with edges to all nodes in outgoingMap and assemble the
+            // respective string
+            for (state in remainingStates) {
+                val newEdges = mutableSetOf<Edge>()
+                for (edge in state.outgoingEdges) {
+                    if (edge.nextState == toReplace) {
+                        for ((key, value) in outgoingMap.entries) {
+                            if (edge.op == EPSILON) {
+                                // EPSILON has a special treatment: We don't want to add it to the
+                                // string.
+                                newEdges.add(Edge(value, null, key))
+                            } else {
+                                newEdges.add(Edge(edge.op + value, null, key))
+                            }
+                        }
+                    } else {
+                        newEdges.add(edge)
+                    }
+                }
+                state.outgoingEdges = newEdges
+            }
+        }
+
+        val copy = this.deepCopy()
+        val stateSet = copy.states.toMutableSet()
+        // We generate a new start state to make the termination a bit easier.
+        val oldStart = stateSet.first { it.isStart }
+        oldStart.isStart = false
+        val newStartState = copy.addState(true, false)
+        newStartState.addEdge(Edge(EPSILON, null, oldStart))
+        stateSet.add(newStartState)
+
+        // We also generate a new end state
+        val newEndState = copy.addState(false, true)
+        stateSet
+            .filter { it.isAcceptingState && it != newEndState }
+            .forEach { it.addEdge(Edge(EPSILON, null, newEndState)) }
+        stateSet.add(newEndState)
+
+        while (stateSet.isNotEmpty()) {
+            val toProcess =
+                stateSet.firstOrNull { it != newStartState && it != newEndState }
+                    ?: return newStartState.outgoingEdges.joinToString("|") { "(${it.op})" }
+
+            stateSet.remove(toProcess)
+            replaceStateWithRegex(toProcess, stateSet)
+        }
+
+        return newStartState.outgoingEdges.joinToString("|") { "(${it.op})" }
+    }
 }

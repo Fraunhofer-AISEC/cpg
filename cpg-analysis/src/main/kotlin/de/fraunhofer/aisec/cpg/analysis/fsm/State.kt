@@ -53,8 +53,12 @@ class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = fal
 
     /** Must only be changed through [addEdge]. */
     private val _outgoingEdges: MutableSet<Edge> = mutableSetOf()
-    val outgoingEdges: Set<Edge>
+    var outgoingEdges: Set<Edge>
         get() = _outgoingEdges
+        set(value) {
+            _outgoingEdges.clear()
+            _outgoingEdges.addAll(value)
+        }
 
     /**
      * Set by the [FSM] when this state is added to a [FSM]. This lambda should throw an exception
