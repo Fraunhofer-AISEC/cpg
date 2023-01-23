@@ -193,7 +193,7 @@ class Application : Callable<Int> {
      *
      * @param translationResult, not null
      * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the
-     * neo4j db.
+     *   neo4j db.
      * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
      */
     @Throws(InterruptedException::class, ConnectException::class)
@@ -225,9 +225,9 @@ class Application : Callable<Int> {
      * Connects to the neo4j db.
      *
      * @return a Pair of Optionals of the Session and the SessionFactory, if it is possible to
-     * connect to neo4j. If it is not possible, the return value is a Pair of empty Optionals.
+     *   connect to neo4j. If it is not possible, the return value is a Pair of empty Optionals.
      * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the
-     * neo4j db.
+     *   neo4j db.
      * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
      */
     @Throws(InterruptedException::class, ConnectException::class)
@@ -288,8 +288,8 @@ class Application : Callable<Int> {
      * Parse the file paths to analyze and set up the translationConfiguration with these paths.
      *
      * @throws IllegalArgumentException, if there were no arguments provided, or the path does not
-     * point to a file, is a directory or point to a hidden file or the paths does not have the same
-     * top level path.
+     *   point to a file, is a directory or point to a hidden file or the paths does not have the
+     *   same top level path.
      */
     private fun setupTranslationConfiguration(): TranslationConfiguration {
         val translationConfiguration =
@@ -350,10 +350,10 @@ class Application : Callable<Int> {
      * The entrypoint of the cpg-vis-neo4j.
      *
      * @throws IllegalArgumentException, if there were no arguments provided, or the path does not
-     * point to a file, is a directory or point to a hidden file or the paths does not have the same
-     * top level path
+     *   point to a file, is a directory or point to a hidden file or the paths does not have the
+     *   same top level path
      * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the
-     * neo4j db.
+     *   neo4j db.
      * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
      */
     @Throws(Exception::class, ConnectException::class, IllegalArgumentException::class)
@@ -396,10 +396,10 @@ class Application : Callable<Int> {
  * Starts a command line application of the cpg-vis-neo4j.
  *
  * @throws IllegalArgumentException, if there was no arguments provided, or the path does not point
- * to a file, is a directory or point to a hidden file or the paths does not have the same top level
- * path
+ *   to a file, is a directory or point to a hidden file or the paths does not have the same top
+ *   level path
  * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the neo4j
- * db.
+ *   db.
  * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
  */
 fun main(args: Array<String>) {

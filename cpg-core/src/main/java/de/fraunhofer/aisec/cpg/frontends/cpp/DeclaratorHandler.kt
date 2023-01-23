@@ -68,7 +68,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
      * This is sort of a catch-all function, if none of the previous specialized declarators match.
      * It can be one of three things:
      * - a wrapper around a nested declarator, in which case we delegate the handling to the nested
-     * one,
+     *   one,
      * - a field declaration, if this declaration occurs within a class or has a qualified name, or
      * - a variable declaration in all the other cases.
      */

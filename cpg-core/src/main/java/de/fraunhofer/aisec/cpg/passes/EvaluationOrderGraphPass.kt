@@ -57,16 +57,15 @@ import org.slf4j.LoggerFactory
  * actual source code does not have an explicit return statement.
  *
  * The EOG is similar to the CFG `ControlFlowGraphPass`, but there are some subtle differences:
- *
  * * For methods without explicit return statement, EOF will have an edge to a virtual return node
- * with line number -1 which does not exist in the original code. A CFG will always end with the
- * last reachable statement(s) and not insert any virtual return statements.
+ *   with line number -1 which does not exist in the original code. A CFG will always end with the
+ *   last reachable statement(s) and not insert any virtual return statements.
  * * EOG considers an opening blocking ("CompoundStatement", indicated by a "{") as a separate node.
- * A CFG will rather use the first actual executable statement within the block.
+ *   A CFG will rather use the first actual executable statement within the block.
  * * For IF statements, EOG treats the "if" keyword and the condition as separate nodes. CFG treats
- * this as one "if" statement.
+ *   this as one "if" statement.
  * * EOG considers a method header as a node. CFG will consider the first executable statement of
- * the methods as a node.
+ *   the methods as a node.
  *
  * Its handleXXX functions are intentionally set as `protected`, in case someone wants to extend
  * this pass and fine-tune it.
@@ -986,6 +985,7 @@ open class EvaluationOrderGraphPass : Pass() {
          *
          * @param node
          * - That lies on the reachable or unreachable path
+         *
          * @return true if the node can bea reached from a function declaration
          */
         protected fun reachableFromValidEOGRoot(node: Node): Boolean {

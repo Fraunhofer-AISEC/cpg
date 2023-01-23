@@ -267,9 +267,9 @@ class ScopeManager : ScopeProvider {
      * all declarations, such as classes, independently of the translation units. Therefore, we need
      * to check, whether such as node already exists. If it does already exist:
      * - we update the scope map so that the current [NamespaceDeclaration] points to the existing
-     * [NameScope]
+     *   [NameScope]
      * - we return null, indicating to [enterScope], that no new scope needs to be pushed by
-     * [enterScope].
+     *   [enterScope].
      *
      * Otherwise, we return a new name scope.
      */
@@ -317,7 +317,6 @@ class ScopeManager : ScopeProvider {
      * [enterScope] call with the same [nodeToLeave], otherwise the scope-tree might be corrupted.
      *
      * @param nodeToLeave the AST node
-     *
      * @return the scope that was just left
      */
     fun leaveScope(nodeToLeave: Node): Scope? {
@@ -368,7 +367,7 @@ class ScopeManager : ScopeProvider {
      *
      * @param declaration the declaration to add
      * @param addToAST specifies, whether the declaration also gets added to the [Scope.astNode] of
-     * the current scope (if it implements [DeclarationHolder]). Defaults to true.
+     *   the current scope (if it implements [DeclarationHolder]). Defaults to true.
      */
     @JvmOverloads
     fun addDeclaration(declaration: Declaration?, addToAST: Boolean = true) {
@@ -585,11 +584,11 @@ class ScopeManager : ScopeProvider {
      * Resolves only references to Values in the current scope, static references to other visible
      * records are not resolved over the ScopeManager.
      *
-     * TODO: We should merge this function with [.resolveFunction]
-     *
      * @param scope
      * @param ref
      * @return
+     *
+     * TODO: We should merge this function with [.resolveFunction]
      */
     @JvmOverloads
     fun resolveReference(
@@ -732,7 +731,7 @@ class ScopeManager : ScopeProvider {
      * @param scope where we are searching for the FunctionTemplateDeclarations
      * @param call CallExpression we want to resolve an invocation target for
      * @return List of FunctionTemplateDeclaration that match the name provided in the
-     * CallExpression and therefore are invocation candidates
+     *   CallExpression and therefore are invocation candidates
      */
     @JvmOverloads
     fun resolveFunctionTemplateDeclaration(

@@ -124,7 +124,7 @@ abstract class Pass protected constructor() : Consumer<TranslationResult> {
      * executed.
      *
      * @return true, if the pass does not require a specific language frontend or if it matches the
-     * [RequiredFrontend]
+     *   [RequiredFrontend]
      */
     fun runsWithCurrentFrontend(usedFrontends: Collection<LanguageFrontend>): Boolean {
         if (!this.javaClass.isAnnotationPresent(RequiredFrontend::class.java)) return true

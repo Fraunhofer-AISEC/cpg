@@ -44,7 +44,7 @@ open class TypeResolver : Pass() {
      * Reduce the SecondOrderTypes to store only the unique SecondOrderTypes
      *
      * @param type SecondOrderType that is to be eliminated if an equal is already in typeState or
-     * is added if not
+     *   is added if not
      */
     protected fun processSecondOrderTypes(type: Type) {
         val state = typeState.computeIfAbsent(type.root, ::mutableListOf)
@@ -68,8 +68,8 @@ open class TypeResolver : Pass() {
      *
      * @param type newly created Type
      * @return If the same type was already stored in the typeState Map the stored one is returned.
-     * In the other case the parameter type is stored into the map and the parameter type is
-     * returned
+     *   In the other case the parameter type is stored into the map and the parameter type is
+     *   returned
      */
     private fun obtainType(type: Type): Type {
         return if (type.root == type && type in typeState) {

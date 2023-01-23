@@ -41,9 +41,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
  * Represents a call to a constructor, usually as an initializer.
- *
  * * In C++ this can be part of a variable declaration plus initialization, such as `int a(5);` or
- * as part of a [NewExpression].
+ *   as part of a [NewExpression].
  * * In Java, it is the initializer of a [NewExpression].
  */
 class ConstructExpression : CallExpression(), HasType.TypeListener {
