@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.time.Duration
@@ -95,7 +94,6 @@ class PerformanceRegressionTest {
                             i,
                             ObjectType(
                                 "int",
-                                Type.Qualifier(),
                                 listOf(),
                                 ObjectType.Modifier.UNSIGNED,
                                 true,

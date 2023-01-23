@@ -531,7 +531,7 @@ class CXXLanguageFrontend(
                         type.reference(PointerType.PointerOrigin.POINTER)
                     }
                     is ICPPASTReferenceOperator -> {
-                        ReferenceType(type.qualifier, type)
+                        ReferenceType(type)
                     }
                     else -> {
                         type
@@ -577,7 +577,7 @@ class CXXLanguageFrontend(
                 ) {
                     it.typeName
                 } + type.typeName
-            type = FunctionType(name, paramTypes, listOf(type), language, type.qualifier)
+            type = FunctionType(name, paramTypes, listOf(type), language)
         }
 
         // Lastly, there might be further nested declarators that adjust the type further.

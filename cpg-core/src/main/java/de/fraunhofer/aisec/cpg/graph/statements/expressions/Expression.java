@@ -127,7 +127,6 @@ public abstract class Expression extends Statement implements HasType {
     Type oldType = this.type; // Backup to check if something changed
 
     type = type.duplicate();
-    type.setQualifier(this.type.getQualifier().merge(type.getQualifier()));
 
     Set<Type> subTypes = new HashSet<>();
 

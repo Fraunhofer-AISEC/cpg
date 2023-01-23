@@ -338,9 +338,6 @@ public class TypeParser {
       return resolveBracketExpression(finalType, subBracketExpression, language);
     }
 
-    if (language instanceof HasQualifier hasQualifier)
-      hasQualifier.updateQualifier(part, finalType.getQualifier());
-
     return finalType;
   }
 
@@ -501,10 +498,7 @@ public class TypeParser {
       if (part.equals("&")) {
         // CPP ReferenceTypes are indicated by an & at the end of the typeName e.g. int&, and are
         // handled differently to a pointer
-        Type.Qualifier oldQualifier = finalType.getQualifier();
-        finalType.setQualifier(new Type.Qualifier());
         finalType = new ReferenceType(finalType);
-        finalType.setQualifier(oldQualifier);
       }
 
       if (part.startsWith("[") && part.endsWith("]")) {
@@ -517,10 +511,6 @@ public class TypeParser {
         // processed afterwards
         bracketExpressions.add(part);
       }
-
-      // Check the qualifier specifiers that are defined after the typeName e.g. int const
-      if (language instanceof HasQualifier hasQualifier)
-        hasQualifier.updateQualifier(part, finalType.getQualifier());
     }
     return finalType;
   }
@@ -600,24 +590,26 @@ public class TypeParser {
     // long long int (only primitive types)
     typeBlocks = joinPrimitive(typeBlocks, language);
 
-    Type.Qualifier qualifier = new Type.Qualifier(false, false, false, false);
-
     // Handle preceding qualifier or storage specifier to the type name e.g. static const int
     int counter = 0;
 
     for (String part : typeBlocks) {
-      if (List.of("STATIC", "EXTERN", "REGISTER", "AUTO").contains(part.toUpperCase())) {
+      if (List.of(
+                  "STATIC",
+                  "EXTERN",
+                  "REGISTER",
+                  "AUTO",
+                  "FINAL",
+                  "CONST",
+                  "RESTRICT",
+                  "VOLATILE",
+                  "ATOMIC")
+              .contains(part.toUpperCase())
+          || isElaboratedTypeSpecifier(part, language)) {
+        // We only want to get rid of these parts for the remaining method.
         counter++;
       } else {
-        if (language instanceof HasQualifier hasQualifier
-            && hasQualifier.updateQualifier(part, qualifier)) {
-          counter++;
-        } else if (isElaboratedTypeSpecifier(part, language)) {
-          // ignore elaborated types for now
-          counter++;
-        } else {
-          break;
-        }
+        break;
       }
     }
 
@@ -637,13 +629,12 @@ public class TypeParser {
 
     finalType = language.getSimpleTypeOf(modifier + typeName);
     if (finalType != null) {
-      finalType.setQualifier(qualifier);
+      // Nothing to do here
     } else if (funcptr != null) {
       Type returnType = createFrom(typeName, language);
       List<Type> parameterList = getParameterList(funcptr.group("args"), language);
 
-      return typeManager.registerType(
-          new FunctionPointerType(qualifier, parameterList, returnType, language));
+      return typeManager.registerType(new FunctionPointerType(parameterList, returnType, language));
     } else if (isIncompleteType(typeName)) {
       // IncompleteType e.g. void
       finalType = new IncompleteType();
@@ -657,12 +648,7 @@ public class TypeParser {
       typeName = removeGenerics(typeName, language);
       finalType =
           new ObjectType(
-              typeName,
-              qualifier,
-              generics,
-              ObjectType.Modifier.NOT_APPLICABLE,
-              primitiveType,
-              language);
+              typeName, generics, ObjectType.Modifier.NOT_APPLICABLE, primitiveType, language);
     }
 
     if (finalType.getName().getLocalName().equals("auto")

@@ -27,29 +27,17 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType.Modifier
-import de.fraunhofer.aisec.cpg.graph.types.Type
 
 fun MetadataProvider.newPrimitiveType(
     name: String,
     modifier: Modifier = Modifier.SIGNED,
-    qualifier: Type.Qualifier = Type.Qualifier()
 ): ObjectType {
-    val type =
-        ObjectType(
-            name,
-            qualifier,
-            listOf(),
-            modifier,
-            true,
-            (this as? LanguageProvider)?.language!!
-        )
+    val type = ObjectType(name, listOf(), modifier, true, (this as? LanguageProvider)?.language!!)
 
     return type
 }
 
 fun ObjectType.const(): ObjectType {
     val constType = ObjectType(this, listOf(), this.modifier, this.isPrimitive, this.language)
-    constType.qualifier.isConst = true
-
     return constType
 }

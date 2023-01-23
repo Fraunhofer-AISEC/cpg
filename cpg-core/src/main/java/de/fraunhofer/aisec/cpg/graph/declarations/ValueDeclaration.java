@@ -154,7 +154,6 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     Type oldType = this.type;
 
     type = type.duplicate();
-    type.setQualifier(this.type.getQualifier().merge(type.getQualifier()));
 
     Set<Type> subTypes = new HashSet<>();
 

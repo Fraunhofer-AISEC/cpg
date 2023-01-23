@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
-import de.fraunhofer.aisec.cpg.frontends.HasQualifier;
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Name;
@@ -35,7 +34,6 @@ import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
-import org.neo4j.ogm.annotation.typeconversion.Convert;
 
 /**
  * Abstract Type, describing all possible SubTypes, i.e. all different Subtypes are compliant with
@@ -51,48 +49,34 @@ public abstract class Type extends Node {
 
   protected boolean primitive = false;
 
-  @Convert(QualifierConverter.class)
-  protected Qualifier qualifier;
-
   protected Origin origin;
 
   public Type() {
     this.setName(new Name(EMPTY_NAME, null, this.getLanguage()));
-    this.qualifier = new Qualifier(false, false, false, false);
   }
 
   public Type(String typeName) {
     this.setName(NameKt.parseName(this.getLanguage(), typeName));
-    this.qualifier = new Qualifier();
     this.origin = Origin.UNRESOLVED;
   }
 
   public Type(Type type) {
     this.setName(type.getName().clone());
-    this.qualifier =
-        new Qualifier(
-            type.qualifier.isConst,
-            type.qualifier.isVolatile,
-            type.qualifier.isRestrict,
-            type.qualifier.isAtomic);
     this.origin = type.origin;
   }
 
-  public Type(String typeName, Qualifier qualifier, Language<? extends LanguageFrontend> language) {
+  public Type(String typeName, Language<? extends LanguageFrontend> language) {
     if (this instanceof FunctionType) {
       this.setName(new Name(typeName, null, language));
     } else {
       this.setName(NameKt.parseName(language, typeName));
     }
     this.setLanguage(language);
-    this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
   }
 
-  public Type(
-      Name fullTypeName, Qualifier qualifier, Language<? extends LanguageFrontend> language) {
+  public Type(Name fullTypeName, Language<? extends LanguageFrontend> language) {
     this.setName(fullTypeName.clone());
-    this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
     this.setLanguage(language);
   }
@@ -105,14 +89,6 @@ public abstract class Type extends Node {
   @NotNull
   public Set<Type> getSuperTypes() {
     return superTypes;
-  }
-
-  public Qualifier getQualifier() {
-    return qualifier;
-  }
-
-  public void setQualifier(Qualifier qualifier) {
-    this.qualifier = qualifier;
   }
 
   public Origin getTypeOrigin() {
@@ -286,16 +262,6 @@ public abstract class Type extends Node {
     return 0;
   }
 
-  public void setAdditionalTypeKeywords(String keywords) {
-    List<String> separatedKeywords = TypeParser.separate(keywords, getLanguage());
-    for (String keyword : separatedKeywords) {
-      if (getLanguage() != null) {
-        if (getLanguage() instanceof HasQualifier)
-          ((HasQualifier) getLanguage()).updateQualifier(keyword, this.getQualifier());
-      }
-    }
-  }
-
   /**
    * @return True if the Type parameter t is a FirstOrderType (Root of a chain) and not a Pointer or
    *     RefrenceType
@@ -329,12 +295,13 @@ public abstract class Type extends Node {
     if (this == o) return true;
     if (!(o instanceof Type)) return false;
     Type type = (Type) o;
-    return Objects.equals(getName(), type.getName()) && Objects.equals(qualifier, type.qualifier);
+    return Objects.equals(getName(), type.getName())
+        && Objects.equals(getLanguage(), type.getLanguage());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getName(), qualifier);
+    return Objects.hash(getName(), getLanguage());
   }
 
   @NotNull

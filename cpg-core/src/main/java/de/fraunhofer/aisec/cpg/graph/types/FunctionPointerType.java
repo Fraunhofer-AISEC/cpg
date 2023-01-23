@@ -57,11 +57,8 @@ public class FunctionPointerType extends Type {
   private FunctionPointerType() {}
 
   public FunctionPointerType(
-      Type.Qualifier qualifier,
-      List<Type> parameters,
-      Type returnType,
-      Language<? extends LanguageFrontend> language) {
-    super("", qualifier, language);
+      List<Type> parameters, Type returnType, Language<? extends LanguageFrontend> language) {
+    super("", language);
     this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
     this.returnType = returnType;
   }
@@ -145,10 +142,8 @@ public class FunctionPointerType extends Type {
         + ", returnType="
         + returnType
         + ", typeName='"
-        + getName().toString()
+        + getName()
         + '\''
-        + ", qualifier="
-        + this.getQualifier()
         + ", origin="
         + this.getTypeOrigin()
         + '}';

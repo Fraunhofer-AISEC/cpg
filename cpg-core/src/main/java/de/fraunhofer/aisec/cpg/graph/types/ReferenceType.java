@@ -53,14 +53,6 @@ public class ReferenceType extends Type implements SecondOrderType {
     this.reference = reference;
   }
 
-  public ReferenceType(Qualifier qualifier, Type reference) {
-    this.setName(reference.getName().append("&"));
-    this.qualifier = qualifier;
-    this.origin = Origin.UNRESOLVED;
-    this.reference = reference;
-    this.setLanguage(reference.getLanguage());
-  }
-
   /**
    * @return Referencing a ReferenceType results in a PointerType to the original ReferenceType
    */
@@ -123,8 +115,6 @@ public class ReferenceType extends Type implements SecondOrderType {
         + ", typeName='"
         + this.getName()
         + '\''
-        + ", qualifier="
-        + this.getQualifier()
         + ", origin="
         + this.getTypeOrigin()
         + '}';

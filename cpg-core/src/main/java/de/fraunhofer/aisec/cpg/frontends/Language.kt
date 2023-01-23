@@ -96,6 +96,10 @@ abstract class Language<T : LanguageFrontend> : Node() {
         return file.extension in fileExtensions
     }
 
+    override fun equals(other: Any?): Boolean {
+        return other?.javaClass == this.javaClass
+    }
+
     init {
         this.also { this.language = it }
     }

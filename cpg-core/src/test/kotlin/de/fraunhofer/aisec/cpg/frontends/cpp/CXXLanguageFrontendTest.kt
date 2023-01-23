@@ -103,7 +103,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(parameter)
         assertLocalName("e", parameter)
         assertEquals("std::exception&", parameter.type.typeName)
-        assertTrue(parameter.type.qualifier.isConst)
 
         // anonymous variable (this is not 100% handled correctly but will do for now)
         parameter = catchClauses[1].parameter
@@ -111,7 +110,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // this is currently our 'unnamed' parameter
         assertLocalName("", parameter)
         assertEquals("std::exception&", parameter.type.typeName)
-        assertTrue(parameter.type.qualifier.isConst)
 
         // catch all
         parameter = catchClauses[2].parameter

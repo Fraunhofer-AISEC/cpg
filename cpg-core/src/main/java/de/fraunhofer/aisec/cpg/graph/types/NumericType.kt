@@ -42,27 +42,25 @@ open class NumericType : ObjectType {
         bitWidth: Int?,
         language: Language<out LanguageFrontend>?,
         modifier: Modifier = Modifier.SIGNED
-    ) : super(typeName, Qualifier(), listOf(), modifier, true, language) {
+    ) : super(typeName, listOf(), modifier, true, language) {
         this.bitWidth = bitWidth
     }
 
     constructor(
         typeName: String,
-        qualifier: Qualifier,
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
-    ) : super(typeName, qualifier, listOf(), modifier, true, language) {
+    ) : super(typeName, listOf(), modifier, true, language) {
         this.bitWidth = bitWidth
     }
 
     constructor(
         typeName: Name,
-        qualifier: Qualifier,
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
-    ) : super(typeName, qualifier, listOf(), modifier, true, language) {
+    ) : super(typeName, listOf(), modifier, true, language) {
         this.bitWidth = bitWidth
     }
 }

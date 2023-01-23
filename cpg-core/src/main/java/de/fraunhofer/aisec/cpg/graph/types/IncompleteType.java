@@ -38,7 +38,7 @@ import java.util.Objects;
 public class IncompleteType extends Type {
 
   public IncompleteType() {
-    super("void", new Qualifier(false, false, false, false), null);
+    super("void", null);
   }
 
   public IncompleteType(Type type) {

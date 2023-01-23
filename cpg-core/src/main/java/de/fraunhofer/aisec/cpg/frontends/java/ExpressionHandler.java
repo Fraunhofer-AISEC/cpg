@@ -236,10 +236,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       ResolvedValueDeclaration resolved = variable.resolve();
 
       Type declarationType = this.frontend.getTypeAsGoodAsPossible(variable, resolved);
-      declarationType.setAdditionalTypeKeywords(
-          variableDeclarationExpr.getModifiers().stream()
-              .map(m -> m.getKeyword().asString())
-              .collect(Collectors.joining(" ")));
 
       VariableDeclaration declaration =
           newVariableDeclaration(

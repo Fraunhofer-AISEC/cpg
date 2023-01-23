@@ -87,12 +87,11 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
 
   public ObjectType(
       String typeName,
-      Qualifier qualifier,
       List<Type> generics,
       Modifier modifier,
       boolean primitive,
       Language<? extends LanguageFrontend> language) {
-    super(typeName, qualifier, language);
+    super(typeName, language);
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;
@@ -101,12 +100,11 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
 
   public ObjectType(
       Name typeName,
-      Qualifier qualifier,
       List<Type> generics,
       Modifier modifier,
       boolean primitive,
       Language<? extends LanguageFrontend> language) {
-    super(typeName, qualifier, language);
+    super(typeName, language);
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;
