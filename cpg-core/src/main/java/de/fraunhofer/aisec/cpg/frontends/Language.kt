@@ -100,6 +100,16 @@ abstract class Language<T : LanguageFrontend> : Node() {
         return other?.javaClass == this.javaClass
     }
 
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + fileExtensions.hashCode()
+        result = 31 * result + namespaceDelimiter.hashCode()
+        result = 31 * result + frontend.hashCode()
+        result = 31 * result + primitiveTypes.hashCode()
+        result = 31 * result + accessModifiers.hashCode()
+        return result
+    }
+
     init {
         this.also { this.language = it }
     }
