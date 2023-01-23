@@ -44,9 +44,8 @@ class FunctionType : Type {
         parameters: List<Type>,
         returnTypes: List<Type>,
         language: Language<out LanguageFrontend>?,
-        qualifier: Qualifier = Qualifier(),
-        storage: Storage = Storage.AUTO
-    ) : super(typeName, storage, qualifier, language) {
+        qualifier: Qualifier = Qualifier()
+    ) : super(typeName, qualifier, language) {
         this.parameters = parameters
         this.returnTypes = returnTypes
     }
@@ -59,13 +58,7 @@ class FunctionType : Type {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         // TODO(oxisto): In the future, we actually could just remove the FunctionPointerType
         //  and just have a regular PointerType here
-        return FunctionPointerType(
-            qualifier,
-            storage,
-            parameters.toList(),
-            returnTypes.first(),
-            language
-        )
+        return FunctionPointerType(qualifier, parameters.toList(), returnTypes.first(), language)
     }
 
     override fun dereference(): Type {
@@ -78,8 +71,7 @@ class FunctionType : Type {
             parameters.toList(),
             returnTypes.toList(),
             language,
-            qualifier,
-            storage
+            qualifier
         )
     }
 

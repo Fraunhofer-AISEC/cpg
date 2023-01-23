@@ -31,14 +31,12 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.Type.Storage
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
 import kotlin.reflect.KClass
@@ -92,22 +90,6 @@ abstract class Language<T : LanguageFrontend> : Node() {
     ): T
 
     fun getSimpleTypeOf(typeString: String) = simpleTypes[typeString]?.duplicate()
-
-    open fun asStorageSpecifier(specifier: String): Storage? {
-        // TODO: Which of these affect which language? Probably, we should separate it more clearly.
-        // I'm also wondering why we actually need this information.
-        if (specifier.uppercase() == "STATIC") {
-            return Storage.STATIC
-        } else if (specifier.uppercase() == "EXTERN") {
-            return Storage.EXTERN
-        } else if (specifier.uppercase() == "REGISTER") {
-            return Storage.REGISTER
-        } else if (specifier.uppercase() == "AUTO" && this is CPPLanguage) {
-            return Storage.AUTO
-        } else {
-            return null
-        }
-    }
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
     fun handlesFile(file: File): Boolean {

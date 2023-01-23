@@ -42,23 +42,21 @@ class FloatingPointType : NumericType {
 
     constructor(
         typeName: String,
-        storage: Storage,
         qualifier: Qualifier,
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
-    ) : super(typeName, storage, qualifier, modifier, language, bitWidth)
+    ) : super(typeName, qualifier, modifier, language, bitWidth)
 
     constructor(
         name: Name,
-        storage: Storage,
         qualifier: Qualifier,
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
-    ) : super(name, storage, qualifier, modifier, language, bitWidth)
+    ) : super(name, qualifier, modifier, language, bitWidth)
 
     override fun duplicate(): Type {
-        return FloatingPointType(name, storage, qualifier, modifier, language, bitWidth)
+        return FloatingPointType(name, qualifier, modifier, language, bitWidth)
     }
 }

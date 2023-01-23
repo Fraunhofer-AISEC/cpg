@@ -110,18 +110,10 @@ internal class FunctionTemplateTest : BaseTest() {
 
         val typeT = ParameterizedType("T", CPPLanguage())
         val intType =
-            IntegerType(
-                "int",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ObjectType.Modifier.SIGNED,
-                CPPLanguage(),
-                32
-            )
+            IntegerType("int", Type.Qualifier(), ObjectType.Modifier.SIGNED, CPPLanguage(), 32)
         val floatType =
             FloatingPointType(
                 "float",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 ObjectType.Modifier.SIGNED,
                 CPPLanguage(),
@@ -237,7 +229,6 @@ internal class FunctionTemplateTest : BaseTest() {
         val doubleType =
             FloatingPointType(
                 "double",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 ObjectType.Modifier.SIGNED,
                 CPPLanguage(),
@@ -376,7 +367,6 @@ internal class FunctionTemplateTest : BaseTest() {
         val doubleType =
             FloatingPointType(
                 "double",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 ObjectType.Modifier.SIGNED,
                 CPPLanguage(),

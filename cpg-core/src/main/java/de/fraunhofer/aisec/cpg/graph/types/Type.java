@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 
@@ -50,12 +49,6 @@ public abstract class Type extends Node {
   @NotNull
   protected Set<Type> superTypes = new HashSet<>();
 
-  /**
-   * auto, extern, static, register: consider "auto" as modifier or auto to automatically infer the
-   * value.
-   */
-  @NotNull protected Storage storage = Storage.AUTO;
-
   protected boolean primitive = false;
 
   @Convert(QualifierConverter.class)
@@ -65,19 +58,16 @@ public abstract class Type extends Node {
 
   public Type() {
     this.setName(new Name(EMPTY_NAME, null, this.getLanguage()));
-    this.storage = Storage.AUTO;
     this.qualifier = new Qualifier(false, false, false, false);
   }
 
   public Type(String typeName) {
     this.setName(NameKt.parseName(this.getLanguage(), typeName));
-    this.storage = Storage.AUTO;
     this.qualifier = new Qualifier();
     this.origin = Origin.UNRESOLVED;
   }
 
   public Type(Type type) {
-    this.storage = type.storage;
     this.setName(type.getName().clone());
     this.qualifier =
         new Qualifier(
@@ -88,29 +78,20 @@ public abstract class Type extends Node {
     this.origin = type.origin;
   }
 
-  public Type(
-      String typeName,
-      @Nullable Storage storage,
-      Qualifier qualifier,
-      Language<? extends LanguageFrontend> language) {
+  public Type(String typeName, Qualifier qualifier, Language<? extends LanguageFrontend> language) {
     if (this instanceof FunctionType) {
       this.setName(new Name(typeName, null, language));
     } else {
       this.setName(NameKt.parseName(language, typeName));
     }
     this.setLanguage(language);
-    this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
   }
 
   public Type(
-      Name fullTypeName,
-      @Nullable Storage storage,
-      Qualifier qualifier,
-      Language<? extends LanguageFrontend> language) {
+      Name fullTypeName, Qualifier qualifier, Language<? extends LanguageFrontend> language) {
     this.setName(fullTypeName.clone());
-    this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
     this.setLanguage(language);
@@ -124,27 +105,6 @@ public abstract class Type extends Node {
   @NotNull
   public Set<Type> getSuperTypes() {
     return superTypes;
-  }
-
-  /**
-   * Describes Storage specifier of variables. Depending on the storage specifier, variables are
-   * stored in different parts e.g. in C/CPP AUTO stores the variable on the stack whereas static in
-   * the bss section
-   */
-  public enum Storage {
-    AUTO,
-    EXTERN,
-    STATIC,
-    REGISTER
-  }
-
-  @NotNull
-  public Storage getStorage() {
-    return storage;
-  }
-
-  public void setStorage(@NotNull Storage storage) {
-    this.storage = storage;
   }
 
   public Qualifier getQualifier() {
@@ -330,8 +290,6 @@ public abstract class Type extends Node {
     List<String> separatedKeywords = TypeParser.separate(keywords, getLanguage());
     for (String keyword : separatedKeywords) {
       if (getLanguage() != null) {
-        Storage storageSpecifier = getLanguage().asStorageSpecifier(keyword);
-        if (storageSpecifier != null) this.setStorage(storageSpecifier);
         if (getLanguage() instanceof HasQualifier)
           ((HasQualifier) getLanguage()).updateQualifier(keyword, this.getQualifier());
       }
@@ -371,14 +329,12 @@ public abstract class Type extends Node {
     if (this == o) return true;
     if (!(o instanceof Type)) return false;
     Type type = (Type) o;
-    return Objects.equals(getName(), type.getName())
-        && storage == type.storage
-        && Objects.equals(qualifier, type.qualifier);
+    return Objects.equals(getName(), type.getName()) && Objects.equals(qualifier, type.qualifier);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getName(), storage, qualifier);
+    return Objects.hash(getName(), qualifier);
   }
 
   @NotNull

@@ -338,12 +338,6 @@ public class TypeParser {
       return resolveBracketExpression(finalType, subBracketExpression, language);
     }
 
-    Type.Storage storageSpecifier = language.asStorageSpecifier(part);
-    if (storageSpecifier != null) {
-      finalType.setStorage(storageSpecifier);
-      return finalType;
-    }
-
     if (language instanceof HasQualifier hasQualifier)
       hasQualifier.updateQualifier(part, finalType.getQualifier());
 
@@ -508,11 +502,8 @@ public class TypeParser {
         // CPP ReferenceTypes are indicated by an & at the end of the typeName e.g. int&, and are
         // handled differently to a pointer
         Type.Qualifier oldQualifier = finalType.getQualifier();
-        Type.Storage oldStorage = finalType.getStorage();
         finalType.setQualifier(new Type.Qualifier());
-        finalType.setStorage(Type.Storage.AUTO);
         finalType = new ReferenceType(finalType);
-        finalType.setStorage(oldStorage);
         finalType.setQualifier(oldQualifier);
       }
 
@@ -527,9 +518,7 @@ public class TypeParser {
         bracketExpressions.add(part);
       }
 
-      // Check storage and qualifier specifiers that are defined after the typeName e.g. int const
-      Type.Storage storageSpecifier = language.asStorageSpecifier(part);
-      if (storageSpecifier != null) finalType.setStorage(storageSpecifier);
+      // Check the qualifier specifiers that are defined after the typeName e.g. int const
       if (language instanceof HasQualifier hasQualifier)
         hasQualifier.updateQualifier(part, finalType.getQualifier());
     }
@@ -612,15 +601,12 @@ public class TypeParser {
     typeBlocks = joinPrimitive(typeBlocks, language);
 
     Type.Qualifier qualifier = new Type.Qualifier(false, false, false, false);
-    List<Type.Storage> storageList = new ArrayList<>();
 
     // Handle preceding qualifier or storage specifier to the type name e.g. static const int
     int counter = 0;
 
     for (String part : typeBlocks) {
-      var specifier = language.asStorageSpecifier(part);
-      if (specifier != null) {
-        storageList.add(specifier);
+      if (List.of("STATIC", "EXTERN", "REGISTER", "AUTO").contains(part.toUpperCase())) {
         counter++;
       } else {
         if (language instanceof HasQualifier hasQualifier
@@ -634,8 +620,6 @@ public class TypeParser {
         }
       }
     }
-
-    Type.Storage storageValue = !storageList.isEmpty() ? storageList.get(0) : Type.Storage.AUTO;
 
     // Once all preceding known keywords (if any) are handled the next word must be the TypeName
     if (counter >= typeBlocks.size()) {
@@ -654,13 +638,12 @@ public class TypeParser {
     finalType = language.getSimpleTypeOf(modifier + typeName);
     if (finalType != null) {
       finalType.setQualifier(qualifier);
-      finalType.setStorage(storageValue);
     } else if (funcptr != null) {
       Type returnType = createFrom(typeName, language);
       List<Type> parameterList = getParameterList(funcptr.group("args"), language);
 
       return typeManager.registerType(
-          new FunctionPointerType(qualifier, storageValue, parameterList, returnType, language));
+          new FunctionPointerType(qualifier, parameterList, returnType, language));
     } else if (isIncompleteType(typeName)) {
       // IncompleteType e.g. void
       finalType = new IncompleteType();
@@ -675,7 +658,6 @@ public class TypeParser {
       finalType =
           new ObjectType(
               typeName,
-              storageValue,
               qualifier,
               generics,
               ObjectType.Modifier.NOT_APPLICABLE,

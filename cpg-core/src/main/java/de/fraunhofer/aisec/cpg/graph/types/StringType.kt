@@ -35,33 +35,23 @@ class StringType : ObjectType {
 
     constructor(
         typeName: String,
-        storage: Storage,
         qualifier: Qualifier,
         generics: List<Type>,
         language: Language<out LanguageFrontend>?
-    ) : super(typeName, storage, qualifier, generics, Modifier.NOT_APPLICABLE, false, language)
+    ) : super(typeName, qualifier, generics, Modifier.NOT_APPLICABLE, false, language)
 
     constructor(
         typeName: String,
         language: Language<out LanguageFrontend>?
-    ) : super(
-        typeName,
-        Storage.AUTO,
-        Qualifier(),
-        listOf(),
-        Modifier.NOT_APPLICABLE,
-        false,
-        language
-    )
+    ) : super(typeName, Qualifier(), listOf(), Modifier.NOT_APPLICABLE, false, language)
     constructor(
         name: Name,
-        storage: Storage,
         qualifier: Qualifier,
         generics: List<Type>,
         language: Language<out LanguageFrontend>?
-    ) : super(name, storage, qualifier, generics, Modifier.NOT_APPLICABLE, false, language)
+    ) : super(name, qualifier, generics, Modifier.NOT_APPLICABLE, false, language)
 
     override fun duplicate(): Type {
-        return StringType(name, storage, qualifier, generics, language)
+        return StringType(name, qualifier, generics, language)
     }
 }

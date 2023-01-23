@@ -95,7 +95,6 @@ class PerformanceRegressionTest {
                             i,
                             ObjectType(
                                 "int",
-                                Type.Storage.AUTO,
                                 Type.Qualifier(),
                                 listOf(),
                                 ObjectType.Modifier.UNSIGNED,

@@ -113,11 +113,6 @@ public class UnknownType extends Type {
   }
 
   @Override
-  public void setStorage(@NotNull Storage storage) {
-    // Only one instance of UnknownType, use default values
-  }
-
-  @Override
   public void setQualifier(Qualifier qualifier) {
     // Only one instance of UnknownType, use default values
   }

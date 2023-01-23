@@ -75,7 +75,6 @@ class LambdaExpression : Expression(), HasType.TypeListener {
         val functionType =
             FunctionPointerType(
                 Type.Qualifier(false, false, false, false),
-                Type.Storage.AUTO,
                 parameterTypes,
                 returnType,
                 this.language

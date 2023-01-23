@@ -53,9 +53,8 @@ public class ReferenceType extends Type implements SecondOrderType {
     this.reference = reference;
   }
 
-  public ReferenceType(Storage storage, Qualifier qualifier, Type reference) {
+  public ReferenceType(Qualifier qualifier, Type reference) {
     this.setName(reference.getName().append("&"));
-    this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
     this.reference = reference;
@@ -124,8 +123,6 @@ public class ReferenceType extends Type implements SecondOrderType {
         + ", typeName='"
         + this.getName()
         + '\''
-        + ", storage="
-        + this.getStorage()
         + ", qualifier="
         + this.getQualifier()
         + ", origin="

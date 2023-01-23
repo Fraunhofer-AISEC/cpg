@@ -41,23 +41,21 @@ class IntegerType : NumericType {
     ) : super(typeName, bitWidth, language, modifier)
     constructor(
         typeName: String,
-        storage: Storage,
         qualifier: Qualifier,
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
-    ) : super(typeName, storage, qualifier, modifier, language, bitWidth)
+    ) : super(typeName, qualifier, modifier, language, bitWidth)
 
     constructor(
         name: Name,
-        storage: Storage,
         qualifier: Qualifier,
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
-    ) : super(name, storage, qualifier, modifier, language, bitWidth)
+    ) : super(name, qualifier, modifier, language, bitWidth)
 
     override fun duplicate(): Type {
-        return IntegerType(this.name, storage, qualifier, modifier, language, bitWidth)
+        return IntegerType(this.name, qualifier, modifier, language, bitWidth)
     }
 }

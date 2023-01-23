@@ -46,7 +46,6 @@ internal class TypeTests : BaseTest() {
         val objectType: Type =
             ObjectType(
                 "int",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 ArrayList(),
                 ObjectType.Modifier.SIGNED,
@@ -60,7 +59,6 @@ internal class TypeTests : BaseTest() {
             listOf<Type>(
                 ObjectType(
                     "int",
-                    Type.Storage.AUTO,
                     Type.Qualifier(),
                     emptyList(),
                     ObjectType.Modifier.SIGNED,
@@ -69,13 +67,7 @@ internal class TypeTests : BaseTest() {
                 )
             )
         val functionPointerType: Type =
-            FunctionPointerType(
-                Type.Qualifier(),
-                Type.Storage.AUTO,
-                parameterList,
-                IncompleteType(),
-                CPPLanguage()
-            )
+            FunctionPointerType(Type.Qualifier(), parameterList, IncompleteType(), CPPLanguage())
 
         // Test 1: ObjectType becomes PointerType containing the original ObjectType as ElementType
         assertEquals(
@@ -110,7 +102,6 @@ internal class TypeTests : BaseTest() {
         val objectType: Type =
             ObjectType(
                 "int",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 ArrayList(),
                 ObjectType.Modifier.SIGNED,
@@ -124,7 +115,6 @@ internal class TypeTests : BaseTest() {
             listOf<Type>(
                 ObjectType(
                     "int",
-                    Type.Storage.AUTO,
                     Type.Qualifier(),
                     emptyList(),
                     ObjectType.Modifier.SIGNED,
@@ -133,13 +123,7 @@ internal class TypeTests : BaseTest() {
                 )
             )
         val functionPointerType: Type =
-            FunctionPointerType(
-                Type.Qualifier(),
-                Type.Storage.AUTO,
-                parameterList,
-                IncompleteType(),
-                CPPLanguage()
-            )
+            FunctionPointerType(Type.Qualifier(), parameterList, IncompleteType(), CPPLanguage())
 
         // Test 1: Dereferencing an ObjectType results in an UnknownType, since we cannot track the
         // type
@@ -168,14 +152,7 @@ internal class TypeTests : BaseTest() {
         var typeString = "private int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
-            IntegerType(
-                "int",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ObjectType.Modifier.SIGNED,
-                JavaLanguage(),
-                32
-            )
+            IntegerType("int", Type.Qualifier(), ObjectType.Modifier.SIGNED, JavaLanguage(), 32)
         assertEquals(expected, result)
 
         // Test 2: constant type using final
@@ -184,7 +161,6 @@ internal class TypeTests : BaseTest() {
         expected =
             IntegerType(
                 "int",
-                Type.Storage.AUTO,
                 Type.Qualifier(true, false, false, false),
                 ObjectType.Modifier.SIGNED,
                 JavaLanguage(),
@@ -196,14 +172,7 @@ internal class TypeTests : BaseTest() {
         typeString = "static int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
-            IntegerType(
-                "int",
-                Type.Storage.STATIC,
-                Type.Qualifier(),
-                ObjectType.Modifier.SIGNED,
-                JavaLanguage(),
-                32
-            )
+            IntegerType("int", Type.Qualifier(), ObjectType.Modifier.SIGNED, JavaLanguage(), 32)
         assertEquals(expected, result)
 
         // Test 4: volatile type
@@ -212,7 +181,6 @@ internal class TypeTests : BaseTest() {
         expected =
             IntegerType(
                 "int",
-                Type.Storage.AUTO,
                 Type.Qualifier(false, true, false, false),
                 ObjectType.Modifier.SIGNED,
                 JavaLanguage(),
@@ -226,7 +194,6 @@ internal class TypeTests : BaseTest() {
         expected =
             StringType(
                 "java.lang.String",
-                Type.Storage.STATIC,
                 Type.Qualifier(true, false, false, false),
                 ArrayList(),
                 JavaLanguage()
@@ -239,7 +206,6 @@ internal class TypeTests : BaseTest() {
         expected =
             IntegerType(
                 "int",
-                Type.Storage.AUTO,
                 Type.Qualifier(true, true, false, false),
                 ObjectType.Modifier.SIGNED,
                 JavaLanguage(),
@@ -254,7 +220,6 @@ internal class TypeTests : BaseTest() {
             PointerType(
                 IntegerType(
                     "int",
-                    Type.Storage.AUTO,
                     Type.Qualifier(),
                     ObjectType.Modifier.SIGNED,
                     JavaLanguage(),
@@ -272,7 +237,6 @@ internal class TypeTests : BaseTest() {
         expected =
             ObjectType(
                 "List",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 generics,
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -290,7 +254,6 @@ internal class TypeTests : BaseTest() {
         val genericElement3 =
             ObjectType(
                 "List",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 generics3,
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -304,7 +267,6 @@ internal class TypeTests : BaseTest() {
         val genericElement1 =
             ObjectType(
                 "List",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 generics2a,
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -314,7 +276,6 @@ internal class TypeTests : BaseTest() {
         val genericElement2 =
             ObjectType(
                 "List",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 generics2b,
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -327,7 +288,6 @@ internal class TypeTests : BaseTest() {
         expected =
             ObjectType(
                 "List",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 generics,
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -346,23 +306,10 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         val parameterList =
             listOf<Type>(
-                IntegerType(
-                    "int",
-                    Type.Storage.AUTO,
-                    Type.Qualifier(),
-                    ObjectType.Modifier.SIGNED,
-                    CPPLanguage(),
-                    32
-                )
+                IntegerType("int", Type.Qualifier(), ObjectType.Modifier.SIGNED, CPPLanguage(), 32)
             )
         var expected: Type =
-            FunctionPointerType(
-                Type.Qualifier(),
-                Type.Storage.AUTO,
-                parameterList,
-                IncompleteType(),
-                CPPLanguage()
-            )
+            FunctionPointerType(Type.Qualifier(), parameterList, IncompleteType(), CPPLanguage())
         assertEquals(expected, result)
 
         // Test 1.1: interleaved brackets in function pointer
@@ -378,7 +325,6 @@ internal class TypeTests : BaseTest() {
                 PointerType(
                     IntegerType(
                         "char",
-                        Type.Storage.AUTO,
                         Type.Qualifier(),
                         ObjectType.Modifier.NOT_APPLICABLE,
                         CPPLanguage(),
@@ -398,7 +344,6 @@ internal class TypeTests : BaseTest() {
             PointerType(
                 IntegerType(
                     "char",
-                    Type.Storage.AUTO,
                     Type.Qualifier(),
                     ObjectType.Modifier.NOT_APPLICABLE,
                     CPPLanguage(),
@@ -425,7 +370,6 @@ internal class TypeTests : BaseTest() {
             PointerType(
                 IntegerType(
                     "char",
-                    Type.Storage.AUTO,
                     Type.Qualifier(true, false, false, false),
                     ObjectType.Modifier.NOT_APPLICABLE,
                     CPPLanguage(),
@@ -442,7 +386,6 @@ internal class TypeTests : BaseTest() {
             PointerType(
                 IntegerType(
                     "char",
-                    Type.Storage.AUTO,
                     Type.Qualifier(false, false, false, false),
                     ObjectType.Modifier.NOT_APPLICABLE,
                     CPPLanguage(),
@@ -460,7 +403,6 @@ internal class TypeTests : BaseTest() {
             PointerType(
                 IntegerType(
                     "char",
-                    Type.Storage.AUTO,
                     Type.Qualifier(true, false, false, false),
                     ObjectType.Modifier.NOT_APPLICABLE,
                     CPPLanguage(),
@@ -479,7 +421,6 @@ internal class TypeTests : BaseTest() {
                 PointerType(
                     IntegerType(
                         "char",
-                        Type.Storage.STATIC,
                         Type.Qualifier(true, false, false, false),
                         ObjectType.Modifier.NOT_APPLICABLE,
                         CPPLanguage(),
@@ -501,7 +442,6 @@ internal class TypeTests : BaseTest() {
                     PointerType(
                         IntegerType(
                             "char",
-                            Type.Storage.STATIC,
                             Type.Qualifier(true, false, false, false),
                             ObjectType.Modifier.NOT_APPLICABLE,
                             CPPLanguage(),
@@ -520,19 +460,11 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         var generics: MutableList<Type?> = ArrayList()
         generics.add(
-            IntegerType(
-                "int",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ObjectType.Modifier.SIGNED,
-                CPPLanguage(),
-                8
-            )
+            IntegerType("int", Type.Qualifier(), ObjectType.Modifier.SIGNED, CPPLanguage(), 8)
         )
         expected =
             ObjectType(
                 "Array",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 generics,
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -547,7 +479,6 @@ internal class TypeTests : BaseTest() {
         expected =
             IntegerType(
                 "long long int",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 ObjectType.Modifier.SIGNED,
                 CPPLanguage(),
@@ -561,7 +492,6 @@ internal class TypeTests : BaseTest() {
         expected =
             IntegerType(
                 "unsigned int",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 ObjectType.Modifier.UNSIGNED,
                 CPPLanguage(),
@@ -571,21 +501,13 @@ internal class TypeTests : BaseTest() {
         typeString = "signed int"
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
-            IntegerType(
-                "int",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ObjectType.Modifier.SIGNED,
-                CPPLanguage(),
-                32
-            )
+            IntegerType("int", Type.Qualifier(), ObjectType.Modifier.SIGNED, CPPLanguage(), 32)
         assertEquals(expected, result)
         typeString = "A a"
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             ObjectType(
                 "A",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 ArrayList(),
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -598,7 +520,6 @@ internal class TypeTests : BaseTest() {
         expected =
             IntegerType(
                 "unsigned long long int",
-                Type.Storage.AUTO,
                 Type.Qualifier(true, false, false, false),
                 ObjectType.Modifier.UNSIGNED,
                 CPPLanguage(),
@@ -629,16 +550,8 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             ReferenceType(
-                Type.Storage.AUTO,
                 Type.Qualifier(true, false, false, false),
-                IntegerType(
-                    "int",
-                    Type.Storage.AUTO,
-                    Type.Qualifier(),
-                    ObjectType.Modifier.SIGNED,
-                    CPPLanguage(),
-                    32
-                )
+                IntegerType("int", Type.Qualifier(), ObjectType.Modifier.SIGNED, CPPLanguage(), 32)
             )
         assertEquals(expected, result)
 
@@ -652,7 +565,6 @@ internal class TypeTests : BaseTest() {
         var generic =
             ObjectType(
                 "Node",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 ArrayList(),
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -663,7 +575,6 @@ internal class TypeTests : BaseTest() {
         expected =
             ObjectType(
                 "Array",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 generics,
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -677,7 +588,6 @@ internal class TypeTests : BaseTest() {
         generic =
             ObjectType(
                 "myclass",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 ArrayList(),
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -688,7 +598,6 @@ internal class TypeTests : BaseTest() {
         expected =
             ObjectType(
                 "Array",
-                Type.Storage.AUTO,
                 Type.Qualifier(),
                 generics,
                 ObjectType.Modifier.NOT_APPLICABLE,
@@ -814,21 +723,13 @@ internal class TypeTests : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("fptr_type.cpp").toFile()), topLevel, true)
         val noParamType =
-            FunctionPointerType(
-                Type.Qualifier(),
-                Type.Storage.AUTO,
-                emptyList(),
-                IncompleteType(),
-                CPPLanguage()
-            )
+            FunctionPointerType(Type.Qualifier(), emptyList(), IncompleteType(), CPPLanguage())
         val oneParamType =
             FunctionPointerType(
                 Type.Qualifier(),
-                Type.Storage.AUTO,
                 listOf<Type>(
                     IntegerType(
                         "int",
-                        Type.Storage.AUTO,
                         Type.Qualifier(),
                         ObjectType.Modifier.SIGNED,
                         CPPLanguage(),
@@ -841,11 +742,9 @@ internal class TypeTests : BaseTest() {
         val twoParamType =
             FunctionPointerType(
                 Type.Qualifier(),
-                Type.Storage.AUTO,
                 listOf<Type>(
                     IntegerType(
                         "int",
-                        Type.Storage.AUTO,
                         Type.Qualifier(),
                         ObjectType.Modifier.SIGNED,
                         CPPLanguage(),
@@ -853,21 +752,13 @@ internal class TypeTests : BaseTest() {
                     ),
                     IntegerType(
                         "unsigned long",
-                        Type.Storage.AUTO,
                         Type.Qualifier(),
                         ObjectType.Modifier.UNSIGNED,
                         CPPLanguage(),
                         64
                     )
                 ),
-                IntegerType(
-                    "int",
-                    Type.Storage.AUTO,
-                    Type.Qualifier(),
-                    ObjectType.Modifier.SIGNED,
-                    CPPLanguage(),
-                    32
-                ),
+                IntegerType("int", Type.Qualifier(), ObjectType.Modifier.SIGNED, CPPLanguage(), 32),
                 CPPLanguage()
             )
         val variables = tu.variables

@@ -37,7 +37,6 @@ fun MetadataProvider.newPrimitiveType(
     val type =
         ObjectType(
             name,
-            Type.Storage.AUTO,
             qualifier,
             listOf(),
             modifier,
