@@ -353,7 +353,8 @@ def handle_function_or_method(self, node, record=None):
             # a type listener in the Annotation to correctly resolve the base
             ref = self.handle_expression(decorator.func)
             annotation = NodeBuilderKt.newAnnotation(
-                self.frontend, ref.getCode(), self.get_src_code(decorator.func))
+                self.frontend, ref.getCode()
+                self.get_src_code(decorator.func))
 
             # add the base as a receiver annotation
             member = NodeBuilderKt.newAnnotationMember(
