@@ -327,7 +327,7 @@ public abstract class Type extends Node {
   }
 
   public void setAdditionalTypeKeywords(String keywords) {
-    List<String> separatedKeywords = TypeParser.separate(keywords);
+    List<String> separatedKeywords = TypeParser.separate(keywords, getLanguage());
     for (String keyword : separatedKeywords) {
       if (getLanguage() != null) {
         Storage storageSpecifier = getLanguage().asStorageSpecifier(keyword);

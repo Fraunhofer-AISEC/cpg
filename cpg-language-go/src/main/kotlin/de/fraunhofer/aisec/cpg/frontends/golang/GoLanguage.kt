@@ -26,18 +26,21 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.HasGenerics
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
 /** The Go language. */
-open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators {
+open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     override val frontend = GoLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
+    override val startCharacter = '['
+    override val endCharacter = ']'
 
     override fun newFrontend(
         config: TranslationConfiguration,

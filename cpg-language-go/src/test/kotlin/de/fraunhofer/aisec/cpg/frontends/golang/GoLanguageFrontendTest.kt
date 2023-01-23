@@ -167,7 +167,7 @@ class GoLanguageFrontendTest : BaseTest() {
         make = decl.initializer
         assertNotNull(make)
         assertTrue(make is ConstructExpression)
-        assertEquals(TypeParser.createFrom("map<string,string>", GoLanguage()), make.type)
+        assertEquals(TypeParser.createFrom("map[string,string]", GoLanguage()), make.type)
 
         // make channel
 
@@ -180,7 +180,7 @@ class GoLanguageFrontendTest : BaseTest() {
         make = decl.initializer
         assertNotNull(make)
         assertTrue(make is ConstructExpression)
-        assertEquals(TypeParser.createFrom("chan<int>", GoLanguage()), make.type)
+        assertEquals(TypeParser.createFrom("chan[int]", GoLanguage()), make.type)
     }
 
     @Test

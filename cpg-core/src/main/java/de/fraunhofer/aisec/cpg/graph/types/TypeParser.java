@@ -201,7 +201,8 @@ public class TypeParser {
    * @return list of strings in which every piece of type information is one element of the list
    */
   @NotNull
-  public static List<String> separate(@NotNull String type) {
+  public static List<String> separate(
+      @NotNull String type, Language<? extends LanguageFrontend> language) {
     type = type.split("=")[0];
 
     // Guarantee that there is no arbitrary number of whitespaces
@@ -236,12 +237,21 @@ public class TypeParser {
 
         case '[':
           // handle [ find matching closing ignore content (not relevant type information)
-          processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
-
           finishPosition = findMatching('[', ']', type.substring(i + 1));
-          typeBlocks.add("[]"); // type.substring(i, i+finishPosition+1)
-          i = finishPosition + i;
-          lastSplit = i + 1;
+          Pattern onlyNumbers = Pattern.compile("^\\[[0-9]*\\]$");
+          // If a language uses '[‘ for its generics, we want to make sure that only numbers (e.g.
+          // for array sizes) are between the brackets. We assume that a type cannot be a number
+          // here.
+          if (!(language instanceof HasGenerics
+                  && ((HasGenerics) language).getStartCharacter() == '[')
+              || onlyNumbers.matcher(type.substring(i, i + finishPosition + 1)).matches()) {
+            processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
+
+            // typeBlocks.add(type.substring(i, i + finishPosition + 1));
+            typeBlocks.add("[]"); // type.substring(i, i+finishPosition+1)
+            i = finishPosition + i;
+            lastSplit = i + 1;
+          }
           break;
 
         case '*':
@@ -357,7 +367,7 @@ public class TypeParser {
       @NotNull Language<? extends LanguageFrontend> language) {
     for (String bracketExpression : bracketExpressions) {
       List<String> splitExpression =
-          separate(bracketExpression.substring(1, bracketExpression.length() - 1));
+          separate(bracketExpression.substring(1, bracketExpression.length() - 1), language);
       for (String part : splitExpression) {
         finalType = performBracketContentAction(finalType, part, language);
       }
@@ -590,7 +600,7 @@ public class TypeParser {
     type = fixGenerics(type, language);
 
     // Separate typeString into a List containing each part of the typeString
-    List<String> typeBlocks = separate(type);
+    List<String> typeBlocks = separate(type, language);
 
     // Depending on if the Type is primitive or not signed/unsigned must be set differently (only
     // relevant for ObjectTypes)
