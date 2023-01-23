@@ -167,6 +167,9 @@ class GoLanguageFrontendTest : BaseTest() {
         make = decl.initializer
         assertNotNull(make)
         assertTrue(make is ConstructExpression)
+        // TODO: Maps can have dedicated types and parsing them as a generic here is only a
+        // temporary solution.
+        // This should be fixed in the future.
         assertEquals(TypeParser.createFrom("map[string,string]", GoLanguage()), make.type)
 
         // make channel
