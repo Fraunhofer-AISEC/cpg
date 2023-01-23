@@ -65,7 +65,7 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
                     this,
                     ObjectType.Modifier.NOT_APPLICABLE
                 ), // It's two floats
-            "str" to StringType("str", Type.Qualifier(), listOf(), this)
+            "str" to StringType("str", listOf(), this)
         )
 
     override fun newFrontend(
