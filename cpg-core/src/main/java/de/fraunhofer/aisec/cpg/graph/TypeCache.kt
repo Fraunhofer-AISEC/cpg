@@ -45,7 +45,8 @@ interface TypeCacheProvider : LanguageProvider {
 }
 
 fun TypeCacheProvider.newObjectType(name: CharSequence): Type {
-    val fqn = this.newName(name)
+    val namespace = (this as? NamespaceProvider)?.namespace // TODO: Maybe remove this again?
+    val fqn = this.newName(name, namespace = namespace)
 
     return this.typeManager.getOrPut(fqn) {
         val type = ObjectType()

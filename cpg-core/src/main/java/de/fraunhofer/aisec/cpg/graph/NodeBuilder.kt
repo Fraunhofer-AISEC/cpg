@@ -117,7 +117,13 @@ fun Node.applyMetadata(
     }
 
     if (name != null) {
-        this.name = this.newName(name, localNameOnly, defaultNamespace)
+        val namespace =
+            if (provider is NamespaceProvider) {
+                provider.namespace ?: defaultNamespace
+            } else {
+                defaultNamespace
+            }
+        this.name = this.newName(name, localNameOnly, namespace)
     }
 
     if (codeOverride != null) {
@@ -128,15 +134,8 @@ fun Node.applyMetadata(
 fun LanguageProvider.newName(
     name: CharSequence,
     localNameOnly: Boolean = false,
-    defaultNamespace: Name? = null,
+    namespace: Name? = null
 ): Name {
-    val namespace =
-        if (this is NamespaceProvider) {
-            this.namespace ?: defaultNamespace
-        } else {
-            defaultNamespace
-        }
-
     val language = this.language
 
     // The name could already be a real "name" (of our Name class). In this case we can just set
