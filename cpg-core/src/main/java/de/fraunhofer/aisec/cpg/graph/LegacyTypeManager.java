@@ -174,9 +174,8 @@ public class LegacyTypeManager {
 
       // We need an additional check here, because of parsing or other errors, the AST node might
       // not necessarily be a template declaration.
-      if (node instanceof TemplateDeclaration) {
-        TemplateDeclaration template = (TemplateDeclaration) node;
-        ParameterizedType parameterizedType = getTypeParameter(template, name);
+      if (node instanceof TemplateDeclaration templateDeclaration) {
+        ParameterizedType parameterizedType = getTypeParameter(templateDeclaration, name);
         if (parameterizedType != null) {
           return parameterizedType;
         }
@@ -312,13 +311,13 @@ public class LegacyTypeManager {
    *     with parameterizedTypes as generics false otherwise
    */
   public boolean stopPropagation(Type type, Type newType) {
-    if (type instanceof ObjectType
-        && newType instanceof ObjectType
-        && ((ObjectType) type).getGenerics() != null
-        && ((ObjectType) newType).getGenerics() != null
+    if (type instanceof ObjectType typeObjectType
+        && newType instanceof ObjectType newObjectType
+        && typeObjectType.getGenerics() != null
+        && newObjectType.getGenerics() != null
         && type.getName().equals(newType.getName())) {
-      return containsParameterizedType(((ObjectType) newType).getGenerics())
-          && !(containsParameterizedType(((ObjectType) type).getGenerics()));
+      return containsParameterizedType(newObjectType.getGenerics())
+          && !(containsParameterizedType(typeObjectType.getGenerics()));
     }
     return false;
   }
@@ -476,7 +475,7 @@ public class LegacyTypeManager {
             .map(t -> typeToRecord.getOrDefault(t, null))
             .filter(Objects::nonNull)
             .map(r -> getAncestors(r, 0))
-            .collect(Collectors.toList());
+            .toList();
 
     // normalize/reverse depth: roots start at 0, increasing on each level
     for (Set<Ancestor> ancestors : allAncestors) {
@@ -558,8 +557,8 @@ public class LegacyTypeManager {
     }
 
     // ObjectTypes can be passed as ReferenceTypes
-    if (superType instanceof ReferenceType) {
-      return isSupertypeOf(((ReferenceType) superType).getElementType(), subType, provider);
+    if (superType instanceof ReferenceType referenceType) {
+      return isSupertypeOf(referenceType.getElementType(), subType, provider);
     }
 
     Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)), provider);

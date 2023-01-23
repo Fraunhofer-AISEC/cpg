@@ -65,8 +65,8 @@ public class TypeParser {
    */
   public static boolean isElaboratedTypeSpecifier(
       String specifier, Language<? extends LanguageFrontend> language) {
-    return language instanceof HasElaboratedTypeSpecifier
-        && ((HasElaboratedTypeSpecifier) language).getElaboratedTypeSpecifier().contains(specifier);
+    return language instanceof HasElaboratedTypeSpecifier hasElaboratedTypeSpecifier
+        && hasElaboratedTypeSpecifier.getElaboratedTypeSpecifier().contains(specifier);
   }
 
   /**
@@ -135,8 +135,8 @@ public class TypeParser {
   private static boolean isUnknownType(
       String typeName, @NotNull Language<? extends LanguageFrontend> language) {
     return typeName.equals(Type.UNKNOWN_TYPE_STRING)
-        || (language instanceof HasUnknownType
-            && ((HasUnknownType) language).getUnknownTypeString().contains(typeName));
+        || (language instanceof HasUnknownType hasUnknownType
+            && hasUnknownType.getUnknownTypeString().contains(typeName));
   }
 
   /**
@@ -149,17 +149,17 @@ public class TypeParser {
   @NotNull
   private static String fixGenerics(
       @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
-    if (language instanceof HasGenerics
-        && type.contains(((HasGenerics) language).getStartCharacter() + "")
-        && type.contains(((HasGenerics) language).getEndCharacter() + "")) {
+    if (language instanceof HasGenerics hasGenerics
+        && type.contains(hasGenerics.getStartCharacter() + "")
+        && type.contains(hasGenerics.getEndCharacter() + "")) {
 
-      char startCharacter = ((HasGenerics) language).getStartCharacter();
-      char endCharacter = ((HasGenerics) language).getEndCharacter();
+      char startCharacter = hasGenerics.getStartCharacter();
+      char endCharacter = hasGenerics.getEndCharacter();
 
       // Get the generic string between startCharacter and endCharacter.
       String generics =
           type.substring(type.indexOf(startCharacter) + 1, type.lastIndexOf(endCharacter));
-      if (language instanceof HasElaboratedTypeSpecifier) {
+      if (language instanceof HasElaboratedTypeSpecifier hasElaboratedTypeSpecifier) {
         /* We can have elaborate type specifiers (e.g. struct) inside this string. We want to remove it.
          * We remove this specifier from the generic string.
          * To do so, this regex checks that a specifier is preceded by "<" (or whatever is the startCharacter), "," or a whitespace and is also followed by a whitespace (to avoid removing other strings by mistake).
@@ -167,10 +167,9 @@ public class TypeParser {
         generics =
             generics.replaceAll(
                 "((^|[\\h,"
-                    + ((HasGenerics) language).getStartCharacter()
+                    + hasGenerics.getStartCharacter()
                     + "])\\h*)(("
-                    + String.join(
-                        "|", ((HasElaboratedTypeSpecifier) language).getElaboratedTypeSpecifier())
+                    + String.join("|", hasElaboratedTypeSpecifier.getElaboratedTypeSpecifier())
                     + ")\\h+)",
                 "$1");
       }
@@ -242,12 +241,11 @@ public class TypeParser {
           // If a language uses '[‘ for its generics, we want to make sure that only numbers (e.g.
           // for array sizes) are between the brackets. We assume that a type cannot be a number
           // here.
-          if (!(language instanceof HasGenerics
-                  && ((HasGenerics) language).getStartCharacter() == '[')
+          if (!(language instanceof HasGenerics hasGenerics
+                  && hasGenerics.getStartCharacter() == '[')
               || onlyNumbers.matcher(type.substring(i, i + finishPosition + 1)).matches()) {
             processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
 
-            // typeBlocks.add(type.substring(i, i + finishPosition + 1));
             typeBlocks.add("[]"); // type.substring(i, i+finishPosition+1)
             i = finishPosition + i;
             lastSplit = i + 1;
@@ -303,13 +301,13 @@ public class TypeParser {
 
   private static List<Type> getGenerics(
       String typeName, Language<? extends LanguageFrontend> language) {
-    if (language instanceof HasGenerics
-        && typeName.contains(((HasGenerics) language).getStartCharacter() + "")
-        && typeName.contains(((HasGenerics) language).getEndCharacter() + "")) {
+    if (language instanceof HasGenerics hasGenerics
+        && typeName.contains(hasGenerics.getStartCharacter() + "")
+        && typeName.contains(hasGenerics.getEndCharacter() + "")) {
       String generics =
           typeName.substring(
-              typeName.indexOf(((HasGenerics) language).getStartCharacter()) + 1,
-              typeName.lastIndexOf(((HasGenerics) language).getEndCharacter()));
+              typeName.indexOf(hasGenerics.getStartCharacter()) + 1,
+              typeName.lastIndexOf(hasGenerics.getEndCharacter()));
       List<Type> genericList = new ArrayList<>();
       String[] parametersSplit = generics.split(",");
       for (String parameter : parametersSplit) {
@@ -346,8 +344,8 @@ public class TypeParser {
       return finalType;
     }
 
-    if (language instanceof HasQualifier)
-      ((HasQualifier) language).updateQualifier(part, finalType.getQualifier());
+    if (language instanceof HasQualifier hasQualifier)
+      hasQualifier.updateQualifier(part, finalType.getQualifier());
 
     return finalType;
   }
@@ -465,8 +463,8 @@ public class TypeParser {
     if (oldChain instanceof ObjectType && newRoot instanceof ObjectType) {
       ((ObjectType) newRoot.getRoot()).setGenerics(((ObjectType) oldChain).getGenerics());
       return newRoot;
-    } else if (oldChain instanceof ReferenceType) {
-      Type reference = reWrapType(((ReferenceType) oldChain).getElementType(), newRoot);
+    } else if (oldChain instanceof ReferenceType referenceType) {
+      Type reference = reWrapType(referenceType.getElementType(), newRoot);
       ReferenceType newChain = (ReferenceType) oldChain.duplicate();
       newChain.setElementType(reference);
       newChain.refreshName();
@@ -532,19 +530,18 @@ public class TypeParser {
       // Check storage and qualifier specifiers that are defined after the typeName e.g. int const
       Type.Storage storageSpecifier = language.asStorageSpecifier(part);
       if (storageSpecifier != null) finalType.setStorage(storageSpecifier);
-      if (language instanceof HasQualifier)
-        ((HasQualifier) language).updateQualifier(part, finalType.getQualifier());
+      if (language instanceof HasQualifier hasQualifier)
+        hasQualifier.updateQualifier(part, finalType.getQualifier());
     }
     return finalType;
   }
 
   private static String removeGenerics(
       String typeName, @NotNull Language<? extends LanguageFrontend> language) {
-    if (language instanceof HasGenerics
-        && typeName.contains(((HasGenerics) language).getStartCharacter() + "")
-        && typeName.contains(((HasGenerics) language).getEndCharacter() + "")) {
-      typeName =
-          typeName.substring(0, typeName.indexOf(((HasGenerics) language).getStartCharacter()));
+    if (language instanceof HasGenerics hasGenerics
+        && typeName.contains(hasGenerics.getStartCharacter() + "")
+        && typeName.contains(hasGenerics.getEndCharacter() + "")) {
+      typeName = typeName.substring(0, typeName.indexOf(hasGenerics.getStartCharacter()));
     }
     return typeName;
   }
@@ -626,8 +623,8 @@ public class TypeParser {
         storageList.add(specifier);
         counter++;
       } else {
-        if (language instanceof HasQualifier
-            && ((HasQualifier) language).updateQualifier(part, qualifier)) {
+        if (language instanceof HasQualifier hasQualifier
+            && hasQualifier.updateQualifier(part, qualifier)) {
           counter++;
         } else if (isElaboratedTypeSpecifier(part, language)) {
           // ignore elaborated types for now
