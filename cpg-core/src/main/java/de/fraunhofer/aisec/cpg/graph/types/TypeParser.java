@@ -46,8 +46,6 @@ public class TypeParser {
 
   private static final Logger log = LoggerFactory.getLogger(TypeParser.class);
 
-  public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
-
   // TODO: document/remove this regexp
   private static final Pattern functionPtrRegex =
       Pattern.compile(
@@ -136,7 +134,7 @@ public class TypeParser {
 
   private static boolean isUnknownType(
       String typeName, @NotNull Language<? extends LanguageFrontend> language) {
-    return typeName.equals(UNKNOWN_TYPE_STRING)
+    return typeName.equals(Type.UNKNOWN_TYPE_STRING)
         || (language instanceof HasUnknownType
             && ((HasUnknownType) language).getUnknownTypeString().contains(typeName));
   }
@@ -164,11 +162,13 @@ public class TypeParser {
       if (language instanceof HasElaboratedTypeSpecifier) {
         /* We can have elaborate type specifiers (e.g. struct) inside this string. We want to remove it.
          * We remove this specifier from the generic string.
-         * To do so, this regex checks that a specifier is preceded by "<", "," or a whitespace and is also followed by a whitespace (to avoid removing other strings by mistake).
+         * To do so, this regex checks that a specifier is preceded by "<" (or whatever is the startCharacter), "," or a whitespace and is also followed by a whitespace (to avoid removing other strings by mistake).
          */
         generics =
             generics.replaceAll(
-                "((^|[\\h,<])\\h*)(("
+                "((^|[\\h,"
+                    + ((HasGenerics) language).getStartCharacter()
+                    + "])\\h*)(("
                     + String.join(
                         "|", ((HasElaboratedTypeSpecifier) language).getElaboratedTypeSpecifier())
                     + ")\\h+)",
@@ -293,8 +293,13 @@ public class TypeParser {
 
   private static List<Type> getGenerics(
       String typeName, Language<? extends LanguageFrontend> language) {
-    if (typeName.contains("<") && typeName.contains(">")) {
-      String generics = typeName.substring(typeName.indexOf('<') + 1, typeName.lastIndexOf('>'));
+    if (language instanceof HasGenerics
+        && typeName.contains(((HasGenerics) language).getStartCharacter() + "")
+        && typeName.contains(((HasGenerics) language).getEndCharacter() + "")) {
+      String generics =
+          typeName.substring(
+              typeName.indexOf(((HasGenerics) language).getStartCharacter()) + 1,
+              typeName.lastIndexOf(((HasGenerics) language).getEndCharacter()));
       List<Type> genericList = new ArrayList<>();
       String[] parametersSplit = generics.split(",");
       for (String parameter : parametersSplit) {
@@ -523,9 +528,13 @@ public class TypeParser {
     return finalType;
   }
 
-  private static String removeGenerics(String typeName) {
-    if (typeName.contains("<") && typeName.contains(">")) {
-      typeName = typeName.substring(0, typeName.indexOf('<'));
+  private static String removeGenerics(
+      String typeName, @NotNull Language<? extends LanguageFrontend> language) {
+    if (language instanceof HasGenerics
+        && typeName.contains(((HasGenerics) language).getStartCharacter() + "")
+        && typeName.contains(((HasGenerics) language).getEndCharacter() + "")) {
+      typeName =
+          typeName.substring(0, typeName.indexOf(((HasGenerics) language).getStartCharacter()));
     }
     return typeName;
   }
@@ -650,12 +659,12 @@ public class TypeParser {
       finalType = new IncompleteType();
     } else if (isUnknownType(typeName, language)) {
       // UnknownType -> no information on how to process this type
-      finalType = new UnknownType(UNKNOWN_TYPE_STRING);
+      finalType = new UnknownType(Type.UNKNOWN_TYPE_STRING);
     } else {
       // ObjectType
       // Obtain possible generic List from TypeString
       List<Type> generics = getGenerics(typeName, language);
-      typeName = removeGenerics(typeName);
+      typeName = removeGenerics(typeName, language);
       finalType =
           new ObjectType(
               typeName,
