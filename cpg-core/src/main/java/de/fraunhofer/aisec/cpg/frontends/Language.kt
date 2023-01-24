@@ -89,7 +89,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
         typeCache: TypeCache = TypeCache()
     ): T
 
-    fun getSimpleTypeOf(typeString: String) = simpleTypes[typeString]?.duplicate()
+    fun getSimpleTypeOf(typeString: String) = simpleTypes[typeString]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
     fun handlesFile(file: File): Boolean {

@@ -50,6 +50,17 @@ public class TypeParser {
   private static final Pattern functionPtrRegex =
       Pattern.compile(
           "(?:(?<functionptr>[\\h(]+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*[\\h)]+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
+  private static final List<String> potentialKeywords =
+      List.of(
+          "STATIC",
+          "EXTERN",
+          "REGISTER",
+          "AUTO",
+          "FINAL",
+          "CONST",
+          "RESTRICT",
+          "VOLATILE",
+          "ATOMIC");
 
   private TypeParser() {
     throw new IllegalStateException("Do not instantiate the TypeParser");
@@ -103,7 +114,7 @@ public class TypeParser {
    * Matches the type blocks and checks if the typeString has the structure of a function pointer
    *
    * @param type separated type string
-   * @return true if function pointer structure is found in typeString, false if not
+   * @return the Matcher of the functionPointer or null
    */
   @Nullable
   private static Matcher getFunctionPtrMatcher(@NotNull List<String> type) {
@@ -150,8 +161,8 @@ public class TypeParser {
   private static String fixGenerics(
       @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
     if (language instanceof HasGenerics hasGenerics
-        && type.contains(hasGenerics.getStartCharacter() + "")
-        && type.contains(hasGenerics.getEndCharacter() + "")) {
+        && type.indexOf(hasGenerics.getStartCharacter()) > -1
+        && type.indexOf(hasGenerics.getEndCharacter()) > -1) {
 
       char startCharacter = hasGenerics.getStartCharacter();
       char endCharacter = hasGenerics.getEndCharacter();
@@ -212,31 +223,26 @@ public class TypeParser {
 
     // Splits TypeString into relevant information blocks
     int lastSplit = 0;
-    int finishPosition = 0;
-    String substr = "";
 
-    int i = 0;
-    while (i < type.length()) {
+    for (int i = 0; i < type.length(); i++) {
       char ch = type.charAt(i);
       switch (ch) {
-        case ' ':
+        case ' ' -> {
           // handle space create element
           processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
           lastSplit = i + 1;
-          break;
-
-        case '(':
+        }
+        case '(' -> {
           // handle ( find matching closing ignore content (not relevant type information)
           processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
-          finishPosition = findMatching('(', ')', type.substring(i + 1));
+          int finishPosition = findMatching('(', ')', type.substring(i + 1));
           typeBlocks.add(type.substring(i, i + finishPosition + 1));
           i = finishPosition + i;
           lastSplit = i + 1;
-          break;
-
-        case '[':
+        }
+        case '[' -> {
           // handle [ find matching closing ignore content (not relevant type information)
-          finishPosition = findMatching('[', ']', type.substring(i + 1));
+          int finishPosition = findMatching('[', ']', type.substring(i + 1));
           Pattern onlyNumbers = Pattern.compile("^\\[[0-9]*\\]$");
           // If a language uses '[‘ for its generics, we want to make sure that only numbers (e.g.
           // for array sizes) are between the brackets. We assume that a type cannot be a number
@@ -250,33 +256,27 @@ public class TypeParser {
             i = finishPosition + i;
             lastSplit = i + 1;
           }
-          break;
-
-        case '*':
+        }
+        case '*' -> {
           // handle * operator
           processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
-
           typeBlocks.add("*");
           lastSplit = i + 1;
-          break;
-
-        case '&':
+        }
+        case '&' -> {
           // handle & operator
           processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
-
           typeBlocks.add("&");
           lastSplit = i + 1;
-          break;
-
-        default:
+        }
+        default -> {
           // everything else
-          substr = type.substring(lastSplit);
+          String substr = type.substring(lastSplit);
           if (substr.length() != 0 && i == type.length() - 1) {
             typeBlocks.add(substr);
           }
-          break;
+        }
       }
-      i++;
     }
 
     return typeBlocks;
@@ -290,7 +290,7 @@ public class TypeParser {
     List<Type> parameters = new ArrayList<>();
     String[] parametersSplit = parameterList.split(",");
     for (String parameter : parametersSplit) {
-      // ignore void parameters
+      // ignore void parameters // TODO: WHY??
       if (parameter.length() > 0 && !parameter.trim().equals("void")) {
         parameters.add(createFrom(parameter.trim(), language));
       }
@@ -301,22 +301,21 @@ public class TypeParser {
 
   private static List<Type> getGenerics(
       String typeName, Language<? extends LanguageFrontend> language) {
+    List<Type> genericList = new ArrayList<>();
     if (language instanceof HasGenerics hasGenerics
-        && typeName.contains(hasGenerics.getStartCharacter() + "")
-        && typeName.contains(hasGenerics.getEndCharacter() + "")) {
+        && typeName.indexOf(hasGenerics.getStartCharacter()) > -1
+        && typeName.indexOf(hasGenerics.getEndCharacter()) > -1) {
       String generics =
           typeName.substring(
               typeName.indexOf(hasGenerics.getStartCharacter()) + 1,
               typeName.lastIndexOf(hasGenerics.getEndCharacter()));
-      List<Type> genericList = new ArrayList<>();
+
       String[] parametersSplit = generics.split(",");
       for (String parameter : parametersSplit) {
         genericList.add(createFrom(parameter.trim(), language));
       }
-
-      return genericList;
     }
-    return new ArrayList<>();
+    return genericList;
   }
 
   private static Type performBracketContentAction(
@@ -332,10 +331,9 @@ public class TypeParser {
     if (part.startsWith("[") && part.endsWith("]")) {
       return finalType.reference(PointerType.PointerOrigin.ARRAY);
     }
+
     if (part.startsWith("(") && part.endsWith(")")) {
-      List<String> subBracketExpression = new ArrayList<>();
-      subBracketExpression.add(part);
-      return resolveBracketExpression(finalType, subBracketExpression, language);
+      return resolveBracketExpression(finalType, List.of(part), language);
     }
 
     return finalType;
@@ -373,10 +371,7 @@ public class TypeParser {
    */
   private static String removeAccessModifier(
       @NotNull String type, @NotNull Language<? extends LanguageFrontend> language) {
-    for (String modifier : language.getAccessModifiers()) {
-      type = type.replaceAll(modifier, "");
-    }
-    return type.trim();
+    return type.replaceAll(String.join("|", language.getAccessModifiers()), "").trim();
   }
 
   /**
@@ -388,12 +383,7 @@ public class TypeParser {
    */
   private static boolean isPrimitiveType(
       @NotNull List<String> stringList, @NotNull Language<? extends LanguageFrontend> language) {
-    for (String s : stringList) {
-      if (language.getPrimitiveTypes().contains(s)) {
-        return true;
-      }
-    }
-    return false;
+    return stringList.stream().anyMatch(s -> language.getPrimitiveTypes().contains(s));
   }
 
   /**
@@ -408,26 +398,23 @@ public class TypeParser {
       @NotNull List<String> typeBlocks, @NotNull Language<? extends LanguageFrontend> language) {
     List<String> joinedTypeBlocks = new ArrayList<>();
     StringBuilder primitiveType = new StringBuilder();
-    boolean foundPrimitive = false;
+    int index = 0;
 
     for (String s : typeBlocks) {
       if (language.getPrimitiveTypes().contains(s)) {
         if (primitiveType.length() > 0) {
           primitiveType.append(" ");
+        } else {
+          index = joinedTypeBlocks.size();
         }
         primitiveType.append(s);
+      } else {
+        joinedTypeBlocks.add(s);
       }
     }
 
-    for (String s : typeBlocks) {
-      if (language.getPrimitiveTypes().contains(s) && !foundPrimitive) {
-        joinedTypeBlocks.add(primitiveType.toString());
-        foundPrimitive = true;
-      } else {
-        if (!language.getPrimitiveTypes().contains(s)) {
-          joinedTypeBlocks.add(s);
-        }
-      }
+    if (!primitiveType.isEmpty()) {
+      joinedTypeBlocks.add(index, primitiveType.toString());
     }
 
     return joinedTypeBlocks;
@@ -487,8 +474,7 @@ public class TypeParser {
   private static Type postTypeParsing(
       @NotNull List<String> subPart,
       @NotNull Type finalType,
-      @NotNull List<String> bracketExpressions,
-      @NotNull Language<? extends LanguageFrontend> language) {
+      @NotNull List<String> bracketExpressions) {
     for (String part : subPart) {
       if (part.equals("*")) {
         // Creates a Pointer to the finalType
@@ -594,17 +580,7 @@ public class TypeParser {
     int counter = 0;
 
     for (String part : typeBlocks) {
-      if (List.of(
-                  "STATIC",
-                  "EXTERN",
-                  "REGISTER",
-                  "AUTO",
-                  "FINAL",
-                  "CONST",
-                  "RESTRICT",
-                  "VOLATILE",
-                  "ATOMIC")
-              .contains(part.toUpperCase())
+      if (potentialKeywords.contains(part.toUpperCase())
           || isElaboratedTypeSpecifier(part, language)) {
         // We only want to get rid of these parts for the remaining method.
         counter++;
@@ -651,20 +627,12 @@ public class TypeParser {
               typeName, generics, ObjectType.Modifier.NOT_APPLICABLE, primitiveType, language);
     }
 
-    if (finalType.getName().getLocalName().equals("auto")
-        || (type.contains("auto") && !primitiveType)) {
-      // In C++17 if auto keyword is used the compiler infers the type automatically, hence we
-      // are not able to find out, which type this should be, it will be resolved due to
-      // dataflow
-      return UnknownType.getUnknownType(language);
-    }
-
     // Process Keywords / Operators (*, &) after typeName
     List<String> subPart = typeBlocks.subList(counter, typeBlocks.size());
 
     List<String> bracketExpressions = new ArrayList<>();
 
-    finalType = postTypeParsing(subPart, finalType, bracketExpressions, language);
+    finalType = postTypeParsing(subPart, finalType, bracketExpressions);
 
     // Resolve BracketExpressions that were identified previously
     finalType = resolveBracketExpression(finalType, bracketExpressions, language);

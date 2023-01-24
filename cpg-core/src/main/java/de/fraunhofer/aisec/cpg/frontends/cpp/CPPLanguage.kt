@@ -25,10 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.frontends.HasClasses
-import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
-import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
-import de.fraunhofer.aisec.cpg.frontends.HasTemplates
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -42,9 +39,15 @@ import java.util.regex.Pattern
 
 /** The C++ language. */
 class CPPLanguage :
-    CLanguage(), HasDefaultArguments, HasTemplates, HasComplexCallResolution, HasClasses {
+    CLanguage(),
+    HasDefaultArguments,
+    HasTemplates,
+    HasComplexCallResolution,
+    HasClasses,
+    HasUnknownType {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
+    override val unknownTypeString = listOf("auto")
 
     override val simpleTypes =
         mapOf(
