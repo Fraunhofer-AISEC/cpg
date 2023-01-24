@@ -82,7 +82,7 @@ open class NumericType : ObjectType {
     }
 
     override fun equals(other: Any?) =
-        super.equals(other) && this.modifier == (other as NumericType).modifier
+        super.equals(other) && this.modifier == (other as? NumericType)?.modifier
 
     override fun hashCode() = Objects.hash(super.hashCode(), generics, modifier, primitive)
 }
