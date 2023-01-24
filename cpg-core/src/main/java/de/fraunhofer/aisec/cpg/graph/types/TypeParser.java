@@ -622,9 +622,7 @@ public class TypeParser {
       // Obtain possible generic List from TypeString
       List<Type> generics = getGenerics(typeName, language);
       typeName = removeGenerics(typeName, language);
-      finalType =
-          new ObjectType(
-              typeName, generics, ObjectType.Modifier.NOT_APPLICABLE, primitiveType, language);
+      finalType = new ObjectType(typeName, generics, primitiveType, language);
     }
 
     // Process Keywords / Operators (*, &) after typeName

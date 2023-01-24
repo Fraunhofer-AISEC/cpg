@@ -37,19 +37,19 @@ class FloatingPointType : NumericType {
         typeName: String,
         bitWidth: Int?,
         language: Language<out LanguageFrontend>?,
-        modifier: Modifier = Modifier.SIGNED
+        modifier: NumericType.Modifier = Modifier.SIGNED
     ) : super(typeName, bitWidth, language, modifier)
 
     constructor(
         typeName: String,
-        modifier: Modifier,
+        modifier: NumericType.Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
     ) : super(typeName, modifier, language, bitWidth)
 
     constructor(
         name: Name,
-        modifier: Modifier,
+        modifier: NumericType.Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
     ) : super(name, modifier, language, bitWidth)

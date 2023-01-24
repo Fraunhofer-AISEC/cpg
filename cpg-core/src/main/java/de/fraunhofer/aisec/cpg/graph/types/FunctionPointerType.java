@@ -120,9 +120,8 @@ public class FunctionPointerType extends Type {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (!(o instanceof FunctionPointerType)) return false;
+    if (!(o instanceof FunctionPointerType that)) return false;
     if (!super.equals(o)) return false;
-    FunctionPointerType that = (FunctionPointerType) o;
     return Objects.equals(this.getParameters(), that.getParameters())
         && PropertyEdge.propertyEqualsList(parameters, that.parameters)
         && Objects.equals(returnType, that.returnType);

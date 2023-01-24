@@ -400,10 +400,15 @@ class CXXLanguageFrontend(
                 130 -> // a string
                 newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
-                        newPrimitiveType("char").const().reference(),
+                        newPrimitiveType("char", NumericType.Modifier.NOT_APPLICABLE).reference(),
                         code
                     )
-                else -> newLiteral(code, newPrimitiveType("char").const().reference(), code)
+                else ->
+                    newLiteral(
+                        code,
+                        newPrimitiveType("char", NumericType.Modifier.NOT_APPLICABLE).reference(),
+                        code
+                    )
             }
         return newAnnotationMember("", expression, code)
     }

@@ -28,13 +28,16 @@ package de.fraunhofer.aisec.cpg.graph.types
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
+import java.util.*
 
 /** This type collects all kind of numeric types. */
 open class NumericType : ObjectType {
     val bitWidth: Int?
+    val modifier: Modifier
 
     constructor() : super() {
         bitWidth = null
+        modifier = Modifier.SIGNED
     }
 
     constructor(
@@ -42,8 +45,9 @@ open class NumericType : ObjectType {
         bitWidth: Int?,
         language: Language<out LanguageFrontend>?,
         modifier: Modifier = Modifier.SIGNED
-    ) : super(typeName, listOf(), modifier, true, language) {
+    ) : super(typeName, listOf(), true, language) {
         this.bitWidth = bitWidth
+        this.modifier = modifier
     }
 
     constructor(
@@ -51,8 +55,9 @@ open class NumericType : ObjectType {
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
-    ) : super(typeName, listOf(), modifier, true, language) {
+    ) : super(typeName, listOf(), true, language) {
         this.bitWidth = bitWidth
+        this.modifier = modifier
     }
 
     constructor(
@@ -60,7 +65,24 @@ open class NumericType : ObjectType {
         modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
-    ) : super(typeName, listOf(), modifier, true, language) {
+    ) : super(typeName, listOf(), true, language) {
         this.bitWidth = bitWidth
+        this.modifier = modifier
     }
+
+    /**
+     * NumericTypes can have a modifier. The default is signed. Some types (e.g. char in C) may be
+     * neither of the signed/unsigned option. TODO: maybe replace with a flag "signed" or
+     * "unsigned"?
+     */
+    enum class Modifier {
+        SIGNED,
+        UNSIGNED,
+        NOT_APPLICABLE
+    }
+
+    override fun equals(other: Any?) =
+        super.equals(other) && this.modifier == (other as NumericType).modifier
+
+    override fun hashCode() = Objects.hash(super.hashCode(), generics, modifier, primitive)
 }

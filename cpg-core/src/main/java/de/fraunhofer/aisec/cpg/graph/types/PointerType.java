@@ -165,9 +165,8 @@ public class PointerType extends Type implements SecondOrderType {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (!(o instanceof PointerType)) return false;
+    if (!(o instanceof PointerType that)) return false;
     if (!super.equals(o)) return false;
-    PointerType that = (PointerType) o;
     return Objects.equals(elementType, that.elementType)
         && Objects.equals(pointerOrigin, that.pointerOrigin);
   }

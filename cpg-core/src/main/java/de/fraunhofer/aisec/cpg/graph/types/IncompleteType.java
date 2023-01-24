@@ -32,8 +32,8 @@ import java.util.Objects;
  * length, forward declarated classes in C++
  *
  * <p>Right now we are only dealing with void for objects with unknown size, therefore the name is
- * fixed to void. However, this can be changed in future, in order to support other objects with
- * unknown size apart from void. Therefore this Type is not called VoidType
+ * fixed to void. However, this can be changed in the future, in order to support other objects with
+ * unknown size apart from void. Therefore, this Type is not called VoidType
  */
 public class IncompleteType extends Type {
 

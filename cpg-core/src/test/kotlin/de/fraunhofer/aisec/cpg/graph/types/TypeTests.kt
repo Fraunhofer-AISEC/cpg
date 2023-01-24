@@ -43,15 +43,12 @@ import kotlin.test.*
 internal class TypeTests : BaseTest() {
     @Test
     fun reference() {
-        val objectType: Type =
-            ObjectType("int", ArrayList(), ObjectType.Modifier.SIGNED, true, CPPLanguage())
+        val objectType: Type = IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 32)
         val pointerType: Type = PointerType(objectType, PointerType.PointerOrigin.POINTER)
         val unknownType: Type = UnknownType.getUnknownType(CPPLanguage())
         val incompleteType: Type = IncompleteType()
         val parameterList =
-            listOf<Type>(
-                ObjectType("int", emptyList(), ObjectType.Modifier.SIGNED, true, CPPLanguage())
-            )
+            listOf<Type>(IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 32))
         val functionPointerType: Type =
             FunctionPointerType(parameterList, IncompleteType(), CPPLanguage())
 
@@ -85,15 +82,12 @@ internal class TypeTests : BaseTest() {
 
     @Test
     fun dereference() {
-        val objectType: Type =
-            ObjectType("int", ArrayList(), ObjectType.Modifier.SIGNED, true, CPPLanguage())
+        val objectType: Type = IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 32)
         val pointerType: Type = PointerType(objectType, PointerType.PointerOrigin.POINTER)
         val unknownType: Type = UnknownType.getUnknownType(CPPLanguage())
         val incompleteType: Type = IncompleteType()
         val parameterList =
-            listOf<Type>(
-                ObjectType("int", emptyList(), ObjectType.Modifier.SIGNED, true, CPPLanguage())
-            )
+            listOf<Type>(IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 32))
         val functionPointerType: Type =
             FunctionPointerType(parameterList, IncompleteType(), CPPLanguage())
 
@@ -123,25 +117,25 @@ internal class TypeTests : BaseTest() {
         // Test 1: Ignore Access Modifier Keyword (public, private, protected)
         var typeString = "private int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = IntegerType("int", ObjectType.Modifier.SIGNED, JavaLanguage(), 32)
+        expected = IntegerType("int", NumericType.Modifier.SIGNED, JavaLanguage(), 32)
         assertEquals(expected, result)
 
         // Test 2: constant type using final
         typeString = "final int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = IntegerType("int", ObjectType.Modifier.SIGNED, JavaLanguage(), 32)
+        expected = IntegerType("int", NumericType.Modifier.SIGNED, JavaLanguage(), 32)
         assertEquals(expected, result)
 
         // Test 3: static type
         typeString = "static int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = IntegerType("int", ObjectType.Modifier.SIGNED, JavaLanguage(), 32)
+        expected = IntegerType("int", NumericType.Modifier.SIGNED, JavaLanguage(), 32)
         assertEquals(expected, result)
 
         // Test 4: volatile type
         typeString = "public volatile int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = IntegerType("int", ObjectType.Modifier.SIGNED, JavaLanguage(), 32)
+        expected = IntegerType("int", NumericType.Modifier.SIGNED, JavaLanguage(), 32)
         assertEquals(expected, result)
 
         // Test 5: combining a storage type and a qualifier
@@ -153,7 +147,7 @@ internal class TypeTests : BaseTest() {
         // Test 6: using two different qualifiers
         typeString = "public final volatile int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = IntegerType("int", ObjectType.Modifier.SIGNED, JavaLanguage(), 32)
+        expected = IntegerType("int", NumericType.Modifier.SIGNED, JavaLanguage(), 32)
         assertEquals(expected, result)
 
         // Test 7: Reference level using arrays
@@ -161,7 +155,7 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
             PointerType(
-                IntegerType("int", ObjectType.Modifier.SIGNED, JavaLanguage(), 32),
+                IntegerType("int", NumericType.Modifier.SIGNED, JavaLanguage(), 32),
                 PointerType.PointerOrigin.ARRAY
             )
         assertEquals(expected, result)
@@ -171,8 +165,7 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, JavaLanguage())
         var generics: MutableList<Type?> = ArrayList()
         generics.add(StringType("java.lang.String", JavaLanguage()))
-        expected =
-            ObjectType("List", generics, ObjectType.Modifier.NOT_APPLICABLE, false, JavaLanguage())
+        expected = ObjectType("List", generics, false, JavaLanguage())
         assertEquals(expected, result)
 
         // Test 9: more generics
@@ -181,33 +174,17 @@ internal class TypeTests : BaseTest() {
         val genericStringType = StringType("java.lang.String", JavaLanguage())
         val generics3: MutableList<Type> = ArrayList()
         generics3.add(genericStringType)
-        val genericElement3 =
-            ObjectType("List", generics3, ObjectType.Modifier.NOT_APPLICABLE, false, JavaLanguage())
+        val genericElement3 = ObjectType("List", generics3, false, JavaLanguage())
         val generics2a: MutableList<Type> = ArrayList()
         generics2a.add(genericElement3)
         val generics2b: MutableList<Type> = ArrayList()
         generics2b.add(genericStringType)
-        val genericElement1 =
-            ObjectType(
-                "List",
-                generics2a,
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
-        val genericElement2 =
-            ObjectType(
-                "List",
-                generics2b,
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
+        val genericElement1 = ObjectType("List", generics2a, false, JavaLanguage())
+        val genericElement2 = ObjectType("List", generics2b, false, JavaLanguage())
         generics = ArrayList()
         generics.add(genericElement1)
         generics.add(genericElement2)
-        expected =
-            ObjectType("List", generics, ObjectType.Modifier.NOT_APPLICABLE, false, JavaLanguage())
+        expected = ObjectType("List", generics, false, JavaLanguage())
         assertEquals(expected, result)
     }
 
@@ -219,7 +196,7 @@ internal class TypeTests : BaseTest() {
         var typeString = "void (*single_param)(int)"
         result = TypeParser.createFrom(typeString, CPPLanguage())
         val parameterList =
-            listOf<Type>(IntegerType("int", ObjectType.Modifier.SIGNED, CPPLanguage(), 32))
+            listOf<Type>(IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 32))
         var expected: Type = FunctionPointerType(parameterList, IncompleteType(), CPPLanguage())
         assertEquals(expected, result)
 
@@ -234,7 +211,7 @@ internal class TypeTests : BaseTest() {
         expected =
             PointerType(
                 PointerType(
-                    IntegerType("char", ObjectType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
+                    IntegerType("char", NumericType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
                     PointerType.PointerOrigin.ARRAY
                 ),
                 PointerType.PointerOrigin.POINTER
@@ -246,7 +223,7 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             PointerType(
-                IntegerType("char", ObjectType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
+                IntegerType("char", NumericType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
                 PointerType.PointerOrigin.POINTER
             )
         assertEquals(expected, result)
@@ -266,7 +243,7 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             PointerType(
-                IntegerType("char", ObjectType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
+                IntegerType("char", NumericType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
                 PointerType.PointerOrigin.POINTER
             )
         assertEquals(expected, result)
@@ -276,7 +253,7 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             PointerType(
-                IntegerType("char", ObjectType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
+                IntegerType("char", NumericType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
                 PointerType.PointerOrigin.POINTER
             )
         assertEquals(expected, result)
@@ -286,7 +263,7 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         expected =
             PointerType(
-                IntegerType("char", ObjectType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
+                IntegerType("char", NumericType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
                 PointerType.PointerOrigin.POINTER
             )
         assertEquals(expected, result)
@@ -297,7 +274,7 @@ internal class TypeTests : BaseTest() {
         expected =
             PointerType(
                 PointerType(
-                    IntegerType("char", ObjectType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
+                    IntegerType("char", NumericType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
                     PointerType.PointerOrigin.POINTER
                 ),
                 PointerType.PointerOrigin.ARRAY
@@ -311,7 +288,7 @@ internal class TypeTests : BaseTest() {
             PointerType(
                 PointerType(
                     PointerType(
-                        IntegerType("char", ObjectType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
+                        IntegerType("char", NumericType.Modifier.NOT_APPLICABLE, CPPLanguage(), 8),
                         PointerType.PointerOrigin.POINTER
                     ),
                     PointerType.PointerOrigin.ARRAY
@@ -324,35 +301,33 @@ internal class TypeTests : BaseTest() {
         typeString = "Array<int> array"
         result = TypeParser.createFrom(typeString, CPPLanguage())
         var generics: MutableList<Type?> = ArrayList()
-        generics.add(IntegerType("int", ObjectType.Modifier.SIGNED, CPPLanguage(), 8))
-        expected =
-            ObjectType("Array", generics, ObjectType.Modifier.NOT_APPLICABLE, false, CPPLanguage())
+        generics.add(IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 8))
+        expected = ObjectType("Array", generics, false, CPPLanguage())
         assertEquals(expected, result)
 
         // Test 9: Compound Primitive Types
         typeString = "long long int"
         result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected = IntegerType("long long int", ObjectType.Modifier.SIGNED, CPPLanguage(), 64)
+        expected = IntegerType("long long int", NumericType.Modifier.SIGNED, CPPLanguage(), 64)
         assertEquals(expected, result)
 
         // Test 10: Unsigned/Signed Types
         typeString = "unsigned int"
         result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected = IntegerType("unsigned int", ObjectType.Modifier.UNSIGNED, CPPLanguage(), 32)
+        expected = IntegerType("unsigned int", NumericType.Modifier.UNSIGNED, CPPLanguage(), 32)
         assertEquals(expected, result)
         typeString = "signed int"
         result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected = IntegerType("int", ObjectType.Modifier.SIGNED, CPPLanguage(), 32)
+        expected = IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 32)
         assertEquals(expected, result)
         typeString = "A a"
         result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected =
-            ObjectType("A", ArrayList(), ObjectType.Modifier.NOT_APPLICABLE, false, CPPLanguage())
+        expected = ObjectType("A", ArrayList(), false, CPPLanguage())
         assertEquals(expected, result)
 
         // Test 11: Unsigned + const + compound primitive Types
         expected =
-            IntegerType("unsigned long long int", ObjectType.Modifier.UNSIGNED, CPPLanguage(), 64)
+            IntegerType("unsigned long long int", NumericType.Modifier.UNSIGNED, CPPLanguage(), 64)
         typeString = "const unsigned long long int a = 1"
         result = TypeParser.createFrom(typeString, CPPLanguage())
         assertEquals(expected, result)
@@ -376,7 +351,7 @@ internal class TypeTests : BaseTest() {
         // Test 12: C++ Reference Types
         typeString = "const int& ref = a"
         result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected = ReferenceType(IntegerType("int", ObjectType.Modifier.SIGNED, CPPLanguage(), 32))
+        expected = ReferenceType(IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 32))
         assertEquals(expected, result)
 
         typeString = "int const &ref2 = a"
@@ -386,32 +361,16 @@ internal class TypeTests : BaseTest() {
         // Test 13: Elaborated Type in Generics
         result = TypeParser.createFrom("Array<struct Node>", CPPLanguage())
         generics = ArrayList()
-        var generic =
-            ObjectType(
-                "Node",
-                ArrayList(),
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                CPPLanguage()
-            )
+        var generic = ObjectType("Node", ArrayList(), false, CPPLanguage())
         generics.add(generic)
-        expected =
-            ObjectType("Array", generics, ObjectType.Modifier.NOT_APPLICABLE, false, CPPLanguage())
+        expected = ObjectType("Array", generics, false, CPPLanguage())
         assertEquals(expected, result)
 
         result = TypeParser.createFrom("Array<myclass >", CPPLanguage())
         generics = ArrayList()
-        generic =
-            ObjectType(
-                "myclass",
-                ArrayList(),
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                CPPLanguage()
-            )
+        generic = ObjectType("myclass", ArrayList(), false, CPPLanguage())
         generics.add(generic)
-        expected =
-            ObjectType("Array", generics, ObjectType.Modifier.NOT_APPLICABLE, false, CPPLanguage())
+        expected = ObjectType("Array", generics, false, CPPLanguage())
         assertEquals(expected, result)
     }
 
@@ -530,17 +489,17 @@ internal class TypeTests : BaseTest() {
         val noParamType = FunctionPointerType(emptyList(), IncompleteType(), CPPLanguage())
         val oneParamType =
             FunctionPointerType(
-                listOf<Type>(IntegerType("int", ObjectType.Modifier.SIGNED, CPPLanguage(), 32)),
+                listOf<Type>(IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 32)),
                 IncompleteType(),
                 CPPLanguage()
             )
         val twoParamType =
             FunctionPointerType(
                 listOf<Type>(
-                    IntegerType("int", ObjectType.Modifier.SIGNED, CPPLanguage(), 32),
-                    IntegerType("unsigned long", ObjectType.Modifier.UNSIGNED, CPPLanguage(), 64)
+                    IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 32),
+                    IntegerType("unsigned long", NumericType.Modifier.UNSIGNED, CPPLanguage(), 64)
                 ),
-                IntegerType("int", ObjectType.Modifier.SIGNED, CPPLanguage(), 32),
+                IntegerType("int", NumericType.Modifier.SIGNED, CPPLanguage(), 32),
                 CPPLanguage()
             )
         val variables = tu.variables

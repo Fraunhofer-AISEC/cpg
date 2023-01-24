@@ -119,7 +119,7 @@ public abstract class Type extends Node {
   public abstract Type reference(PointerType.PointerOrigin pointer);
 
   /**
-   * @return Dereferences the current Type by resolving the reference. E.g. when dereferencing an
+   * @return Dereferences the current Type by resolving the reference. E.g. when dereferencing a
    *     pointer type we obtain the type the pointer is pointing towards
    */
   public abstract Type dereference();
@@ -128,7 +128,7 @@ public abstract class Type extends Node {
 
   /**
    * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a
-   * Object-, Incomplete-, or FunctionPtrType is reached.
+   * Object-, Incomplete-, or FunctionPtrType is reached).
    *
    * @return root Type
    */
@@ -169,7 +169,7 @@ public abstract class Type extends Node {
 
   /**
    * @return True if the Type parameter t is a FirstOrderType (Root of a chain) and not a Pointer or
-   *     RefrenceType
+   *     ReferenceType
    */
   public boolean isFirstOrderType() {
     return this instanceof ObjectType
@@ -188,18 +188,13 @@ public abstract class Type extends Node {
    * @return True if the parameter t is equal to the current type (this)
    */
   public boolean isSimilar(Type t) {
-    if (this.equals(t)) {
-      return true;
-    }
-
-    return this.getTypeName().equals(t.getTypeName());
+    return this.equals(t) || this.getTypeName().equals(t.getTypeName());
   }
 
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (!(o instanceof Type)) return false;
-    Type type = (Type) o;
+    if (!(o instanceof Type type)) return false;
     return Objects.equals(getName(), type.getName())
         && Objects.equals(getLanguage(), type.getLanguage());
   }

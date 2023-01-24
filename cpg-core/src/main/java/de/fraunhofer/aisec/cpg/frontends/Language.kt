@@ -33,10 +33,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeCache
-import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
-import de.fraunhofer.aisec.cpg.graph.types.IntegerType
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
 import kotlin.reflect.KClass
@@ -68,14 +65,14 @@ abstract class Language<T : LanguageFrontend> : Node() {
     @get:JsonIgnore
     open val simpleTypes: Map<String, Type> =
         mapOf(
-            "boolean" to IntegerType("boolean", 1, this, ObjectType.Modifier.SIGNED),
-            "char" to IntegerType("char", 8, this, ObjectType.Modifier.NOT_APPLICABLE),
-            "byte" to IntegerType("byte", 8, this, ObjectType.Modifier.SIGNED),
-            "short" to IntegerType("short", 16, this, ObjectType.Modifier.SIGNED),
-            "int" to IntegerType("int", 32, this, ObjectType.Modifier.SIGNED),
-            "long" to IntegerType("long", 64, this, ObjectType.Modifier.SIGNED),
-            "float" to FloatingPointType("float", 32, this, ObjectType.Modifier.SIGNED),
-            "double" to FloatingPointType("double", 64, this, ObjectType.Modifier.SIGNED),
+            "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
+            "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
+            "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
+            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
+            "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
+            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
         )
 
     /** The access modifiers of this programming language */

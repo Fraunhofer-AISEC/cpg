@@ -37,17 +37,17 @@ class StringType : ObjectType {
         typeName: String,
         generics: List<Type>,
         language: Language<out LanguageFrontend>?
-    ) : super(typeName, generics, Modifier.NOT_APPLICABLE, false, language)
+    ) : super(typeName, generics, false, language)
 
     constructor(
         typeName: String,
         language: Language<out LanguageFrontend>?
-    ) : super(typeName, listOf(), Modifier.NOT_APPLICABLE, false, language)
+    ) : super(typeName, listOf(), false, language)
     constructor(
         name: Name,
         generics: List<Type>,
         language: Language<out LanguageFrontend>?
-    ) : super(name, generics, Modifier.NOT_APPLICABLE, false, language)
+    ) : super(name, generics, false, language)
 
     override fun duplicate(): Type {
         return StringType(name, generics, language)
