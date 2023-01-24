@@ -43,27 +43,27 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
 
     override val simpleTypes =
         mapOf(
-            "bool" to IntegerType("bool", 1, this, ObjectType.Modifier.NOT_APPLICABLE),
+            "bool" to IntegerType("bool", 1, this, NumericType.Modifier.NOT_APPLICABLE),
             "int" to
                 IntegerType(
                     "int",
                     Integer.MAX_VALUE,
                     this,
-                    ObjectType.Modifier.NOT_APPLICABLE
+                    NumericType.Modifier.NOT_APPLICABLE
                 ), // Unlimited precision
             "float" to
                 FloatingPointType(
                     "float",
                     32,
                     this,
-                    ObjectType.Modifier.NOT_APPLICABLE
+                    NumericType.Modifier.NOT_APPLICABLE
                 ), // This depends on the implementation
             "complex" to
                 NumericType(
                     "complex",
                     null,
                     this,
-                    ObjectType.Modifier.NOT_APPLICABLE
+                    NumericType.Modifier.NOT_APPLICABLE
                 ), // It's two floats
             "str" to StringType("str", listOf(), this)
         )

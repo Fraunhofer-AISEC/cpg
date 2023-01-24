@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
@@ -44,18 +44,18 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     // they are interpreted as signed or unsigned.
     override val simpleTypes =
         mapOf(
-            "i1" to IntegerType("i1", 1, this, ObjectType.Modifier.NOT_APPLICABLE),
-            "i8" to IntegerType("i8", 8, this, ObjectType.Modifier.NOT_APPLICABLE),
-            "i32" to IntegerType("i32", 32, this, ObjectType.Modifier.NOT_APPLICABLE),
-            "i64" to IntegerType("i64", 64, this, ObjectType.Modifier.NOT_APPLICABLE),
-            "i128" to IntegerType("i128", 128, this, ObjectType.Modifier.NOT_APPLICABLE),
-            "half" to FloatingPointType("half", 16, this, ObjectType.Modifier.SIGNED),
-            "bfloat" to FloatingPointType("bfloat", 16, this, ObjectType.Modifier.SIGNED),
-            "float" to FloatingPointType("float", 32, this, ObjectType.Modifier.SIGNED),
-            "double" to FloatingPointType("double", 64, this, ObjectType.Modifier.SIGNED),
-            "fp128" to FloatingPointType("fp128", 128, this, ObjectType.Modifier.SIGNED),
-            "x86_fp80" to FloatingPointType("x86_fp80", 80, this, ObjectType.Modifier.SIGNED),
-            "ppc_fp128" to FloatingPointType("ppc_fp128", 128, this, ObjectType.Modifier.SIGNED),
+            "i1" to IntegerType("i1", 1, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i8" to IntegerType("i8", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i32" to IntegerType("i32", 32, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i64" to IntegerType("i64", 64, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i128" to IntegerType("i128", 128, this, NumericType.Modifier.NOT_APPLICABLE),
+            "half" to FloatingPointType("half", 16, this, NumericType.Modifier.SIGNED),
+            "bfloat" to FloatingPointType("bfloat", 16, this, NumericType.Modifier.SIGNED),
+            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
+            "fp128" to FloatingPointType("fp128", 128, this, NumericType.Modifier.SIGNED),
+            "x86_fp80" to FloatingPointType("x86_fp80", 80, this, NumericType.Modifier.SIGNED),
+            "ppc_fp128" to FloatingPointType("ppc_fp128", 128, this, NumericType.Modifier.SIGNED),
         )
 
     override fun newFrontend(
