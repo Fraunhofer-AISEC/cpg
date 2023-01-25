@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -92,7 +93,10 @@ class PythonFrontendTest : BaseTest() {
         val c = p.variables["c"]
         assertNotNull(c)
         assertLocalName("c", c)
-        assertEquals(TypeParser.createFrom("complex", PythonLanguage()), c.type)
+        assertEquals(
+            NumericType("complex", null, PythonLanguage(), NumericType.Modifier.NOT_APPLICABLE),
+            c.type
+        )
         assertEquals("(3+5j)", (c.initializer as? Literal<*>)?.value)
 
         val t = p.variables["t"]

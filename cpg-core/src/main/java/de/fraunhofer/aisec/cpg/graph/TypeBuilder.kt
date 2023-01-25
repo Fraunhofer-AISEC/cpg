@@ -37,11 +37,11 @@ fun MetadataProvider.newPrimitiveType(
     if ((type as? NumericType)?.modifier != modifier) {
         // Try again but explicitly state "signed" or "unsigned" as our best guess.
         val modifierStr =
-            if (modifier == Modifier.SIGNED) {
-                "signed "
-            } else if (modifier == Modifier.UNSIGNED) {
-                "UNSIGNED "
-            } else ""
+            when (modifier) {
+                Modifier.SIGNED -> "signed "
+                Modifier.UNSIGNED -> "unsigned "
+                else -> ""
+            }
         return (this as? LanguageProvider)?.language?.getSimpleTypeOf(modifierStr + name)
             as ObjectType
     }
