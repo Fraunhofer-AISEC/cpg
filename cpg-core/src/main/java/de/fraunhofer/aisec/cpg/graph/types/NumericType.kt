@@ -70,6 +70,10 @@ open class NumericType : ObjectType {
         this.modifier = modifier
     }
 
+    override fun duplicate(): Type {
+        return NumericType(this.name, modifier, language, bitWidth)
+    }
+
     /**
      * NumericTypes can have a modifier. The default is signed. Some types (e.g. char in C) may be
      * neither of the signed/unsigned option. TODO: maybe replace with a flag "signed" or
