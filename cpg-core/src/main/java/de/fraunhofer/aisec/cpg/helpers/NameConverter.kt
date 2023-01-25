@@ -41,12 +41,14 @@ class NameConverter : CompositeAttributeConverter<Name> {
 
     companion object {
         const val FIELD_FULL_NAME = "fullName"
+        const val FIELD_NAME = "name"
         const val FIELD_LOCAL_NAME = "localName"
         const val FIELD_NAME_DELIMITER = "nameDelimiter"
     }
 
     override fun toGraphProperties(value: Name): MutableMap<String, *> {
         val map = mutableMapOf<String, String>()
+        map[FIELD_NAME] = value.toString()
         map[FIELD_FULL_NAME] = value.toString()
         map[FIELD_LOCAL_NAME] = value.localName
         map[FIELD_NAME_DELIMITER] = value.delimiter
