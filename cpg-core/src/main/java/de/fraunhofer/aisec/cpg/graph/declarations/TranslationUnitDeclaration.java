@@ -48,25 +48,25 @@ public class TranslationUnitDeclaration extends Declaration
     implements DeclarationHolder, StatementHolder {
 
   /** A list of declarations within this unit. */
-  @Relationship(value = "DECLARATIONS", direction = "OUTGOING")
+  @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   @NotNull
   private final List<PropertyEdge<Declaration>> declarations = new ArrayList<>();
 
   /** A list of includes within this unit. */
-  @Relationship(value = "INCLUDES", direction = "OUTGOING")
+  @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   @NotNull
   private final List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
-  @Relationship(value = "NAMESPACES", direction = "OUTGOING")
+  @Relationship(value = "NAMESPACES", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   @NotNull
   private final List<PropertyEdge<NamespaceDeclaration>> namespaces = new ArrayList<>();
 
   /** The list of statements. */
-  @Relationship(value = "STATEMENTS", direction = "OUTGOING")
+  @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
   @NotNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 

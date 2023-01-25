@@ -38,7 +38,7 @@ public class ParamVariableDeclaration extends ValueDeclaration implements HasDef
 
   @NotNull private boolean variadic = false;
 
-  @Relationship(value = "DEFAULT", direction = "OUTGOING")
+  @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private Expression defaultValue;
 

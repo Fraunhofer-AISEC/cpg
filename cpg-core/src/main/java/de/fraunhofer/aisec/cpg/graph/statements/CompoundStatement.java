@@ -44,7 +44,7 @@ import org.neo4j.ogm.annotation.Relationship;
 public class CompoundStatement extends Statement implements StatementHolder {
 
   /** The list of statements. */
-  @Relationship(value = "STATEMENTS", direction = "OUTGOING")
+  @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
   @NotNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 

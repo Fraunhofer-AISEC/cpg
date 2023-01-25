@@ -182,8 +182,8 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      * there are two different types of structs:
      * - identified structs, which have a name are explicitly declared
      * - literal structs, which do not have a name, but are structurally unique To emulate this
-     * uniqueness, we create a [RecordDeclaration] for each literal struct and name it according to
-     * its element types (see [getLiteralStructName]).
+     *   uniqueness, we create a [RecordDeclaration] for each literal struct and name it according
+     *   to its element types (see [getLiteralStructName]).
      */
     fun handleStructureType(
         typeRef: LLVMTypeRef,

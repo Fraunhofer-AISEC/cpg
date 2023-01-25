@@ -156,8 +156,9 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
 
         /**
          * Gets the include directories of the array value provided. Example for a compile command
-         * is: ['clang', '-Iinc', '-I', 'include', '-isystem', 'sysroot', 'main.c', '-o',
-         * 'main.c.o'] This method returns the include-paths in the above command.
+         * is:
+         * ['clang', '-Iinc', '-I', 'include', '-isystem', 'sysroot', 'main.c', '-o', 'main.c.o']
+         * This method returns the include-paths in the above command.
          */
         private fun parseCommandLineArgs(command: List<String>): ParsedCompilationDatabaseEntry {
             val entry = ParsedCompilationDatabaseEntry()

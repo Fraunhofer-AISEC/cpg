@@ -48,7 +48,7 @@ public class VariableDeclaration extends ValueDeclaration
    * We need a way to store the templateParameters that a VariableDeclaration might have before the
    * ConstructExpression is created
    */
-  @Relationship(value = "TEMPLATE_PARAMETERS", direction = "OUTGOING")
+  @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   @Nullable
   private List<Node> templateParameters = null;

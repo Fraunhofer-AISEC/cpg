@@ -45,9 +45,9 @@ private fun toNewDfa(fsm: FSM) =
  * The functions needed for the algorithm:
  * - MAKE-SET(i): creates a new set (singleton) for one element i.
  * - FIND-SET(i): returns the identifier Si of the set which contains i. If no set containing i is
- * found, MAKE-SET(i) is called and the set Si = {i} is created.
+ *   found, MAKE-SET(i) is called and the set Si = {i} is created.
  * - UNION(i,j): combines the sets identified by i and j in a new set S = Si ∪ Sj; Si and Sj are
- * destroyed.
+ *   destroyed.
  *
  * The algorithm:
  * 1. On input (M1, M2), where M1 and M2 are DFAs with start states p0 and q0 respectively:
@@ -63,7 +63,7 @@ private fun toNewDfa(fsm: FSM) =
  *          - iii. If r1 != r2, then UNION(r1, r2) and push the pair {p', q'} on the stack.
  * ```
  * 5. If 4. was completed without aborting in 4.2, the two DFAs accept the same language and are
- * thus equivalent: return True
+ *    thus equivalent: return True
  */
 internal fun acceptsSameLanguage(
     fsm: FSM,

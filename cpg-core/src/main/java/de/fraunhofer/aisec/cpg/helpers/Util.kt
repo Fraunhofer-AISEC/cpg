@@ -72,20 +72,27 @@ object Util {
      *
      * @param q
      * - The quantifier, all or any node of n must connect to refs, defaults to ALL.
+     *
      * @param cn
      * - NODE if n itself is the node to connect or SUBTREE if the EOG borders are of interest.
-     * Defaults to SUBTREE
+     *   Defaults to SUBTREE
+     *
      * @param en
      * - The Edge direction and therefore the borders of n to connect to refs
+     *
      * @param n
      * - Node of interest
+     *
      * @param cr
      * - NODE if refs nodes itself are the nodes to connect or SUBTREE if the EOG borders are of
-     * interest
+     *   interest
+     *
      * @param props
      * - All edges must have these properties set to the provided value
+     *
      * @param refs
      * - Multiple reference nodes that can be passed as varargs
+     *
      * @return true if all/any of the connections from node connect to n.
      */
     fun eogConnect(

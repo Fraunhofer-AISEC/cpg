@@ -32,9 +32,9 @@ import kotlin.reflect.KClass
  * Register a dependency for the annotated pass. This ensures that:
  * - the annotated pass is executed after its dependency when `softDependency` is `false`:
  * - the dependency is added to the list of active passes even if not manually specified by the user
- * when `softDependency`is true:
+ *   when `softDependency`is true:
  * - the dependency is not added to the list of active passes - the order is only enforced if the
- * user manually adds the pass
+ *   user manually adds the pass
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)

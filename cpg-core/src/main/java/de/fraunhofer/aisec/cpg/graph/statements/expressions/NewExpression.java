@@ -53,7 +53,7 @@ public class NewExpression extends Expression implements HasInitializer {
    * We need a way to store the templateParameters that a NewExpression might have before the
    * ConstructExpression is created
    */
-  @Relationship(value = "TEMPLATE_PARAMETERS", direction = "OUTGOING")
+  @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   @Nullable
   private List<Node> templateParameters = null;

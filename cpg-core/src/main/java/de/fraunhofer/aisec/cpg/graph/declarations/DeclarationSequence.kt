@@ -37,7 +37,7 @@ import org.neo4j.ogm.annotation.Relationship
  * the translation unit. It should NOT end up in the final graph.
  */
 class DeclarationSequence : Declaration(), DeclarationHolder {
-    @Relationship(value = "CHILDREN", direction = Relationship.OUTGOING)
+    @Relationship(value = "CHILDREN", direction = Relationship.Direction.OUTGOING)
     val childrenPropertyEdge: MutableList<PropertyEdge<Declaration>> = mutableListOf()
 
     val children: List<Declaration> by
