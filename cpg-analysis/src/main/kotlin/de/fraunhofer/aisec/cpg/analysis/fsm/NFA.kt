@@ -135,45 +135,54 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
      * readable.
      */
     fun toRegex(): String {
+        fun List<Edge>.combineToRegex(): String {
+            var result = ""
+            val singleChars = mutableListOf<String>()
+            for (edge in this) {
+                if (edge.op.length == 1) {
+                    // Only one character
+                    singleChars.add(edge.op)
+                } else if (edge.op.isNotEmpty()) {
+                    result = if (result.isEmpty()) edge.op else "$result|${edge.op}"
+                }
+            }
+            if (singleChars.size > 1) {
+                result += "[" + singleChars.joinToString("") + "]"
+            } else {
+                result += singleChars.joinToString("")
+            }
+
+            return if ("|" in result) "($result)" else result
+        }
+
         fun getSelfLoopOfState(toReplace: State): String {
             // First, we get the loop(s) to the same node.
             var selfLoop =
                 toReplace.outgoingEdges
                     .filter { it.nextState == toReplace && it.op != EPSILON }
-                    .joinToString("|") { it.op }
+                    .combineToRegex()
             // EPSILON wouldn't change anything here because we put the asterisk operator around it.
             // So, we just remove such an edge.
             // There's a loop, so we surround it with brackets and put the * operator
-            if (selfLoop.isNotEmpty()) selfLoop = "($selfLoop)*"
+            if (selfLoop.isNotEmpty()) selfLoop = "$selfLoop*"
 
             return selfLoop
         }
 
         fun getOutgoingEdgesMap(toReplace: State): Map<State, String> {
-            // Only consider edges to other nodes.
             val result = mutableMapOf<State, String>()
-            // We add the nodes which can be reached by EPSILON because we will have to put a ? for
-            // them (1 or 0 occurrences)
-            val withEpsilon = mutableSetOf<State>()
-            for (edge in toReplace.outgoingEdges.filter { it.nextState != toReplace }) {
-                val nodeEdge = result.computeIfAbsent(edge.nextState) { "" }
-                if (edge.op == EPSILON) {
-                    // We won't add this to the string but modify the string afterwards
-                    withEpsilon.add(edge.nextState)
-                } else {
-                    result[edge.nextState] =
-                        if (nodeEdge.isNotEmpty()) {
-                            "$nodeEdge|${edge.op}"
-                        } else {
-                            edge.op
-                        }
-                }
-            }
-            // Wrap the states with an epsilon transition with the "?" operator
-            withEpsilon.forEach {
-                if (it in result && result[it]!!.isNotEmpty()) {
-                    result[it] = "(${result[it]})?"
-                }
+            // How can we reach the respective nodes?
+            for ((k, v) in toReplace.outgoingEdges.groupBy { it.nextState }) {
+                // Only consider edges to other nodes.
+                if (k == toReplace) continue
+
+                // Collect the different branches in one regex
+                var regex = v.filter { it.op != EPSILON }.combineToRegex()
+
+                // We put the ? around this regex because we can bypass it with the EPSILON edge.
+                if (regex.isNotEmpty() && v.any { it.op == EPSILON }) regex += "?"
+
+                result[k] = regex
             }
             return result
         }
@@ -182,30 +191,32 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
             val selfLoop = getSelfLoopOfState(toReplace)
             // We add the self-loop string to the front because it affects every single outgoing
             // edge.
-            val outgoingMap =
-                getOutgoingEdgesMap(toReplace).mapValues { (_, v) ->
-                    if ("|" in v) "$selfLoop($v)" else "$selfLoop$v"
-                }
+            val outgoingMap = getOutgoingEdgesMap(toReplace).mapValues { (_, v) -> selfLoop + v }
             // Iterate over all states and their edges which have a transition to toReplace.
             // We replace this edge with edges to all nodes in outgoingMap and assemble the
             // respective string
             for (state in remainingStates) {
                 val newEdges = mutableSetOf<Edge>()
-                for (edge in state.outgoingEdges) {
-                    if (edge.nextState == toReplace) {
-                        for ((key, value) in outgoingMap.entries) {
-                            if (edge.op == EPSILON) {
-                                // EPSILON has a special treatment: We don't want to add it to the
-                                // string.
-                                newEdges.add(Edge(value, null, key))
-                            } else {
-                                newEdges.add(Edge(edge.op + value, null, key))
-                            }
-                        }
-                    } else {
-                        newEdges.add(edge)
+                // Get the regex from state to the state to replace. There might be multiple options
+                val outgoingEdges = state.outgoingEdges.filter { it.nextState == toReplace }
+                var regexToReplace = outgoingEdges.filter { it.op != EPSILON }.combineToRegex()
+
+                // If there's an EPSILON edge from state to toReplace, everything is optional
+                if (outgoingEdges.any { it.op == EPSILON && regexToReplace.isNotEmpty() })
+                    regexToReplace += "?"
+
+                // We add edges from this state to each state reachable from the one to remove.
+                // It's the string to reach the state to be removed + the option(s) to reach the
+                // next hop
+                if (outgoingEdges.isNotEmpty()) {
+                    for ((key, value) in outgoingMap.entries) {
+                        newEdges.add(Edge(regexToReplace + value, null, key))
                     }
                 }
+
+                // We also need all the edges to other states
+                newEdges.addAll(state.outgoingEdges.filter { it.nextState != toReplace })
+
                 state.outgoingEdges = newEdges
             }
         }
