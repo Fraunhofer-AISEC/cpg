@@ -31,7 +31,7 @@ import os
 class PythonASTToCPG(ast.NodeVisitor):
     def __init__(self, fname, frontend, code):
         self.sourcecode = CodeExtractor(fname)
-        self.frontend = frontend
+        self.frontend = frontend  # absolute path
         self.tud = DeclarationBuilderKt.newTranslationUnitDeclaration(
             self.frontend, fname, code)
         self.fname = fname
