@@ -51,7 +51,7 @@ open class DeclarationStatement : Statement() {
     private var declarations: MutableList<PropertyEdge<Declaration>> = ArrayList()
 
     var singleDeclaration: Declaration?
-        get() = if (isSingleDeclaration()) declarations[0].end else null
+        get() = if (isSingleDeclaration) declarations[0].end else null
         set(value) {
             if (value != null) {
                 declarations.clear()
@@ -61,9 +61,10 @@ open class DeclarationStatement : Statement() {
             }
         }
 
-    fun isSingleDeclaration(): Boolean {
-        return declarations.size == 1
-    }
+    val isSingleDeclaration: Boolean
+        get() {
+            return declarations.size == 1
+        }
 
     fun <T : Declaration?> getSingleDeclarationAs(clazz: Class<T>): T {
         return clazz.cast(singleDeclaration)
