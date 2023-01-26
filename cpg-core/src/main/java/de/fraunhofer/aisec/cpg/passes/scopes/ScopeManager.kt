@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
@@ -467,19 +468,20 @@ class ScopeManager : ScopeProvider {
         } else {
             val labelStatement = getLabelStatement(breakStatement.label)
             if (labelStatement != null) {
-                val scope = lookupScope(labelStatement.subStatement)
+                val scope = labelStatement.subStatement?.let { lookupScope(it) }
                 (scope as Breakable?)?.addBreakStatement(breakStatement)
             }
         }
     }
 
     /**
-     * This function SHOULD only be used by the
-     * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
-     * a [ContinueStatement] to the list of continue statements of the current "continuable" scope.
+     * This function SHOULD only be used by the [EvaluationOrderGraphPass] while building up the
+     * EOG. It adds a [ContinueStatement] to the list of continue statements of the current
+     * "continuable" scope.
      */
     fun addContinueStatement(continueStatement: ContinueStatement) {
-        if (continueStatement.label == null) {
+        val label = continueStatement.label
+        if (label == null) {
             val scope = firstScopeOrNull { scope: Scope? -> scope?.isContinuable() == true }
             if (scope == null) {
                 LOGGER.error(
@@ -490,9 +492,9 @@ class ScopeManager : ScopeProvider {
             }
             (scope as Continuable).addContinueStatement(continueStatement)
         } else {
-            val labelStatement = getLabelStatement(continueStatement.label)
+            val labelStatement = getLabelStatement(label)
             if (labelStatement != null) {
-                val scope = lookupScope(labelStatement.subStatement)
+                val scope = labelStatement.subStatement?.let { lookupScope(it) }
                 (scope as Continuable?)?.addContinueStatement(continueStatement)
             }
         }

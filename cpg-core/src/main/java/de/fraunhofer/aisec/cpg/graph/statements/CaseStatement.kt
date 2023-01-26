@@ -23,42 +23,35 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
+package de.fraunhofer.aisec.cpg.graph.statements
 
-import java.util.Objects;
+import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 /**
- * Statement used to interrupt further execution of a loop body and jump to the evaluation of the
- * loop condition. Can have a loop label, e.g. in Java, to specify which of the nested loops
- * condition should be reevaluated.
+ * Case statement of the form `case expression :` that serves as entry point for switch statements,
+ * the only allowed substatements are side effekt free primitive expression for the selector to
+ * choose from. THe statements executed after the entry are on the same AST hierarchy in the parent
+ * compound statement.
  */
-public class ContinueStatement extends Statement {
+class CaseStatement : Statement() {
+    /**
+     * Primitive side effect free statement that has to match with the evaluated selector in
+     * SwitchStatement
+     */
+    @field:SubGraph("AST") var caseExpression: Expression? = null
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is CaseStatement) {
+            return false
+        }
 
-  /** Specifies the loop in a nested structure that the label will 'continue' */
-  private String label = null;
-
-  public String getLabel() {
-    return label;
-  }
-
-  public void setLabel(String label) {
-    this.label = label;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+        return super.equals(other) && caseExpression == other.caseExpression
     }
-    if (!(o instanceof ContinueStatement)) {
-      return false;
-    }
-    ContinueStatement that = (ContinueStatement) o;
-    return super.equals(that) && Objects.equals(label, that.label);
-  }
 
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
 }

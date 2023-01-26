@@ -672,8 +672,8 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleGotoStatement(node: GotoStatement) {
         pushToEOG(node)
-        if (node.targetLabel != null) {
-            processedListener.registerObjectListener(node.targetLabel) { _: Any?, to: Any? ->
+        node.targetLabel?.let {
+            processedListener.registerObjectListener(it) { _: Any?, to: Any? ->
                 addEOGEdge(node, to as Node)
             }
         }
@@ -681,7 +681,7 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleCaseStatement(node: CaseStatement) {
-        createEOG(node.getCaseExpression())
+        createEOG(node.caseExpression)
         pushToEOG(node)
     }
 
@@ -795,9 +795,9 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleSynchronizedStatement(node: SynchronizedStatement) {
-        createEOG(node.getExpression())
+        createEOG(node.expression)
         pushToEOG(node)
-        createEOG(node.getBlockStatement())
+        createEOG(node.blockStatement)
     }
 
     protected fun handleConditionalExpression(node: ConditionalExpression) {
@@ -820,7 +820,7 @@ open class EvaluationOrderGraphPass : Pass() {
         scopeManager.enterScope(node)
         createEOG(node.statement)
         createEOG(node.condition)
-        node.addPrevDFG(node.condition)
+        node.condition?.let { node.addPrevDFG(it) }
         pushToEOG(node) // To have semantic information after the condition evaluation
         currentProperties[Properties.BRANCH] = true
         connectCurrentToLoopStart()
@@ -837,7 +837,7 @@ open class EvaluationOrderGraphPass : Pass() {
         scopeManager.enterScope(node)
         createEOG(node.iterable)
         createEOG(node.variable)
-        node.addPrevDFG(node.variable)
+        node.variable?.let { node.addPrevDFG(it) }
         pushToEOG(node) // To have semantic information after the variable declaration
         currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
@@ -920,7 +920,7 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.selector)
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
-            node.getSelector(),
+            node.selector,
             node.selectorDeclaration
         )
         pushToEOG(node) // To have semantic information after the condition evaluation

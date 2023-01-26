@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
 import java.util.function.BiConsumer
 import java.util.function.Supplier
-import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
@@ -89,10 +88,8 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val tryStatement = newTryStatement(tryStmt.toString())
         frontend.scopeManager.enterScope(tryStatement)
         val statement = handle(tryStmt.tryBody) as CompoundStatement?
-        val catchClauses =
-            Arrays.stream(tryStmt.catchHandlers)
-                .map { handleCatchHandler(it) }
-                .collect(Collectors.toList())
+
+        val catchClauses = tryStmt.catchHandlers.map { handleCatchHandler(it) }
         tryStatement.tryBlock = statement
         tryStatement.catchClauses = catchClauses
         frontend.scopeManager.leaveScope(tryStatement)
@@ -344,7 +341,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         }
 
         if (ctx.controllerExpression != null) {
-            switchStatement.setSelector(frontend.expressionHandler.handle(ctx.controllerExpression))
+            switchStatement.selector = frontend.expressionHandler.handle(ctx.controllerExpression)
         }
 
         switchStatement.statement = handle(ctx.body)
@@ -356,7 +353,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
     private fun handleCaseStatement(ctx: IASTCaseStatement): CaseStatement {
         val caseStatement = newCaseStatement(ctx.rawSignature)
-        caseStatement.setCaseExpression(frontend.expressionHandler.handle(ctx.expression))
+        caseStatement.caseExpression = frontend.expressionHandler.handle(ctx.expression)
         return caseStatement
     }
 

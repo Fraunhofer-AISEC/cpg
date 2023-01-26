@@ -23,45 +23,37 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
+package de.fraunhofer.aisec.cpg.graph.statements
 
-import java.util.Objects;
+import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-/**
- * Statement used to interrupt further execution of a loop body and exit the respective loop
- * context. Can have a loop label, e.g. in Java, to specify which of the nested loops should be
- * broken out of.
- */
-public class BreakStatement extends Statement {
-  private String label = null;
+/** Represents an assert statement */
+class AssertStatement : Statement() {
+    /** The condition to be evaluated. */
+    @field:SubGraph("AST") var condition: Expression? = null
 
-  /**
-   * Specifies the label of the loop in a nested structure that this statement will 'break'
-   *
-   * @return the label
-   */
-  public String getLabel() {
-    return label;
-  }
+    /** The _optional_ message that is shown, if the assert is evaluated as true */
+    @field:SubGraph("AST")
+    var message: Statement? = null
+        private set
 
-  public void setLabel(String label) {
-    this.label = label;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    fun setMessage(message: Statement) {
+        this.message = message
     }
-    if (!(o instanceof BreakStatement)) {
-      return false;
-    }
-    BreakStatement that = (BreakStatement) o;
-    return super.equals(that) && Objects.equals(label, that.label);
-  }
 
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is AssertStatement) {
+            return false
+        }
+
+        return super.equals(other) && condition == other.condition && message == other.message
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
 }

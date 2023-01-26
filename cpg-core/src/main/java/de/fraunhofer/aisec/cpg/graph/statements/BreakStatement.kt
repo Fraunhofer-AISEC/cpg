@@ -23,10 +23,33 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
+package de.fraunhofer.aisec.cpg.graph.statements
+
 /**
- * Default statement of the form <code>default:</code> that serves as entry point for switch
- * statements. The statements executed after the entry are on the same AST hierarchy in the parent
- * compound statement.
+ * Statement used to interrupt further execution of a loop body and exit the respective loop
+ * context. Can have a loop label, e.g. in Java, to specify which of the nested loops should be
+ * broken out of.
  */
-public class DefaultStatement extends Statement {}
+class BreakStatement : Statement() {
+    /**
+     * Specifies the label of the loop in a nested structure that this statement will 'break'
+     *
+     * @return the label
+     */
+    var label: String = ""
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is BreakStatement) {
+            return false
+        }
+
+        return super.equals(other) && label == other.label
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+}

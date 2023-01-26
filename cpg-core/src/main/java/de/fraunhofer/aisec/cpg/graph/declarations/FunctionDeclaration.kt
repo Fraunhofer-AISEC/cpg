@@ -63,7 +63,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     var parameters: List<ParamVariableDeclaration> by
         PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)
 
-    /** Virtual property for accessing [parameterEdges] without property edges. */
+    /** Virtual property for accessing [recordEdges] without property edges. */
     var records: List<RecordDeclaration> by PropertyEdgeDelegate(FunctionDeclaration::recordEdges)
 
     @Relationship(value = "THROWS_TYPES", direction = Relationship.Direction.OUTGOING)

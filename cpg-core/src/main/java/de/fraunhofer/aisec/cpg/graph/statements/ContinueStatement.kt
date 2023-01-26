@@ -23,6 +23,29 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
+package de.fraunhofer.aisec.cpg.graph.statements
 
-public class EmptyStatement extends Statement {}
+/**
+ * Statement used to interrupt further execution of a loop body and jump to the evaluation of the
+ * loop condition. Can have a loop label, e.g. in Java, to specify which of the nested loops
+ * condition should be reevaluated.
+ */
+class ContinueStatement : Statement() {
+    /** Specifies the loop in a nested structure that the label will 'continue' */
+    var label: String? = null
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is ContinueStatement) {
+            return false
+        }
+
+        return super.equals(other) && label == other.label
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+}

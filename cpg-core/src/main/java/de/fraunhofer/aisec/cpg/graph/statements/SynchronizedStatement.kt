@@ -23,48 +23,29 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
+package de.fraunhofer.aisec.cpg.graph.statements
 
-import java.util.Objects;
+import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-public class GotoStatement extends Statement {
+class SynchronizedStatement : Statement() {
+    @SubGraph("AST") var expression: Expression? = null
 
-  private String labelName;
-
-  private LabelStatement targetLabel;
-
-  public String getLabelName() {
-    return labelName;
-  }
-
-  public void setLabelName(String labelName) {
-    this.labelName = labelName;
-  }
-
-  public LabelStatement getTargetLabel() {
-    return targetLabel;
-  }
-
-  public void setTargetLabel(LabelStatement targetLabel) {
-    this.targetLabel = targetLabel;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    @SubGraph("AST") var blockStatement: CompoundStatement? = null
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
+        }
+        if (o !is SynchronizedStatement) {
+            return false
+        }
+        val that = o
+        return super.equals(that) &&
+            expression == that.expression &&
+            blockStatement == that.blockStatement
     }
-    if (!(o instanceof GotoStatement)) {
-      return false;
-    }
-    GotoStatement that = (GotoStatement) o;
-    return super.equals(that)
-        && Objects.equals(labelName, that.labelName)
-        && Objects.equals(targetLabel, that.targetLabel);
-  }
 
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
 }

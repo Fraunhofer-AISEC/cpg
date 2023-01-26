@@ -23,6 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
+package de.fraunhofer.aisec.cpg.graph.statements
 
-public class ASMDeclarationStatement extends DeclarationStatement {}
+/**
+ * Default statement of the form `default:` that serves as entry point for switch statements. The
+ * statements executed after the entry are on the same AST hierarchy in the parent compound
+ * statement.
+ */
+class DefaultStatement : Statement()
