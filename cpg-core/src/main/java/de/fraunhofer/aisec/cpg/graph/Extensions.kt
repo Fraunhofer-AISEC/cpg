@@ -376,13 +376,20 @@ fun Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
         val currentPath = worklist.removeFirst()
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
-        if (currentPath.last().prevEOG.isEmpty()) {
+        if (
+            currentPath.last().prevEOGEdges.none { it.getProperty(Properties.UNREACHABLE) != true }
+        ) {
             // No further nodes in the path and the path criteria are not satisfied.
             failedPaths.add(currentPath)
             continue // Don't add this path anymore. The requirement is satisfied.
         }
 
-        for (next in currentPath.last().prevEOG) {
+        for (next in
+            currentPath
+                .last()
+                .prevEOGEdges
+                .filter { it.getProperty(Properties.UNREACHABLE) != true }
+                .map { it.start }) {
             // Copy the path for each outgoing DFG edge and add the next node
             val nextPath = mutableListOf<Node>()
             nextPath.addAll(currentPath)
@@ -443,7 +450,7 @@ fun Node.followNextEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEd
 fun Node.followPrevEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
     val path = mutableListOf<PropertyEdge<*>>()
 
-    for (edge in this.prevEOGEdges) {
+    for (edge in this.prevEOGEdges.filter { it.getProperty(Properties.UNREACHABLE) != true }) {
         val source = edge.start
 
         path.add(edge)
