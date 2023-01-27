@@ -50,12 +50,12 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     /**
      * Classes and Structs can be declared inside a function and are only valid within the function.
      */
-    @Relationship(value = "RECORDS", direction = "OUTGOING")
+    @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
     var recordEdges: List<PropertyEdge<RecordDeclaration>> = ArrayList()
         protected set
 
     /** The list of function parameters. */
-    @Relationship(value = "PARAMETERS", direction = "OUTGOING")
+    @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
     var parameterEdges: MutableList<PropertyEdge<ParamVariableDeclaration>> = ArrayList()
 
@@ -66,13 +66,13 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     /** Virtual property for accessing [parameterEdges] without property edges. */
     var records: List<RecordDeclaration> by PropertyEdgeDelegate(FunctionDeclaration::recordEdges)
 
-    @Relationship(value = "THROWS_TYPES", direction = "OUTGOING")
+    @Relationship(value = "THROWS_TYPES", direction = Relationship.Direction.OUTGOING)
     var throwsTypes: MutableList<Type> = ArrayList()
 
-    @Relationship(value = "OVERRIDES", direction = "INCOMING")
+    @Relationship(value = "OVERRIDES", direction = Relationship.Direction.INCOMING)
     val overriddenBy: MutableList<out FunctionDeclaration> = ArrayList()
 
-    @Relationship(value = "OVERRIDES", direction = "OUTGOING")
+    @Relationship(value = "OVERRIDES", direction = Relationship.Direction.OUTGOING)
     val overrides: MutableList<out FunctionDeclaration> = ArrayList()
 
     /** The list of return types. The default is an empty list. */

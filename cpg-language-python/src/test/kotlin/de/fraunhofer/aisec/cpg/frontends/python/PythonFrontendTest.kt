@@ -29,16 +29,14 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -1002,5 +1000,23 @@ class PythonFrontendTest : BaseTest() {
             "# comment end",
             declStmts.first { it.location?.region?.startLine == 18 }.comment
         )
+    }
+
+    @Test
+    fun testAnnotations() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("annotations.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>().matchCommentsToNodes(true)
+            }
+        assertNotNull(tu)
+
+        val annotations = tu.allChildren<Annotation>()
+        val route = annotations.firstOrNull()
+        assertFullName("app.route", route)
     }
 }

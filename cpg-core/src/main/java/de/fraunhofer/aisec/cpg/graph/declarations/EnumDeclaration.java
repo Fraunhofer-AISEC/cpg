@@ -37,11 +37,11 @@ import org.neo4j.ogm.annotation.Relationship;
 
 public class EnumDeclaration extends Declaration {
 
-  @Relationship(value = "ENTRIES", direction = "OUTGOING")
+  @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<EnumConstantDeclaration>> entries = new ArrayList<>();
 
-  @Relationship(value = "SUPER_TYPES", direction = "OUTGOING")
+  @Relationship(value = "SUPER_TYPES", direction = Relationship.Direction.OUTGOING)
   private List<PropertyEdge<Type>> superTypes = new ArrayList<>();
 
   @Relationship private Set<RecordDeclaration> superTypeDeclarations = new HashSet<>();

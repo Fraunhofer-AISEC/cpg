@@ -60,7 +60,7 @@ public class NamespaceDeclaration extends Declaration
   private final List<Declaration> declarations = new ArrayList<>();
 
   /** The list of statements. */
-  @Relationship(value = "STATEMENTS", direction = "OUTGOING")
+  @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
   @NotNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 

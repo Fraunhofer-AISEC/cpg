@@ -44,7 +44,7 @@ public class TypeParamDeclaration extends ValueDeclaration
    * TypeResolver requires to implement the {@link HasType.SecondaryTypeEdge} to be aware of the
    * edge to be able to merge the type nodes.
    */
-  @Relationship(value = "DEFAULT", direction = "OUTGOING")
+  @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   @Nullable
   private Type defaultType;

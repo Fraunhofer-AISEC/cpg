@@ -43,7 +43,7 @@ class CouldNotResolve
  * The result can be retrieved in two ways:
  * * The result of the [resolve] function is a JVM object which represents the constant value
  * * Furthermore, after the execution of [evaluateInternal], the latest evaluation path can be
- * retrieved in the [path] property of the evaluator.
+ *   retrieved in the [path] property of the evaluator.
  *
  * It contains some advanced mechanics such as resolution of values of arrays, if they contain
  * literal values. Furthermore, its behaviour can be adjusted by implementing the [cannotEvaluate]

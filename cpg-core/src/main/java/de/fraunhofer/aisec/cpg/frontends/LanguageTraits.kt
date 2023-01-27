@@ -55,7 +55,7 @@ interface HasTemplates : LanguageTrait {
      * list of possible candidates.
      *
      * @return a pair in which the first member denotes whether resolution was successful and the
-     * second parameter is a list of [FunctionDeclaration] candidates.
+     *   second parameter is a list of [FunctionDeclaration] candidates.
      */
     fun handleTemplateFunctionCalls(
         curClass: RecordDeclaration?,

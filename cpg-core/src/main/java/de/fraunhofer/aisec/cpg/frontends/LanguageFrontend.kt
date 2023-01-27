@@ -119,6 +119,7 @@ abstract class LanguageFrontend(
      *
      * @param node
      * - The newline type is extracted from the nodes code.
+     *
      * @return the String of the newline
      */
     fun getNewLineType(node: Node): String {
@@ -137,10 +138,13 @@ abstract class LanguageFrontend(
      *
      * @param node
      * - The parent node of the subregion
+     *
      * @param nodeRegion
      * - region needs to be precomputed.
+     *
      * @param subRegion
      * - precomputed subregion
+     *
      * @return the code of the subregion.
      */
     fun getCodeOfSubregion(node: Node, nodeRegion: Region, subRegion: Region): String {

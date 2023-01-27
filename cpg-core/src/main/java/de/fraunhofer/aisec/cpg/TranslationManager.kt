@@ -137,7 +137,7 @@ private constructor(
      * @param result the translation result that is being mutated
      * @param config the translation configuration
      * @throws TranslationException if the language front-end runs into an error and
-     * [TranslationConfiguration.failOnError]
+     *   [TranslationConfiguration.failOnError]
      * * is `true`.
      */
     @Throws(TranslationException::class)

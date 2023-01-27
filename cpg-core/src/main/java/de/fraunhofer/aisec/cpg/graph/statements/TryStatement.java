@@ -36,7 +36,7 @@ import org.neo4j.ogm.annotation.Relationship;
 
 public class TryStatement extends Statement {
 
-  @Relationship(value = "RESOURCES", direction = "OUTGOING")
+  @Relationship(value = "RESOURCES", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<Statement>> resources = new ArrayList<>();
 
@@ -46,7 +46,7 @@ public class TryStatement extends Statement {
   @SubGraph("AST")
   private CompoundStatement finallyBlock;
 
-  @Relationship(value = "CATCH_CLAUSES", direction = "OUTGOING")
+  @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   private List<PropertyEdge<CatchClause>> catchClauses = new ArrayList<>();
 

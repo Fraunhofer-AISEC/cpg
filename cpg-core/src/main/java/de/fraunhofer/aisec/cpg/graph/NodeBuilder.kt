@@ -162,7 +162,7 @@ fun Node.applyMetadata(
  */
 @JvmOverloads
 fun MetadataProvider.newAnnotation(
-    name: String?,
+    name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
 ): Annotation {
@@ -181,13 +181,13 @@ fun MetadataProvider.newAnnotation(
  */
 @JvmOverloads
 fun MetadataProvider.newAnnotationMember(
-    name: String?,
+    name: CharSequence?,
     value: Expression?,
     code: String? = null,
     rawNode: Any? = null
 ): AnnotationMember {
     val node = AnnotationMember()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, true)
 
     node.value = value
 
