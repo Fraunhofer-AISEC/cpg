@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -82,7 +83,6 @@ class DFGPass : Pass() {
             // Statements
             is ReturnStatement -> handleReturnStatement(node)
             is ForEachStatement -> handleForEachStatement(node)
-            is DeclarationStatement -> handleDeclarationStatement(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
@@ -90,15 +90,6 @@ class DFGPass : Pass() {
             // Other
             is Assignment -> handleAssignment(node)
         }
-    }
-
-    /**
-     * For a [DeclarationStatement], the whole statement flows into its declarations. This is fine
-     * because it's used as a wrapper if a Statement is needed but we only have a Declaration (which
-     * is not a statement).
-     */
-    private fun handleDeclarationStatement(node: DeclarationStatement) {
-        node.declarations.forEach { it.addPrevDFG(node) }
     }
 
     /**
@@ -117,8 +108,8 @@ class DFGPass : Pass() {
     }
 
     /**
-     * Adds the DFG edge for a [VariableDeclaration]. The data flows from the return statement(s) to
-     * the function.
+     * Adds the DFG edge for a [VariableDeclaration]. The data flows from initializer to the
+     * variable.
      */
     private fun handleVariableDeclaration(node: VariableDeclaration) {
         node.initializer?.let { node.addPrevDFG(it) }
@@ -156,10 +147,20 @@ class DFGPass : Pass() {
 
     /**
      * Adds the DFG edge for a [ForEachStatement]. The data flows from the
-     * [ForEachStatement.iterable] to the [ForEachStatement.variable].
+     * [ForEachStatement.iterable] to the [ForEachStatement.variable]. However, since the
+     * [ForEachStatement.variable] is a [Statement], we have to identify the variable which is used
+     * in the loop. In most cases, we should have a [DeclarationStatement] which means that we can
+     * unwrap the [VariableDeclaration]. If this is not the case, we assume that the last
+     * [VariableDeclaration] in the statement is the one we care about.
      */
     private fun handleForEachStatement(node: ForEachStatement) {
-        node.variable.addPrevDFG(node.iterable)
+        if (node.variable is DeclarationStatement) {
+            (node.variable as DeclarationStatement).declarations.forEach {
+                it.addPrevDFG(node.iterable)
+            }
+        } else {
+            node.variable.variables.lastOrNull()?.addPrevDFG(node.iterable)
+        }
     }
 
     /**
