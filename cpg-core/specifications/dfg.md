@@ -406,31 +406,38 @@ Scheme:
 
 Interesting fields:
 
-* `variable: Statement`: The statement which is used in each iteration to assign the current iteration value
+* `variable: Statement`: The statement which is used in each iteration to assign the current iteration value.
 * `iterable: Statement`: The statement or expression, which is iterated
 
+The value of the iterable flow to the `VariableDeclaration` in the `variable`. Since some languages allow arbitrary logic, we differentiate between two cases:
+
+### Case 1. The `variable` is a `DeclarationStatement`.
+
+This is the case for most languages where we can have only a variable in this place (e.g., `for(e in list)`). Here, we get the declaration(s) in the statement and add the DFG from the iterable to this declaration.
+
+
 Scheme:
 ```mermaid
   flowchart LR
-    node([ForEachStatement]) -.- variable[variable]
+    node([ForEachStatement]) -.- variable[variable: DeclarationStatement]
     node -.- iterable[iterable]
-    iterable -- DFG --> variable
+    variable -.- declarations["declarations[i]"]
+    iterable -- for all i: DFG --> declarations
   ```
 
-## DeclarationStatement
+### Case 2. The `variable` is another type of `Statement`.
 
-Interesting fields:
-
-* `declarations: List<Declaration>`: All the declarations which are contained in this statement.
-
-The value of the statement (which serves as a wrapper around the individual declarations) flows into the declarations.
+In this case, we assume that the last VariableDeclaration is the one used for looping. We add a DFG edge only to this declaration.
 
 Scheme:
 ```mermaid
   flowchart LR
-    node([DeclarationStatement]) -.- declarations["for all i: declarations[i]"]
-    node -- DFG --> declarations
-```
+    node([ForEachStatement]) -.- statement[variable]
+    node -.- iterable[iterable]
+    statement -.- localVars[variables]
+    localVars -. "last" .-> variable
+    iterable -- DFG --> variable
+  ```
 
 ## FunctionDeclaration
 
