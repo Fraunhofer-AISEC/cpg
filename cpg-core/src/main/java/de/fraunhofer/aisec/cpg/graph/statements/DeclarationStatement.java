@@ -42,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship;
 /**
  * A {@link Statement}, which contains a single or multiple {@link Declaration}s. Usually these
  * statements occur if one defines a variable within a function body. A function body is a {@link
- * CompoundStatement}, which can only contain other statements, but not declarations. Therefore
+ * CompoundStatement}, which can only contain other statements, but not declarations. Therefore,
  * declarations are wrapped in a {@link DeclarationStatement}.
  */
 public class DeclarationStatement extends Statement {
