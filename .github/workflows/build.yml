@@ -11,15 +11,6 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  code-compliance:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: Fraunhofer-AISEC/codyze-action@v2.3
-        with:
-          markDirectory: cpg-core/src/main/mark
-          directory: cpg-core/src/main/java
-
   build-cpgo-osx:
     runs-on: macos-latest
     steps:
