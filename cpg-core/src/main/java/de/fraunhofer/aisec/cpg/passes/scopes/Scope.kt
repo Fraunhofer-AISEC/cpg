@@ -50,7 +50,7 @@ abstract class Scope(open var astNode: Node?) {
     var labelStatements = mutableMapOf<String, LabelStatement>()
 
     fun addLabelStatement(labelStatement: LabelStatement) {
-        labelStatements[labelStatement.label] = labelStatement
+        labelStatement.label?.let { labelStatements[it] = labelStatement }
     }
 
     fun isBreakable(): Boolean {

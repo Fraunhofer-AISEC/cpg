@@ -104,6 +104,8 @@ public class SubgraphWalker {
     if (node == null) return children;
 
     Class<?> classType = node.getClass();
+    // TODO: To be more flexible, we should check getter methods as well. This is probably useful
+    // for the kotlin conversion.
     for (Field field : getAllFields(classType)) {
       SubGraph subGraph = field.getAnnotation(SubGraph.class);
       if (subGraph != null && Arrays.asList(subGraph.value()).contains("AST")) {

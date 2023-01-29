@@ -23,23 +23,22 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements.expressions
+package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-/**
- * An expression, which calls another function. It has a list of arguments (list of [ ]s) and is
- * connected via the INVOKES edge to its [FunctionDeclaration].
- */
-class CompoundStatementExpression : Expression() {
-    /** The list of arguments. */
-    @field:SubGraph("AST") var statement: Statement? = null
+class SynchronizedStatement : Statement() {
+    @field:SubGraph("AST") var expression: Expression? = null
+
+    @field:SubGraph("AST") var blockStatement: CompoundStatement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is CompoundStatementExpression) return false
-        return super.equals(other) && statement == other.statement
+        if (other !is SynchronizedStatement) return false
+        return super.equals(other) &&
+            expression == other.expression &&
+            blockStatement == other.blockStatement
     }
 
     override fun hashCode() = super.hashCode()

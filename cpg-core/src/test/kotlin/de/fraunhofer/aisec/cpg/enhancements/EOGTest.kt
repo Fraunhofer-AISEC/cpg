@@ -820,7 +820,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = prints[0],
                 cr = Connect.SUBTREE,
-                refs = listOf(swch.getSelector())
+                refs = listOf(swch.selector)
             )
         )
         assertTrue(
@@ -844,7 +844,7 @@ internal class EOGTest : BaseTest() {
         assertTrue(
             Util.eogConnect(
                 en = Util.Edge.EXITS,
-                n = swch.getSelector(),
+                n = swch.selector,
                 cr = Connect.NODE,
                 refs = listOf(swch)
             )
@@ -908,7 +908,7 @@ internal class EOGTest : BaseTest() {
             Util.eogConnect(
                 cn = Connect.SUBTREE,
                 en = Util.Edge.EXITS,
-                n = swch.getSelector(),
+                n = swch.selector,
                 cr = Connect.NODE,
                 refs = listOf(swch)
             )
@@ -926,7 +926,7 @@ internal class EOGTest : BaseTest() {
         assertTrue(
             Util.eogConnect(
                 en = Util.Edge.EXITS,
-                n = swch.getSelector(),
+                n = swch.selector,
                 cr = Connect.NODE,
                 refs = listOf(swch)
             )

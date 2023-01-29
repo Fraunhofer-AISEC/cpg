@@ -380,7 +380,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val ifStatement = statements[0] as IfStatement
         assertNotNull(ifStatement)
         assertNotNull(ifStatement.condition)
-        assertEquals("bool", ifStatement.condition.type.typeName)
+        assertEquals("bool", ifStatement.condition!!.type.typeName)
         assertEquals(true, (ifStatement.condition as Literal<*>).value)
         assertTrue(
             (ifStatement.thenStatement as CompoundStatement).statements[0] is ReturnStatement

@@ -795,9 +795,9 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleSynchronizedStatement(node: SynchronizedStatement) {
-        createEOG(node.getExpression())
+        createEOG(node.expression)
         pushToEOG(node)
-        createEOG(node.getBlockStatement())
+        createEOG(node.blockStatement)
     }
 
     protected fun handleConditionalExpression(node: ConditionalExpression) {
@@ -920,7 +920,7 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.selector)
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
-            node.getSelector(),
+            node.selector,
             node.selectorDeclaration
         )
         pushToEOG(node) // To have semantic information after the condition evaluation

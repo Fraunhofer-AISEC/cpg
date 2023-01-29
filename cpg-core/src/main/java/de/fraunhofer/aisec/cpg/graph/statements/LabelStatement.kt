@@ -23,23 +23,34 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements.expressions
+package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
- * An expression, which calls another function. It has a list of arguments (list of [ ]s) and is
- * connected via the INVOKES edge to its [FunctionDeclaration].
+ * A label attached to a statement that is used to change control flow by labeled continue and
+ * breaks (Java) or goto(C++).
  */
-class CompoundStatementExpression : Expression() {
-    /** The list of arguments. */
-    @field:SubGraph("AST") var statement: Statement? = null
+class LabelStatement : Statement() {
+    /** Statement that the label is attached to. Can be a simple or compound statement. */
+    @field:SubGraph("AST") var subStatement: Statement? = null
+
+    /** Label in the form of a String */
+    var label: String? = null
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("subStatement", subStatement)
+            .append("label", label)
+            .toString()
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is CompoundStatementExpression) return false
-        return super.equals(other) && statement == other.statement
+        if (other !is LabelStatement) return false
+        return super.equals(other) && subStatement == other.subStatement && label == other.label
     }
 
     override fun hashCode() = super.hashCode()

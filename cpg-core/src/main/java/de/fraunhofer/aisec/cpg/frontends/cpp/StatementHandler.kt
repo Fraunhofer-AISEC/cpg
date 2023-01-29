@@ -344,7 +344,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         }
 
         if (ctx.controllerExpression != null) {
-            switchStatement.setSelector(frontend.expressionHandler.handle(ctx.controllerExpression))
+            switchStatement.selector = frontend.expressionHandler.handle(ctx.controllerExpression)
         }
 
         switchStatement.statement = handle(ctx.body)

@@ -23,23 +23,28 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements.expressions
+package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import org.apache.commons.lang3.builder.ToStringBuilder
 
-/**
- * An expression, which calls another function. It has a list of arguments (list of [ ]s) and is
- * connected via the INVOKES edge to its [FunctionDeclaration].
- */
-class CompoundStatementExpression : Expression() {
-    /** The list of arguments. */
-    @field:SubGraph("AST") var statement: Statement? = null
+/** Represents a statement that returns out of the current function. */
+class ReturnStatement : Statement() {
+    /** The expression whose value will be returned. */
+    @field:SubGraph("AST") var returnValue: Expression? = null
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("returnValue", returnValue)
+            .toString()
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is CompoundStatementExpression) return false
-        return super.equals(other) && statement == other.statement
+        if (other !is ReturnStatement) return false
+        return super.equals(other) && returnValue == other.returnValue
     }
 
     override fun hashCode() = super.hashCode()

@@ -689,7 +689,7 @@ class LLVMIRLanguageFrontendTest {
 
         // Check the assignment of the function call
         val resDecl =
-            (tryStatement.tryBlock.statements[0] as? DeclarationStatement)?.singleDeclaration
+            (tryStatement.tryBlock?.statements?.get(0) as? DeclarationStatement)?.singleDeclaration
                 as? VariableDeclaration
         assertNotNull(resDecl)
         assertLocalName("res", resDecl)
@@ -701,11 +701,11 @@ class LLVMIRLanguageFrontendTest {
 
         // Check that the second part of the try-block is inlined by the pass
         val aDecl =
-            (tryStatement.tryBlock.statements[1] as? DeclarationStatement)?.singleDeclaration
+            (tryStatement.tryBlock?.statements?.get(1) as? DeclarationStatement)?.singleDeclaration
                 as? VariableDeclaration
         assertNotNull(aDecl)
         assertLocalName("a", aDecl)
-        val resStatement = tryStatement.tryBlock.statements[2] as? ReturnStatement
+        val resStatement = tryStatement.tryBlock?.statements?.get(2) as? ReturnStatement
         assertNotNull(resStatement)
 
         // Check that the catch block is inlined by the pass
@@ -955,11 +955,17 @@ class LLVMIRLanguageFrontendTest {
                 ?.statements
                 ?.firstOrNull { s -> s is TryStatement } as? TryStatement
         assertNotNull(tryStatement)
-        assertEquals(2, tryStatement.tryBlock.statements.size)
-        assertFullName("_CxxThrowException", tryStatement.tryBlock.statements[0] as? CallExpression)
+        assertEquals(2, tryStatement.tryBlock?.statements?.size)
+        assertFullName(
+            "_CxxThrowException",
+            tryStatement.tryBlock?.statements?.get(0) as? CallExpression
+        )
         assertEquals(
             "end",
-            (tryStatement.tryBlock.statements[1] as? GotoStatement)?.targetLabel?.name?.localName
+            (tryStatement.tryBlock?.statements?.get(1) as? GotoStatement)
+                ?.targetLabel
+                ?.name
+                ?.localName
         )
 
         assertEquals(1, tryStatement.catchClauses.size)
@@ -995,10 +1001,13 @@ class LLVMIRLanguageFrontendTest {
 
         val innerTry = catchBlock.statements[1] as? TryStatement
         assertNotNull(innerTry)
-        assertFullName("_CxxThrowException", innerTry.tryBlock.statements[0] as? CallExpression)
+        assertFullName(
+            "_CxxThrowException",
+            innerTry.tryBlock?.statements?.get(0) as? CallExpression
+        )
         assertLocalName(
             "try.cont",
-            (innerTry.tryBlock.statements[1] as? GotoStatement)?.targetLabel
+            (innerTry.tryBlock?.statements?.get(1) as? GotoStatement)?.targetLabel
         )
 
         val innerCatchClause =
