@@ -32,9 +32,8 @@ import java.util.*
  * Represents a key / value pair, often found in languages that allow associative arrays or objects,
  * such as Python, Golang or JavaScript.
  *
- * Most often used in combination with an
- * [de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression] to represent the
- * creation of an array.
+ * Most often used in combination with an [InitializerListExpression] to represent the creation of
+ * an array.
  */
 class KeyValueExpression : Expression() {
 
@@ -51,15 +50,11 @@ class KeyValueExpression : Expression() {
         if (this === other) {
             return true
         }
-
         if (other !is KeyValueExpression) {
             return false
         }
-
         return super.equals(other) && key == other.key && value == other.value
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(super.hashCode(), key, value)
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), key, value)
 }

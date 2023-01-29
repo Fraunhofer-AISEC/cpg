@@ -250,7 +250,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleConditionalExpression(ctx: IASTConditionalExpression): ConditionalExpression {
-        val condition = handle(ctx.logicalConditionExpression)
+        val condition =
+            handle(ctx.logicalConditionExpression)
+                ?: ProblemExpression("could not parse condition expression")
         return newConditionalExpression(
             condition,
             if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression)

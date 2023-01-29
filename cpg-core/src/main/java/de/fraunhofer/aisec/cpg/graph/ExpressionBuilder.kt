@@ -152,7 +152,7 @@ fun MetadataProvider.newConstructExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newConditionalExpression(
-    condition: Expression?,
+    condition: Expression,
     thenExpr: Expression?,
     elseExpr: Expression?,
     type: Type?,

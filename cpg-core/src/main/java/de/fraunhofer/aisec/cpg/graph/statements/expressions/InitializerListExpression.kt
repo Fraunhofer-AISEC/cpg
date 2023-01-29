@@ -47,7 +47,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
     @field:SubGraph("AST")
     var initializerEdges = mutableListOf<PropertyEdge<Expression>>()
         set(value) {
-            field.forEach() {
+            field.forEach {
                 it.end.unregisterTypeListener(this)
                 removePrevDFG(it.end)
             }
@@ -58,6 +58,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
             }
         }
 
+    /** Virtual property to access [initializerEdges] without property edges. */
     var initializers by PropertyEdgeDelegate(InitializerListExpression::initializerEdges)
 
     fun addInitializer(initializer: Expression) {
@@ -123,16 +124,16 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
             .toString()
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
             return true
         }
-        if (o !is InitializerListExpression) {
+        if (other !is InitializerListExpression) {
             return false
         }
-        return super.equals(o) &&
-            initializers == o.initializers &&
-            propertyEqualsList(initializerEdges, o.initializerEdges)
+        return super.equals(other) &&
+            initializers == other.initializers &&
+            propertyEqualsList(initializerEdges, other.initializerEdges)
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), initializers)

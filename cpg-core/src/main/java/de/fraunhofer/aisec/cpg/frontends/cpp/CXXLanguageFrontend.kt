@@ -376,7 +376,7 @@ class CXXLanguageFrontend(
         return list
     }
 
-    private fun handleTokenList(tokenList: IASTTokenList): List<AnnotationMember> {
+    private fun handleTokenList(tokenList: IASTTokenList): MutableList<AnnotationMember> {
         val list: MutableList<AnnotationMember> = ArrayList()
         for (token in tokenList.tokens) {
             // skip commas and such

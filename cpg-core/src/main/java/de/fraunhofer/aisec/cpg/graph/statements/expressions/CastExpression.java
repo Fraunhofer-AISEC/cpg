@@ -127,10 +127,9 @@ public class CastExpression extends Expression implements TypeListener {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof CastExpression)) {
+    if (!(o instanceof CastExpression that)) {
       return false;
     }
-    CastExpression that = (CastExpression) o;
     return Objects.equals(expression, that.expression) && Objects.equals(castType, that.castType);
   }
 
