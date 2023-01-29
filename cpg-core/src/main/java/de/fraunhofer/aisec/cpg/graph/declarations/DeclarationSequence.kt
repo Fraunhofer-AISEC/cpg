@@ -63,7 +63,6 @@ class DeclarationSequence : Declaration(), DeclarationHolder {
         return childrenPropertyEdge[0].end
     }
 
-    override fun getDeclarations(): List<Declaration> {
-        return children
-    }
+    override val declarations: List<Declaration>
+        get() = children
 }

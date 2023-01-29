@@ -51,8 +51,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
      * Classes and Structs can be declared inside a function and are only valid within the function.
      */
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    var recordEdges: List<PropertyEdge<RecordDeclaration>> = ArrayList()
-        protected set
+    var recordEdges: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
 
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
@@ -70,10 +69,10 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     var throwsTypes: MutableList<Type> = ArrayList()
 
     @Relationship(value = "OVERRIDES", direction = Relationship.Direction.INCOMING)
-    val overriddenBy: MutableList<out FunctionDeclaration> = ArrayList()
+    val overriddenBy: MutableList<FunctionDeclaration> = ArrayList()
 
     @Relationship(value = "OVERRIDES", direction = Relationship.Direction.OUTGOING)
-    val overrides: MutableList<out FunctionDeclaration> = ArrayList()
+    val overrides: MutableList<FunctionDeclaration> = ArrayList()
 
     /** The list of return types. The default is an empty list. */
     var returnTypes: List<Type> = listOf()
@@ -260,12 +259,13 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
         }
     }
 
-    override fun getDeclarations(): MutableList<Declaration> {
-        val list = ArrayList<Declaration>()
-        list.addAll(parameters)
-        list.addAll(records)
-        return list
-    }
+    override val declarations: List<Declaration>
+        get() {
+            val list = ArrayList<Declaration>()
+            list.addAll(parameters)
+            list.addAll(records)
+            return list
+        }
 
     companion object {
         const val WHITESPACE = " "

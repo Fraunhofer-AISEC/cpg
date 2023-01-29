@@ -93,20 +93,17 @@ class CompressLLVMPass : Pass() {
                 }
             } else if (node is SwitchStatement) {
                 // Iterate over all statements in a body of the switch/case and replace a goto
-                // statement iff it is the only one jumping to the target
+                // statement if it is the only one jumping to the target
                 val caseBodyStatements = node.statement as CompoundStatement
                 val newStatements = caseBodyStatements.statements.toMutableList()
                 for (i in 0 until newStatements.size) {
+                    val subStatement =
+                        (newStatements[i] as? GotoStatement)?.targetLabel?.subStatement
                     if (
                         newStatements[i] in gotosToReplace &&
-                            newStatements[i] !in
-                                SubgraphWalker.flattenAST(
-                                    (newStatements[i] as GotoStatement).targetLabel.subStatement
-                                )
+                            newStatements[i] !in (subStatement?.astChildren ?: listOf())
                     ) {
-                        (newStatements[i] as GotoStatement).targetLabel.subStatement?.let {
-                            newStatements[i] = it
-                        }
+                        subStatement?.let { newStatements[i] = it }
                     }
                 }
                 (node.statement as CompoundStatement).statements = newStatements

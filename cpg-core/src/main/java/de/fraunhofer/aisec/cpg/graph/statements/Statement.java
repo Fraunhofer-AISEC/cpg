@@ -96,4 +96,22 @@ public abstract class Statement extends Node implements DeclarationHolder {
   public List<Declaration> getDeclarations() {
     return new ArrayList<>(this.getLocals());
   }
+
+  @Override
+  public <T extends Declaration> void addIfNotContains(
+      @NotNull Collection<T> collection, @NotNull T declaration) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration);
+  }
+
+  @Override
+  public <T extends Node> void addIfNotContains(
+      @NotNull Collection<PropertyEdge<T>> collection, @NotNull T declaration) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration);
+  }
+
+  @Override
+  public <T extends Node> void addIfNotContains(
+      @NotNull Collection<PropertyEdge<T>> collection, @NotNull T declaration, boolean outgoing) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration, outgoing);
+  }
 }

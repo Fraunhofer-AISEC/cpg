@@ -26,14 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
@@ -63,34 +61,6 @@ public class NamespaceDeclaration extends Declaration
   @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
   @NotNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statementEdges = new ArrayList<>();
-
-  public List<FieldDeclaration> getFields() {
-    return declarations.stream()
-        .filter(FieldDeclaration.class::isInstance)
-        .map(FieldDeclaration.class::cast)
-        .collect(Collectors.toList());
-  }
-
-  public List<FunctionDeclaration> getFunctions() {
-    return declarations.stream()
-        .filter(FunctionDeclaration.class::isInstance)
-        .map(FunctionDeclaration.class::cast)
-        .collect(Collectors.toList());
-  }
-
-  public List<RecordDeclaration> getRecords() {
-    return declarations.stream()
-        .filter(RecordDeclaration.class::isInstance)
-        .map(RecordDeclaration.class::cast)
-        .collect(Collectors.toList());
-  }
-
-  public List<NamespaceDeclaration> getNamespaces() {
-    return declarations.stream()
-        .filter(NamespaceDeclaration.class::isInstance)
-        .map(NamespaceDeclaration.class::cast)
-        .collect(Collectors.toList());
-  }
 
   @NotNull
   public List<Declaration> getDeclarations() {
@@ -131,14 +101,13 @@ public class NamespaceDeclaration extends Declaration
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
+  public boolean equals(Object other) {
+    if (this == other) {
       return true;
     }
-    if (!(o instanceof NamespaceDeclaration)) {
+    if (!(other instanceof NamespaceDeclaration that)) {
       return false;
     }
-    NamespaceDeclaration that = (NamespaceDeclaration) o;
     return super.equals(that) && Objects.equals(declarations, that.declarations);
   }
 
@@ -166,5 +135,23 @@ public class NamespaceDeclaration extends Declaration
   @Override
   public void addStatement(@NotNull Statement s) {
     StatementHolder.DefaultImpls.addStatement(this, s);
+  }
+
+  @Override
+  public <T extends Declaration> void addIfNotContains(
+      @NotNull Collection<T> collection, @NotNull T declaration) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration);
+  }
+
+  @Override
+  public <T extends Node> void addIfNotContains(
+      @NotNull Collection<PropertyEdge<T>> collection, @NotNull T declaration) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration);
+  }
+
+  @Override
+  public <T extends Node> void addIfNotContains(
+      @NotNull Collection<PropertyEdge<T>> collection, @NotNull T declaration, boolean outgoing) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration, outgoing);
   }
 }

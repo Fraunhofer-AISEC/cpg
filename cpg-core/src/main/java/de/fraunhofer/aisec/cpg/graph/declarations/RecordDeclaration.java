@@ -316,10 +316,9 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
     if (this == o) {
       return true;
     }
-    if (!(o instanceof RecordDeclaration)) {
+    if (!(o instanceof RecordDeclaration that)) {
       return false;
     }
-    RecordDeclaration that = (RecordDeclaration) o;
     return super.equals(that)
         && Objects.equals(kind, that.kind)
         && Objects.equals(this.getFields(), that.getFields())
@@ -387,5 +386,23 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   @Override
   public void addStatement(@NotNull Statement s) {
     StatementHolder.DefaultImpls.addStatement(this, s);
+  }
+
+  @Override
+  public <T extends Declaration> void addIfNotContains(
+      @NotNull Collection<T> collection, @NotNull T declaration) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration);
+  }
+
+  @Override
+  public <T extends Node> void addIfNotContains(
+      @NotNull Collection<PropertyEdge<T>> collection, @NotNull T declaration) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration);
+  }
+
+  @Override
+  public <T extends Node> void addIfNotContains(
+      @NotNull Collection<PropertyEdge<T>> collection, @NotNull T declaration, boolean outgoing) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration, outgoing);
   }
 }

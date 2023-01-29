@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
@@ -141,5 +142,23 @@ public abstract class TemplateDeclaration extends Declaration implements Declara
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Override
+  public <T extends Declaration> void addIfNotContains(
+      @NotNull Collection<T> collection, @NotNull T declaration) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration);
+  }
+
+  @Override
+  public <T extends Node> void addIfNotContains(
+      @NotNull Collection<PropertyEdge<T>> collection, @NotNull T declaration) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration);
+  }
+
+  @Override
+  public <T extends Node> void addIfNotContains(
+      @NotNull Collection<PropertyEdge<T>> collection, @NotNull T declaration, boolean outgoing) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration, outgoing);
   }
 }

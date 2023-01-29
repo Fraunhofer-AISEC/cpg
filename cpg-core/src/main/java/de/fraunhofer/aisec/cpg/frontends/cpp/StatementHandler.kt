@@ -291,7 +291,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             val declarationStatement = newDeclarationStatement(ctx.rawSignature)
             val declaration = frontend.declarationHandler.handle(ctx.declaration)
             if (declaration is DeclarationSequence) {
-                declarationStatement.declarations = declaration.asList()
+                declarationStatement.setDeclarations(declaration.asList())
             } else {
                 declarationStatement.singleDeclaration = declaration
             }

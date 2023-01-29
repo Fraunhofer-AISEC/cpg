@@ -33,10 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.NotNull;
@@ -215,5 +212,23 @@ public class TranslationUnitDeclaration extends Declaration
   @Override
   public void addStatement(@NotNull Statement s) {
     StatementHolder.DefaultImpls.addStatement(this, s);
+  }
+
+  @Override
+  public <T extends Declaration> void addIfNotContains(
+      @NotNull Collection<T> collection, @NotNull T declaration) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration);
+  }
+
+  @Override
+  public <T extends Node> void addIfNotContains(
+      @NotNull Collection<PropertyEdge<T>> collection, @NotNull T declaration) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration);
+  }
+
+  @Override
+  public <T extends Node> void addIfNotContains(
+      @NotNull Collection<PropertyEdge<T>> collection, @NotNull T declaration, boolean outgoing) {
+    DeclarationHolder.DefaultImpls.addIfNotContains(this, collection, declaration, outgoing);
   }
 }
