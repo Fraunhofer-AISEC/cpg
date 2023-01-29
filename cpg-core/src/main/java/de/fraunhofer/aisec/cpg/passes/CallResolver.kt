@@ -447,7 +447,7 @@ open class CallResolver : SymbolResolverPass() {
 
     private fun handleExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
         if (eci.containingClass != null) {
-            val recordDeclaration = recordMap[eci.parseName(eci.containingClass)]
+            val recordDeclaration = recordMap[eci.parseName(eci.containingClass!!)]
             val signature = eci.arguments.map { it.type }
             if (recordDeclaration != null) {
                 val constructor =

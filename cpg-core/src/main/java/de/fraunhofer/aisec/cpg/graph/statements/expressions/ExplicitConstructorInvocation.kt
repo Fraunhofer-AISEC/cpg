@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,25 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements.expressions;
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-/**
- * Represets a Type used as an expression for instance when instantiating templates
- *
- * <p>Note: This Expression is required since we cannot have ASTChilds directly connected to a Type
- * since they are merged.
- */
-public class TypeExpression extends Expression {}
+import org.apache.commons.lang3.builder.ToStringBuilder
+
+class ExplicitConstructorInvocation : CallExpression() {
+    var containingClass: String? = null
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("invokes", invokes)
+            .toString()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ExplicitConstructorInvocation) return false
+        return super.equals(other) && containingClass == other.containingClass
+    }
+
+    override fun hashCode() = super.hashCode()
+}

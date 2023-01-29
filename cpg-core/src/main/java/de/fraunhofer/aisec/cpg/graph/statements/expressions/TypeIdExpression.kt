@@ -23,52 +23,27 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements.expressions;
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import java.util.Objects;
+import de.fraunhofer.aisec.cpg.graph.types.Type
 
-/** Expressions of the form floor ... ceiling */
-public class ArrayRangeExpression extends Expression {
+/**
+ * Models C++ operations that inspect types. These are `typeof`, `sizeof`, `typeid`, `alignof`and
+ * are stored as string in their operator code.
+ *
+ * TODO: Is such a class really necessary??
+ */
+class TypeIdExpression : Expression() {
+    var referencedType: Type? = null
+    var operatorCode: String? = null
 
-  @SubGraph("AST")
-  private Expression floor;
-
-  @SubGraph("AST")
-  private Expression ceiling;
-
-  public Expression getCeiling() {
-    return ceiling;
-  }
-
-  public void setCeiling(Expression ceiling) {
-    this.ceiling = ceiling;
-  }
-
-  public Expression getFloor() {
-    return floor;
-  }
-
-  public void setFloor(Expression floor) {
-    this.floor = floor;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is TypeIdExpression) return false
+        return super.equals(other) &&
+            operatorCode == other.operatorCode &&
+            referencedType == other.referencedType
     }
-    if (!(o instanceof ArrayRangeExpression)) {
-      return false;
-    }
-    ArrayRangeExpression that = (ArrayRangeExpression) o;
-    return super.equals(that)
-        && Objects.equals(floor, that.floor)
-        && Objects.equals(ceiling, that.ceiling);
-  }
 
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+    override fun hashCode() = super.hashCode()
 }
