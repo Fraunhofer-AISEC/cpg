@@ -23,42 +23,24 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
+package de.fraunhofer.aisec.cpg.graph.statements
 
-import java.util.Objects;
+import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-/**
- * Statement used to interrupt further execution of a loop body and jump to the evaluation of the
- * loop condition. Can have a loop label, e.g. in Java, to specify which of the nested loops
- * condition should be reevaluated.
- */
-public class ContinueStatement extends Statement {
+/** Represents an assert statement */
+class AssertStatement : Statement() {
+    /** The condition to be evaluated. */
+    @field:SubGraph("AST") var condition: Expression? = null
 
-  /** Specifies the loop in a nested structure that the label will 'continue' */
-  private String label = null;
+    /** The _optional_ message that is shown, if the assert is evaluated as true */
+    @field:SubGraph("AST") var message: Statement? = null
 
-  public String getLabel() {
-    return label;
-  }
-
-  public void setLabel(String label) {
-    this.label = label;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is AssertStatement) return false
+        return super.equals(other) && condition == other.condition && message == other.message
     }
-    if (!(o instanceof ContinueStatement)) {
-      return false;
-    }
-    ContinueStatement that = (ContinueStatement) o;
-    return super.equals(that) && Objects.equals(label, that.label);
-  }
 
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+    override fun hashCode() = super.hashCode()
 }

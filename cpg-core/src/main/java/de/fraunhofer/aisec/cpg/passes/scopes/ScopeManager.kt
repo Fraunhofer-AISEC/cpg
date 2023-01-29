@@ -465,7 +465,7 @@ class ScopeManager : ScopeProvider {
             }
             (scope as Breakable).addBreakStatement(breakStatement)
         } else {
-            val labelStatement = getLabelStatement(breakStatement.label)
+            val labelStatement = getLabelStatement(breakStatement.label!!)
             if (labelStatement != null) {
                 val scope = lookupScope(labelStatement.subStatement)
                 (scope as Breakable?)?.addBreakStatement(breakStatement)
@@ -490,7 +490,7 @@ class ScopeManager : ScopeProvider {
             }
             (scope as Continuable).addContinueStatement(continueStatement)
         } else {
-            val labelStatement = getLabelStatement(continueStatement.label)
+            val labelStatement = getLabelStatement(continueStatement.label!!)
             if (labelStatement != null) {
                 val scope = lookupScope(labelStatement.subStatement)
                 (scope as Continuable?)?.addContinueStatement(continueStatement)

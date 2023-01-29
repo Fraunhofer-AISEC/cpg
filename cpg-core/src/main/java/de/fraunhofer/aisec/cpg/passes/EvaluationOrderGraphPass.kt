@@ -681,7 +681,7 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleCaseStatement(node: CaseStatement) {
-        createEOG(node.getCaseExpression())
+        createEOG(node.caseExpression)
         pushToEOG(node)
     }
 

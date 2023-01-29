@@ -1171,7 +1171,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
             val catchClause = newCatchClause(instrStr)
             catchClause.name = Name(gotoCatch.labelName)
-            catchClause.setParameter(
+            catchClause.parameter =
                 newVariableDeclaration(
                     "e_${gotoCatch.labelName}",
                     UnknownType.getUnknownType(language),
@@ -1179,7 +1179,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     true,
                     frontend.language
                 )
-            )
+
             val catchCompoundStatement = newCompoundStatement(instrStr)
             catchCompoundStatement.addStatement(gotoCatch)
             catchClause.body = catchCompoundStatement
@@ -1232,7 +1232,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 frontend.language
             )
         frontend.bindingsCache["%${exceptionName}"] = except
-        catchInstr.setParameter(except)
+        catchInstr.parameter = except
         catchInstr.name = Name(catchType)
         return catchInstr
     }

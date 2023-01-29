@@ -938,7 +938,7 @@ internal class EOGTest : BaseTest() {
         // Assert: while-switch, all breaks inside the switch connect to the containing switch
         // unless it has a label which connects the break to the  while
         for (b in breaks) {
-            if (b.label != null && b.label.isNotEmpty()) {
+            if (b.label != null && b.label!!.isNotEmpty()) {
                 assertTrue(
                     Util.eogConnect(
                         en = Util.Edge.EXITS,
@@ -965,7 +965,7 @@ internal class EOGTest : BaseTest() {
 
         // Assert: switch-while, all breaks inside the while connect to the containing while unless
         // it has a label which connects the break to the switch
-        for (b in breaks) if (b.label != null && b.label.isNotEmpty())
+        for (b in breaks) if (b.label != null && b.label!!.isNotEmpty())
             assertTrue(
                 Util.eogConnect(
                     en = Util.Edge.EXITS,

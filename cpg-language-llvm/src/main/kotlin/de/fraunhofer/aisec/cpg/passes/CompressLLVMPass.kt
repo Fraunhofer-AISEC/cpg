@@ -112,7 +112,7 @@ class CompressLLVMPass : Pass() {
             } else if (
                 node is TryStatement &&
                     node.catchClauses.size == 1 &&
-                    node.catchClauses[0].body.statements[0] is CatchClause
+                    node.catchClauses[0].body?.statements?.get(0) is CatchClause
             ) {
                 /* Initially, we expect only a single catch clause which contains all the logic.
                  * The first statement of the clause should have been a `landingpad` instruction
@@ -124,12 +124,12 @@ class CompressLLVMPass : Pass() {
                 val caseBody = node.catchClauses[0].body
 
                 // This is the most generic one
-                val clauseToAdd = caseBody.statements[0] as CatchClause
+                val clauseToAdd = caseBody?.statements?.get(0) as CatchClause
                 catchClauses.add(clauseToAdd)
                 caseBody.statements = caseBody.statements.drop(1)
                 catchClauses[0].body = caseBody
                 if (node.catchClauses[0].parameter != null) {
-                    catchClauses[0].setParameter(node.catchClauses[0].parameter!!)
+                    catchClauses[0].parameter = node.catchClauses[0].parameter
                 }
                 node.catchClauses = catchClauses
 
@@ -137,14 +137,15 @@ class CompressLLVMPass : Pass() {
             } else if (
                 node is TryStatement &&
                     node.catchClauses.size == 1 &&
-                    node.catchClauses[0].body.statements[0] is CompoundStatement
+                    node.catchClauses[0].body?.statements?.get(0) is CompoundStatement
             ) {
                 // A compound statement which is wrapped in the catchClause. We can simply move
                 // it
                 // one layer up and make
                 // the compound statement the body of the catch clause.
-                val innerCompound = node.catchClauses[0].body.statements[0] as CompoundStatement
-                node.catchClauses[0].body.statements = innerCompound.statements
+                val innerCompound =
+                    node.catchClauses[0].body?.statements?.get(0) as? CompoundStatement
+                innerCompound?.statements?.let { node.catchClauses[0].body?.statements = it }
                 fixThrowStatementsForCatch(node.catchClauses[0])
             } else if (node is TryStatement && node.catchClauses.size > 0) {
                 for (catch in node.catchClauses) {
@@ -190,7 +191,7 @@ class CompressLLVMPass : Pass() {
                         "",
                         true,
                     )
-                catch.setParameter(error)
+                catch.parameter = error
             }
             val exceptionReference =
                 catch.newDeclaredReferenceExpression(

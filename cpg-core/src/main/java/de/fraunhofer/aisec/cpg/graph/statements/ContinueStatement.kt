@@ -23,45 +23,22 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
-
-import java.util.Objects;
+package de.fraunhofer.aisec.cpg.graph.statements
 
 /**
- * Statement used to interrupt further execution of a loop body and exit the respective loop
- * context. Can have a loop label, e.g. in Java, to specify which of the nested loops should be
- * broken out of.
+ * Statement used to interrupt further execution of a loop body and jump to the evaluation of the
+ * loop condition. Can have a loop label, e.g. in Java, to specify which of the nested loops
+ * condition should be reevaluated.
  */
-public class BreakStatement extends Statement {
-  private String label = null;
+class ContinueStatement : Statement() {
+    /** Specifies the loop in a nested structure that the label will 'continue' */
+    var label: String? = null
 
-  /**
-   * Specifies the label of the loop in a nested structure that this statement will 'break'
-   *
-   * @return the label
-   */
-  public String getLabel() {
-    return label;
-  }
-
-  public void setLabel(String label) {
-    this.label = label;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ContinueStatement) return false
+        return super.equals(other) && label == other.label
     }
-    if (!(o instanceof BreakStatement)) {
-      return false;
-    }
-    BreakStatement that = (BreakStatement) o;
-    return super.equals(that) && Objects.equals(label, that.label);
-  }
 
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+    override fun hashCode() = super.hashCode()
 }

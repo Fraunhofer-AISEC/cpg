@@ -114,7 +114,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         catchClause.body = body as? CompoundStatement
 
         if (decl != null) {
-            catchClause.setParameter((decl as VariableDeclaration?)!!)
+            catchClause.parameter = decl as? VariableDeclaration
         }
         frontend.scopeManager.leaveScope(catchClause)
         return catchClause
@@ -356,7 +356,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
     private fun handleCaseStatement(ctx: IASTCaseStatement): CaseStatement {
         val caseStatement = newCaseStatement(ctx.rawSignature)
-        caseStatement.setCaseExpression(frontend.expressionHandler.handle(ctx.expression))
+        caseStatement.caseExpression = frontend.expressionHandler.handle(ctx.expression)
         return caseStatement
     }
 
