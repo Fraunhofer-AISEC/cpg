@@ -837,7 +837,7 @@ open class EvaluationOrderGraphPass : Pass() {
         scopeManager.enterScope(node)
         createEOG(node.iterable)
         createEOG(node.variable)
-        node.addPrevDFG(node.variable)
+        node.variable?.let { node.addPrevDFG(it) }
         pushToEOG(node) // To have semantic information after the variable declaration
         currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)

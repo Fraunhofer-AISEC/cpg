@@ -148,7 +148,7 @@ class DFGPass : Pass() {
      * [ForEachStatement.iterable] to the [ForEachStatement.variable].
      */
     private fun handleForEachStatement(node: ForEachStatement) {
-        node.variable.addPrevDFG(node.iterable)
+        node.iterable?.let { node.variable?.addPrevDFG(it) }
     }
 
     /**
