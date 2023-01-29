@@ -819,7 +819,7 @@ open class EvaluationOrderGraphPass : Pass() {
         scopeManager.enterScope(node)
         createEOG(node.statement)
         createEOG(node.condition)
-        node.addPrevDFG(node.condition)
+        node.condition?.let { node.addPrevDFG(it) }
         pushToEOG(node) // To have semantic information after the condition evaluation
         currentProperties[Properties.BRANCH] = true
         connectCurrentToLoopStart()

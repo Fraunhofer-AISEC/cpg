@@ -170,7 +170,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             val arrayCreate = newArrayCreationExpression(code)
             arrayCreate.type = t
             for (arrayMod in arrayMods) {
-                arrayCreate.addDimension(handle(arrayMod.constantExpression))
+                val constant = handle(arrayMod.constantExpression)
+                constant?.let { arrayCreate.addDimension(it) }
             }
             if (init != null) {
                 arrayCreate.initializer = frontend.initializerHandler.handle(init)
