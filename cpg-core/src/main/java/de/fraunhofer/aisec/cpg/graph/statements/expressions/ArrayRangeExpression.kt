@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 
-/** Expressions of the form floor ... ceiling */
+/** Expressions of the form `floor ... ceiling` */
 class ArrayRangeExpression : Expression() {
     @field:SubGraph("AST") var floor: Expression? = null
 

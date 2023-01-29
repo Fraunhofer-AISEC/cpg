@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.CallResolver
+import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -127,11 +128,10 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         if (other !is ConstructExpression) {
             return false
         }
-
-        return super.equals(other) && constructor == other.constructor
+        return super.equals(other) &&
+            constructor == other.constructor &&
+            arguments == other.arguments
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), constructor, arguments)
 }

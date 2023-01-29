@@ -53,6 +53,7 @@ import org.neo4j.ogm.annotation.Transient;
  *
  * <p>This is not possible in Java, the aforementioned code example would prompt a compile error.
  */
+// TODO: We cannot convert this class into Kotlin until we resolve type listener foo
 public abstract class Expression extends Statement implements HasType {
 
   /** The type of the value after evaluation. */

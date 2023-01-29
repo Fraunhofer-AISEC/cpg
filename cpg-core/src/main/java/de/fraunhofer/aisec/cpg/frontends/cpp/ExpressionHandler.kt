@@ -152,8 +152,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleArraySubscriptExpression(ctx: IASTArraySubscriptExpression): Expression {
         val arraySubsExpression = newArraySubscriptionExpression(ctx.rawSignature)
-        arraySubsExpression.arrayExpression = handle(ctx.arrayExpression)
-        arraySubsExpression.subscriptExpression = handle(ctx.argument)
+        handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
+        handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
         return arraySubsExpression
     }
 
@@ -646,9 +646,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         for (clause in ctx.clauses) {
             handle(clause)?.let {
                 val edge = PropertyEdge(expression, it)
-                edge.addProperty(Properties.INDEX, expression.initializersPropertyEdge.size)
+                edge.addProperty(Properties.INDEX, expression.initializerEdges.size)
 
-                expression.initializersPropertyEdge.add(edge)
+                expression.initializerEdges.add(edge)
             }
         }
 
