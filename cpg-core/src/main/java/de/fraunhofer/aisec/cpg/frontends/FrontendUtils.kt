@@ -138,7 +138,7 @@ class FrontendUtils {
             val smallestEnclosingNode =
                 enclosingNodes.sortedWith(compareBy { it.code?.length ?: 10000 }).first()
 
-            var children = SubgraphWalker.getAstChildren(smallestEnclosingNode)
+            val children = SubgraphWalker.getAstChildren(smallestEnclosingNode).toMutableList()
 
             // Because in GO we wrap all elements into a NamespaceDeclaration we have to extract the
             // natural children
@@ -151,9 +151,9 @@ class FrontendUtils {
             // Searching for the closest successor to our comment amongst the children of the
             // smallest
             // enclosing nodes
-            var successors =
+            val successors =
                 children.filter {
-                    val nodeRegion: Region = it.location?.region?.let { it } ?: Region()
+                    val nodeRegion: Region = it.location?.region ?: Region()
                     nodeRegion.startLine >= location.endLine &&
                         (nodeRegion.startLine > location.endLine ||
                             nodeRegion.startColumn >= location.endColumn)

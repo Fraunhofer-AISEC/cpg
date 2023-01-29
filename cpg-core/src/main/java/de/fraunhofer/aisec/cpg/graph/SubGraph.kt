@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 
 /**
- * Annotates single member variables of supertype [Node] or a collection of nodes to be part
- * of the a sub-graph of the current Node. This is used to iterate over all AST sub-nodes with
+ * Annotates single member variables of supertype [Node] or a collection of nodes to be part of the
+ * a sub-graph of the current Node. This is used to iterate over all AST sub-nodes with
  * [SubgraphWalker.getAstChildren]. Could be replaced with @Relationship{sub-graph:'ast'} if
  * switching to an OGM that supports relationship properties.
  */

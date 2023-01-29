@@ -68,7 +68,7 @@ class FunctionPointerCallResolver : Pass() {
         scopeManager = t.scopeManager
         inferDfgForUnresolvedCalls = t.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         walker = ScopedWalker(t.scopeManager)
-        walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
+        walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node ->
             walker.collectDeclarations(currNode)
         }
         walker.registerHandler { node, _ -> resolve(node) }
