@@ -23,6 +23,31 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
+package de.fraunhofer.aisec.cpg.graph.statements
 
-public class EmptyStatement extends Statement {}
+import de.fraunhofer.aisec.cpg.graph.SubGraph
+
+class ForEachStatement : Statement() {
+    /**
+     * This field contains the iteration variable of the loop. It can be either a new variable
+     * declaration or a reference to an existing variable.
+     */
+    @field:SubGraph("AST") var variable: Statement? = null
+
+    /** This field contains the iteration subject of the loop. */
+    @field:SubGraph("AST") var iterable: Statement? = null
+
+    /** This field contains the body of the loop. */
+    @field:SubGraph("AST") var statement: Statement? = null
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ForEachStatement) return false
+        return super.equals(other) &&
+            variable == other.variable &&
+            iterable == other.iterable &&
+            statement == other.statement
+    }
+
+    override fun hashCode() = super.hashCode()
+}

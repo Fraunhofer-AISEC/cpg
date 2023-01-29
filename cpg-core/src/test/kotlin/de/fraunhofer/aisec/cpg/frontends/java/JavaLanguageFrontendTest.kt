@@ -743,6 +743,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val forEach = forIterator.bodyOrNull<ForEachStatement>()
         assertNotNull(forEach)
 
-        assertContains(forEach.variable.prevDFG, forEach.iterable)
+        assertNotNull(forEach.variable)
+        assertContains(forEach.variable!!.prevDFG, forEach.iterable!!)
     }
 }

@@ -23,10 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
+package de.fraunhofer.aisec.cpg.graph.statements
+
 /**
- * Default statement of the form <code>default:</code> that serves as entry point for switch
- * statements. The statements executed after the entry are on the same AST hierarchy in the parent
- * compound statement.
+ * Default statement of the form `default:` that serves as entry point for switch statements. The
+ * statements executed after the entry are on the same AST hierarchy in the parent compound
+ * statement.
  */
-public class DefaultStatement extends Statement {}
+class DefaultStatement : Statement()
