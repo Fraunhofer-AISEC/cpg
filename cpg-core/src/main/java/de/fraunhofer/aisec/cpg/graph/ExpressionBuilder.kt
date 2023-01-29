@@ -568,7 +568,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.type = this.type
     duplicate.code = this.code
     duplicate.location = this.location
-    duplicate.locals = this.locals
+    duplicate.localEdges = this.localEdges
     duplicate.possibleSubTypes = this.possibleSubTypes
     duplicate.argumentIndex = this.argumentIndex
     duplicate.annotations = this.annotations

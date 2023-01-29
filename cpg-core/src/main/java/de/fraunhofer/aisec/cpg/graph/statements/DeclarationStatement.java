@@ -108,10 +108,9 @@ public class DeclarationStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof DeclarationStatement)) {
+    if (!(o instanceof DeclarationStatement that)) {
       return false;
     }
-    DeclarationStatement that = (DeclarationStatement) o;
     return super.equals(that)
         && Objects.equals(this.getDeclarations(), that.getDeclarations())
         && PropertyEdge.propertyEqualsList(declarations, that.declarations);
