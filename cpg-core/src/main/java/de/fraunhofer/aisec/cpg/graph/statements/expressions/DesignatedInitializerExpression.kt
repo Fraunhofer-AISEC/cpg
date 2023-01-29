@@ -23,50 +23,46 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import java.util.*
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
-/** Represents a conditional loop statement of the form: `while(...){...}`. */
-class WhileStatement : Statement() {
-    /** C++ allows defining a declaration instead of a pure logical expression as condition */
-    @field:SubGraph("AST") var conditionDeclaration: Declaration? = null
+// TODO: Document this class!
+class DesignatedInitializerExpression : Expression() {
+    @field:SubGraph("AST") var rhs: Expression? = null
 
-    /** The condition that decides if the block is executed. */
-    @field:SubGraph("AST") var condition: Expression? = null
+    @Relationship(value = "LHS", direction = Relationship.Direction.OUTGOING)
+    var lhsPropertyEdge: List<PropertyEdge<Expression>> = listOf()
+        private set
 
-    /**
-     * The statement that is going to be executed, until the condition evaluates to false for the
-     * first time. Usually a [CompoundStatement].
-     */
-    @field:SubGraph("AST") var statement: Statement? = null
+    @get:SubGraph("AST")
+    var lhs: List<Expression>
+        set(value) {
+            lhsPropertyEdge = transformIntoOutgoingPropertyEdgeList(value ?: listOf(), this)
+        }
+        get() = unwrap(lhsPropertyEdge)
+
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
-            .append("condition", condition)
-            .append("statement", statement)
+            .append("lhr", lhsPropertyEdge)
+            .append("rhs", rhs)
             .toString()
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is WhileStatement) {
-            return false
-        }
-
+        if (this === other) return true
+        if (other !is DesignatedInitializerExpression) return false
         return super.equals(other) &&
-            conditionDeclaration == other.conditionDeclaration &&
-            condition == other.condition &&
-            statement == other.statement
+            rhs == other.rhs &&
+            lhsPropertyEdge == other.lhsPropertyEdge &&
+            lhs == other.lhs
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash()
-    }
+    override fun hashCode() = super.hashCode()
 }

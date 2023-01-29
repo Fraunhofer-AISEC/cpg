@@ -23,37 +23,23 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements.expressions;
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import java.util.Objects;
+import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 
-public class DeleteExpression extends Expression {
-  @SubGraph("AST")
-  private Expression operand;
-
-  public Expression getOperand() {
-    return operand;
-  }
-
-  public void setOperand(Expression operand) {
-    this.operand = operand;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+/**
+ * An expression, which calls another function. It has a list of arguments (list of [ ]s) and is
+ * connected via the INVOKES edge to its [FunctionDeclaration].
+ */
+class CompoundStatementExpression : Expression() {
+    /** The list of arguments. */
+    @field:SubGraph("AST") var statement: Statement? = null
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CompoundStatementExpression) return false
+        return super.equals(other) && statement == other.statement
     }
-    if (!(o instanceof DeleteExpression)) {
-      return false;
-    }
-    DeleteExpression that = (DeleteExpression) o;
-    return super.equals(that) && Objects.equals(operand, that.operand);
-  }
 
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+    override fun hashCode() = super.hashCode()
 }

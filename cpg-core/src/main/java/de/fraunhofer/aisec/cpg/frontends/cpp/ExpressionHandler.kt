@@ -178,7 +178,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             arrayCreate
         } else {
             // Resolve possible templates
-            var templateParameters: List<Node?> = emptyList<Node>()
+            var templateParameters: List<Node> = emptyList()
             val declSpecifier = ctx.typeId.declSpecifier as? IASTNamedTypeSpecifier
             if (declSpecifier?.name is CPPASTTemplateId) {
                 templateParameters = getTemplateArguments(declSpecifier.name as CPPASTTemplateId)
@@ -208,10 +208,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // expression since the construct expression will do the actual template instantiation
             if (
                 newExpression.templateParameters != null &&
-                    newExpression.templateParameters.isNotEmpty()
+                    newExpression.templateParameters!!.isNotEmpty()
             ) {
                 CallResolver.addImplicitTemplateParametersToCall(
-                    newExpression.templateParameters,
+                    newExpression.templateParameters!!,
                     initializer as ConstructExpression
                 )
             }

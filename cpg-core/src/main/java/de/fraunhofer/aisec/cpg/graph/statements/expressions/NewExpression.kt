@@ -23,50 +23,38 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.HasInitializer
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.SubGraph
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
-/** Represents a conditional loop statement of the form: `while(...){...}`. */
-class WhileStatement : Statement() {
-    /** C++ allows defining a declaration instead of a pure logical expression as condition */
-    @field:SubGraph("AST") var conditionDeclaration: Declaration? = null
-
-    /** The condition that decides if the block is executed. */
-    @field:SubGraph("AST") var condition: Expression? = null
+/** Represents the creation of a new object through the `new` keyword. */
+class NewExpression : Expression(), HasInitializer {
+    /** The initializer expression. */
+    @field:SubGraph("AST") override var initializer: Expression? = null
 
     /**
-     * The statement that is going to be executed, until the condition evaluates to false for the
-     * first time. Usually a [CompoundStatement].
+     * We need a way to store the templateParameters that a NewExpression might have before the
+     * ConstructExpression is created
      */
-    @field:SubGraph("AST") var statement: Statement? = null
+    @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
+    @field:SubGraph("AST")
+    var templateParameters: List<Node>? = null
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
-            .append("condition", condition)
-            .append("statement", statement)
+            .append("initializer", initializer)
             .toString()
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is WhileStatement) {
-            return false
-        }
-
-        return super.equals(other) &&
-            conditionDeclaration == other.conditionDeclaration &&
-            condition == other.condition &&
-            statement == other.statement
+        if (this === other) return true
+        if (other !is NewExpression) return false
+        return super.equals(other) && initializer == other.initializer
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash()
-    }
+    override fun hashCode(): Int = super.hashCode()
 }

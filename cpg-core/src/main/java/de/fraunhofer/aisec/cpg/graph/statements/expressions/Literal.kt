@@ -23,56 +23,36 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements.expressions;
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.Node;
-import java.util.Objects;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.jetbrains.annotations.NotNull;
+import java.util.*
+import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
  * Represents a literal value, meaning the value is fixed and not depending on the runtime
  * evaluation of the expression.
  *
- * @param <T> the literal type.
+ * @param <T> the literal type. </T>
  */
-public class Literal<T> extends Expression {
+class Literal<T> : Expression() {
+    var value: T? = null
 
-  private T value;
-
-  public T getValue() {
-    return value;
-  }
-
-  public void setValue(T value) {
-    this.value = value;
-  }
-
-  @NotNull
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("value", value)
-        .toString();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("value", value)
+            .toString()
     }
-    if (!(o instanceof Literal)) {
-      return false;
-    }
-    Literal<?> literal = (Literal<?>) o;
-    return super.equals(literal) && Objects.equals(value, literal.value);
-  }
 
-  @Override
-  public int hashCode() {
-    // include the value in the hash code, otherwise the hash set/map implementation falls back to
-    // equals() because the node's hash code only depends on the name
-    return Objects.hash(super.hashCode(), value);
-  }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Literal<*>) return false
+        return super.equals(other) && value == other.value
+    }
+
+    override fun hashCode(): Int {
+        // include the value in the hash code, otherwise the hash set/map implementation falls back
+        // to equals() because the node's hash code only depends on the name
+        return Objects.hash(super.hashCode(), value)
+    }
 }
