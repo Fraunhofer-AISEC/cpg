@@ -714,7 +714,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.ENTRIES,
                 n = wstat,
-                refs = listOf(wstat.condition)
+                refs = listOfNotNull(wstat.condition)
             )
         )
         // Assert: Condition is preceded by print or block of the loop itself
@@ -722,7 +722,7 @@ internal class EOGTest : BaseTest() {
             Util.eogConnect(
                 en = Util.Edge.ENTRIES,
                 n = wstat.condition,
-                refs = listOf(prints[0], wstat.statement)
+                refs = listOfNotNull(prints[0], wstat.statement)
             )
         )
 
@@ -1097,7 +1097,11 @@ internal class EOGTest : BaseTest() {
 
         // Assert: Print is only followed by first nodes in condition
         assertTrue(
-            Util.eogConnect(en = Util.Edge.EXITS, n = prints[0], refs = listOf(wstat.condition))
+            Util.eogConnect(
+                en = Util.Edge.EXITS,
+                n = prints[0],
+                refs = listOfNotNull(wstat.condition)
+            )
         )
 
         // Assert: condition nodes are preceded by either continue, last nodes in block or last
@@ -1106,13 +1110,13 @@ internal class EOGTest : BaseTest() {
             Util.eogConnect(
                 en = Util.Edge.ENTRIES,
                 n = wstat.condition,
-                refs = listOf(prints[0], wstat.statement)
+                refs = listOfNotNull(prints[0], wstat.statement)
             ) ||
                 Util.eogConnect(
                     cn = Connect.NODE,
                     en = Util.Edge.EXITS,
                     n = continues[0],
-                    refs = listOf(wstat.condition)
+                    refs = listOfNotNull(wstat.condition)
                 )
         )
 

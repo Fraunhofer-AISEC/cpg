@@ -26,16 +26,19 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
+/** A [Statement] which represents a try/catch block, primarily used for exception handling. */
 class TryStatement : Statement() {
     @Relationship(value = "RESOURCES", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    private var _resources: MutableList<PropertyEdge<Statement>> = mutableListOf()
+    var resourceEdges = mutableListOf<PropertyEdge<Statement>>()
+
+    var resources by PropertyEdgeDelegate(TryStatement::resourceEdges)
 
     @field:SubGraph("AST") var tryBlock: CompoundStatement? = null
 
@@ -43,47 +46,29 @@ class TryStatement : Statement() {
 
     @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    private var _catchClauses: MutableList<PropertyEdge<CatchClause>> = mutableListOf()
 
-    var catchClauses: List<CatchClause>
-        get() = unwrap(_catchClauses)
-        set(value) {
-            _catchClauses = mutableListOf()
-            for ((counter, c) in value.withIndex()) {
-                val propertyEdge = PropertyEdge(this, c)
-                propertyEdge.addProperty(Properties.INDEX, counter)
-                _catchClauses.add(propertyEdge)
-            }
-        }
+    var catchClauseEdges = mutableListOf<PropertyEdge<CatchClause>>()
 
-    var resources: List<Statement>
-        get() = unwrap(_resources)
-        set(value) {
-            this._resources = mutableListOf()
-            for ((c, s) in value.withIndex()) {
-                val propertyEdge = PropertyEdge(this, s)
-                propertyEdge.addProperty(Properties.INDEX, c)
-                _resources.add(propertyEdge)
-            }
-        }
-
-    val resourcesPropertyEdge: List<PropertyEdge<Statement>>
-        get() = _resources
-
-    val catchClausesPropertyEdge: List<PropertyEdge<CatchClause>>
-        get() = _catchClauses
+    var catchClauses by PropertyEdgeDelegate(TryStatement::catchClauseEdges)
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is TryStatement) return false
-        return ((super.equals(other) &&
+        if (this === other) {
+            return true
+        }
+        if (other !is TryStatement) {
+            return false
+        }
+
+        return (super.equals(other) &&
             resources == other.resources &&
-            propertyEqualsList(_resources, other._resources) &&
-            tryBlock == other.tryBlock) &&
+            propertyEqualsList(resourceEdges, other.resourceEdges) &&
+            tryBlock == other.tryBlock &&
             finallyBlock == other.finallyBlock &&
             catchClauses == other.catchClauses &&
-            propertyEqualsList(_catchClauses, other._catchClauses))
+            propertyEqualsList(catchClauseEdges, other.catchClauseEdges))
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), resources, tryBlock, finallyBlock, catchClauses)
+    }
 }

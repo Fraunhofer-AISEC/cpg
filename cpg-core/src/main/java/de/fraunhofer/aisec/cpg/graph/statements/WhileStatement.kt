@@ -44,6 +44,7 @@ class WhileStatement : Statement() {
      * first time. Usually a [CompoundStatement].
      */
     @field:SubGraph("AST") var statement: Statement? = null
+
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
