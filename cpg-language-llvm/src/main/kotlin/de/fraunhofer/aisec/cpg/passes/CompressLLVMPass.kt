@@ -104,8 +104,9 @@ class CompressLLVMPass : Pass() {
                                     (newStatements[i] as GotoStatement).targetLabel.subStatement
                                 )
                     ) {
-                        newStatements[i] =
-                            (newStatements[i] as GotoStatement).targetLabel.subStatement
+                        (newStatements[i] as GotoStatement).targetLabel.subStatement?.let {
+                            newStatements[i] = it
+                        }
                     }
                 }
                 (node.statement as CompoundStatement).statements = newStatements

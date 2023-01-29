@@ -70,7 +70,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
   @NotNull
-  private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
+  private @SubGraph("AST") List<PropertyEdge<Statement>> statementEdges = new ArrayList<>();
 
   @Transient private List<Type> superClasses = new ArrayList<>();
   @Transient private List<Type> implementedInterfaces = new ArrayList<>();
@@ -289,16 +289,16 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
 
   @Override
   public @NotNull List<PropertyEdge<Statement>> getStatementEdges() {
-    return this.statements;
+    return this.statementEdges;
   }
 
   @Override
   public void setStatementEdges(@NotNull List<PropertyEdge<Statement>> statements) {
-    this.statements = statements;
+    this.statementEdges = statements;
   }
 
   @Override
-  public String toString() {
+  public @NotNull String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
         .append("name", getName())
@@ -371,5 +371,21 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
     }
 
     return type;
+  }
+
+  @NotNull
+  @Override
+  public List<Statement> getStatements() {
+    return StatementHolder.DefaultImpls.getStatements(this);
+  }
+
+  @Override
+  public void setStatements(@NotNull List<? extends Statement> value) {
+    StatementHolder.DefaultImpls.setStatements(this, value);
+  }
+
+  @Override
+  public void addStatement(@NotNull Statement s) {
+    StatementHolder.DefaultImpls.addStatement(this, s);
   }
 }

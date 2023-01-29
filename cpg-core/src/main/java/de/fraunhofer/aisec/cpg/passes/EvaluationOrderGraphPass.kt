@@ -287,8 +287,7 @@ open class EvaluationOrderGraphPass : Pass() {
     protected fun handleStatementHolder(statementHolder: StatementHolder) {
         // separate code into static and non-static parts as they are executed in different moments,
         // although they can be placed in the same enclosing declaration.
-        val code =
-            statementHolder.statementsPropertyEdge.map { (it as PropertyEdge).end as Statement }
+        val code = statementHolder.statements
 
         val nonStaticCode = code.filter { (it as? CompoundStatement)?.isStaticBlock == false }
         val staticCode = code.filter { it !in nonStaticCode }

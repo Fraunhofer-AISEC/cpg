@@ -62,7 +62,7 @@ public class NamespaceDeclaration extends Declaration
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
   @NotNull
-  private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
+  private @SubGraph("AST") List<PropertyEdge<Statement>> statementEdges = new ArrayList<>();
 
   public List<FieldDeclaration> getFields() {
     return declarations.stream()
@@ -122,12 +122,12 @@ public class NamespaceDeclaration extends Declaration
 
   @Override
   public @NotNull List<PropertyEdge<Statement>> getStatementEdges() {
-    return this.statements;
+    return this.statementEdges;
   }
 
   @Override
   public void setStatementEdges(@NotNull List<PropertyEdge<Statement>> statements) {
-    this.statements = statements;
+    this.statementEdges = statements;
   }
 
   @Override
@@ -150,5 +150,21 @@ public class NamespaceDeclaration extends Declaration
   @Override
   public void addDeclaration(@NotNull Declaration declaration) {
     addIfNotContains(this.declarations, declaration);
+  }
+
+  @NotNull
+  @Override
+  public List<Statement> getStatements() {
+    return StatementHolder.DefaultImpls.getStatements(this);
+  }
+
+  @Override
+  public void setStatements(@NotNull List<? extends Statement> value) {
+    StatementHolder.DefaultImpls.setStatements(this, value);
+  }
+
+  @Override
+  public void addStatement(@NotNull Statement s) {
+    StatementHolder.DefaultImpls.addStatement(this, s);
   }
 }

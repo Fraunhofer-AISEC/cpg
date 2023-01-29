@@ -68,7 +68,7 @@ public class TranslationUnitDeclaration extends Declaration
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
   @NotNull
-  private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
+  private @SubGraph("AST") List<PropertyEdge<Statement>> statementEdges = new ArrayList<>();
 
   /**
    * Returns the i-th declaration as a specific class, if it can be cast
@@ -161,12 +161,12 @@ public class TranslationUnitDeclaration extends Declaration
 
   @Override
   public @NotNull List<PropertyEdge<Statement>> getStatementEdges() {
-    return this.statements;
+    return this.statementEdges;
   }
 
   @Override
   public void setStatementEdges(@NotNull List<PropertyEdge<Statement>> statements) {
-    this.statements = statements;
+    this.statementEdges = statements;
   }
 
   @Override
@@ -199,5 +199,21 @@ public class TranslationUnitDeclaration extends Declaration
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @NotNull
+  @Override
+  public List<Statement> getStatements() {
+    return StatementHolder.DefaultImpls.getStatements(this);
+  }
+
+  @Override
+  public void setStatements(@NotNull List<? extends Statement> value) {
+    StatementHolder.DefaultImpls.setStatements(this, value);
+  }
+
+  @Override
+  public void addStatement(@NotNull Statement s) {
+    StatementHolder.DefaultImpls.addStatement(this, s);
   }
 }

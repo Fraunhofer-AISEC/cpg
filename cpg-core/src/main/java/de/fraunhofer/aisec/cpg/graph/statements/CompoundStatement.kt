@@ -25,49 +25,50 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import java.util.*
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-/** A [Statement] which represents a try/catch block, primarily used for exception handling. */
-class TryStatement : Statement() {
-    @Relationship(value = "RESOURCES", direction = Relationship.Direction.OUTGOING)
+/**
+ * A statement which contains a list of statements. A common example is a function body within a
+ * [FunctionDeclaration].
+ */
+class CompoundStatement : Statement(), StatementHolder {
+    /** The list of statements. */
+    @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    var resourceEdges = mutableListOf<PropertyEdge<Statement>>()
+    override var statementEdges = mutableListOf<PropertyEdge<Statement>>()
 
-    var resources by PropertyEdgeDelegate(TryStatement::resourceEdges)
+    /**
+     * This variable helps to differentiate between static and non static initializer blocks. Static
+     * initializer blocks are executed when the enclosing declaration is first referred to, e.g.
+     * loaded into the jvm or parsed. Non static initializers are executed on Record construction.
+     *
+     * If a compound statement is part of a method body, this notion is not relevant.
+     */
+    var isStaticBlock = false
 
-    @field:SubGraph("AST") var tryBlock: CompoundStatement? = null
-
-    @field:SubGraph("AST") var finallyBlock: CompoundStatement? = null
-
-    @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
-    var catchClauseEdges = mutableListOf<PropertyEdge<CatchClause>>()
-
-    var catchClauses by PropertyEdgeDelegate(TryStatement::catchClauseEdges)
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE).appendSuper(super.toString()).toString()
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
         }
-        if (other !is TryStatement) {
+        if (other !is CompoundStatement) {
             return false
         }
-
         return (super.equals(other) &&
-            resources == other.resources &&
-            propertyEqualsList(resourceEdges, other.resourceEdges) &&
-            tryBlock == other.tryBlock &&
-            finallyBlock == other.finallyBlock &&
-            catchClauses == other.catchClauses &&
-            propertyEqualsList(catchClauseEdges, other.catchClauseEdges))
+            this.statements == other.statements &&
+            propertyEqualsList(statementEdges, other.statementEdges))
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(super.hashCode(), resources, tryBlock, finallyBlock, catchClauses)
+        return super.hashCode()
     }
 }
