@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -70,6 +71,10 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         if (node is FunctionDeclaration) {
             clearFlowsOfVariableDeclarations(node)
             handleFunction(node)
+        } else if (node is NamespaceDeclaration) {
+            // TODO: We have to fix this to match all languages. This is only for the test!
+            clearFlowsOfVariableDeclarations(node)
+            handleFunction(node)
         }
     }
 
@@ -77,7 +82,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      * Removes all the incoming and outgoing DFG edges for each variable declaration in the function
      * [node].
      */
-    private fun clearFlowsOfVariableDeclarations(node: FunctionDeclaration) {
+    private fun clearFlowsOfVariableDeclarations(node: Node) {
         for (varDecl in node.variables) {
             varDecl.clearPrevDFG()
             varDecl.clearNextDFG()
@@ -94,7 +99,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      * - Assignments with an operation e.g. of the form "variable += rhs"
      * - Read operations on a variable
      */
-    private fun handleFunction(node: FunctionDeclaration) {
+    private fun handleFunction(node: Node) {
         // The list of nodes that we have to consider and the last write operations to the different
         // variables.
         val worklist =

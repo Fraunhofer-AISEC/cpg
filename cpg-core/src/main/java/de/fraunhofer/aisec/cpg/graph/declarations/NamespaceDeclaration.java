@@ -46,9 +46,9 @@ import org.neo4j.ogm.annotation.Relationship;
  * appearance a namespace declaration can contain {@link FunctionDeclaration}, {@link
  * FieldDeclaration} and {@link RecordDeclaration} similar to a {@link RecordDeclaration} and the
  * semantic difference between NamespaceDeclaration and {@link RecordDeclaration} lies in the
- * non-instantiabillity of a namespace.
+ * non-instantiability of a namespace.
  *
- * <p>The name property of this node need to be a FQN for propery resolution.
+ * <p>The name property of this node MUST be a FQN for property resolution.
  */
 public class NamespaceDeclaration extends Declaration
     implements DeclarationHolder, StatementHolder {
