@@ -405,16 +405,32 @@ Scheme:
 ## ForEachStatement
 
 Interesting fields:
+
 * `variable: Statement`: The statement which is used in each iteration to assign the current iteration value
 * `iterable: Statement`: The statement or expression, which is iterated
 
 Scheme:
 ```mermaid
   flowchart LR
-    node([ForEachStatement]) -.- variable(variable)
-    node -.- iterable(iterable)
+    node([ForEachStatement]) -.- variable[variable]
+    node -.- iterable[iterable]
     iterable -- DFG --> variable
   ```
+
+## DeclarationStatement
+
+Interesting fields:
+
+* `declarations: List<Declaration>`: All the declarations which are contained in this statement.
+
+The value of the statement (which serves as a wrapper around the individual declarations) flows into the declarations.
+
+Scheme:
+```mermaid
+  flowchart LR
+    node([DeclarationStatement]) -.- declarations["for all i: declarations[i]"]
+    node -- DFG --> declarations
+```
 
 ## FunctionDeclaration
 

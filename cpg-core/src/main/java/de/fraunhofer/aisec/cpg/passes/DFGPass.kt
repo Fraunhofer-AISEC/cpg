@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -81,6 +82,7 @@ class DFGPass : Pass() {
             // Statements
             is ReturnStatement -> handleReturnStatement(node)
             is ForEachStatement -> handleForEachStatement(node)
+            is DeclarationStatement -> handleDeclarationStatement(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
@@ -88,6 +90,15 @@ class DFGPass : Pass() {
             // Other
             is Assignment -> handleAssignment(node)
         }
+    }
+
+    /**
+     * For a [DeclarationStatement], the whole statement flows into its declarations. This is fine
+     * because it's used as a wrapper if a Statement is needed but we only have a Declaration (which
+     * is not a statement).
+     */
+    private fun handleDeclarationStatement(node: DeclarationStatement) {
+        node.declarations.forEach { it.addPrevDFG(node) }
     }
 
     /**
