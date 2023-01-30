@@ -214,30 +214,42 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 // This is what we write to the declaration
                 val iterable = currentNode.iterable as? Expression
 
-                if (currentNode.variable is DeclarationStatement) {
-                    // We wrote something to this variable declaration
-                    writtenDecl =
-                        (currentNode.variable as DeclarationStatement).singleDeclaration
-                            as? VariableDeclaration
+                val writtenTo =
+                    when (currentNode.variable) {
+                        is DeclarationStatement ->
+                            (currentNode.variable as DeclarationStatement).singleDeclaration
+                        else -> currentNode.variable
+                    }
 
-                    writtenDecl?.let { wd ->
-                        iterable?.let { wd.addPrevDFG(it) }
-                        // Add the variable declaration to the list of previous write nodes in this
-                        // path
-                        previousWrites[wd] = mutableListOf(wd)
+                // We wrote something to this variable declaration
+                writtenDecl =
+                    when (writtenTo) {
+                        is VariableDeclaration -> writtenTo
+                        is DeclaredReferenceExpression -> writtenTo.refersTo
+                        else -> null // TODO: This shouldn't happen
                     }
-                } else if (currentNode.variable is DeclaredReferenceExpression) {
-                    writtenDecl = (currentNode.variable as? DeclaredReferenceExpression)?.refersTo
-                    writtenDecl?.let { wd ->
-                        iterable?.let { currentNode.variable.addPrevDFG(it) }
-                        previousWrites
-                            .computeIfAbsent(wd) { mutableListOf() }
-                            .add(currentNode.variable)
-                        currentWritten = currentNode.variable
-                    }
-                } else {
-                    TODO()
+
+                currentWritten = currentNode.variable
+
+                val oldPreviousWrites = copyMap(previousWrites)
+
+                if (writtenDecl != null) {
+                    iterable?.let { writtenTo.addPrevDFG(it) }
+                    // Add the variable declaration (or the reference) to the list of previous write
+                    // nodes in this path
+                    previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(writtenTo)
                 }
+
+                // This is a special case: We add the nextEOGEdge which goes out of the loop but
+                // with the old previousWrites map.
+                currentNode.nextEOGEdges
+                    .filter {
+                        it.getProperty(Properties.UNREACHABLE) != true &&
+                            it.end != currentNode.statement &&
+                            it.end !in currentNode.statement.allChildren<Node>()
+                    }
+                    .map { it.end }
+                    .forEach { worklist.add(Pair(it, copyMap(oldPreviousWrites))) }
             }
 
             // Check for loops: No loop statement with the same state as before and no write which
