@@ -43,9 +43,9 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class StatementHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Statement?, IASTStatement>(Supplier(::ProblemExpression), lang) {
+    CXXHandler<Statement, IASTStatement>(Supplier(::ProblemExpression), lang) {
 
-    override fun handleNode(node: IASTStatement): Statement? {
+    override fun handleNode(node: IASTStatement): Statement {
         return when (node) {
             is IASTCompoundStatement -> handleCompoundStatement(node)
             is IASTReturnStatement -> handleReturnStatement(node)
@@ -273,13 +273,13 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         // C++ has no labeled continue
     }
 
-    private fun handleExpressionStatement(ctx: IASTExpressionStatement): Expression? {
-        val expression = frontend.expressionHandler.handle(ctx.expression)
+    private fun handleExpressionStatement(ctx: IASTExpressionStatement): Expression {
+        val expression =
+            frontend.expressionHandler.handle(ctx.expression)
+                ?: ProblemExpression("could not parse expression in statement")
 
         // update the code and region to include the whole statement
-        if (expression != null) {
-            frontend.setCodeAndLocation(expression, ctx)
-        }
+        frontend.setCodeAndLocation(expression, ctx)
 
         return expression
     }

@@ -46,15 +46,11 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
 import java.util.stream.Collectors
-import kotlin.collections.indices
 import kotlin.collections.set
 import org.slf4j.LoggerFactory
 
-class ExpressionHandler(lang: JavaLanguageFrontend?) :
-    Handler<Statement?, Expression?, JavaLanguageFrontend?>(
-        Supplier { ProblemExpression() },
-        lang!!
-    ) {
+class ExpressionHandler(lang: JavaLanguageFrontend) :
+    Handler<Statement, Expression, JavaLanguageFrontend>(Supplier { ProblemExpression() }, lang) {
     private fun handleCastExpr(expr: Expression): Statement {
         val castExpr = expr.asCastExpr()
         val castExpression = this.newCastExpression(expr.toString())
@@ -90,16 +86,16 @@ class ExpressionHandler(lang: JavaLanguageFrontend?) :
         // in Java, an array creation expression either specifies an initializer or dimensions
 
         // parse initializer, if present
-        arrayCreationExpr.initializer.ifPresent { init: ArrayInitializerExpr? ->
-            creationExpression.initializer = handle(init) as InitializerListExpression?
+        arrayCreationExpr.initializer.ifPresent {
+            creationExpression.initializer = handle(it) as? InitializerListExpression
         }
 
         // dimensions are only present if you specify them explicitly, such as new int[1]
         for (lvl in arrayCreationExpr.levels) {
-            lvl.dimension.ifPresent { expression: Expression? ->
+            lvl.dimension.ifPresent {
                 creationExpression.addDimension(
-                    (handle(expression)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)!!
+                    (handle(it)
+                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)!!
                 )
             }
         }
@@ -113,14 +109,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend?) :
         val initList = this.newInitializerListExpression(expr.toString())
         val initializers =
             arrayInitializerExpr.values
-                .stream()
-                .map { ctx: Expression? -> handle(ctx) }
-                .map { obj: Statement? ->
+                .map { handle(it) }
+                .map {
                     de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression::class
                         .java
-                        .cast(obj)
+                        .cast(it)
                 }
-                .collect(Collectors.toList())
         initList.initializers = initializers
         return initList
     }
@@ -779,7 +773,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend?) :
         de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression {
         val base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         val thisType =
-            (getFrontend().scopeManager.currentFunction as MethodDeclaration?)?.receiver?.type
+            (frontend.scopeManager.currentFunction as MethodDeclaration?)?.receiver?.type
                 ?: UnknownType.getUnknownType(language)
         base = this.newDeclaredReferenceExpression("this", thisType, "this")
         base.isImplicit = true

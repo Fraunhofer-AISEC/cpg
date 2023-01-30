@@ -53,7 +53,7 @@ import kotlin.collections.set
 import org.slf4j.LoggerFactory
 
 class StatementHandler(lang: JavaLanguageFrontend?) :
-    Handler<de.fraunhofer.aisec.cpg.graph.statements.Statement?, Statement?, JavaLanguageFrontend?>(
+    Handler<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement, JavaLanguageFrontend>(
         Supplier { ProblemExpression() },
         lang!!
     ) {
@@ -94,7 +94,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             // handle the expression as the first argument
             expression =
                 frontend.expressionHandler.handle(expr)
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         }
         val returnStatement = this.newReturnStatement(returnStmt.toString())
 
@@ -117,9 +117,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         ifStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        optionalElseStatement.ifPresent { statement: Statement? ->
-            ifStatement.elseStatement = handle(statement)
-        }
+        optionalElseStatement.ifPresent { ifStatement.elseStatement = handle(it) }
         frontend.scopeManager.leaveScope(ifStatement)
         return ifStatement
     }

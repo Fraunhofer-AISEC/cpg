@@ -36,9 +36,9 @@ import org.eclipse.cdt.core.dom.ast.IASTInitializerList
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTConstructorInitializer
 
 class InitializerHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Expression?, IASTInitializer>(Supplier(::ProblemExpression), lang) {
+    CXXHandler<Expression, IASTInitializer>(Supplier(::ProblemExpression), lang) {
 
-    override fun handleNode(node: IASTInitializer): Expression? {
+    override fun handleNode(node: IASTInitializer): Expression {
         return when (node) {
             is IASTEqualsInitializer -> handleEqualsInitializer(node)
             // TODO: Initializer List is handled in ExpressionsHandler that actually handles

@@ -396,9 +396,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val entries =
             enumDecl.entries
                 .stream()
-                .map { e: com.github.javaparser.ast.body.EnumConstantDeclaration? ->
-                    handle(e) as EnumConstantDeclaration?
-                }
+                .map { handle(it) as EnumConstantDeclaration? }
                 .collect(Collectors.toList())
         entries.forEach(
             Consumer { e: EnumConstantDeclaration? ->
@@ -461,28 +459,26 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     }
 
     init {
-        map[MethodDeclaration::class.java] =
-            HandlerInterface<Declaration, BodyDeclaration<*>> { decl: BodyDeclaration<*> ->
-                handleMethodDeclaration(decl as MethodDeclaration)
-            }
-        map[ConstructorDeclaration::class.java] =
-            HandlerInterface<Declaration, BodyDeclaration<*>> { decl: BodyDeclaration<*> ->
-                handleConstructorDeclaration(decl as ConstructorDeclaration)
-            }
+        map[MethodDeclaration::class.java] = HandlerInterface { decl: BodyDeclaration<*> ->
+            handleMethodDeclaration(decl as MethodDeclaration)
+        }
+        map[ConstructorDeclaration::class.java] = HandlerInterface { decl: BodyDeclaration<*> ->
+            handleConstructorDeclaration(decl as ConstructorDeclaration)
+        }
         map[ClassOrInterfaceDeclaration::class.java] =
-            HandlerInterface<Declaration, BodyDeclaration<*>> { decl: BodyDeclaration<*> ->
+            HandlerInterface { decl: BodyDeclaration<*> ->
                 handleClassOrInterfaceDeclaration(decl as ClassOrInterfaceDeclaration)
             }
         map[com.github.javaparser.ast.body.FieldDeclaration::class.java] =
-            HandlerInterface<Declaration, BodyDeclaration<*>> { decl: BodyDeclaration<*> ->
+            HandlerInterface { decl: BodyDeclaration<*> ->
                 handleFieldDeclaration(decl as com.github.javaparser.ast.body.FieldDeclaration)
             }
         map[com.github.javaparser.ast.body.EnumDeclaration::class.java] =
-            HandlerInterface<Declaration, BodyDeclaration<*>> { decl: BodyDeclaration<*> ->
+            HandlerInterface { decl: BodyDeclaration<*> ->
                 handleEnumDeclaration(decl as com.github.javaparser.ast.body.EnumDeclaration)
             }
         map[com.github.javaparser.ast.body.EnumConstantDeclaration::class.java] =
-            HandlerInterface<Declaration, BodyDeclaration<*>> { decl: BodyDeclaration<*> ->
+            HandlerInterface { decl: BodyDeclaration<*> ->
                 handleEnumConstantDeclaration(
                     decl as com.github.javaparser.ast.body.EnumConstantDeclaration
                 )

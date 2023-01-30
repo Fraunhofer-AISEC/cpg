@@ -49,9 +49,9 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  * See [DeclarationHandler] for a detailed explanation, why this is split into a dedicated handler.
  */
 class DeclaratorHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration?, IASTNameOwner>(Supplier(::ProblemDeclaration), lang) {
+    CXXHandler<Declaration, IASTNameOwner>(Supplier(::ProblemDeclaration), lang) {
 
-    override fun handleNode(node: IASTNameOwner): Declaration? {
+    override fun handleNode(node: IASTNameOwner): Declaration {
         return when (node) {
             is IASTStandardFunctionDeclarator -> handleFunctionDeclarator(node)
             is IASTFieldDeclarator -> handleFieldDeclarator(node)
@@ -72,10 +72,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
      * - a field declaration, if this declaration occurs within a class or has a qualified name, or
      * - a variable declaration in all the other cases.
      */
-    private fun handleDeclarator(ctx: IASTDeclarator): Declaration? {
+    private fun handleDeclarator(ctx: IASTDeclarator): Declaration {
         // This is just a nested declarator, i.e. () wrapping the real declarator
         if (ctx.initializer == null && ctx.nestedDeclarator is IASTDeclarator) {
             return handle(ctx.nestedDeclarator)
+                ?: ProblemDeclaration("could not parse nested declaration")
         }
 
         val name = ctx.name.toString()

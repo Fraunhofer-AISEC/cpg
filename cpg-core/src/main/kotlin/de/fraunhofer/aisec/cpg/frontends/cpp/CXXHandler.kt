@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 
-abstract class CXXHandler<S : Node?, T : Any>(
+abstract class CXXHandler<S : Node, T : Any>(
     configConstructor: Supplier<S>,
     lang: CXXLanguageFrontend
 ) : Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {

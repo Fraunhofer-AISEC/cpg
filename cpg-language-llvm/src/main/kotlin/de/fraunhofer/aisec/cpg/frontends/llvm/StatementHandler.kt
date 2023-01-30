@@ -1504,8 +1504,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             log.debug("Parsing {}", frontend.getCodeFromRawNode(instr))
 
             val stmt = frontend.statementHandler.handle(instr)
-
-            compound.addStatement(stmt)
+            if (stmt != null) {
+                compound.addStatement(stmt)
+            }
 
             instr = LLVMGetNextInstruction(instr)
         }

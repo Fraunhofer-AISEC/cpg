@@ -35,9 +35,9 @@ import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
 
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration?, IASTParameterDeclaration>(Supplier(::ProblemDeclaration), lang) {
+    CXXHandler<Declaration, IASTParameterDeclaration>(Supplier(::ProblemDeclaration), lang) {
 
-    override fun handleNode(node: IASTParameterDeclaration): Declaration? {
+    override fun handleNode(node: IASTParameterDeclaration): Declaration {
         return when (node) {
             is CPPASTParameterDeclaration -> handleParameterDeclaration(node)
             is CASTParameterDeclaration -> handleParameterDeclaration(node)
