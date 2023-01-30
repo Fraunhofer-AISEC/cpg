@@ -224,32 +224,34 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 // We wrote something to this variable declaration
                 writtenDecl =
                     when (writtenTo) {
-                        is VariableDeclaration -> writtenTo
+                        is Declaration -> writtenTo
                         is DeclaredReferenceExpression -> writtenTo.refersTo
                         else -> null // TODO: This shouldn't happen
                     }
 
                 currentWritten = currentNode.variable
 
-                val oldPreviousWrites = copyMap(previousWrites)
+                if (writtenTo is DeclaredReferenceExpression) {
+                    // This is a special case: We add the nextEOGEdge which goes out of the loop but
+                    // with the old previousWrites map.
+                    val nodesOutsideTheLoop =
+                        currentNode.nextEOGEdges.filter {
+                            it.getProperty(Properties.UNREACHABLE) != true &&
+                                it.end != currentNode.statement &&
+                                it.end !in currentNode.statement.allChildren<Node>()
+                        }
+                    nodesOutsideTheLoop
+                        .map { it.end }
+                        .forEach { worklist.add(Pair(it, copyMap(previousWrites))) }
+                }
+
+                iterable?.let { writtenTo.addPrevDFG(it) }
 
                 if (writtenDecl != null) {
-                    iterable?.let { writtenTo.addPrevDFG(it) }
                     // Add the variable declaration (or the reference) to the list of previous write
                     // nodes in this path
                     previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(writtenTo)
                 }
-
-                // This is a special case: We add the nextEOGEdge which goes out of the loop but
-                // with the old previousWrites map.
-                currentNode.nextEOGEdges
-                    .filter {
-                        it.getProperty(Properties.UNREACHABLE) != true &&
-                            it.end != currentNode.statement &&
-                            it.end !in currentNode.statement.allChildren<Node>()
-                    }
-                    .map { it.end }
-                    .forEach { worklist.add(Pair(it, copyMap(oldPreviousWrites))) }
             }
 
             // Check for loops: No loop statement with the same state as before and no write which
