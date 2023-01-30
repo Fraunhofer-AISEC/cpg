@@ -44,7 +44,7 @@ import org.neo4j.ogm.annotation.Relationship
 class InitializerListExpression : Expression(), HasType.TypeListener {
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var initializerEdges = mutableListOf<PropertyEdge<Expression>>()
         set(value) {
             field.forEach {

@@ -34,14 +34,14 @@ import org.neo4j.ogm.annotation.Relationship
 /** Represents the creation of a new object through the `new` keyword. */
 class NewExpression : Expression(), HasInitializer {
     /** The initializer expression. */
-    @SubGraph("AST") override var initializer: Expression? = null
+    @field:SubGraph("AST") override var initializer: Expression? = null
 
     /**
      * We need a way to store the templateParameters that a NewExpression might have before the
      * ConstructExpression is created
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var templateParameters: List<Node>? = null
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

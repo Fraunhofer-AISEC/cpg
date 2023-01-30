@@ -38,10 +38,10 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * valueIfFalse`;
  */
 class ConditionalExpression : Expression(), HasType.TypeListener {
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var condition: Expression = ProblemExpression("could not parse condition expression")
 
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var thenExpr: Expression? = null
         set(value) {
             field?.unregisterTypeListener(this)
@@ -49,7 +49,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
             value?.registerTypeListener(this)
         }
 
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var elseExpr: Expression? = null
         set(value) {
             field?.unregisterTypeListener(this)

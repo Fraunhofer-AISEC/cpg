@@ -40,22 +40,22 @@ import org.neo4j.ogm.annotation.Relationship
 class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHolder {
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     val declarationsPropertyEdge: MutableList<PropertyEdge<Declaration>> = ArrayList()
 
     /** A list of includes within this unit. */
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     val includesPropertyEdge: MutableList<PropertyEdge<IncludeDeclaration>> = ArrayList()
 
     /** A list of namespaces within this unit. */
     @Relationship(value = "NAMESPACES", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     val namespacesPropertyEdge: MutableList<PropertyEdge<NamespaceDeclaration>> = ArrayList()
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
 
     override val declarations: List<Declaration>

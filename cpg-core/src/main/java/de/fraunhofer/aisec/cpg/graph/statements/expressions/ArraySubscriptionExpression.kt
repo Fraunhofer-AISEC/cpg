@@ -43,7 +43,7 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
      * The array on which the access is happening. This is most likely a
      * [DeclaredReferenceExpression].
      */
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var arrayExpression: Expression = ProblemExpression("could not parse array expression")
         set(value) {
             field = value
@@ -56,7 +56,7 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
      * This can for example be a reference to another variable ([DeclaredReferenceExpression]) or a
      * [Literal].
      */
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var subscriptExpression: Expression = ProblemExpression("could not parse index expression")
 
     override val base: Expression

@@ -45,7 +45,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
      * The initializer of the expression, if present. Many languages, such as Java, either specify
      * [dimensions] or an initializer.
      */
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var initializer: Expression? = null
         set(value) {
             field?.unregisterTypeListener(this)
@@ -59,7 +59,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
      * dimensions. In the graph, this will NOT be done.
      */
     @Relationship(value = "DIMENSIONS", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var dimensionEdges = mutableListOf<PropertyEdge<Expression>>()
 
     /** Virtual property to access [dimensionEdges] without property edges. */

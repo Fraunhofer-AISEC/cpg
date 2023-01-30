@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
  */
 class CompoundStatementExpression : Expression() {
     /** The list of arguments. */
-    @SubGraph("AST") var statement: Statement? = null
+    @field:SubGraph("AST") var statement: Statement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

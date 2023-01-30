@@ -34,7 +34,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  */
 class LabelStatement : Statement() {
     /** Statement that the label is attached to. Can be a simple or compound statement. */
-    @SubGraph("AST") var subStatement: Statement? = null
+    @field:SubGraph("AST") var subStatement: Statement? = null
 
     /** Label in the form of a String */
     var label: String? = null

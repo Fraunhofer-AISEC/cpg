@@ -42,7 +42,7 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
      * expansion pass for each instantiation of the ClassTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     private val _realization: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
 
     val realization: List<RecordDeclaration>

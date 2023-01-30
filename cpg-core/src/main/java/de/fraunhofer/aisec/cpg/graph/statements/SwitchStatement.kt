@@ -36,19 +36,19 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
  */
 class SwitchStatement : Statement() {
     /** Selector that determines the case/default statement of the subsequent execution */
-    @SubGraph("AST") var selector: Expression? = null
+    @field:SubGraph("AST") var selector: Expression? = null
 
     /** C++ can have an initializer statement in a switch */
-    @SubGraph("AST") var initializerStatement: Statement? = null
+    @field:SubGraph("AST") var initializerStatement: Statement? = null
 
     /** C++ allows to use a declaration instead of a expression as selector */
-    @SubGraph("AST") var selectorDeclaration: Declaration? = null
+    @field:SubGraph("AST") var selectorDeclaration: Declaration? = null
 
     /**
      * The compound statement that contains break/default statements with regular statements on the
      * same hierarchy
      */
-    @SubGraph("AST") var statement: Statement? = null
+    @field:SubGraph("AST") var statement: Statement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

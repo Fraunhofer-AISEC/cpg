@@ -36,7 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
  */
 open class Component : Node() {
     /** All translation units belonging to this application. */
-    @SubGraph("AST") val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()
+    @field:SubGraph("AST")
+    val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()
 
     /**
      * All points where unknown data may enter this application, e.g., the main method, or other

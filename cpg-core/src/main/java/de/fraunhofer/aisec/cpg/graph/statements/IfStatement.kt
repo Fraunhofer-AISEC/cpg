@@ -33,13 +33,13 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /** Represents a condition control flow statement, usually indicating by `If`. */
 class IfStatement : Statement() {
     /** C++ initializer statement. */
-    @SubGraph("AST") var initializerStatement: Statement? = null
+    @field:SubGraph("AST") var initializerStatement: Statement? = null
 
     /** C++ alternative to the condition. */
-    @SubGraph("AST") var conditionDeclaration: Declaration? = null
+    @field:SubGraph("AST") var conditionDeclaration: Declaration? = null
 
     /** The condition to be evaluated. */
-    @SubGraph("AST") var condition: Expression? = null
+    @field:SubGraph("AST") var condition: Expression? = null
 
     /** C++ constexpr construct. */
     var isConstExpression = false
@@ -48,13 +48,13 @@ class IfStatement : Statement() {
      * The statement that is executed, if the condition is evaluated as true. Usually a
      * [CompoundStatement].
      */
-    @SubGraph("AST") var thenStatement: Statement? = null
+    @field:SubGraph("AST") var thenStatement: Statement? = null
 
     /**
      * The statement that is executed, if the condition is evaluated as false. Usually a
      * [CompoundStatement].
      */
-    @SubGraph("AST") var elseStatement: Statement? = null
+    @field:SubGraph("AST") var elseStatement: Statement? = null
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

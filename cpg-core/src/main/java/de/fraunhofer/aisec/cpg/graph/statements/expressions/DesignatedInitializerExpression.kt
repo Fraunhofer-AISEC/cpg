@@ -34,7 +34,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 // TODO: Document this class!
 class DesignatedInitializerExpression : Expression() {
-    @SubGraph("AST") var rhs: Expression? = null
+    @field:SubGraph("AST") var rhs: Expression? = null
 
     @Relationship(value = "LHS", direction = Relationship.Direction.OUTGOING)
     var lhsPropertyEdge: List<PropertyEdge<Expression>> = listOf()

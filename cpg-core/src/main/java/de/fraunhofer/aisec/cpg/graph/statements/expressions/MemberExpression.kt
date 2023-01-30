@@ -39,7 +39,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * property of a [MemberCallExpression].
  */
 class MemberExpression : DeclaredReferenceExpression(), HasBase {
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     override var base: Expression = ProblemExpression("could not parse base expression")
         set(value) {
             field.unregisterTypeListener(this)

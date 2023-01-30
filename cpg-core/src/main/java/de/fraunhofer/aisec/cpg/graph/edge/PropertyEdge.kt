@@ -344,7 +344,7 @@ open class PropertyEdge<T : Node> : Persistable {
  *
  * class MyNode {
  *   @Relationship(value = "EXPRESSIONS", direction = "OUTGOING")
- *   @SubGraph("AST")
+ *   @field:SubGraph("AST")
  *   var expressionsEdges = mutableListOf<PropertyEdge<Expression>>()
  *   var expressions by PropertyEdgeDelegate(MyNode::expressionsEdges)
  * }

@@ -41,10 +41,10 @@ class KeyValueExpression : Expression() {
      * The key of this pair. It is usually a literal, but some languages even allow references to
      * variables as a key.
      */
-    @SubGraph("AST") var key: Expression? = null
+    @field:SubGraph("AST") var key: Expression? = null
 
     /** The value of this pair. It can be any expression */
-    @SubGraph("AST") var value: Expression? = null
+    @field:SubGraph("AST") var value: Expression? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

@@ -57,7 +57,7 @@ class TranslationResult(
      * Entry points to the CPG: "SoftwareComponent" refer to programs, application, other "bundles"
      * of software.
      */
-    @SubGraph("AST") val components = mutableListOf<Component>()
+    @field:SubGraph("AST") val components = mutableListOf<Component>()
 
     /**
      * Scratch storage that can be used by passes to store additional information in this result.

@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph
 
 /** Expressions of the form `floor ... ceiling` */
 class ArrayRangeExpression : Expression() {
-    @SubGraph("AST") var floor: Expression? = null
+    @field:SubGraph("AST") var floor: Expression? = null
 
-    @SubGraph("AST") var ceiling: Expression? = null
+    @field:SubGraph("AST") var ceiling: Expression? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

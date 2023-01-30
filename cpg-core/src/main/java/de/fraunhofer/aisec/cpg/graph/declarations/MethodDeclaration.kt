@@ -72,5 +72,5 @@ open class MethodDeclaration : FunctionDeclaration() {
      * declaration do not share the same name. The [CallResolver] will recognize this and treat the
      * scoping aspect of the super-call accordingly.
      */
-    @SubGraph("AST") var receiver: VariableDeclaration? = null
+    @field:SubGraph("AST") var receiver: VariableDeclaration? = null
 }

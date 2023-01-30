@@ -31,15 +31,15 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 
 class ForStatement : Statement() {
-    @SubGraph("AST") var statement: Statement? = null
+    @field:SubGraph("AST") var statement: Statement? = null
 
-    @SubGraph("AST") var initializerStatement: Statement? = null
+    @field:SubGraph("AST") var initializerStatement: Statement? = null
 
-    @SubGraph("AST") var conditionDeclaration: Declaration? = null
+    @field:SubGraph("AST") var conditionDeclaration: Declaration? = null
 
-    @SubGraph("AST") var condition: Expression? = null
+    @field:SubGraph("AST") var condition: Expression? = null
 
-    @SubGraph("AST") var iterationStatement: Statement? = null
+    @field:SubGraph("AST") var iterationStatement: Statement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

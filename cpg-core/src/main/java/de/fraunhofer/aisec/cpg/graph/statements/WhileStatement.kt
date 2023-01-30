@@ -34,16 +34,16 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /** Represents a conditional loop statement of the form: `while(...){...}`. */
 class WhileStatement : Statement() {
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
-    @SubGraph("AST") var conditionDeclaration: Declaration? = null
+    @field:SubGraph("AST") var conditionDeclaration: Declaration? = null
 
     /** The condition that decides if the block is executed. */
-    @SubGraph("AST") var condition: Expression? = null
+    @field:SubGraph("AST") var condition: Expression? = null
 
     /**
      * The statement that is going to be executed, until the condition evaluates to false for the
      * first time. Usually a [CompoundStatement].
      */
-    @SubGraph("AST") var statement: Statement? = null
+    @field:SubGraph("AST") var statement: Statement? = null
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

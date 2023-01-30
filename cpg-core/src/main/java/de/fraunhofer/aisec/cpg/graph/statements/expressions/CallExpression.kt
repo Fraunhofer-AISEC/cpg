@@ -77,7 +77,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      * The list of arguments of this call expression, backed by a list of [PropertyEdge] objects.
      */
     @Relationship(value = "ARGUMENTS", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var argumentsEdges = mutableListOf<PropertyEdge<Expression>>()
 
     /**
@@ -92,7 +92,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      * [DeclaredReferenceExpression.refersTo] is intentionally left empty. It is not filled by the
      * [VariableUsageResolver].
      */
-    @SubGraph("AST") var callee: Expression? = null
+    @field:SubGraph("AST") var callee: Expression? = null
 
     /**
      * The [Name] of this call expression, based on its [callee].
@@ -141,7 +141,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
 
     /** If the CallExpression instantiates a template, the call can provide template parameters. */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var templateParametersEdges: MutableList<PropertyEdge<Node>>? = null
         set(value) {
             field = value
