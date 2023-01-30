@@ -148,9 +148,9 @@ class DFGPass : Pass() {
 
     /**
      * Adds the DFG edge for a [ForEachStatement]. The data flows from the
-     * [ForEachStatement.iterable] to the [ForEachStatement.variable] and
-     * from [ForEachStatement.variable] to the [ForEachStatement] to show
-     * the dependence between data and branching node.
+     * [ForEachStatement.iterable] to the [ForEachStatement.variable] and from
+     * [ForEachStatement.variable] to the [ForEachStatement] to show the dependence between data and
+     * branching node.
      */
     private fun handleForEachStatement(node: ForEachStatement) {
         node.variable.addPrevDFG(node.iterable)
@@ -158,17 +158,17 @@ class DFGPass : Pass() {
     }
 
     /**
-     * Adds the DFG edge from [ForEachStatement.variable] to the [ForEachStatement] to show
-     * the dependence between data and the branching node.
+     * Adds the DFG edge from [ForEachStatement.variable] to the [ForEachStatement] to show the
+     * dependence between data and the branching node.
      */
     private fun handleDoStatement(node: DoStatement) {
         node.addPrevDFG(node.condition)
     }
 
     /**
-     * Adds the DFG edge from [ForStatement.condition] or [ForStatement.conditionDeclaration]
-     * to the [ForStatement] to show the dependence between data and the branching node. Usage of
-     * one or the other in the statement is mutually exclusive.
+     * Adds the DFG edge from [ForStatement.condition] or [ForStatement.conditionDeclaration] to the
+     * [ForStatement] to show the dependence between data and the branching node. Usage of one or
+     * the other in the statement is mutually exclusive.
      */
     private fun handleForStatement(node: ForStatement) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
@@ -179,9 +179,9 @@ class DFGPass : Pass() {
     }
 
     /**
-     * Adds the DFG edge from [IfStatement.condition] or [IfStatement.conditionDeclaration]
-     * to the [IfStatement] to show the dependence between data and the branching node. Usage of
-     * one or the other in the statement is mutually exclusive.
+     * Adds the DFG edge from [IfStatement.condition] or [IfStatement.conditionDeclaration] to the
+     * [IfStatement] to show the dependence between data and the branching node. Usage of one or the
+     * other in the statement is mutually exclusive.
      */
     private fun handleIfStatement(node: IfStatement) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
@@ -192,8 +192,8 @@ class DFGPass : Pass() {
     }
 
     /**
-     * Adds the DFG edge from [SwitchStatement.selector] or [SwitchStatement.selectorDeclaration]
-     * to the [SwitchStatement] to show the dependence between data and the branching node. Usage of
+     * Adds the DFG edge from [SwitchStatement.selector] or [SwitchStatement.selectorDeclaration] to
+     * the [SwitchStatement] to show the dependence between data and the branching node. Usage of
      * one or the other in the statement is mutually exclusive.
      */
     private fun handleSwitchStatement(node: SwitchStatement) {
@@ -205,9 +205,9 @@ class DFGPass : Pass() {
     }
 
     /**
-     * Adds the DFG edge from [WhileStatement.condition] or [WhileStatement.conditionDeclaration]
-     * to the [WhileStatement] to show the dependence between data and the branching node. Usage of
-     * one or the other in the statement is mutually exclusive.
+     * Adds the DFG edge from [WhileStatement.condition] or [WhileStatement.conditionDeclaration] to
+     * the [WhileStatement] to show the dependence between data and the branching node. Usage of one
+     * or the other in the statement is mutually exclusive.
      */
     private fun handleWhileStatement(node: WhileStatement) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
