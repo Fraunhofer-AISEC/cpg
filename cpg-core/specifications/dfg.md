@@ -403,7 +403,7 @@ Scheme:
 ```
   
 ## Branching Statements
-Specific statements lead to a branch in the control flow of a program. A value that influences the branching decision has an indirect data flow to the branch and we therefore draw a dfg edge from the value, to the branching node, which is the statement root node:
+Specific statements lead to a branch in the control flow of a program. A value that influences the branching decision can lead to an implicit data flow via the branching and we therefore draw a dfg edge from the condition, to the branching node.
 
 ### ForEachStatement
 
