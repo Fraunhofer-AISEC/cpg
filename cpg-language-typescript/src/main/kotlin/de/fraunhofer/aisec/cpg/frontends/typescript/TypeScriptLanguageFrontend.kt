@@ -229,7 +229,8 @@ class TypeScriptLanguageFrontend(
 
             val annotation = newAnnotation(call.name.localName, this.getCodeFromRawNode(node) ?: "")
 
-            annotation.members = call.arguments.map { newAnnotationMember("", it, it.code ?: "") }
+            annotation.members =
+                call.arguments.map { newAnnotationMember("", it, it.code ?: "") }.toMutableList()
 
             call.disconnectFromGraph()
 
