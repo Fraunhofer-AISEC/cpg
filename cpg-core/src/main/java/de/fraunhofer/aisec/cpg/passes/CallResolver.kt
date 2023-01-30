@@ -412,27 +412,27 @@ open class CallResolver : SymbolResolverPass() {
             if (
                 template is ClassTemplateDeclaration &&
                     recordDeclaration in template.realization &&
-                    (constructExpression.templateParameters.size <= template.getParameters().size)
+                    (constructExpression.templateParameters.size <= template.parameters.size)
             ) {
                 val defaultDifference =
-                    template.getParameters().size - constructExpression.templateParameters.size
-                if (defaultDifference <= template.getParameterDefaults().size) {
+                    template.parameters.size - constructExpression.templateParameters.size
+                if (defaultDifference <= template.parameterDefaults.size) {
                     // Check if predefined template value is used as default in next value
                     addRecursiveDefaultTemplateArgs(constructExpression, template)
 
                     // Add missing defaults
-                    val missingNewParams: List<Node> =
-                        template
-                            .getParameterDefaults()
-                            .subList(
-                                constructExpression.templateParameters.size,
-                                template.getParameterDefaults().size
-                            )
-                    for (missingParam in missingNewParams) {
-                        constructExpression.addTemplateParameter(
-                            missingParam,
-                            TemplateInitialization.DEFAULT
+                    val missingNewParams: List<Node?> =
+                        template.parameterDefaults.subList(
+                            constructExpression.templateParameters.size,
+                            template.parameterDefaults.size
                         )
+                    for (missingParam in missingNewParams) {
+                        if (missingParam != null) {
+                            constructExpression.addTemplateParameter(
+                                missingParam,
+                                TemplateInitialization.DEFAULT
+                            )
+                        }
                     }
                     constructExpression.templateInstantiation = template
                     break

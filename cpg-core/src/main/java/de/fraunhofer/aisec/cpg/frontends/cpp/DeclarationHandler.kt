@@ -283,8 +283,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         frontend.scopeManager.leaveScope(templateDeclaration)
         if (templateDeclaration is FunctionTemplateDeclaration) {
             // Fix typeName
-            templateDeclaration.name =
-                templateDeclaration.getRealizationDeclarations()[0].name.clone()
+            templateDeclaration.name = templateDeclaration.realizationDeclarations[0].name.clone()
         } else
             (innerDeclaration as? RecordDeclaration)?.let {
                 addParameterizedTypesToRecord(templateDeclaration, it)

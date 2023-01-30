@@ -52,8 +52,8 @@ internal class ClassTemplateTest : BaseTest() {
         type2: TypeParamDeclaration?
     ) {
         assertEquals(2, template.parameters.size)
-        assertEquals(type1, template.parameters[0])
-        assertEquals(type2, template.parameters[1])
+        assertEquals(type1, template.parameters[0] as TypeParamDeclaration?)
+        assertEquals(type2, template.parameters[1] as TypeParamDeclaration?)
         assertEquals(1, template.realization.size)
         assertEquals(pair, template.realization[0])
     }

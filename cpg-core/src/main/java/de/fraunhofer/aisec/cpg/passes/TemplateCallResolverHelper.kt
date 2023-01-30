@@ -113,7 +113,7 @@ fun applyMissingParams(
     templateParametersExplicitInitialization: Map<Node, Node>,
     templateParameterRealDefaultInitialization: Map<Node, Node?>
 ) {
-    val missingParams: List<Node> =
+    val missingParams: List<Node?> =
         template.parameterDefaults.subList(
             constructExpression.templateParameters.size,
             template.parameterDefaults.size
