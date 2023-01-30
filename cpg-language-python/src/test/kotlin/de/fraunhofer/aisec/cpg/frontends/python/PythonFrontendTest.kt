@@ -1051,8 +1051,8 @@ class PythonFrontendTest : BaseTest() {
         val barCall = namespace.statements[4] as? CallExpression
         assertNotNull(barCall)
 
-        // dataflow from var declaration to loop variable
-        assert((firstLoop.variable.prevDFG?.contains(varDefinedBeforeLoop) == true))
+        // no dataflow from var declaration to loop variable because it's a write access
+        assert((firstLoop.variable.prevDFG?.contains(varDefinedBeforeLoop) == false))
 
         // dataflow from range call to loop variable
         val firstLoopIterable = firstLoop.iterable as? CallExpression
