@@ -214,15 +214,29 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 // This is what we write to the declaration
                 val iterable = currentNode.iterable as? Expression
 
-                // We wrote something to this variable declaration
-                writtenDecl =
-                    (currentNode.variable as? DeclarationStatement)?.singleDeclaration
-                        as? VariableDeclaration
+                if (currentNode.variable is DeclarationStatement) {
+                    // We wrote something to this variable declaration
+                    writtenDecl =
+                        (currentNode.variable as DeclarationStatement).singleDeclaration
+                            as? VariableDeclaration
 
-                writtenDecl?.let { wd ->
-                    iterable?.let { wd.addPrevDFG(it) }
-                    // Add the variable declaration to the list of previous write nodes in this path
-                    previousWrites[wd] = mutableListOf(wd)
+                    writtenDecl?.let { wd ->
+                        iterable?.let { wd.addPrevDFG(it) }
+                        // Add the variable declaration to the list of previous write nodes in this
+                        // path
+                        previousWrites[wd] = mutableListOf(wd)
+                    }
+                } else if (currentNode.variable is DeclaredReferenceExpression) {
+                    writtenDecl = (currentNode.variable as? DeclaredReferenceExpression)?.refersTo
+                    writtenDecl?.let { wd ->
+                        iterable?.let { currentNode.variable.addPrevDFG(it) }
+                        previousWrites
+                            .computeIfAbsent(wd) { mutableListOf() }
+                            .add(currentNode.variable)
+                        currentWritten = currentNode.variable
+                    }
+                } else {
+                    TODO()
                 }
             }
 
