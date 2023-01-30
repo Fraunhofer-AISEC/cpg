@@ -42,10 +42,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
     // TODO ensure gradle doesn't remove those classes
@@ -1018,5 +1015,68 @@ class PythonFrontendTest : BaseTest() {
         val annotations = tu.allChildren<Annotation>()
         val route = annotations.firstOrNull()
         assertFullName("app.route", route)
+    }
+
+    @Test
+    fun testForLoop() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("forloop.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val namespace = tu.namespaces["forloop"]
+        assertNotNull(namespace)
+
+        val varDefinedBeforeLoop = namespace.variables["varDefinedBeforeLoop"]
+        assertNotNull(varDefinedBeforeLoop)
+
+        val varDefinedInLoop = namespace.variables["varDefinedInLoop"]
+        assertNotNull(varDefinedInLoop)
+
+        val firstLoop = namespace.statements[1] as? ForEachStatement
+        assertNotNull(firstLoop)
+
+        val secondLoop = namespace.statements[2] as? ForEachStatement
+        assertNotNull(secondLoop)
+
+        val fooCall = namespace.statements[3] as? CallExpression
+        assertNotNull(fooCall)
+
+        val barCall = namespace.statements[4] as? CallExpression
+        assertNotNull(barCall)
+
+        // dataflow from var declaration to loop variable
+        assert((firstLoop.variable.prevDFG?.contains(varDefinedBeforeLoop) == true))
+
+        // dataflow from range call to loop variable
+        val firstLoopIterable = firstLoop.iterable as? CallExpression
+        assertNotNull(firstLoopIterable)
+        assert((firstLoop.variable.prevDFG?.contains((firstLoopIterable)) == true))
+
+        // dataflow from var declaration to loop iterable call
+        assert(
+            firstLoopIterable.arguments.firstOrNull()?.prevDFG?.contains(varDefinedBeforeLoop) ==
+                true
+        )
+
+        // dataflow from first loop to foo call
+        assert(fooCall.arguments.first()?.prevDFG?.contains(firstLoop.variable) == true)
+
+        // dataflow from var declaration to foo call (in case for loop is not executed)
+        assert(fooCall.arguments.first()?.prevDFG?.contains(varDefinedBeforeLoop) == true)
+
+        // dataflow from range call to loop variable
+        val secondLoopIterable = secondLoop.iterable as? CallExpression
+        assertNotNull(secondLoopIterable)
+        assert((secondLoop.variable.prevDFG?.contains((secondLoopIterable)) == true))
+
+        // dataflow from second loop var to bar call
+        assertEquals(secondLoop.variable, barCall.arguments.first()?.prevDFG?.firstOrNull())
     }
 }
