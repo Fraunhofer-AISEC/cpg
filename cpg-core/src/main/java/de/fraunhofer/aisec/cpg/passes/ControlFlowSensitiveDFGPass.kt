@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -69,10 +68,6 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      */
     protected fun handle(node: Node) {
         if (node is FunctionDeclaration) {
-            clearFlowsOfVariableDeclarations(node)
-            handleFunction(node)
-        } else if (node is NamespaceDeclaration) {
-            // TODO: We have to fix this to match all languages. This is only for the test!
             clearFlowsOfVariableDeclarations(node)
             handleFunction(node)
         }
