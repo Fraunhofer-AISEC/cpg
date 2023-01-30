@@ -42,7 +42,6 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
-import java.lang.reflect.Field
 import java.util.*
 import java.util.function.BiConsumer
 import java.util.function.Consumer
@@ -57,34 +56,6 @@ import org.slf4j.LoggerFactory
 /** Helper class for graph walking: Walking through ast-, cfg-, ...- edges */
 object SubgraphWalker {
     private val LOGGER = LoggerFactory.getLogger(SubgraphWalker::class.java)
-    private val fieldCache = HashMap<String, List<Field>>()
-
-    /**
-     * Returns all the fields for a specific class type. Because this information is static during
-     * runtime, we do cache this information in [.fieldCache] for performance reasons.
-     *
-     * @param classType the class type
-     * @return its fields, including the ones from its superclass
-     */
-    private fun getAllFields(classType: Class<*>): Collection<Field> {
-        if (classType.superclass != null) {
-            val cacheKey = classType.name
-
-            // Note: we cannot use computeIfAbsent here, because we are calling our function
-            // recursively and this would result in a ConcurrentModificationException
-            if (fieldCache.containsKey(cacheKey)) {
-                return fieldCache[cacheKey]!!
-            }
-            val fields = ArrayList<Field>()
-            fields.addAll(getAllFields(classType.superclass))
-            fields.addAll(listOf(*classType.declaredFields))
-
-            // update the cache
-            fieldCache[cacheKey] = fields
-            return fields
-        }
-        return ArrayList()
-    }
 
     /**
      * Retrieves a list of AST children of the specified node by iterating all fields that are
@@ -101,7 +72,6 @@ object SubgraphWalker {
     fun getAstChildren(node: Node?): List<Node> {
         val children = ArrayList<Node>()
         if (node == null) return children
-        val classType: Class<*> = node.javaClass
 
         for (member in node::class.members) {
             val subGraph = member.findAnnotation<SubGraph>()
@@ -128,7 +98,7 @@ object SubgraphWalker {
                     }
                     else -> {
                         throw AnnotationFormatError(
-                            "Found @SubGraph(\"AST\") on field of type " +
+                            "Found @SubGraph(\"AST\") on property of type " +
                                 obj.javaClass +
                                 " but can only used with node graph classes or collections of graph nodes"
                         )
@@ -137,53 +107,6 @@ object SubgraphWalker {
             }
         }
 
-        // TODO: To be more flexible, we should check getter methods as well. This is probably
-        // useful
-        // for the kotlin conversion.
-        /*for (field in getAllFields(classType)) {
-            val subGraph = field.getAnnotation(SubGraph::class.java)
-            if (subGraph != null && listOf(*subGraph.value).contains("AST")) {
-                try {
-                    // disable access mechanisms
-                    field.trySetAccessible()
-                    var obj = field[node]
-
-                    // restore old state
-                    field.isAccessible = false
-
-                    // skip, if null
-                    if (obj == null) {
-                        continue
-                    }
-                    var outgoing = true // default
-                    if (field.getAnnotation(Relationship::class.java) != null) {
-                        outgoing =
-                            (field.getAnnotation(Relationship::class.java).direction ==
-                                Relationship.Direction.OUTGOING)
-                    }
-                    if (checkForPropertyEdge(field, obj)) {
-                        obj = unwrap(obj as List<PropertyEdge<Node>>, outgoing)
-                    }
-                    when (obj) {
-                        is Node -> {
-                            children.add(obj)
-                        }
-                        is Collection<*> -> {
-                            children.addAll(obj as Collection<Node>)
-                        }
-                        else -> {
-                            throw AnnotationFormatError(
-                                "Found @SubGraph(\"AST\") on field of type " +
-                                    obj.javaClass +
-                                    " but can only used with node graph classes or collections of graph nodes"
-                            )
-                        }
-                    }
-                } catch (ex: IllegalAccessException) {
-                    LOGGER.error("Error while retrieving AST children: {}", ex.message)
-                }
-            }
-        }*/
         return children
     }
 
@@ -199,8 +122,7 @@ object SubgraphWalker {
         }
 
         // We are using an identity set here, to avoid placing the *same* node in the identitySet
-        // twice,
-        // possibly resulting in loops
+        // twice, possibly resulting in loops
         val identitySet = IdentitySet<Node>()
         flattenASTInternal(identitySet, n)
         return identitySet.toSortedList()
@@ -493,10 +415,7 @@ object SubgraphWalker {
             var currentScope = scope
 
             // iterate all declarations from the current scope and all its parent scopes
-            while (
-                currentScope != null &&
-                    nodeToParentBlockAndContainedValueDeclarations.containsKey(scope)
-            ) {
+            while (nodeToParentBlockAndContainedValueDeclarations.containsKey(scope)) {
                 val entry = nodeToParentBlockAndContainedValueDeclarations[currentScope]!!
                 for (`val` in entry.right) {
                     if (predicate.test(`val`)) {
