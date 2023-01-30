@@ -51,7 +51,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
 
     /** Parameters the Template requires for instantiation */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @SubGraph("AST")
     protected var parametersEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
 
     val parameters: List<Declaration>

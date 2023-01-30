@@ -48,6 +48,7 @@ import java.util.function.BiConsumer
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.isAccessible
 import org.apache.commons.lang3.tuple.MutablePair
 import org.neo4j.ogm.annotation.Relationship
@@ -102,30 +103,20 @@ object SubgraphWalker {
         if (node == null) return children
         val classType: Class<*> = node.javaClass
 
-        /*for (member in node::class.members) {
+        for (member in node::class.members) {
             val subGraph = member.findAnnotation<SubGraph>()
             if (subGraph != null && listOf(*subGraph.value).contains("AST")) {
                 val old = member.isAccessible
-
                 member.isAccessible = true
-
-                val obj = member.call(node)
-
-                // skip, if null
-                if (obj == null) {
-                    continue
-                }
-
+                var obj = member.call(node) ?: continue
                 member.isAccessible = old
 
                 var outgoing = true // default
-                var relationship = member.findAnnotation<Relationship>()
+                val relationship = member.findAnnotation<Relationship>()
                 if (relationship != null) {
-                    outgoing =
-                        relationship.direction ==
-                                Relationship.Direction.OUTGOING)
+                    outgoing = relationship.direction == Relationship.Direction.OUTGOING
                 }
-                if (checkForPropertyEdge(field, obj)) {
+                if (checkForPropertyEdge(member, obj)) {
                     obj = unwrap(obj as List<PropertyEdge<Node>>, outgoing)
                 }
                 when (obj) {
@@ -138,18 +129,18 @@ object SubgraphWalker {
                     else -> {
                         throw AnnotationFormatError(
                             "Found @SubGraph(\"AST\") on field of type " +
-                                    obj.javaClass +
-                                    " but can only used with node graph classes or collections of graph nodes"
+                                obj.javaClass +
+                                " but can only used with node graph classes or collections of graph nodes"
                         )
                     }
                 }
             }
-        }*/
+        }
 
         // TODO: To be more flexible, we should check getter methods as well. This is probably
         // useful
         // for the kotlin conversion.
-        for (field in getAllFields(classType)) {
+        /*for (field in getAllFields(classType)) {
             val subGraph = field.getAnnotation(SubGraph::class.java)
             if (subGraph != null && listOf(*subGraph.value).contains("AST")) {
                 try {
@@ -192,7 +183,7 @@ object SubgraphWalker {
                     LOGGER.error("Error while retrieving AST children: {}", ex.message)
                 }
             }
-        }
+        }*/
         return children
     }
 

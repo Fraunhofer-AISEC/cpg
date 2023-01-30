@@ -32,7 +32,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /** Represents a statement that returns out of the current function. */
 class ReturnStatement : Statement() {
     /** The expression whose value will be returned. */
-    @field:SubGraph("AST") var returnValue: Expression? = null
+    @SubGraph("AST") var returnValue: Expression? = null
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

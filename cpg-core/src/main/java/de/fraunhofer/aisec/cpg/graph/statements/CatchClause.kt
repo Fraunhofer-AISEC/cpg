@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 
 class CatchClause : Statement() {
-    @field:SubGraph("AST") var parameter: VariableDeclaration? = null
+    @SubGraph("AST") var parameter: VariableDeclaration? = null
 
-    @field:SubGraph("AST") var body: CompoundStatement? = null
+    @SubGraph("AST") var body: CompoundStatement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

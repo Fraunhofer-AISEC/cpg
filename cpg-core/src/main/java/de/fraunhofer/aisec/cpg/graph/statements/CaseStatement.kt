@@ -39,7 +39,7 @@ class CaseStatement : Statement() {
      * Primitive side effect free statement that has to match with the evaluated selector in
      * SwitchStatement
      */
-    @field:SubGraph("AST") var caseExpression: Expression? = null
+    @SubGraph("AST") var caseExpression: Expression? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

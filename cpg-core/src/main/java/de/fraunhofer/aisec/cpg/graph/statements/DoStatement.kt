@@ -35,13 +35,13 @@ class DoStatement : Statement() {
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
      */
-    @field:SubGraph("AST") var condition: Expression? = null
+    @SubGraph("AST") var condition: Expression? = null
 
     /**
      * The statement that is going to be executed and re-executed, until the condition evaluates to
      * false for the first time. Usually a [CompoundStatement].
      */
-    @field:SubGraph("AST") var statement: Statement? = null
+    @SubGraph("AST") var statement: Statement? = null
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)

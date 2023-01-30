@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 class SynchronizedStatement : Statement() {
-    @field:SubGraph("AST") var expression: Expression? = null
+    @SubGraph("AST") var expression: Expression? = null
 
-    @field:SubGraph("AST") var blockStatement: CompoundStatement? = null
+    @SubGraph("AST") var blockStatement: CompoundStatement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

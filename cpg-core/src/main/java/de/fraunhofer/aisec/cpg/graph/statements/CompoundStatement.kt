@@ -40,7 +40,7 @@ import org.neo4j.ogm.annotation.Relationship
 class CompoundStatement : Statement(), StatementHolder {
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @SubGraph("AST")
     override var statementEdges = mutableListOf<PropertyEdge<Statement>>()
 
     /**

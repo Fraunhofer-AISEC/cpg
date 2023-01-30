@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 
 class DeleteExpression : Expression() {
-    @field:SubGraph("AST") var operand: Expression? = null
+    @SubGraph("AST") var operand: Expression? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

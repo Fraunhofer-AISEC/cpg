@@ -35,17 +35,17 @@ import org.neo4j.ogm.annotation.Relationship
 /** A [Statement] which represents a try/catch block, primarily used for exception handling. */
 class TryStatement : Statement() {
     @Relationship(value = "RESOURCES", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @SubGraph("AST")
     var resourceEdges = mutableListOf<PropertyEdge<Statement>>()
 
     var resources by PropertyEdgeDelegate(TryStatement::resourceEdges)
 
-    @field:SubGraph("AST") var tryBlock: CompoundStatement? = null
+    @SubGraph("AST") var tryBlock: CompoundStatement? = null
 
-    @field:SubGraph("AST") var finallyBlock: CompoundStatement? = null
+    @SubGraph("AST") var finallyBlock: CompoundStatement? = null
 
     @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @SubGraph("AST")
     var catchClauseEdges = mutableListOf<PropertyEdge<CatchClause>>()
 
     var catchClauses by PropertyEdgeDelegate(TryStatement::catchClauseEdges)

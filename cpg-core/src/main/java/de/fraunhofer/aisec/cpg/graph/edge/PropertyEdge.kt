@@ -33,6 +33,7 @@ import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.ParameterizedType
 import java.util.*
+import kotlin.reflect.KCallable
 import kotlin.reflect.KMutableProperty1
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
@@ -277,6 +278,17 @@ open class PropertyEdge<T : Node> : Persistable {
             return false
         }
 
+        fun checkForPropertyEdge(member: KCallable<*>, obj: Any?): Boolean {
+            if (obj is PropertyEdge<*>) {
+                return true
+            } else if (obj is Collection<*>) {
+                val returnType = member.returnType
+                return returnType.classifier == List::class &&
+                    returnType.arguments.any { it.type?.classifier == PropertyEdge::class }
+            }
+            return false
+        }
+
         @JvmStatic
         fun <T : Node> removeElementFromList(
             propertyEdges: List<PropertyEdge<T>>,
@@ -333,7 +345,7 @@ open class PropertyEdge<T : Node> : Persistable {
  *
  * class MyNode {
  *   @Relationship(value = "EXPRESSIONS", direction = "OUTGOING")
- *   @field:SubGraph("AST")
+ *   @SubGraph("AST")
  *   var expressionsEdges = mutableListOf<PropertyEdge<Expression>>()
  *   var expressions by PropertyEdgeDelegate(MyNode::expressionsEdges)
  * }
