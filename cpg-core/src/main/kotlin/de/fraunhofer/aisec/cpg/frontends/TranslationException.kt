@@ -23,22 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends;
+package de.fraunhofer.aisec.cpg.frontends
 
 /**
- * A generic exception that can be thrown from a {@link LanguageFrontend}, if it reaches a state
- * where it cannot continue translating source code into the graph.
+ * A generic exception that can be thrown from a [LanguageFrontend], if it reaches a state where it
+ * cannot continue translating source code into the graph.
  *
- * <p>Ideally, this should never be thrown since we want to fuzzy parse the source code as much as
+ * Ideally, this should never be thrown since we want to fuzzy parse the source code as much as
  * possible.
  */
-public class TranslationException extends Exception {
-
-  public TranslationException(Exception ex) {
-    super(ex);
-  }
-
-  public TranslationException(String message) {
-    super(message);
-  }
+class TranslationException : Exception {
+    constructor(ex: Exception) : super(ex) {}
+    constructor(message: String) : super(message) {}
 }

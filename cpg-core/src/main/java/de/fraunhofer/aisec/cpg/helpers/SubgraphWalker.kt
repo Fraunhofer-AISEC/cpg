@@ -48,7 +48,6 @@ import java.util.function.BiConsumer
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.reflect.jvm.isAccessible
 import org.apache.commons.lang3.tuple.MutablePair
 import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
@@ -146,11 +145,10 @@ object SubgraphWalker {
             }
         }*/
 
-        // TODO: To be more flexible, we should check getter methods as well. This is probably
-        // useful
-        // for the kotlin conversion.
+        // We currently need to stick to pure Java reflection, since Kotlin reflection
+        // is EXTREMELY slow. See https://youtrack.jetbrains.com/issue/KT-32198
         for (field in getAllFields(classType)) {
-            var subGraph = field.getAnnotation(SubGraph::class.java)
+            val subGraph = field.getAnnotation(SubGraph::class.java)
             if (subGraph != null && listOf(*subGraph.value).contains("AST")) {
                 try {
                     // disable access mechanisms

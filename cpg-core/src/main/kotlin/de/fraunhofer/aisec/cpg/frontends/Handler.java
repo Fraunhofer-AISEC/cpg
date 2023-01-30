@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * <p>It implements at least one {@link MetadataProvider}, so that node builder extension functions
  * (e.g., {@link
  * de.fraunhofer.aisec.cpg.graph.ExpressionBuilderKt#newCallExpression(MetadataProvider, Expression,
- * String, boolean)} can be used directly to create appropriate nodes.
+ * CharSequence)} can be used directly to create appropriate nodes.
  *
  * @param <S> the result node or a collection of nodes
  * @param <T> the raw ast node specific to the parser

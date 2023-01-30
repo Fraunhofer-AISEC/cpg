@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.CallableInterface
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -73,7 +72,7 @@ import org.slf4j.LoggerFactory
 @Suppress("MemberVisibilityCanBePrivate")
 @DependsOn(CallResolver::class)
 open class EvaluationOrderGraphPass : Pass() {
-    protected val map = mutableMapOf<Class<out Node>, CallableInterface<Node>>()
+    protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
     private var currentEOG = mutableListOf<Node>()
     private val currentProperties = EnumMap<Properties, Any?>(Properties::class.java)
 
@@ -84,112 +83,72 @@ open class EvaluationOrderGraphPass : Pass() {
     private val intermediateNodes = mutableListOf<Node>()
 
     init {
-        map[IncludeDeclaration::class.java] = CallableInterface { doNothing(it) }
-        map[TranslationUnitDeclaration::class.java] = CallableInterface {
+        map[IncludeDeclaration::class.java] = { doNothing(it) }
+        map[TranslationUnitDeclaration::class.java] = {
             handleTranslationUnitDeclaration(it as TranslationUnitDeclaration)
         }
-        map[NamespaceDeclaration::class.java] = CallableInterface {
+        map[NamespaceDeclaration::class.java] = {
             handleNamespaceDeclaration(it as NamespaceDeclaration)
         }
-        map[RecordDeclaration::class.java] = CallableInterface {
-            handleRecordDeclaration(it as RecordDeclaration)
-        }
-        map[FunctionDeclaration::class.java] = CallableInterface {
+        map[RecordDeclaration::class.java] = { handleRecordDeclaration(it as RecordDeclaration) }
+        map[FunctionDeclaration::class.java] = {
             handleFunctionDeclaration(it as FunctionDeclaration)
         }
-        map[VariableDeclaration::class.java] = CallableInterface {
+        map[VariableDeclaration::class.java] = {
             handleVariableDeclaration(it as VariableDeclaration)
         }
-        map[CallExpression::class.java] = CallableInterface {
-            handleCallExpression(it as CallExpression)
-        }
-        map[MemberExpression::class.java] = CallableInterface {
-            handleMemberExpression(it as MemberExpression)
-        }
-        map[ArraySubscriptionExpression::class.java] = CallableInterface {
+        map[CallExpression::class.java] = { handleCallExpression(it as CallExpression) }
+        map[MemberExpression::class.java] = { handleMemberExpression(it as MemberExpression) }
+        map[ArraySubscriptionExpression::class.java] = {
             handleArraySubscriptionExpression(it as ArraySubscriptionExpression)
         }
-        map[ArrayCreationExpression::class.java] = CallableInterface {
+        map[ArrayCreationExpression::class.java] = {
             handleArrayCreationExpression(it as ArrayCreationExpression)
         }
-        map[DeclarationStatement::class.java] = CallableInterface {
+        map[DeclarationStatement::class.java] = {
             handleDeclarationStatement(it as DeclarationStatement)
         }
-        map[ReturnStatement::class.java] = CallableInterface {
-            handleReturnStatement(it as ReturnStatement)
-        }
-        map[BinaryOperator::class.java] = CallableInterface {
-            handleBinaryOperator(it as BinaryOperator)
-        }
-        map[UnaryOperator::class.java] = CallableInterface {
-            handleUnaryOperator(it as UnaryOperator)
-        }
-        map[CompoundStatement::class.java] = CallableInterface {
-            handleCompoundStatement(it as CompoundStatement)
-        }
-        map[CompoundStatementExpression::class.java] = CallableInterface {
+        map[ReturnStatement::class.java] = { handleReturnStatement(it as ReturnStatement) }
+        map[BinaryOperator::class.java] = { handleBinaryOperator(it as BinaryOperator) }
+        map[UnaryOperator::class.java] = { handleUnaryOperator(it as UnaryOperator) }
+        map[CompoundStatement::class.java] = { handleCompoundStatement(it as CompoundStatement) }
+        map[CompoundStatementExpression::class.java] = {
             handleCompoundStatementExpression(it as CompoundStatementExpression)
         }
-        map[IfStatement::class.java] = CallableInterface { handleIfStatement(it as IfStatement) }
-        map[AssertStatement::class.java] = CallableInterface {
-            handleAssertStatement(it as AssertStatement)
-        }
-        map[WhileStatement::class.java] = CallableInterface {
-            handleWhileStatement(it as WhileStatement)
-        }
-        map[DoStatement::class.java] = CallableInterface { handleDoStatement(it as DoStatement) }
-        map[ForStatement::class.java] = CallableInterface { handleForStatement(it as ForStatement) }
-        map[ForEachStatement::class.java] = CallableInterface {
-            handleForEachStatement(it as ForEachStatement)
-        }
-        map[TryStatement::class.java] = CallableInterface { handleTryStatement(it as TryStatement) }
-        map[ContinueStatement::class.java] = CallableInterface {
-            handleContinueStatement(it as ContinueStatement)
-        }
-        map[DeleteExpression::class.java] = CallableInterface {
-            handleDeleteExpression(it as DeleteExpression)
-        }
-        map[BreakStatement::class.java] = CallableInterface {
-            handleBreakStatement(it as BreakStatement)
-        }
-        map[SwitchStatement::class.java] = CallableInterface {
-            handleSwitchStatement(it as SwitchStatement)
-        }
-        map[LabelStatement::class.java] = CallableInterface {
-            handleLabelStatement(it as LabelStatement)
-        }
-        map[GotoStatement::class.java] = CallableInterface {
-            handleGotoStatement(it as GotoStatement)
-        }
-        map[CaseStatement::class.java] = CallableInterface {
-            handleCaseStatement(it as CaseStatement)
-        }
-        map[SynchronizedStatement::class.java] = CallableInterface {
+        map[IfStatement::class.java] = { handleIfStatement(it as IfStatement) }
+        map[AssertStatement::class.java] = { handleAssertStatement(it as AssertStatement) }
+        map[WhileStatement::class.java] = { handleWhileStatement(it as WhileStatement) }
+        map[DoStatement::class.java] = { handleDoStatement(it as DoStatement) }
+        map[ForStatement::class.java] = { handleForStatement(it as ForStatement) }
+        map[ForEachStatement::class.java] = { handleForEachStatement(it as ForEachStatement) }
+        map[TryStatement::class.java] = { handleTryStatement(it as TryStatement) }
+        map[ContinueStatement::class.java] = { handleContinueStatement(it as ContinueStatement) }
+        map[DeleteExpression::class.java] = { handleDeleteExpression(it as DeleteExpression) }
+        map[BreakStatement::class.java] = { handleBreakStatement(it as BreakStatement) }
+        map[SwitchStatement::class.java] = { handleSwitchStatement(it as SwitchStatement) }
+        map[LabelStatement::class.java] = { handleLabelStatement(it as LabelStatement) }
+        map[GotoStatement::class.java] = { handleGotoStatement(it as GotoStatement) }
+        map[CaseStatement::class.java] = { handleCaseStatement(it as CaseStatement) }
+        map[SynchronizedStatement::class.java] = {
             handleSynchronizedStatement(it as SynchronizedStatement)
         }
-        map[NewExpression::class.java] = CallableInterface {
-            handleNewExpression(it as NewExpression)
-        }
-        map[CastExpression::class.java] = CallableInterface {
-            handleCastExpression(it as CastExpression)
-        }
-        map[ExpressionList::class.java] = CallableInterface {
-            handleExpressionList(it as ExpressionList)
-        }
-        map[ConditionalExpression::class.java] = CallableInterface {
+        map[NewExpression::class.java] = { handleNewExpression(it as NewExpression) }
+        map[CastExpression::class.java] = { handleCastExpression(it as CastExpression) }
+        map[ExpressionList::class.java] = { handleExpressionList(it as ExpressionList) }
+        map[ConditionalExpression::class.java] = {
             handleConditionalExpression(it as ConditionalExpression)
         }
-        map[InitializerListExpression::class.java] = CallableInterface {
+        map[InitializerListExpression::class.java] = {
             handleInitializerListExpression(it as InitializerListExpression)
         }
-        map[ConstructExpression::class.java] = CallableInterface {
+        map[ConstructExpression::class.java] = {
             handleConstructExpression(it as ConstructExpression)
         }
-        map[EmptyStatement::class.java] = CallableInterface { handleDefault(it as EmptyStatement) }
-        map[Literal::class.java] = CallableInterface { handleDefault(it) }
-        map[DefaultStatement::class.java] = CallableInterface { handleDefault(it) }
-        map[TypeIdExpression::class.java] = CallableInterface { handleDefault(it) }
-        map[DeclaredReferenceExpression::class.java] = CallableInterface { handleDefault(it) }
+        map[EmptyStatement::class.java] = { handleDefault(it as EmptyStatement) }
+        map[Literal::class.java] = { handleDefault(it) }
+        map[DefaultStatement::class.java] = { handleDefault(it) }
+        map[TypeIdExpression::class.java] = { handleDefault(it) }
+        map[DeclaredReferenceExpression::class.java] = { handleDefault(it) }
     }
 
     private fun doNothing(node: Node) {
@@ -388,7 +347,7 @@ open class EvaluationOrderGraphPass : Pass() {
             if (toHandle == Node::class.java || !Node::class.java.isAssignableFrom(toHandle)) break
         }
         if (callable != null) {
-            callable.dispatch(node)
+            callable(node)
         } else {
             LOGGER.info("Parsing of type " + node.javaClass + " is not supported (yet)")
         }
