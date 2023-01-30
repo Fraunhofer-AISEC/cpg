@@ -23,36 +23,17 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations;
+package de.fraunhofer.aisec.cpg.graph.declarations
 
-import java.util.Objects;
+// TODO: Documentation
+class UsingDirective : Declaration() {
+    var qualifiedName: String? = null
 
-public class UsingDirective extends Declaration {
-
-  private String qualifiedName;
-
-  public String getQualifiedName() {
-    return qualifiedName;
-  }
-
-  public void setQualifiedName(String qualifiedName) {
-    this.qualifiedName = qualifiedName;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is UsingDirective) return false
+        return super.equals(other) && qualifiedName == other.qualifiedName
     }
-    if (!(o instanceof UsingDirective)) {
-      return false;
-    }
-    UsingDirective that = (UsingDirective) o;
-    return super.equals(that) && Objects.equals(qualifiedName, that.qualifiedName);
-  }
 
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+    override fun hashCode() = super.hashCode()
 }

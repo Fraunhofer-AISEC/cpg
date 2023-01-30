@@ -178,7 +178,7 @@ fun MetadataProvider.newVariableDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newTypedefDeclaration(
-    targetType: Type?,
+    targetType: Type,
     alias: Type,
     code: String? = null,
     rawNode: Any? = null
