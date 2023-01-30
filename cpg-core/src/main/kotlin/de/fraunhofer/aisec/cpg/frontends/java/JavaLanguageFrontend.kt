@@ -77,8 +77,8 @@ open class JavaLanguageFrontend(
     var javaSymbolResolver: JavaSymbolSolver?
     val nativeTypeResolver = CombinedTypeSolver()
 
-    protected lateinit var expressionHandler: ExpressionHandler
-    protected lateinit var statementHandler: StatementHandler
+    lateinit var expressionHandler: ExpressionHandler
+    lateinit var statementHandler: StatementHandler
     protected lateinit var declarationHandler: DeclarationHandler
 
     init {

@@ -596,7 +596,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         ) : JavaLanguageFrontend(language, config, scopeManager) {
             init {
                 this.declarationHandler =
-                    object : DeclarationHandler(this) {
+                    object : DeclarationHandler(this@MyJavaLanguageFrontend) {
                         override fun handleClassOrInterfaceDeclaration(
                             classInterDecl: ClassOrInterfaceDeclaration
                         ): RecordDeclaration {
