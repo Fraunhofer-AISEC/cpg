@@ -1077,6 +1077,9 @@ class PythonFrontendTest : BaseTest() {
         assert((secondLoop.variable.prevDFG?.contains((secondLoopIterable)) == true))
 
         // dataflow from second loop var to bar call
-        assertEquals(secondLoop.variable, barCall.arguments.first()?.prevDFG?.firstOrNull())
+        assertEquals(
+            (secondLoop.variable as? DeclarationStatement)?.singleDeclaration,
+            barCall.arguments.first()?.prevDFG?.firstOrNull()
+        )
     }
 }
