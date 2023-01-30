@@ -47,6 +47,8 @@ import java.util.function.BiConsumer
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
+import kotlin.reflect.KCallable
+import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.isAccessible
 import org.apache.commons.lang3.tuple.MutablePair
@@ -73,7 +75,7 @@ object SubgraphWalker {
         val children = ArrayList<Node>()
         if (node == null) return children
 
-        for (member in node::class.members) {
+        for (member in getMembers(node)) {
             val subGraph = member.findAnnotation<SubGraph>()
             if (subGraph != null && listOf(*subGraph.value).contains("AST")) {
                 val old = member.isAccessible
@@ -108,6 +110,14 @@ object SubgraphWalker {
         }
 
         return children
+    }
+
+    val membersCache = mutableMapOf<KClass<out Node>, Collection<KCallable<*>>>()
+
+    private fun getMembers(node: Node): Collection<KCallable<*>> {
+        return membersCache.computeIfAbsent(node::class) {
+            return@computeIfAbsent node::class.members
+        }
     }
 
     /**

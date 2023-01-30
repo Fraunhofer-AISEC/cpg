@@ -285,6 +285,7 @@ open class PropertyEdge<T : Node> : Persistable {
                 val returnType = member.returnType
                 return returnType.classifier == List::class &&
                     returnType.arguments.any { it.type?.classifier == PropertyEdge::class }
+                return true
             }
             return false
         }
