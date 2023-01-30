@@ -437,7 +437,7 @@ Scheme:
 ### WhileStatement
 
 Interesting fields:
-* `condition: Statement`: The condition that is evaluated before making the branching decisio
+* `condition: Statement`: The condition that is evaluated before making the branching decision
 * `conditionDeclaration: Statement`: A declaration containing the condition in the initializer, used instead of the condition
 
 Scheme:
