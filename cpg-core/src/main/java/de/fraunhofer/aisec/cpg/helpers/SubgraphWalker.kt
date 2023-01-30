@@ -47,9 +47,10 @@ import java.util.function.BiConsumer
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 import org.apache.commons.lang3.tuple.MutablePair
 import org.neo4j.ogm.annotation.Relationship
@@ -72,7 +73,7 @@ object SubgraphWalker {
      */
     @JvmStatic
     fun getAstChildren(node: Node?): List<Node> {
-        val children = ArrayList<Node>()
+        val children = mutableListOf<Node>()
         if (node == null) return children
 
         for (member in getMembers(node)) {
@@ -112,12 +113,10 @@ object SubgraphWalker {
         return children
     }
 
-    val membersCache = mutableMapOf<KClass<out Node>, Collection<KCallable<*>>>()
+    val membersCache = mutableMapOf<KClass<out Node>, Collection<KProperty1<out Node, *>>>()
 
-    private fun getMembers(node: Node): Collection<KCallable<*>> {
-        return membersCache.computeIfAbsent(node::class) {
-            return@computeIfAbsent node::class.members
-        }
+    private fun getMembers(node: Node): Collection<KProperty1<out Node, *>> {
+        return membersCache.computeIfAbsent(node::class) { node::class.memberProperties }
     }
 
     /**
