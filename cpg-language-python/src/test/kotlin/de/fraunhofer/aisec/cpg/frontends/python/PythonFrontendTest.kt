@@ -1030,7 +1030,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val namespace = tu.functions["forloop"]
+        val namespace = tu.functions["forloop"]?.body as? CompoundStatement
         assertNotNull(namespace)
 
         val varDefinedBeforeLoop = namespace.variables["varDefinedBeforeLoop"]
