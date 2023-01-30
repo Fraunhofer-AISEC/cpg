@@ -48,7 +48,6 @@ import java.util.function.BiConsumer
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.isAccessible
 import org.apache.commons.lang3.tuple.MutablePair
 import org.neo4j.ogm.annotation.Relationship
