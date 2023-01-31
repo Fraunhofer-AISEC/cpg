@@ -311,7 +311,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     this.newFieldDeclaration(
                         "this$" + scope.name!!.localName,
                         fieldType,
-                        null,
+                        listOf<String>(),
                         null,
                         null,
                         null

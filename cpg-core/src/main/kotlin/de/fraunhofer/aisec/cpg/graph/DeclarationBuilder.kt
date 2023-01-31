@@ -326,7 +326,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
 fun MetadataProvider.newFieldDeclaration(
     name: CharSequence?,
     type: Type? = UnknownType.getUnknownType(),
-    modifiers: List<String?>? = listOf(),
+    modifiers: List<String> = listOf(),
     code: String? = null,
     location: PhysicalLocation? = null,
     initializer: Expression? = null,
@@ -342,7 +342,7 @@ fun MetadataProvider.newFieldDeclaration(
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
     if (initializer != null) {
         if (initializer is ArrayCreationExpression) {
-            node.setIsArray(true)
+            node.isArray = true
         }
         node.initializer = initializer
     }
