@@ -23,46 +23,44 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements.expressions
+package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-// TODO: Document this class!
-class DesignatedInitializerExpression : Expression() {
-    @field:SubGraph("AST") var rhs: Expression? = null
-
-    @Relationship(value = "LHS", direction = Relationship.Direction.OUTGOING)
-    var lhsPropertyEdge: List<PropertyEdge<Expression>> = listOf()
+class EnumDeclaration : Declaration() {
+    @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
+    var entriesPropertyEdge: List<PropertyEdge<EnumConstantDeclaration>> = ArrayList()
         private set
 
+    @Relationship(value = "SUPER_TYPES", direction = Relationship.Direction.OUTGOING)
+    var superTypesPropertyEdge: List<PropertyEdge<Type>> = ArrayList()
+        private set
+
+    @Relationship var superTypeDeclarations: Set<RecordDeclaration> = HashSet()
+
     @property:SubGraph("AST")
-    var lhs: List<Expression>
+    var entries: List<EnumConstantDeclaration>
+        get() = unwrap(entriesPropertyEdge)
         set(value) {
-            lhsPropertyEdge = transformIntoOutgoingPropertyEdgeList(value ?: listOf(), this)
+            entriesPropertyEdge = transformIntoOutgoingPropertyEdgeList(value, this)
         }
-        get() = unwrap(lhsPropertyEdge)
+
+    var superTypes: List<Type>
+        get() = unwrap(superTypesPropertyEdge)
+        set(value) {
+            superTypesPropertyEdge = transformIntoOutgoingPropertyEdgeList(value, this)
+        }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
-            .append("lhr", lhsPropertyEdge)
-            .append("rhs", rhs)
+            .append("entries", entriesPropertyEdge)
             .toString()
     }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is DesignatedInitializerExpression) return false
-        return super.equals(other) &&
-            rhs == other.rhs &&
-            lhsPropertyEdge == other.lhsPropertyEdge &&
-            lhs == other.lhs
-    }
-
-    override fun hashCode() = super.hashCode()
 }

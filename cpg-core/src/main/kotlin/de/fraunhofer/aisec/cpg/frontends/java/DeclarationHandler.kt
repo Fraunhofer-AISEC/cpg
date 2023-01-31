@@ -50,7 +50,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
-import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.stream.Collectors
 import kotlin.collections.set
@@ -393,22 +392,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val name = enumDecl.nameAsString
         val location = frontend.getLocationFromRawNode(enumDecl)
         val enumDeclaration = this.newEnumDeclaration(name, enumDecl.toString(), location)
-        val entries =
-            enumDecl.entries
-                .stream()
-                .map { handle(it) as EnumConstantDeclaration? }
-                .collect(Collectors.toList())
-        entries.forEach(
-            Consumer { e: EnumConstantDeclaration? ->
-                e!!.type = this.parseType(enumDeclaration.name)
-            }
-        )
+        val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
+
+        entries.forEach { it.type = this.parseType(enumDeclaration.name) }
         enumDeclaration.entries = entries
-        val superTypes =
-            enumDecl.implementedTypes
-                .stream()
-                .map { type: ClassOrInterfaceType? -> frontend.getTypeAsGoodAsPossible(type!!) }
-                .collect(Collectors.toList())
+        val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superTypes = superTypes
         return enumDeclaration
     }
