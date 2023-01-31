@@ -37,20 +37,20 @@ class DesignatedInitializerExpression : Expression() {
     @field:SubGraph("AST") var rhs: Expression? = null
 
     @Relationship(value = "LHS", direction = Relationship.Direction.OUTGOING)
-    var lhsPropertyEdge: List<PropertyEdge<Expression>> = listOf()
+    var lhsEdges: List<PropertyEdge<Expression>> = listOf()
         private set
 
     @property:SubGraph("AST")
     var lhs: List<Expression>
         set(value) {
-            lhsPropertyEdge = transformIntoOutgoingPropertyEdgeList(value ?: listOf(), this)
+            lhsEdges = transformIntoOutgoingPropertyEdgeList(value, this)
         }
-        get() = unwrap(lhsPropertyEdge)
+        get() = unwrap(lhsEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
-            .append("lhr", lhsPropertyEdge)
+            .append("lhr", lhsEdges)
             .append("rhs", rhs)
             .toString()
     }
@@ -60,7 +60,7 @@ class DesignatedInitializerExpression : Expression() {
         if (other !is DesignatedInitializerExpression) return false
         return super.equals(other) &&
             rhs == other.rhs &&
-            lhsPropertyEdge == other.lhsPropertyEdge &&
+            lhsEdges == other.lhsEdges &&
             lhs == other.lhs
     }
 

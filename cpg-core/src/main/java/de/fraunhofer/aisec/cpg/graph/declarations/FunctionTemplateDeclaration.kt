@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
@@ -40,33 +40,30 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
      * expansion pass for each instantiation of the FunctionTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    private val _realization: MutableList<PropertyEdge<FunctionDeclaration>> = ArrayList()
+    private val realizationEdges: MutableList<PropertyEdge<FunctionDeclaration>> = ArrayList()
 
-    val realization: List<FunctionDeclaration>
-        get() = unwrap(_realization)
+    val realization: List<FunctionDeclaration> by
+        PropertyEdgeDelegate(FunctionTemplateDeclaration::realizationEdges)
 
     // TODO: Remove this!?
     override val realizationDeclarations: List<Declaration>
         get() = ArrayList<Declaration>(realization)
 
-    val realizationPropertyEdge: List<PropertyEdge<FunctionDeclaration>>
-        get() = _realization
-
     fun addRealization(realizedFunction: FunctionDeclaration) {
         val propertyEdge = PropertyEdge(this, realizedFunction)
-        propertyEdge.addProperty(Properties.INDEX, _realization.size)
-        _realization.add(propertyEdge)
+        propertyEdge.addProperty(Properties.INDEX, realizationEdges.size)
+        realizationEdges.add(propertyEdge)
     }
 
     fun removeRealization(realizedFunction: FunctionDeclaration?) {
-        _realization.removeIf { it.end == realizedFunction }
+        realizationEdges.removeIf { it.end == realizedFunction }
     }
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is TypeParamDeclaration || declaration is ParamVariableDeclaration) {
             addIfNotContains(this.parametersEdges, declaration)
         } else if (declaration is FunctionDeclaration) {
-            addIfNotContains(_realization, declaration)
+            addIfNotContains(realizationEdges, declaration)
         }
     }
 
@@ -76,15 +73,14 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
         if (!super.equals(o)) return false
         val that = o as FunctionTemplateDeclaration
         return realization == that.realization &&
-            propertyEqualsList(_realization, that._realization) &&
+            propertyEqualsList(realizationEdges, that.realizationEdges) &&
             parameters == that.parameters &&
             propertyEqualsList(parametersEdges, that.parametersEdges)
     }
 
     // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the
     // parameters field is added, the ScopeManager is not able to find it anymore and we cannot
-    // leave
-    // the TemplateScope. Analogous for realization
+    // leave the TemplateScope. Analogous for realization
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode())
     }

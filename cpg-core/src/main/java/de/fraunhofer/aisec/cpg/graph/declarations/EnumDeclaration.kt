@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -51,11 +52,7 @@ class EnumDeclaration : Declaration() {
             entryEdges = transformIntoOutgoingPropertyEdgeList(value, this)
         }
 
-    var superTypes: List<Type>
-        get() = unwrap(superTypeEdges)
-        set(value) {
-            superTypeEdges = transformIntoOutgoingPropertyEdgeList(value, this)
-        }
+    var superTypes: List<Type> by PropertyEdgeDelegate(EnumDeclaration::superTypeEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
