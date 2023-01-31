@@ -283,7 +283,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         frontend.scopeManager.leaveScope(templateDeclaration)
         if (templateDeclaration is FunctionTemplateDeclaration) {
             // Fix typeName
-            templateDeclaration.name = templateDeclaration.realizationDeclarations[0].name.clone()
+            templateDeclaration.name = templateDeclaration.realizations[0].name.clone()
         } else
             (innerDeclaration as? RecordDeclaration)?.let {
                 addParameterizedTypesToRecord(templateDeclaration, it)
@@ -356,7 +356,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * @param templateDeclaration
      */
     private fun addRealizationToScope(templateDeclaration: TemplateDeclaration) {
-        for (declaration in templateDeclaration.realizationDeclarations) {
+        for (declaration in templateDeclaration.realizations) {
             frontend.scopeManager.addDeclaration(declaration)
         }
     }

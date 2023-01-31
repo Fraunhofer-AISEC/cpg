@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import org.neo4j.ogm.annotation.Relationship
 
 /** Abstract class representing the template concept */
@@ -52,23 +52,10 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
     /** Parameters the Template requires for instantiation */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    protected var parametersEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
+    var parameterEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
 
-    val parameters: List<Declaration>
-        get() = unwrap(parametersEdges)
+    val parameters by PropertyEdgeDelegate(TemplateDeclaration::parameterEdges)
 
-    fun getParametersOfClazz(clazz: Class<out Declaration?>): List<Declaration> {
-        val reducedParametersByType: MutableList<Declaration> = ArrayList()
-        for (n in parameters) {
-            if (clazz.isInstance(n)) {
-                reducedParametersByType.add(n)
-            }
-        }
-        return reducedParametersByType
-    }
-
-    val parametersPropertyEdge: List<PropertyEdge<Declaration>>
-        get() = parametersEdges
     val parametersWithDefaults: List<Declaration>
         get() {
             val parametersWithDefaults: MutableList<Declaration> = ArrayList()
@@ -82,6 +69,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
             }
             return parametersWithDefaults
         }
+
     val parameterDefaults: List<Node?>
         get() {
             val defaults: MutableList<Node?> = ArrayList()
@@ -97,40 +85,40 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
 
     fun addParameter(parameterizedType: TypeParamDeclaration) {
         val propertyEdge = PropertyEdge<Declaration>(this, parameterizedType)
-        propertyEdge.addProperty(Properties.INDEX, parametersEdges.size)
-        parametersEdges.add(propertyEdge)
+        propertyEdge.addProperty(Properties.INDEX, parameterEdges.size)
+        parameterEdges.add(propertyEdge)
     }
 
     fun addParameter(nonTypeTemplateParamDeclaration: ParamVariableDeclaration) {
         val propertyEdge = PropertyEdge<Declaration>(this, nonTypeTemplateParamDeclaration)
-        propertyEdge.addProperty(Properties.INDEX, parametersEdges.size)
-        parametersEdges.add(propertyEdge)
+        propertyEdge.addProperty(Properties.INDEX, parameterEdges.size)
+        parameterEdges.add(propertyEdge)
     }
 
     override val declarations: List<Declaration>
         get() {
             val list = ArrayList<Declaration>()
-            list.addAll(realizationDeclarations)
+            list.addAll(realizations)
             return list
         }
 
     fun removeParameter(parameterizedType: TypeParamDeclaration?) {
-        parametersEdges.removeIf { it.end == parameterizedType }
+        parameterEdges.removeIf { it.end == parameterizedType }
     }
 
     fun removeParameter(nonTypeTemplateParamDeclaration: ParamVariableDeclaration?) {
-        parametersEdges.removeIf { it.end == nonTypeTemplateParamDeclaration }
+        parameterEdges.removeIf { it.end == nonTypeTemplateParamDeclaration }
     }
 
-    abstract val realizationDeclarations: List<Declaration>
+    abstract val realizations: List<Declaration>
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) return true
-        if (o == null || javaClass != o.javaClass) return false
-        if (!super.equals(o)) return false
-        val that = o as TemplateDeclaration
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || javaClass != other.javaClass) return false
+        if (!super.equals(other)) return false
+        val that = other as TemplateDeclaration
         return parameters == that.parameters &&
-            propertyEqualsList(parametersEdges, that.parametersEdges)
+            propertyEqualsList(parameterEdges, that.parameterEdges)
     }
 
     override fun hashCode() = super.hashCode()

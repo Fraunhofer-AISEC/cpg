@@ -45,7 +45,7 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
     @field:SubGraph("AST")
     val realizationEdges: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
 
-    override val realizationDeclarations: List<Declaration> by
+    override val realizations: List<Declaration> by
         PropertyEdgeDelegate(ClassTemplateDeclaration::realizationEdges)
 
     fun addRealization(realizedRecord: RecordDeclaration) {
@@ -60,7 +60,7 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is TypeParamDeclaration || declaration is ParamVariableDeclaration) {
-            addIfNotContains(super.parametersEdges, declaration)
+            addIfNotContains(super.parameterEdges, declaration)
         } else if (declaration is RecordDeclaration) {
             addIfNotContains(realizationEdges, declaration)
         }
@@ -71,10 +71,10 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
         if (o == null || javaClass != o.javaClass) return false
         if (!super.equals(o)) return false
         val that = o as ClassTemplateDeclaration
-        return realizationDeclarations == that.realizationDeclarations &&
+        return realizations == that.realizations &&
             propertyEqualsList(realizationEdges, that.realizationEdges) &&
             parameters == that.parameters &&
-            propertyEqualsList(parametersPropertyEdge, that.parametersPropertyEdge)
+            propertyEqualsList(parameterEdges, that.parameterEdges)
     }
 
     // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the

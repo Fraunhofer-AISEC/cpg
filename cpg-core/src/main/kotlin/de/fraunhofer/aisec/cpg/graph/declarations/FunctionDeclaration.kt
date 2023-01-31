@@ -51,7 +51,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
      * Classes and Structs can be declared inside a function and are only valid within the function.
      */
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    var recordEdges: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
+    var recordEdges = mutableListOf<PropertyEdge<RecordDeclaration>>()
 
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
@@ -59,23 +59,22 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     var parameterEdges = mutableListOf<PropertyEdge<ParamVariableDeclaration>>()
 
     /** Virtual property for accessing [parameterEdges] without property edges. */
-    var parameters by
-        PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)
+    var parameters by PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)
 
     /** Virtual property for accessing [parameterEdges] without property edges. */
-    var records: List<RecordDeclaration> by PropertyEdgeDelegate(FunctionDeclaration::recordEdges)
+    var records by PropertyEdgeDelegate(FunctionDeclaration::recordEdges)
 
     @Relationship(value = "THROWS_TYPES", direction = Relationship.Direction.OUTGOING)
-    var throwsTypes: MutableList<Type> = ArrayList()
+    var throwsTypes = mutableListOf<Type>()
 
     @Relationship(value = "OVERRIDES", direction = Relationship.Direction.INCOMING)
-    val overriddenBy: MutableList<FunctionDeclaration> = ArrayList()
+    val overriddenBy = mutableListOf<FunctionDeclaration>()
 
     @Relationship(value = "OVERRIDES", direction = Relationship.Direction.OUTGOING)
-    val overrides: MutableList<FunctionDeclaration> = ArrayList()
+    val overrides = mutableListOf<FunctionDeclaration>()
 
     /** The list of return types. The default is an empty list. */
-    var returnTypes: List<Type> = listOf()
+    var returnTypes = listOf<Type>()
 
     /**
      * Specifies, whether this function declaration is also a definition, i.e. has a function body

@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.parameters
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
@@ -80,7 +79,7 @@ class CPPLanguage :
                 return candidates
             }
 
-            call.templateParametersEdges = null
+            call.templateParameterEdges = null
         }
         if (invocationCandidates.isEmpty()) {
             // Check for usage of implicit cast
@@ -155,14 +154,14 @@ class CPPLanguage :
             // resolver, we resolve the call. Otherwise, there won't be an inferred template, we
             // will do an
             // inferred FunctionDeclaration instead.
-            call.templateParametersEdges = mutableListOf()
+            call.templateParameterEdges = mutableListOf()
             val (ok, candidates) =
                 handleTemplateFunctionCalls(null, call, false, scopeManager, currentTU)
             if (ok) {
                 return candidates
             }
 
-            call.templateParametersEdges = null
+            call.templateParameterEdges = null
         }
         if (invocationCandidates.isEmpty()) {
             // If we don't find any candidate and our current language is c/c++ we check if there is
@@ -265,7 +264,7 @@ class CPPLanguage :
             val functionTemplateDeclaration =
                 holder.startInference().createInferredFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
-            val edges = templateCall.templateParametersEdges
+            val edges = templateCall.templateParameterEdges
             // Set instantiation propertyEdges
             for (instantiationParameter in edges ?: listOf()) {
                 instantiationParameter.addProperty(

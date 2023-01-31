@@ -412,7 +412,7 @@ open class CallResolver : SymbolResolverPass() {
             if (
                 template is ClassTemplateDeclaration &&
                     recordDeclaration != null &&
-                    recordDeclaration in template.realizationDeclarations &&
+                    recordDeclaration in template.realizations &&
                     (constructExpression.templateParameters.size <= template.parameters.size)
             ) {
                 val defaultDifference =

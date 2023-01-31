@@ -45,7 +45,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
     val realization: List<FunctionDeclaration> by
         PropertyEdgeDelegate(FunctionTemplateDeclaration::realizationEdges)
 
-    override val realizationDeclarations: List<Declaration>
+    override val realizations: List<Declaration>
         get() = ArrayList<Declaration>(realization)
 
     fun addRealization(realizedFunction: FunctionDeclaration) {
@@ -60,7 +60,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is TypeParamDeclaration || declaration is ParamVariableDeclaration) {
-            addIfNotContains(this.parametersEdges, declaration)
+            addIfNotContains(this.parameterEdges, declaration)
         } else if (declaration is FunctionDeclaration) {
             addIfNotContains(realizationEdges, declaration)
         }
@@ -74,7 +74,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
         return realization == that.realization &&
             propertyEqualsList(realizationEdges, that.realizationEdges) &&
             parameters == that.parameters &&
-            propertyEqualsList(parametersEdges, that.parametersEdges)
+            propertyEqualsList(parameterEdges, that.parameterEdges)
     }
 
     // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the

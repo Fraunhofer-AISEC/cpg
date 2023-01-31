@@ -30,12 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
+import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.CallResolver
@@ -142,7 +141,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
     /** If the CallExpression instantiates a template, the call can provide template parameters. */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    var templateParametersEdges: MutableList<PropertyEdge<Node>>? = null
+    var templateParameterEdges: MutableList<PropertyEdge<Node>>? = null
         set(value) {
             field = value
             template = value != null
@@ -150,7 +149,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
 
     val templateParameters: List<Node>
         get(): List<Node> {
-            return unwrap(templateParametersEdges ?: listOf())
+            return unwrap(templateParameterEdges ?: listOf())
         }
 
     /**
@@ -177,8 +176,8 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         }
 
     private fun replaceTypeTemplateParameter(oldType: Type?, newType: Type) {
-        for (i in templateParametersEdges?.indices ?: listOf()) {
-            val propertyEdge = templateParametersEdges!![i]
+        for (i in templateParameterEdges?.indices ?: listOf()) {
+            val propertyEdge = templateParameterEdges!![i]
             if (propertyEdge.end == oldType) {
                 propertyEdge.end = newType
             }
@@ -195,14 +194,14 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         templateInitialization: TemplateInitialization? = TemplateInitialization.EXPLICIT
     ) {
         if (templateParam is Expression || templateParam is Type) {
-            if (templateParametersEdges == null) {
-                templateParametersEdges = mutableListOf()
+            if (templateParameterEdges == null) {
+                templateParameterEdges = mutableListOf()
             }
 
             val propertyEdge = PropertyEdge(this, templateParam)
             propertyEdge.addProperty(Properties.INDEX, templateParameters.size)
             propertyEdge.addProperty(Properties.INSTANTIATION, templateInitialization)
-            templateParametersEdges!!.add(propertyEdge)
+            templateParameterEdges!!.add(propertyEdge)
             template = true
         }
     }
@@ -211,11 +210,11 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         initializationType: Map<Node?, TemplateInitialization?>,
         orderedInitializationSignature: List<Node>
     ) {
-        if (templateParametersEdges == null) {
-            templateParametersEdges = mutableListOf()
+        if (templateParameterEdges == null) {
+            templateParameterEdges = mutableListOf()
         }
 
-        for (edge in templateParametersEdges!!) {
+        for (edge in templateParameterEdges!!) {
             if (
                 edge.getProperty(Properties.INSTANTIATION) != null &&
                     (edge.getProperty(Properties.INSTANTIATION) ==
@@ -226,9 +225,9 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             }
         }
 
-        for (i in templateParametersEdges!!.size until orderedInitializationSignature.size) {
+        for (i in templateParameterEdges!!.size until orderedInitializationSignature.size) {
             val propertyEdge = PropertyEdge(this, orderedInitializationSignature[i])
-            propertyEdge.addProperty(Properties.INDEX, templateParametersEdges!!.size)
+            propertyEdge.addProperty(Properties.INDEX, templateParameterEdges!!.size)
             propertyEdge.addProperty(
                 Properties.INSTANTIATION,
                 initializationType.getOrDefault(
@@ -236,12 +235,12 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
                     TemplateInitialization.UNKNOWN
                 )
             )
-            templateParametersEdges!!.add(propertyEdge)
+            templateParameterEdges!!.add(propertyEdge)
         }
     }
 
     fun instantiatesTemplate(): Boolean {
-        return templateInstantiation != null || templateParametersEdges != null || template
+        return templateInstantiation != null || templateParameterEdges != null || template
     }
 
     override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
@@ -302,7 +301,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             invokes == other.invokes &&
             propertyEqualsList(invokesRelationship, other.invokesRelationship)) &&
             templateParameters == other.templateParameters &&
-            propertyEqualsList(templateParametersEdges, other.templateParametersEdges)) &&
+            propertyEqualsList(templateParameterEdges, other.templateParameterEdges)) &&
             templateInstantiation == other.templateInstantiation &&
             template == other.template
     }
