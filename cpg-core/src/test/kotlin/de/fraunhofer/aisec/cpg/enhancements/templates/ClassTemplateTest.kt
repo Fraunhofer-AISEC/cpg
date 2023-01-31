@@ -132,11 +132,11 @@ internal class ClassTemplateTest : BaseTest() {
         assertLocalName("int", (templateParameters[1] as TypeExpression).type)
         assertTrue(templateParameters[0].isImplicit)
         assertTrue(templateParameters[1].isImplicit)
-        assertEquals(2, point1.templateParameters.size)
-        assertLocalName("int", (point1.templateParameters[0] as TypeExpression).type)
-        assertLocalName("int", (point1.templateParameters[1] as TypeExpression).type)
-        assertFalse(point1.templateParameters[0].isImplicit)
-        assertFalse(point1.templateParameters[1].isImplicit)
+        assertEquals(2, point1.templateParameters?.size)
+        assertLocalName("int", (point1.templateParameters?.get(0) as TypeExpression).type)
+        assertLocalName("int", (point1.templateParameters!![1] as TypeExpression).type)
+        assertFalse(point1.templateParameters!![0].isImplicit)
+        assertFalse(point1.templateParameters!![1].isImplicit)
     }
 
     @Test
@@ -238,8 +238,8 @@ internal class ClassTemplateTest : BaseTest() {
         assertLocalName("int", instantiatedType.generics[1])
 
         // Test TemplateParameter of VariableDeclaration
-        assertEquals(3, point1.templateParameters.size)
-        assertEquals(literal3, point1.templateParameters[2])
+        assertEquals(3, point1.templateParameters?.size)
+        assertEquals(literal3, point1.templateParameters?.get(2))
 
         // Test Invocation
         val templateParameters = constructExpression.templateParameters
@@ -572,10 +572,10 @@ internal class ClassTemplateTest : BaseTest() {
         assertLocalName("int", (constructExpression.templateParameters[0] as TypeExpression).type)
         assertTrue(constructExpression.templateParameters[0].isImplicit)
         assertEquals(literal5Implicit, constructExpression.templateParameters[1])
-        assertEquals(2, arrayVariable.templateParameters.size)
-        assertLocalName("int", (arrayVariable.templateParameters[0] as TypeExpression).type)
-        assertFalse(arrayVariable.templateParameters[0].isImplicit)
-        assertEquals(literal5Declaration, arrayVariable.templateParameters[1])
+        assertEquals(2, arrayVariable.templateParameters?.size)
+        assertLocalName("int", (arrayVariable.templateParameters?.get(0) as TypeExpression).type)
+        assertFalse(arrayVariable.templateParameters!![0].isImplicit)
+        assertEquals(literal5Declaration, arrayVariable.templateParameters!![1])
         assertLocalName("Array", constructExpression.type)
 
         val arrayType = constructExpression.type as ObjectType

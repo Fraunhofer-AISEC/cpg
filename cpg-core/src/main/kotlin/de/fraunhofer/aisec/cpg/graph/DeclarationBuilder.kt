@@ -326,7 +326,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
 fun MetadataProvider.newFieldDeclaration(
     name: CharSequence?,
     type: Type? = UnknownType.getUnknownType(),
-    modifiers: List<String> = listOf(),
+    modifiers: List<String>? = listOf(),
     code: String? = null,
     location: PhysicalLocation? = null,
     initializer: Expression? = null,
@@ -337,7 +337,7 @@ fun MetadataProvider.newFieldDeclaration(
     node.applyMetadata(this, name, rawNode, code)
 
     node.type = type
-    node.modifiers = modifiers
+    node.modifiers = modifiers ?: listOf()
     node.location = location
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
     if (initializer != null) {
