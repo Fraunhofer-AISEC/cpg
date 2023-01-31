@@ -54,8 +54,9 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(2, template.parameters.size)
         assertEquals(type1, template.parameters[0] as TypeParamDeclaration?)
         assertEquals(type2, template.parameters[1] as TypeParamDeclaration?)
-        assertEquals(1, template.realization.size)
-        assertEquals(pair, template.realization[0])
+        assertEquals(1, template.realizationDeclarations.size)
+        assertNotNull(pair)
+        assertEquals(pair, template.realizationDeclarations[0])
     }
 
     private fun testClassTemplateFields(
@@ -311,8 +312,8 @@ internal class ClassTemplateTest : BaseTest() {
         val point1 = findByUniqueName(result.variables, "point1")
         val constructExpression =
             findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "Pair()" }
-        assertEquals(1, template.realization.size)
-        assertEquals(pair, template.realization[0])
+        assertEquals(1, template.realizationDeclarations.size)
+        assertEquals(pair, template.realizationDeclarations[0])
         assertEquals(2, template.parameters.size)
         assertEquals(type1, template.parameters[0])
         assertEquals(type2, template.parameters[1])

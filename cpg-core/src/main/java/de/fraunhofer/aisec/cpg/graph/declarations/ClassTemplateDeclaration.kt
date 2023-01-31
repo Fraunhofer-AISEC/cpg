@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import java.util.*
 import kotlin.collections.ArrayList
 import org.neo4j.ogm.annotation.Relationship
@@ -43,26 +43,19 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    private val _realization: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
+    val realizationEdges: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
 
-    val realization: List<RecordDeclaration>
-        get() = unwrap(_realization)
-
-    // TODO: Remove this!?
-    override val realizationDeclarations: List<Declaration>
-        get() = ArrayList<Declaration>(realization)
-
-    val realizationPropertyEdge: List<PropertyEdge<RecordDeclaration>>
-        get() = _realization
+    override val realizationDeclarations: List<Declaration> by
+        PropertyEdgeDelegate(ClassTemplateDeclaration::realizationEdges)
 
     fun addRealization(realizedRecord: RecordDeclaration) {
         val propertyEdge = PropertyEdge(this, realizedRecord)
-        propertyEdge.addProperty(Properties.INDEX, _realization.size)
-        _realization.add(propertyEdge)
+        propertyEdge.addProperty(Properties.INDEX, realizationEdges.size)
+        realizationEdges.add(propertyEdge)
     }
 
     fun removeRealization(realizedRecordDeclaration: RecordDeclaration) {
-        _realization.removeIf { propertyEdge: PropertyEdge<RecordDeclaration> ->
+        realizationEdges.removeIf { propertyEdge: PropertyEdge<RecordDeclaration> ->
             propertyEdge.end == realizedRecordDeclaration
         }
     }
@@ -71,7 +64,7 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
         if (declaration is TypeParamDeclaration || declaration is ParamVariableDeclaration) {
             addIfNotContains(super.parametersEdges, declaration)
         } else if (declaration is RecordDeclaration) {
-            addIfNotContains(_realization, declaration)
+            addIfNotContains(realizationEdges, declaration)
         }
     }
 
@@ -80,8 +73,8 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
         if (o == null || javaClass != o.javaClass) return false
         if (!super.equals(o)) return false
         val that = o as ClassTemplateDeclaration
-        return realization == that.realization &&
-            propertyEqualsList(_realization, that._realization) &&
+        return realizationDeclarations == that.realizationDeclarations &&
+            propertyEqualsList(realizationEdges, that.realizationEdges) &&
             parameters == that.parameters &&
             propertyEqualsList(parametersPropertyEdge, that.parametersPropertyEdge)
     }
