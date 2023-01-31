@@ -645,8 +645,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             if (copy is DeclarationStatement) {
                 base =
                     newDeclaredReferenceExpression(
-                        copy.singleDeclaration.name.localName,
-                        (copy.singleDeclaration as VariableDeclaration).type,
+                        copy.singleDeclaration?.name?.localName,
+                        (copy.singleDeclaration as VariableDeclaration?)?.type,
                         frontend.getCodeFromRawNode(instr)
                     )
             }

@@ -55,9 +55,7 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
     }
 
     fun removeRealization(realizedRecordDeclaration: RecordDeclaration) {
-        realizationEdges.removeIf { propertyEdge: PropertyEdge<RecordDeclaration> ->
-            propertyEdge.end == realizedRecordDeclaration
-        }
+        realizationEdges.removeIf { it.end == realizedRecordDeclaration }
     }
 
     override fun addDeclaration(declaration: Declaration) {
@@ -81,8 +79,7 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
 
     // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the
     // parameters field is added, the ScopeManager is not able to find it anymore and we cannot
-    // leave
-    // the TemplateScope. Analogous for realization
+    // leave the TemplateScope. Analogous for realization
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode())
     }

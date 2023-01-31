@@ -45,7 +45,6 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
     val realization: List<FunctionDeclaration> by
         PropertyEdgeDelegate(FunctionTemplateDeclaration::realizationEdges)
 
-    // TODO: Remove this!?
     override val realizationDeclarations: List<Declaration>
         get() = ArrayList<Declaration>(realization)
 
