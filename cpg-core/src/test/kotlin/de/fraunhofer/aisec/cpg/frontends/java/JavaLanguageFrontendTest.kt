@@ -130,7 +130,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val s = forEachStatement.variable
         assertNotNull(s)
         assertTrue(s is DeclarationStatement)
-        assertTrue(s.isSingleDeclaration)
+        assertTrue(s.isSingleDeclaration())
 
         val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
