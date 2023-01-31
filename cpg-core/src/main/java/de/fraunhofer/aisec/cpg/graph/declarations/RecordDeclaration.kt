@@ -189,7 +189,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
             propertyEqualsList(fieldEdges, o.fieldEdges) &&
             methods == o.methods &&
             propertyEqualsList(methodEdges, o.methodEdges) &&
-            constructors == constructors &&
+            constructors == o.constructors &&
             propertyEqualsList(constructorEdges, o.constructorEdges) &&
             records == o.records &&
             propertyEqualsList(recordEdges, o.recordEdges) &&
