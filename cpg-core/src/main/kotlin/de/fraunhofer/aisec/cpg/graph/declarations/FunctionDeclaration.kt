@@ -56,10 +56,10 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    var parameterEdges: MutableList<PropertyEdge<ParamVariableDeclaration>> = ArrayList()
+    var parameterEdges = mutableListOf<PropertyEdge<ParamVariableDeclaration>>()
 
     /** Virtual property for accessing [parameterEdges] without property edges. */
-    var parameters: List<ParamVariableDeclaration> by
+    var parameters by
         PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)
 
     /** Virtual property for accessing [parameterEdges] without property edges. */
