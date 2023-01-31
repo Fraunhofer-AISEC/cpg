@@ -243,8 +243,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     iName
                 }
 
-        recordDeclaration.staticImportStatements = staticImports
-        recordDeclaration.importStatements = imports
+        recordDeclaration.staticImportStatements = staticImports ?: listOf()
+        recordDeclaration.importStatements = imports ?: listOf()
         frontend.scopeManager.enterScope(recordDeclaration)
 
         // TODO: 'this' identifier for multiple instances?

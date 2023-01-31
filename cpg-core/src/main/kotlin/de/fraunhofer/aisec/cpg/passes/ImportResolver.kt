@@ -60,7 +60,7 @@ open class ImportResolver : Pass() {
         }
     }
 
-    protected fun getStaticImports(recordDecl: RecordDeclaration): Set<ValueDeclaration> {
+    protected fun getStaticImports(recordDecl: RecordDeclaration): MutableSet<ValueDeclaration> {
         val partitioned =
             recordDecl.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
 
@@ -101,8 +101,8 @@ open class ImportResolver : Pass() {
         return staticImports
     }
 
-    protected fun getDeclarationsForTypeNames(targetTypes: List<String>): Set<Declaration> {
-        return targetTypes.mapNotNull { importables[it] }.toSet()
+    protected fun getDeclarationsForTypeNames(targetTypes: List<String>): MutableSet<Declaration> {
+        return targetTypes.mapNotNull { importables[it] }.toMutableSet()
     }
 
     protected fun getOrCreateMembers(base: EnumDeclaration, name: String): Set<ValueDeclaration> {

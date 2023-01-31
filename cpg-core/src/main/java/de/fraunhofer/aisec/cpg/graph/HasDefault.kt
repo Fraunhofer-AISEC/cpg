@@ -23,16 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph;
+package de.fraunhofer.aisec.cpg.graph
 
 /**
  * Interface that allows us to mark nodes that contain a default value
  *
- * @param <T> type of the default node
+ * @param <T> type of the default node </T>
  */
-public interface HasDefault<T extends Node> {
-
-  T getDefault();
-
-  void setDefault(T t);
+interface HasDefault<T : Node?> {
+    var default: T
 }
