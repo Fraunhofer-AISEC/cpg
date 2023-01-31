@@ -817,11 +817,6 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.initializerStatement)
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.condition,
-            node.conditionDeclaration
-        )
 
         pushToEOG(node) // To have semantic information after the condition evaluation
         currentProperties[Properties.BRANCH] = true
@@ -849,11 +844,6 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.initializerStatement)
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.condition,
-            node.conditionDeclaration
-        )
         pushToEOG(node) // To have semantic information after the condition evaluation
         val openConditionEOGs = ArrayList(currentEOG)
         currentProperties[Properties.BRANCH] = true
@@ -876,11 +866,6 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.initializerStatement)
         createEOG(node.selectorDeclaration)
         createEOG(node.selector)
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.selector,
-            node.selectorDeclaration
-        )
         pushToEOG(node) // To have semantic information after the condition evaluation
         val tmp = ArrayList(currentEOG)
         val compound =
@@ -910,11 +895,6 @@ open class EvaluationOrderGraphPass : Pass() {
         scopeManager.enterScope(node)
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.condition,
-            node.conditionDeclaration
-        )
         pushToEOG(node) // To have semantic information after the condition evaluation
         currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)

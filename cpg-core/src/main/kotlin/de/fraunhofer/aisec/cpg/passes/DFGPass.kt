@@ -32,9 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -81,6 +79,11 @@ class DFGPass : Pass() {
             // Statements
             is ReturnStatement -> handleReturnStatement(node)
             is ForEachStatement -> handleForEachStatement(node)
+            is DoStatement -> handleDoStatement(node)
+            is WhileStatement -> handleWhileStatement(node)
+            is ForStatement -> handleForStatement(node)
+            is SwitchStatement -> handleSwitchStatement(node)
+            is IfStatement -> handleIfStatement(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
@@ -145,10 +148,73 @@ class DFGPass : Pass() {
 
     /**
      * Adds the DFG edge for a [ForEachStatement]. The data flows from the
-     * [ForEachStatement.iterable] to the [ForEachStatement.variable].
+     * [ForEachStatement.iterable] to the [ForEachStatement.variable] and from
+     * [ForEachStatement.variable] to the [ForEachStatement] to show the dependence between data and
+     * branching node.
      */
     private fun handleForEachStatement(node: ForEachStatement) {
         node.iterable?.let { node.variable?.addPrevDFG(it) }
+        node.variable?.let { node.addPrevDFG(it) }
+    }
+
+    /**
+     * Adds the DFG edge from [ForEachStatement.variable] to the [ForEachStatement] to show the
+     * dependence between data and the branching node.
+     */
+    private fun handleDoStatement(node: DoStatement) {
+        node.condition?.let { node.addPrevDFG(it) }
+    }
+
+    /**
+     * Adds the DFG edge from [ForStatement.condition] or [ForStatement.conditionDeclaration] to the
+     * [ForStatement] to show the dependence between data and the branching node. Usage of one or
+     * the other in the statement is mutually exclusive.
+     */
+    private fun handleForStatement(node: ForStatement) {
+        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+            node,
+            node.condition,
+            node.conditionDeclaration
+        )
+    }
+
+    /**
+     * Adds the DFG edge from [IfStatement.condition] or [IfStatement.conditionDeclaration] to the
+     * [IfStatement] to show the dependence between data and the branching node. Usage of one or the
+     * other in the statement is mutually exclusive.
+     */
+    private fun handleIfStatement(node: IfStatement) {
+        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+            node,
+            node.condition,
+            node.conditionDeclaration
+        )
+    }
+
+    /**
+     * Adds the DFG edge from [SwitchStatement.selector] or [SwitchStatement.selectorDeclaration] to
+     * the [SwitchStatement] to show the dependence between data and the branching node. Usage of
+     * one or the other in the statement is mutually exclusive.
+     */
+    private fun handleSwitchStatement(node: SwitchStatement) {
+        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+            node,
+            node.selector,
+            node.selectorDeclaration
+        )
+    }
+
+    /**
+     * Adds the DFG edge from [WhileStatement.condition] or [WhileStatement.conditionDeclaration] to
+     * the [WhileStatement] to show the dependence between data and the branching node. Usage of one
+     * or the other in the statement is mutually exclusive.
+     */
+    private fun handleWhileStatement(node: WhileStatement) {
+        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+            node,
+            node.condition,
+            node.conditionDeclaration
+        )
     }
 
     /**
@@ -187,7 +253,7 @@ class DFGPass : Pass() {
      * TODO: This change seems to have performance issues!
      */
     private fun handleInitializerListExpression(node: InitializerListExpression) {
-        node.initializers?.forEach {
+        node.initializers.forEach {
             it.registerTypeListener(node)
             node.addPrevDFG(it)
         }
@@ -242,7 +308,7 @@ class DFGPass : Pass() {
      * result `x[i]`.
      */
     private fun handleArraySubscriptionExpression(node: ArraySubscriptionExpression) {
-        node.arrayExpression?.let { node.addPrevDFG(it) }
+        node.addPrevDFG(node.arrayExpression)
     }
 
     /**
