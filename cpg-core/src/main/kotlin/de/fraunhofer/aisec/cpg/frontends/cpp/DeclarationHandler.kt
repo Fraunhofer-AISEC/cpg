@@ -755,7 +755,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         for ((key, value) in allIncludes) {
             val includeDeclaration = includeMap[key]
             for (s in value) {
-                includeDeclaration!!.addInclude(includeMap[s])
+                includeDeclaration?.addInclude(includeMap[s])
             }
         }
     }

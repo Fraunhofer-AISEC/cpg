@@ -35,32 +35,32 @@ import org.neo4j.ogm.annotation.Relationship
 
 class EnumDeclaration : Declaration() {
     @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
-    var entriesPropertyEdge: List<PropertyEdge<EnumConstantDeclaration>> = ArrayList()
+    var entryEdges: List<PropertyEdge<EnumConstantDeclaration>> = ArrayList()
         private set
 
     @Relationship(value = "SUPER_TYPES", direction = Relationship.Direction.OUTGOING)
-    var superTypesPropertyEdge: List<PropertyEdge<Type>> = ArrayList()
+    var superTypeEdges: List<PropertyEdge<Type>> = ArrayList()
         private set
 
     @Relationship var superTypeDeclarations: Set<RecordDeclaration> = HashSet()
 
     @property:SubGraph("AST")
     var entries: List<EnumConstantDeclaration>
-        get() = unwrap(entriesPropertyEdge)
+        get() = unwrap(entryEdges)
         set(value) {
-            entriesPropertyEdge = transformIntoOutgoingPropertyEdgeList(value, this)
+            entryEdges = transformIntoOutgoingPropertyEdgeList(value, this)
         }
 
     var superTypes: List<Type>
-        get() = unwrap(superTypesPropertyEdge)
+        get() = unwrap(superTypeEdges)
         set(value) {
-            superTypesPropertyEdge = transformIntoOutgoingPropertyEdgeList(value, this)
+            superTypeEdges = transformIntoOutgoingPropertyEdgeList(value, this)
         }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
-            .append("entries", entriesPropertyEdge)
+            .append("entries", entryEdges)
             .toString()
     }
 }
