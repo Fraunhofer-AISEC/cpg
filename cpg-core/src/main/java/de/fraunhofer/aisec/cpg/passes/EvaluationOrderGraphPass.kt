@@ -820,7 +820,6 @@ open class EvaluationOrderGraphPass : Pass() {
         scopeManager.enterScope(node)
         createEOG(node.statement)
         createEOG(node.condition)
-        node.addPrevDFG(node.condition)
         pushToEOG(node) // To have semantic information after the condition evaluation
         currentProperties[Properties.BRANCH] = true
         connectCurrentToLoopStart()
@@ -837,7 +836,6 @@ open class EvaluationOrderGraphPass : Pass() {
         scopeManager.enterScope(node)
         createEOG(node.iterable)
         createEOG(node.variable)
-        node.addPrevDFG(node.variable)
         pushToEOG(node) // To have semantic information after the variable declaration
         currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
@@ -859,11 +857,6 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.initializerStatement)
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.condition,
-            node.conditionDeclaration
-        )
 
         pushToEOG(node) // To have semantic information after the condition evaluation
         currentProperties[Properties.BRANCH] = true
@@ -891,11 +884,6 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.initializerStatement)
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.condition,
-            node.conditionDeclaration
-        )
         pushToEOG(node) // To have semantic information after the condition evaluation
         val openConditionEOGs = ArrayList(currentEOG)
         currentProperties[Properties.BRANCH] = true
@@ -918,11 +906,6 @@ open class EvaluationOrderGraphPass : Pass() {
         createEOG(node.initializerStatement)
         createEOG(node.selectorDeclaration)
         createEOG(node.selector)
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.getSelector(),
-            node.selectorDeclaration
-        )
         pushToEOG(node) // To have semantic information after the condition evaluation
         val tmp = ArrayList(currentEOG)
         val compound =
@@ -952,11 +935,6 @@ open class EvaluationOrderGraphPass : Pass() {
         scopeManager.enterScope(node)
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.condition,
-            node.conditionDeclaration
-        )
         pushToEOG(node) // To have semantic information after the condition evaluation
         currentProperties[Properties.BRANCH] = true
         val tmpEOGNodes = ArrayList(currentEOG)
