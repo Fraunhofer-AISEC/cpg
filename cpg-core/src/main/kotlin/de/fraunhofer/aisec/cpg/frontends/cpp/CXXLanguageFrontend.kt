@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.passes.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -58,6 +59,7 @@ import org.eclipse.cdt.core.parser.IncludeFileContentProvider
 import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.ASTTranslationUnit
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
@@ -475,6 +477,7 @@ class CXXLanguageFrontend(
      *
      * @param hint an optional [Declaration], which serves as a parsing hint.
      */
+    @ResolveInFrontend("getRecordForName")
     fun typeOf(
         declarator: IASTDeclarator,
         specifier: IASTDeclSpecifier,
@@ -496,7 +499,36 @@ class CXXLanguageFrontend(
                     }
                 }
                 is IASTNamedTypeSpecifier -> {
-                    TypeParser.createFrom(name, true, this)
+                    // A reference to an object type. We need to differentiate between two cases:
+                    // a) the type name is already an FQN. In this case, we can just parse it as
+                    //    such.
+                    // b) the type is a local name. In this case, we can peek whether the local name
+                    //    refers to a symbol in our current namespace. This means that we are doing
+                    //    some resolving in the frontend, which we actually want to avoid since it
+                    //    has limited view.
+                    //
+                    // Note: we cannot use parseType here, because of typedefs (and templates?) the
+                    // TypeParser still needs to have access directly to the language frontend
+                    // (meh!)
+                    if (specifier.name is CPPASTQualifiedName) {
+                        // Case a: FQN
+                        TypeParser.createFrom(name, true, this)
+                    } else {
+                        // Case b: Peek into our symbols. This is most likely limited to our current
+                        // translation unit
+                        val decl =
+                            scopeManager.currentScope?.let {
+                                scopeManager.getRecordForName(it, Name(name))
+                            }
+
+                        // We found a symbol, so we can use its name
+                        if (decl != null) {
+                            TypeParser.createFrom(decl.name.toString(), true, this)
+                        } else {
+                            // Otherwise, we keep it as a local name and hope for the best
+                            TypeParser.createFrom(name, true, this)
+                        }
+                    }
                 }
                 is IASTCompositeTypeSpecifier -> {
                     // A class. This actually also declares the class. At the moment, we handle this

@@ -27,16 +27,16 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
-import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
+import java.util.function.Supplier
 
 /**
  * This class is a [CXXHandler] which takes care of translating C/C++
@@ -139,43 +139,45 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // We also need to set the return type, based on the function type.
         declaration.returnTypes = type?.returnTypes ?: listOf(IncompleteType())
 
-        // Store the reference to a record declaration, if we managed to find one. This is most
-        // likely the case, if the function is defined within the class itself.
-        val recordDeclaration = (declaration as? MethodDeclaration)?.recordDeclaration
+        // We want to determine, whether this is a function definition that is external to its
+        // scope. This is a usual case in C++, where the named scope, such as a record or namespace
+        // only includes the AST element for a function declaration and the definition is outside.
+        val outsideOfScope = frontend.scopeManager.currentScope != declaration.scope
 
-        // We want to determine, whether we are currently outside a record. In this case, our
-        // function is either really a function or a method definition external to a class.
-        val outsideOfRecord =
-            !(frontend.scopeManager.currentScope is RecordScope ||
-                frontend.scopeManager.currentScope is TemplateScope)
+        // Store the reference to a declaration holder of a named scope.
+        val holder = (declaration.scope as? NameScope)?.astNode
 
-        if (recordDeclaration != null) {
-            if (outsideOfRecord) {
-                // everything inside the method is within the scope of its record
-                frontend.scopeManager.enterScope(recordDeclaration)
+        if (holder != null) {
+            if (outsideOfScope) {
+                // everything inside the method is within the scope of its record or namespace
+                frontend.scopeManager.enterScope(holder)
             }
 
-            // update the definition
-            var candidates: List<MethodDeclaration> =
-                if (declaration is ConstructorDeclaration) {
-                    recordDeclaration.constructors
-                } else {
-                    recordDeclaration.methods
-                }
+            // Update the definition
+            // TODO: This should be extracted into a separate pass and done for all function
+            //  declarations, also global ones
+            var candidates =
+                (holder as? DeclarationHolder)
+                    ?.declarations
+                    ?.filterIsInstance<FunctionDeclaration>()
+                    ?: listOf()
 
-            // look for the method or constructor
-            candidates = candidates.filter { it.signature == declaration.signature }
+            // Look for the method or constructor
+            candidates =
+                candidates.filter {
+                    it::class == declaration::class && it.signature == declaration.signature
+                }
             if (candidates.isEmpty() && frontend.scopeManager.currentScope !is TemplateScope) {
                 log.warn(
                     "Could not find declaration of method {} in record {}",
                     declaration.name,
-                    recordDeclaration.name
+                    holder.name
                 )
             } else if (candidates.size > 1) {
                 log.warn(
                     "Found more than one candidate to connect definition of method {} in record {} to its declaration. We will comply, but this is suspicious.",
                     declaration.name,
-                    recordDeclaration.name
+                    holder.name
                 )
             }
             for (candidate in candidates) {
@@ -213,10 +215,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         frontend.processAttributes(declaration, ctx)
 
-        frontend.scopeManager.leaveScope(declaration)
-        if (recordDeclaration != null && outsideOfRecord) {
-            frontend.scopeManager.leaveScope(recordDeclaration)
+        if (holder != null && outsideOfScope) {
+            frontend.scopeManager.leaveScope(holder)
         }
+
+        frontend.scopeManager.leaveScope(declaration)
 
         // Check for declarations of the same function within the same translation unit to connect
         // definitions and declarations.
@@ -516,7 +519,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     }
 
                     if (declaration != null) {
-                        // We also need to set the return type, based on the function type.
+                        // We also need to set the return type, based on the declrator type.
                         declaration.type = type
 
                         // process attributes

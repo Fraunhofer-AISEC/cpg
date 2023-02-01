@@ -199,13 +199,9 @@ fun MetadataProvider.newAnnotationMember(
  * Provides a nice alias to [TypeParser.createFrom]. In the future, this should not be used anymore
  * since we are moving away from the [TypeParser] altogether.
  */
-fun LanguageProvider.parseType(name: String) = TypeParser.createFrom(name, language)
-
-/**
- * Provides a nice alias to [TypeParser.createFrom]. In the future, this should not be used anymore
- * since we are moving away from the [TypeParser] altogether.
- */
-fun LanguageProvider.parseType(name: Name) = TypeParser.createFrom(name, language)
+@JvmOverloads
+fun LanguageProvider.parseType(name: CharSequence, resolveAlias: Boolean = false) =
+    TypeParser.createFrom(name, resolveAlias, language)
 
 /** Returns a new [Name] based on the [localName] and the current namespace as parent. */
 fun NamespaceProvider.fqn(localName: String): Name {
