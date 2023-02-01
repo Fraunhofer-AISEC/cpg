@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newTypedefDeclaration;
 
+import de.fraunhofer.aisec.cpg.ScopeManager;
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
@@ -34,9 +35,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope;
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope;
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope;
+import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import de.fraunhofer.aisec.cpg.passes.scopes.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
