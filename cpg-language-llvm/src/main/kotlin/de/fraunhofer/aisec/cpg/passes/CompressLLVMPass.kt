@@ -61,8 +61,12 @@ class CompressLLVMPass : Pass() {
         // inside a CompoundStatement.
         for (node in
             flatAST.sortedBy { n ->
-                if (n is IfStatement) 1
-                else if (n is SwitchStatement) 2 else if (n is TryStatement) 4 else 3
+                when (n) {
+                    is IfStatement -> 1
+                    is SwitchStatement -> 2
+                    is TryStatement -> 4
+                    else -> 3
+                }
             }) {
             if (node is IfStatement) {
                 // Replace the then-statement with the basic block it jumps to iff we found that
@@ -145,7 +149,7 @@ class CompressLLVMPass : Pass() {
                     node.catchClauses[0].body?.statements?.get(0) as? CompoundStatement
                 innerCompound?.statements?.let { node.catchClauses[0].body?.statements = it }
                 fixThrowStatementsForCatch(node.catchClauses[0])
-            } else if (node is TryStatement && node.catchClauses.size > 0) {
+            } else if (node is TryStatement && node.catchClauses.isNotEmpty()) {
                 for (catch in node.catchClauses) {
                     fixThrowStatementsForCatch(catch)
                 }
@@ -194,7 +198,7 @@ class CompressLLVMPass : Pass() {
             val exceptionReference =
                 catch.newDeclaredReferenceExpression(
                     catch.parameter?.name,
-                    catch.parameter?.type,
+                    catch.parameter?.type ?: UnknownType.getUnknownType(catch.language),
                     ""
                 )
             exceptionReference.refersTo = catch.parameter

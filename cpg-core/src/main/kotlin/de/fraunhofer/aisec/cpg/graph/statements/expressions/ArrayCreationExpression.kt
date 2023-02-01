@@ -81,7 +81,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
 
     override fun hashCode() = Objects.hash(super.hashCode(), initializer, dimensions)
 
-    override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
@@ -92,7 +92,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
         }
     }
 
-    override fun possibleSubTypesChanged(src: HasType, root: List<HasType>) {
+    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }

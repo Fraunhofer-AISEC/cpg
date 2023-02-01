@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class ExpressionList extends Expression implements TypeListener {
@@ -80,20 +81,21 @@ public class ExpressionList extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, List<HasType> root, Type oldType) {
+  public void typeChanged(
+      @NotNull HasType src, @NotNull List<HasType> root, @NotNull Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
-    Type previous = this.type;
+    Type previous = this.getType();
     setType(src.getPropagationType(), root);
     setPossibleSubTypes(new ArrayList<>(src.getPossibleSubTypes()), root);
-    if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
+    if (!previous.equals(this.getType())) {
+      this.getType().setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, List<HasType> root) {
+  public void possibleSubTypesChanged(@NotNull HasType src, @NotNull List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }

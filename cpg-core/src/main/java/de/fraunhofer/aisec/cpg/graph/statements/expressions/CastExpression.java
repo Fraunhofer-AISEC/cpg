@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,21 +61,22 @@ public class CastExpression extends Expression implements TypeListener {
 
   public void setCastType(Type castType) {
     this.castType = castType;
-    this.type = castType;
+    this.setType(castType);
   }
 
   @Override
-  public void updateType(Type type) {
+  public void updateType(@NotNull Type type) {
     super.updateType(type);
     this.castType = type;
   }
 
   @Override
-  public void typeChanged(HasType src, List<HasType> root, Type oldType) {
+  public void typeChanged(
+      @NotNull HasType src, @NotNull List<HasType> root, @NotNull Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
-    Type previous = this.type;
+    Type previous = this.getType();
 
     if (TypeManager.getInstance().isSupertypeOf(this.castType, src.getPropagationType(), this)) {
       setType(src.getPropagationType(), root);
@@ -82,13 +84,13 @@ public class CastExpression extends Expression implements TypeListener {
       resetTypes(this.getCastType());
     }
 
-    if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
+    if (!previous.equals(this.getType())) {
+      this.getType().setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, List<HasType> root) {
+  public void possibleSubTypesChanged(@NotNull HasType src, @NotNull List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }

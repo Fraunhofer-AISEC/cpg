@@ -137,8 +137,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleConditionalExpression(expr: Expression): ConditionalExpression {
         val conditionalExpr = expr.asConditionalExpr()
-        val superType: Type?
-        superType =
+        val superType: Type =
             try {
                 this.parseType(conditionalExpr.calculateResolvedType().describe())
             } catch (e: RuntimeException) {
@@ -146,14 +145,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 if (s != null) {
                     this.parseType(s)
                 } else {
-                    null
+                    UnknownType.getUnknownType(this.language)
                 }
             } catch (e: NoClassDefFoundError) {
                 val s = frontend.recoverTypeFromUnsolvedException(e)
                 if (s != null) {
                     this.parseType(s)
                 } else {
-                    null
+                    UnknownType.getUnknownType(this.language)
                 }
             }
         val condition =
@@ -240,7 +239,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val scope = fieldAccessExpr.scope
         if (scope.isNameExpr) {
             var isStaticAccess = false
-            var baseType: Type?
+            var baseType: Type
             try {
                 val resolve = fieldAccessExpr.resolve()
                 if (resolve.asField().isStatic) {
@@ -750,7 +749,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         ) // This will also overwrite the code set to the empty string set above
         callExpression =
             this.newMemberCallExpression(member, isStatic, methodCallExpr.toString(), expr)
-        callExpression.setType(this.parseType(typeString))
+        callExpression.type = this.parseType(typeString)
         val arguments = methodCallExpr.arguments
 
         // handle the arguments

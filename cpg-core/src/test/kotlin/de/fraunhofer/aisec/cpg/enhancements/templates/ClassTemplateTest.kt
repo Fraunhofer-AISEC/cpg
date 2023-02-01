@@ -106,7 +106,7 @@ internal class ClassTemplateTest : BaseTest() {
         pairConstructorDeclaration: ConstructorDeclaration?,
         constructExpression: ConstructExpression,
         pair: RecordDeclaration?,
-        pairType: ObjectType?,
+        pairType: ObjectType,
         template: ClassTemplateDeclaration?,
         point1: VariableDeclaration
     ) {
@@ -320,9 +320,11 @@ internal class ClassTemplateTest : BaseTest() {
         assertLocalName("Type1", type1.type)
 
         val type1ParameterizedType = type1.type as? ParameterizedType
+        assertNotNull(type1ParameterizedType)
         assertLocalName("Type2", type2.type)
 
         val type2ParameterizedType = type2.type as? ParameterizedType
+        assertNotNull(type2ParameterizedType)
         assertEquals(type1ParameterizedType, type2.default)
 
         val pairType =

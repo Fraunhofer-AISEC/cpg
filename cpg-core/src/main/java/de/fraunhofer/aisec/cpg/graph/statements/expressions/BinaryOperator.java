@@ -146,11 +146,12 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
   }
 
   @Override
-  public void typeChanged(HasType src, List<HasType> root, Type oldType) {
+  public void typeChanged(
+      @NotNull HasType src, @NotNull List<HasType> root, @NotNull Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
-    Type previous = this.type;
+    Type previous = this.getType();
     if (this.operatorCode.equals("=")) {
       setType(src.getPropagationType(), root);
     } else if (this.lhs != null && "java.lang.String".equals(this.lhs.getType().toString())
@@ -159,20 +160,19 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
       getPossibleSubTypes().clear();
       setType(TypeParser.createFrom("java.lang.String", getLanguage()), root);
     } else if ((this.operatorCode.equals(".*") || this.operatorCode.equals("->*"))
-        && src != null
         && src == this.rhs) {
       // Propagate the function pointer type to the expression itself. This helps us later in the
       // call resolver, when trying to determine, whether this is a regular call or a function
       // pointer call.
       setType(src.getPropagationType(), root);
     }
-    if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
+    if (!previous.equals(this.getType())) {
+      this.getType().setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, List<HasType> root) {
+  public void possibleSubTypesChanged(@NotNull HasType src, @NotNull List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }

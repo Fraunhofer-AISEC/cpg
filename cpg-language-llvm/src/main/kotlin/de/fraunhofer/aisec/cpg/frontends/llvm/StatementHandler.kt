@@ -646,7 +646,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 base =
                     newDeclaredReferenceExpression(
                         copy.singleDeclaration?.name?.localName,
-                        (copy.singleDeclaration as VariableDeclaration?)?.type,
+                        (copy.singleDeclaration as? VariableDeclaration)?.type
+                            ?: UnknownType.getUnknownType(this.language),
                         frontend.getCodeFromRawNode(instr)
                     )
             }
@@ -699,7 +700,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: UnknownType.getUnknownType(language)
 
                 // construct our member expression
-                expr = newMemberExpression(field?.name?.localName, base, field?.type, ".", "")
+                expr = newMemberExpression(field?.name?.localName, base, baseType, ".", "")
                 log.info("{}", expr)
 
                 // the current expression is the new base
@@ -1255,7 +1256,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         arrayExpr.arrayExpression =
             newDeclaredReferenceExpression(
                 decl?.name?.toString() ?: Node.EMPTY_NAME,
-                decl?.type,
+                decl?.type ?: UnknownType.getUnknownType(this.language),
                 instrStr
             )
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 2)

@@ -135,7 +135,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                     return true
                 }
                 val provided = targetSignature[i]
-                if (!TypeManager.getInstance().isSupertypeOf(declared.getType(), provided, this)) {
+                if (!TypeManager.getInstance().isSupertypeOf(declared.type, provided, this)) {
                     return false
                 }
             }
@@ -147,7 +147,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
 
     fun isOverrideCandidate(other: FunctionDeclaration): Boolean {
         return other.name.localName == name.localName &&
-            other.getType() == type &&
+            other.type == type &&
             other.signature == signature
     }
 
@@ -198,7 +198,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
             val signature: MutableList<Type> = ArrayList()
             for (paramVariableDeclaration in parameters) {
                 if (paramVariableDeclaration.default != null) {
-                    signature.add(paramVariableDeclaration.getType())
+                    signature.add(paramVariableDeclaration.type)
                 } else {
                     signature.add(UnknownType.getUnknownType(language))
                 }

@@ -346,7 +346,9 @@ fun applyTemplateInstantiation(
             (initializationSignature[parameterizedTypeResolution[returnType]] as TypeExpression?)
                 ?.type
     }
-    templateCall.type = returnType
+    if (returnType != null) {
+        templateCall.type = returnType
+    }
     templateCall.updateTemplateParameters(initializationType, templateInstantiationParameters)
 
     // Apply changes to the call signature
@@ -465,7 +467,7 @@ fun getTemplateInitializationSignature(
     templateCall: CallExpression,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
-    explicitInstantiated: MutableList<ParameterizedType?>
+    explicitInstantiated: MutableList<ParameterizedType>
 ): Map<Declaration?, Node?>? {
     // Construct Signature
     val signature =
@@ -527,7 +529,7 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
     templateCall: CallExpression,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
-    explicitInstantiated: MutableList<ParameterizedType?>
+    explicitInstantiated: MutableList<ParameterizedType>
 ): MutableMap<Declaration?, Node?>? {
     val instantiationSignature: MutableMap<Declaration?, Node?> = HashMap()
     for (i in functionTemplateDeclaration.parameters.indices) {
@@ -674,7 +676,7 @@ fun checkArgumentValidity(
     functionDeclaration: FunctionDeclaration,
     functionDeclarationSignature: List<Type>,
     templateCallExpression: CallExpression,
-    explicitInstantiation: List<ParameterizedType?>
+    explicitInstantiation: List<ParameterizedType>
 ): Boolean {
     if (templateCallExpression.arguments.size <= functionDeclaration.parameters.size) {
         val callArguments =

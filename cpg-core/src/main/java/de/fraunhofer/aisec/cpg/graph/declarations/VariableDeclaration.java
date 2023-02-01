@@ -131,12 +131,12 @@ public class VariableDeclaration extends ValueDeclaration
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
-    if (!TypeManager.getInstance().isUnknown(this.type)
+    if (!TypeManager.getInstance().isUnknown(this.getType())
         && src.getPropagationType().equals(oldType)) {
       return;
     }
 
-    Type previous = this.type;
+    Type previous = this.getType();
     Type newType;
     if (src == initializer && initializer instanceof InitializerListExpression) {
       // Init list is seen as having an array type, but can be used ambiguously. It can be either
@@ -145,7 +145,7 @@ public class VariableDeclaration extends ValueDeclaration
       // can be ignored once we have a type
       if (isArray) {
         newType = src.getType();
-      } else if (!TypeManager.getInstance().isUnknown(this.type)) {
+      } else if (!TypeManager.getInstance().isUnknown(this.getType())) {
         return;
       } else {
         newType = src.getType().dereference();
@@ -155,8 +155,8 @@ public class VariableDeclaration extends ValueDeclaration
     }
 
     setType(newType, root);
-    if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
+    if (!previous.equals(this.getType())) {
+      this.getType().setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 

@@ -46,5 +46,5 @@ interface ProblemNode {
      * The type of the problem: Either the statement could not be parsed or the kind of statement is
      * not handled by the CPG yet. See [ProblemType]
      */
-    var type: ProblemType
+    var problemType: ProblemType
 }
