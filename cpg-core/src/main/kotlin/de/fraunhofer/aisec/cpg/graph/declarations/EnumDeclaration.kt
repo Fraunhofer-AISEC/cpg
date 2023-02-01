@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -37,20 +35,14 @@ import org.neo4j.ogm.annotation.Relationship
 class EnumDeclaration : Declaration() {
     @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
     var entryEdges: List<PropertyEdge<EnumConstantDeclaration>> = ArrayList()
-        private set
 
     @Relationship(value = "SUPER_TYPES", direction = Relationship.Direction.OUTGOING)
     var superTypeEdges: List<PropertyEdge<Type>> = ArrayList()
-        private set
 
     @Relationship var superTypeDeclarations: Set<RecordDeclaration> = HashSet()
 
     @property:SubGraph("AST")
-    var entries: List<EnumConstantDeclaration>
-        get() = unwrap(entryEdges)
-        set(value) {
-            entryEdges = transformIntoOutgoingPropertyEdgeList(value, this)
-        }
+    var entries: List<EnumConstantDeclaration> by PropertyEdgeDelegate(EnumDeclaration::entryEdges)
 
     var superTypes: List<Type> by PropertyEdgeDelegate(EnumDeclaration::superTypeEdges)
 
