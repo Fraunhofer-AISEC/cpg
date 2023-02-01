@@ -54,10 +54,9 @@ public class GotoStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof GotoStatement)) {
+    if (!(o instanceof GotoStatement that)) {
       return false;
     }
-    GotoStatement that = (GotoStatement) o;
     return super.equals(that)
         && Objects.equals(labelName, that.labelName)
         && Objects.equals(targetLabel, that.targetLabel);
