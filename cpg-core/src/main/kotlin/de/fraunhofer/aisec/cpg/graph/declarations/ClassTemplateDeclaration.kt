@@ -80,7 +80,5 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
     // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the
     // parameters field is added, the ScopeManager is not able to find it anymore and we cannot
     // leave the TemplateScope. Analogous for realization
-    override fun hashCode(): Int {
-        return Objects.hash(super.hashCode())
-    }
+    override fun hashCode() = Objects.hash(super.hashCode())
 }

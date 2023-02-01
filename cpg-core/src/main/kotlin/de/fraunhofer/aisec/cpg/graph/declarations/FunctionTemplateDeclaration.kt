@@ -66,11 +66,11 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
         }
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) return true
-        if (o == null || javaClass != o.javaClass) return false
-        if (!super.equals(o)) return false
-        val that = o as FunctionTemplateDeclaration
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || javaClass != other.javaClass) return false
+        if (!super.equals(other)) return false
+        val that = other as FunctionTemplateDeclaration
         return realization == that.realization &&
             propertyEqualsList(realizationEdges, that.realizationEdges) &&
             parameters == that.parameters &&
@@ -80,7 +80,5 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
     // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the
     // parameters field is added, the ScopeManager is not able to find it anymore and we cannot
     // leave the TemplateScope. Analogous for realization
-    override fun hashCode(): Int {
-        return Objects.hash(super.hashCode())
-    }
+    override fun hashCode() = Objects.hash(super.hashCode())
 }

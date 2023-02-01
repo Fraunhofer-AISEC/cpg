@@ -121,6 +121,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
             propertyEqualsList(parameterEdges, that.parameterEdges)
     }
 
+    // We can't add anything else here
     override fun hashCode() = super.hashCode()
 
     override fun <T : Declaration> addIfNotContains(

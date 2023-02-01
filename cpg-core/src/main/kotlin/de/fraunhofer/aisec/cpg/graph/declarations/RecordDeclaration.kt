@@ -196,9 +196,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
             superTypeDeclarations == o.superTypeDeclarations
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode() = super.hashCode() // TODO: Which fields can be safely added?
 
     override fun addDeclaration(declaration: Declaration) {
         when (declaration) {

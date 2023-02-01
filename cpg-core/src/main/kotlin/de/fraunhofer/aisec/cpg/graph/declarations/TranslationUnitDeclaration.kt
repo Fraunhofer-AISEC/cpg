@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -134,7 +135,7 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
         // TODO: This statement doesn't make sense to me. The declarationsPropertyEdge comparison is
         // more strict than the propertyEqualsList() isn't it?
         return super.equals(other) &&
-            declarationEdges == other.declarationEdges &&
+            declarations == other.declarations &&
             propertyEqualsList(declarationEdges, other.declarationEdges) &&
             includes == other.includes &&
             propertyEqualsList(includeEdges, other.includeEdges) &&
@@ -142,7 +143,7 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
             propertyEqualsList(namespaceEdges, other.namespaceEdges)
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), includes, namespaces, declarations)
 
     override fun addStatement(s: Statement) {
         super.addStatement(s)

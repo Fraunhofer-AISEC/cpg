@@ -44,17 +44,14 @@ class TypeParamDeclaration : ValueDeclaration(), SecondaryTypeEdge, HasDefault<T
     @field:SubGraph("AST")
     override var default: Type? = null
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) return true
-        if (o == null || javaClass != o.javaClass) return false
-        if (!super.equals(o)) return false
-        val that = o as TypeParamDeclaration
-        return default == that.default
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || javaClass != other.javaClass) return false
+        val that = other as TypeParamDeclaration
+        return super.equals(that) && default == that.default
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(super.hashCode(), default)
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), default)
 
     override fun updateType(typeState: Collection<Type>) {
         val oldType = default

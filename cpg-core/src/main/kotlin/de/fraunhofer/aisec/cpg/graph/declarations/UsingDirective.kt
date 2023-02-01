@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import java.util.Objects
+
 // TODO: Documentation
 class UsingDirective : Declaration() {
     var qualifiedName: String? = null
@@ -35,5 +37,5 @@ class UsingDirective : Declaration() {
         return super.equals(other) && qualifiedName == other.qualifiedName
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), qualifiedName)
 }

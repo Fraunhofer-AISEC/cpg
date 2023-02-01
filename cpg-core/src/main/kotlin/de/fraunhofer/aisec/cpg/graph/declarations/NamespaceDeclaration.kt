@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -74,15 +75,12 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        return if (other !is NamespaceDeclaration) {
-            false
-        } else super.equals(other) && declarations == other.declarations
+        if (this === other) return true
+        if (other !is NamespaceDeclaration) return false
+        return super.equals(other) && declarations == other.declarations
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), declarations)
 
     override fun addDeclaration(declaration: Declaration) {
         addIfNotContains(declarations, declaration)

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -45,16 +46,10 @@ class ProblemDeclaration(
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is ProblemDeclaration) {
-            return false
-        }
-        return (super.equals(other) && problem == other.problem)
+        if (this === other) return true
+        if (other !is ProblemDeclaration) return false
+        return super.equals(other) && problem == other.problem
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), problem)
 }
