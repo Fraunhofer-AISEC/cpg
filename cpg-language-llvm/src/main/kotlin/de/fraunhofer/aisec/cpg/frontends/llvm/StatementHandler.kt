@@ -490,7 +490,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleAlloca(instr: LLVMValueRef): Statement {
         val array = newArrayCreationExpression(frontend.getCodeFromRawNode(instr))
 
-        array.updateType(frontend.typeOf(instr))
+        array.type = frontend.typeOf(instr)
 
         // LLVM is quite forthcoming here. in case the optional length parameter is omitted in the
         // source code, it will automatically be set to 1
@@ -1423,8 +1423,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val type = frontend.typeOf(instr)
         val code = frontend.getCodeFromRawNode(instr)
         val declaration = newVariableDeclaration(varName, type, code, false, frontend.language)
-        declaration.updateType(type)
+        declaration.type = type
+
         flatAST.add(declaration)
+
         // add the declaration to the current scope
         frontend.scopeManager.addDeclaration(declaration)
         // add it to our bindings cache
