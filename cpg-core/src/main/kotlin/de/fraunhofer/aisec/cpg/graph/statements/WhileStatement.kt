@@ -54,12 +54,8 @@ class WhileStatement : Statement() {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is WhileStatement) {
-            return false
-        }
+        if (this === other) return true
+        if (other !is WhileStatement) return false
 
         return super.equals(other) &&
             conditionDeclaration == other.conditionDeclaration &&
@@ -67,7 +63,6 @@ class WhileStatement : Statement() {
             statement == other.statement
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash()
-    }
+    override fun hashCode() =
+        Objects.hash(super.hashCode(), conditionDeclaration, condition, statement)
 }

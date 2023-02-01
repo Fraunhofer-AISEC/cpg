@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import java.util.Objects
 
 /**
  * Case statement of the form `case expression :` that serves as entry point for switch statements,
@@ -47,5 +48,5 @@ class CaseStatement : Statement() {
         return super.equals(other) && caseExpression == other.caseExpression
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), caseExpression)
 }

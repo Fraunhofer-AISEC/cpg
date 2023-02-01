@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import java.util.Objects
 
 class ForEachStatement : Statement() {
     /**
@@ -49,5 +50,5 @@ class ForEachStatement : Statement() {
             statement == other.statement
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, statement)
 }

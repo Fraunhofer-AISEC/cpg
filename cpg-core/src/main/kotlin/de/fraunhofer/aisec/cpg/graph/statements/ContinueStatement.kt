@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import java.util.Objects
+
 /**
  * Statement used to interrupt further execution of a loop body and jump to the evaluation of the
  * loop condition. Can have a loop label, e.g. in Java, to specify which of the nested loops
@@ -40,5 +42,5 @@ class ContinueStatement : Statement() {
         return super.equals(other) && label == other.label
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), label)
 }

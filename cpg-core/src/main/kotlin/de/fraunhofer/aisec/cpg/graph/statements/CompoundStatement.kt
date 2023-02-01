@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -57,18 +58,12 @@ class CompoundStatement : Statement(), StatementHolder {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is CompoundStatement) {
-            return false
-        }
-        return (super.equals(other) &&
+        if (this === other) return true
+        if (other !is CompoundStatement) return false
+        return super.equals(other) &&
             this.statements == other.statements &&
-            propertyEqualsList(statementEdges, other.statementEdges))
+            propertyEqualsList(statementEdges, other.statementEdges)
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), statements)
 }

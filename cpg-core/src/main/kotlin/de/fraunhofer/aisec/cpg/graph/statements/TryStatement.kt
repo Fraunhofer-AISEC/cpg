@@ -51,13 +51,8 @@ class TryStatement : Statement() {
     var catchClauses by PropertyEdgeDelegate(TryStatement::catchClauseEdges)
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is TryStatement) {
-            return false
-        }
-
+        if (this === other) return true
+        if (other !is TryStatement) return false
         return (super.equals(other) &&
             resources == other.resources &&
             propertyEqualsList(resourceEdges, other.resourceEdges) &&
@@ -67,7 +62,6 @@ class TryStatement : Statement() {
             propertyEqualsList(catchClauseEdges, other.catchClauseEdges))
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(super.hashCode(), resources, tryBlock, finallyBlock, catchClauses)
-    }
+    override fun hashCode() =
+        Objects.hash(super.hashCode(), resources, tryBlock, finallyBlock, catchClauses)
 }

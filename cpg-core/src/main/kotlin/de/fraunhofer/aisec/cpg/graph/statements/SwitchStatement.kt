@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import java.util.Objects
 
 /**
  * Represents a Java or C++ switch statement of the `switch (selector) {...}` that can include case
@@ -60,5 +61,12 @@ class SwitchStatement : Statement() {
             statement == other.statement
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() =
+        Objects.hash(
+            super.hashCode(),
+            initializerStatement,
+            selectorDeclaration,
+            selector,
+            statement
+        )
 }

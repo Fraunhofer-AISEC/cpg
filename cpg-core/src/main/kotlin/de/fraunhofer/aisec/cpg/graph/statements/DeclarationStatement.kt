@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -82,13 +83,13 @@ open class DeclarationStatement : Statement() {
             .toString()
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) return true
-        if (o !is DeclarationStatement) return false
-        return super.equals(o) &&
-            declarations == o.declarations &&
-            propertyEqualsList(declarationEdges, o.declarationEdges)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DeclarationStatement) return false
+        return super.equals(other) &&
+            declarations == other.declarations &&
+            propertyEqualsList(declarationEdges, other.declarationEdges)
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), declarations)
 }

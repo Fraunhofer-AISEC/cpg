@@ -55,20 +55,14 @@ abstract class Statement : Node(), DeclarationHolder {
     var locals by PropertyEdgeDelegate(Statement::localEdges)
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is Statement) {
-            return false
-        }
-        return (super.equals(other) &&
+        if (this === other) return true
+        if (other !is Statement) return false
+        return super.equals(other) &&
             locals == other.locals &&
-            propertyEqualsList(localEdges, other.localEdges))
+            propertyEqualsList(localEdges, other.localEdges)
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(super.hashCode(), locals)
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), locals)
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is VariableDeclaration) {

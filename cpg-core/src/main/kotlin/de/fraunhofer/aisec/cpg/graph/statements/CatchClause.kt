@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import java.util.Objects
 
 class CatchClause : Statement() {
     @field:SubGraph("AST") var parameter: VariableDeclaration? = null
@@ -39,5 +40,5 @@ class CatchClause : Statement() {
         return super.equals(other) && parameter == other.parameter && body == other.body
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), parameter, body)
 }

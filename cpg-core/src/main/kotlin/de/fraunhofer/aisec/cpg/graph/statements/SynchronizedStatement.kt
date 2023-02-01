@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import java.util.Objects
 
 class SynchronizedStatement : Statement() {
     @field:SubGraph("AST") var expression: Expression? = null
@@ -41,5 +42,5 @@ class SynchronizedStatement : Statement() {
             blockStatement == other.blockStatement
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), expression, blockStatement)
 }

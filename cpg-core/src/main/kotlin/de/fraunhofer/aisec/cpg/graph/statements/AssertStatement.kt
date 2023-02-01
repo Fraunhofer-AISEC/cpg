@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import java.util.Objects
 
 /** Represents an assert statement */
 class AssertStatement : Statement() {
@@ -42,5 +43,5 @@ class AssertStatement : Statement() {
         return super.equals(other) && condition == other.condition && message == other.message
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), condition, message)
 }

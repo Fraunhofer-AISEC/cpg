@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -53,5 +54,5 @@ class LabelStatement : Statement() {
         return super.equals(other) && subStatement == other.subStatement && label == other.label
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), label, subStatement)
 }

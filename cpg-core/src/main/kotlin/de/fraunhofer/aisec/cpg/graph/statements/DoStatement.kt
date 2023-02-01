@@ -51,14 +51,9 @@ class DoStatement : Statement() {
             .toString()
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is DoStatement) {
-            return false
-        }
-        val that = other
-        return (super.equals(that) && condition == that.condition && statement == that.statement)
+        if (this === other) return true
+        if (other !is DoStatement) return false
+        return super.equals(other) && condition == other.condition && statement == other.statement
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), condition, statement)

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
@@ -77,5 +78,14 @@ class IfStatement : Statement() {
             elseStatement == other.elseStatement
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() =
+        Objects.hash(
+            super.hashCode(),
+            isConstExpression,
+            initializerStatement,
+            conditionDeclaration,
+            condition,
+            thenStatement,
+            elseStatement
+        )
 }

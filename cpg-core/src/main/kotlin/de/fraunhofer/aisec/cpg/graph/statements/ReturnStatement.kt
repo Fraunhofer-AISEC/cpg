@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a statement that returns out of the current function. */
@@ -47,5 +48,5 @@ class ReturnStatement : Statement() {
         return super.equals(other) && returnValue == other.returnValue
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), returnValue)
 }

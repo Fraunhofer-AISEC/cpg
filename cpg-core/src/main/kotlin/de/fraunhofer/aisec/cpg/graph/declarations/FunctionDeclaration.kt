@@ -242,8 +242,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
             overrides == other.overrides)
     }
 
-    override fun hashCode() =
-        Objects.hash(super.hashCode(), parameters, body, throwsTypes, overrides)
+    override fun hashCode() = Objects.hash(super.hashCode(), parameters, throwsTypes, overrides)
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is ParamVariableDeclaration) {
