@@ -265,7 +265,7 @@ abstract class Expression : Statement(), HasType {
         if (this === other) {
             return true
         }
-        if (other !is ValueDeclaration) {
+        if (other !is Expression) {
             return false
         }
         return (super.equals(other) &&
