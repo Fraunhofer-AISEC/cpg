@@ -1052,12 +1052,12 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(barCall)
 
         // no dataflow from var declaration to loop variable because it's a write access
-        assert((firstLoop.variable.prevDFG?.contains(varDefinedBeforeLoop) == false))
+        assert((!firstLoop.variable.prevDFG.contains(varDefinedBeforeLoop)))
 
         // dataflow from range call to loop variable
         val firstLoopIterable = firstLoop.iterable as? CallExpression
         assertNotNull(firstLoopIterable)
-        assert((firstLoop.variable.prevDFG?.contains((firstLoopIterable)) == true))
+        assert((firstLoop.variable.prevDFG.contains((firstLoopIterable))))
 
         // dataflow from var declaration to loop iterable call
         assert(
@@ -1066,20 +1066,25 @@ class PythonFrontendTest : BaseTest() {
         )
 
         // dataflow from first loop to foo call
-        assert(fooCall.arguments.first()?.prevDFG?.contains(firstLoop.variable) == true)
+        assert(fooCall.arguments.first().prevDFG.contains(firstLoop.variable))
 
         // dataflow from var declaration to foo call (in case for loop is not executed)
-        assert(fooCall.arguments.first()?.prevDFG?.contains(varDefinedBeforeLoop) == true)
+        assert(fooCall.arguments.first().prevDFG.contains(varDefinedBeforeLoop))
 
         // dataflow from range call to loop variable
         val secondLoopIterable = secondLoop.iterable as? CallExpression
         assertNotNull(secondLoopIterable)
-        assert((secondLoop.variable.prevDFG?.contains((secondLoopIterable)) == true))
+        assert(
+            ((secondLoop.variable as DeclarationStatement)
+                .singleDeclaration
+                .prevDFG
+                .contains((secondLoopIterable)))
+        )
 
         // dataflow from second loop var to bar call
         assertEquals(
             (secondLoop.variable as? DeclarationStatement)?.singleDeclaration,
-            barCall.arguments.first()?.prevDFG?.firstOrNull()
+            barCall.arguments.first().prevDFG.firstOrNull()
         )
     }
 }

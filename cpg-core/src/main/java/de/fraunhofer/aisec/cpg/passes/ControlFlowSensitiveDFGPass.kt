@@ -232,6 +232,15 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 currentWritten = currentNode.variable
 
                 if (writtenTo is DeclaredReferenceExpression) {
+                    if (currentNode !in loopPoints) {
+                        // We haven't been here before, so there's no chance we added something
+                        // already. However, as the variable is processed before, we have already
+                        // added the DFG edge from the VariableDeclaration to the
+                        // DeclaredReferenceExpression. This doesn't make any sense, so we have to
+                        // remove it again.
+                        writtenTo.removePrevDFG(writtenDecl)
+                    }
+
                     // This is a special case: We add the nextEOGEdge which goes out of the loop but
                     // with the old previousWrites map.
                     val nodesOutsideTheLoop =
