@@ -33,10 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
+import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
-import java.util.function.Supplier
 
 /**
  * This class is a [CXXHandler] which takes care of translating C/C++
@@ -215,11 +215,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         frontend.processAttributes(declaration, ctx)
 
+        frontend.scopeManager.leaveScope(declaration)
+
         if (holder != null && outsideOfScope) {
             frontend.scopeManager.leaveScope(holder)
         }
-
-        frontend.scopeManager.leaveScope(declaration)
 
         // Check for declarations of the same function within the same translation unit to connect
         // definitions and declarations.
