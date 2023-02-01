@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes
+package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -40,10 +40,10 @@ import org.slf4j.LoggerFactory
  * Works for if, for, and extends to the block scope
  */
 open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
-    var valueDeclarations = mutableListOf<ValueDeclaration>()
+    @Transient var valueDeclarations = mutableListOf<ValueDeclaration>()
 
     /** A map of typedefs keyed by their alias. */
-    val typedefs = mutableMapOf<Type, TypedefDeclaration>()
+    @Transient val typedefs = mutableMapOf<Type, TypedefDeclaration>()
 
     fun addTypedef(typedef: TypedefDeclaration) {
         typedefs[typedef.alias] = typedef

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import de.fraunhofer.aisec.cpg.ScopeManager
 import kotlin.reflect.KClass
 
 /** The C language. */

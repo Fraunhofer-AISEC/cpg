@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes
+package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -91,6 +91,7 @@ class LoopScope(loopStatement: Statement) :
             }
     private val breaks = mutableListOf<BreakStatement>()
     private val continues = mutableListOf<ContinueStatement>()
+
     override fun addBreakStatement(breakStatement: BreakStatement) {
         breaks.add(breakStatement)
     }

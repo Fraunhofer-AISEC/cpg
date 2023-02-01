@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,20 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes
+package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
-class TemplateScope(node: Node) : StructureDeclarationScope(node) {}
+/**
+ * A scope which acts as a namespace with a certain name, which is prefixed to all local names
+ * declared in it. This could be a package or other structural elements, like a class. In the latter
+ * case, the derived [RecordScope] should be used.
+ */
+open class NameScope(node: Node) : StructureDeclarationScope(node) {
+
+    init {
+        astNode = node
+        // Set the name so that we can use it as a namespace later
+        name = node.name
+    }
+}

@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.passes.order.*
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.util.function.Consumer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

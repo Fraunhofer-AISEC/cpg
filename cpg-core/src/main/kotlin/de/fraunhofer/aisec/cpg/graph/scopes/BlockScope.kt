@@ -23,10 +23,19 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes
+package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 
-/** Represents the scope of a record or class, most likely created by a [RecordDeclaration]. */
-class RecordScope(node: Node) : NameScope(node)
+class BlockScope(blockStatement: CompoundStatement) :
+    ValueDeclarationScope(blockStatement), Breakable {
+    private val breaks: MutableList<BreakStatement> = ArrayList()
+
+    override fun addBreakStatement(breakStatement: BreakStatement) {
+        breaks.add(breakStatement)
+    }
+
+    override val breakStatements: List<BreakStatement>
+        get() = breaks
+}

@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer

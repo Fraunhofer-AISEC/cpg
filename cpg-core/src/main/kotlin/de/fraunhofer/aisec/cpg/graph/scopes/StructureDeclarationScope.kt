@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes
+package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 
 open class StructureDeclarationScope(final override var astNode: Node?) :
     ValueDeclarationScope(astNode) {
-    var structureDeclarations = mutableListOf<Declaration>()
+    @Transient var structureDeclarations = mutableListOf<Declaration>()
 
     private fun addStructureDeclaration(declaration: Declaration) {
         structureDeclarations.add(declaration)
