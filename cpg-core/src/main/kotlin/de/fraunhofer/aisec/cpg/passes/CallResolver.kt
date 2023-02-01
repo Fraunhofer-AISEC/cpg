@@ -283,7 +283,7 @@ open class CallResolver : SymbolResolverPass() {
         if (curClass == null) {
             // Handle function (not method) calls. C++ allows function overloading. Make sure we
             // have at least the same number of arguments
-            var candidates =
+            val candidates =
                 if (language is HasComplexCallResolution) {
                     // Handle CXX normal call resolution externally, otherwise it leads to increased
                     // complexity

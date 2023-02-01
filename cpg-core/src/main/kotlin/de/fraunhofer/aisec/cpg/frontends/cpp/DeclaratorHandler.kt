@@ -282,8 +282,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                         )
                     } else {
                         // specifying void as first parameter is ok and means that the function has
-                        // no
-                        // parameters
+                        // no parameters
                         if (i == 0) {
                             continue
                         } else {

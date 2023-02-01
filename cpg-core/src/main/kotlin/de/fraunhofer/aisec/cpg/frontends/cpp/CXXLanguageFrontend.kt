@@ -454,8 +454,13 @@ class CXXLanguageFrontend(
         }
     }
 
+    /** Returns the [Type] that is represented by an [IASTTypeId]. */
+    fun typeOf(id: IASTTypeId): Type {
+        return typeOf(id.abstractDeclarator, id.declSpecifier)
+    }
+
     /**
-     * Returns the [Type] that is represented by the [declarator] and [specifier]. This tries to
+     * Returns te [Type] that is represented by the [declarator] and [specifier]. This tries to
      * resolve as much information about the type on its own using by analyzing the AST of the
      * supplied declarator and specifier. Finally, [TypeParser.createFrom] is invoked on the
      * innermost type, but all other type adjustments, such as creating a [PointerType] is done

@@ -144,8 +144,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val recordDeclaration = (declaration as? MethodDeclaration)?.recordDeclaration
 
         // We want to determine, whether we are currently outside a record. In this case, our
-        // function
-        // is either really a function or a method definition external to a class.
+        // function is either really a function or a method definition external to a class.
         val outsideOfRecord =
             !(frontend.scopeManager.currentScope is RecordScope ||
                 frontend.scopeManager.currentScope is TemplateScope)
@@ -246,7 +245,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * not. For some reason it seems that Eclipse CDT has no other means of differentiating a
      * typedef declaration from a regular one, except looking at the raw code
      */
-    val IASTSimpleDeclaration.isTypedef: Boolean
+    private val IASTSimpleDeclaration.isTypedef: Boolean
         get() {
             return if (this.rawSignature.contains("typedef")) {
                 if (this.declSpecifier is CPPASTCompositeTypeSpecifier) {
