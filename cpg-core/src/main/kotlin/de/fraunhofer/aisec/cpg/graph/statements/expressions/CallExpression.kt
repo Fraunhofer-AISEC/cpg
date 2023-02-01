@@ -51,7 +51,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
     /** Connection to its [FunctionDeclaration]. This will be populated by the [CallResolver]. */
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(CallResolver::class)
-    var invokesRelationship = mutableListOf<PropertyEdge<FunctionDeclaration>>()
+    var invokeEdges = mutableListOf<PropertyEdge<FunctionDeclaration>>()
         protected set
 
     /**
@@ -61,14 +61,14 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
     var invokes: List<FunctionDeclaration>
         get(): List<FunctionDeclaration> {
             val targets: MutableList<FunctionDeclaration> = ArrayList()
-            for (propertyEdge in invokesRelationship) {
+            for (propertyEdge in invokeEdges) {
                 targets.add(propertyEdge.end)
             }
             return Collections.unmodifiableList(targets)
         }
         set(value) {
-            unwrap(invokesRelationship).forEach { it.unregisterTypeListener(this) }
-            invokesRelationship = transformIntoOutgoingPropertyEdgeList(value, this)
+            unwrap(invokeEdges).forEach { it.unregisterTypeListener(this) }
+            invokeEdges = transformIntoOutgoingPropertyEdgeList(value, this)
             value.forEach { it.registerTypeListener(this) }
         }
 
@@ -77,13 +77,13 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      */
     @Relationship(value = "ARGUMENTS", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    var argumentsEdges = mutableListOf<PropertyEdge<Expression>>()
+    var argumentEdges = mutableListOf<PropertyEdge<Expression>>()
 
     /**
      * The list of arguments as a simple list. This is a delegated property delegated to
-     * [argumentsEdges].
+     * [argumentEdges].
      */
-    var arguments by PropertyEdgeDelegate(CallExpression::argumentsEdges)
+    var arguments by PropertyEdgeDelegate(CallExpression::argumentEdges)
 
     /**
      * The expression that is being "called". This is currently not yet used in the [CallResolver]
@@ -115,25 +115,25 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         }
 
     fun setArgument(index: Int, argument: Expression) {
-        argumentsEdges[index].end = argument
+        argumentEdges[index].end = argument
     }
 
     /** Adds the specified [expression] with an optional [name] to this call. */
     @JvmOverloads
     fun addArgument(expression: Expression, name: String? = null) {
         val edge = PropertyEdge(this, expression)
-        edge.addProperty(Properties.INDEX, argumentsEdges.size)
+        edge.addProperty(Properties.INDEX, argumentEdges.size)
 
         if (name != null) {
             edge.addProperty(Properties.NAME, name)
         }
 
-        argumentsEdges.add(edge)
+        argumentEdges.add(edge)
     }
 
     /** Returns the function signature as list of types of the call arguments. */
     val signature: List<Type>
-        get() = argumentsEdges.map { it.end.type }
+        get() = argumentEdges.map { it.end.type }
 
     /** Specifies, whether this call has any template arguments. */
     var template = false
@@ -256,7 +256,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
 
         val previous = type
         val types =
-            invokesRelationship.map(PropertyEdge<FunctionDeclaration>::end).mapNotNull {
+            invokeEdges.map(PropertyEdge<FunctionDeclaration>::end).mapNotNull {
                 // TODO(oxisto): Support multiple return values
                 it.returnTypes.firstOrNull()
             }
@@ -297,9 +297,9 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
 
         return (((super.equals(other) &&
             arguments == other.arguments &&
-            propertyEqualsList(argumentsEdges, other.argumentsEdges)) &&
+            propertyEqualsList(argumentEdges, other.argumentEdges)) &&
             invokes == other.invokes &&
-            propertyEqualsList(invokesRelationship, other.invokesRelationship)) &&
+            propertyEqualsList(invokeEdges, other.invokeEdges)) &&
             templateParameters == other.templateParameters &&
             propertyEqualsList(templateParameterEdges, other.templateParameterEdges)) &&
             templateInstantiation == other.templateInstantiation &&

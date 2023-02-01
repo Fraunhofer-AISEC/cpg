@@ -109,9 +109,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
     }
 
     fun removeField(fieldDeclaration: FieldDeclaration) {
-        fieldEdges.removeIf { propertyEdge: PropertyEdge<FieldDeclaration> ->
-            propertyEdge.end == fieldDeclaration
-        }
+        fieldEdges.removeIf { it.end == fieldDeclaration }
     }
 
     fun addMethod(methodDeclaration: MethodDeclaration) {

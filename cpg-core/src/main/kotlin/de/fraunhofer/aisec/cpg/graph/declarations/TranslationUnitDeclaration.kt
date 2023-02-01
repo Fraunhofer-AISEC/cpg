@@ -41,17 +41,17 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    val declarationsPropertyEdge: MutableList<PropertyEdge<Declaration>> = ArrayList()
+    val declarationEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
 
     /** A list of includes within this unit. */
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    val includesPropertyEdge: MutableList<PropertyEdge<IncludeDeclaration>> = ArrayList()
+    val includeEdges: MutableList<PropertyEdge<IncludeDeclaration>> = ArrayList()
 
     /** A list of namespaces within this unit. */
     @Relationship(value = "NAMESPACES", direction = Relationship.Direction.OUTGOING)
     @field:SubGraph("AST")
-    val namespacesPropertyEdge: MutableList<PropertyEdge<NamespaceDeclaration>> = ArrayList()
+    val namespaceEdges: MutableList<PropertyEdge<NamespaceDeclaration>> = ArrayList()
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
@@ -59,7 +59,7 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
     override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
 
     override val declarations: List<Declaration>
-        get() = unwrap(declarationsPropertyEdge)
+        get() = unwrap(declarationEdges)
 
     override var statements: List<Statement>
         get() = unwrap(statementEdges)
@@ -68,10 +68,10 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
         }
 
     val includes: List<IncludeDeclaration>
-        get() = unwrap(includesPropertyEdge)
+        get() = unwrap(includeEdges)
 
     val namespaces: List<NamespaceDeclaration>
-        get() = unwrap(namespacesPropertyEdge)
+        get() = unwrap(namespaceEdges)
 
     /**
      * Returns the i-th declaration as a specific class, if it can be cast
@@ -82,9 +82,9 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
      * @return the declaration or null, if it can not be cast to the class </T>
      */
     fun <T : Declaration?> getDeclarationAs(i: Int, clazz: Class<T>): T? {
-        val declaration = declarationsPropertyEdge[i].end
+        val declaration = declarationEdges[i].end
         return if (declaration.javaClass.isAssignableFrom(clazz))
-            clazz.cast(declarationsPropertyEdge[i].end)
+            clazz.cast(declarationEdges[i].end)
         else null
     }
 
@@ -100,7 +100,7 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
      * @return a `Set` containing the declarations, if any. </T>
      */
     fun <T : Declaration?> getDeclarationsByName(name: String, clazz: Class<T>): Set<T> {
-        return declarationsPropertyEdge
+        return declarationEdges
             .map { it.end }
             .filter { it.name.toString() == name }
             .filterIsInstance(clazz)
@@ -108,23 +108,23 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
     }
 
     fun getIncludeByName(name: String): IncludeDeclaration? {
-        return includesPropertyEdge.map { it.end }.firstOrNull { it.name.toString() == name }
+        return includeEdges.map { it.end }.firstOrNull { it.name.toString() == name }
     }
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is IncludeDeclaration) {
-            addIfNotContains(includesPropertyEdge, declaration)
+            addIfNotContains(includeEdges, declaration)
         } else if (declaration is NamespaceDeclaration) {
-            addIfNotContains(namespacesPropertyEdge, declaration)
+            addIfNotContains(namespaceEdges, declaration)
         }
-        addIfNotContains(declarationsPropertyEdge, declaration)
+        addIfNotContains(declarationEdges, declaration)
     }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
-            .append("declarations", declarationsPropertyEdge)
-            .append("includes", includesPropertyEdge)
-            .append("namespaces", namespacesPropertyEdge)
+            .append("declarations", declarationEdges)
+            .append("includes", includeEdges)
+            .append("namespaces", namespaceEdges)
             .toString()
     }
 
@@ -134,12 +134,12 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
         // TODO: This statement doesn't make sense to me. The declarationsPropertyEdge comparison is
         // more strict than the propertyEqualsList() isn't it?
         return super.equals(other) &&
-            declarationsPropertyEdge == other.declarationsPropertyEdge &&
-            propertyEqualsList(declarationsPropertyEdge, other.declarationsPropertyEdge) &&
+            declarationEdges == other.declarationEdges &&
+            propertyEqualsList(declarationEdges, other.declarationEdges) &&
             includes == other.includes &&
-            propertyEqualsList(includesPropertyEdge, other.includesPropertyEdge) &&
+            propertyEqualsList(includeEdges, other.includeEdges) &&
             namespaces == other.namespaces &&
-            propertyEqualsList(namespacesPropertyEdge, other.namespacesPropertyEdge)
+            propertyEqualsList(namespaceEdges, other.namespaceEdges)
     }
 
     override fun hashCode() = super.hashCode()

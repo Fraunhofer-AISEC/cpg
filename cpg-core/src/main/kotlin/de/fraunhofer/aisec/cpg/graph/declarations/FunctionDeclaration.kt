@@ -216,9 +216,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     }
 
     fun removeParameter(paramVariableDeclaration: ParamVariableDeclaration) {
-        parameterEdges.removeIf { propertyEdge: PropertyEdge<ParamVariableDeclaration> ->
-            propertyEdge.end == paramVariableDeclaration
-        }
+        parameterEdges.removeIf { it.end == paramVariableDeclaration }
     }
 
     override fun toString(): String {

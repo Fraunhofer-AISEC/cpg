@@ -38,18 +38,17 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class DeclarationSequence : Declaration(), DeclarationHolder {
     @Relationship(value = "CHILDREN", direction = Relationship.Direction.OUTGOING)
-    val childrenPropertyEdge: MutableList<PropertyEdge<Declaration>> = mutableListOf()
+    val childEdges: MutableList<PropertyEdge<Declaration>> = mutableListOf()
 
-    val children: List<Declaration> by
-        PropertyEdgeDelegate(DeclarationSequence::childrenPropertyEdge)
+    val children: List<Declaration> by PropertyEdgeDelegate(DeclarationSequence::childEdges)
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is DeclarationSequence) {
             for (declarationChild in declaration.children) {
-                addIfNotContains(childrenPropertyEdge, declarationChild)
+                addIfNotContains(childEdges, declarationChild)
             }
         }
-        addIfNotContains(childrenPropertyEdge, declaration)
+        addIfNotContains(childEdges, declaration)
     }
 
     fun asList(): List<Declaration> {
@@ -57,10 +56,10 @@ class DeclarationSequence : Declaration(), DeclarationHolder {
     }
 
     val isSingle: Boolean
-        get() = childrenPropertyEdge.size == 1
+        get() = childEdges.size == 1
 
     fun first(): Declaration {
-        return childrenPropertyEdge[0].end
+        return childEdges[0].end
     }
 
     override val declarations: List<Declaration>

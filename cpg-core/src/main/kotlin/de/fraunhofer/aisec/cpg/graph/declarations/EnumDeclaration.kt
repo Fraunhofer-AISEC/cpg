@@ -57,7 +57,7 @@ class EnumDeclaration : Declaration() {
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
-            .append("entries", entryEdges)
+            .append("entries", entries)
             .toString()
     }
 }
