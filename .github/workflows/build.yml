@@ -43,7 +43,7 @@ jobs:
           path: cpg-language-go/src/main/resources/libcpgo-arm64.dylib
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-cpgo-osx
     steps:
       - uses: actions/checkout@v3
