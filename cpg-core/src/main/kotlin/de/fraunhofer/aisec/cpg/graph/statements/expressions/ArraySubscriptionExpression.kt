@@ -95,15 +95,11 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is ArraySubscriptionExpression) {
-            return false
-        }
-        return (super.equals(other) &&
+        if (this === other) return true
+        if (other !is ArraySubscriptionExpression) return false
+        return super.equals(other) &&
             arrayExpression == other.arrayExpression &&
-            subscriptExpression == other.subscriptExpression)
+            subscriptExpression == other.subscriptExpression
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), arrayExpression, subscriptExpression)

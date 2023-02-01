@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -73,19 +74,12 @@ class MemberExpression : DeclaredReferenceExpression(), HasBase {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is MemberExpression) {
-            return false
-        }
-
+        if (this === other) return true
+        if (other !is MemberExpression) return false
         return super.equals(other) && base == other.base
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), base)
 
     private fun updateName() {
         this.name = base.type.root.name.fqn(name.localName)

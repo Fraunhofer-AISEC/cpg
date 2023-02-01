@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import java.util.Objects
 
 /**
  * An expression, which calls another function. It has a list of arguments (list of [ ]s) and is
@@ -42,5 +43,5 @@ class CompoundStatementExpression : Expression() {
         return super.equals(other) && statement == other.statement
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), statement)
 }

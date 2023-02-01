@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 class ExplicitConstructorInvocation : CallExpression() {
@@ -43,5 +44,5 @@ class ExplicitConstructorInvocation : CallExpression() {
         return super.equals(other) && containingClass == other.containingClass
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), containingClass)
 }

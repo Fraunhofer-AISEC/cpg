@@ -122,12 +122,8 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is ConstructExpression) {
-            return false
-        }
+        if (this === other) return true
+        if (other !is ConstructExpression) return false
         return super.equals(other) &&
             constructor == other.constructor &&
             arguments == other.arguments

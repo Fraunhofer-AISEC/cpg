@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.ArrayList
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -99,19 +100,13 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is ConditionalExpression) {
-            return false
-        }
-        return (super.equals(other) &&
+        if (this === other) return true
+        if (other !is ConditionalExpression) return false
+        return super.equals(other) &&
             condition == other.condition &&
             thenExpr == other.thenExpr &&
-            elseExpr == other.elseExpr)
+            elseExpr == other.elseExpr
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), condition, thenExpr, elseExpr)
 }

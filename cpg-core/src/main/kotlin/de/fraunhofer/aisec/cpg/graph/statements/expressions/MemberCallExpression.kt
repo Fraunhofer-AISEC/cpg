@@ -67,17 +67,11 @@ class MemberCallExpression : CallExpression(), HasBase {
     var isStatic: Boolean = false
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is MemberCallExpression) {
-            return false
-        }
+        if (this === other) return true
+        if (other !is MemberCallExpression) return false
 
         return super.equals(other) && base == other.base
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(super.hashCode(), base)
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), base)
 }

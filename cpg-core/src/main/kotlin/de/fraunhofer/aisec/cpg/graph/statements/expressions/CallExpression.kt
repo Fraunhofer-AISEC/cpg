@@ -288,27 +288,22 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is CallExpression) {
-            return false
-        }
-
-        return (((super.equals(other) &&
+        if (this === other) return true
+        if (other !is CallExpression) return false
+        return super.equals(other) &&
             arguments == other.arguments &&
-            propertyEqualsList(argumentEdges, other.argumentEdges)) &&
+            propertyEqualsList(argumentEdges, other.argumentEdges) &&
             invokes == other.invokes &&
-            propertyEqualsList(invokeEdges, other.invokeEdges)) &&
+            propertyEqualsList(invokeEdges, other.invokeEdges) &&
             templateParameters == other.templateParameters &&
-            propertyEqualsList(templateParameterEdges, other.templateParameterEdges)) &&
+            propertyEqualsList(templateParameterEdges, other.templateParameterEdges) &&
             templateInstantiation == other.templateInstantiation &&
             template == other.template
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    // TODO: Not sure if we can add the template, templateParameters, templateInstantiation fields
+    // here
+    override fun hashCode() = Objects.hash(super.hashCode(), arguments, invokes)
 
     override fun updateType(typeState: Collection<Type>) {
         for (t in typeTemplateParameters) {

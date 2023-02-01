@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import java.util.Objects
 
 class DeleteExpression : Expression() {
     @field:SubGraph("AST") var operand: Expression? = null
@@ -36,5 +37,5 @@ class DeleteExpression : Expression() {
         return super.equals(other) && operand == other.operand
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), operand)
 }

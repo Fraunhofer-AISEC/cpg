@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -56,5 +57,5 @@ class NewExpression : Expression(), HasInitializer {
         return super.equals(other) && initializer == other.initializer
     }
 
-    override fun hashCode(): Int = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), initializer)
 }

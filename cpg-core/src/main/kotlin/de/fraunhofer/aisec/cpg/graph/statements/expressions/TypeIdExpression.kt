@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import java.util.Objects
 
 /**
  * Models C++ operations that inspect types. These are `typeof`, `sizeof`, `typeid`, `alignof`and
@@ -45,5 +46,5 @@ class TypeIdExpression : Expression() {
             referencedType == other.referencedType
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), operatorCode, referencedType)
 }

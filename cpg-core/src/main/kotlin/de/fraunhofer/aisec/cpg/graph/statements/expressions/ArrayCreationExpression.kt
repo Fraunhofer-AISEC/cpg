@@ -71,12 +71,8 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is ArrayCreationExpression) {
-            return false
-        }
+        if (this === other) return true
+        if (other !is ArrayCreationExpression) return false
         return (super.equals(other) &&
             initializer == other.initializer &&
             dimensions == other.dimensions &&

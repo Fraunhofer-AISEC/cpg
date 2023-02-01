@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -38,14 +38,9 @@ class DesignatedInitializerExpression : Expression() {
 
     @Relationship(value = "LHS", direction = Relationship.Direction.OUTGOING)
     var lhsEdges: List<PropertyEdge<Expression>> = listOf()
-        private set
 
     @property:SubGraph("AST")
-    var lhs: List<Expression>
-        set(value) {
-            lhsEdges = transformIntoOutgoingPropertyEdgeList(value, this)
-        }
-        get() = unwrap(lhsEdges)
+    var lhs: List<Expression> by PropertyEdgeDelegate(DesignatedInitializerExpression::lhsEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -60,9 +55,9 @@ class DesignatedInitializerExpression : Expression() {
         if (other !is DesignatedInitializerExpression) return false
         return super.equals(other) &&
             rhs == other.rhs &&
-            lhsEdges == other.lhsEdges &&
-            lhs == other.lhs
+            lhs == other.lhs &&
+            lhsEdges == other.lhsEdges
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), rhs, lhs)
 }

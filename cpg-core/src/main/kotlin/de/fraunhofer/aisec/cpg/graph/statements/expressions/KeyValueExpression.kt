@@ -47,12 +47,8 @@ class KeyValueExpression : Expression() {
     @field:SubGraph("AST") var value: Expression? = null
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is KeyValueExpression) {
-            return false
-        }
+        if (this === other) return true
+        if (other !is KeyValueExpression) return false
         return super.equals(other) && key == other.key && value == other.value
     }
 

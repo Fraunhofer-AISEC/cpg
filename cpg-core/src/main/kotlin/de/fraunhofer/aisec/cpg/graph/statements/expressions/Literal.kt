@@ -50,9 +50,7 @@ class Literal<T> : Expression() {
         return super.equals(other) && value == other.value
     }
 
-    override fun hashCode(): Int {
-        // include the value in the hash code, otherwise the hash set/map implementation falls back
-        // to equals() because the node's hash code only depends on the name
-        return Objects.hash(super.hashCode(), value)
-    }
+    // include the value in the hash code, otherwise the hash set/map implementation falls back
+    // to equals() because the node's hash code only depends on the name
+    override fun hashCode() = Objects.hash(super.hashCode(), value)
 }

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import java.util.Objects
 
 /** Expressions of the form `floor ... ceiling` */
 class ArrayRangeExpression : Expression() {
@@ -39,5 +40,5 @@ class ArrayRangeExpression : Expression() {
         return super.equals(other) && floor == other.floor && ceiling == other.ceiling
     }
 
-    override fun hashCode() = super.hashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), floor, ceiling)
 }
