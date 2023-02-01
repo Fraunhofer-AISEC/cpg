@@ -130,7 +130,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val s = forEachStatement.variable
         assertNotNull(s)
         assertTrue(s is DeclarationStatement)
-        assertTrue(s.isSingleDeclaration)
+        assertTrue(s.isSingleDeclaration())
 
         val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
@@ -596,7 +596,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         ) : JavaLanguageFrontend(language, config, scopeManager) {
             init {
                 this.declarationHandler =
-                    object : DeclarationHandler(this) {
+                    object : DeclarationHandler(this@MyJavaLanguageFrontend) {
                         override fun handleClassOrInterfaceDeclaration(
                             classInterDecl: ClassOrInterfaceDeclaration
                         ): RecordDeclaration {
@@ -743,6 +743,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val forEach = forIterator.bodyOrNull<ForEachStatement>()
         assertNotNull(forEach)
 
-        assertContains(forEach.variable.prevDFG, forEach.iterable)
+        assertNotNull(forEach.variable)
+        assertContains(forEach.variable!!.prevDFG, forEach.iterable!!)
     }
 }

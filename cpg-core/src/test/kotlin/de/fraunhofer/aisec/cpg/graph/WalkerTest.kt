@@ -45,7 +45,6 @@ class WalkerTest : BaseTest() {
         // Traversal of about 80.000 nodes should not exceed 1s (on GitHub). On a recently fast
         // machine, such as MacBook M1, this should take about 200-300ms.
         assertTimeout(Duration.of(1500, ChronoUnit.MILLIS)) {
-            val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")
             val tu = TranslationUnitDeclaration()
 
             // Let's build some fake CPG trees with a good amount of classes
@@ -97,15 +96,39 @@ class WalkerTest : BaseTest() {
                 tu.addDeclaration(record)
             }
 
+            val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")
             val flat = SubgraphWalker.flattenAST(tu)
+            bench.stop()
 
             assertNotNull(flat)
 
             assertEquals(82619, flat.size)
 
             log.info("Flat AST has {} nodes", flat.size)
-
-            bench.stop()
         }
+    }
+
+    // 741ms with branch
+    @Test
+    fun test2() {
+        val stmt = DeclarationStatement()
+
+        for (k in 0..1000) {
+            val decl = VariableDeclaration()
+            decl.name = Name("var${k}")
+
+            stmt.addToPropertyEdgeDeclaration(decl)
+        }
+
+        val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")
+        val flat = SubgraphWalker.flattenAST(stmt)
+
+        assertNotNull(flat)
+
+        assertEquals(1002, flat.size)
+
+        log.info("Flat AST has {} nodes", flat.size)
+
+        bench.stop()
     }
 }

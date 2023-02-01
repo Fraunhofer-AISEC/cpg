@@ -150,7 +150,7 @@ class LLVMIRLanguageFrontend(
         }
 
         var counter = 0
-        val flatAST = SubgraphWalker.flattenAST(tu)
+        val flatAST = SubgraphWalker.flattenAST(tu).toMutableList()
         for (phiInstr in phiList) {
             statementHandler.handlePhi(phiInstr, tu, flatAST)
             counter++

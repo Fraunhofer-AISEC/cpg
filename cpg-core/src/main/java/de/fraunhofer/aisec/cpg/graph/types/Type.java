@@ -362,7 +362,7 @@ public abstract class Type extends Node {
       return true;
     }
 
-    return this.getTypeName().equals(t.getTypeName());
+    return this.getRoot().getName().equals(t.getRoot().getName());
   }
 
   @Override

@@ -29,6 +29,7 @@ import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newTypedefDecla
 
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
@@ -546,23 +547,35 @@ public class TypeManager {
     return ancestors;
   }
 
-  public boolean isSupertypeOf(Type superType, Type subType, ScopeProvider provider) {
+  public boolean isSupertypeOf(Type superType, Type subType, MetadataProvider provider) {
+    Language<?> language = null;
 
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
       return false;
     }
 
-    // arrays and pointers match in C++
-    if (checkArrayAndPointer(superType, subType)) {
+    if (provider instanceof LanguageProvider languageProvider) {
+      language = languageProvider.getLanguage();
+    }
+
+    // arrays and pointers match in C/C++
+    // TODO: Make this independent from the specific language
+    if (language instanceof CLanguage && checkArrayAndPointer(superType, subType)) {
       return true;
     }
 
     // ObjectTypes can be passed as ReferenceTypes
-    if (superType instanceof ReferenceType) {
-      return isSupertypeOf(((ReferenceType) superType).getElementType(), subType, provider);
+    if (superType instanceof ReferenceType referenceType) {
+      return isSupertypeOf(referenceType.getElementType(), subType, provider);
     }
 
-    Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)), provider);
+    // We cannot proceed without a scope provider
+    if (!(provider instanceof ScopeProvider scopeProvider)) {
+      return false;
+    }
+
+    Optional<Type> commonType =
+        getCommonType(new HashSet<>(List.of(superType, subType)), scopeProvider);
     if (commonType.isPresent()) {
       return commonType.get().equals(superType);
     } else {
@@ -582,7 +595,8 @@ public class TypeManager {
     int firstDepth = first.getReferenceDepth();
     int secondDepth = second.getReferenceDepth();
     if (firstDepth == secondDepth) {
-      return first.getTypeName().equals(second.getTypeName()) && first.isSimilar(second);
+      return first.getRoot().getName().equals(second.getRoot().getName())
+          && first.isSimilar(second);
     } else {
       return false;
     }

@@ -75,7 +75,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val stmt = forEachStatement.variable
         assertNotNull(stmt)
         assertTrue(stmt is DeclarationStatement)
-        assertTrue(stmt.isSingleDeclaration)
+        assertTrue(stmt.isSingleDeclaration())
 
         val i = stmt.singleDeclaration as VariableDeclaration
         assertNotNull(i)
@@ -380,7 +380,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val ifStatement = statements[0] as IfStatement
         assertNotNull(ifStatement)
         assertNotNull(ifStatement.condition)
-        assertEquals("bool", ifStatement.condition.type.typeName)
+        assertEquals("bool", ifStatement.condition!!.type.typeName)
         assertEquals(true, (ifStatement.condition as Literal<*>).value)
         assertTrue(
             (ifStatement.thenStatement as CompoundStatement).statements[0] is ReturnStatement

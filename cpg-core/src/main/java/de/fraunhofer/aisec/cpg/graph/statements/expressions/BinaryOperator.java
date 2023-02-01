@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Transient;
 
@@ -80,8 +81,6 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
         ((DeclaredReferenceExpression) lhs).setAccess(AccessValues.WRITE);
-      } else if (lhs instanceof MemberExpression) {
-        ((MemberExpression) lhs).setAccess(AccessValues.WRITE);
       }
       if (lhs instanceof TypeListener) {
         this.registerTypeListener((TypeListener) lhs);
@@ -91,8 +90,6 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
         ((DeclaredReferenceExpression) lhs).setAccess(AccessValues.READWRITE);
-      } else if (lhs instanceof MemberExpression) {
-        ((MemberExpression) lhs).setAccess(AccessValues.READWRITE);
       }
       if (lhs instanceof TypeListener) {
         this.registerTypeListener((TypeListener) lhs);
@@ -185,7 +182,7 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
   }
 
   @Override
-  public String toString() {
+  public @NotNull String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .append("lhs", (lhs == null ? "null" : lhs.getName()))
         .append("rhs", (rhs == null ? "null" : rhs.getName()))
@@ -198,10 +195,9 @@ public class BinaryOperator extends Expression implements TypeListener, Assignme
     if (this == o) {
       return true;
     }
-    if (!(o instanceof BinaryOperator)) {
+    if (!(o instanceof BinaryOperator that)) {
       return false;
     }
-    BinaryOperator that = (BinaryOperator) o;
     return super.equals(that)
         && Objects.equals(lhs, that.lhs)
         && Objects.equals(rhs, that.rhs)

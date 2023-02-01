@@ -645,8 +645,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             if (copy is DeclarationStatement) {
                 base =
                     newDeclaredReferenceExpression(
-                        copy.singleDeclaration.name.localName,
-                        (copy.singleDeclaration as VariableDeclaration).type,
+                        copy.singleDeclaration?.name?.localName,
+                        (copy.singleDeclaration as VariableDeclaration?)?.type,
                         frontend.getCodeFromRawNode(instr)
                     )
             }
@@ -1171,7 +1171,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
             val catchClause = newCatchClause(instrStr)
             catchClause.name = Name(gotoCatch.labelName)
-            catchClause.setParameter(
+            catchClause.parameter =
                 newVariableDeclaration(
                     "e_${gotoCatch.labelName}",
                     UnknownType.getUnknownType(language),
@@ -1179,7 +1179,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     true,
                     frontend.language
                 )
-            )
+
             val catchCompoundStatement = newCompoundStatement(instrStr)
             catchCompoundStatement.addStatement(gotoCatch)
             catchClause.body = catchCompoundStatement
@@ -1232,7 +1232,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 frontend.language
             )
         frontend.bindingsCache["%${exceptionName}"] = except
-        catchInstr.setParameter(except)
+        catchInstr.parameter = except
         catchInstr.name = Name(catchType)
         return catchInstr
     }
@@ -1504,8 +1504,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             log.debug("Parsing {}", frontend.getCodeFromRawNode(instr))
 
             val stmt = frontend.statementHandler.handle(instr)
-
-            compound.addStatement(stmt)
+            if (stmt != null) {
+                compound.addStatement(stmt)
+            }
 
             instr = LLVMGetNextInstruction(instr)
         }

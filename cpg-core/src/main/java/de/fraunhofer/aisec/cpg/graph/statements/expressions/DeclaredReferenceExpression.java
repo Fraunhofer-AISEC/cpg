@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -138,13 +139,18 @@ public class DeclaredReferenceExpression extends Expression
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
+
+    // since we want to update the sub types, we need to exclude ourselves from the root, otherwise
+    // it won't work. What a weird and broken system!
+    root.remove(this);
+
     List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);
   }
 
   @Override
-  public String toString() {
+  public @NotNull String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .append(super.toString())
         .append("refersTo", refersTo)
@@ -161,10 +167,9 @@ public class DeclaredReferenceExpression extends Expression
     if (this == o) {
       return true;
     }
-    if (!(o instanceof DeclaredReferenceExpression)) {
+    if (!(o instanceof DeclaredReferenceExpression that)) {
       return false;
     }
-    DeclaredReferenceExpression that = (DeclaredReferenceExpression) o;
     return super.equals(that) && Objects.equals(refersTo, that.refersTo);
   }
 

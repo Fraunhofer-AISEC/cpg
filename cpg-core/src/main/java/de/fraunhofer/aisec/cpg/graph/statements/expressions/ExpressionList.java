@@ -105,10 +105,9 @@ public class ExpressionList extends Expression implements TypeListener {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ExpressionList)) {
+    if (!(o instanceof ExpressionList that)) {
       return false;
     }
-    ExpressionList that = (ExpressionList) o;
     return super.equals(that)
         && Objects.equals(this.getExpressions(), that.getExpressions())
         && PropertyEdge.propertyEqualsList(expressions, that.expressions);

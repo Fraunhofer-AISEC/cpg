@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Transient;
 
 /**
@@ -85,8 +86,6 @@ public class UnaryOperator extends Expression implements TypeListener {
 
     if (this.input instanceof DeclaredReferenceExpression) {
       ((DeclaredReferenceExpression) this.input).setAccess(access);
-    } else if (this.input instanceof MemberExpression) {
-      ((MemberExpression) this.input).setAccess(access);
     }
   }
 
@@ -216,7 +215,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public String toString() {
+  public @NotNull String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
         .append("operatorCode", operatorCode)
@@ -230,10 +229,9 @@ public class UnaryOperator extends Expression implements TypeListener {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof UnaryOperator)) {
+    if (!(o instanceof UnaryOperator that)) {
       return false;
     }
-    UnaryOperator that = (UnaryOperator) o;
     return super.equals(that)
         && postfix == that.postfix
         && prefix == that.prefix
