@@ -618,7 +618,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     ) {
         val templateId = typeSpecifier.name as CPPASTTemplateId
         val type = parseType(ctx.rawSignature)
-        val templateParams: MutableList<Node?> = ArrayList()
+        val templateParams = mutableListOf<Node>()
 
         if (type.root !is ObjectType) {
             // we cannot continue in this case
@@ -640,7 +640,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 )
             } else if (templateArgument is IASTExpression) {
                 val expression = frontend.expressionHandler.handle(templateArgument)
-                templateParams.add(expression)
+                if (expression != null) {
+                    templateParams.add(expression)
+                }
             }
         }
         for (declarator in ctx.declarators) {

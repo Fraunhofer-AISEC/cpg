@@ -208,7 +208,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     variable
                 )
             if (declarationType is PointerType && declarationType.isArray) {
-                declaration.setIsArray(true)
+                declaration.isArray = true
             }
             val oInitializer = variable.initializer
             if (oInitializer.isPresent) {
@@ -216,7 +216,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     handle(oInitializer.get())
                         as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
                 if (initializer is ArrayCreationExpression) {
-                    declaration.setIsArray(true)
+                    declaration.isArray = true
                 }
                 declaration.initializer = initializer
             }
