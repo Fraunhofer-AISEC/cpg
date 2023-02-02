@@ -34,7 +34,7 @@
     <div class="library-name">
 <a href="../../index.html">
 <span>cpg</span>            </a>    </div>
-    <div>6.0.0
+    <div>6.1.0
     </div>
     <div class="pull-right d-flex">
         <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
@@ -65,7 +65,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-properties/index.html">Properties</a></div><div class="brief ">INDEX:(int) Indicates the position in a list of edges BRANCH:(boolean) If we have multiple EOG edges the branch property indicates which EOG edge leads to true branch (expression evaluated to true) or the false branch (e.g.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-properties/index.html">Properties</a> : <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-enum/index.html">Enum</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-properties/index.html">Properties</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">INDEX: (int) Indicates the position in a list of edges</p></div></div></div>
               </div>
             </div>
           </div>
@@ -95,7 +95,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-property-edge-converter/index.html">PropertyEdgeConverter</a> : <span data-unresolved-link="org.neo4j.ogm.typeconversion/CompositeAttributeConverter///PointingToDeclaration/">CompositeAttributeConverter</span><span class="token operator">&lt;</span><span data-unresolved-link="org.neo4j.ogm.typeconversion/CompositeAttributeConverter///PointingToGenericParameters(0)/">T</span><span class="token operator">&gt; </span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-property-edge-converter/index.html">PropertyEdgeConverter</a> : <span data-unresolved-link="org.neo4j.ogm.typeconversion/CompositeAttributeConverter///PointingToDeclaration/">CompositeAttributeConverter</span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-properties/index.html">Properties</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span><span class="token operator">&gt;</span><span class="token operator">&gt; </span></div></div></div>
               </div>
             </div>
           </div>
@@ -110,7 +110,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-property-edge-converter-manager/index.html">PropertyEdgeConverterManager</a></div><div class="brief ">Since Neo4J uses the PropertyEdgeConverter (as it implements the CompositeAttributeConverter interface), we cannot define it as a singleton, as it requires to have a constructor.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-property-edge-converter-manager/index.html">PropertyEdgeConverterManager</a></div><div class="brief "><p class="paragraph">Since Neo4J uses the PropertyEdgeConverter (as it implements the CompositeAttributeConverter interface), we cannot define it as a singleton, as it requires to have a constructor. We want to be able to dynamically define converters for PropertyEdges that have more complex structures such as enums or custom classes, we need a singleton to be able to add the converters. Refer to the documentation of <a href="-property-edge-converter/index.html">PropertyEdgeConverter</a> to see which primitives are supported by default, and which require a custom converter.</p></div></div></div>
               </div>
             </div>
           </div>

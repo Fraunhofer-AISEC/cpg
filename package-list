@@ -18,6 +18,7 @@ de.fraunhofer.aisec.cpg.frontends.java
 de.fraunhofer.aisec.cpg.graph
 de.fraunhofer.aisec.cpg.graph.declarations
 de.fraunhofer.aisec.cpg.graph.edge
+de.fraunhofer.aisec.cpg.graph.scopes
 de.fraunhofer.aisec.cpg.graph.statements
 de.fraunhofer.aisec.cpg.graph.statements.expressions
 de.fraunhofer.aisec.cpg.graph.types
@@ -26,7 +27,6 @@ de.fraunhofer.aisec.cpg.helpers.annotations
 de.fraunhofer.aisec.cpg.passes
 de.fraunhofer.aisec.cpg.passes.inference
 de.fraunhofer.aisec.cpg.passes.order
-de.fraunhofer.aisec.cpg.passes.scopes
 de.fraunhofer.aisec.cpg.processing
 de.fraunhofer.aisec.cpg.processing.strategy
 de.fraunhofer.aisec.cpg.sarif
