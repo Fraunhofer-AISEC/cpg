@@ -62,7 +62,9 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
 
         val decl = this.frontend.declarationHandler.handle(node)
 
-        statement.addToPropertyEdgeDeclaration(decl)
+        if (decl != null) {
+            statement.addToPropertyEdgeDeclaration(decl)
+        }
 
         this.frontend.scopeManager.addDeclaration(decl)
 
@@ -82,7 +84,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleBlock(node: TypeScriptNode): CompoundStatement {
         val block = newCompoundStatement(this.frontend.getCodeFromRawNode(node))
 
-        node.children?.forEach { block.addStatement(this.handle(it)) }
+        node.children?.forEach { this.handle(it)?.let { it1 -> block.addStatement(it1) } }
 
         return block
     }
@@ -91,7 +93,8 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         // unwrap it and directly forward it to the expression handler
         // this is possible because in our CPG, expression inherit from statements
         // and can be directly added to a compound statement
-        return this.frontend.expressionHandler.handle(node.children?.first())
+        return node.children?.first()?.let { this.frontend.expressionHandler.handle(it) }
+            ?: ProblemExpression("problem parsing expression")
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
@@ -103,7 +106,9 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         for (variableNode in nodes ?: emptyList()) {
             val decl = this.frontend.declarationHandler.handle(variableNode)
 
-            statement.addToPropertyEdgeDeclaration(decl)
+            if (decl != null) {
+                statement.addToPropertyEdgeDeclaration(decl)
+            }
 
             this.frontend.scopeManager.addDeclaration(decl)
         }

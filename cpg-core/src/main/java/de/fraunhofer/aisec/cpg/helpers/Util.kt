@@ -102,7 +102,7 @@ object Util {
         n: Node?,
         cr: Connect = Connect.SUBTREE,
         props: Map<Properties, Any?> = mutableMapOf(),
-        refs: List<Node>
+        refs: List<Node?>
     ): Boolean {
         if (n == null) {
             return false
@@ -132,7 +132,7 @@ object Util {
             }
         refSide =
             if (cr == Connect.SUBTREE) {
-                val borders = refs.map { n: Node? -> SubgraphWalker.getEOGPathEdges(n) }
+                val borders = refs.map { n -> SubgraphWalker.getEOGPathEdges(n) }
 
                 borders.flatMap { border: SubgraphWalker.Border ->
                     if (Edge.ENTRIES == er) {
@@ -143,9 +143,9 @@ object Util {
                     } else border.exits
                 }
             } else {
-                refSide.flatMap { node: Node ->
+                refSide.flatMap { node ->
                     if (er == Edge.ENTRIES) {
-                        val pe = node.prevEOGEdges
+                        val pe = node?.prevEOGEdges ?: listOf()
                         if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
                             return false
                         pe.filter { it.containsProperties(props) }.map { it.start }

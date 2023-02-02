@@ -714,7 +714,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.ENTRIES,
                 n = wstat,
-                refs = listOf(wstat.condition)
+                refs = listOfNotNull(wstat.condition)
             )
         )
         // Assert: Condition is preceded by print or block of the loop itself
@@ -722,7 +722,7 @@ internal class EOGTest : BaseTest() {
             Util.eogConnect(
                 en = Util.Edge.ENTRIES,
                 n = wstat.condition,
-                refs = listOf(prints[0], wstat.statement)
+                refs = listOfNotNull(prints[0], wstat.statement)
             )
         )
 
@@ -820,7 +820,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = prints[0],
                 cr = Connect.SUBTREE,
-                refs = listOf(swch.getSelector())
+                refs = listOf(swch.selector)
             )
         )
         assertTrue(
@@ -844,7 +844,7 @@ internal class EOGTest : BaseTest() {
         assertTrue(
             Util.eogConnect(
                 en = Util.Edge.EXITS,
-                n = swch.getSelector(),
+                n = swch.selector,
                 cr = Connect.NODE,
                 refs = listOf(swch)
             )
@@ -908,7 +908,7 @@ internal class EOGTest : BaseTest() {
             Util.eogConnect(
                 cn = Connect.SUBTREE,
                 en = Util.Edge.EXITS,
-                n = swch.getSelector(),
+                n = swch.selector,
                 cr = Connect.NODE,
                 refs = listOf(swch)
             )
@@ -926,7 +926,7 @@ internal class EOGTest : BaseTest() {
         assertTrue(
             Util.eogConnect(
                 en = Util.Edge.EXITS,
-                n = swch.getSelector(),
+                n = swch.selector,
                 cr = Connect.NODE,
                 refs = listOf(swch)
             )
@@ -938,7 +938,7 @@ internal class EOGTest : BaseTest() {
         // Assert: while-switch, all breaks inside the switch connect to the containing switch
         // unless it has a label which connects the break to the  while
         for (b in breaks) {
-            if (b.label != null && b.label.isNotEmpty()) {
+            if (b.label != null && b.label!!.isNotEmpty()) {
                 assertTrue(
                     Util.eogConnect(
                         en = Util.Edge.EXITS,
@@ -965,7 +965,7 @@ internal class EOGTest : BaseTest() {
 
         // Assert: switch-while, all breaks inside the while connect to the containing while unless
         // it has a label which connects the break to the switch
-        for (b in breaks) if (b.label != null && b.label.isNotEmpty())
+        for (b in breaks) if (b.label != null && b.label!!.isNotEmpty())
             assertTrue(
                 Util.eogConnect(
                     en = Util.Edge.EXITS,
@@ -1097,7 +1097,11 @@ internal class EOGTest : BaseTest() {
 
         // Assert: Print is only followed by first nodes in condition
         assertTrue(
-            Util.eogConnect(en = Util.Edge.EXITS, n = prints[0], refs = listOf(wstat.condition))
+            Util.eogConnect(
+                en = Util.Edge.EXITS,
+                n = prints[0],
+                refs = listOfNotNull(wstat.condition)
+            )
         )
 
         // Assert: condition nodes are preceded by either continue, last nodes in block or last
@@ -1106,13 +1110,13 @@ internal class EOGTest : BaseTest() {
             Util.eogConnect(
                 en = Util.Edge.ENTRIES,
                 n = wstat.condition,
-                refs = listOf(prints[0], wstat.statement)
+                refs = listOfNotNull(prints[0], wstat.statement)
             ) ||
                 Util.eogConnect(
                     cn = Connect.NODE,
                     en = Util.Edge.EXITS,
                     n = continues[0],
-                    refs = listOf(wstat.condition)
+                    refs = listOfNotNull(wstat.condition)
                 )
         )
 

@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpre
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -46,18 +47,21 @@ public class VariableDeclaration extends ValueDeclaration
 
   /**
    * We need a way to store the templateParameters that a VariableDeclaration might have before the
-   * ConstructExpression is created
+   * ConstructExpression is created.
+   *
+   * <p>Because templates are only used by a small subset of languages and variable declarations are
+   * used often, we intentionally make this a nullable list instead of an empty list.
    */
   @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
   @SubGraph("AST")
   @Nullable
   private List<Node> templateParameters = null;
 
-  public List<Node> getTemplateParameters() {
+  public @Nullable List<Node> getTemplateParameters() {
     return templateParameters;
   }
 
-  public void setTemplateParameters(List<Node> templateParameters) {
+  public void setTemplateParameters(@Nullable List<Node> templateParameters) {
     this.templateParameters = templateParameters;
   }
 
@@ -167,7 +171,7 @@ public class VariableDeclaration extends ValueDeclaration
   }
 
   @Override
-  public String toString() {
+  public @NotNull String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .append("name", getName())
         .append("location", getLocation())
@@ -180,10 +184,9 @@ public class VariableDeclaration extends ValueDeclaration
     if (this == o) {
       return true;
     }
-    if (!(o instanceof VariableDeclaration)) {
+    if (!(o instanceof VariableDeclaration that)) {
       return false;
     }
-    VariableDeclaration that = (VariableDeclaration) o;
     return super.equals(that) && Objects.equals(initializer, that.initializer);
   }
 

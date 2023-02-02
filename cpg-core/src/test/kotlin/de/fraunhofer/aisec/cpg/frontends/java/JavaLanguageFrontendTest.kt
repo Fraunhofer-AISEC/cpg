@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
@@ -39,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.math.BigInteger
@@ -130,7 +130,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val s = forEachStatement.variable
         assertNotNull(s)
         assertTrue(s is DeclarationStatement)
-        assertTrue(s.isSingleDeclaration)
+        assertTrue(s.isSingleDeclaration())
 
         val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
@@ -602,7 +602,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         ) : JavaLanguageFrontend(language, config, scopeManager) {
             init {
                 this.declarationHandler =
-                    object : DeclarationHandler(this) {
+                    object : DeclarationHandler(this@MyJavaLanguageFrontend) {
                         override fun handleClassOrInterfaceDeclaration(
                             classInterDecl: ClassOrInterfaceDeclaration
                         ): RecordDeclaration {
@@ -751,7 +751,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val loopVariable = (forEach.variable as? DeclarationStatement)?.singleDeclaration
         assertNotNull(loopVariable)
-        assertContains(loopVariable.prevDFG, forEach.iterable)
+        assertNotNull(forEach.iterable)
+        assertTrue(forEach.iterable!! in loopVariable.prevDFG)
 
         val jArg = forIterator.calls["println"]?.arguments?.firstOrNull()
         assertNotNull(jArg)

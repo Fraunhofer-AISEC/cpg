@@ -297,7 +297,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         for (i in 0 until LLVMGetNumOperands(value)) {
             // and handle them as expressions themselves
             val arg = this.handle(LLVMGetOperand(value, i))
-            expr.addArgument(arg)
+            if (arg != null) {
+                expr.addArgument(arg)
+            }
         }
 
         return expr

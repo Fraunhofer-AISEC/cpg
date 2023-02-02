@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -41,7 +42,6 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.CompressLLVMPass
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer
@@ -150,7 +150,7 @@ class LLVMIRLanguageFrontend(
         }
 
         var counter = 0
-        val flatAST = SubgraphWalker.flattenAST(tu)
+        val flatAST = SubgraphWalker.flattenAST(tu).toMutableList()
         for (phiInstr in phiList) {
             statementHandler.handlePhi(phiInstr, tu, flatAST)
             counter++
