@@ -143,6 +143,12 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         assertLocalName("println", sce)
         assertFullName("java.io.PrintStream.println", sce)
+
+        // Check the flow from the iterable to the variable s
+        assertEquals(1, sDecl.prevDFG.size)
+        assertTrue(forEachStatement.iterable as DeclaredReferenceExpression in sDecl.prevDFG)
+        // Check the flow from the variable s to the print
+        assertTrue(sDecl in sce.arguments.first().prevDFG)
     }
 
     @Test
