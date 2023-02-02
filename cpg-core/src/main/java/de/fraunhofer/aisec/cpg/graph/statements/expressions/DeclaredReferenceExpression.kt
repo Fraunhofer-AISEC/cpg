@@ -48,9 +48,6 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener, Ass
     @Relationship(value = "REFERS_TO")
     var refersTo: Declaration? = null
         set(value) {
-            if (field == null) {
-                return
-            }
             val current = field
 
             // unregister type listeners for current declaration
