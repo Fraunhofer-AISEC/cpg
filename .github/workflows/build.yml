@@ -58,9 +58,6 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - name: Setup neo4j
-        run: |
-          docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 neo4j
       - name: Install JEP
         run: |
           pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
@@ -79,7 +76,35 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
-          name: test
+          name: cpg-language-python-test
+          path: "**/build/reports/tests"
+
+  test-go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of SonarQube analysis
+      - run: |
+          cp gradle.properties.example gradle.properties
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle"
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Test
+        run: |
+          ./gradlew --no-daemon --parallel -PenableGoFrontend=true :cpg-language-go:test
+        id: build
+      - name: Archive test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: cpg-language-go-test
           path: "**/build/reports/tests"
 
   build:
