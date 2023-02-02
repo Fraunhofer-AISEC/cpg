@@ -36,7 +36,7 @@ import org.neo4j.ogm.annotation.Relationship
 class VariableDeclaration :
     ValueDeclaration(), HasType.TypeListener, HasInitializer, Assignment, AssignmentTarget {
     /** The (optional) initializer of the declaration. */
-    @SubGraph("AST") override var value: Expression? = null
+    @field:SubGraph("AST") override var value: Expression? = null
 
     /**
      * We need a way to store the templateParameters that a VariableDeclaration might have before
@@ -46,7 +46,7 @@ class VariableDeclaration :
      * used often, we intentionally make this a nullable list instead of an empty list.
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var templateParameters: List<Node>? = null
 
     /**

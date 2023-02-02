@@ -41,7 +41,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 class ExpressionList : Expression(), HasType.TypeListener {
     @Relationship(value = "SUBEXPR", direction = Relationship.Direction.OUTGOING)
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var expressionEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
 
     var expressions: List<Statement>

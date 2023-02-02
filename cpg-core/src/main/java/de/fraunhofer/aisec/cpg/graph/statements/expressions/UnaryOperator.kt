@@ -39,7 +39,7 @@ import org.neo4j.ogm.annotation.Transient
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
 class UnaryOperator : Expression(), HasType.TypeListener {
     /** The expression on which the operation is applied. */
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var input: Expression = ProblemExpression("could not parse input")
         set(value) {
             field.unregisterTypeListener(this)
@@ -172,14 +172,14 @@ class UnaryOperator : Expression(), HasType.TypeListener {
             .toString()
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
             return true
         }
-        if (o !is UnaryOperator) {
+        if (other !is UnaryOperator) {
             return false
         }
-        val that = o
+        val that = other
         return super.equals(that) &&
             isPostfix == that.isPostfix &&
             isPrefix == that.isPrefix &&
