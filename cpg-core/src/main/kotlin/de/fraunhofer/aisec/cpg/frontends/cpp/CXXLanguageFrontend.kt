@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -38,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -454,8 +454,13 @@ class CXXLanguageFrontend(
         }
     }
 
+    /** Returns the [Type] that is represented by an [IASTTypeId]. */
+    fun typeOf(id: IASTTypeId): Type {
+        return typeOf(id.abstractDeclarator, id.declSpecifier)
+    }
+
     /**
-     * Returns the [Type] that is represented by the [declarator] and [specifier]. This tries to
+     * Returns te [Type] that is represented by the [declarator] and [specifier]. This tries to
      * resolve as much information about the type on its own using by analyzing the AST of the
      * supplied declarator and specifier. Finally, [TypeParser.createFrom] is invoked on the
      * innermost type, but all other type adjustments, such as creating a [PointerType] is done

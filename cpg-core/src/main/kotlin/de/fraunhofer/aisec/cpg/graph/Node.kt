@@ -36,12 +36,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.NameConverter
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.passes.scopes.Scope
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -85,6 +85,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * the declaration itself creates a [RecordScope], the scope of a [MethodDeclaration] within the
      * class would be a [RecordScope] pointing to the [RecordDeclaration].
      */
+    @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
     override var scope: Scope? = null
 
     /** Optional comment of this node. */

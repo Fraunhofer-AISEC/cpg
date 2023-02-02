@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.ScopeManager;
 import de.fraunhofer.aisec.cpg.frontends.*;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage;
 import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;

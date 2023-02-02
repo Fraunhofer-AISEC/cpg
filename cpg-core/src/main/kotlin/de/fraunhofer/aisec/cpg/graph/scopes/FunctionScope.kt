@@ -23,20 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes
+package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.Type
 
-/**
- * A scope which acts as a namespace with a certain name, which is prefixed to all local names
- * declared in it. This could be a package or other structural elements, like a class. In the latter
- * case, the derived [RecordScope] should be used.
- */
-open class NameScope(node: Node) : StructureDeclarationScope(node) {
-
-    init {
-        astNode = node
-        // Set the name so that we can use it as a namespace later
-        name = node.name
-    }
+class FunctionScope(astNode: FunctionDeclaration) : ValueDeclarationScope(astNode) {
+    @Transient var catchesOrRelays = mutableMapOf<Type, MutableList<Node>>()
 }

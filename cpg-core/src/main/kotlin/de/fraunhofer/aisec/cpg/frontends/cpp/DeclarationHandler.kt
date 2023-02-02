@@ -27,12 +27,12 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
@@ -144,8 +144,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val recordDeclaration = (declaration as? MethodDeclaration)?.recordDeclaration
 
         // We want to determine, whether we are currently outside a record. In this case, our
-        // function
-        // is either really a function or a method definition external to a class.
+        // function is either really a function or a method definition external to a class.
         val outsideOfRecord =
             !(frontend.scopeManager.currentScope is RecordScope ||
                 frontend.scopeManager.currentScope is TemplateScope)
@@ -246,7 +245,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * not. For some reason it seems that Eclipse CDT has no other means of differentiating a
      * typedef declaration from a regular one, except looking at the raw code
      */
-    val IASTSimpleDeclaration.isTypedef: Boolean
+    private val IASTSimpleDeclaration.isTypedef: Boolean
         get() {
             return if (this.rawSignature.contains("typedef")) {
                 if (this.declSpecifier is CPPASTCompositeTypeSpecifier) {

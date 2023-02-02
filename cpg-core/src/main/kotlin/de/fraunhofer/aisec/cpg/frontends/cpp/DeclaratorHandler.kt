@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
 import java.util.*
 import java.util.function.Supplier
 import java.util.regex.Pattern
@@ -282,8 +282,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                         )
                     } else {
                         // specifying void as first parameter is ok and means that the function has
-                        // no
-                        // parameters
+                        // no parameters
                         if (i == 0) {
                             continue
                         } else {

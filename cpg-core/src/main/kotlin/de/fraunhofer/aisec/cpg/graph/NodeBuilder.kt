@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
-import de.fraunhofer.aisec.cpg.passes.scopes.Scope
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {

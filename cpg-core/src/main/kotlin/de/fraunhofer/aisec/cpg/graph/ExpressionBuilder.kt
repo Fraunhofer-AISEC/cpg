@@ -155,7 +155,7 @@ fun MetadataProvider.newConditionalExpression(
     condition: Expression,
     thenExpr: Expression?,
     elseExpr: Expression?,
-    type: Type?,
+    type: Type? = UnknownType.getUnknownType(),
     code: String? = null,
     rawNode: Any? = null
 ): ConditionalExpression {

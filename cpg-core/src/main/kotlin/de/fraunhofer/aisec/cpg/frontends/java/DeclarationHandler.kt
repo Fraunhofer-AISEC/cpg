@@ -45,11 +45,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import java.util.function.Supplier
 import java.util.stream.Collectors
 import kotlin.collections.set

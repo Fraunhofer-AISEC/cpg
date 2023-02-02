@@ -244,7 +244,12 @@ class Application : Callable<Int> {
                         .credentials(neo4jUsername, neo4jPassword)
                         .verifyConnection(VERIFY_CONNECTION)
                         .build()
-                sessionFactory = SessionFactory(configuration, "de.fraunhofer.aisec.cpg.graph")
+                sessionFactory =
+                    SessionFactory(
+                        configuration,
+                        "de.fraunhofer.aisec.cpg.graph",
+                        "de.fraunhofer.aisec.cpg.frontends"
+                    )
                 session = sessionFactory.openSession()
             } catch (ex: ConnectionException) {
                 sessionFactory = null
