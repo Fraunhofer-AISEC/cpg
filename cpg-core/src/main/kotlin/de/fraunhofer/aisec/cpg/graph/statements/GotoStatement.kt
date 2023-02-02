@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import java.util.Objects
 
 class GotoStatement : Statement() {
-    var labelName: String? = null
+    var labelName: String = ""
     var targetLabel: LabelStatement? = null
 
     override fun equals(other: Any?): Boolean {

@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -223,5 +222,4 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
         }
         return type
     }
-
 }

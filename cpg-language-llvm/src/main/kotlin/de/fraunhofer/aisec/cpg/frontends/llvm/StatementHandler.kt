@@ -1645,14 +1645,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val bb: LLVMBasicBlockRef = LLVMValueAsBasicBlock(bbTarget)
         val labelName = LLVMGetBasicBlockName(bb).string
         goto.labelName = labelName
-        try {
-            val label = newLabelStatement(labelName)
-            label.name = Name(labelName)
-            // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
-            // to the CPG goto statement
-            frontend.registerObjectListener(label, assigneeTargetLabel)
-            goto.targetLabel.label
-        } catch (e: Exception) {
+        val label = newLabelStatement(labelName)
+        label.name = Name(labelName)
+        // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
+        // to the CPG goto statement
+        frontend.registerObjectListener(label, assigneeTargetLabel)
+        if (goto.targetLabel == null) {
             // If the Label AST node could not be resolved, the matching is done based on label
             // names of CPG nodes using the predicate listeners
             frontend.registerPredicateListener(

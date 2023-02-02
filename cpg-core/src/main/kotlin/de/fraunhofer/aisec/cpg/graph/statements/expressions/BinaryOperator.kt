@@ -127,7 +127,8 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
             setType(TypeParser.createFrom("java.lang.String", language), root)
         } else if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
             // Propagate the function pointer type to the expression itself. This helps us later in
-            // the call resolver, when trying to determine, whether this is a regular call or a function
+            // the call resolver, when trying to determine, whether this is a regular call or a
+            // function
             // pointer call.
             setType(src.propagationType, root)
         }
@@ -161,9 +162,9 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
             return false
         }
         return super.equals(other) &&
-                lhs == other.lhs &&
-                rhs == other.rhs &&
-                operatorCode == other.operatorCode
+            lhs == other.lhs &&
+            rhs == other.rhs &&
+            operatorCode == other.operatorCode
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), lhs, rhs, operatorCode)

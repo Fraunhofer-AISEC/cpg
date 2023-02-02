@@ -54,5 +54,5 @@ class LabelStatement : Statement() {
         return super.equals(other) && subStatement == other.subStatement && label == other.label
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), label, subStatement)
+    override fun hashCode() = Objects.hash(super.hashCode(), label)
 }

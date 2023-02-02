@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.newDeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -76,11 +77,11 @@ class CompressLLVMPass : Pass() {
                     node.thenStatement in gotosToReplace &&
                         node !in
                             SubgraphWalker.flattenAST(
-                                (node.thenStatement as GotoStatement).targetLabel.subStatement
+                                (node.thenStatement as GotoStatement).targetLabel?.subStatement
                             )
                 ) {
                     node.thenStatement =
-                        (node.thenStatement as GotoStatement).targetLabel.subStatement
+                        (node.thenStatement as GotoStatement).targetLabel?.subStatement
                 }
                 // Replace the else-statement with the basic block it jumps to iff we found that
                 // its
@@ -89,11 +90,11 @@ class CompressLLVMPass : Pass() {
                     node.elseStatement in gotosToReplace &&
                         node !in
                             SubgraphWalker.flattenAST(
-                                (node.elseStatement as GotoStatement).targetLabel.subStatement
+                                (node.elseStatement as GotoStatement).targetLabel?.subStatement
                             )
                 ) {
                     node.elseStatement =
-                        (node.elseStatement as GotoStatement).targetLabel.subStatement
+                        (node.elseStatement as GotoStatement).targetLabel?.subStatement
                 }
             } else if (node is SwitchStatement) {
                 // Iterate over all statements in a body of the switch/case and replace a goto
@@ -162,10 +163,10 @@ class CompressLLVMPass : Pass() {
                         goto in gotosToReplace &&
                         node !in
                             SubgraphWalker.flattenAST(
-                                (goto as GotoStatement).targetLabel.subStatement
+                                (goto as GotoStatement).targetLabel?.subStatement
                             )
                 ) {
-                    val subStatement = goto.targetLabel.subStatement
+                    val subStatement = goto.targetLabel?.subStatement
                     val newStatements = node.statements.dropLast(1).toMutableList()
                     newStatements.addAll((subStatement as CompoundStatement).statements)
                     node.statements = newStatements
@@ -182,7 +183,9 @@ class CompressLLVMPass : Pass() {
     private fun fixThrowStatementsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
             getAllChildrenRecursively(catch).filter { n ->
-                n is UnaryOperator && n.operatorCode?.equals("throw") == true && n.input == null
+                n is UnaryOperator &&
+                    n.operatorCode?.equals("throw") == true &&
+                    n.input is ProblemExpression
             }
         if (reachableThrowNodes.isNotEmpty()) {
             if (catch.parameter == null) {

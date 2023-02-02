@@ -328,7 +328,7 @@ class LLVMIRLanguageFrontendTest {
         assertSame(variableDecl, (ifCondition as DeclaredReferenceExpression).refersTo)
 
         val elseBranch =
-            (ifStatement.elseStatement!! as GotoStatement).targetLabel.subStatement
+            (ifStatement.elseStatement!! as GotoStatement).targetLabel?.subStatement
                 as CompoundStatement
         assertEquals(2, elseBranch.statements.size)
         assertEquals("  %y = mul i32 %x, 32768", elseBranch.statements[0].code)

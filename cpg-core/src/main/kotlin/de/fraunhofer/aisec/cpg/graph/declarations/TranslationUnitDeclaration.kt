@@ -144,5 +144,4 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), includes, namespaces, declarations)
-
 }
