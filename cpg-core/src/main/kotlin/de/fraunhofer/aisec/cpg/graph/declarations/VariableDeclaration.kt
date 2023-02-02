@@ -35,8 +35,10 @@ import org.neo4j.ogm.annotation.Relationship
 /** Represents the declaration of a variable. */
 class VariableDeclaration :
     ValueDeclaration(), HasType.TypeListener, HasInitializer, Assignment, AssignmentTarget {
-    /** The (optional) initializer of the declaration. */
-    @field:SubGraph("AST") override var value: Expression? = null
+    override val value: Expression?
+        get() {
+            return initializer
+        }
 
     /**
      * We need a way to store the templateParameters that a VariableDeclaration might have before
@@ -60,6 +62,8 @@ class VariableDeclaration :
     var isImplicitInitializerAllowed = false
     var isArray = false
 
+    /** The (optional) initializer of the declaration. */
+    @field:SubGraph("AST")
     override var initializer: Expression? = null
         set(value) {
             field?.unregisterTypeListener(this)
