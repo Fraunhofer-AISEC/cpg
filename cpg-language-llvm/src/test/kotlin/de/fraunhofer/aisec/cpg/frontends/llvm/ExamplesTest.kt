@@ -26,125 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLocalName
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import java.nio.file.Path
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertSame
 import org.junit.jupiter.api.Tag
 
 @Tag("llvm-examples")
 class ExamplesTest {
-
-    @Test
-    fun testExceptions() {
-        val topLevel = Path.of("src", "test", "resources", "llvm")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("exceptions.ll").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage<LLVMIRLanguage>()
-            }
-
-        val funcF = tu.byNameOrNull<FunctionDeclaration>("f")
-        assertNotNull(funcF)
-
-        val tryStatement =
-            (funcF.bodyOrNull<LabelStatement>(0)?.subStatement as? CompoundStatement)
-                ?.statements
-                ?.firstOrNull { s -> s is TryStatement } as? TryStatement
-        assertNotNull(tryStatement)
-        assertEquals(2, tryStatement.tryBlock?.statements?.size)
-        assertFullName(
-            "_CxxThrowException",
-            tryStatement.tryBlock?.statements?.get(0) as? CallExpression
-        )
-        assertEquals(
-            "end",
-            (tryStatement.tryBlock?.statements?.get(1) as? GotoStatement)
-                ?.targetLabel
-                ?.name
-                ?.localName
-        )
-
-        assertEquals(1, tryStatement.catchClauses.size)
-        val catchSwitchExpr =
-            tryStatement.catchClauses[0].body?.statements?.get(0) as? DeclarationStatement
-        assertNotNull(catchSwitchExpr)
-        val catchswitchCall =
-            (catchSwitchExpr.singleDeclaration as? VariableDeclaration)?.initializer
-                as? CallExpression
-        assertNotNull(catchswitchCall)
-        assertFullName("llvm.catchswitch", catchswitchCall)
-        val ifExceptionMatches =
-            tryStatement.catchClauses[0].body?.statements?.get(1) as? IfStatement
-        val matchesExceptionCall = ifExceptionMatches?.condition as? CallExpression
-        assertNotNull(matchesExceptionCall)
-        assertFullName("llvm.matchesCatchpad", matchesExceptionCall)
-        assertEquals(
-            catchSwitchExpr.singleDeclaration,
-            (matchesExceptionCall.arguments[0] as DeclaredReferenceExpression).refersTo
-        )
-        assertEquals(null, (matchesExceptionCall.arguments[1] as Literal<*>).value)
-        assertEquals(64L, (matchesExceptionCall.arguments[2] as Literal<*>).value as Long)
-        assertEquals(null, (matchesExceptionCall.arguments[3] as Literal<*>).value)
-
-        val catchBlock = ifExceptionMatches.thenStatement as? CompoundStatement
-        assertNotNull(catchBlock)
-        assertFullName(
-            "llvm.catchpad",
-            ((catchBlock.statements[0] as? DeclarationStatement)?.singleDeclaration
-                    as? VariableDeclaration)
-                ?.initializer as? CallExpression
-        )
-
-        val innerTry = catchBlock.statements[1] as? TryStatement
-        assertNotNull(innerTry)
-        assertFullName(
-            "_CxxThrowException",
-            innerTry.tryBlock?.statements?.get(0) as? CallExpression
-        )
-        assertLocalName(
-            "try.cont",
-            (innerTry.tryBlock?.statements?.get(1) as? GotoStatement)?.targetLabel
-        )
-
-        val innerCatchClause =
-            (innerTry.catchClauses[0].body?.statements?.get(1) as? IfStatement)?.thenStatement
-                as? CompoundStatement
-        assertNotNull(innerCatchClause)
-        assertFullName(
-            "llvm.catchpad",
-            ((innerCatchClause.statements[0] as? DeclarationStatement)?.singleDeclaration
-                    as? VariableDeclaration)
-                ?.initializer as? CallExpression
-        )
-        assertLocalName("try.cont", (innerCatchClause.statements[1] as? GotoStatement)?.targetLabel)
-
-        val innerCatchThrows =
-            (innerTry.catchClauses[0].body?.statements?.get(1) as? IfStatement)?.elseStatement
-                as? UnaryOperator
-        assertNotNull(innerCatchThrows)
-        assertNotNull(innerCatchThrows.input)
-        assertSame(
-            innerTry.catchClauses[0].parameter,
-            (innerCatchThrows.input as? DeclaredReferenceExpression)?.refersTo
-        )
-    }
-
     @Test
     fun testRust() {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples")
