@@ -23,9 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes
-
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+package de.fraunhofer.aisec.cpg
 
 /**
  * Functions marked with this annotation are using features of the [ScopeManager] to resolve symbols

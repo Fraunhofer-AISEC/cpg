@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.passes.Pass
 import kotlin.reflect.KClass
