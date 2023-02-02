@@ -1396,6 +1396,37 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertRefersTo(callee.rhs, singleParam)
     }
 
+    @Test
+    @Throws(Exception::class)
+    fun testNamespacedFunction() {
+        val file = File("src/test/resources/cxx/namespaced_function.cpp")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        assertNotNull(tu)
+
+        // everything in the TU should be a function (within a namespace), not a method (except the
+        // implicit constructor of ABC::A)
+        assertTrue(tu.functions.isNotEmpty())
+        assertTrue(tu.methods.none { it !is ConstructorDeclaration })
+
+        var foo = tu.functions["foo"]
+        assertNotNull(foo)
+
+        // jump to definition (in case we got the declaration), but they should be connected anyway
+        foo = foo.definition
+
+        val a = foo.variables["a"]
+        assertNotNull(a)
+        assertFullName("ABC::A", a.type)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val callFoo = main.calls["ABC::foo"]
+        assertNotNull(callFoo)
+        assertInvokes(callFoo, foo)
+        assertTrue(callFoo.invokes.none { it.isInferred })
+    }
+
     private fun createTypeFrom(typename: String, resolveAlias: Boolean) =
         TypeParser.createFrom(typename, CPPLanguage(), resolveAlias, null)
 }

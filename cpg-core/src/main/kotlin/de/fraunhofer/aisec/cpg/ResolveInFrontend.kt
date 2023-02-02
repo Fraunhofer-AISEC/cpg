@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
-
-import de.fraunhofer.aisec.cpg.passes.Pass
-import kotlin.reflect.KClass
+package de.fraunhofer.aisec.cpg
 
 /**
- * This annotation denotes that, this property is populates by a pass. Optionally, also specifying
- * which Pass class is responsible.
+ * Functions marked with this annotation are using features of the [ScopeManager] to resolve symbols
+ * (or scopes) during frontend parsing. This is something which we discourage. However, in
+ * non-context free languages such as C++ this is unavoidable to some degree.
  */
-annotation class PopulatedByPass(val value: KClass<out Pass>)
+@Target(AnnotationTarget.FUNCTION) annotation class ResolveInFrontend(val method: String)

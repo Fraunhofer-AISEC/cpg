@@ -88,7 +88,7 @@ func InitEnv(e *jnigi.Env) {
 
 func TypeParser_createFrom(s string, l *Language) *Type {
 	var t Type
-	err := env.CallStaticMethod(TypeParserClass, "createFrom", &t, NewString(s), l)
+	err := env.CallStaticMethod(TypeParserClass, "createFrom", &t, NewCharSequence(s), l)
 	if err != nil {
 		log.Fatal(err)
 
