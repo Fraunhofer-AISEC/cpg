@@ -42,6 +42,46 @@ jobs:
           name: libcpgo-arm64.dylib
           path: cpg-language-go/src/main/resources/libcpgo-arm64.dylib
 
+  test-python:
+    runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+          with:
+            fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of SonarQube analysis
+        - run: |
+            cp gradle.properties.example gradle.properties
+        - uses: actions/setup-java@v3
+          with:
+            distribution: "zulu"
+            java-version: "17"
+            cache: "gradle"
+        - uses: actions/setup-python@v4
+          with:
+            python-version: "3.10"
+        - name: Setup neo4j
+          run: |
+            docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 neo4j
+        - name: Install JEP
+          run: |
+            pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
+            find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
+        - name: Install pycodestyle
+          run: |
+            pip3 install pycodestyle
+        - name: Run pycodestyle
+          run: |
+            find cpg-language-python/src/main/python -iname "*.py" -print0 | xargs -n 1 -0 pycodestyle
+        - name: Test
+          run: |
+            ./gradlew --no-daemon --parallel -PenablePythonFrontend=true :cpg-language-python:test
+          id: build
+        - name: Archive test reports
+          if: ${{ always() }}
+          uses: actions/upload-artifact@v3
+          with:
+            name: test
+            path: "**/build/reports/tests"
+
   build:
     runs-on: ubuntu-latest
     needs: build-cpgo-osx
