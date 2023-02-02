@@ -346,9 +346,7 @@ fun applyTemplateInstantiation(
             (initializationSignature[parameterizedTypeResolution[returnType]] as TypeExpression?)
                 ?.type
     }
-    if (returnType != null) {
-        templateCall.type = returnType
-    }
+    returnType?.let { templateCall.type = it }
     templateCall.updateTemplateParameters(initializationType, templateInstantiationParameters)
 
     // Apply changes to the call signature

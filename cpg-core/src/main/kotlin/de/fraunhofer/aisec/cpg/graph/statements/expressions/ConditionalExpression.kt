@@ -64,12 +64,10 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
         }
         val previous = type
         val types: MutableList<Type> = ArrayList()
-        if (thenExpr != null) {
-            types.add(thenExpr!!.propagationType)
-        }
-        if (elseExpr != null) {
-            types.add(elseExpr!!.propagationType)
-        }
+
+        thenExpr?.propagationType?.let { types.add(it) }
+        elseExpr?.propagationType?.let { types.add(it) }
+
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
         subTypes.remove(oldType)
         subTypes.addAll(types)

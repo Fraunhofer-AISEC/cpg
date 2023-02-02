@@ -640,9 +640,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 )
             } else if (templateArgument is IASTExpression) {
                 val expression = frontend.expressionHandler.handle(templateArgument)
-                if (expression != null) {
-                    templateParams.add(expression)
-                }
+                expression?.let { templateParams.add(it) }
             }
         }
         for (declarator in ctx.declarators) {
