@@ -206,7 +206,7 @@ class CPPLanguage :
             val initializationType =
                 mutableMapOf<Node?, TemplateDeclaration.TemplateInitialization?>()
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
-            val explicitInstantiation = mutableListOf<ParameterizedType?>()
+            val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (
                 (templateCall.templateParameters.size <=
                     functionTemplateDeclaration.parameters.size) &&

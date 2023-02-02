@@ -96,8 +96,10 @@ class Inference(val start: Node) : LanguageProvider, IsInferredProvider {
 
         // TODO: Once, we used inferred.type = returnType and once the two following statements:
         // Why? What's the "right way"?
-        returnType?.let { inferred.returnTypes = listOf(it) }
-        inferred.type = returnType
+        returnType?.let {
+            inferred.returnTypes = listOf(it)
+            inferred.type = returnType
+        }
 
         // TODO: Handle multiple return values?
         if (declarationHolder is RecordDeclaration) {

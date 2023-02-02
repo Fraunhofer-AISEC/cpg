@@ -346,7 +346,7 @@ fun applyTemplateInstantiation(
             (initializationSignature[parameterizedTypeResolution[returnType]] as TypeExpression?)
                 ?.type
     }
-    templateCall.type = returnType
+    returnType?.let { templateCall.type = it }
     templateCall.updateTemplateParameters(initializationType, templateInstantiationParameters)
 
     // Apply changes to the call signature
@@ -393,7 +393,7 @@ fun applyTemplateInstantiation(
  */
 fun signatureWithImplicitCastTransformation(
     callSignature: List<Type?>,
-    arguments: List<Expression?>,
+    arguments: List<Expression>,
     functionSignature: List<Type>
 ): MutableList<CastExpression?> {
     val implicitCasts = mutableListOf<CastExpression?>()
@@ -411,8 +411,7 @@ fun signatureWithImplicitCastTransformation(
             implicitCasts.add(implicitCast)
         } else {
             // If no cast is needed we add null to be able to access the function signature
-            // list and
-            // the implicit cast list with the same index.
+            // list and the implicit cast list with the same index.
             implicitCasts.add(null)
         }
     }
@@ -465,7 +464,7 @@ fun getTemplateInitializationSignature(
     templateCall: CallExpression,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
-    explicitInstantiated: MutableList<ParameterizedType?>
+    explicitInstantiated: MutableList<ParameterizedType>
 ): Map<Declaration?, Node?>? {
     // Construct Signature
     val signature =
@@ -527,7 +526,7 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
     templateCall: CallExpression,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
-    explicitInstantiated: MutableList<ParameterizedType?>
+    explicitInstantiated: MutableList<ParameterizedType>
 ): MutableMap<Declaration?, Node?>? {
     val instantiationSignature: MutableMap<Declaration?, Node?> = HashMap()
     for (i in functionTemplateDeclaration.parameters.indices) {
@@ -674,7 +673,7 @@ fun checkArgumentValidity(
     functionDeclaration: FunctionDeclaration,
     functionDeclarationSignature: List<Type>,
     templateCallExpression: CallExpression,
-    explicitInstantiation: List<ParameterizedType?>
+    explicitInstantiation: List<ParameterizedType>
 ): Boolean {
     if (templateCallExpression.arguments.size <= functionDeclaration.parameters.size) {
         val callArguments =

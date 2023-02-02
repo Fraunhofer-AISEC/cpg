@@ -222,7 +222,7 @@ class DFGPass : Pass() {
      * case of the operators "++" and "--" also from the node back to the input.
      */
     private fun handleUnaryOperator(node: UnaryOperator) {
-        node.input?.let {
+        node.input.let {
             node.addPrevDFG(it)
             if (node.operatorCode == "++" || node.operatorCode == "--") {
                 node.addNextDFG(it)
@@ -325,14 +325,14 @@ class DFGPass : Pass() {
     private fun handleBinaryOp(node: BinaryOperator, parent: Node?) {
         when (node.operatorCode) {
             "=" -> {
-                node.rhs?.let { node.lhs.addPrevDFG(it) }
+                node.rhs.let { node.lhs.addPrevDFG(it) }
                 // There are cases where we explicitly want to connect the rhs to the =.
                 // E.g., this is the case in C++ where subexpressions can make the assignment.
                 // Examples: a + (b = 1)  or  a = a == b ? b = 2: b = 3
                 // When the parent is a compound statement (or similar block of code), we can safely
                 // assume that we're not in such a sub-expression
                 if (parent == null || parent !is CompoundStatement) {
-                    node.rhs?.addNextDFG(node)
+                    node.rhs.addNextDFG(node)
                 }
             }
             "*=",
@@ -345,15 +345,15 @@ class DFGPass : Pass() {
             "&=",
             "^=",
             "|=" -> {
-                node.lhs?.let {
+                node.lhs.let {
                     node.addPrevDFG(it)
                     node.addNextDFG(it)
                 }
-                node.rhs?.let { node.addPrevDFG(it) }
+                node.rhs.let { node.addPrevDFG(it) }
             }
             else -> {
-                node.lhs?.let { node.addPrevDFG(it) }
-                node.rhs?.let { node.addPrevDFG(it) }
+                node.lhs.let { node.addPrevDFG(it) }
+                node.rhs.let { node.addPrevDFG(it) }
             }
         }
     }
@@ -367,7 +367,7 @@ class DFGPass : Pass() {
      * Adds the DFG edge to a [CastExpression]. The inner expression flows to the cast expression.
      */
     private fun handleCastExpression(castExpression: CastExpression) {
-        castExpression.expression?.let { castExpression.addPrevDFG(it) }
+        castExpression.expression.let { castExpression.addPrevDFG(it) }
     }
 
     /** Adds the DFG edges to a [CallExpression]. */

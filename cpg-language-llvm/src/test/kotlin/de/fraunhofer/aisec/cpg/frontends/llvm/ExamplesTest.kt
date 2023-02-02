@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertNotNull

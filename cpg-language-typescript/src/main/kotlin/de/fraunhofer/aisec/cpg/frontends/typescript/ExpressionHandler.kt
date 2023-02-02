@@ -96,7 +96,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // and a container named JsxAttributes, with JsxAttribute nodes
         tag.expressions =
-            node.firstChild("JsxAttributes")?.children?.map { this.handle(it) } ?: emptyList()
+            node.firstChild("JsxAttributes")?.children?.mapNotNull { this.handle(it) }
+                ?: emptyList()
 
         return tag
     }
@@ -104,7 +105,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handeJsxElement(node: TypeScriptNode): ExpressionList {
         val jsx = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
-        jsx.expressions = node.children?.map { this.handle(it) }
+        jsx.expressions = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
 
         return jsx
     }

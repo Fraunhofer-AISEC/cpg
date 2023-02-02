@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOu
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
@@ -244,7 +245,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         return templateInstantiation != null || templateParameterEdges != null || template
     }
 
-    override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
@@ -261,7 +262,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
                 // TODO(oxisto): Support multiple return values
                 it.returnTypes.firstOrNull()
             }
-        val alternative = if (types.isNotEmpty()) types[0] else null
+        val alternative = if (types.isNotEmpty()) types[0] else UnknownType.getUnknownType(language)
         val commonType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
 
@@ -274,7 +275,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         }
     }
 
-    override fun possibleSubTypesChanged(src: HasType, root: List<HasType>) {
+    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }

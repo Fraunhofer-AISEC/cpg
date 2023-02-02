@@ -57,7 +57,7 @@ class MemberExpression : DeclaredReferenceExpression(), HasBase {
             .toString()
     }
 
-    override fun typeChanged(src: HasType?, root: MutableList<HasType>?, oldType: Type?) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         // We are basically only interested in type changes from our base to update the naming. We
         // need to ignore actual changes to the type because otherwise things go horribly wrong
         if (src == base) {
@@ -67,7 +67,7 @@ class MemberExpression : DeclaredReferenceExpression(), HasBase {
         }
     }
 
-    override fun possibleSubTypesChanged(src: HasType?, root: MutableList<HasType>?) {
+    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
         if (src != base) {
             super.possibleSubTypesChanged(src, root)
         }

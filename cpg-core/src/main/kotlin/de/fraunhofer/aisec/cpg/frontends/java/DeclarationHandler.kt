@@ -341,7 +341,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             variable.initializer
                 .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
                 .orElse(null) as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        var type: Type?
+        var type: Type
         try {
             // Resolve type first with ParameterizedType
             type =
@@ -350,9 +350,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                         frontend.scopeManager.currentRecord,
                         variable.resolve().type.describe()
                     )
-            if (type == null) {
-                type = this.parseType(joinedModifiers + variable.resolve().type.describe())
-            }
+                    ?: this.parseType(joinedModifiers + variable.resolve().type.describe())
         } catch (e: UnsolvedSymbolException) {
             val t = frontend.recoverTypeFromUnsolvedException(e)
             if (t == null) {

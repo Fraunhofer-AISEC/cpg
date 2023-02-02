@@ -58,18 +58,16 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
             value?.registerTypeListener(this)
         }
 
-    override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val previous = type
         val types: MutableList<Type> = ArrayList()
-        if (thenExpr != null && thenExpr!!.propagationType != null) {
-            types.add(thenExpr!!.propagationType)
-        }
-        if (elseExpr != null && elseExpr!!.propagationType != null) {
-            types.add(elseExpr!!.propagationType)
-        }
+
+        thenExpr?.propagationType?.let { types.add(it) }
+        elseExpr?.propagationType?.let { types.add(it) }
+
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
         subTypes.remove(oldType)
         subTypes.addAll(types)
@@ -81,7 +79,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
         }
     }
 
-    override fun possibleSubTypesChanged(src: HasType, root: List<HasType>) {
+    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }

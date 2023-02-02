@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 @JvmOverloads
 fun <T> MetadataProvider.newLiteral(
     value: T,
-    type: Type? = UnknownType.getUnknownType(),
+    type: Type = UnknownType.getUnknownType(),
     code: String? = null,
     rawNode: Any? = null,
 ): Literal<T> {
@@ -71,7 +71,7 @@ fun MetadataProvider.newBinaryOperator(
     val node = BinaryOperator()
     node.applyMetadata(this, operatorCode, rawNode, code, true)
 
-    node.setOperatorCode(operatorCode)
+    node.operatorCode = operatorCode
 
     log(node)
 
@@ -113,7 +113,7 @@ fun MetadataProvider.newUnaryOperator(
 @JvmOverloads
 fun MetadataProvider.newNewExpression(
     code: String? = null,
-    type: Type? = UnknownType.getUnknownType(),
+    type: Type = UnknownType.getUnknownType(),
     rawNode: Any? = null
 ): NewExpression {
     val node = NewExpression()
@@ -155,7 +155,7 @@ fun MetadataProvider.newConditionalExpression(
     condition: Expression,
     thenExpr: Expression?,
     elseExpr: Expression?,
-    type: Type? = UnknownType.getUnknownType(),
+    type: Type = UnknownType.getUnknownType(),
     code: String? = null,
     rawNode: Any? = null
 ): ConditionalExpression {
@@ -313,7 +313,7 @@ fun MetadataProvider.newMemberCallExpression(
 fun MetadataProvider.newMemberExpression(
     name: CharSequence?,
     base: Expression,
-    memberType: Type? = UnknownType.getUnknownType(),
+    memberType: Type = UnknownType.getUnknownType(),
     operatorCode: String? = ".",
     code: String? = null,
     rawNode: Any? = null
@@ -353,8 +353,8 @@ fun MetadataProvider.newCastExpression(code: String? = null, rawNode: Any? = nul
 @JvmOverloads
 fun MetadataProvider.newTypeIdExpression(
     operatorCode: String,
-    type: Type?,
-    referencedType: Type?,
+    type: Type = UnknownType.getUnknownType(),
+    referencedType: Type = UnknownType.getUnknownType(),
     code: String? = null,
     rawNode: Any? = null
 ): TypeIdExpression {
@@ -414,7 +414,7 @@ fun MetadataProvider.newArrayCreationExpression(
 @JvmOverloads
 fun MetadataProvider.newDeclaredReferenceExpression(
     name: CharSequence?,
-    type: Type? = UnknownType.getUnknownType(),
+    type: Type = UnknownType.getUnknownType(),
     code: String? = null,
     rawNode: Any? = null
 ): DeclaredReferenceExpression {
@@ -529,7 +529,7 @@ fun MetadataProvider.newDesignatedInitializerExpression(
 @JvmOverloads
 fun MetadataProvider.newTypeExpression(
     name: CharSequence?,
-    type: Type?,
+    type: Type = UnknownType.getUnknownType(),
     rawNode: Any? = null
 ): TypeExpression {
     val node = TypeExpression()

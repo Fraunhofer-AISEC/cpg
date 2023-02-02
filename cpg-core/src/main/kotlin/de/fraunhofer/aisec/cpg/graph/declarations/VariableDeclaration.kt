@@ -25,60 +25,65 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.HasInitializer
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.SubGraph
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-/**
- * Declaration of a field within a [RecordDeclaration]. It contains the modifiers associated with
- * the field as well as an initializer [Expression] which provides an initial value for the field.
- */
-class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitializer {
+/** Represents the declaration of a variable. */
+class VariableDeclaration :
+    ValueDeclaration(), HasType.TypeListener, HasInitializer, Assignment, AssignmentTarget {
+    override val value: Expression?
+        get() {
+            return initializer
+        }
+
+    /**
+     * We need a way to store the templateParameters that a VariableDeclaration might have before
+     * the ConstructExpression is created.
+     *
+     * Because templates are only used by a small subset of languages and variable declarations are
+     * used often, we intentionally make this a nullable list instead of an empty list.
+     */
+    @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
+    @field:SubGraph("AST")
+    var templateParameters: List<Node>? = null
+
+    /**
+     * C++ uses implicit constructor calls for statements like `A a;` but this only applies to types
+     * that are actually classes and not just primitive types or typedef aliases of primitives.
+     * Thus, during AST construction, we can only suggest that an implicit constructor call might be
+     * allowed by the language (so this is set to true for C++ but false for Java, as such a
+     * statement in Java leads to an uninitialized variable). The final decision can then be made
+     * after we have analyzed all classes present in the current scope.
+     */
+    var isImplicitInitializerAllowed = false
+    var isArray = false
+
+    /** The (optional) initializer of the declaration. */
     @field:SubGraph("AST")
     override var initializer: Expression? = null
         set(value) {
-            if (field != null) {
-                isDefinition = true
-                field?.unregisterTypeListener(this)
-                if (field is HasType.TypeListener) {
-                    unregisterTypeListener(field as HasType.TypeListener)
-                }
+            field?.unregisterTypeListener(this)
+            if (field is HasType.TypeListener) {
+                unregisterTypeListener(field as HasType.TypeListener)
             }
             field = value
-            if (value != null) {
-                value.registerTypeListener(this)
-                if (value is HasType.TypeListener) {
-                    registerTypeListener(value as HasType.TypeListener)
-                }
+            value?.registerTypeListener(this)
+
+            // if the initializer implements a type listener, inform it about our type changes
+            // since the type is tied to the declaration, but it is convenient to have the type
+            // information in the initializer, i.e. in a ConstructExpression.
+            if (value is HasType.TypeListener) {
+                registerTypeListener((value as HasType.TypeListener?)!!)
             }
         }
 
-    /** Specifies, whether this field declaration is also a definition, i.e. has an initializer. */
-    private var isDefinition = false
-
-    /** If this is only a declaration, this provides a link to the definition of the field. */
-    @Relationship(value = "DEFINES")
-    var definition: FieldDeclaration = this
-        get() {
-            return if (isDefinition) {
-                this
-            } else {
-                field
-            }
-        }
-
-    /** @see VariableDeclaration.implicitInitializerAllowed */
-    var isImplicitInitializerAllowed = false
-
-    var isArray = false
-    var modifiers: List<String> = mutableListOf()
+    fun <T> getInitializerAs(clazz: Class<T>): T? {
+        return clazz.cast(initializer)
+    }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
@@ -89,10 +94,10 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
         }
         val previous = type
         val newType =
-            if (src === initializer && initializer is InitializerListExpression) {
+            if (src === value && value is InitializerListExpression) {
                 // Init list is seen as having an array type, but can be used ambiguously. It can be
-                // either used to initialize an array, or to initialize some objects. If it is used
-                // as an
+                // either
+                // used to initialize an array, or to initialize some objects. If it is used as an
                 // array initializer, we need to remove the array/pointer layer from the type,
                 // otherwise it
                 // can be ignored once we have a type
@@ -123,9 +128,9 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("initializer", initializer)
-            .append("modifiers", modifiers)
+            .append("name", name)
+            .append("location", location)
+            .append("initializer", value)
             .toString()
     }
 
@@ -133,13 +138,15 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
         if (this === other) {
             return true
         }
-        if (other !is FieldDeclaration) {
-            return false
-        }
-        return (super.equals(other) &&
-            initializer == other.initializer &&
-            modifiers == other.modifiers)
+        return if (other !is VariableDeclaration) {
+            false
+        } else super.equals(other) && value == other.value
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), initializer, modifiers)
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+
+    override val target: AssignmentTarget
+        get() = this
 }

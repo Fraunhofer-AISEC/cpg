@@ -490,7 +490,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleAlloca(instr: LLVMValueRef): Statement {
         val array = newArrayCreationExpression(frontend.getCodeFromRawNode(instr))
 
-        array.updateType(frontend.typeOf(instr))
+        array.type = frontend.typeOf(instr)
 
         // LLVM is quite forthcoming here. in case the optional length parameter is omitted in the
         // source code, it will automatically be set to 1
@@ -646,7 +646,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 base =
                     newDeclaredReferenceExpression(
                         copy.singleDeclaration?.name?.localName,
-                        (copy.singleDeclaration as VariableDeclaration?)?.type,
+                        (copy.singleDeclaration as? VariableDeclaration)?.type
+                            ?: UnknownType.getUnknownType(this.language),
                         frontend.getCodeFromRawNode(instr)
                     )
             }
@@ -699,7 +700,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: UnknownType.getUnknownType(language)
 
                 // construct our member expression
-                expr = newMemberExpression(field?.name?.localName, base, field?.type, ".", "")
+                expr = newMemberExpression(field?.name?.localName, base, baseType, ".", "")
                 log.info("{}", expr)
 
                 // the current expression is the new base
@@ -1255,7 +1256,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         arrayExpr.arrayExpression =
             newDeclaredReferenceExpression(
                 decl?.name?.toString() ?: Node.EMPTY_NAME,
-                decl?.type,
+                decl?.type ?: UnknownType.getUnknownType(this.language),
                 instrStr
             )
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 2)
@@ -1422,8 +1423,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val type = frontend.typeOf(instr)
         val code = frontend.getCodeFromRawNode(instr)
         val declaration = newVariableDeclaration(varName, type, code, false, frontend.language)
-        declaration.updateType(type)
+        declaration.type = type
+
         flatAST.add(declaration)
+
         // add the declaration to the current scope
         frontend.scopeManager.addDeclaration(declaration)
         // add it to our bindings cache
@@ -1642,14 +1645,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val bb: LLVMBasicBlockRef = LLVMValueAsBasicBlock(bbTarget)
         val labelName = LLVMGetBasicBlockName(bb).string
         goto.labelName = labelName
-        try {
-            val label = newLabelStatement(labelName)
-            label.name = Name(labelName)
-            // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
-            // to the CPG goto statement
-            frontend.registerObjectListener(label, assigneeTargetLabel)
-            goto.targetLabel.label
-        } catch (e: Exception) {
+        val label = newLabelStatement(labelName)
+        label.name = Name(labelName)
+        // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
+        // to the CPG goto statement
+        frontend.registerObjectListener(label, assigneeTargetLabel)
+        if (goto.targetLabel == null) {
             // If the Label AST node could not be resolved, the matching is done based on label
             // names of CPG nodes using the predicate listeners
             frontend.registerPredicateListener(

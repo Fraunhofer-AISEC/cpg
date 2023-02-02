@@ -69,7 +69,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
         initializerEdges.add(edge)
     }
 
-    override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
@@ -83,7 +83,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
             val types =
                 initializers
                     .parallelStream()
-                    .map { obj: Expression -> obj.getType() }
+                    .map { obj: Expression -> obj.type }
                     .filter { obj: Type? -> Objects.nonNull(obj) }
                     .map { t: Type ->
                         TypeManager.getInstance().registerType(t.reference(PointerOrigin.ARRAY))
@@ -108,7 +108,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
         }
     }
 
-    override fun possibleSubTypesChanged(src: HasType, root: List<HasType>) {
+    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }

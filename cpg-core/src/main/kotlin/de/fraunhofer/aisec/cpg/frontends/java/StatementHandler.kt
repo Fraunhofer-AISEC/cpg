@@ -99,9 +99,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val returnStatement = this.newReturnStatement(returnStmt.toString())
 
         // expressionRefersToDeclaration to arguments, if there are any
-        if (expression != null) {
-            returnStatement.returnValue = expression
-        }
+        expression?.let { returnStatement.returnValue = it }
+
         frontend.setCodeAndLocation(returnStatement, stmt)
         return returnStatement
     }
@@ -190,7 +189,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
                 // make sure location is set
                 frontend.setCodeAndLocation(s, initExpr)
-                initExprList.addExpression(s)
+                s?.let { initExprList.addExpression(it) }
 
                 // can not update location
                 if (s!!.location == null) {
@@ -241,7 +240,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
                 // make sure location is set
                 frontend.setCodeAndLocation(s, updateExpr)
-                iterationExprList.addExpression(s)
+                s?.let { iterationExprList.addExpression(it) }
 
                 // can not update location
                 if (s!!.location == null) {

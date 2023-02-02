@@ -123,26 +123,4 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
 
     // We can't add anything else here
     override fun hashCode() = super.hashCode()
-
-    override fun <T : Declaration> addIfNotContains(
-        collection: MutableCollection<T>,
-        declaration: T
-    ) {
-        super.addIfNotContains(collection, declaration)
-    }
-
-    override fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
-        declaration: T
-    ) {
-        super.addIfNotContains(collection, declaration)
-    }
-
-    override fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
-        declaration: T,
-        outgoing: Boolean
-    ) {
-        super.addIfNotContains(collection, declaration, outgoing)
-    }
 }

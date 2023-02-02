@@ -160,7 +160,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 }
             } else if (isSimpleAssignment(currentNode)) {
                 // We write to the target => the rhs flows to the lhs
-                (currentNode as BinaryOperator).rhs?.let { currentNode.lhs.addPrevDFG(it) }
+                (currentNode as BinaryOperator).rhs.let { currentNode.lhs.addPrevDFG(it) }
 
                 // Only the lhs is the last write statement here and the variable which is written
                 // to.
@@ -169,8 +169,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 if (writtenDecl != null) {
                     previousWrites
                         .computeIfAbsent(writtenDecl, ::mutableListOf)
-                        .add(currentNode.lhs)
-                    currentWritten = currentNode.lhs
+                        .add(currentNode.lhs as DeclaredReferenceExpression)
+                    currentWritten = currentNode.lhs as DeclaredReferenceExpression
                 }
             } else if (isCompoundAssignment(currentNode)) {
                 // We write to the lhs, but it also serves as an input => We first get all previous
@@ -188,7 +188,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     currentNode.addPrevDFG(currentNode.lhs)
 
                     // Data flows from whatever is the rhs to this node
-                    currentNode.rhs?.let { currentNode.addPrevDFG(it) }
+                    currentNode.rhs.let { currentNode.addPrevDFG(it) }
 
                     // TODO: Similar to the ++ case: Should the DFG edge go back to the reference?
                     //  If it shouldn't, remove the following statement:

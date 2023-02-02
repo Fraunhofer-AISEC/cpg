@@ -47,7 +47,7 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
     var arrayExpression: Expression = ProblemExpression("could not parse array expression")
         set(value) {
             field = value
-            setType(value.getType()?.let { getSubscriptType(it) })
+            type = getSubscriptType(value.type)
             value.registerTypeListener(this)
         }
 
@@ -69,7 +69,7 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
         return arrayType.dereference()
     }
 
-    override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
@@ -80,7 +80,7 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
         }
     }
 
-    override fun possibleSubTypesChanged(src: HasType, root: List<HasType>) {
+    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
