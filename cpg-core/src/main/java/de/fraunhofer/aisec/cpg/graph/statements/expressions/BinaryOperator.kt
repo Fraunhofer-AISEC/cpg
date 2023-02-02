@@ -28,32 +28,34 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Transient
 import java.util.List
 import java.util.Objects
+import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
  * right hand expression (rhs) and an operatorCode.
  */
 class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
-    /** The left hand expression.  */
-    @SubGraph("AST")
-    private var lhs: Expression? = null
-    set(value) {
-        if (field != null) {
+    /** The left hand expression. */
+    @field:SubGraph("AST")
+    var lhs: Expression = ProblemExpression("could not parse lhs")
+        set(value) {
             disconnectOldLhs()
+            field = value
+            connectNewLhs(value)
         }
-        field = value
-        value?.let { connectNewLhs(it) }
-    }
 
-    /** The right hand expression.  */
-    @SubGraph("AST")
-    private var rhs: Expression? = null
-
-    /** The operator code.  */
+    /** The right hand expression. */
+    @field:SubGraph("AST")
+    var rhs: Expression = ProblemExpression("could not parse rhs")
+        set(value) {
+            disconnectOldRhs()
+            field = value
+            connectNewRhs(value)
+        }
+    /** The operator code. */
     override var operatorCode: String? = null
 
     fun <T : Expression?> getLhsAs(clazz: Class<T>): T? {
@@ -64,7 +66,8 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
         lhs.registerTypeListener(this)
         if ("=" == operatorCode) {
             if (lhs is DeclaredReferenceExpression) {
-                // declared reference expr is the left hand side of an assignment -> writing to the var
+                // declared reference expr is the left hand side of an assignment -> writing to the
+                // var
                 lhs.access = AccessValues.WRITE
             }
             if (lhs is HasType.TypeListener) {
@@ -73,7 +76,8 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
             }
         } else if (compoundOperators.contains(operatorCode)) {
             if (lhs is DeclaredReferenceExpression) {
-                // declared reference expr is the left hand side of an assignment -> writing to the var
+                // declared reference expr is the left hand side of an assignment -> writing to the
+                // var
                 lhs.access = AccessValues.READWRITE
             }
             if (lhs is HasType.TypeListener) {
@@ -84,26 +88,14 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
     }
 
     private fun disconnectOldLhs() {
-        lhs!!.unregisterTypeListener(this)
+        lhs.unregisterTypeListener(this)
         if ("=" == operatorCode && lhs is HasType.TypeListener) {
             unregisterTypeListener((lhs as HasType.TypeListener?)!!)
         }
     }
 
-    fun getRhs(): Expression? {
-        return rhs
-    }
-
     fun <T : Expression?> getRhsAs(clazz: Class<T>): T? {
         return if (clazz.isInstance(rhs)) clazz.cast(rhs) else null
-    }
-
-    fun setRhs(rhs: Expression?) {
-        if (this.rhs != null) {
-            disconnectOldRhs()
-        }
-        this.rhs = rhs
-        rhs?.let { connectNewRhs(it) }
     }
 
     private fun connectNewRhs(rhs: Expression) {
@@ -114,31 +106,28 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
     }
 
     private fun disconnectOldRhs() {
-        rhs!!.unregisterTypeListener(this)
+        rhs.unregisterTypeListener(this)
         if ("=" == operatorCode && rhs is HasType.TypeListener) {
             unregisterTypeListener((rhs as HasType.TypeListener?)!!)
         }
     }
 
-    override fun typeChanged(
-        src: HasType, root: MutableList<HasType>, oldType: Type
-    ) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val previous = type
         if (operatorCode == "=") {
             setType(src.propagationType, root)
-        } else if (lhs != null && "java.lang.String" == lhs!!.type.toString()
-            || rhs != null && "java.lang.String" == rhs!!.type.toString()
+        } else if (
+            "java.lang.String" == lhs.type.toString() || "java.lang.String" == rhs.type.toString()
         ) {
             // String + any other type results in a String
             _possibleSubTypes.clear()
             setType(TypeParser.createFrom("java.lang.String", language), root)
-        } else if (operatorCode == ".*" || operatorCode == "->*"
-            && src === rhs
-        ) {
-            // Propagate the function pointer type to the expression itself. This helps us later in the
+        } else if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
+            // Propagate the function pointer type to the expression itself. This helps us later in
+            // the
             // call resolver, when trying to determine, whether this is a regular call or a function
             // pointer call.
             setType(src.propagationType, root)
@@ -159,8 +148,8 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
-            .append("lhs", if (lhs == null) "null" else lhs!!.name)
-            .append("rhs", if (rhs == null) "null" else rhs!!.name)
+            .append("lhs", lhs.name)
+            .append("rhs", rhs.name)
             .append("operatorCode", operatorCode)
             .toString()
     }
@@ -173,38 +162,44 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
             return false
         }
         val that = other
-        return super.equals(that) && lhs == that.lhs && rhs == that.rhs && operatorCode == that.operatorCode
+        return super.equals(that) &&
+            lhs == that.lhs &&
+            rhs == that.rhs &&
+            operatorCode == that.operatorCode
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), lhs, rhs, operatorCode)
 
     // We only want to supply a target if this is an assignment
     override val target: AssignmentTarget?
-        get() =// We only want to supply a target if this is an assignment
-            if (isAssignment) (if (lhs is AssignmentTarget) lhs as AssignmentTarget? else null) else null
+        get() = // We only want to supply a target if this is an assignment
+        if (isAssignment) (if (lhs is AssignmentTarget) lhs as AssignmentTarget? else null)
+            else null
     override val value: Expression?
         get() = if (isAssignment) rhs else null
 
     private val isAssignment: Boolean
         get() {
-            // TODO(oxisto): We need to discuss, if the other operators are also assignments and if we really want them
+            // TODO(oxisto): We need to discuss, if the other operators are also assignments and if
+            // we really want them
             return this.operatorCode.equals("=")
             /*||this.operatorCode.equals("+=") ||this.operatorCode.equals("-=")
-            ||this.operatorCode.equals("/=")  ||this.operatorCode.equals("*=")*/ ;
+            ||this.operatorCode.equals("/=")  ||this.operatorCode.equals("*=")*/
         }
 
     override val base: Expression?
-    get() {
-        return if (operatorCode == ".*" || operatorCode == "->*") {
-            lhs
-        } else {
-            null
+        get() {
+            return if (operatorCode == ".*" || operatorCode == "->*") {
+                lhs
+            } else {
+                null
+            }
         }
-    }
 
     companion object {
-        /** Required for compound BinaryOperators. This should not be stored in the graph  */
+        /** Required for compound BinaryOperators. This should not be stored in the graph */
         @Transient
-        val compoundOperators = List.of("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=")
+        val compoundOperators =
+            List.of("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=")
     }
 }

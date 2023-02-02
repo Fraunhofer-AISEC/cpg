@@ -33,18 +33,50 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import java.util.*
+import kotlin.collections.ArrayList
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the
- * expression `a = b`, which itself is a [BinaryOperator], contains two [ ]s, one for the variable `a` and one for variable `b
-` * , which have been previously been declared.
+ * expression `a = b`, which itself is a [BinaryOperator], contains two [ ]s, one for the variable
+ * `a` and one for variable `b ` * , which have been previously been declared.
  */
 open class DeclaredReferenceExpression : Expression(), HasType.TypeListener, AssignmentTarget {
-    /** The [Declaration]s this expression might refer to.  */
+    /** The [Declaration]s this expression might refer to. */
     @Relationship(value = "REFERS_TO")
-    private var refersTo: Declaration? = null
+    var refersTo: Declaration? = null
+        set(value) {
+            if (field == null) {
+                return
+            }
+            val current = field
+
+            // unregister type listeners for current declaration
+            if (current != null) {
+                if (current is ValueDeclaration) {
+                    current.unregisterTypeListener(this)
+                }
+                if (current is HasType.TypeListener) {
+                    unregisterTypeListener((current as HasType.TypeListener?)!!)
+                }
+            }
+
+            // set it
+            field = value
+            if (value is ValueDeclaration) {
+                value.addUsage(this)
+            }
+
+            // update type listeners
+            if (field is ValueDeclaration) {
+                (field as ValueDeclaration).registerTypeListener(this)
+            }
+            if (field is HasType.TypeListener) {
+                registerTypeListener(field as HasType.TypeListener)
+            }
+        }
     // set the access
     /**
      * Is this reference used for writing data instead of just reading it? Determines dataflow
@@ -52,9 +84,6 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener, Ass
      */
     var access = AccessValues.READ
     var isStaticAccess = false
-    fun getRefersTo(): Declaration? {
-        return refersTo
-    }
 
     /**
      * Returns the contents of [.refersTo] as the specified class, if the class is assignable.
@@ -63,7 +92,8 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener, Ass
      * @param clazz the expected class
      * @param <T> the type
      * @return the declaration cast to the expected class, or null if the class is not assignable
-    </T> */
+     *   </T>
+     */
     fun <T : VariableDeclaration?> getRefersToAs(clazz: Class<T>): T? {
         if (refersTo == null) {
             return null
@@ -71,40 +101,7 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener, Ass
         return if (clazz.isAssignableFrom(refersTo!!.javaClass)) clazz.cast(refersTo) else null
     }
 
-    fun setRefersTo(refersTo: Declaration?) {
-        if (refersTo == null) {
-            return
-        }
-        val current = this.refersTo
-
-        // unregister type listeners for current declaration
-        if (current != null) {
-            if (current is ValueDeclaration) {
-                current.unregisterTypeListener(this)
-            }
-            if (current is HasType.TypeListener) {
-                unregisterTypeListener((current as HasType.TypeListener?)!!)
-            }
-        }
-
-        // set it
-        this.refersTo = refersTo
-        if (refersTo is ValueDeclaration) {
-            refersTo.addUsage(this)
-        }
-
-        // update type listeners
-        if (this.refersTo is ValueDeclaration) {
-            (this.refersTo as ValueDeclaration?)!!.registerTypeListener(this)
-        }
-        if (this.refersTo is HasType.TypeListener) {
-            registerTypeListener((this.refersTo as HasType.TypeListener?)!!)
-        }
-    }
-
-    override fun typeChanged(
-        src: HasType, root: MutableList<HasType>, oldType: Type
-    ) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
@@ -120,7 +117,8 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener, Ass
             return
         }
 
-        // since we want to update the sub types, we need to exclude ourselves from the root, otherwise
+        // since we want to update the sub types, we need to exclude ourselves from the root,
+        // otherwise
         // it won't work. What a weird and broken system!
         root.remove(this)
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
@@ -135,18 +133,15 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener, Ass
             .toString()
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
             return true
         }
-        if (o !is DeclaredReferenceExpression) {
+        if (other !is DeclaredReferenceExpression) {
             return false
         }
-        val that = o
-        return super.equals(that) && refersTo == that.refersTo
+        return super.equals(other) && refersTo == other.refersTo
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), refersTo)
 }

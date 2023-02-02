@@ -325,7 +325,7 @@ class DFGPass : Pass() {
     private fun handleBinaryOp(node: BinaryOperator, parent: Node?) {
         when (node.operatorCode) {
             "=" -> {
-                node.rhs?.let { node.lhs.addPrevDFG(it) }
+                node.rhs?.let { node.lhs?.addPrevDFG(it) }
                 // There are cases where we explicitly want to connect the rhs to the =.
                 // E.g., this is the case in C++ where subexpressions can make the assignment.
                 // Examples: a + (b = 1)  or  a = a == b ? b = 2: b = 3

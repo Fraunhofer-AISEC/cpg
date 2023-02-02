@@ -169,8 +169,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 if (writtenDecl != null) {
                     previousWrites
                         .computeIfAbsent(writtenDecl, ::mutableListOf)
-                        .add(currentNode.lhs)
-                    currentWritten = currentNode.lhs
+                        .add(currentNode.lhs as DeclaredReferenceExpression)
+                    currentWritten = currentNode.lhs as DeclaredReferenceExpression
                 }
             } else if (isCompoundAssignment(currentNode)) {
                 // We write to the lhs, but it also serves as an input => We first get all previous

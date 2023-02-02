@@ -35,47 +35,47 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOu
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import java.util.*
+import kotlin.collections.ArrayList
 import org.neo4j.ogm.annotation.Relationship
 
 class ExpressionList : Expression(), HasType.TypeListener {
     @Relationship(value = "SUBEXPR", direction = Relationship.Direction.OUTGOING)
     @SubGraph("AST")
-    private var expressions: MutableList<PropertyEdge<Statement>> = ArrayList()
-    fun getExpressions(): List<Statement> {
-        return unwrap(expressions)
-    }
+    var expressionEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
 
-    val expressionsPropertyEdges: List<PropertyEdge<Statement>>
-        get() = expressions
-
-    fun setExpressions(expressions: List<Statement>?) {
-        if (!this.expressions.isEmpty()) {
-            val lastExpression = this.expressions[this.expressions.size - 1].end
-            if (lastExpression is HasType) (lastExpression as HasType).unregisterTypeListener(this)
+    var expressions: List<Statement>
+        get() {
+            return unwrap(expressionEdges)
         }
-        this.expressions = transformIntoOutgoingPropertyEdgeList(expressions, this)
-        if (!this.expressions.isEmpty()) {
-            val lastExpression = this.expressions[this.expressions.size - 1].end
-            if (lastExpression is HasType) (lastExpression as HasType).registerTypeListener(this)
+        set(value) {
+            if (this.expressionEdges.isNotEmpty()) {
+                val lastExpression = this.expressionEdges[this.expressionEdges.size - 1].end
+                if (lastExpression is HasType)
+                    (lastExpression as HasType).unregisterTypeListener(this)
+            }
+            this.expressionEdges = transformIntoOutgoingPropertyEdgeList(value, this)
+            if (this.expressionEdges.isNotEmpty()) {
+                val lastExpression = this.expressionEdges[this.expressionEdges.size - 1].end
+                if (lastExpression is HasType)
+                    (lastExpression as HasType).registerTypeListener(this)
+            }
         }
-    }
 
     fun addExpression(expression: Statement) {
-        if (!expressions.isEmpty()) {
-            val lastExpression = expressions[expressions.size - 1].end
+        if (!expressionEdges.isEmpty()) {
+            val lastExpression = expressionEdges[expressionEdges.size - 1].end
             if (lastExpression is HasType) (lastExpression as HasType).unregisterTypeListener(this)
         }
         val propertyEdge = PropertyEdge(this, expression)
-        propertyEdge.addProperty(Properties.INDEX, expressions.size)
-        expressions.add(propertyEdge)
+        propertyEdge.addProperty(Properties.INDEX, expressionEdges.size)
+        expressionEdges.add(propertyEdge)
         if (expression is HasType) {
             (expression as HasType).registerTypeListener(this)
         }
     }
 
-    override fun typeChanged(
-        src: HasType, root: MutableList<HasType>, oldType: Type
-    ) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
@@ -101,12 +101,12 @@ class ExpressionList : Expression(), HasType.TypeListener {
         if (o !is ExpressionList) {
             return false
         }
-        val that = o
-        return (super.equals(that) && getExpressions() == that.getExpressions()
-                && propertyEqualsList(expressions, that.expressions))
+        return (super.equals(o) &&
+            expressions == o.expressions &&
+            propertyEqualsList(expressionEdges, o.expressionEdges))
     }
 
     override fun hashCode(): Int {
-        return super.hashCode()
+        return Objects.hash(super.hashCode(), expressions)
     }
 }

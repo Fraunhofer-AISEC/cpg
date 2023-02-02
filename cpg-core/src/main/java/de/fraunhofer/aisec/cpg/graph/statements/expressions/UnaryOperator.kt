@@ -32,36 +32,36 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util.distinctBy
+import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Transient
-import java.util.List
-import java.util.stream.Collectors
 
-/**
- * A unary operator expression, involving one expression and an operator, such as `a++`.
- */
+/** A unary operator expression, involving one expression and an operator, such as `a++`. */
 class UnaryOperator : Expression(), HasType.TypeListener {
-    /** The expression on which the operation is applied.  */
+    /** The expression on which the operation is applied. */
     @SubGraph("AST")
-    private var input: Expression? = null
-    set(value) {
-        field?.unregisterTypeListener(this)
-        field = value
-        input?.registerTypeListener(this)
-        changeExpressionAccess()
-    }
+    var input: Expression = ProblemExpression("could not parse input")
+        set(value) {
+            field.unregisterTypeListener(this)
+            field = value
+            input.registerTypeListener(this)
+            changeExpressionAccess()
+        }
 
-    /** The operator code.  */
-    private var operatorCode: String? = null
+    /** The operator code. */
+    var operatorCode: String? = null
+        set(value) {
+            field = value
+            changeExpressionAccess()
+        }
 
-    /** Specifies, whether this a post fix operation.  */
+    /** Specifies, whether this a post fix operation. */
     var isPostfix = false
 
-    /** Specifies, whether this a pre fix operation.  */
+    /** Specifies, whether this a pre fix operation. */
     var isPrefix = false
 
-    @Transient
-    private val checked: MutableList<HasType.TypeListener> = ArrayList()
+    @Transient private val checked: MutableList<HasType.TypeListener> = ArrayList()
 
     private fun changeExpressionAccess() {
         var access = AccessValues.READ
@@ -73,7 +73,10 @@ class UnaryOperator : Expression(), HasType.TypeListener {
         }
     }
 
-    private fun getsDataFromInput(curr: HasType.TypeListener, target: HasType.TypeListener): Boolean {
+    private fun getsDataFromInput(
+        curr: HasType.TypeListener,
+        target: HasType.TypeListener
+    ): Boolean {
         val worklist: MutableList<HasType.TypeListener> = ArrayList()
         worklist.add(curr)
         while (!worklist.isEmpty()) {
@@ -93,25 +96,13 @@ class UnaryOperator : Expression(), HasType.TypeListener {
 
     private fun getsDataFromInput(listener: HasType.TypeListener): Boolean {
         checked.clear()
-        if (input == null) return false
-        for (l in input!!.typeListeners) {
+        for (l in input.typeListeners) {
             if (getsDataFromInput(l, listener)) return true
         }
         return false
     }
 
-    fun getOperatorCode(): String? {
-        return operatorCode
-    }
-
-    fun setOperatorCode(operatorCode: String?) {
-        this.operatorCode = operatorCode
-        changeExpressionAccess()
-    }
-
-    override fun typeChanged(
-        src: HasType, root: MutableList<HasType>, oldType: Type
-    ) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
@@ -136,11 +127,7 @@ class UnaryOperator : Expression(), HasType.TypeListener {
                 newType = src.propagationType.dereference()
             }
 
-            // We are a fuzzy parser, so while this should not happen, there is no guarantee that input is
-            // not null
-            if (input != null) {
-                input!!.setType(newType!!, ArrayList(List.of(this)))
-            }
+            input.setType(newType!!, mutableListOf(this))
         }
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW
@@ -158,15 +145,19 @@ class UnaryOperator : Expression(), HasType.TypeListener {
         val newSubTypes = src.possibleSubTypes
         currSubTypes.addAll(newSubTypes)
         if (operatorCode == "*") {
-            currSubTypes = currSubTypes.stream()
-                .filter(distinctBy { obj: Type -> obj.typeName })
-                .map { obj: Type -> obj.dereference() }
-                .collect(Collectors.toList())
+            currSubTypes =
+                currSubTypes
+                    .stream()
+                    .filter(distinctBy { obj: Type -> obj.typeName })
+                    .map { obj: Type -> obj.dereference() }
+                    .collect(Collectors.toList())
         } else if (operatorCode == "&") {
-            currSubTypes = currSubTypes.stream()
-                .filter(distinctBy { obj: Type -> obj.typeName })
-                .map { t: Type -> t.reference(PointerType.PointerOrigin.POINTER) }
-                .collect(Collectors.toList())
+            currSubTypes =
+                currSubTypes
+                    .stream()
+                    .filter(distinctBy { obj: Type -> obj.typeName })
+                    .map { t: Type -> t.reference(PointerType.PointerOrigin.POINTER) }
+                    .collect(Collectors.toList())
         }
         _possibleSubTypes.clear()
         setPossibleSubTypes(currSubTypes, root) // notify about the new type
@@ -189,7 +180,11 @@ class UnaryOperator : Expression(), HasType.TypeListener {
             return false
         }
         val that = o
-        return super.equals(that) && isPostfix == that.isPostfix && isPrefix == that.isPrefix && input == that.input && operatorCode == that.operatorCode
+        return super.equals(that) &&
+            isPostfix == that.isPostfix &&
+            isPrefix == that.isPrefix &&
+            input == that.input &&
+            operatorCode == that.operatorCode
     }
 
     override fun hashCode(): Int {

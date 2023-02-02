@@ -190,7 +190,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
                 // make sure location is set
                 frontend.setCodeAndLocation(s, initExpr)
-                initExprList.addExpression(s)
+                if (s != null) {
+                    initExprList.addExpression(s)
+                }
 
                 // can not update location
                 if (s!!.location == null) {
@@ -241,7 +243,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
                 // make sure location is set
                 frontend.setCodeAndLocation(s, updateExpr)
-                iterationExprList.addExpression(s)
+                if (s != null) {
+                    iterationExprList.addExpression(s)
+                }
 
                 // can not update location
                 if (s!!.location == null) {

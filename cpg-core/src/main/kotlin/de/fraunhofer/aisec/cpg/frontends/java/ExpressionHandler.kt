@@ -56,7 +56,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val castExpression = this.newCastExpression(expr.toString())
         val expression =
             handle(castExpr.expression)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                ?: newProblemExpression("could not parse expression")
         castExpression.expression = expression
         castExpression.setCastOperator(2)
         val t = frontend.getTypeAsGoodAsPossible(castExpr.type)
@@ -173,12 +174,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // first, handle the target. this is the first argument of the operator call
         val lhs =
             handle(assignExpr.target)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                ?: newProblemExpression("could not parse lhs")
 
         // second, handle the value. this is the second argument of the operator call
         val rhs =
             handle(assignExpr.value)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                ?: newProblemExpression("could not parse lhs")
         val binaryOperator =
             this.newBinaryOperator(assignExpr.operator.asString(), assignExpr.toString())
         binaryOperator.lhs = lhs
@@ -617,7 +620,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // symbol
         val lhs =
             handle(binaryExpr.expression)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                ?: newProblemExpression("could not parse lhs")
         val typeAsGoodAsPossible = frontend.getTypeAsGoodAsPossible(binaryExpr.type)
 
         // second, handle the value. this is the second argument of the operator call
@@ -639,7 +643,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // handle the 'inner' expression, which is affected by the unary expression
         val expression =
             handle(unaryExpr.expression)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                ?: newProblemExpression("could not parse input")
         val unaryOperator =
             this.newUnaryOperator(
                 unaryExpr.operator.asString(),
@@ -657,12 +662,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // first, handle the target. this is the first argument of the operator call
         val lhs =
             handle(binaryExpr.left)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                ?: newProblemExpression("could not parse lhs")
 
         // second, handle the value. this is the second argument of the operator call
         val rhs =
             handle(binaryExpr.right)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                ?: newProblemExpression("could not parse rhs")
         val binaryOperator =
             this.newBinaryOperator(binaryExpr.operator.asString(), binaryExpr.toString())
         binaryOperator.lhs = lhs

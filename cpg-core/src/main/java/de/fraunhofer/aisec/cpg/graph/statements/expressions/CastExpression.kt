@@ -30,29 +30,27 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import java.util.*
+import kotlin.collections.ArrayList
 import org.slf4j.LoggerFactory
 
 class CastExpression : Expression(), HasType.TypeListener {
-    @SubGraph("AST")
-    var expression: Expression? = null
-    private var castType: Type? = null
-    fun getCastType(): Type? {
-        return castType
-    }
+    @field:SubGraph("AST")
+    var expression: Expression = ProblemExpression("could not parse inner expression")
 
-    fun setCastType(castType: Type?) {
-        this.castType = castType
-        type = castType!!
-    }
+    var castType: Type = UnknownType.getUnknownType()
+        set(value) {
+            field = value
+            type = value
+        }
 
     override fun updateType(type: Type) {
         super.updateType(type)
         castType = type
     }
 
-    override fun typeChanged(
-        src: HasType, root: MutableList<HasType>, oldType: Type
-    ) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
@@ -60,7 +58,7 @@ class CastExpression : Expression(), HasType.TypeListener {
         if (TypeManager.getInstance().isSupertypeOf(castType, src.propagationType, this)) {
             setType(src.propagationType, root)
         } else {
-            resetTypes(getCastType()!!)
+            resetTypes(castType)
         }
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW
@@ -89,20 +87,17 @@ class CastExpression : Expression(), HasType.TypeListener {
         }
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
             return true
         }
-        if (o !is CastExpression) {
+        if (other !is CastExpression) {
             return false
         }
-        val that = o
-        return expression == that.expression && castType == that.castType
+        return expression == other.expression && castType == other.castType
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), expression, castType)
 
     companion object {
         private val log = LoggerFactory.getLogger(CastExpression::class.java)

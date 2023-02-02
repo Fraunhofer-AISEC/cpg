@@ -247,7 +247,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleCastExpression(ctx: IASTCastExpression): Expression {
         val castExpression = newCastExpression(ctx.rawSignature)
-        castExpression.expression = handle(ctx.operand)
+        castExpression.expression =
+            handle(ctx.operand) ?: ProblemExpression("could not parse inner expression")
         castExpression.setCastOperator(ctx.operator)
         castExpression.castType = frontend.typeOf(ctx.typeId)
 
@@ -314,7 +315,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     if (TypeManager.getInstance().typeExists(typeName)) {
                         val cast = newCastExpression(frontend.getCodeFromRawNode<Any>(ctx))
                         cast.castType = parseType(typeName)
-                        cast.expression = input
+                        cast.expression = input ?: newProblemExpression("could not parse input")
                         cast.location = frontend.getLocationFromRawNode<Any>(ctx)
                         return cast
                     }
@@ -426,7 +427,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleExpressionList(exprList: IASTExpressionList): ExpressionList {
         val expressionList = newExpressionList(exprList.rawSignature)
         for (expr in exprList.expressions) {
-            expressionList.addExpression(handle(expr))
+            handle(expr)?.let { expressionList.addExpression(it) }
         }
         return expressionList
     }
@@ -472,13 +473,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
         }
         val binaryOperator = newBinaryOperator(operatorCode, ctx.rawSignature)
-        val lhs = handle(ctx.operand1)
+        val lhs = handle(ctx.operand1) ?: newProblemExpression("could not parse lhs")
         val rhs =
             if (ctx.operand2 != null) {
                 handle(ctx.operand2)
             } else {
                 handle(ctx.initOperand2)
             }
+                ?: newProblemExpression("could not parse rhs")
         binaryOperator.lhs = lhs
         binaryOperator.rhs = rhs
 
