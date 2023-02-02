@@ -177,7 +177,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
 
     fun <T> getBodyStatementAs(i: Int, clazz: Class<T>): T? {
         if (body is CompoundStatement) {
-            val statement = (body as CompoundStatement?)!!.statements[i] ?: return null
+            val statement = (body as CompoundStatement?)!!.statements[i]
             return if (clazz.isAssignableFrom(statement.javaClass)) clazz.cast(statement) else null
         }
         return null

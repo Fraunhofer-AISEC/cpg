@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.Transient
  * right hand expression (rhs) and an operatorCode.
  */
 class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
-    /** The left hand expression. */
+    /** The left-hand expression. */
     @field:SubGraph("AST")
     var lhs: Expression = ProblemExpression("could not parse lhs")
         set(value) {
@@ -47,7 +47,7 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
             connectNewLhs(value)
         }
 
-    /** The right hand expression. */
+    /** The right-hand expression. */
     @field:SubGraph("AST")
     var rhs: Expression = ProblemExpression("could not parse rhs")
         set(value) {
@@ -66,7 +66,7 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
         lhs.registerTypeListener(this)
         if ("=" == operatorCode) {
             if (lhs is DeclaredReferenceExpression) {
-                // declared reference expr is the left hand side of an assignment -> writing to the
+                // declared reference expr is the left-hand side of an assignment -> writing to the
                 // var
                 lhs.access = AccessValues.WRITE
             }
@@ -76,7 +76,7 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
             }
         } else if (compoundOperators.contains(operatorCode)) {
             if (lhs is DeclaredReferenceExpression) {
-                // declared reference expr is the left hand side of an assignment -> writing to the
+                // declared reference expr is the left-hand side of an assignment -> writing to the
                 // var
                 lhs.access = AccessValues.READWRITE
             }
@@ -127,8 +127,7 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
             setType(TypeParser.createFrom("java.lang.String", language), root)
         } else if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
             // Propagate the function pointer type to the expression itself. This helps us later in
-            // the
-            // call resolver, when trying to determine, whether this is a regular call or a function
+            // the call resolver, when trying to determine, whether this is a regular call or a function
             // pointer call.
             setType(src.propagationType, root)
         }
@@ -161,11 +160,10 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
         if (other !is BinaryOperator) {
             return false
         }
-        val that = other
-        return super.equals(that) &&
-            lhs == that.lhs &&
-            rhs == that.rhs &&
-            operatorCode == that.operatorCode
+        return super.equals(other) &&
+                lhs == other.lhs &&
+                rhs == other.rhs &&
+                operatorCode == other.operatorCode
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), lhs, rhs, operatorCode)

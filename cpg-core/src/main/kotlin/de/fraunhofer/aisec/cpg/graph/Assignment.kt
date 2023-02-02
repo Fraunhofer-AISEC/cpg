@@ -50,4 +50,4 @@ interface Assignment {
  * The target of an assignment. The target is usually either a [VariableDeclaration] or a
  * [DeclaredReferenceExpression].
  */
-interface AssignmentTarget : HasType {}
+interface AssignmentTarget : HasType

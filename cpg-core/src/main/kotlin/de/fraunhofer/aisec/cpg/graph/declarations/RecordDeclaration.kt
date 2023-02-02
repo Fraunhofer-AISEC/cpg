@@ -224,21 +224,4 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
         return type
     }
 
-    override fun addStatement(s: Statement) = super.addStatement(s)
-
-    override fun <T : Declaration> addIfNotContains(
-        collection: MutableCollection<T>,
-        declaration: T
-    ) = super.addIfNotContains<T>(collection, declaration)
-
-    override fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
-        declaration: T
-    ) = super.addIfNotContains<T>(collection, declaration)
-
-    override fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
-        declaration: T,
-        outgoing: Boolean
-    ) = super.addIfNotContains<T>(collection, declaration, outgoing)
 }

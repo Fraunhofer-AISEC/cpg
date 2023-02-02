@@ -153,7 +153,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
 
         // TODO: we need to do proper scoping (and merge it with the code above), but for now
-        // this just enables CXX static fields
+        //  this just enables CXX static fields
         if (
             refersTo == null &&
                 language != null &&
@@ -183,19 +183,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
     private fun getEnclosingTypeOf(current: Node): Type {
         val language = current.language
 
-        // TODO(oxisto): This should use our new name system instead
         if (language != null && language.namespaceDelimiter.isNotEmpty()) {
-            /*val path =
-                listOf(
-                    *current.name
-                        .split(Pattern.quote(language.namespaceDelimiter).toRegex())
-                        .dropLastWhile { it.isEmpty() }
-                        .toTypedArray()
-                )
-            return TypeParser.createFrom(
-                java.lang.String.join(language.namespaceDelimiter, path.subList(0, path.size - 1)),
-                true
-            )*/
             val parentName = (current.name.parent ?: current.name).toString()
             return TypeParser.createFrom(parentName, language)
         } else {
@@ -281,7 +269,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 return
             }
         }
-        var baseType = current.base?.type ?: UnknownType.getUnknownType(current.language)
+        var baseType = current.base.type
         if (baseType.name !in recordMap) {
             val fqnResolvedType = recordMap.keys.firstOrNull { it.lastPartsMatch(baseType.name) }
             if (fqnResolvedType != null) {
