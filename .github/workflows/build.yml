@@ -46,8 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of SonarQube analysis
       - run: |
           cp gradle.properties.example gradle.properties
       - uses: actions/setup-java@v3
@@ -83,8 +81,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of SonarQube analysis
       - run: |
           cp gradle.properties.example gradle.properties
       - uses: actions/setup-java@v3
@@ -105,6 +101,53 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: cpg-language-go-test
+          path: "**/build/reports/tests"
+
+  test-llvm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          cp gradle.properties.example gradle.properties
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle"
+      - name: Test
+        run: |
+          ./gradlew --no-daemon --parallel -PenableLLVMFrontend=true :cpg-language-llvm:test
+        id: build
+      - name: Archive test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: cpg-language-llvm-test
+          path: "**/build/reports/tests"
+
+  test-typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          cp gradle.properties.example gradle.properties
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle"
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+      - name: Test
+        run: |
+          ./gradlew --no-daemon --parallel -PenableTypeScriptFrontend=true :cpg-language-typescript:test
+        id: build
+      - name: Archive test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: cpg-language-llvm-test
           path: "**/build/reports/tests"
 
   build:
