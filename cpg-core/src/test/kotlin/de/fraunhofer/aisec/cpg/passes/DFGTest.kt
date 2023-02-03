@@ -49,17 +49,16 @@ class DFGTest {
         val returnFunction = result.functions["testReturn"]
         assertNotNull(returnFunction)
 
-        // TODO: For some reason, there's the "implicit" return statement even if the if and the
-        // else branch end with a return. It should be only 2 such statements...
-        assertEquals(3, returnFunction.prevDFG.size)
+        assertEquals(2, returnFunction.prevDFG.size)
 
-        val allReturns = returnFunction.allChildren<ReturnStatement>()
-        assertEquals(allReturns.toSet() as Set<Node>, returnFunction.prevDFG)
+        val allRealReturns = returnFunction.allChildren<ReturnStatement> { it.location != null }
+        assertEquals(allRealReturns.toSet() as Set<Node>, returnFunction.prevDFG)
 
-        assertEquals(1, allReturns[0].prevDFG.size)
-        assertTrue(returnFunction.literals.first { it.value == 2 } in allReturns[0].prevDFG)
-        assertEquals(1, allReturns[1].prevDFG.size)
-        assertTrue(returnFunction.refs.last { it.name.localName == "a" } in allReturns[1].prevDFG)
-        assertEquals(0, allReturns[2].prevDFG.size)
+        assertEquals(1, allRealReturns[0].prevDFG.size)
+        assertTrue(returnFunction.literals.first { it.value == 2 } in allRealReturns[0].prevDFG)
+        assertEquals(1, allRealReturns[1].prevDFG.size)
+        assertTrue(
+            returnFunction.refs.last { it.name.localName == "a" } in allRealReturns[1].prevDFG
+        )
     }
 }
