@@ -25,15 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ScopeHolder
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 
+/*
 /** Creates a new node of type [T]. */
 inline fun <reified T : Node> new(
     name: String = "",
@@ -118,7 +119,100 @@ fun DeclarationStatement.variable(
 
     // TODO(oxisto): not the right place for hits
     // add to scope
-    node.scope?.addSymbol(node)
+    //node.scope?.addSymbol(node)
+
+    return node
+}*/
+
+fun LanguageFrontend.translationUnit(
+    name: CharSequence,
+    init: TranslationUnitDeclaration.() -> Unit
+): TranslationUnitDeclaration {
+    val node = newTranslationUnitDeclaration(name)
+
+    scopeManager.resetToGlobal(node)
+    init(node)
+
+    return node
+}
+
+context(LanguageFrontend)
+
+fun DeclarationHolder.function(
+    name: CharSequence,
+    init: FunctionDeclaration.() -> Unit
+): FunctionDeclaration {
+    val node = newFunctionDeclaration(name)
+
+    scopeManager.enterScope(node)
+    init(node)
+    scopeManager.leaveScope(node)
+
+    scopeManager.addDeclaration(node)
+
+    return node
+}
+
+context(LanguageFrontend)
+
+fun FunctionDeclaration.body(
+    hasScope: Boolean = true,
+    init: CompoundStatement.() -> Unit
+): CompoundStatement {
+    val node = newCompoundStatement()
+
+    if (hasScope) {
+        scopeManager.enterScope(node)
+    }
+    init(node)
+    if (hasScope) {
+        scopeManager.leaveScope(node)
+    }
+    this.body = node
+
+    return node
+}
+
+context(LanguageFrontend)
+
+fun StatementHolder.returnStmt(init: ReturnStatement.() -> Unit): ReturnStatement {
+    val node = newReturnStatement()
+    init(node)
+
+    this += node
+
+    return node
+}
+
+context(LanguageFrontend)
+
+fun StatementHolder.declare(init: DeclarationStatement.() -> Unit): DeclarationStatement {
+    val node = newDeclarationStatement()
+    init(node)
+
+    this += node
+
+    return node
+}
+
+context(LanguageFrontend)
+
+fun <N> ArgumentHolder.literal(value: N): Literal<N> {
+    val node = newLiteral(value)
+
+    this += node
+
+    return node
+}
+
+fun DeclarationStatement.variable(
+    name: String,
+    init: VariableDeclaration.() -> Unit
+): VariableDeclaration {
+    val node = newVariableDeclaration(name)
+    init(node)
+
+    this.addToPropertyEdgeDeclaration(node)
 
     return node
 }

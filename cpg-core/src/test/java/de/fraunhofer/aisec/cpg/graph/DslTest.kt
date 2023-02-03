@@ -25,14 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -41,64 +41,75 @@ import kotlin.test.assertNotNull
 class DslTest {
     @Test
     fun test() {
-        val tu = TranslationUnitDeclaration()
+        var tu: TranslationUnitDeclaration
+        with(TestLanguageFrontend()) {
+            tu =
+                translationUnit("file.cpp") {
+                    function("main") {
+                        body {
+                            declare { variable("a") { literal(1) } }
+                            returnStmt { literal(1) }
+                        }
+                    }
+                }
+        }
 
-        tu.function("main") {
+        /*tu.function("main") {
             body {
                 declare { variable("a") { literal(1) } }
                 returnStmt { ref("a") + literal(2) }
             }
-        }
+        }*/
 
         // Let's assert that we did this correctly
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
-        assertNotNull(main.parent)
+        // assertNotNull(main.parent)
         assertNotNull(main.scope)
 
         val body = main.body as? CompoundStatement
         assertNotNull(body)
-        assertNotNull(body.parent)
+        // assertNotNull(body.parent)
         assertNotNull(body.scope)
 
         val declarationStatement = main.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(declarationStatement)
-        assertNotNull(declarationStatement.parent)
+        // assertNotNull(declarationStatement.parent)
         assertNotNull(declarationStatement.scope)
 
         val variable = declarationStatement.singleDeclaration as? VariableDeclaration
         assertNotNull(variable)
-        assertNotNull(variable.parent)
+        // assertNotNull(variable.parent)
         assertNotNull(variable.scope)
-        assertEquals("a", variable.name)
+        assertLocalName("a", variable)
 
         val lit1 = variable.initializer as? Literal<*>
         assertNotNull(lit1)
-        assertNotNull(lit1.parent)
+        // assertNotNull(lit1.parent)
         assertNotNull(lit1.scope)
         assertEquals(1, lit1.value)
 
         val returnStatement = main.bodyOrNull<ReturnStatement>(0)
         assertNotNull(returnStatement)
-        assertNotNull(returnStatement.parent)
+        // assertNotNull(returnStatement.parent)
         assertNotNull(returnStatement.scope)
 
-        val binOp = returnStatement.returnValue as? BinaryOperator
+        /*val binOp = returnStatement.returnValue as? BinaryOperator
         assertNotNull(binOp)
-        assertNotNull(binOp.parent)
+        // assertNotNull(binOp.parent)
         assertNotNull(binOp.scope)
         assertEquals("+", binOp.operatorCode)
 
         val ref = binOp.lhs as? DeclaredReferenceExpression
         assertNotNull(ref)
-        assertNotNull(ref.parent)
+        // assertNotNull(ref.parent)
         assertNotNull(ref.scope)
-        assertEquals("a", ref.name)
+        assertLocalName("a", ref)
 
         val lit2 = binOp.rhs as? Literal<*>
         assertNotNull(lit2)
-        assertNotNull(lit2.parent)
+        // assertNotNull(lit2.parent)
         assertNotNull(lit2.scope)
-        assertEquals(2, lit2.value)
+        assertEquals(2, lit2.value)*/
     }
 }

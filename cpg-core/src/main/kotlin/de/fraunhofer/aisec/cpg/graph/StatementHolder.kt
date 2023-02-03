@@ -65,4 +65,8 @@ interface StatementHolder {
         propertyEdge.addProperty(Properties.INDEX, statementEdges.size)
         statementEdges.add(propertyEdge)
     }
+
+    operator fun plusAssign(node: Statement) {
+        addStatement(node)
+    }
 }
