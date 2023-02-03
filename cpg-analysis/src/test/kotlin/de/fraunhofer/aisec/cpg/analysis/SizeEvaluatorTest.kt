@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -35,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,7 +51,10 @@ class SizeEvaluatorTest {
                 listOf(topLevel.resolve("size.java").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(JavaLanguage())
+                    .registerPass(JavaExternalTypeHierarchyResolver())
+            }
 
         assertNotNull(tu)
 
@@ -80,7 +85,10 @@ class SizeEvaluatorTest {
                 listOf(topLevel.resolve("size.java").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(JavaLanguage())
+                    .registerPass(JavaExternalTypeHierarchyResolver())
+            }
 
         assertNotNull(tu)
 
@@ -114,7 +122,10 @@ class SizeEvaluatorTest {
                 listOf(topLevel.resolve("size.java").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(JavaLanguage())
+                    .registerPass(JavaExternalTypeHierarchyResolver())
+            }
 
         assertNotNull(tu)
 

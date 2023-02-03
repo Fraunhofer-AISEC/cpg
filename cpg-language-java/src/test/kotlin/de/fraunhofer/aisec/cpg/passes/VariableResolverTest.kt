@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.fields
 import de.fraunhofer.aisec.cpg.graph.methods
@@ -47,7 +48,11 @@ internal class VariableResolverTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testFields() {
-        val result = analyze("java", topLevel, true)
+        val result =
+            analyze("java", topLevel, true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val methods = result.methods
         val fields = result.fields
         val field = findByUniqueName(fields, "field")
@@ -66,7 +71,11 @@ internal class VariableResolverTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testLocalVars() {
-        val result = analyze("java", topLevel, true)
+        val result =
+            analyze("java", topLevel, true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val methods = result.methods
         val fields = result.fields
         val field = findByUniqueName(fields, "field")

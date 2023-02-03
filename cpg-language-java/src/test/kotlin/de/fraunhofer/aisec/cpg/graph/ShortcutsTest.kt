@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -43,6 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -57,6 +59,8 @@ class ShortcutsTest {
                 .sourceLocations(File("src/test/resources/Dataflow.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -82,6 +86,8 @@ class ShortcutsTest {
                 .sourceLocations(File("src/test/resources/ShortcutClass.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -126,6 +132,8 @@ class ShortcutsTest {
                 .sourceLocations(File("src/test/resources/ShortcutClass.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -150,6 +158,8 @@ class ShortcutsTest {
                 .sourceLocations(File("src/test/resources/ShortcutClass.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -195,6 +205,8 @@ class ShortcutsTest {
                 .sourceLocations(File("src/test/resources/ShortcutClass.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -222,6 +234,8 @@ class ShortcutsTest {
                 .sourceLocations(File("src/test/resources/ShortcutClass.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -282,6 +296,8 @@ class ShortcutsTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerPass(EdgeCachePass())
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -316,6 +332,8 @@ class ShortcutsTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerPass(EdgeCachePass())
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -362,6 +380,8 @@ class ShortcutsTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerPass(EdgeCachePass())
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -396,6 +416,8 @@ class ShortcutsTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerPass(EdgeCachePass())
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -429,6 +451,8 @@ class ShortcutsTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerPass(EdgeCachePass())
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()

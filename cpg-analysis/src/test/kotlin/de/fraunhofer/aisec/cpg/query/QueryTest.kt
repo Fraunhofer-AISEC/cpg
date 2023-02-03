@@ -29,10 +29,12 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.analysis.NumberSet
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -731,6 +733,8 @@ class QueryTest {
                 .sourceLocations(File("src/test/resources/query/Dataflow.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -804,6 +808,8 @@ class QueryTest {
                 .sourceLocations(File("src/test/resources/query/ComplexDataflow.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .registerPass(EdgeCachePass())
                 .build()
 
@@ -857,6 +863,8 @@ class QueryTest {
                 .sourceLocations(File("src/test/resources/query/ComplexDataflow2.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .registerPass(EdgeCachePass())
                 .build()
 
@@ -910,6 +918,8 @@ class QueryTest {
                 .sourceLocations(File("src/test/resources/query/ComplexDataflow3.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .registerPass(EdgeCachePass())
                 .build()
 

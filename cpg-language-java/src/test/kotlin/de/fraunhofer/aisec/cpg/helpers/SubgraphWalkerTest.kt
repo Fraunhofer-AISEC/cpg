@@ -26,25 +26,36 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
+import java.io.File
 import kotlin.test.*
 
 internal class SubgraphWalkerTest : BaseTest() {
     @Test
-    fun testLoopDetection() {
-        // Let's create an intentional loop
-        val tu = TranslationUnitDeclaration()
-        val name = NamespaceDeclaration()
-        val func = FunctionDeclaration()
-        name.addDeclaration(tu)
-        name.addDeclaration(func)
-        tu.addDeclaration(name)
+    @Throws(Exception::class)
+    fun testASTChildrenGetter() {
+        val file = File("src/test/resources/compiling/RecordDeclaration.java")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), false) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
+        val namespace = tu.byNameOrNull<NamespaceDeclaration>("compiling")
+        assertNotNull(namespace)
 
-        val flat = SubgraphWalker.flattenAST(tu)
+        val recordDeclaration = namespace.byNameOrNull<RecordDeclaration>("compiling.SimpleClass")
+        assertNotNull(recordDeclaration)
 
-        assertEquals(listOf<Node>(tu, name, func), flat)
+        // This calls SubgraphWalker.getAstChildren()
+        val ast = recordDeclaration.astChildren
+        assertFalse(ast.isEmpty())
+
+        // should contain 3 AST nodes, 1 field, 1 method, 1 constructor
+        assertEquals(3, ast.size)
     }
 }

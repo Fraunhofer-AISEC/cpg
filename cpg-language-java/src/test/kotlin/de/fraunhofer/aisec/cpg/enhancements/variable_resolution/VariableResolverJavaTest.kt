@@ -29,11 +29,13 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOf
 import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
 import kotlin.test.Test
@@ -187,7 +189,11 @@ internal class VariableResolverJavaTest : BaseTest() {
                         topLevel.resolve("ExternalClass.java")
                     )
                     .map(Path::toFile)
-            val result = analyze(fileNames, topLevel, true)
+            val result =
+                analyze(fileNames, topLevel, true) {
+                    it.registerLanguage(JavaLanguage())
+                    it.registerPass(JavaExternalTypeHierarchyResolver())
+                }
 
             val calls = result.calls { it.name.localName == "printLog" }
             val records = result.records

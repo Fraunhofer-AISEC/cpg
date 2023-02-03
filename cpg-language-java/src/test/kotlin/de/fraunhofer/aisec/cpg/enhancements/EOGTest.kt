@@ -26,25 +26,28 @@
 package de.fraunhofer.aisec.cpg.enhancements
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import java.nio.file.Path
 import java.util.function.Consumer
 import java.util.stream.Collectors
 import java.util.stream.Stream
@@ -58,8 +61,8 @@ import kotlin.test.*
 internal class EOGTest : BaseTest() {
     @Test
     @Throws(Exception::class)
-    fun testCppIf() {
-        testIf("src/test/resources/cfg/if.cpp", REFNODESTRINGCXX)
+    fun testJavaIf() {
+        testIf("src/test/resources/cfg/If.java", REFNODESTRINGJAVA)
     }
 
     /**
@@ -232,12 +235,67 @@ internal class EOGTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testCPPFor() {
-        val nodes = translateToNodes("src/test/resources/cfg/forloop.cpp")
+    fun testConditionShortCircuit() {
+        val nodes = translateToNodes("src/test/resources/cfg/ShortCircuit.java")
+        val binaryOperators =
+            nodes.filterIsInstance<BinaryOperator>().filter { bo: BinaryOperator ->
+                bo.operatorCode == "&&" || bo.operatorCode == "||"
+            }
+        for (bo in binaryOperators) {
+            assertTrue(
+                Util.eogConnect(
+                    q = Util.Quantifier.ALL,
+                    cn = Connect.SUBTREE,
+                    en = Util.Edge.ENTRIES,
+                    n = bo.rhs,
+                    cr = Connect.SUBTREE,
+                    props = mutableMapOf(Properties.BRANCH to (bo.operatorCode == "&&")),
+                    refs = listOf(bo.lhs)
+                )
+            )
+            assertTrue(
+                Util.eogConnect(
+                    q = Util.Quantifier.ALL,
+                    cn = Connect.NODE,
+                    en = Util.Edge.ENTRIES,
+                    n = bo,
+                    cr = Connect.SUBTREE,
+                    refs = listOf(bo.lhs, bo.rhs)
+                )
+            )
+            assertTrue(
+                Util.eogConnect(
+                    q = Util.Quantifier.ANY,
+                    cn = Connect.NODE,
+                    en = Util.Edge.ENTRIES,
+                    n = bo,
+                    cr = Connect.SUBTREE,
+                    refs = listOf(bo.rhs)
+                )
+            )
+            assertTrue(
+                Util.eogConnect(
+                    q = Util.Quantifier.ANY,
+                    cn = Connect.NODE,
+                    en = Util.Edge.ENTRIES,
+                    n = bo,
+                    cr = Connect.SUBTREE,
+                    props = mutableMapOf(Properties.BRANCH to (bo.operatorCode != "&&")),
+                    refs = listOf(bo.lhs)
+                )
+            )
+            assertTrue(bo.lhs.nextEOG.size == 2)
+        }
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testJavaFor() {
+        val nodes = translateToNodes("src/test/resources/cfg/ForLoop.java")
         val prints =
             nodes
                 .stream()
-                .filter { node: Node -> node.code == REFNODESTRINGCXX }
+                .filter { node: Node -> node.code == REFNODESTRINGJAVA }
                 .collect(Collectors.toList())
         val fstat = nodes.filterIsInstance<ForStatement>()
         var fs = fstat[0]
@@ -264,15 +322,24 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.initializerStatement,
                 cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.conditionDeclaration)
+                refs = listOfNotNull(fs.condition)
             )
         )
         assertTrue(
             Util.eogConnect(
                 en = Util.Edge.EXITS,
-                n = fs.conditionDeclaration,
+                n = fs.condition,
                 cr = Connect.NODE,
                 refs = listOf(fs)
+            )
+        )
+        assertTrue(
+            Util.eogConnect(
+                cn = Connect.NODE,
+                en = Util.Edge.EXITS,
+                n = fs,
+                cr = Connect.SUBTREE,
+                refs = listOfNotNull(fs.statement, prints[1])
             )
         )
         assertTrue(
@@ -288,17 +355,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs.iterationStatement,
                 cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.conditionDeclaration)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = fs,
-                cr = Connect.SUBTREE,
-                props = mutableMapOf(Properties.BRANCH to false),
-                refs = listOf(prints[1])
+                refs = listOfNotNull(fs.condition)
             )
         )
         fs = fstat[1]
@@ -362,105 +419,12 @@ internal class EOGTest : BaseTest() {
                 refs = listOf(prints[2])
             )
         )
-        fs = fstat[2]
-        assertTrue(
-            Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[3],
-                cr = Connect.SUBTREE,
-                refs = listOf(fs)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[3],
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.initializerStatement)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.initializerStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.condition)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.condition,
-                cr = Connect.NODE,
-                refs = listOf(fs)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.statement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.iterationStatement)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.iterationStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.condition)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = fs,
-                cr = Connect.SUBTREE,
-                props = mutableMapOf(Properties.BRANCH to false),
-                refs = listOf(prints[4])
-            )
-        )
-    }
-
-    /** Test function (not method) calls. */
-    @Test
-    @Throws(Exception::class)
-    fun testCPPCallGraph() {
-        val nodes = translateToNodes("src/test/resources/cg.cpp")
-        val calls = nodes.filterIsInstance<CallExpression>()
-        val functions = nodes.filterIsInstance<FunctionDeclaration>()
-        val first = findByUniqueName(calls, "first")
-        assertNotNull(first)
-
-        var target = functions["first", UNIQUE]
-        assertEquals(listOf(target), first.invokes)
-
-        val second = calls["second", UNIQUE]
-        assertNotNull(second)
-
-        target = findByUniqueName(functions, "second")
-        assertEquals(listOf(target), second.invokes)
-
-        val third = findByUniqueName(calls, "third")
-        assertNotNull(third)
-
-        target = functions[{ it.name.localName == "third" && it.parameters.size == 2 }, UNIQUE]
-        assertEquals(listOf(target), third.invokes)
-
-        val fourth = findByUniqueName(calls, "fourth")
-        assertNotNull(fourth)
-
-        target = findByUniqueName(functions, "fourth")
-        assertEquals(listOf(target), fourth.invokes)
     }
 
     @Test
     @Throws(Exception::class)
-    fun testCppLoops() {
-        testLoops("src/test/resources/cfg/loops.cpp", "printf(\"\\n\");")
+    fun testJavaLoops() {
+        testLoops("src/test/resources/cfg/Loops.java", "System.out.println();")
     }
 
     /**
@@ -783,14 +747,77 @@ internal class EOGTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testCppSwitch() {
-        testSwitch("src/test/resources/cfg/switch.cpp", REFNODESTRINGCXX)
+    fun testJavaSwitch() {
+        testSwitch("src/test/resources/cfg/Switch.java", REFNODESTRINGJAVA)
     }
 
     @Test
     @Throws(Exception::class)
-    fun testCppBreakContinue() {
-        testBreakContinue("src/test/resources/cfg/break_continue.cpp", "printf(\"\\n\");")
+    fun testJavaBreakContinue() {
+        testBreakContinue("src/test/resources/cfg/BreakContinue.java", "System.out.println();")
+    }
+
+    /**
+     * Tests EOG branch edge property in if/else if/else construct
+     *
+     * @throws Exception
+     */
+    @Test
+    @Throws(Exception::class)
+    fun testBranchProperty() {
+        val topLevel = Path.of("src", "test", "resources", "eog")
+        val result =
+            analyze(listOf(topLevel.resolve("EOG.java").toFile()), topLevel, true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
+
+        // Test If-Block
+        val firstIf: IfStatement =
+            result.allChildren<IfStatement>().filter { l -> l.location?.region?.startLine == 6 }[0]
+        val a =
+            result.refs[
+                    { l: DeclaredReferenceExpression ->
+                        l.location?.region?.startLine == 8 && l.name.localName == "a"
+                    }]
+        assertNotNull(a)
+        val b = result.refs[{ it.location?.region?.startLine == 7 && it.name.localName == "b" }]
+        assertNotNull(b)
+        var nextEOG: List<PropertyEdge<Node>> = firstIf.nextEOGEdges
+        assertEquals(2, nextEOG.size)
+        for (edge in nextEOG) {
+            assertEquals(firstIf, edge.start)
+            if (edge.end == b) {
+                assertEquals(true, edge.getProperty(Properties.BRANCH))
+                assertEquals(0, edge.getProperty(Properties.INDEX))
+            } else {
+                assertEquals(a, edge.end)
+                assertEquals(false, edge.getProperty(Properties.BRANCH))
+                assertEquals(1, edge.getProperty(Properties.INDEX))
+            }
+        }
+        val elseIf: IfStatement =
+            result
+                .allChildren<IfStatement>()
+                .filter { l: IfStatement -> l.location?.region?.startLine == 8 }[0]
+        assertEquals(elseIf, firstIf.elseStatement)
+        val b2 = result.refs[{ it.location?.region?.startLine == 9 && it.name.localName == "b" }]
+        assertNotNull(b2)
+        val x = result.refs[{ it.location?.region?.startLine == 11 && it.name.localName == "x" }]
+        assertNotNull(x)
+        nextEOG = elseIf.nextEOGEdges
+        assertEquals(2, nextEOG.size)
+        for (edge in nextEOG) {
+            assertEquals(elseIf, edge.start)
+            if (edge.end == b2) {
+                assertEquals(true, edge.getProperty(Properties.BRANCH))
+                assertEquals(0, edge.getProperty(Properties.INDEX))
+            } else {
+                assertEquals(x, edge.end)
+                assertEquals(false, edge.getProperty(Properties.BRANCH))
+                assertEquals(1, edge.getProperty(Properties.INDEX))
+            }
+        }
     }
 
     /**
@@ -933,7 +960,11 @@ internal class EOGTest : BaseTest() {
     @Ignore
     fun testEOGInvariant() {
         val file = File("src/main/java/de/fraunhofer/aisec/cpg/passes/CallResolver.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         assertTrue(EvaluationOrderGraphPass.checkEOGInvariant(tu))
     }
 
@@ -947,7 +978,11 @@ internal class EOGTest : BaseTest() {
     private fun translateToNodes(path: String): List<Node> {
         val toTranslate = File(path)
         val topLevel = toTranslate.parentFile.toPath()
-        val tu = analyzeAndGetFirstTU(listOf(toTranslate), topLevel, true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(toTranslate), topLevel, true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         var nodes = SubgraphWalker.flattenAST(tu)
         // TODO: until explicitly added Return Statements are either removed again or code and
         // region

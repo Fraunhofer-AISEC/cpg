@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
@@ -52,6 +53,8 @@ class UnresolvedDFGPassTest {
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferDfgForUnresolvedCalls(true).build()
                 )
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         // Flow from base to return value
@@ -94,6 +97,8 @@ class UnresolvedDFGPassTest {
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferDfgForUnresolvedCalls(false).build()
                 )
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         // No flow from base to return value

@@ -29,12 +29,14 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.io.File
 import java.util.concurrent.ExecutionException
@@ -149,6 +151,8 @@ class VisitorTest : BaseTest() {
                     .sourceLocations(file)
                     .defaultPasses()
                     .defaultLanguages()
+                    .registerLanguage(JavaLanguage())
+                    .registerPass(JavaExternalTypeHierarchyResolver())
                     .build()
             val result =
                 TranslationManager.builder().config(config).build().analyze()[20, TimeUnit.SECONDS]

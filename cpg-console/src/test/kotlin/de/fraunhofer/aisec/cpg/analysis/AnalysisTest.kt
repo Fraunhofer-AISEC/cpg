@@ -28,11 +28,13 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.console.fancyCode
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.body
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -75,6 +77,8 @@ class AnalysisTest {
                 .sourceLocations(File("src/test/resources/Array.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()

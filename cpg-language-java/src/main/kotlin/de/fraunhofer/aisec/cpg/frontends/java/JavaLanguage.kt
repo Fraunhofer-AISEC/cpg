@@ -28,6 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.passes.JavaCallResolverHelper
 import kotlin.reflect.KClass
 
 /** The Java language. */
@@ -44,6 +48,7 @@ open class JavaLanguage :
     override val namespaceDelimiter = "."
     override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
     override val superClassKeyword = "super"
+
     override val qualifiers = listOf("final", "volatile")
     override val unknownTypeString = listOf("var")
     override val conjunctiveOperators = listOf("&&")
@@ -55,4 +60,11 @@ open class JavaLanguage :
     ): JavaLanguageFrontend {
         return JavaLanguageFrontend(this, config, scopeManager)
     }
+
+    override fun handleSuperCall(
+        callee: MemberExpression,
+        curClass: RecordDeclaration,
+        scopeManager: ScopeManager,
+        recordMap: Map<Name, RecordDeclaration>
+    ) = JavaCallResolverHelper.handleSuperCall(callee, curClass, scopeManager, recordMap)
 }

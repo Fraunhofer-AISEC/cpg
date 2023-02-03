@@ -36,10 +36,12 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 import org.slf4j.LoggerFactory
 
 @DependsOn(TypeHierarchyResolver::class)
+@ExecuteBefore(ImportResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)
 class JavaExternalTypeHierarchyResolver : Pass() {
     override fun accept(translationResult: TranslationResult) {

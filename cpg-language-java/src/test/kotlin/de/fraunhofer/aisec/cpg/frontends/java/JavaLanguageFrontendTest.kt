@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.math.BigInteger
@@ -53,7 +54,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testLargeNegativeNumber() {
         val file = File("src/test/resources/LargeNegativeNumber.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
 
         val declaration = tu.byNameOrNull<RecordDeclaration>("LargeNegativeNumber")
         assertNotNull(declaration)
@@ -87,7 +92,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testFor() {
         val file = File("src/test/resources/components/ForStmt.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
 
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
@@ -112,7 +121,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testForeach() {
         val file = File("src/test/resources/components/ForEachStmt.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
 
@@ -148,7 +161,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testTryCatch() {
         val file = File("src/test/resources/components/TryStmt.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
 
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
@@ -190,7 +207,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testLiteral() {
         val file = File("src/test/resources/components/LiteralExpr.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
 
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
@@ -264,7 +285,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testRecordDeclaration() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         assertNotNull(declaration)
 
         val namespaceDeclaration = declaration.getDeclarationAs(0, NamespaceDeclaration::class.java)
@@ -294,14 +319,22 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testNameExpressions() {
         val file = File("src/test/resources/compiling/NameExpression.java")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         assertNotNull(declaration)
     }
 
     @Test
     fun testSwitch() {
         val file = File("src/test/resources/cfg/Switch.java")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val graphNodes = SubgraphWalker.flattenAST(declaration)
 
         assertTrue(graphNodes.size != 0)
@@ -322,7 +355,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testCast() {
         val file = File("src/test/resources/components/CastExpr.java")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         assertNotNull(declaration)
 
         val namespaceDeclaration = declaration.getDeclarationAs(0, NamespaceDeclaration::class.java)
@@ -372,7 +409,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testArrays() {
         val file = File("src/test/resources/compiling/Arrays.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         assertNotNull(tu)
 
         val namespaceDeclaration = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
@@ -419,7 +460,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testFieldAccessExpressions() {
         val file = File("src/test/resources/compiling/FieldAccess.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         assertNotNull(tu)
 
         val namespaceDeclaration = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
@@ -446,7 +491,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testMemberCallExpressions() {
         val file = File("src/test/resources/compiling/MemberCallExpression.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         assertNotNull(tu)
 
         assertEquals(7, tu.mcalls.size)
@@ -456,7 +505,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testLocation() {
         val file = File("src/test/resources/compiling/FieldAccess.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         assertNotNull(tu)
 
         val namespaceDeclaration = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
@@ -486,6 +539,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                     .topLevel(file.parentFile)
                     .defaultPasses()
                     .defaultLanguages()
+                    .registerLanguage(JavaLanguage())
+                    .registerPass(JavaExternalTypeHierarchyResolver())
                     .processAnnotations(true)
             )
         assertFalse(declarations.isEmpty())
@@ -531,7 +586,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testChainedCalls() {
         val file = File("src/test/resources/Issue285.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val record = tu.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(record)
 
@@ -566,7 +625,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     fun testSuperFieldUsage() {
         val file1 = File("src/test/resources/fix-328/Cat.java")
         val file2 = File("src/test/resources/fix-328/Animal.java")
-        val result = TestUtils.analyze(listOf(file1, file2), file1.parentFile.toPath(), true)
+        val result =
+            TestUtils.analyze(listOf(file1, file2), file1.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val tu = findByUniqueName(result.translationUnits, "src/test/resources/fix-328/Cat.java")
         val namespace = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
         assertNotNull(namespace)
@@ -661,6 +724,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .topLevel(topLevel.toFile())
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .debugParser(true)
                 .failOnError(true)
                 .build()
@@ -685,6 +750,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .topLevel(topLevel.toFile())
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
+                .registerPass(JavaExternalTypeHierarchyResolver())
                 .debugParser(true)
                 .failOnError(true)
                 .build()
@@ -698,7 +765,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testQualifiedThis() {
         val file = File("src/test/resources/compiling/OuterClass.java")
-        val result = TestUtils.analyze(listOf(file), file.parentFile.toPath(), true)
+        val result =
+            TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val tu = result.translationUnits.firstOrNull()
         assertNotNull(tu)
 
@@ -733,7 +804,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testForEach() {
         val file = File("src/test/resources/compiling/ForEach.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
 
         val p = tu.namespaces["compiling"]
         val forEachClass = p.records["compiling.ForEach"]

@@ -44,6 +44,8 @@ if [ ! -f $GRADLE_PROPERTIES_FILE ]; then
   cp ${GRADLE_PROPERTIES_FILE}.example $GRADLE_PROPERTIES_FILE
 fi
 
+answerJava=$(ask "Do you want to enable the Java frontend? (currently $(getProperty "enableJavaFrontend"))")
+setProperty "enableJavaFrontend" $answerJava
 answerGo=$(ask "Do you want to enable the Go frontend? (currently $(getProperty "enableGoFrontend"))")
 setProperty "enableGoFrontend" $answerGo
 answerPython=$(ask "Do you want to enable the Python frontend? (currently $(getProperty "enablePythonFrontend"))")

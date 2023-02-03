@@ -24,25 +24,21 @@
  *
  */
 plugins {
-    id("cpg.library-conventions")
+    id("cpg.frontend-conventions")
 }
-
 
 publishing {
     publications {
-        named<MavenPublication>("cpg-analysis") {
+        named<MavenPublication>("cpg-language-java") {
             pom {
-                artifactId = "cpg-analysis"
-                name.set("Code Property Graph - Analysis Modules")
-                description.set("Analysis modules for the CPG")
+                artifactId = "cpg-language-java"
+                name.set("Code Property Graph - Java Frontend")
+                description.set("A Java language frontend for the CPG")
             }
         }
     }
 }
 
 dependencies {
-    api(projects.cpgCore)
-    api(projects.cpgLanguageJava)
-
-    testImplementation(testFixtures(projects.cpgCore))
+    api(libs.javaparser)
 }

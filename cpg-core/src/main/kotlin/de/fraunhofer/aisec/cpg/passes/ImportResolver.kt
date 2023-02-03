@@ -38,7 +38,7 @@ import java.util.*
 import java.util.regex.Pattern
 
 @DependsOn(TypeHierarchyResolver::class)
-@DependsOn(value = JavaExternalTypeHierarchyResolver::class, softDependency = true)
+// @DependsOn(value = JavaExternalTypeHierarchyResolver::class, softDependency = true)
 open class ImportResolver : Pass() {
     protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()

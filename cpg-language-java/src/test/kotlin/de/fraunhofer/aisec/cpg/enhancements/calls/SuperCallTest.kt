@@ -31,9 +31,11 @@ import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,7 +48,11 @@ internal class SuperCallTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testSimpleCall() {
-        val result = analyze("java", topLevel, true)
+        val result =
+            analyze("java", topLevel, true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
         val superMethods = superClass.methods
@@ -62,7 +68,11 @@ internal class SuperCallTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testInterfaceCall() {
-        val result = analyze("java", topLevel, true)
+        val result =
+            analyze("java", topLevel, true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val records = result.records
         val interface1 = findByUniqueName(records, "Interface1")
         val interface1Methods = interface1.methods
@@ -85,7 +95,11 @@ internal class SuperCallTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testSuperField() {
-        val result = analyze("java", topLevel, true)
+        val result =
+            analyze("java", topLevel, true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
         val superField = findByUniqueName(superClass.fields, "field")
@@ -109,7 +123,11 @@ internal class SuperCallTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testInnerCall() {
-        val result = analyze("java", topLevel, true)
+        val result =
+            analyze("java", topLevel, true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
         val superMethods = superClass.methods
@@ -125,7 +143,11 @@ internal class SuperCallTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testNoExcessFields() {
-        val result = analyze("java", topLevel, true)
+        val result =
+            analyze("java", topLevel, true) {
+                it.registerLanguage(JavaLanguage())
+                it.registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val records = result.records
 
         val superClass = records["SuperClass"]
