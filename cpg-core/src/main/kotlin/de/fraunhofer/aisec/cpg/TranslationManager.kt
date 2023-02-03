@@ -72,7 +72,7 @@ private constructor(
      * @return a [CompletableFuture] with the [TranslationResult].
      */
     fun analyze(): CompletableFuture<TranslationResult> {
-        val result = TranslationResult(this, ScopeManager(), TypeCache())
+        val result = TranslationResult(this, ScopeManager())
 
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
         return CompletableFuture.supplyAsync {
@@ -147,7 +147,7 @@ private constructor(
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
         for (sc in this.config.softwareComponents.keys) {
-            val component = Component()
+            val component = Component(TypeCache())
             component.name = Name(sc)
             result.addComponent(component)
 
@@ -272,7 +272,7 @@ private constructor(
                         return@supplyAsync parse(
                             component,
                             scopeManager,
-                            result.typeCache,
+                            component.typeCache,
                             sourceLocation
                         )
                     } catch (e: TranslationException) {
@@ -317,7 +317,7 @@ private constructor(
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
 
-            parse(component, result.scopeManager, result.typeCache, sourceLocation).ifPresent {
+            parse(component, result.scopeManager, component.typeCache, sourceLocation).ifPresent {
                 f: LanguageFrontend ->
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }

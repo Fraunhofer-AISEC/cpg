@@ -46,8 +46,7 @@ class TranslationResult(
      * of sequential parsing, individual scope managers will be spawned by each language frontend
      * and then finally merged into this one.
      */
-    val scopeManager: ScopeManager,
-    val typeCache: TypeCache
+    val scopeManager: ScopeManager
 ) : Node(), StatisticsHolder {
 
     /**
@@ -111,7 +110,7 @@ class TranslationResult(
             swc = components[0]
         } else if (components.isEmpty()) {
             // No component exists, so we create the new dummy component.
-            swc = Component()
+            swc = Component(TypeCache())
             swc.name = Name(APPLICATION_LOCAL_NAME, null, "")
             components.add(swc)
         } else {
@@ -124,7 +123,7 @@ class TranslationResult(
                 }
             }
             if (swc == null) {
-                swc = Component()
+                swc = Component(TypeCache())
                 swc.name = Name(APPLICATION_LOCAL_NAME, null, "")
                 components.add(swc)
             }
