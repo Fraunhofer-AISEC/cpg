@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -121,14 +122,7 @@ class DFGPass : Pass() {
      * the function.
      */
     private fun handleFunctionDeclaration(node: FunctionDeclaration) {
-        if (node.body is ReturnStatement) {
-            node.addPrevDFG(node.body as ReturnStatement)
-        } else if (node.body is CompoundStatement) {
-            (node.body as CompoundStatement)
-                .statements
-                .filterIsInstance<ReturnStatement>()
-                .forEach { node.addPrevDFG(it) }
-        }
+        node.allChildren<ReturnStatement>().forEach { node.addPrevDFG(it) }
     }
 
     /**

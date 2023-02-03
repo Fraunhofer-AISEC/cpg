@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import java.util.List
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Transient
@@ -198,7 +197,6 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
     companion object {
         /** Required for compound BinaryOperators. This should not be stored in the graph */
         @Transient
-        val compoundOperators =
-            List.of("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=")
+        val compoundOperators = listOf("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=")
     }
 }
