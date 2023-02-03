@@ -235,7 +235,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
 
     /**
      * Removes the DFG edges for a potential implicit return statement if it is not
-     * in[reachableReturnStatements].
+     * in [reachableReturnStatements].
      */
     private fun removeUnreachableImplicitReturnStatement(
         node: Node,
