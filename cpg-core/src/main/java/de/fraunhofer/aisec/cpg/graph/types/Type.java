@@ -43,7 +43,7 @@ import org.neo4j.ogm.annotation.Relationship;
 public abstract class Type extends Node {
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
 
-  @Relationship(value = "SUPER_TYPE", direction = "OUTGOING")
+  @Relationship(value = "SUPER_TYPE", direction = Relationship.Direction.OUTGOING)
   @NotNull
   protected Set<Type> superTypes = new HashSet<>();
 
@@ -188,7 +188,11 @@ public abstract class Type extends Node {
    * @return True if the parameter t is equal to the current type (this)
    */
   public boolean isSimilar(Type t) {
-    return this.equals(t) || this.getTypeName().equals(t.getTypeName());
+    if (this.equals(t)) {
+      return true;
+    }
+
+    return this.getRoot().getName().equals(t.getRoot().getName());
   }
 
   @Override

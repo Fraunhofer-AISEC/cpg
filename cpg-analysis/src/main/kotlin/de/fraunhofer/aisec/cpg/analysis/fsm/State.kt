@@ -30,7 +30,7 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
  * - [name] is the name of the State and must be unique for the FSM.
  * - [isStart] indicates if it is the starting state.
  * - [isAcceptingState] indicates if this State accepts the FSM (in our case, this means that the
- * order of statements was correct).
+ *   order of statements was correct).
  */
 class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = false) {
     /**

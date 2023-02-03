@@ -87,11 +87,10 @@ object TestUtils {
      * extension
      *
      * @param fileExtension All files found in the directory must end on this String. An empty
-     * string matches all files
+     *   string matches all files
      * @param topLevel The directory to traverse while looking for files to parse
      * @param usePasses Whether the analysis should run passes after the initial phase
      * @param configModifier An optional modifier for the config
-     *
      * @return A list of [TranslationUnitDeclaration] nodes, representing the CPG roots
      * @throws Exception Any exception thrown during the parsing process
      */
@@ -119,7 +118,6 @@ object TestUtils {
      * @param topLevel The directory to traverse while looking for files to parse
      * @param usePasses Whether the analysis should run passes after the initial phase
      * @param configModifier An optional modifier for the config
-     *
      * @return A list of [TranslationUnitDeclaration] nodes, representing the CPG roots
      * @throws Exception Any exception thrown during the parsing process
      */
@@ -249,6 +247,7 @@ object TestUtils {
      *
      * @param usingNode
      * - The node that shows usage of another node.
+     *
      * @param usedNode
      * - The node that is expected to be used.
      */
@@ -271,8 +270,10 @@ object TestUtils {
      *
      * @param usingNode
      * - Node that uses some member
+     *
      * @param usedBase
      * - The expected base that is used
+     *
      * @param usedMember
      * - THe expected member that is used
      */

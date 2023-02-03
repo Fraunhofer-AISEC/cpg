@@ -128,7 +128,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 } else {
                     log.error("Unknown expression {}", kind)
                     return newProblemExpression(
-                        "Unknown expression ${kind}",
+                        "Unknown expression $kind",
                         ProblemNode.ProblemType.TRANSLATION,
                         frontend.getCodeFromRawNode(value)
                     )
@@ -269,7 +269,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 else -> {
                     log.error("Not handling constant expression of opcode {} yet", kind)
                     newProblemExpression(
-                        "Not handling constant expression of opcode ${kind} yet",
+                        "Not handling constant expression of opcode $kind yet",
                         ProblemNode.ProblemType.TRANSLATION,
                         frontend.getCodeFromRawNode(value)
                     )
@@ -297,7 +297,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         for (i in 0 until LLVMGetNumOperands(value)) {
             // and handle them as expressions themselves
             val arg = this.handle(LLVMGetOperand(value, i))
-            expr.addArgument(arg)
+            if (arg != null) {
+                expr.addArgument(arg)
+            }
         }
 
         return expr
@@ -335,14 +337,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val initializers = mutableListOf<Expression>()
 
         for (i in 0 until length) {
-            val expr =
-                if (LLVMGetValueKind(valueRef) == LLVMConstantVectorValueKind) {
-                    // This type of vectors needs to access the elements via LLVMGetOperand(). Not
-                    // sure why but the other method crashes.
-                    handle(LLVMGetOperand(valueRef, i)) as Expression
-                } else {
-                    handle(LLVMGetElementAsConstant(valueRef, i)) as Expression
-                }
+            val expr = handle(LLVMGetAggregateElement(valueRef, i)) as Expression
 
             initializers += expr
         }
@@ -532,7 +527,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: UnknownType.getUnknownType(language)
 
                 // construct our member expression
-                expr = newMemberExpression(fieldName, base, field?.type, ".", "")
+                expr =
+                    newMemberExpression(
+                        fieldName,
+                        base,
+                        field?.type ?: UnknownType.getUnknownType(),
+                        ".",
+                        ""
+                    )
                 log.info("{}", expr)
 
                 // the current expression is the new base

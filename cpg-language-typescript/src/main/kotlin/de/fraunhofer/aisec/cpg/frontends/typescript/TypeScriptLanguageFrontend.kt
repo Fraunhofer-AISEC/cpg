@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
 import de.fraunhofer.aisec.cpg.frontends.Language
@@ -35,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -117,6 +117,7 @@ class TypeScriptLanguageFrontend(
     /**
      * Extracts comments from the file with a regular expression and calls a best effort approach
      * function that matches them to the closes ast node in the cpg.
+     *
      * @param file The source of comments
      * @param translationUnit the ast root node which children get the comments associated to
      */
@@ -229,7 +230,8 @@ class TypeScriptLanguageFrontend(
 
             val annotation = newAnnotation(call.name.localName, this.getCodeFromRawNode(node) ?: "")
 
-            annotation.members = call.arguments.map { newAnnotationMember("", it, it.code ?: "") }
+            annotation.members =
+                call.arguments.map { newAnnotationMember("", it, it.code ?: "") }.toMutableList()
 
             call.disconnectFromGraph()
 

@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -42,7 +43,7 @@ import org.neo4j.ogm.annotation.Relationship;
 public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
 
   @Override
-  public void updateType(Collection<Type> typeState) {
+  public void updateType(@NotNull Collection<? extends Type> typeState) {
     if (this.generics == null) {
       return;
     }
@@ -70,7 +71,7 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
   // Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
   private RecordDeclaration recordDeclaration = null;
 
-  @Relationship(value = "GENERICS", direction = "OUTGOING")
+  @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
   private List<PropertyEdge<Type>> generics;
 
   public ObjectType(

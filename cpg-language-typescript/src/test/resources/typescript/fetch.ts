@@ -15,5 +15,5 @@ function handleSubmit(event: any) {
     .then((res) => {
         const group = res.json();
         console.log(group);
-    );
+    )
 }

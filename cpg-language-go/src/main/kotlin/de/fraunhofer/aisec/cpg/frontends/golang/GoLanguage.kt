@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasGenerics
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.TypeCache
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 
 /** The Go language. */
 open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics {

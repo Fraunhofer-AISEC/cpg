@@ -14,7 +14,11 @@ function getProperty {
 function setProperty {
   local PROP_KEY=$1
   local PROP_VALUE=$2
-  sed -i '' "s/\(${PROP_KEY}[[:space:]]*=[[:space:]]*\).*\$/\1${PROP_VALUE}/" $GRADLE_PROPERTIES_FILE
+  if [[ "$(uname)" == "Darwin" ]]; then
+    sed -i '' "s/\(${PROP_KEY}[[:space:]]*=[[:space:]]*\).*\$/\1${PROP_VALUE}/" $GRADLE_PROPERTIES_FILE
+  else
+    sed -i "s/\(${PROP_KEY}[[:space:]]*=[[:space:]]*\).*\$/\1${PROP_VALUE}/" $GRADLE_PROPERTIES_FILE
+  fi
 }
 
 function ask() {
@@ -35,6 +39,10 @@ echo "When you run into build problems after enabling a frontend please make sur
 echo "necessary dependencies. There is a reason why they are not enabled by default."
 echo "You can always rerun this script to disable experimental frontends again."
 echo ""
+
+if [ ! -f $GRADLE_PROPERTIES_FILE ]; then
+  cp ${GRADLE_PROPERTIES_FILE}.example $GRADLE_PROPERTIES_FILE
+fi
 
 answerGo=$(ask "Do you want to enable the Go frontend? (currently $(getProperty "enableGoFrontend"))")
 setProperty "enableGoFrontend" $answerGo

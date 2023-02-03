@@ -42,7 +42,7 @@ class CommentMatcher {
      * region.
      */
     fun getEnclosingChild(node: Node, location: Region): Node {
-        var children = SubgraphWalker.getAstChildren(node)
+        var children = SubgraphWalker.getAstChildren(node).toMutableList()
         // As some frontends add regional implicit namespaces we have to search amongst its children
         // instead.
         children.addAll(
@@ -79,7 +79,7 @@ class CommentMatcher {
             smallestEnclosingNode = getEnclosingChild(smallestEnclosingNode, location)
         }
 
-        var children = SubgraphWalker.getAstChildren(smallestEnclosingNode)
+        var children = SubgraphWalker.getAstChildren(smallestEnclosingNode).toMutableList()
 
         // Because we sometimes wrap all elements into a NamespaceDeclaration we have to extract the
         // children with a location

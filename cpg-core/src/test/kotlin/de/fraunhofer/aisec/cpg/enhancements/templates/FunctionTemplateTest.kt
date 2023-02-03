@@ -76,16 +76,16 @@ internal class FunctionTemplateTest : BaseTest() {
     ) {
         assertEquals(2, callFloat3.templateParameters.size)
         assertEquals(floatType, (callFloat3.templateParameters[0] as TypeExpression).type)
-        assertEquals(0, callFloat3.templateParametersEdges!![0].getProperty(Properties.INDEX))
+        assertEquals(0, callFloat3.templateParameterEdges!![0].getProperty(Properties.INDEX))
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateParametersEdges!![0].getProperty(Properties.INSTANTIATION)
+            callFloat3.templateParameterEdges!![0].getProperty(Properties.INSTANTIATION)
         )
         assertEquals(int3, callFloat3.templateParameters[1])
-        assertEquals(1, callFloat3.templateParametersEdges!![1].getProperty(Properties.INDEX))
+        assertEquals(1, callFloat3.templateParameterEdges!![1].getProperty(Properties.INDEX))
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateParametersEdges!![1].getProperty(Properties.INSTANTIATION)
+            callFloat3.templateParameterEdges!![1].getProperty(Properties.INSTANTIATION)
         )
     }
 
@@ -506,16 +506,16 @@ internal class FunctionTemplateTest : BaseTest() {
         assertLocalName("int", callExpression.templateParameters[0])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callExpression.templateParametersEdges?.get(0)?.getProperty(Properties.INSTANTIATION)
+            callExpression.templateParameterEdges?.get(0)?.getProperty(Properties.INSTANTIATION)
         )
-        assertEquals(0, callExpression.templateParametersEdges!![0].getProperty(Properties.INDEX))
+        assertEquals(0, callExpression.templateParameterEdges!![0].getProperty(Properties.INDEX))
         val int5 =
             findByUniquePredicate(result.literals, Predicate { l: Literal<*> -> l.value == 5 })
         assertEquals(int5, callExpression.templateParameters[1])
-        assertEquals(1, callExpression.templateParametersEdges!![1].getProperty(Properties.INDEX))
+        assertEquals(1, callExpression.templateParameterEdges!![1].getProperty(Properties.INDEX))
         assertEquals(
             TemplateDeclaration.TemplateInitialization.DEFAULT,
-            callExpression.templateParametersEdges!![1].getProperty(Properties.INSTANTIATION)
+            callExpression.templateParameterEdges!![1].getProperty(Properties.INSTANTIATION)
         )
     }
 

@@ -1,6 +1,6 @@
 interface LoginResponse {
     access_token: string;
-};
+}
 
 export const LoginForm: React.FunctionComponent<{}> = () => {
     const [username, setUsername] = useState("");

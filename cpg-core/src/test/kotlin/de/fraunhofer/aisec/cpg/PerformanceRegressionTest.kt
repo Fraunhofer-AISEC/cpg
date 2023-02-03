@@ -49,12 +49,11 @@ import org.junit.jupiter.api.assertTimeout
 class PerformanceRegressionTest {
     /**
      * This test demonstrates two performance bottlenecks.
-     *
      * * First, we want to make a large initializer list with literals and make sure we parse this
-     * in reasonable time. We had issues with literals and their hashcode when they were inserted
-     * into a set.
+     *   in reasonable time. We had issues with literals and their hashcode when they were inserted
+     *   into a set.
      * * Second, we want to make that list essentially a one-liner because we had issues when
-     * populating the [Node.location] property using [CXXLanguageFrontend.getLocationFromRawNode].
+     *   populating the [Node.location] property using [CXXLanguageFrontend.getLocationFromRawNode].
      */
     @Test
     fun testParseLargeList() {
@@ -88,7 +87,7 @@ class PerformanceRegressionTest {
             val list = InitializerListExpression()
 
             for (i in 0 until 50000) {
-                list.initializersPropertyEdge.add(
+                list.initializerEdges.add(
                     PropertyEdge(
                         list,
                         newLiteral(
