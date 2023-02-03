@@ -245,8 +245,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             ((node as? FunctionDeclaration)?.body as? CompoundStatement)?.statements?.lastOrNull()
         if (
             lastStatement is ReturnStatement &&
-                lastStatement.location ==
-                    null && // Location == null means that it's an "implicit" return statement
+                lastStatement.isImplicit &&
                 lastStatement !in reachableReturnStatements
         )
             lastStatement.removeNextDFG(node)
