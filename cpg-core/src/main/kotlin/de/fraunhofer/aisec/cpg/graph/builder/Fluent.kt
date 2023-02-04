@@ -25,27 +25,31 @@
  */
 package de.fraunhofer.aisec.cpg.graph.builder
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
+/**
+ * Creates a new [TranslationUnitDeclaration] in the Fluent Node DSL with the given [name]. The
+ * declaration will be set to the [ScopeManager.globalScope]. The [init] block can be used to create
+ * further sub-nodes as well as configuring the created node itself.
+ */
 fun LanguageFrontend.translationUnit(
     name: CharSequence,
     init: TranslationUnitDeclaration.() -> Unit
 ): TranslationUnitDeclaration {
-    val node = newTranslationUnitDeclaration(name)
+    val node = (this@LanguageFrontend).newTranslationUnitDeclaration(name)
 
     scopeManager.resetToGlobal(node)
     init(node)
@@ -53,13 +57,20 @@ fun LanguageFrontend.translationUnit(
     return node
 }
 
-context(LanguageFrontend)
+/**
+ * Creates a new [FunctionDeclaration] in the Fluent Node DSL with the given [name] and optional
+ * [returnType]. The [init] block can be used to create further sub-nodes as well as configuring the
+ * created node itself.
+ */
+context(DeclarationHolder)
 
-fun DeclarationHolder.function(
+fun LanguageFrontend.function(
     name: CharSequence,
+    returnType: Type = UnknownType.getUnknownType(),
     init: FunctionDeclaration.() -> Unit
 ): FunctionDeclaration {
     val node = newFunctionDeclaration(name)
+    node.returnTypes = listOf(returnType)
 
     scopeManager.enterScope(node)
     init(node)
@@ -70,37 +81,41 @@ fun DeclarationHolder.function(
     return node
 }
 
-context(LanguageFrontend)
+/**
+ * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
+ * [FunctionDeclaration.body] of the nearest enclosing [FunctionDeclaration]. The [init] block can
+ * be used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(FunctionDeclaration)
 
-fun FunctionDeclaration.body(
-    hasScope: Boolean = true,
+fun LanguageFrontend.body(
+    needsScope: Boolean = true,
     init: CompoundStatement.() -> Unit
 ): CompoundStatement {
     val node = newCompoundStatement()
 
-    if (hasScope) {
-        scopeManager.enterScope(node)
-    }
-    init(node)
-    if (hasScope) {
-        scopeManager.leaveScope(node)
-    }
-    this.body = node
+    scopeIfNecessary(needsScope, node, init)
+    body = node
 
     return node
 }
 
-context(LanguageFrontend)
+/**
+ * Creates a new [ParamVariableDeclaration] in the Fluent Node DSL and adds it to the
+ * [FunctionDeclaration.parameters] of the nearest enclosing [FunctionDeclaration]. The [init] block
+ * can be used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(FunctionDeclaration)
 
-fun FunctionDeclaration.param(
+fun LanguageFrontend.param(
     name: CharSequence,
-    typeName: CharSequence? = null,
+    type: Type = UnknownType.getUnknownType(),
     init: (ParamVariableDeclaration.() -> Unit)? = null
 ): ParamVariableDeclaration {
     val node =
-        newParamVariableDeclaration(
+        (this@LanguageFrontend).newParamVariableDeclaration(
             name,
-            typeName?.let { parseType(it) } ?: UnknownType.getUnknownType()
+            type,
         )
     init?.let { it(node) }
 
@@ -109,50 +124,189 @@ fun FunctionDeclaration.param(
     return node
 }
 
-context(LanguageFrontend)
+/**
+ * Creates a new [ReturnStatement] in the Fluent Node DSL and adds it to the
+ * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(StatementHolder)
 
-fun StatementHolder.returnStmt(init: ReturnStatement.() -> Unit): ReturnStatement {
-    val node = newReturnStatement()
+fun LanguageFrontend.returnStmt(init: ReturnStatement.() -> Unit): ReturnStatement {
+    val node = (this@LanguageFrontend).newReturnStatement()
     init(node)
 
-    this += node
+    (this@StatementHolder) += node
 
     return node
 }
 
-context(LanguageFrontend)
+/**
+ * Creates a new [DeclarationStatement] in the Fluent Node DSL and adds it to the
+ * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(StatementHolder)
 
-fun StatementHolder.declare(init: DeclarationStatement.() -> Unit): DeclarationStatement {
-    val node = newDeclarationStatement()
+fun LanguageFrontend.declare(init: DeclarationStatement.() -> Unit): DeclarationStatement {
+    val node = (this@LanguageFrontend).newDeclarationStatement()
     init(node)
 
-    this += node
+    (this@StatementHolder) += node
 
     return node
 }
 
-context(LanguageFrontend)
+/**
+ * Creates a new [VariableDeclaration] in the Fluent Node DSL and adds it to the
+ * [DeclarationStatement.declarations] of the nearest enclosing [DeclarationStatement]. The [init]
+ * block can be used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(DeclarationStatement)
 
-fun <N> ArgumentHolder.literal(value: N): Literal<N> {
-    val node = newLiteral(value)
-
-    this += node
-
-    return node
-}
-
-context(LanguageFrontend)
-
-fun DeclarationStatement.variable(
+fun LanguageFrontend.variable(
     name: String,
+    type: Type = UnknownType.getUnknownType(),
     init: VariableDeclaration.() -> Unit
 ): VariableDeclaration {
-    val node = newVariableDeclaration(name)
+    val node = newVariableDeclaration(name, type)
     init(node)
 
-    this.addToPropertyEdgeDeclaration(node)
+    addToPropertyEdgeDeclaration(node)
 
     scopeManager.addDeclaration(node)
+
+    return node
+}
+
+/**
+ * Creates a new [CallExpression] (or [MemberCallExpression]) in the Fluent Node DSL with the given
+ * [name] and adds it to the [StatementHolder.statements] of the nearest enclosing
+ * [StatementHolder]. The type of expression is determined whether [name] is either a [Name] with a
+ * [Name.parent] or if it can be parsed as a FQN in the given language. It also automatically
+ * creates either a [DeclaredReferenceExpression] or [MemberExpression] and sets it as the
+ * [CallExpression.callee]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
+ */
+context(StatementHolder)
+
+fun LanguageFrontend.call(
+    name: CharSequence,
+    isStatic: Boolean = false,
+    init: (CallExpression.() -> Unit)? = null
+): CallExpression {
+    // Try to parse the name
+    val parsedName = parseName(name)
+    val node =
+        if (parsedName.parent != null) {
+            newMemberCallExpression(
+                newMemberExpression(
+                    parsedName.localName,
+                    newDeclaredReferenceExpression(parsedName.parent)
+                ),
+                isStatic
+            )
+        } else {
+            newCallExpression(newDeclaredReferenceExpression(parsedName))
+        }
+
+    if (init != null) {
+        init(node)
+    }
+
+    (this@StatementHolder) += node
+
+    return node
+}
+
+/**
+ * Creates a new [IfStatement] in the Fluent Node DSL and adds it to the
+ * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(StatementHolder)
+
+fun LanguageFrontend.ifStmt(init: IfStatement.() -> Unit): IfStatement {
+    val node = newIfStatement()
+    init(node)
+
+    (this@StatementHolder) += node
+
+    return node
+}
+
+/**
+ * Configures the [IfStatement.condition] in the Fluent Node DSL of the nearest enclosing
+ * [IfStatement]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
+ */
+fun IfStatement.condition(init: IfStatement.() -> BinaryOperator): BinaryOperator {
+    return init(this)
+}
+
+/**
+ * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
+ * [IfStatement.thenStatement] of the nearest enclosing [IfStatement]. The [init] block can be used
+ * to create further sub-nodes as well as configuring the created node itself.
+ */
+context(IfStatement)
+
+fun LanguageFrontend.then(
+    needsScope: Boolean = true,
+    init: CompoundStatement.() -> Unit
+): CompoundStatement {
+    val node = newCompoundStatement()
+    scopeIfNecessary(needsScope, node, init)
+
+    thenStatement = node
+
+    return node
+}
+
+/**
+ * Creates a new [IfStatement] in the Fluent Node DSL and sets it to the [IfStatement.elseStatement]
+ * of the nearest enclosing [IfStatement]. This simulates an `else-if` scenario. The [init] block
+ * can be used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(IfStatement)
+
+fun LanguageFrontend.elseIf(init: IfStatement.() -> Unit): IfStatement {
+    val node = newIfStatement()
+    init(node)
+
+    elseStatement = node
+
+    return node
+}
+
+/**
+ * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
+ * [IfStatement.elseStatement] of the nearest enclosing [IfStatement]. The [init] block can be used
+ * to create further sub-nodes as well as configuring the created node itself.
+ */
+context(IfStatement)
+
+fun LanguageFrontend.els(
+    needsScope: Boolean = true,
+    init: CompoundStatement.() -> Unit
+): CompoundStatement {
+    val node = newCompoundStatement()
+    scopeIfNecessary(needsScope, node, init)
+
+    elseStatement = node
+
+    return node
+}
+
+/**
+ * Creates a new [Literal] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument] of the
+ * nearest enclosing [ArgumentHolder].
+ */
+context(ArgumentHolder)
+
+fun <N> LanguageFrontend.literal(value: N): Literal<N> {
+    val node = newLiteral(value)
+
+    (this@ArgumentHolder) += node
 
     return node
 }
@@ -160,7 +314,7 @@ fun DeclarationStatement.variable(
 context(LanguageFrontend)
 
 fun ArgumentHolder.ref(name: CharSequence): DeclaredReferenceExpression {
-    val node = newDeclaredReferenceExpression(name)
+    val node = (this@LanguageFrontend).newDeclaredReferenceExpression(name)
 
     this += node
 
@@ -170,11 +324,47 @@ fun ArgumentHolder.ref(name: CharSequence): DeclaredReferenceExpression {
 context(LanguageFrontend, ArgumentHolder)
 
 operator fun Expression.plus(rhs: Expression): BinaryOperator {
-    val node = newBinaryOperator("+")
+    val node = (this@LanguageFrontend).newBinaryOperator("+")
     node.lhs = this
     node.rhs = rhs
 
-    plusAssign(node)
+    (this@ArgumentHolder) += node
 
     return node
+}
+
+context(LanguageFrontend, ArgumentHolder)
+
+infix fun Expression.eq(rhs: Expression): BinaryOperator {
+    val node = (this@LanguageFrontend).newBinaryOperator("==")
+    node.lhs = this
+    node.rhs = rhs
+
+    (this@ArgumentHolder) += node
+
+    return node
+}
+
+context(LanguageFrontend)
+
+fun t(name: CharSequence): Type {
+    return parseType(name)
+}
+
+/**
+ * Internally used to enter a new scope if [needsScope] is true before invoking [init] and leaving
+ * it afterwards.
+ */
+private fun LanguageFrontend.scopeIfNecessary(
+    needsScope: Boolean,
+    node: CompoundStatement,
+    init: CompoundStatement.() -> Unit
+) {
+    if (needsScope) {
+        scopeManager.enterScope(node)
+    }
+    init(node)
+    if (needsScope) {
+        scopeManager.leaveScope(node)
+    }
 }

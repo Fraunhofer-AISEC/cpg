@@ -33,29 +33,40 @@ import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
+import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.*
 
-class DslTest {
+class FluentTest {
     @Test
     fun test() {
         val scopeManager = ScopeManager()
         val tu =
             TestLanguageFrontend(scopeManager).build {
                 translationUnit("file.cpp") {
-                    function("main") {
-                        param("argc", "int")
+                    function("main", t("int")) {
+                        param("argc", t("int"))
                         body {
-                            declare { variable("a") { literal(1) } }
+                            declare { variable("a", t("short")) { literal(1) } }
+                            ifStmt {
+                                condition { ref("argc") eq literal(1) }
+                                then { call("printf") { literal("then") } }
+                                elseIf {
+                                    condition { ref("argc") eq literal(1) }
+                                    then { call("printf") { literal("elseIf") } }
+                                    els { call("printf") { literal("else") } }
+                                }
+                            }
+
                             returnStmt { ref("a") + literal(2) }
                         }
                     }
@@ -66,6 +77,7 @@ class DslTest {
         val main = tu.functions["main"]
         assertNotNull(main)
         assertNotNull(main.scope)
+        assertTrue(main.scope is GlobalScope)
 
         val argc = main.parameters["argc"]
         assertNotNull(argc)
@@ -74,23 +86,62 @@ class DslTest {
 
         val body = main.body as? CompoundStatement
         assertNotNull(body)
-        assertNotNull(body.scope)
+        assertTrue {
+            body.scope is FunctionScope
+            body.scope?.astNode == main
+        }
 
-        val declarationStatement = main.bodyOrNull<DeclarationStatement>(0)
+        // First line should be a DeclarationStatement
+        val declarationStatement = main[0] as? DeclarationStatement
         assertNotNull(declarationStatement)
-        assertNotNull(declarationStatement.scope)
+        assertTrue(declarationStatement.scope is BlockScope)
 
         val variable = declarationStatement.singleDeclaration as? VariableDeclaration
         assertNotNull(variable)
-        assertNotNull(variable.scope)
+        assertTrue(variable.scope is BlockScope)
         assertLocalName("a", variable)
 
-        val lit1 = variable.initializer as? Literal<*>
+        var lit1 = variable.initializer as? Literal<*>
         assertNotNull(lit1)
-        assertNotNull(lit1.scope)
+        assertTrue(lit1.scope is BlockScope)
         assertEquals(1, lit1.value)
 
-        val returnStatement = main.bodyOrNull<ReturnStatement>(0)
+        // Second line should be an IfStatement
+        val ifStatement = main[1] as? IfStatement
+        assertNotNull(ifStatement)
+        assertTrue(ifStatement.scope is BlockScope)
+
+        val condition = ifStatement.condition as? BinaryOperator
+        assertNotNull(condition)
+        assertEquals("==", condition.operatorCode)
+
+        // The "then" should have a call to "printf" with argument "then"
+        var printf = ifStatement.thenStatement.calls["printf"]
+        assertNotNull(printf)
+        assertEquals("then", printf.arguments[0]<Literal<*>>()?.value)
+
+        // The "else" contains another if (else-if) and a call to "printf" with argument "elseIf"
+        val elseIf = ifStatement.elseStatement as? IfStatement
+        assertNotNull(elseIf)
+
+        printf = elseIf.thenStatement.calls["printf"]
+        assertNotNull(printf)
+        assertEquals("elseIf", printf.arguments[0]<Literal<*>>()?.value)
+
+        printf = elseIf.elseStatement.calls["printf"]
+        assertNotNull(printf)
+        assertEquals("else", printf.arguments[0]<Literal<*>>()?.value)
+
+        var ref = condition.lhs<DeclaredReferenceExpression>()
+        assertNotNull(ref)
+        assertLocalName("argc", ref)
+
+        lit1 = condition.rhs()
+        assertNotNull(lit1)
+        assertEquals(1, lit1.value)
+
+        // Third line is the ReturnStatement
+        val returnStatement = main[2] as? ReturnStatement
         assertNotNull(returnStatement)
         assertNotNull(returnStatement.scope)
 
@@ -99,7 +150,7 @@ class DslTest {
         assertNotNull(binOp.scope)
         assertEquals("+", binOp.operatorCode)
 
-        val ref = binOp.lhs as? DeclaredReferenceExpression
+        ref = binOp.lhs as? DeclaredReferenceExpression
         assertNotNull(ref)
         assertNotNull(ref.scope)
         assertNull(ref.refersTo)
