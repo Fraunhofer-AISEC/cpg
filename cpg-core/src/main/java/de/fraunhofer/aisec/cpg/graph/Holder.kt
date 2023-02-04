@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-
-interface ArgumentHolder : Holder<Expression> {
-
-    fun addArgument(expression: Expression)
-
-    override operator fun plusAssign(node: Expression) {
-        addArgument(node)
-    }
+interface Holder<N : Node> {
+    operator fun plusAssign(node: N)
 }

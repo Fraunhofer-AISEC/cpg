@@ -25,11 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
-import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -40,9 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import kotlin.test.*
 
@@ -66,6 +61,7 @@ class FluentTest {
                                     els { call("printf") { literal("else") } }
                                 }
                             }
+                            call("do") { call("some::func") }
 
                             returnStmt { ref("a") + literal(2) }
                         }
@@ -140,8 +136,17 @@ class FluentTest {
         assertNotNull(lit1)
         assertEquals(1, lit1.value)
 
-        // Third line is the ReturnStatement
-        val returnStatement = main[2] as? ReturnStatement
+        // Third line is the CallExpression (containing another MemberCallExpression as argument)
+        val call = main[2] as? CallExpression
+        assertNotNull(call)
+        assertLocalName("do", call)
+
+        val mce = call.arguments[0] as? MemberCallExpression
+        assertNotNull(mce)
+        assertFullName("some::func", mce)
+
+        // Fourth line is the ReturnStatement
+        val returnStatement = main[3] as? ReturnStatement
         assertNotNull(returnStatement)
         assertNotNull(returnStatement.scope)
 

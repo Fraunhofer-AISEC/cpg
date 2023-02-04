@@ -170,7 +170,5 @@ class TranslationResult(
     companion object {
         const val SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend"
         const val APPLICATION_LOCAL_NAME = "application"
-
-        fun of(tu: TranslationUnitDeclaration) {}
     }
 }

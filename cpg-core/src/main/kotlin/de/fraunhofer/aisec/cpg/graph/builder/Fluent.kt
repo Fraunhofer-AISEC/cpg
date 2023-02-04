@@ -32,10 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -180,14 +177,17 @@ fun LanguageFrontend.variable(
 
 /**
  * Creates a new [CallExpression] (or [MemberCallExpression]) in the Fluent Node DSL with the given
- * [name] and adds it to the [StatementHolder.statements] of the nearest enclosing
- * [StatementHolder]. The type of expression is determined whether [name] is either a [Name] with a
- * [Name.parent] or if it can be parsed as a FQN in the given language. It also automatically
- * creates either a [DeclaredReferenceExpression] or [MemberExpression] and sets it as the
- * [CallExpression.callee]. The [init] block can be used to create further sub-nodes as well as
- * configuring the created node itself.
+ * [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
+ * [StatementHolder] it is added to the list of [StatementHolder.statements] or in case of an
+ * [ArgumentHolder], the function [ArgumentHolder.addArgument] is invoked.
+ *
+ * The type of expression is determined whether [name] is either a [Name] with a [Name.parent] or if
+ * it can be parsed as a FQN in the given language. It also automatically creates either a
+ * [DeclaredReferenceExpression] or [MemberExpression] and sets it as the [CallExpression.callee].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
-context(StatementHolder)
+context(Holder<out Statement>)
 
 fun LanguageFrontend.call(
     name: CharSequence,
@@ -201,19 +201,23 @@ fun LanguageFrontend.call(
             newMemberCallExpression(
                 newMemberExpression(
                     parsedName.localName,
-                    newDeclaredReferenceExpression(parsedName.parent)
+                    newDeclaredReferenceExpression(parsedName.parent, parseType(parsedName.parent))
                 ),
                 isStatic
             )
         } else {
             newCallExpression(newDeclaredReferenceExpression(parsedName))
         }
-
     if (init != null) {
         init(node)
     }
 
-    (this@StatementHolder) += node
+    val holder = this@Holder
+    if (holder is StatementHolder) {
+        holder += node
+    } else if (holder is ArgumentHolder) {
+        holder += node
+    }
 
     return node
 }
@@ -311,16 +315,24 @@ fun <N> LanguageFrontend.literal(value: N): Literal<N> {
     return node
 }
 
-context(LanguageFrontend)
+/**
+ * Creates a new [DeclaredReferenceExpression] in the Fluent Node DSL and invokes
+ * [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
+context(ArgumentHolder)
 
-fun ArgumentHolder.ref(name: CharSequence): DeclaredReferenceExpression {
-    val node = (this@LanguageFrontend).newDeclaredReferenceExpression(name)
+fun LanguageFrontend.ref(name: CharSequence): DeclaredReferenceExpression {
+    val node = newDeclaredReferenceExpression(name)
 
-    this += node
+    (this@ArgumentHolder) += node
 
     return node
 }
 
+/**
+ * Creates a new [BinaryOperator] with a `+` [BinaryOperator.operatorCode] in the Fluent Node DSL
+ * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
 context(LanguageFrontend, ArgumentHolder)
 
 operator fun Expression.plus(rhs: Expression): BinaryOperator {
@@ -333,6 +345,10 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
     return node
 }
 
+/**
+ * Creates a new [BinaryOperator] with a `==` [BinaryOperator.operatorCode] in the Fluent Node DSL
+ * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
 context(LanguageFrontend, ArgumentHolder)
 
 infix fun Expression.eq(rhs: Expression): BinaryOperator {
@@ -345,9 +361,8 @@ infix fun Expression.eq(rhs: Expression): BinaryOperator {
     return node
 }
 
-context(LanguageFrontend)
-
-fun t(name: CharSequence): Type {
+/** Creates a new [Type] with the given [name] in the Fluent Node DSL. */
+fun LanguageFrontend.t(name: CharSequence): Type {
     return parseType(name)
 }
 
