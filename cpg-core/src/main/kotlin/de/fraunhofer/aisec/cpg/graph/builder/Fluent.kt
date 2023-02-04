@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.builder
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
@@ -38,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 fun LanguageFrontend.translationUnit(
     name: CharSequence,
@@ -84,6 +86,25 @@ fun FunctionDeclaration.body(
         scopeManager.leaveScope(node)
     }
     this.body = node
+
+    return node
+}
+
+context(LanguageFrontend)
+
+fun FunctionDeclaration.param(
+    name: CharSequence,
+    typeName: CharSequence? = null,
+    init: (ParamVariableDeclaration.() -> Unit)? = null
+): ParamVariableDeclaration {
+    val node =
+        newParamVariableDeclaration(
+            name,
+            typeName?.let { parseType(it) } ?: UnknownType.getUnknownType()
+        )
+    init?.let { it(node) }
+
+    scopeManager.addDeclaration(node)
 
     return node
 }

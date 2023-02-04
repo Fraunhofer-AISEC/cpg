@@ -53,6 +53,7 @@ class DslTest {
             TestLanguageFrontend(scopeManager).build {
                 translationUnit("file.cpp") {
                     function("main") {
+                        param("argc", "int")
                         body {
                             declare { variable("a") { literal(1) } }
                             returnStmt { ref("a") + literal(2) }
@@ -65,6 +66,11 @@ class DslTest {
         val main = tu.functions["main"]
         assertNotNull(main)
         assertNotNull(main.scope)
+
+        val argc = main.parameters["argc"]
+        assertNotNull(argc)
+        assertLocalName("argc", argc)
+        assertLocalName("int", argc.type)
 
         val body = main.body as? CompoundStatement
         assertNotNull(body)
