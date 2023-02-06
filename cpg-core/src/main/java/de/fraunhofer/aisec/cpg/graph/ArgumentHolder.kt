@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,17 +25,26 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 /**
- * Specifies that a certain node has an initializer. It is a special case of [ArgumentHolder], in
- * which the initializer is treated as the first (and only) argument.
+ * This interfaces denotes that [Node] can accept arguments. The most famous example would be a
+ * [CallExpression] to populate [CallExpression.arguments] or the [ReturnStatement.returnValue] of a
+ * return statement.
+ *
+ * We do have some use-cases where we are a little "relaxed" about what is an argument. For example,
+ * we also consider the [BinaryOperator.lhs] and [BinaryOperator.rhs] of a binary operator as
+ * arguments, so we can use node builders in the Node Fluent DSL.
  */
-interface HasInitializer : ArgumentHolder {
+interface ArgumentHolder : Holder<Expression> {
 
-    var initializer: Expression?
+    /** Adds the [expression] to the list of arguments. */
+    fun addArgument(expression: Expression)
 
-    override fun addArgument(expression: Expression) {
-        this.initializer = expression
+    override operator fun plusAssign(node: Expression) {
+        addArgument(node)
     }
 }

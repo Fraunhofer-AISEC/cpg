@@ -1443,8 +1443,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val assignment = newBinaryOperator("=", code)
             assignment.rhs = labelMap[l]!!
             assignment.lhs = newDeclaredReferenceExpression(varName, type, code)
-            assignment.lhs.type = type
-            assignment.lhs.unregisterTypeListener(assignment)
+            (assignment.lhs as DeclaredReferenceExpression).type = type
+            (assignment.lhs as DeclaredReferenceExpression).unregisterTypeListener(assignment)
             assignment.unregisterTypeListener(assignment.lhs as DeclaredReferenceExpression)
             (assignment.lhs as DeclaredReferenceExpression).refersTo = declaration
             flatAST.add(assignment)

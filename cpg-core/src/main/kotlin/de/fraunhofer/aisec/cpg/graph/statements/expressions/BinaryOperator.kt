@@ -37,7 +37,7 @@ import org.neo4j.ogm.annotation.Transient
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
  * right hand expression (rhs) and an operatorCode.
  */
-class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
+class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, ArgumentHolder {
     /** The left-hand expression. */
     @field:SubGraph("AST")
     var lhs: Expression = ProblemExpression("could not parse lhs")
@@ -174,6 +174,7 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
         get() = // We only want to supply a target if this is an assignment
         if (isAssignment) (if (lhs is AssignmentTarget) lhs as AssignmentTarget? else null)
             else null
+
     override val value: Expression?
         get() = if (isAssignment) rhs else null
 
@@ -185,6 +186,14 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
             /*||this.operatorCode.equals("+=") ||this.operatorCode.equals("-=")
             ||this.operatorCode.equals("/=")  ||this.operatorCode.equals("*=")*/
         }
+
+    override fun addArgument(expression: Expression) {
+        if (lhs is ProblemExpression) {
+            lhs = expression
+        } else {
+            rhs = expression
+        }
+    }
 
     override val base: Expression?
         get() {
@@ -198,7 +207,7 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase {
     companion object {
         /** Required for compound BinaryOperators. This should not be stored in the graph */
         @Transient
-        val compoundOperators =
+        val compoundOperators: MutableList<String> =
             List.of("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=")
     }
 }

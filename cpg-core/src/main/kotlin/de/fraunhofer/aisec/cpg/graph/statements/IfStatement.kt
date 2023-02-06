@@ -25,14 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import java.util.Objects
+import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-class IfStatement : Statement() {
+class IfStatement : Statement(), ArgumentHolder {
     /** C++ initializer statement. */
     @field:SubGraph("AST") var initializerStatement: Statement? = null
 
@@ -64,6 +65,10 @@ class IfStatement : Statement() {
             .append("thenStatement", thenStatement)
             .append("elseStatement", elseStatement)
             .toString()
+    }
+
+    override fun addArgument(expression: Expression) {
+        this.condition = expression
     }
 
     override fun equals(other: Any?): Boolean {

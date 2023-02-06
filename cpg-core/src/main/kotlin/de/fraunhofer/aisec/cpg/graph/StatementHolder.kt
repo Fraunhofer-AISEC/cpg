@@ -34,13 +34,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 /**
  * This interface denotes an AST node that can contain code. This code is stored as statements. This
  * includes Translation units namespaces and classes as some languages, mainly scripting languages
- * allow code placement outside of explicit functions.
+ * allow code placement outside explicit functions.
  *
  * The reason for not only using a statement property that encapsulates all code in an implicit
  * compound statements is that code can be distributed between functions and an encapsulating
  * compound statement would imply a block of code with a code region containing only the statements.
  */
-interface StatementHolder {
+interface StatementHolder : Holder<Statement> {
     /** List of statements as property edges. */
     var statementEdges: MutableList<PropertyEdge<Statement>>
 
@@ -64,5 +64,9 @@ interface StatementHolder {
         val propertyEdge = PropertyEdge((this as Node), s)
         propertyEdge.addProperty(Properties.INDEX, statementEdges.size)
         statementEdges.add(propertyEdge)
+    }
+
+    override operator fun plusAssign(node: Statement) {
+        addStatement(node)
     }
 }

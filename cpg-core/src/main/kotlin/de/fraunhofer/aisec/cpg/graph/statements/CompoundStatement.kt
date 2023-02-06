@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import java.util.Objects
+import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -66,4 +66,9 @@ class CompoundStatement : Statement(), StatementHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), statements)
+
+    /** Returns the [n]-th statement in this list of statements. */
+    operator fun get(n: Int): Statement {
+        return statements[n]
+    }
 }
