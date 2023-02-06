@@ -25,13 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a statement that returns out of the current function. */
-class ReturnStatement : Statement() {
+class ReturnStatement : Statement(), ArgumentHolder {
     /** The expression whose value will be returned. */
     @field:SubGraph("AST") var returnValue: Expression? = null
 
@@ -40,6 +41,10 @@ class ReturnStatement : Statement() {
             .appendSuper(super.toString())
             .append("returnValue", returnValue)
             .toString()
+    }
+
+    override fun addArgument(expression: Expression) {
+        this.returnValue = expression
     }
 
     override fun equals(other: Any?): Boolean {

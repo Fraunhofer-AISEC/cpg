@@ -538,6 +538,10 @@ val Node?.literals: List<Literal<*>>
 val Node?.refs: List<DeclaredReferenceExpression>
     get() = this.allChildren()
 
+operator fun <N : Expression> Expression.invoke(): N? {
+    return this as? N
+}
+
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
     return SubgraphWalker.flattenAST(this).filter { node ->
@@ -556,6 +560,19 @@ val FunctionDeclaration.callees: Set<FunctionDeclaration>
             }
             .toSet()
     }
+
+/** Retrieves the n-th statement of the body of this function declaration. */
+operator fun FunctionDeclaration.get(n: Int): Statement? {
+    val body = this.body
+
+    if (body is CompoundStatement) {
+        return body[n]
+    } else if (n == 0) {
+        return body
+    }
+
+    return null
+}
 
 /** Set of all functions calling [function] */
 fun TranslationResult.callersOf(function: FunctionDeclaration): Set<FunctionDeclaration> {
