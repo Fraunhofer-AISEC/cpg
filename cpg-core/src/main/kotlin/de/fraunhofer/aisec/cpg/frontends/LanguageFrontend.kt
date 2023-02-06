@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -86,6 +87,14 @@ abstract class LanguageFrontend(
      * parsing source code, the function [init] is used to build nodes in the Node Fluent DSL.
      */
     fun build(init: LanguageFrontend.() -> TranslationUnitDeclaration): TranslationUnitDeclaration {
+        return init(this)
+    }
+
+    /**
+     * Similar to [parse], this function returns a [TranslationResult], but rather than parsing
+     * source code, the function [init] is used to build nodes in the Node Fluent DSL.
+     */
+    fun buildTR(init: LanguageFrontend.() -> TranslationResult): TranslationResult {
         return init(this)
     }
 
