@@ -117,7 +117,7 @@ context(DeclarationHolder)
 
 fun LanguageFrontend.record(
     name: CharSequence,
-    kind: String,
+    kind: String = "class",
     init: RecordDeclaration.() -> Unit
 ): RecordDeclaration {
     val node = (this@LanguageFrontend).newRecordDeclaration(name, kind)
@@ -126,6 +126,7 @@ fun LanguageFrontend.record(
     init(node)
     scopeManager.leaveScope(node)
     scopeManager.addDeclaration(node)
+
     return node
 }
 
@@ -499,28 +500,37 @@ fun LanguageFrontend.elseStmt(
 
 /**
  * Creates a new [Literal] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument] of the
- * nearest enclosing [ArgumentHolder].
+ * nearest enclosing [Holder], but only if it is an [ArgumentHolder].
  */
-context(ArgumentHolder)
+context(Holder<out Statement>)
 
 fun <N> LanguageFrontend.literal(value: N): Literal<N> {
     val node = newLiteral(value)
 
-    (this@ArgumentHolder) += node
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    val holder = this@Holder
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
 
     return node
 }
 
 /**
  * Creates a new [DeclaredReferenceExpression] in the Fluent Node DSL and invokes
- * [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ * [ArgumentHolder.addArgument] of the nearest enclosing [Holder], but only if it is an
+ * [ArgumentHolder].
  */
-context(ArgumentHolder)
+context(Holder<out Statement>)
 
 fun LanguageFrontend.ref(name: CharSequence): DeclaredReferenceExpression {
     val node = newDeclaredReferenceExpression(name)
 
-    (this@ArgumentHolder) += node
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    val holder = this@Holder
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
 
     return node
 }
@@ -591,7 +601,7 @@ infix fun Expression.gt(rhs: Expression): BinaryOperator {
 
 /**
  * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend, StatementHolder)
 
@@ -607,7 +617,7 @@ infix fun Expression.assign(init: BinaryOperator.() -> Expression): BinaryOperat
 
 /**
  * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend, StatementHolder)
 

@@ -415,15 +415,15 @@ class ShortcutsTest {
                             param("b", t("int"))
                             body {
                                 ifStmt {
-                                    condition { ref("b") gt literal(5) }
+                                    condition { ref("b") eq literal(5) }
                                     thenStmt {
                                         ifStmt {
                                             condition { ref("attr") eq literal(2) }
                                             thenStmt { ref("attr") assign literal(3) }
                                             elseStmt { ref("attr") assign literal(3) }
                                         }
-                                        elseStmt { ref("attr") assign ref("b") }
                                     }
+                                    elseStmt { ref("attr") assign ref("b") }
                                 }
                             }
                         }
@@ -440,8 +440,8 @@ class ShortcutsTest {
                                             thenStmt { ref("a") assign literal(3) }
                                             elseStmt { ref("a") assign literal(3) }
                                         }
-                                        elseStmt { ref("a") assign ref("b") }
                                     }
+                                    elseStmt { ref("a") assign ref("b") }
                                 }
                             }
                         }
