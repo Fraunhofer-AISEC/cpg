@@ -254,7 +254,7 @@ fun IfStatement.condition(init: IfStatement.() -> BinaryOperator): BinaryOperato
  */
 context(IfStatement)
 
-fun LanguageFrontend.then(
+fun LanguageFrontend.thenStmt(
     needsScope: Boolean = true,
     init: CompoundStatement.() -> Unit
 ): CompoundStatement {
@@ -289,7 +289,7 @@ fun LanguageFrontend.elseIf(init: IfStatement.() -> Unit): IfStatement {
  */
 context(IfStatement)
 
-fun LanguageFrontend.els(
+fun LanguageFrontend.elseStmt(
     needsScope: Boolean = true,
     init: CompoundStatement.() -> Unit
 ): CompoundStatement {

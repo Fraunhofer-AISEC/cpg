@@ -54,11 +54,11 @@ class FluentTest {
                             declare { variable("a", t("short")) { literal(1) } }
                             ifStmt {
                                 condition { ref("argc") eq literal(1) }
-                                then { call("printf") { literal("then") } }
+                                thenStmt { call("printf") { literal("then") } }
                                 elseIf {
                                     condition { ref("argc") eq literal(1) }
-                                    then { call("printf") { literal("elseIf") } }
-                                    els { call("printf") { literal("else") } }
+                                    thenStmt { call("printf") { literal("elseIf") } }
+                                    elseStmt { call("printf") { literal("else") } }
                                 }
                             }
                             call("do") { call("some::func") }
