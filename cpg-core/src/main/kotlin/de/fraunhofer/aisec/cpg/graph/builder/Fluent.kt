@@ -139,7 +139,7 @@ context(DeclarationHolder)
 fun LanguageFrontend.field(
     name: CharSequence,
     type: Type = UnknownType.getUnknownType(),
-    init: FunctionDeclaration.() -> Unit
+    init: FieldDeclaration.() -> Unit
 ): FieldDeclaration {
     val node = newFieldDeclaration(name)
     node.type = type
@@ -304,10 +304,10 @@ context(DeclarationStatement)
 fun LanguageFrontend.variable(
     name: String,
     type: Type = UnknownType.getUnknownType(),
-    init: VariableDeclaration.() -> Unit
+    init: (VariableDeclaration.() -> Unit)? = null
 ): VariableDeclaration {
     val node = newVariableDeclaration(name, type)
-    init(node)
+    if (init != null) init(node)
 
     addToPropertyEdgeDeclaration(node)
 
@@ -357,6 +357,54 @@ fun LanguageFrontend.call(
         holder += node
     }
 
+    return node
+}
+
+/**
+ * Creates a new [CallExpression] (or [MemberCallExpression]) in the Fluent Node DSL with the given
+ * [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
+ * [StatementHolder] it is added to the list of [StatementHolder.statements] or in case of an
+ * [ArgumentHolder], the function [ArgumentHolder.addArgument] is invoked.
+ *
+ * The type of expression is determined whether [name] is either a [Name] with a [Name.parent] or if
+ * it can be parsed as a FQN in the given language. It also automatically creates either a
+ * [DeclaredReferenceExpression] or [MemberExpression] and sets it as the [CallExpression.callee].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
+ */
+context(Holder<out Statement>)
+
+fun LanguageFrontend.construct(
+    name: CharSequence,
+    init: (ConstructExpression.() -> Unit)? = null
+): ConstructExpression {
+    val node = newConstructExpression(parseName(name))
+    if (init != null) {
+        init(node)
+    }
+
+    val holder = this@Holder
+    if (holder is StatementHolder) {
+        holder += node
+    } else if (holder is ArgumentHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+context(Holder<out Statement>)
+
+fun LanguageFrontend.new(init: (NewExpression.() -> Unit)? = null): NewExpression {
+    val node = newNewExpression()
+    if (init != null) init(node)
+
+    val holder = this@Holder
+    if (holder is StatementHolder) {
+        holder += node
+    } else if (holder is ArgumentHolder) {
+        holder += node
+    }
     return node
 }
 

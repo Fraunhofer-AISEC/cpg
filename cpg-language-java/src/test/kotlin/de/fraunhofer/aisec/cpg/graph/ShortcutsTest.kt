@@ -25,9 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
+import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -81,23 +86,13 @@ class ShortcutsTest {
 
     @Test
     fun testCalls() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = getShortcutClass()
 
         val actual = result.calls
 
         val expected = mutableListOf<CallExpression>()
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val main = classDecl.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
         expected.add(
@@ -127,23 +122,13 @@ class ShortcutsTest {
 
     @Test
     fun testCallsByName() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = getShortcutClass()
 
         val actual = result.callsByName("print")
 
         val expected = mutableListOf<CallExpression>()
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val main = classDecl.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
         expected.add((main.body as CompoundStatement).statements[1] as MemberCallExpression)
@@ -153,22 +138,11 @@ class ShortcutsTest {
 
     @Test
     fun testCalleesOf() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = getShortcutClass()
 
         val expected = mutableListOf<FunctionDeclaration>()
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
-
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val print = classDecl.byNameOrNull<MethodDeclaration>("print")
         assertNotNull(print)
         expected.add(print)
@@ -200,20 +174,10 @@ class ShortcutsTest {
 
     @Test
     fun testCallersOf() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
+        val result = getShortcutClass()
 
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val print = classDecl.byNameOrNull<MethodDeclaration>("print")
         assertNotNull(print)
 
@@ -229,21 +193,11 @@ class ShortcutsTest {
 
     @Test
     fun testControls() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = getShortcutClass()
 
         val expected = mutableListOf<Node>()
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
         val ifStatement = (magic.body as CompoundStatement).statements[0] as IfStatement
@@ -290,22 +244,11 @@ class ShortcutsTest {
 
     @Test
     fun testControlledBy() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass(EdgeCachePass())
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = getShortcutClass()
 
         val expected = mutableListOf<Node>()
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
@@ -326,21 +269,10 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevDFGEdgesUntilHit() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass(EdgeCachePass())
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
+        val result = getShortcutClass()
 
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic2 = classDecl.byNameOrNull<MethodDeclaration>("magic2")
         assertNotNull(magic2)
 
@@ -374,21 +306,9 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevEOGEdgesUntilHit() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass(EdgeCachePass())
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val result = getShortcutClass()
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
@@ -410,21 +330,10 @@ class ShortcutsTest {
 
     @Test
     fun testFollowNextEOGEdgesUntilHit() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass(EdgeCachePass())
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
+        val result = getShortcutClass()
 
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
@@ -445,21 +354,10 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevDFGEdges() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass(EdgeCachePass())
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
+        val result = getShortcutClass()
 
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
@@ -473,5 +371,83 @@ class ShortcutsTest {
         val paramPassed = attrAssignment.followPrevDFG { it is Literal<*> }
         assertNotNull(paramPassed)
         assertEquals(3, (paramPassed.last() as? Literal<*>)?.value)
+    }
+
+    private fun getShortcutClass(): TranslationResult {
+
+        val config =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .registerLanguage(TestLanguage("."))
+                .registerPass(EdgeCachePass())
+                .build()
+
+        return TestLanguageFrontend(ScopeManager(), ".").buildTR {
+            translationResult(config) {
+                translationUnit("ShortcutClass.java") {
+                    // The main method
+                    function("main") {
+                        param("args", t("int[]"))
+                        body {
+                            declare {
+                                variable("sc", t("ShortcutClass")) {
+                                    new { construct("ShortcutClass") }
+                                }
+                            }
+                            call("sc.print")
+                            call("sc.magic") { literal(3) }
+                            call("sc.magic2") { literal(5) }
+                        }
+                    }
+
+                    record("ShortcutClass", "class") {
+                        field("attr", t("int")) { literal(0) }
+                        constructor() {}
+                        method("toString", t("String")) {
+                            body { returnStmt { literal("ShortcutClass: attr=") + ref("attr") } }
+                        }
+
+                        method("print", t("int")) {
+                            body { call("System.out.println") { call("this.toString") } }
+                        }
+
+                        method("magic") {
+                            param("b", t("int"))
+                            body {
+                                ifStmt {
+                                    condition { ref("b") gt literal(5) }
+                                    thenStmt {
+                                        ifStmt {
+                                            condition { ref("attr") eq literal(2) }
+                                            thenStmt { ref("attr") assign literal(3) }
+                                            elseStmt { ref("attr") assign literal(3) }
+                                        }
+                                        elseStmt { ref("attr") assign ref("b") }
+                                    }
+                                }
+                            }
+                        }
+
+                        method("magic2") {
+                            param("b", t("int"))
+                            body {
+                                declare { variable("a") }
+                                ifStmt {
+                                    condition { ref("b") gt literal(5) }
+                                    thenStmt {
+                                        ifStmt {
+                                            condition { ref("attr") eq literal(2) }
+                                            thenStmt { ref("a") assign literal(3) }
+                                            elseStmt { ref("a") assign literal(3) }
+                                        }
+                                        elseStmt { ref("a") assign ref("b") }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
