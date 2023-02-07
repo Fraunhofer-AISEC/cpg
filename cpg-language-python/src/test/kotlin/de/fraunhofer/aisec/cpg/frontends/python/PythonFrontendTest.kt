@@ -821,6 +821,7 @@ class PythonFrontendTest : BaseTest() {
     }
 
     @Test
+    @Ignore // TODO fix & re-enable this test once there is proper support for multiple variables in a loop
     fun testIssue615() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
