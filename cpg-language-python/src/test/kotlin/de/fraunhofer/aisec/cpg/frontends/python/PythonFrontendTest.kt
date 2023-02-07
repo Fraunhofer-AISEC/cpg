@@ -1054,12 +1054,12 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(barCall)
 
         // no dataflow from var declaration to loop variable because it's a write access
-        assert((!firstLoop.variable.prevDFG.contains(varDefinedBeforeLoop)))
+        assert((firstLoop.variable?.prevDFG?.contains(varDefinedBeforeLoop) == false))
 
         // dataflow from range call to loop variable
         val firstLoopIterable = firstLoop.iterable as? CallExpression
         assertNotNull(firstLoopIterable)
-        assert((firstLoop.variable.prevDFG.contains((firstLoopIterable))))
+        assert((firstLoop.variable?.prevDFG?.contains((firstLoopIterable)) == true))
 
         // dataflow from var declaration to loop iterable call
         assert(
@@ -1068,7 +1068,9 @@ class PythonFrontendTest : BaseTest() {
         )
 
         // dataflow from first loop to foo call
-        assert(fooCall.arguments.first().prevDFG.contains(firstLoop.variable))
+        val loopVar = firstLoop.variable as? DeclaredReferenceExpression
+        assertNotNull(loopVar)
+        assert(fooCall.arguments.first().prevDFG.contains(loopVar))
 
         // dataflow from var declaration to foo call (in case for loop is not executed)
         assert(fooCall.arguments.first().prevDFG.contains(varDefinedBeforeLoop))
@@ -1079,8 +1081,8 @@ class PythonFrontendTest : BaseTest() {
         assert(
             ((secondLoop.variable as DeclarationStatement)
                 .singleDeclaration
-                .prevDFG
-                .contains((secondLoopIterable)))
+                ?.prevDFG
+                ?.contains((secondLoopIterable)) == true)
         )
 
         // dataflow from second loop var to bar call
