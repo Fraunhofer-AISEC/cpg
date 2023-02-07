@@ -28,10 +28,9 @@ package de.fraunhofer.aisec.cpg.processing
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.builder.*
@@ -40,11 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import java.io.File
 import java.util.concurrent.ExecutionException
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -123,7 +119,6 @@ class VisitorTest : BaseTest() {
     @Test
     fun testReturnStmtVisitor() {
         val returnStmts: MutableList<ReturnStatement> = ArrayList()
-        // val recordDeclaration = namespace?.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(recordDecl)
 
         recordDecl!!.accept(
@@ -138,7 +133,6 @@ class VisitorTest : BaseTest() {
     }
 
     companion object {
-        private var namespace: NamespaceDeclaration? = null
         private var recordDecl: RecordDeclaration? = null
         @BeforeAll
         @JvmStatic
@@ -149,22 +143,11 @@ class VisitorTest : BaseTest() {
             TimeoutException::class
         )
         fun setup() {
-            val file = File("src/test/resources/compiling/RecordDeclaration.java")
             val config =
                 TranslationConfiguration.builder()
-                    .sourceLocations(file)
                     .defaultPasses()
-                    .defaultLanguages()
-                    .registerLanguage(JavaLanguage())
-                    .registerPass(JavaExternalTypeHierarchyResolver())
+                    .registerLanguage(TestLanguage("."))
                     .build()
-            val result =
-                TranslationManager.builder().config(config).build().analyze()[20, TimeUnit.SECONDS]
-            val tu = result.translationUnits.firstOrNull()
-            assertNotNull(tu)
-
-            namespace = tu.declarations.firstOrNull() as NamespaceDeclaration
-
             /*
             package compiling;
             class SimpleClass {
@@ -199,10 +182,7 @@ class VisitorTest : BaseTest() {
                                             declare { variable("x", t("int")) { literal(0) } }
                                             ifStmt {
                                                 condition {
-                                                    call("System.currentTimeMillis") gt
-                                                        literal(
-                                                            0
-                                                        ) // TODO This line doesn't seem to work :(
+                                                    call("System.currentTimeMillis") gt literal(0)
                                                 }
                                                 thenStmt {
                                                     ref("x") assign { ref("x") + literal(1) }
@@ -224,5 +204,3 @@ class VisitorTest : BaseTest() {
         }
     }
 }
-// memberCallExpr(callee=memberExpression(name="java.io.PrintStream.println",
-// base=MemberExpression("java.lang.System.out", base=MemberExpression("System"))), )

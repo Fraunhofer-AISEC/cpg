@@ -27,11 +27,9 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -49,8 +47,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -59,17 +55,7 @@ import kotlin.test.assertTrue
 class ShortcutsTest {
     @Test
     fun followDFGUntilHitTest() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/Dataflow.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = getDataflowClass()
 
         val toStringCall = result.callsByName("toString")[0]
         val printDecl =
@@ -385,9 +371,9 @@ class ShortcutsTest {
         return TestLanguageFrontend(ScopeManager(), ".").buildTR {
             translationResult(config) {
                 translationUnit("ShortcutClass.java") {
-                    record("ShortcutClass", "class") {
+                    record("ShortcutClass") {
                         field("attr", t("int")) { literal(0, t("int")) }
-                        constructor() {}
+                        constructor() { isImplicit = true }
                         method("toString", t("String")) {
                             body { returnStmt { literal("ShortcutClass: attr=") + ref("attr") } }
                         }
@@ -443,6 +429,47 @@ class ShortcutsTest {
                                 call("sc.print")
                                 call("sc.magic") { literal(3, t("int")) }
                                 call("sc.magic2") { literal(5, t("int")) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    private fun getDataflowClass(): TranslationResult {
+        val config =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .registerLanguage(TestLanguage("."))
+                .build()
+
+        return TestLanguageFrontend(ScopeManager(), ".").buildTR {
+            translationResult(config) {
+                translationUnit("Dataflow.java") {
+                    record("Dataflow") {
+                        field("attr", t("String")) { literal("", t("String")) }
+                        constructor() { isImplicit = true }
+                        method("toString", t("String")) {
+                            body { returnStmt { literal("ShortcutClass: attr=") + ref("attr") } }
+                        }
+
+                        method("test", t("String")) { body { returnStmt { literal("abcd") } } }
+
+                        method("print", t("int")) {
+                            param("s", t("String"))
+                            body { call("System.out.println") { ref("s") } }
+                        }
+
+                        // The main method
+                        method("main") {
+                            param("args", t("String[]"))
+                            body {
+                                declare {
+                                    variable("sc", t("Dataflow")) { new { construct("Dataflow") } }
+                                }
+                                declare { variable("s", t("String")) { call("sc.toString") } }
+                                call("sc.print") { ref("s") }
+                                call("sc.print") { call("sc.toString") }
                             }
                         }
                     }
