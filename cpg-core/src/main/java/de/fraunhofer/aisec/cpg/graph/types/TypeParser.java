@@ -25,12 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.ScopeManager;
 import de.fraunhofer.aisec.cpg.frontends.*;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage;
-import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -873,16 +872,19 @@ public class TypeParser {
     }
   }
 
-  /** Parses the type from a string and the supplied language. */
+  /** Parses the type from a char sequence and the supplied language. */
   @NotNull
   public static Type createFrom(
-      @NotNull String type, Language<? extends LanguageFrontend> language) {
-    return createFrom(type, language, false, null);
+      @NotNull CharSequence name,
+      Boolean resolveAlias,
+      Language<? extends LanguageFrontend> language) {
+    return createFrom(name.toString(), language, resolveAlias, null);
   }
 
-  /** Parses the type from a string and the supplied language. */
+  /** Parses the type from a char sequence and the supplied language. */
   @NotNull
-  public static Type createFrom(@NotNull Name name, Language<? extends LanguageFrontend> language) {
+  public static Type createFrom(
+      @NotNull CharSequence name, Language<? extends LanguageFrontend> language) {
     return createFrom(name.toString(), language, false, null);
   }
 }

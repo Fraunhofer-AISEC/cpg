@@ -358,7 +358,7 @@ func (this *GoLanguageFrontend) handleValueSpec(fset *token.FileSet, valueDecl *
 	// TODO: more names
 	var ident = valueDecl.Names[0]
 
-	d := (this.NewVariableDeclaration(fset, valueDecl, ident.Name))
+	d := this.NewVariableDeclaration(fset, valueDecl, ident.Name)
 
 	if valueDecl.Type != nil {
 		t := this.handleType(valueDecl.Type)

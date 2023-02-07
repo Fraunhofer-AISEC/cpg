@@ -132,7 +132,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("bar", callExpression)
         assertEquals(bar, callExpression.invokes.iterator().next())
 
-        val edge = callExpression.argumentsEdges[1]
+        val edge = callExpression.argumentEdges[1]
         assertNotNull(edge)
         assertEquals("s2", edge.getProperty(Properties.NAME))
 
@@ -821,7 +821,8 @@ class PythonFrontendTest : BaseTest() {
     }
 
     @Test
-    @Ignore // TODO fix & re-enable this test once there is proper support for multiple variables in a loop
+    @Ignore // TODO fix & re-enable this test once there is proper support for multiple variables in
+    // a loop
     fun testIssue615() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =

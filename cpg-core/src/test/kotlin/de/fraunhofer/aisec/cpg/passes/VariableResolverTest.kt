@@ -74,7 +74,7 @@ internal class VariableResolverTest : BaseTest() {
         var returnStatement = getLocal.allChildren<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
 
-        var local = getLocal.variables.firstOrNull()
+        var local = getLocal.variables.firstOrNull { it.name.localName != "this" }
 
         var returnValue = returnStatement.returnValue as DeclaredReferenceExpression
         assertNotEquals(field, returnValue.refersTo)
@@ -85,7 +85,7 @@ internal class VariableResolverTest : BaseTest() {
         returnStatement = getShadow.allChildren<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
 
-        local = getShadow.variables.firstOrNull()
+        local = getShadow.variables.firstOrNull { it.name.localName != "this" }
 
         returnValue = returnStatement.returnValue as DeclaredReferenceExpression
         assertNotEquals(field, returnValue.refersTo)
