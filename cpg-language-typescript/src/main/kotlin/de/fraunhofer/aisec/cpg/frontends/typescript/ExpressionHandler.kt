@@ -63,8 +63,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleJsxAttribute(node: TypeScriptNode): KeyValueExpression {
-        val key = this.handle(node.children?.first())
-        val value = this.handle(node.children?.last())
+        val key = node.children?.first()?.let { this.handle(it) }
+        val value = node.children?.last()?.let { this.handle(it) }
 
         val keyValue = newKeyValueExpression(key, value, this.frontend.getCodeFromRawNode(node))
 
@@ -83,7 +83,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleJsxExpression(node: TypeScriptNode): Expression {
         // for now, we just treat this as a wrapper and directly return the first node
-        return this.handle(node.children?.first())
+        return node.children?.first()?.let { this.handle(it) }
+            ?: ProblemExpression("problem parsing expression")
     }
 
     private fun handleJsxOpeningElement(node: TypeScriptNode): ExpressionList {
@@ -95,7 +96,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // and a container named JsxAttributes, with JsxAttribute nodes
         tag.expressions =
-            node.firstChild("JsxAttributes")?.children?.map { this.handle(it) } ?: emptyList()
+            node.firstChild("JsxAttributes")?.children?.mapNotNull { this.handle(it) }
+                ?: emptyList()
 
         return tag
     }
@@ -103,7 +105,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handeJsxElement(node: TypeScriptNode): ExpressionList {
         val jsx = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
-        jsx.expressions = node.children?.map { this.handle(it) }
+        jsx.expressions = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
 
         return jsx
     }
@@ -137,8 +139,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handlePropertyAssignment(node: TypeScriptNode): KeyValueExpression {
-        val key = this.handle(node.children?.first())
-        val value = this.handle(node.children?.last())
+        val key = node.children?.first()?.let { this.handle(it) }
+        val value = node.children?.last()?.let { this.handle(it) }
 
         val keyValue = newKeyValueExpression(key, value, this.frontend.getCodeFromRawNode(node))
 
@@ -148,7 +150,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
         val ile = newInitializerListExpression(this.frontend.getCodeFromRawNode(node))
 
-        ile.initializers = node.children?.map { this.handle(it) } ?: emptyList()
+        ile.initializers = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
 
         return ile
     }
@@ -183,7 +185,9 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handlePropertyAccessExpression(node: TypeScriptNode): Expression {
-        val base = this.handle(node.children?.first())
+        val base =
+            node.children?.first()?.let { this.handle(it) }
+                ?: ProblemExpression("problem parsing base")
 
         val name = this.frontend.getCodeFromRawNode(node.children?.last()) ?: ""
 
@@ -228,7 +232,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         // parse the arguments. the first node is the identifier, so we skip that
         val remainingNodes = node.children?.drop(1)
 
-        remainingNodes?.forEach { call.addArgument(this.handle(it)) }
+        remainingNodes?.forEach { this.handle(it)?.let { it1 -> call.addArgument(it1) } }
 
         return call
     }

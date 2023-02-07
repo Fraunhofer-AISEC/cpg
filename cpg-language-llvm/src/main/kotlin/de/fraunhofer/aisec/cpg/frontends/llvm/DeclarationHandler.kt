@@ -159,11 +159,15 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                 functionDeclaration.body = stmt
             } else if (LLVMGetEntryBasicBlock(func) == bb) {
                 functionDeclaration.body = newCompoundStatement()
-                (functionDeclaration.body as CompoundStatement).addStatement(stmt)
+                if (stmt != null) {
+                    (functionDeclaration.body as CompoundStatement).addStatement(stmt)
+                }
             } else {
                 // add the label statement, containing this basic block as a compound statement to
                 // our body (if we have none, which we should)
-                (functionDeclaration.body as? CompoundStatement)?.addStatement(stmt)
+                if (stmt != null) {
+                    (functionDeclaration.body as? CompoundStatement)?.addStatement(stmt)
+                }
             }
 
             bb = LLVMGetNextBasicBlock(bb)

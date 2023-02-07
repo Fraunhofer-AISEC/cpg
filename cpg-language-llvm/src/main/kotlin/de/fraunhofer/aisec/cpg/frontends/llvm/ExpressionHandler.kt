@@ -128,7 +128,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 } else {
                     log.error("Unknown expression {}", kind)
                     return newProblemExpression(
-                        "Unknown expression ${kind}",
+                        "Unknown expression $kind",
                         ProblemNode.ProblemType.TRANSLATION,
                         frontend.getCodeFromRawNode(value)
                     )
@@ -269,7 +269,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 else -> {
                     log.error("Not handling constant expression of opcode {} yet", kind)
                     newProblemExpression(
-                        "Not handling constant expression of opcode ${kind} yet",
+                        "Not handling constant expression of opcode $kind yet",
                         ProblemNode.ProblemType.TRANSLATION,
                         frontend.getCodeFromRawNode(value)
                     )
@@ -297,7 +297,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         for (i in 0 until LLVMGetNumOperands(value)) {
             // and handle them as expressions themselves
             val arg = this.handle(LLVMGetOperand(value, i))
-            expr.addArgument(arg)
+            if (arg != null) {
+                expr.addArgument(arg)
+            }
         }
 
         return expr
@@ -525,7 +527,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: UnknownType.getUnknownType(language)
 
                 // construct our member expression
-                expr = newMemberExpression(fieldName, base, field?.type, ".", "")
+                expr =
+                    newMemberExpression(
+                        fieldName,
+                        base,
+                        field?.type ?: UnknownType.getUnknownType(),
+                        ".",
+                        ""
+                    )
                 log.info("{}", expr)
 
                 // the current expression is the new base

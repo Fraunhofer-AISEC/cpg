@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
@@ -39,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.math.BigInteger
@@ -130,7 +130,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val s = forEachStatement.variable
         assertNotNull(s)
         assertTrue(s is DeclarationStatement)
-        assertTrue(s.isSingleDeclaration)
+        assertTrue(s.isSingleDeclaration())
 
         val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
@@ -342,8 +342,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         // names
         // vs. fully qualified names.
         assertTrue(
-            e?.type?.name?.localName == "ExtendedClass" ||
-                e?.type?.name?.toString() == "cast.ExtendedClass"
+            e.type?.name?.localName == "ExtendedClass" ||
+                e.type?.name?.toString() == "cast.ExtendedClass"
         )
 
         // b = (BaseClass) e
@@ -352,7 +352,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val b = stmt.getSingleDeclarationAs(VariableDeclaration::class.java)
         assertTrue(
-            b?.type?.name?.localName == "BaseClass" || b?.type?.name?.toString() == "cast.BaseClass"
+            b.type?.name?.localName == "BaseClass" || b.type?.name?.toString() == "cast.BaseClass"
         )
 
         // initializer
@@ -360,7 +360,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(cast)
         assertTrue(
             cast.type.name.localName == "BaseClass" ||
-                cast.type?.name?.toString() == "cast.BaseClass"
+                cast.type.name?.toString() == "cast.BaseClass"
         )
 
         // expression itself should be a reference
@@ -596,7 +596,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         ) : JavaLanguageFrontend(language, config, scopeManager) {
             init {
                 this.declarationHandler =
-                    object : DeclarationHandler(this) {
+                    object : DeclarationHandler(this@MyJavaLanguageFrontend) {
                         override fun handleClassOrInterfaceDeclaration(
                             classInterDecl: ClassOrInterfaceDeclaration
                         ): RecordDeclaration {
@@ -743,6 +743,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val forEach = forIterator.bodyOrNull<ForEachStatement>()
         assertNotNull(forEach)
 
-        assertContains(forEach.variable.prevDFG, forEach.iterable)
+        assertNotNull(forEach.variable)
+        assertContains(forEach.variable!!.prevDFG, forEach.iterable!!)
     }
 }

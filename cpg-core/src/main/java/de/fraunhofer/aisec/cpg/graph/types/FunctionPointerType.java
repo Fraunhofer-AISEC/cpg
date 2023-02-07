@@ -146,7 +146,7 @@ public class FunctionPointerType extends Type {
         + ", returnType="
         + returnType
         + ", typeName='"
-        + getName().toString()
+        + getName()
         + '\''
         + ", storage="
         + this.getStorage()

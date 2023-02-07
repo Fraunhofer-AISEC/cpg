@@ -25,12 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import java.util.function.Supplier
 import kotlin.reflect.KClass
 
 /**
@@ -50,11 +52,11 @@ class TestLanguage : Language<TestLanguageFrontend>() {
     }
 }
 
-class TestLanguageFrontend :
+class TestLanguageFrontend(scopeManager: ScopeManager = ScopeManager()) :
     LanguageFrontend(
         TestLanguage(),
         TranslationConfiguration.builder().build(),
-        ScopeManager(),
+        scopeManager,
     ) {
     override fun parse(file: File): TranslationUnitDeclaration {
         TODO("Not yet implemented")
@@ -73,4 +75,8 @@ class TestLanguageFrontend :
     }
 }
 
-class TestHandler : Handler<Node, Any, TestLanguageFrontend>(null, TestLanguageFrontend())
+class TestHandler :
+    Handler<Node, Any, TestLanguageFrontend>(
+        Supplier { ProblemExpression() },
+        TestLanguageFrontend()
+    )

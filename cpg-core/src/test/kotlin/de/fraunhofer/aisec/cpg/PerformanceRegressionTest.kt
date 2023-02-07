@@ -87,7 +87,7 @@ class PerformanceRegressionTest {
             val list = InitializerListExpression()
 
             for (i in 0 until 50000) {
-                list.initializersPropertyEdge.add(
+                list.initializerEdges.add(
                     PropertyEdge(
                         list,
                         newLiteral(

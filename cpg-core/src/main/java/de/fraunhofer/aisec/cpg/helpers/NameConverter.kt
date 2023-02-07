@@ -37,19 +37,34 @@ import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
  *
  * Additionally, it converts the aforementioned Neo4J attributes in a node back into a [Name].
  */
-class NameConverter : CompositeAttributeConverter<Name> {
+class NameConverter : CompositeAttributeConverter<Name?> {
 
     companion object {
         const val FIELD_FULL_NAME = "fullName"
+        const val FIELD_NAME = "name"
         const val FIELD_LOCAL_NAME = "localName"
         const val FIELD_NAME_DELIMITER = "nameDelimiter"
     }
 
-    override fun toGraphProperties(value: Name): MutableMap<String, *> {
+    override fun toGraphProperties(value: Name?): MutableMap<String, *> {
         val map = mutableMapOf<String, String>()
-        map[FIELD_FULL_NAME] = value.toString()
-        map[FIELD_LOCAL_NAME] = value.localName
-        map[FIELD_NAME_DELIMITER] = value.delimiter
+
+        if (value != null) {
+            // The full name of the node
+            map[FIELD_FULL_NAME] = value.toString()
+
+            // The local name of the node
+            map[FIELD_LOCAL_NAME] = value.localName
+
+            // The delimiter
+            map[FIELD_NAME_DELIMITER] = value.delimiter
+
+            // For reasons such as backwards compatibility and the fact that Neo4J likes to display
+            // nodes in the UI with a "name" field as default, we also persist the full name (aka
+            // the
+            // toString() representation) as "name"
+            map[FIELD_NAME] = value.toString()
+        }
 
         return map
     }

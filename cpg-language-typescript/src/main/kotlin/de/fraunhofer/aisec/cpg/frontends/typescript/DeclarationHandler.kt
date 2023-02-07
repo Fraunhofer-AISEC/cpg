@@ -137,7 +137,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             if (childNode.type.endsWith("Statement")) {
                 val statement = this.frontend.statementHandler.handle(childNode)
 
-                tu.addStatement(statement)
+                statement?.let { tu.addStatement(it) }
             } else {
                 val decl = this.handle(childNode)
 
@@ -175,7 +175,10 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 else -> newFunctionDeclaration(name, this.frontend.getCodeFromRawNode(node))
             }
 
-        node.typeChildNode?.let { func.type = this.frontend.typeHandler.handle(it) }
+        node.typeChildNode?.let {
+            func.type =
+                this.frontend.typeHandler.handle(it) ?: UnknownType.getUnknownType(this.language)
+        }
 
         this.frontend.scopeManager.enterScope(func)
 

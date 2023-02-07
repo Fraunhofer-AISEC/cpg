@@ -140,6 +140,12 @@ class Application : Callable<Int> {
     )
     private var loadIncludes: Boolean = false
 
+    @CommandLine.Option(
+        names = ["--use-unity-build"],
+        description = ["Enable unity build mode for C++ (requires --load-includes)"]
+    )
+    private var useUnityBuild: Boolean = false
+
     @CommandLine.Option(names = ["--includes-file"], description = ["Load includes from file"])
     private var includesFile: File? = null
 
@@ -244,7 +250,12 @@ class Application : Callable<Int> {
                         .credentials(neo4jUsername, neo4jPassword)
                         .verifyConnection(VERIFY_CONNECTION)
                         .build()
-                sessionFactory = SessionFactory(configuration, "de.fraunhofer.aisec.cpg.graph")
+                sessionFactory =
+                    SessionFactory(
+                        configuration,
+                        "de.fraunhofer.aisec.cpg.graph",
+                        "de.fraunhofer.aisec.cpg.frontends"
+                    )
                 session = sessionFactory.openSession()
             } catch (ex: ConnectionException) {
                 sessionFactory = null
@@ -302,6 +313,7 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
+                .useUnityBuild(useUnityBuild)
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()

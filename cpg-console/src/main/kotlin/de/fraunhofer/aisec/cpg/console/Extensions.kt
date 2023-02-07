@@ -181,7 +181,7 @@ fun getCode(file: String, region: Region): String {
 
 val styles = SyntaxPlugin.HighlightStylesFromConfiguration(object : ReplConfigurationBase() {})
 
-fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region>> {
+fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Region>> {
     val list = mutableListOf<Pair<AttributedStyle, Region>>()
 
     when (node) {
@@ -226,7 +226,7 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
             // look for the if keyword
             fancyWord("if", node, list, styles.keyword)
 
-            list.addAll(getFanciesFor(original, node.thenStatement))
+            node.thenStatement?.let { list.addAll(getFanciesFor(original, it)) }
 
             return list
         }
