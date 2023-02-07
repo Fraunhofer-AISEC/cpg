@@ -97,6 +97,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                     as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         }
         val returnStatement = this.newReturnStatement(returnStmt.toString())
+        // JavaParser seems to add implicit return statements, that are not part of the original
+        // source code. We mark it as such
+        returnStatement.isImplicit = !returnStmt.tokenRange.isPresent
 
         // expressionRefersToDeclaration to arguments, if there are any
         expression?.let { returnStatement.returnValue = it }

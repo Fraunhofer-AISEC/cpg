@@ -108,6 +108,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         // GotoStatements
         val loopPoints = mutableMapOf<Node, MutableMap<Declaration, MutableSet<Node>>>()
 
+        val returnStatements = mutableSetOf<ReturnStatement>()
+
         // Iterate through the worklist
         while (worklist.isNotEmpty()) {
             // The node we will analyze now and the map of the last write statements to a variable.
@@ -206,6 +208,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 previousWrites[currentNode.refersTo]?.lastOrNull()?.let {
                     currentNode.addPrevDFG(it)
                 }
+            } else if (currentNode is ReturnStatement) {
+                returnStatements.add(currentNode)
             }
 
             // Check for loops: No loop statement with the same state as before and no write which
@@ -225,6 +229,26 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     }
             }
         }
+
+        removeUnreachableImplicitReturnStatement(node, returnStatements)
+    }
+
+    /**
+     * Removes the DFG edges for a potential implicit return statement if it is not in
+     * [reachableReturnStatements].
+     */
+    private fun removeUnreachableImplicitReturnStatement(
+        node: Node,
+        reachableReturnStatements: MutableSet<ReturnStatement>
+    ) {
+        val lastStatement =
+            ((node as? FunctionDeclaration)?.body as? CompoundStatement)?.statements?.lastOrNull()
+        if (
+            lastStatement is ReturnStatement &&
+                lastStatement.isImplicit &&
+                lastStatement !in reachableReturnStatements
+        )
+            lastStatement.removeNextDFG(node)
     }
 
     /**
