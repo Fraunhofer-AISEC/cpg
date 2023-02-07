@@ -348,8 +348,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         // names
         // vs. fully qualified names.
         assertTrue(
-            e?.type?.name?.localName == "ExtendedClass" ||
-                e?.type?.name?.toString() == "cast.ExtendedClass"
+            e.type?.name?.localName == "ExtendedClass" ||
+                e.type?.name?.toString() == "cast.ExtendedClass"
         )
 
         // b = (BaseClass) e
@@ -358,7 +358,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val b = stmt.getSingleDeclarationAs(VariableDeclaration::class.java)
         assertTrue(
-            b?.type?.name?.localName == "BaseClass" || b?.type?.name?.toString() == "cast.BaseClass"
+            b.type?.name?.localName == "BaseClass" || b.type?.name?.toString() == "cast.BaseClass"
         )
 
         // initializer
@@ -366,7 +366,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(cast)
         assertTrue(
             cast.type.name.localName == "BaseClass" ||
-                cast.type?.name?.toString() == "cast.BaseClass"
+                cast.type.name?.toString() == "cast.BaseClass"
         )
 
         // expression itself should be a reference
@@ -752,7 +752,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val loopVariable = (forEach.variable as? DeclarationStatement)?.singleDeclaration
         assertNotNull(loopVariable)
         assertNotNull(forEach.iterable)
-        assertTrue(forEach.iterable!! in loopVariable.prevDFG)
+        assertContains(loopVariable.prevDFG, forEach.iterable!!)
 
         val jArg = forIterator.calls["println"]?.arguments?.firstOrNull()
         assertNotNull(jArg)

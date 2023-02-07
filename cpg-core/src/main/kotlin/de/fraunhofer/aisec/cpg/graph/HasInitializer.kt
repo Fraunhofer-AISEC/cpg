@@ -27,8 +27,15 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-/** Specifies that a certain node has an initializer. */
-interface HasInitializer {
+/**
+ * Specifies that a certain node has an initializer. It is a special case of [ArgumentHolder], in
+ * which the initializer is treated as the first (and only) argument.
+ */
+interface HasInitializer : ArgumentHolder {
 
     var initializer: Expression?
+
+    override fun addArgument(expression: Expression) {
+        this.initializer = expression
+    }
 }

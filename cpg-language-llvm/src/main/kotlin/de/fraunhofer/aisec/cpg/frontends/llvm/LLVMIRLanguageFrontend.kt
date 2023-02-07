@@ -211,7 +211,7 @@ class LLVMIRLanguageFrontend(
                 }
                 LLVMStructTypeKind -> {
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
-                    record.toType() ?: UnknownType.getUnknownType(language)
+                    record.toType()
                 }
                 else -> {
                     parseType(typeStr)

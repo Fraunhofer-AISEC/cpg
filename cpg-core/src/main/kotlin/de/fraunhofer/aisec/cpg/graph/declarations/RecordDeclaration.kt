@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -223,22 +222,4 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
         }
         return type
     }
-
-    override fun addStatement(s: Statement) = super.addStatement(s)
-
-    override fun <T : Declaration> addIfNotContains(
-        collection: MutableCollection<T>,
-        declaration: T
-    ) = super.addIfNotContains<T>(collection, declaration)
-
-    override fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
-        declaration: T
-    ) = super.addIfNotContains<T>(collection, declaration)
-
-    override fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
-        declaration: T,
-        outgoing: Boolean
-    ) = super.addIfNotContains<T>(collection, declaration, outgoing)
 }

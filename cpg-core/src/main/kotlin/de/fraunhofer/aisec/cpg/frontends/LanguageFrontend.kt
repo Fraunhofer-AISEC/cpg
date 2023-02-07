@@ -82,6 +82,14 @@ abstract class LanguageFrontend(
     @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnitDeclaration
 
     /**
+     * Similar to [parse], this function returns a [TranslationUnitDeclaration], but rather than
+     * parsing source code, the function [init] is used to build nodes in the Node Fluent DSL.
+     */
+    fun build(init: LanguageFrontend.() -> TranslationUnitDeclaration): TranslationUnitDeclaration {
+        return init(this)
+    }
+
+    /**
      * Returns the raw code of the ast node, generic for java or c++ ast nodes.
      *
      * @param <T> the raw ast type

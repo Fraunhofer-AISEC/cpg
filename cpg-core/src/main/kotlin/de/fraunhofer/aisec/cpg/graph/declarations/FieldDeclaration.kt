@@ -78,9 +78,9 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
     var isImplicitInitializerAllowed = false
 
     var isArray = false
-    var modifiers: List<String> = mutableListOf<String>()
+    var modifiers: List<String> = mutableListOf()
 
-    override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
@@ -91,17 +91,17 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
         val newType =
             if (src === initializer && initializer is InitializerListExpression) {
                 // Init list is seen as having an array type, but can be used ambiguously. It can be
-                // either
-                // used to initialize an array, or to initialize some objects. If it is used as an
+                // either used to initialize an array, or to initialize some objects. If it is used
+                // as an
                 // array initializer, we need to remove the array/pointer layer from the type,
                 // otherwise it
                 // can be ignored once we have a type
                 if (isArray) {
-                    src.getType()
+                    src.type
                 } else if (!TypeManager.getInstance().isUnknown(type)) {
                     return
                 } else {
-                    src.getType().dereference()
+                    src.type.dereference()
                 }
             } else {
                 src.propagationType
@@ -112,11 +112,11 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
         }
     }
 
-    override fun possibleSubTypesChanged(src: HasType, root: List<HasType>) {
+    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
-        val subTypes: MutableList<Type> = ArrayList(getPossibleSubTypes())
+        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
         subTypes.addAll(src.possibleSubTypes)
         setPossibleSubTypes(subTypes, root)
     }

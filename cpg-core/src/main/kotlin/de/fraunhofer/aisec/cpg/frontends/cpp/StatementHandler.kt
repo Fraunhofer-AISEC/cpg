@@ -160,7 +160,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     private fun handleGotoStatement(ctx: IASTGotoStatement): GotoStatement {
         val statement = newGotoStatement(ctx.rawSignature)
         val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
-            statement.targetLabel = to as LabelStatement?
+            statement.targetLabel = to as LabelStatement
         }
         val b: IBinding?
         try {

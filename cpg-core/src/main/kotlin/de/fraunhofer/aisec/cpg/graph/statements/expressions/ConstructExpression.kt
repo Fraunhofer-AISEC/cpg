@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -68,7 +68,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         set(value) {
             field = value
             if (value != null && this.type is UnknownType) {
-                setType(TypeParser.createFrom(value.name, language))
+                type = TypeParser.createFrom(value.name, language)
             }
         }
 
@@ -94,7 +94,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
      * In fact, we could get rid of this particular implementation altogether, if we would somehow
      * work around the first case in a different way.
      */
-    override fun typeChanged(src: HasType, root: List<HasType>, oldType: Type) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }

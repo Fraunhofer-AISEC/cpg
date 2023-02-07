@@ -25,10 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
+import de.fraunhofer.aisec.cpg.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
@@ -156,31 +158,44 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * A small utility function that creates a [ConstructorDeclaration] if the local names of the
-     * function and its [RecordDeclaration] match. Otherwise, a [MethodDeclaration] with the
-     * appropriate [name] will be created.
+     * A small utility function that creates a [ConstructorDeclaration], [MethodDeclaration] or
+     * [FunctionDeclaration] depending on which scope the function should live in. This basically
+     * checks if the scope is a namespace or a record and if the name matches to the record (in case
+     * of a constructor).
      */
-    private fun createMethodOrConstructor(
+    private fun createFunctionOrMethodOrConstructor(
         name: Name,
-        recordDeclaration: RecordDeclaration?,
+        scope: Scope?,
         ctx: IASTNode,
-    ): MethodDeclaration {
+    ): FunctionDeclaration {
+        // Retrieve the AST node for the scope we need to put the function in
+        val holder = scope?.astNode
+
         // Check, if it's a constructor. This is the case if the local names of the function and the
         // record declaration match
-        val method =
-            if (name.localName == recordDeclaration?.name?.localName) {
-                newConstructorDeclaration(name, null, recordDeclaration, ctx)
+        val func =
+            if (holder is RecordDeclaration && name.localName == holder.name.localName) {
+                newConstructorDeclaration(name, null, holder, ctx)
+            } else if (scope?.astNode is NamespaceDeclaration) {
+                // It could also be a scoped function declaration.
+                newFunctionDeclaration(name, null, ctx)
             } else {
-                newMethodDeclaration(name, null, false, recordDeclaration, ctx)
+                // Otherwise, it's a method to a known or unknown record
+                newMethodDeclaration(name, null, false, holder as? RecordDeclaration, ctx)
             }
 
-        return method
+        // Also make sure to correctly set the scope of the function, regardless where we are in the
+        // AST currently
+        func.scope = scope
+
+        return func
     }
 
+    @ResolveInFrontend("lookupScope")
     private fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration {
         // Programmers can wrap the function name in as many levels of parentheses as they like. CDT
         // treats these levels as separate declarators, so we need to get to the bottom for the
-        // actual name...
+        // actual name using the realName extension function.
         val (nameDecl: IASTDeclarator, hasPointer) = ctx.realName()
         var name = parseName(nameDecl.name.toString())
 
@@ -199,43 +214,40 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
         val declaration: FunctionDeclaration
 
-        // If this is a method, this is its record declaration
-        var recordDeclaration: RecordDeclaration? = null
+        // We need to check if this function is actually part of a named declaration, such as a
+        // record or a namespace, but defined externally.
+        var parentScope: NameScope? = null
 
-        // remember, if this is a method declaration outside the record
-        val outsideOfRecord =
-            !(frontend.scopeManager.currentRecord != null ||
-                frontend.scopeManager.currentScope is TemplateScope)
-
-        // Check for function definitions that are really methods and constructors, i.e. if they
-        // contain a scope operator
+        // Check for function definitions that really belong to a named scoped, i.e. if they
+        // contain a scope operator. This could either be a namespace or a record.
         val parent = name.parent
         if (parent != null) {
             // In this case, the name contains a qualifier, and we can try to check, if we have a
-            // matching record declaration for the parent name
-            recordDeclaration =
-                frontend.scopeManager.currentScope?.let {
-                    frontend.scopeManager.getRecordForName(it, parent)
-                }
+            // matching name scope for the parent name
+            parentScope = frontend.scopeManager.lookupScope(parent.toString())
 
-            declaration = createMethodOrConstructor(name, recordDeclaration, ctx.parent)
+            declaration = createFunctionOrMethodOrConstructor(name, parentScope, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {
-            // if it is inside a record scope, it is a method
-            recordDeclaration = frontend.scopeManager.currentRecord
-            declaration = createMethodOrConstructor(name, recordDeclaration, ctx.parent)
+            // If the current scope is already a record, it's a method
+            declaration =
+                createFunctionOrMethodOrConstructor(
+                    name,
+                    frontend.scopeManager.currentScope,
+                    ctx.parent
+                )
         } else {
-            // a plain old function, outside any record scope
+            // a plain old function, outside any named scope
             declaration = newFunctionDeclaration(name, ctx.rawSignature, ctx.parent)
         }
 
-        // If we know our record declaration, but are outside the actual record, we
-        // need to temporarily enter the record scope. This way, we can do a little trick
+        // We want to determine, whether we are currently outside a named scope on the AST
+        val outsideOfScope = frontend.scopeManager.currentScope != declaration.scope
+
+        // If we know our parent scope, but are outside the actual scope on the AST, we
+        // need to temporarily enter the scope. This way, we can do a little trick
         // and (manually) add the declaration to the AST element of the current scope
-        // (probably the global scope), but associate it to the record scope. Otherwise, we
-        // will get a lot of false-positives such as A::foo, when we look for the function foo.
-        // This is not the best solution and should be optimized once we finally have a good FQN
-        // system.
-        if (recordDeclaration != null && outsideOfRecord) {
+        // (probably the global scope), but associate it to the named scope.
+        if (parentScope != null && outsideOfScope) {
             // Bypass the scope manager and manually add it to the AST parent
             val parent = frontend.scopeManager.currentScope?.astNode
             if (parent != null && parent is DeclarationHolder) {
@@ -243,17 +255,16 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             }
 
             // Enter the record scope
-            frontend.scopeManager.enterScope(recordDeclaration)
+            parentScope.astNode?.let { frontend.scopeManager.enterScope(it) }
 
             // We also need to by-pass the scope manager for this, because it will
-            // otherwise add the declaration to the AST element of the record scope (the record
-            // declaration); in this case to the `methods` fields. However, since `methods` is an
-            // AST field, (for now) we only want those methods in  there, that were actual AST
+            // otherwise add the declaration to the AST element of the named scope (the record
+            // or namespace declaration); in the case of a record declaration to the `methods`
+            // fields. However, since `methods` is an
+            // AST field, (for now) we only want those methods in there, that were actual AST
             // parents. This is also something that we need to figure out how we want to handle
             // this.
-            (frontend.scopeManager.currentScope as? RecordScope)
-                ?.valueDeclarations
-                ?.add(declaration)
+            parentScope.valueDeclarations.add(declaration)
         } else {
             // Add the declaration via the scope manager
             frontend.scopeManager.addDeclaration(declaration)
@@ -325,8 +336,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // if we know our record declaration, but are outside the actual record, we
         // need to leave the record scope again afterwards
-        if (recordDeclaration != null && outsideOfRecord) {
-            frontend.scopeManager.leaveScope(recordDeclaration)
+        if (parentScope != null && outsideOfScope) {
+            parentScope.astNode?.let { frontend.scopeManager.leaveScope(it) }
         }
 
         // We recognize an ambiguity here, but cannot solve it at the moment

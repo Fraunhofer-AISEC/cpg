@@ -77,7 +77,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      * Removes all the incoming and outgoing DFG edges for each variable declaration in the function
      * [node].
      */
-    private fun clearFlowsOfVariableDeclarations(node: FunctionDeclaration) {
+    private fun clearFlowsOfVariableDeclarations(node: Node) {
         for (varDecl in node.variables) {
             varDecl.clearPrevDFG()
             varDecl.clearNextDFG()
@@ -94,7 +94,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      * - Assignments with an operation e.g. of the form "variable += rhs"
      * - Read operations on a variable
      */
-    private fun handleFunction(node: FunctionDeclaration) {
+    private fun handleFunction(node: Node) {
         // The list of nodes that we have to consider and the last write operations to the different
         // variables.
         val worklist =
@@ -108,6 +108,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         // consider ForStatements, WhileStatements, ForEachStatements, DoStatements and
         // GotoStatements
         val loopPoints = mutableMapOf<Node, MutableMap<Declaration, MutableSet<Node>>>()
+
+        val returnStatements = mutableSetOf<ReturnStatement>()
 
         // Iterate through the worklist
         while (worklist.isNotEmpty()) {
@@ -161,7 +163,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 }
             } else if (isSimpleAssignment(currentNode)) {
                 // We write to the target => the rhs flows to the lhs
-                (currentNode as BinaryOperator).rhs?.let { currentNode.lhs.addPrevDFG(it) }
+                (currentNode as BinaryOperator).rhs.let { currentNode.lhs.addPrevDFG(it) }
 
                 // Only the lhs is the last write statement here and the variable which is written
                 // to.
@@ -170,8 +172,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 if (writtenDecl != null) {
                     previousWrites
                         .computeIfAbsent(writtenDecl, ::mutableListOf)
-                        .add(currentNode.lhs)
-                    currentWritten = currentNode.lhs
+                        .add(currentNode.lhs as DeclaredReferenceExpression)
+                    currentWritten = currentNode.lhs as DeclaredReferenceExpression
                 }
             } else if (isCompoundAssignment(currentNode)) {
                 // We write to the lhs, but it also serves as an input => We first get all previous
@@ -189,7 +191,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     currentNode.addPrevDFG(currentNode.lhs)
 
                     // Data flows from whatever is the rhs to this node
-                    currentNode.rhs?.let { currentNode.addPrevDFG(it) }
+                    currentNode.rhs.let { currentNode.addPrevDFG(it) }
 
                     // TODO: Similar to the ++ case: Should the DFG edge go back to the reference?
                     //  If it shouldn't, remove the following statement:
@@ -207,23 +209,61 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 previousWrites[currentNode.refersTo]?.lastOrNull()?.let {
                     currentNode.addPrevDFG(it)
                 }
-            } else if (currentNode is ForEachStatement) {
+            } else if (currentNode is ForEachStatement && currentNode.variable != null) {
                 // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
                 // the "normal" case won't work. We handle this case separately here...
-
                 // This is what we write to the declaration
                 val iterable = currentNode.iterable as? Expression
 
+                val writtenTo =
+                    when (currentNode.variable) {
+                        is DeclarationStatement ->
+                            (currentNode.variable as DeclarationStatement).singleDeclaration!!
+                        else -> currentNode.variable!!
+                    }
+
                 // We wrote something to this variable declaration
                 writtenDecl =
-                    (currentNode.variable as? DeclarationStatement)?.singleDeclaration
-                        as? VariableDeclaration
+                    when (writtenTo) {
+                        is Declaration -> writtenTo
+                        is DeclaredReferenceExpression -> writtenTo.refersTo
+                        else -> null // TODO: This shouldn't happen
+                    }
 
-                writtenDecl?.let { wd ->
-                    iterable?.let { wd.addPrevDFG(it) }
-                    // Add the variable declaration to the list of previous write nodes in this path
-                    previousWrites[wd] = mutableListOf(wd)
+                currentWritten = currentNode.variable!!
+
+                if (writtenTo is DeclaredReferenceExpression) {
+                    if (currentNode !in loopPoints) {
+                        // We haven't been here before, so there's no chance we added something
+                        // already. However, as the variable is processed before, we have already
+                        // added the DFG edge from the VariableDeclaration to the
+                        // DeclaredReferenceExpression. This doesn't make any sense, so we have to
+                        // remove it again.
+                        writtenTo.removePrevDFG(writtenDecl)
+                    }
+
+                    // This is a special case: We add the nextEOGEdge which goes out of the loop but
+                    // with the old previousWrites map.
+                    val nodesOutsideTheLoop =
+                        currentNode.nextEOGEdges.filter {
+                            it.getProperty(Properties.UNREACHABLE) != true &&
+                                it.end != currentNode.statement &&
+                                it.end !in currentNode.statement.allChildren<Node>()
+                        }
+                    nodesOutsideTheLoop
+                        .map { it.end }
+                        .forEach { worklist.add(Pair(it, copyMap(previousWrites))) }
                 }
+
+                iterable?.let { writtenTo.addPrevDFG(it) }
+
+                if (writtenDecl != null) {
+                    // Add the variable declaration (or the reference) to the list of previous write
+                    // nodes in this path
+                    previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(writtenTo)
+                }
+            } else if (currentNode is ReturnStatement) {
+                returnStatements.add(currentNode)
             }
 
             // Check for loops: No loop statement with the same state as before and no write which
@@ -243,6 +283,26 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     }
             }
         }
+
+        removeUnreachableImplicitReturnStatement(node, returnStatements)
+    }
+
+    /**
+     * Removes the DFG edges for a potential implicit return statement if it is not in
+     * [reachableReturnStatements].
+     */
+    private fun removeUnreachableImplicitReturnStatement(
+        node: Node,
+        reachableReturnStatements: MutableSet<ReturnStatement>
+    ) {
+        val lastStatement =
+            ((node as? FunctionDeclaration)?.body as? CompoundStatement)?.statements?.lastOrNull()
+        if (
+            lastStatement is ReturnStatement &&
+                lastStatement.isImplicit &&
+                lastStatement !in reachableReturnStatements
+        )
+            lastStatement.removeNextDFG(node)
     }
 
     /**

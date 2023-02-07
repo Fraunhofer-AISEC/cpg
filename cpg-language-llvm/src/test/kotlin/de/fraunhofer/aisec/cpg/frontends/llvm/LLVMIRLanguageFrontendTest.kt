@@ -328,7 +328,7 @@ class LLVMIRLanguageFrontendTest {
         assertSame(variableDecl, (ifCondition as DeclaredReferenceExpression).refersTo)
 
         val elseBranch =
-            (ifStatement.elseStatement!! as GotoStatement).targetLabel.subStatement
+            (ifStatement.elseStatement!! as GotoStatement).targetLabel?.subStatement
                 as CompoundStatement
         assertEquals(2, elseBranch.statements.size)
         assertEquals("  %y = mul i32 %x, 32768", elseBranch.statements[0].code)
@@ -342,8 +342,8 @@ class LLVMIRLanguageFrontendTest {
             (ifBranch.statements[0] as DeclarationStatement).declarations[0] as VariableDeclaration
         val ifBranchComp = ifBranchVariableDecl.initializer as BinaryOperator
         assertEquals(">", ifBranchComp.operatorCode)
-        assertEquals(CastExpression::class, ifBranchComp.rhs::class)
-        assertEquals(CastExpression::class, ifBranchComp.lhs::class)
+        assertTrue(ifBranchComp.rhs is CastExpression)
+        assertTrue(ifBranchComp.lhs is CastExpression)
 
         val ifBranchCompRhs = ifBranchComp.rhs as CastExpression
         assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompRhs.castType)

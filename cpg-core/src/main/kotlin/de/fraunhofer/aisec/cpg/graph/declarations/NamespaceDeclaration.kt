@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -88,22 +87,4 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder {
 
     override var statements: List<Statement> by
         PropertyEdgeDelegate(NamespaceDeclaration::statementEdges)
-
-    override fun addStatement(s: Statement) = super.addStatement(s)
-
-    override fun <T : Declaration> addIfNotContains(
-        collection: MutableCollection<T>,
-        declaration: T
-    ) = super.addIfNotContains(collection, declaration)
-
-    override fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
-        declaration: T
-    ) = super.addIfNotContains(collection, declaration)
-
-    override fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
-        declaration: T,
-        outgoing: Boolean
-    ) = super.addIfNotContains(collection, declaration, outgoing)
 }

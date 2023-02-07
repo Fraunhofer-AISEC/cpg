@@ -140,11 +140,7 @@ class CPPLanguage :
         scopeManager: ScopeManager,
         currentTU: TranslationUnitDeclaration
     ): List<FunctionDeclaration> {
-        val invocationCandidates =
-            scopeManager
-                .resolveFunctionStopScopeTraversalOnDefinition(call)
-                .filter { it.hasSignature(call.signature) }
-                .toMutableList()
+        val invocationCandidates = scopeManager.resolveFunction(call).toMutableList()
         if (invocationCandidates.isEmpty()) {
             // Check for usage of default args
             invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, scopeManager))
@@ -152,8 +148,7 @@ class CPPLanguage :
         if (invocationCandidates.isEmpty()) {
             // Check if the call can be resolved to a function template instantiation. If it can be
             // resolver, we resolve the call. Otherwise, there won't be an inferred template, we
-            // will do an
-            // inferred FunctionDeclaration instead.
+            // will do an inferred FunctionDeclaration instead.
             call.templateParameterEdges = mutableListOf()
             val (ok, candidates) =
                 handleTemplateFunctionCalls(null, call, false, scopeManager, currentTU)
@@ -211,7 +206,7 @@ class CPPLanguage :
             val initializationType =
                 mutableMapOf<Node?, TemplateDeclaration.TemplateInitialization?>()
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
-            val explicitInstantiation = mutableListOf<ParameterizedType?>()
+            val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (
                 (templateCall.templateParameters.size <=
                     functionTemplateDeclaration.parameters.size) &&

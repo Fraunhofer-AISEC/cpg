@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,47 +23,20 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements;
+package de.fraunhofer.aisec.cpg.graph
 
-import java.util.Objects;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
-public class GotoStatement extends Statement {
-
-  private String labelName;
-
-  private LabelStatement targetLabel;
-
-  public String getLabelName() {
-    return labelName;
-  }
-
-  public void setLabelName(String labelName) {
-    this.labelName = labelName;
-  }
-
-  public LabelStatement getTargetLabel() {
-    return targetLabel;
-  }
-
-  public void setTargetLabel(LabelStatement targetLabel) {
-    this.targetLabel = targetLabel;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof GotoStatement that)) {
-      return false;
-    }
-    return super.equals(that)
-        && Objects.equals(labelName, that.labelName)
-        && Objects.equals(targetLabel, that.targetLabel);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+/**
+ * This interface denotes that a [Node] "holds" a list of other nodes. See also [ArgumentHolder] and
+ * [StatementHolder], in which [Holder] is used as a common interface.
+ *
+ * A primary use-case for the usage of this interface is the Node Fluent DSL in order to create node
+ * objects which can either be used as a statement (e.g. in a [CompoundStatement]) or as an argument
+ * (e.g. of a [CallExpression]).
+ */
+interface Holder<NodeTypeToHold : Node> {
+    /** Adds a [Node] to the list of "held" nodes. */
+    operator fun plusAssign(node: NodeTypeToHold)
 }

@@ -44,19 +44,19 @@ class LambdaExpression : Expression(), HasType.TypeListener {
             if (value != null) {
                 value.unregisterTypeListener(this)
                 if (value is HasType.TypeListener) {
-                    unregisterTypeListener(value as HasType.TypeListener?)
+                    unregisterTypeListener(value)
                 }
             }
             field = value
             value?.registerTypeListener(this)
         }
 
-    override fun typeChanged(src: HasType?, root: MutableList<HasType>?, oldType: Type?) {
+    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
 
-        if (!TypeManager.getInstance().isUnknown(type) && src!!.propagationType == oldType) {
+        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
             return
         }
 
@@ -87,7 +87,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
         }
     }
 
-    override fun possibleSubTypesChanged(src: HasType?, root: MutableList<HasType>?) {
+    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
         // do not take sub types from the listener
     }
 }

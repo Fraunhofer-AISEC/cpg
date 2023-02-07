@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -122,14 +123,7 @@ class DFGPass : Pass() {
      * the function.
      */
     private fun handleFunctionDeclaration(node: FunctionDeclaration) {
-        if (node.body is ReturnStatement) {
-            node.addPrevDFG(node.body as ReturnStatement)
-        } else if (node.body is CompoundStatement) {
-            (node.body as CompoundStatement)
-                .statements
-                .filterIsInstance<ReturnStatement>()
-                .forEach { node.addPrevDFG(it) }
-        }
+        node.allChildren<ReturnStatement>().forEach { node.addPrevDFG(it) }
     }
 
     /**
@@ -149,21 +143,21 @@ class DFGPass : Pass() {
 
     /**
      * Adds the DFG edge for a [ForEachStatement]. The data flows from the
-     * [ForEachStatement.iterable] to the [ForEachStatement.variable] nd from
-     * [ForEachStatement.variable] to the [ForEachStatement] to show the dependence between data and
-     * branching node. However, since the [ForEachStatement.variable] is a [Statement], we have to
-     * identify the variable which is used in the loop. In most cases, we should have a
-     * [DeclarationStatement] which means that we can unwrap the [VariableDeclaration]. If this is
-     * not the case, we assume that the last [VariableDeclaration] in the statement is the one we
-     * care about.
+     * [ForEachStatement.iterable] to the [ForEachStatement.variable]. However, since the
+     * [ForEachStatement.variable] is a [Statement], we have to identify the variable which is used
+     * in the loop. In most cases, we should have a [DeclarationStatement] which means that we can
+     * unwrap the [VariableDeclaration]. If this is not the case, we assume that the last
+     * [VariableDeclaration] in the statement is the one we care about.
      */
     private fun handleForEachStatement(node: ForEachStatement) {
-        if (node.variable is DeclarationStatement) {
-            (node.variable as DeclarationStatement).declarations.forEach {
-                node.iterable?.let { it1 -> it.addPrevDFG(it1) }
+        if (node.iterable != null) {
+            if (node.variable is DeclarationStatement) {
+                (node.variable as DeclarationStatement).declarations.forEach {
+                    it.addPrevDFG(node.iterable!!)
+                }
+            } else {
+                node.variable.variables.lastOrNull()?.addPrevDFG(node.iterable!!)
             }
-        } else {
-            node.iterable?.let { node.variable.variables.lastOrNull()?.addPrevDFG(it) }
         }
         node.variable?.let { node.addPrevDFG(it) }
     }
@@ -233,7 +227,7 @@ class DFGPass : Pass() {
      * case of the operators "++" and "--" also from the node back to the input.
      */
     private fun handleUnaryOperator(node: UnaryOperator) {
-        node.input?.let {
+        node.input.let {
             node.addPrevDFG(it)
             if (node.operatorCode == "++" || node.operatorCode == "--") {
                 node.addNextDFG(it)
@@ -336,14 +330,14 @@ class DFGPass : Pass() {
     private fun handleBinaryOp(node: BinaryOperator, parent: Node?) {
         when (node.operatorCode) {
             "=" -> {
-                node.rhs?.let { node.lhs.addPrevDFG(it) }
+                node.rhs.let { node.lhs.addPrevDFG(it) }
                 // There are cases where we explicitly want to connect the rhs to the =.
                 // E.g., this is the case in C++ where subexpressions can make the assignment.
                 // Examples: a + (b = 1)  or  a = a == b ? b = 2: b = 3
                 // When the parent is a compound statement (or similar block of code), we can safely
                 // assume that we're not in such a sub-expression
                 if (parent == null || parent !is CompoundStatement) {
-                    node.rhs?.addNextDFG(node)
+                    node.rhs.addNextDFG(node)
                 }
             }
             "*=",
@@ -356,15 +350,15 @@ class DFGPass : Pass() {
             "&=",
             "^=",
             "|=" -> {
-                node.lhs?.let {
+                node.lhs.let {
                     node.addPrevDFG(it)
                     node.addNextDFG(it)
                 }
-                node.rhs?.let { node.addPrevDFG(it) }
+                node.rhs.let { node.addPrevDFG(it) }
             }
             else -> {
-                node.lhs?.let { node.addPrevDFG(it) }
-                node.rhs?.let { node.addPrevDFG(it) }
+                node.lhs.let { node.addPrevDFG(it) }
+                node.rhs.let { node.addPrevDFG(it) }
             }
         }
     }
@@ -378,7 +372,7 @@ class DFGPass : Pass() {
      * Adds the DFG edge to a [CastExpression]. The inner expression flows to the cast expression.
      */
     private fun handleCastExpression(castExpression: CastExpression) {
-        castExpression.expression?.let { castExpression.addPrevDFG(it) }
+        castExpression.expression.let { castExpression.addPrevDFG(it) }
     }
 
     /** Adds the DFG edges to a [CallExpression]. */

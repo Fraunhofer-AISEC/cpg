@@ -631,7 +631,7 @@ open class EvaluationOrderGraphPass : Pass() {
     protected fun handleGotoStatement(node: GotoStatement) {
         pushToEOG(node)
         if (node.targetLabel != null) {
-            processedListener.registerObjectListener(node.targetLabel) { _: Any?, to: Any? ->
+            processedListener.registerObjectListener(node.targetLabel!!) { _: Any?, to: Any? ->
                 addEOGEdge(node, to as Node)
             }
         }

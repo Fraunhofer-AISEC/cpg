@@ -97,11 +97,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                     as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         }
         val returnStatement = this.newReturnStatement(returnStmt.toString())
+        // JavaParser seems to add implicit return statements, that are not part of the original
+        // source code. We mark it as such
+        returnStatement.isImplicit = !returnStmt.tokenRange.isPresent
 
         // expressionRefersToDeclaration to arguments, if there are any
-        if (expression != null) {
-            returnStatement.returnValue = expression
-        }
+        expression?.let { returnStatement.returnValue = it }
+
         frontend.setCodeAndLocation(returnStatement, stmt)
         return returnStatement
     }
@@ -190,7 +192,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
                 // make sure location is set
                 frontend.setCodeAndLocation(s, initExpr)
-                initExprList.addExpression(s)
+                s?.let { initExprList.addExpression(it) }
 
                 // can not update location
                 if (s!!.location == null) {
@@ -241,7 +243,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
                 // make sure location is set
                 frontend.setCodeAndLocation(s, updateExpr)
-                iterationExprList.addExpression(s)
+                s?.let { iterationExprList.addExpression(it) }
 
                 // can not update location
                 if (s!!.location == null) {

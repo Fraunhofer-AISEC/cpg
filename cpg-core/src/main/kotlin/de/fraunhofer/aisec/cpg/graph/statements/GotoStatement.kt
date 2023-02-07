@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,25 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.passes.Pass
-import kotlin.reflect.KClass
+import java.util.Objects
 
-/**
- * This annotation denotes that, this property is populates by a pass. Optionally, also specifying
- * which Pass class is responsible.
- */
-annotation class PopulatedByPass(val value: KClass<out Pass>)
+class GotoStatement : Statement() {
+    var labelName: String = ""
+    var targetLabel: LabelStatement? = null
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is GotoStatement) {
+            return false
+        }
+        return super.equals(other) &&
+            labelName == other.labelName &&
+            targetLabel == other.targetLabel
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), labelName, targetLabel)
+}

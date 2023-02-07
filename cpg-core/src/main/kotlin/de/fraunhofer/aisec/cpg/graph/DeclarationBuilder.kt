@@ -131,7 +131,7 @@ fun MetadataProvider.newConstructorDeclaration(
 @JvmOverloads
 fun MetadataProvider.newParamVariableDeclaration(
     name: CharSequence?,
-    type: Type? = UnknownType.getUnknownType(),
+    type: Type = UnknownType.getUnknownType(),
     variadic: Boolean = false,
     code: String? = null,
     rawNode: Any? = null
@@ -155,7 +155,7 @@ fun MetadataProvider.newParamVariableDeclaration(
 @JvmOverloads
 fun MetadataProvider.newVariableDeclaration(
     name: CharSequence?,
-    type: Type? = UnknownType.getUnknownType(),
+    type: Type = UnknownType.getUnknownType(),
     code: String? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
@@ -325,7 +325,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
 @JvmOverloads
 fun MetadataProvider.newFieldDeclaration(
     name: CharSequence?,
-    type: Type? = UnknownType.getUnknownType(),
+    type: Type = UnknownType.getUnknownType(),
     modifiers: List<String>? = listOf(),
     code: String? = null,
     location: PhysicalLocation? = null,
@@ -360,7 +360,7 @@ fun MetadataProvider.newFieldDeclaration(
 @JvmOverloads
 fun MetadataProvider.newProblemDeclaration(
     problem: String = "",
-    type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
+    problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
     code: String? = null,
     rawNode: Any? = null
 ): ProblemDeclaration {
@@ -368,7 +368,7 @@ fun MetadataProvider.newProblemDeclaration(
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.problem = problem
-    node.type = type
+    node.problemType = problemType
 
     log(node)
     return node
