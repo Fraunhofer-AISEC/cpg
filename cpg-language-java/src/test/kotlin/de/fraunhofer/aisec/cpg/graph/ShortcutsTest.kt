@@ -385,23 +385,8 @@ class ShortcutsTest {
         return TestLanguageFrontend(ScopeManager(), ".").buildTR {
             translationResult(config) {
                 translationUnit("ShortcutClass.java") {
-                    // The main method
-                    function("main") {
-                        param("args", t("int[]"))
-                        body {
-                            declare {
-                                variable("sc", t("ShortcutClass")) {
-                                    new { construct("ShortcutClass") }
-                                }
-                            }
-                            call("sc.print")
-                            call("sc.magic") { literal(3) }
-                            call("sc.magic2") { literal(5) }
-                        }
-                    }
-
                     record("ShortcutClass", "class") {
-                        field("attr", t("int")) { literal(0) }
+                        field("attr", t("int")) { literal(0, t("int")) }
                         constructor() {}
                         method("toString", t("String")) {
                             body { returnStmt { literal("ShortcutClass: attr=") + ref("attr") } }
@@ -415,12 +400,12 @@ class ShortcutsTest {
                             param("b", t("int"))
                             body {
                                 ifStmt {
-                                    condition { ref("b") eq literal(5) }
+                                    condition { ref("b") eq literal(5, t("int")) }
                                     thenStmt {
                                         ifStmt {
-                                            condition { ref("attr") eq literal(2) }
-                                            thenStmt { ref("attr") assign literal(3) }
-                                            elseStmt { ref("attr") assign literal(3) }
+                                            condition { ref("attr") eq literal(2, t("int")) }
+                                            thenStmt { ref("attr") assign literal(3, t("int")) }
+                                            elseStmt { ref("attr") assign literal(3, t("int")) }
                                         }
                                     }
                                     elseStmt { ref("attr") assign ref("b") }
@@ -433,16 +418,31 @@ class ShortcutsTest {
                             body {
                                 declare { variable("a") }
                                 ifStmt {
-                                    condition { ref("b") gt literal(5) }
+                                    condition { ref("b") gt literal(5, t("int")) }
                                     thenStmt {
                                         ifStmt {
-                                            condition { ref("attr") eq literal(2) }
-                                            thenStmt { ref("a") assign literal(3) }
-                                            elseStmt { ref("a") assign literal(3) }
+                                            condition { ref("attr") eq literal(2, t("int")) }
+                                            thenStmt { ref("a") assign literal(3, t("int")) }
+                                            elseStmt { ref("a") assign literal(3, t("int")) }
                                         }
                                     }
                                     elseStmt { ref("a") assign ref("b") }
                                 }
+                            }
+                        }
+
+                        // The main method
+                        method("main") {
+                            param("args", t("int[]"))
+                            body {
+                                declare {
+                                    variable("sc", t("ShortcutClass")) {
+                                        new { construct("ShortcutClass") }
+                                    }
+                                }
+                                call("sc.print")
+                                call("sc.magic") { literal(3, t("int")) }
+                                call("sc.magic2") { literal(5, t("int")) }
                             }
                         }
                     }

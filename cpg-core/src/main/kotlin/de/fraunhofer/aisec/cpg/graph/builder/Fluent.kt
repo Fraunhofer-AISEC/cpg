@@ -380,6 +380,7 @@ fun LanguageFrontend.construct(
     init: (ConstructExpression.() -> Unit)? = null
 ): ConstructExpression {
     val node = newConstructExpression(parseName(name))
+
     if (init != null) {
         init(node)
     }
@@ -504,8 +505,8 @@ fun LanguageFrontend.elseStmt(
  */
 context(Holder<out Statement>)
 
-fun <N> LanguageFrontend.literal(value: N): Literal<N> {
-    val node = newLiteral(value)
+fun <N> LanguageFrontend.literal(value: N, type: Type = UnknownType.getUnknownType()): Literal<N> {
+    val node = newLiteral(value, type)
 
     // Only add this to an argument holder if the nearest holder is an argument holder
     val holder = this@Holder
