@@ -60,8 +60,9 @@ object JepSingleton {
             // we can point JEP to the folder and get better debug messages with python source code
             // locations
 
-            // we want to have the parent folder of "CPGPython" so that we can do "import CPGPython"
-            // in python
+            // We want to have the parent folder of "CPGPython" so that we can do "import CPGPython"
+            // in python. The layout looks like `.../main/CPGPython/__init__.py` -> we have to go
+            // two levels up to get the path of `main`.
             var pyFolder = Paths.get(pyInitFile.toURI()).parent.parent
             config.addIncludePaths(pyFolder.toString())
         } else {
@@ -112,6 +113,9 @@ object JepSingleton {
             if (library.exists()) {
                 MainInterpreter.setJepLibraryPath(library.path)
                 config.addIncludePaths(
+                    // We want to have the parent folder of "CPGPython" so that we can do "import
+                    // CPGPython" in python. The layout looks like `.../main/CPGPython/__init__.py`
+                    // -> we have to go two levels up to get the path of `main`.
                     library.toPath().parent.parent.toString()
                 ) // this assumes that the python code is also at the library's location
             }
@@ -149,7 +153,6 @@ object JepSingleton {
                         "libjep.jnilib"
                     )
                 )
-                // Windows TODO: is this correct?
                 wellKnownPaths.add(
                     Paths.get(
                         "$virtualEnvPath",
@@ -175,6 +178,10 @@ object JepSingleton {
                     // to setJepLibraryPath and co result in failures.
                     MainInterpreter.setJepLibraryPath(it.toString())
                     config.addIncludePaths(
+                        // We want to have the parent folder of "CPGPython" so that we can do
+                        // "import CPGPython" in python. The layout looks like
+                        // `.../main/CPGPython/__init__.py` -> we have to go two levels up to get
+                        // the path of `main`.
                         it.parent.parent.toString()
                     ) // this assumes that the python code is also at the library's location
                 }
