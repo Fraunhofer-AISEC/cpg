@@ -26,10 +26,7 @@
 package de.fraunhofer.aisec.cpg.processing
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
@@ -143,63 +140,8 @@ class VisitorTest : BaseTest() {
             TimeoutException::class
         )
         fun setup() {
-            val config =
-                TranslationConfiguration.builder()
-                    .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
-                    .build()
-            /*
-            package compiling;
-            class SimpleClass {
-              private int field;
-              SimpleClass() {
-                // constructor
-              }
-
-              Integer method() {
-                System.out.println("Hello world");
-                int x = 0;
-                if (System.currentTimeMillis() > 0) {
-                  x = x + 1;
-                } else {
-                  x = x -1;
-                }
-                return x;
-              }
-            }
-            */
             val cpg =
-                TestLanguageFrontend(ScopeManager(), ".").buildTR {
-                    translationResult(config) {
-                        translationUnit("RecordDeclaration.java") {
-                            namespace("compiling") {
-                                record("SimpleClass", "class") {
-                                    field("field", t("int")) {}
-                                    constructor() {}
-                                    method("method", t("Integer")) {
-                                        body {
-                                            call("System.out.println") { literal("Hello world") }
-                                            declare { variable("x", t("int")) { literal(0) } }
-                                            ifStmt {
-                                                condition {
-                                                    call("System.currentTimeMillis") gt literal(0)
-                                                }
-                                                thenStmt {
-                                                    ref("x") assign { ref("x") + literal(1) }
-                                                }
-                                                elseStmt {
-                                                    ref("x") assign { ref("x") - literal(1) }
-                                                }
-                                            }
-                                            returnStmt { ref("x") }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
+                GraphExamples.getTRWithConfig("src/test/resources/compiling/RecordDeclaration.java")
             recordDecl = cpg.records.firstOrNull()
         }
     }

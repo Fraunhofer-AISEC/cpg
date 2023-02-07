@@ -290,6 +290,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 it.registerLanguage(JavaLanguage())
                 it.registerPass(JavaExternalTypeHierarchyResolver())
             }
+        // TODO: Use GraphExamples here as well.
         assertNotNull(declaration)
 
         val namespaceDeclaration = declaration.getDeclarationAs(0, NamespaceDeclaration::class.java)

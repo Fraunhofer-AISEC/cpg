@@ -25,12 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -55,9 +52,9 @@ import kotlin.test.assertTrue
 class ShortcutsTest {
     @Test
     fun followDFGUntilHitTest() {
-        val result = getDataflowClass()
+        val result = GraphExamples.getTRWithConfig("src/test/resources/Dataflow.java")
 
-        val toStringCall = result.callsByName("toString")[0]
+        val toStringCall = result!!.callsByName("toString")[0]
         val printDecl =
             result.translationUnits[0]
                 .byNameOrNull<RecordDeclaration>("Dataflow")
@@ -72,7 +69,7 @@ class ShortcutsTest {
 
     @Test
     fun testCalls() {
-        val result = getShortcutClass()
+        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
 
         val actual = result.calls
 
@@ -108,9 +105,9 @@ class ShortcutsTest {
 
     @Test
     fun testCallsByName() {
-        val result = getShortcutClass()
+        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
 
-        val actual = result.callsByName("print")
+        val actual = result!!.callsByName("print")
 
         val expected = mutableListOf<CallExpression>()
         val classDecl = result.records["ShortcutClass"]
@@ -124,7 +121,7 @@ class ShortcutsTest {
 
     @Test
     fun testCalleesOf() {
-        val result = getShortcutClass()
+        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
 
         val expected = mutableListOf<FunctionDeclaration>()
         val classDecl = result.records["ShortcutClass"]
@@ -160,14 +157,14 @@ class ShortcutsTest {
 
     @Test
     fun testCallersOf() {
-        val result = getShortcutClass()
+        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
 
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
         val print = classDecl.byNameOrNull<MethodDeclaration>("print")
         assertNotNull(print)
 
-        val actual = result.callersOf(print)
+        val actual = result!!.callersOf(print)
 
         val expected = mutableListOf<FunctionDeclaration>()
         val main = classDecl.byNameOrNull<MethodDeclaration>("main")
@@ -179,7 +176,7 @@ class ShortcutsTest {
 
     @Test
     fun testControls() {
-        val result = getShortcutClass()
+        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
 
         val expected = mutableListOf<Node>()
         val classDecl = result.records["ShortcutClass"]
@@ -230,7 +227,15 @@ class ShortcutsTest {
 
     @Test
     fun testControlledBy() {
-        val result = getShortcutClass()
+        val result =
+            GraphExamples.getTRWithConfig(
+                "src/test/resources/ShortcutClass.java",
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerPass(EdgeCachePass())
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+            )
 
         val expected = mutableListOf<Node>()
         val classDecl = result.records["ShortcutClass"]
@@ -255,7 +260,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevDFGEdgesUntilHit() {
-        val result = getShortcutClass()
+        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
 
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
@@ -292,7 +297,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevEOGEdgesUntilHit() {
-        val result = getShortcutClass()
+        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
@@ -316,7 +321,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowNextEOGEdgesUntilHit() {
-        val result = getShortcutClass()
+        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
 
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
@@ -340,7 +345,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevDFGEdges() {
-        val result = getShortcutClass()
+        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
 
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
@@ -357,124 +362,5 @@ class ShortcutsTest {
         val paramPassed = attrAssignment.followPrevDFG { it is Literal<*> }
         assertNotNull(paramPassed)
         assertEquals(3, (paramPassed.last() as? Literal<*>)?.value)
-    }
-
-    private fun getShortcutClass(): TranslationResult {
-
-        val config =
-            TranslationConfiguration.builder()
-                .defaultPasses()
-                .registerLanguage(TestLanguage("."))
-                .registerPass(EdgeCachePass())
-                .build()
-
-        return TestLanguageFrontend(ScopeManager(), ".").buildTR {
-            translationResult(config) {
-                translationUnit("ShortcutClass.java") {
-                    record("ShortcutClass") {
-                        field("attr", t("int")) { literal(0, t("int")) }
-                        constructor() { isImplicit = true }
-                        method("toString", t("String")) {
-                            body { returnStmt { literal("ShortcutClass: attr=") + ref("attr") } }
-                        }
-
-                        method("print", t("int")) {
-                            body { call("System.out.println") { call("this.toString") } }
-                        }
-
-                        method("magic") {
-                            param("b", t("int"))
-                            body {
-                                ifStmt {
-                                    condition { ref("b") eq literal(5, t("int")) }
-                                    thenStmt {
-                                        ifStmt {
-                                            condition { ref("attr") eq literal(2, t("int")) }
-                                            thenStmt { ref("attr") assign literal(3, t("int")) }
-                                            elseStmt { ref("attr") assign literal(3, t("int")) }
-                                        }
-                                    }
-                                    elseStmt { ref("attr") assign ref("b") }
-                                }
-                            }
-                        }
-
-                        method("magic2") {
-                            param("b", t("int"))
-                            body {
-                                declare { variable("a") }
-                                ifStmt {
-                                    condition { ref("b") gt literal(5, t("int")) }
-                                    thenStmt {
-                                        ifStmt {
-                                            condition { ref("attr") eq literal(2, t("int")) }
-                                            thenStmt { ref("a") assign literal(3, t("int")) }
-                                            elseStmt { ref("a") assign literal(3, t("int")) }
-                                        }
-                                    }
-                                    elseStmt { ref("a") assign ref("b") }
-                                }
-                            }
-                        }
-
-                        // The main method
-                        method("main") {
-                            param("args", t("int[]"))
-                            body {
-                                declare {
-                                    variable("sc", t("ShortcutClass")) {
-                                        new { construct("ShortcutClass") }
-                                    }
-                                }
-                                call("sc.print")
-                                call("sc.magic") { literal(3, t("int")) }
-                                call("sc.magic2") { literal(5, t("int")) }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    private fun getDataflowClass(): TranslationResult {
-        val config =
-            TranslationConfiguration.builder()
-                .defaultPasses()
-                .registerLanguage(TestLanguage("."))
-                .build()
-
-        return TestLanguageFrontend(ScopeManager(), ".").buildTR {
-            translationResult(config) {
-                translationUnit("Dataflow.java") {
-                    record("Dataflow") {
-                        field("attr", t("String")) { literal("", t("String")) }
-                        constructor() { isImplicit = true }
-                        method("toString", t("String")) {
-                            body { returnStmt { literal("ShortcutClass: attr=") + ref("attr") } }
-                        }
-
-                        method("test", t("String")) { body { returnStmt { literal("abcd") } } }
-
-                        method("print", t("int")) {
-                            param("s", t("String"))
-                            body { call("System.out.println") { ref("s") } }
-                        }
-
-                        // The main method
-                        method("main") {
-                            param("args", t("String[]"))
-                            body {
-                                declare {
-                                    variable("sc", t("Dataflow")) { new { construct("Dataflow") } }
-                                }
-                                declare { variable("s", t("String")) { call("sc.toString") } }
-                                call("sc.print") { ref("s") }
-                                call("sc.print") { call("sc.toString") }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
