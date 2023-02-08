@@ -37,18 +37,18 @@ class IntegerType : NumericType {
         typeName: String,
         bitWidth: Int?,
         language: Language<out LanguageFrontend>?,
-        modifier: NumericType.Modifier = Modifier.SIGNED
+        modifier: Modifier = Modifier.SIGNED
     ) : super(typeName, bitWidth, language, modifier)
     constructor(
         typeName: String,
-        modifier: NumericType.Modifier,
+        modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
     ) : super(typeName, modifier, language, bitWidth)
 
     constructor(
         name: Name,
-        modifier: NumericType.Modifier,
+        modifier: Modifier,
         language: Language<out LanguageFrontend>?,
         bitWidth: Int?
     ) : super(name, modifier, language, bitWidth)

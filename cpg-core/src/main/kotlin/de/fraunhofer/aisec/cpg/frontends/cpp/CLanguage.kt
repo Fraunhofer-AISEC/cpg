@@ -48,6 +48,7 @@ open class CLanguage :
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
 
+    @Transient
     override val simpleTypes: Map<String, Type> =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),

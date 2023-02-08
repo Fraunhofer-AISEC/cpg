@@ -41,6 +41,7 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
 
+    @Transient
     override val simpleTypes =
         mapOf(
             "bool" to IntegerType("bool", 1, this, NumericType.Modifier.NOT_APPLICABLE),

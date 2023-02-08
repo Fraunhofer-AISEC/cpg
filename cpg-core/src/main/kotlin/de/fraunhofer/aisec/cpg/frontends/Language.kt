@@ -63,6 +63,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
 
     // TODO: Maybe make this abstract?
     @get:JsonIgnore
+    @Transient
     open val simpleTypes: Map<String, Type> =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),

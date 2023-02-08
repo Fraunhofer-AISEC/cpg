@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * A node which presents some kind of complete piece of software, e.g., an application, a library,
@@ -34,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
  * This node holds all translation units belonging to this software component as well as (potential)
  * entry points or interactions with other software.
  */
-open class Component(val typeCache: TypeCache) : Node() {
+open class Component(@Transient val typeCache: TypeCache) : Node() {
     /** All translation units belonging to this application. */
     @field:SubGraph("AST")
     val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()

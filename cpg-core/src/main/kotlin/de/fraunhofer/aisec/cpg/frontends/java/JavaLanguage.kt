@@ -51,6 +51,7 @@ open class JavaLanguage :
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
 
+    @Transient
     override val simpleTypes =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),

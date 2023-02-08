@@ -53,6 +53,7 @@ class CPPLanguage :
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
 
+    @Transient
     override val simpleTypes =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
