@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,17 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
 /**
- * Specifies that a certain node has an initializer. It is a special case of [ArgumentHolder], in
- * which the initializer is treated as the first (and only) argument.
+ * This interface denotes that a [Node] "holds" a list of other nodes. See also [ArgumentHolder] and
+ * [StatementHolder], in which [Holder] is used as a common interface.
+ *
+ * A primary use-case for the usage of this interface is the Node Fluent DSL in order to create node
+ * objects which can either be used as a statement (e.g. in a [CompoundStatement]) or as an argument
+ * (e.g. of a [CallExpression]).
  */
-interface HasInitializer : ArgumentHolder {
-
-    var initializer: Expression?
-
-    override fun addArgument(expression: Expression) {
-        this.initializer = expression
-    }
+interface Holder<NodeTypeToHold : Node> {
+    /** Adds a [Node] to the list of "held" nodes. */
+    operator fun plusAssign(node: NodeTypeToHold)
 }

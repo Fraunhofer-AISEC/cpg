@@ -54,7 +54,7 @@ class TestLanguage : Language<TestLanguageFrontend>() {
     }
 }
 
-class TestLanguageFrontend :
+class TestLanguageFrontend(scopeManager: ScopeManager = ScopeManager()) :
     LanguageFrontend(
         TestLanguage(),
         TranslationConfiguration.builder().build(),

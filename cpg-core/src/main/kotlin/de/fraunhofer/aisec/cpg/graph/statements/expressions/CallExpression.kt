@@ -49,7 +49,7 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
-open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdge {
+open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdge, ArgumentHolder {
     /** Connection to its [FunctionDeclaration]. This will be populated by the [CallResolver]. */
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(CallResolver::class)
@@ -120,8 +120,11 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         argumentEdges[index].end = argument
     }
 
+    override fun addArgument(expression: Expression) {
+        return addArgument(expression, null)
+    }
+
     /** Adds the specified [expression] with an optional [name] to this call. */
-    @JvmOverloads
     fun addArgument(expression: Expression, name: String? = null) {
         val edge = PropertyEdge(this, expression)
         edge.addProperty(Properties.INDEX, argumentEdges.size)
