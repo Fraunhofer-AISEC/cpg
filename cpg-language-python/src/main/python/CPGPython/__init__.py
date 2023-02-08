@@ -25,12 +25,13 @@
 from ._code_extractor import CodeExtractor
 from de.fraunhofer.aisec.cpg.graph import DeclarationBuilderKt
 import ast
+import os
 
 
 class PythonASTToCPG(ast.NodeVisitor):
     def __init__(self, fname, frontend, code):
         self.sourcecode = CodeExtractor(fname)
-        self.frontend = frontend
+        self.frontend = frontend  # absolute path
         self.tud = DeclarationBuilderKt.newTranslationUnitDeclaration(
             self.frontend, fname, code)
         self.fname = fname
@@ -73,7 +74,7 @@ class PythonASTToCPG(ast.NodeVisitor):
             # Module(stmt* body, type_ignore* type_ignores)
             # TODO how to name the namespace?
             # TODO improve readability
-            nsd_name = ".".join(self.fname.split("/")[-1].split(".")[:-1])
+            nsd_name = ".".join(os.path.basename(self.fname).split(".")[:-1])
             nsd = DeclarationBuilderKt.newNamespaceDeclaration(self.frontend,
                                                                nsd_name, "")
             self.tud.addDeclaration(nsd)
