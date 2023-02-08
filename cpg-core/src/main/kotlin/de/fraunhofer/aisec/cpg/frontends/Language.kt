@@ -33,10 +33,10 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.io.File
 import kotlin.reflect.KClass
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * Represents a programming language. When creating new languages in the CPG, one must derive custom
@@ -58,11 +58,12 @@ abstract class Language<T : LanguageFrontend> : Node() {
     abstract val frontend: KClass<out T>
 
     /** The primitive types of this language. */
+    @get:JsonIgnore
     val primitiveTypes: Set<String>
         get() = simpleTypes.keys
 
     // TODO: Maybe make this abstract?
-    @get:JsonIgnore
+    @JsonIgnore
     @Transient
     open val simpleTypes: Map<String, Type> =
         mapOf(
@@ -84,7 +85,6 @@ abstract class Language<T : LanguageFrontend> : Node() {
     abstract fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager = ScopeManager(),
-        typeCache: TypeCache = TypeCache()
     ): T
 
     fun getSimpleTypeOf(typeString: String) = simpleTypes[typeString]

@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
@@ -72,8 +71,7 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager,
-        typeCache: TypeCache
     ): PythonLanguageFrontend {
-        return PythonLanguageFrontend(this, config, scopeManager, typeCache)
+        return PythonLanguageFrontend(this, config, scopeManager)
     }
 }

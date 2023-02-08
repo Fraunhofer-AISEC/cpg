@@ -49,14 +49,12 @@ abstract class LanguageFrontend(
     override val language: Language<out LanguageFrontend>,
     val config: TranslationConfiguration,
     scopeManager: ScopeManager,
-    override var typeManager: TypeCache
 ) :
     ProcessedListener(),
     CodeAndLocationProvider,
     LanguageProvider,
     ScopeProvider,
-    NamespaceProvider,
-    TypeCacheProvider {
+    NamespaceProvider {
     var scopeManager: ScopeManager = scopeManager
         set(scopeManager) {
             field = scopeManager

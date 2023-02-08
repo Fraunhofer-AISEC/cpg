@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.assertLocalName
-import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -54,7 +53,6 @@ class LLVMIRLanguageFrontendTest {
                 LLVMIRLanguage(),
                 TranslationConfiguration.builder().build(),
                 ScopeManager(),
-                TypeCache()
             )
         frontend.parse(topLevel.resolve("main.ll").toFile())
     }

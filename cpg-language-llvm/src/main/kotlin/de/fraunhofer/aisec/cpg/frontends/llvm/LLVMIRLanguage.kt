@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
@@ -62,8 +61,7 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager,
-        typeCache: TypeCache
     ): LLVMIRLanguageFrontend {
-        return LLVMIRLanguageFrontend(this, config, scopeManager, typeCache)
+        return LLVMIRLanguageFrontend(this, config, scopeManager)
     }
 }

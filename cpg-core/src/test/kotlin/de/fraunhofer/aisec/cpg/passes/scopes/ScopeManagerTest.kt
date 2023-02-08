@@ -54,7 +54,7 @@ internal class ScopeManagerTest : BaseTest() {
     @Throws(TranslationException::class)
     fun testSetScope() {
         val frontend: LanguageFrontend =
-            JavaLanguageFrontend(JavaLanguage(), config, ScopeManager(), TypeCache())
+            JavaLanguageFrontend(JavaLanguage(), config, ScopeManager())
         assertEquals(frontend, frontend.scopeManager.lang)
 
         frontend.scopeManager = ScopeManager()
@@ -65,8 +65,7 @@ internal class ScopeManagerTest : BaseTest() {
     @Throws(TranslationException::class)
     fun testReplaceNode() {
         val scopeManager = ScopeManager()
-        val typeCache = TypeCache()
-        val frontend = CXXLanguageFrontend(CPPLanguage(), config, scopeManager, typeCache)
+        val frontend = CXXLanguageFrontend(CPPLanguage(), config, scopeManager)
         val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
         val methods = tu.allChildren<MethodDeclaration>().filter { it !is ConstructorDeclaration }
         assertFalse(methods.isEmpty())
@@ -96,7 +95,6 @@ internal class ScopeManagerTest : BaseTest() {
                 CPPLanguage(),
                 TranslationConfiguration.builder().build(),
                 s1,
-                TypeCache()
             )
         s1.resetToGlobal(frontend1.newTranslationUnitDeclaration("f1.cpp", null))
 
@@ -113,7 +111,6 @@ internal class ScopeManagerTest : BaseTest() {
                 CPPLanguage(),
                 TranslationConfiguration.builder().build(),
                 s2,
-                TypeCache()
             )
         s2.resetToGlobal(frontend2.newTranslationUnitDeclaration("f1.cpp", null))
 
@@ -131,7 +128,6 @@ internal class ScopeManagerTest : BaseTest() {
                 CPPLanguage(),
                 TranslationConfiguration.builder().build(),
                 final,
-                TypeCache()
             )
         final.mergeFrom(listOf(s1, s2))
 
@@ -174,7 +170,6 @@ internal class ScopeManagerTest : BaseTest() {
                 CPPLanguage(),
                 TranslationConfiguration.builder().build(),
                 s,
-                TypeCache()
             )
         s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
 

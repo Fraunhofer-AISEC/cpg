@@ -60,8 +60,7 @@ class TypeScriptLanguageFrontend(
     language: Language<TypeScriptLanguageFrontend>,
     config: TranslationConfiguration,
     scopeManager: ScopeManager,
-    typeCache: TypeCache
-) : LanguageFrontend(language, config, scopeManager, typeCache) {
+) : LanguageFrontend(language, config, scopeManager) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)

@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasGenerics
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.TypeCache
 
 /** The Go language. */
 open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics {
@@ -45,8 +44,7 @@ open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager,
-        typeCache: TypeCache
     ): GoLanguageFrontend {
-        return GoLanguageFrontend(this, config, scopeManager, typeCache)
+        return GoLanguageFrontend(this, config, scopeManager)
     }
 }

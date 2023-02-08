@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
@@ -42,8 +41,7 @@ class PythonLanguageFrontend(
     language: Language<PythonLanguageFrontend>,
     config: TranslationConfiguration,
     scopeManager: ScopeManager,
-    typeCache: TypeCache
-) : LanguageFrontend(language, config, scopeManager, typeCache) {
+) : LanguageFrontend(language, config, scopeManager) {
     private val jep = JepSingleton // configure Jep
 
     @Throws(TranslationException::class)

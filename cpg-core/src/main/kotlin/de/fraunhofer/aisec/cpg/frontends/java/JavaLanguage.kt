@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
@@ -52,6 +52,7 @@ open class JavaLanguage :
     override val disjunctiveOperators = listOf("||")
 
     @Transient
+    @JsonIgnore
     override val simpleTypes =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
@@ -69,9 +70,8 @@ open class JavaLanguage :
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager,
-        typeCache: TypeCache
     ): JavaLanguageFrontend {
-        return JavaLanguageFrontend(this, config, scopeManager, typeCache)
+        return JavaLanguageFrontend(this, config, scopeManager)
     }
 
     override val startCharacter = '<'

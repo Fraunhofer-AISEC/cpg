@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.TypeCache
 import kotlin.reflect.KClass
 
 /** The JavaScript language. */
@@ -44,8 +43,7 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
     override fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager,
-        typeCache: TypeCache
     ): TypeScriptLanguageFrontend {
-        return TypeScriptLanguageFrontend(this, config, scopeManager, typeCache)
+        return TypeScriptLanguageFrontend(this, config, scopeManager)
     }
 }

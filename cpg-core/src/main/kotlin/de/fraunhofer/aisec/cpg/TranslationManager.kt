@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.TypeCache
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -147,7 +146,7 @@ private constructor(
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
         for (sc in this.config.softwareComponents.keys) {
-            val component = Component(TypeCache())
+            val component = Component()
             component.name = Name(sc)
             result.addComponent(component)
 
@@ -269,12 +268,7 @@ private constructor(
             val future =
                 CompletableFuture.supplyAsync {
                     try {
-                        return@supplyAsync parse(
-                            component,
-                            scopeManager,
-                            component.typeCache,
-                            sourceLocation
-                        )
+                        return@supplyAsync parse(component, scopeManager, sourceLocation)
                     } catch (e: TranslationException) {
                         throw RuntimeException("Error parsing $sourceLocation", e)
                     }
@@ -317,8 +311,7 @@ private constructor(
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
 
-            parse(component, result.scopeManager, component.typeCache, sourceLocation).ifPresent {
-                f: LanguageFrontend ->
+            parse(component, result.scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
         }
@@ -346,12 +339,11 @@ private constructor(
     private fun parse(
         component: Component,
         scopeManager: ScopeManager,
-        typeCache: TypeCache,
         sourceLocation: File
     ): Optional<LanguageFrontend> {
         var frontend: LanguageFrontend? = null
         try {
-            frontend = getFrontend(sourceLocation, scopeManager, typeCache)
+            frontend = getFrontend(sourceLocation, scopeManager)
 
             if (frontend == null) {
                 log.error("Found no parser frontend for ${sourceLocation.name}")
@@ -376,13 +368,12 @@ private constructor(
     private fun getFrontend(
         file: File,
         scopeManager: ScopeManager,
-        typeCache: TypeCache
     ): LanguageFrontend? {
         val language = file.language
 
         return if (language != null) {
             try {
-                language.newFrontend(config, scopeManager, typeCache)
+                language.newFrontend(config, scopeManager)
             } catch (e: Exception) {
                 when (e) {
                     is InstantiationException,

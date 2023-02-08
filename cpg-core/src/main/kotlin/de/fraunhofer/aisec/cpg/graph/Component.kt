@@ -35,7 +35,7 @@ import org.neo4j.ogm.annotation.Transient
  * This node holds all translation units belonging to this software component as well as (potential)
  * entry points or interactions with other software.
  */
-open class Component(@Transient val typeCache: TypeCache) : Node() {
+open class Component() : Node() {
     /** All translation units belonging to this application. */
     @field:SubGraph("AST")
     val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()
