@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import org.neo4j.ogm.annotation.Transient
 
 /**
  * A node which presents some kind of complete piece of software, e.g., an application, a library,

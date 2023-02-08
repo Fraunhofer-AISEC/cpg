@@ -63,7 +63,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
         get() = simpleTypes.keys
 
     // TODO: Maybe make this abstract?
-    @JsonIgnore
+    @get:JsonIgnore
     @Transient
     open val simpleTypes: Map<String, Type> =
         mapOf(
