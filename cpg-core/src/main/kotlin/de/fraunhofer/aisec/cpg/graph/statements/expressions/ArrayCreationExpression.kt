@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
@@ -82,7 +82,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
     override fun hashCode() = Objects.hash(super.hashCode(), initializer, dimensions)
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val previous = type
@@ -93,7 +93,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

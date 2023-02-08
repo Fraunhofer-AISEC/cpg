@@ -52,14 +52,14 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LegacyTypeManager {
+public class TypeManager {
 
-  private static final Logger log = LoggerFactory.getLogger(LegacyTypeManager.class);
+  private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
   // TODO: document/remove this regexp, merge with other pattern
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
-  @NotNull private static LegacyTypeManager instance = new LegacyTypeManager();
+  @NotNull private static TypeManager instance = new TypeManager();
   private static boolean typeSystemActive = true;
 
   @NotNull
@@ -94,7 +94,7 @@ public class LegacyTypeManager {
   private final Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
 
   public static void reset() {
-    instance = new LegacyTypeManager();
+    instance = new TypeManager();
   }
 
   /**
@@ -117,7 +117,7 @@ public class LegacyTypeManager {
   }
 
   /**
-   * Adds a List of ParameterizedType to {@link LegacyTypeManager#recordToTypeParameters}
+   * Adds a List of ParameterizedType to {@link TypeManager#recordToTypeParameters}
    *
    * @param recordDeclaration will be stored as key for the map
    * @param typeParameters List containing all ParameterizedTypes used by the recordDeclaration and
@@ -129,8 +129,8 @@ public class LegacyTypeManager {
   }
 
   /**
-   * Searches {@link LegacyTypeManager#templateToTypeParameters} for ParameterizedTypes that were
-   * defined in a template matching the provided name
+   * Searches {@link TypeManager#templateToTypeParameters} for ParameterizedTypes that were defined
+   * in a template matching the provided name
    *
    * @param templateDeclaration that includes the ParameterizedType we are looking for
    * @param name name of the ParameterizedType we are looking for
@@ -193,10 +193,10 @@ public class LegacyTypeManager {
   }
 
   /**
-   * Adds ParameterizedType to the {@link LegacyTypeManager#templateToTypeParameters} to be able to
+   * Adds ParameterizedType to the {@link TypeManager#templateToTypeParameters} to be able to
    * resolve this type when it is used
    *
-   * @param templateDeclaration key for {@link LegacyTypeManager#templateToTypeParameters}
+   * @param templateDeclaration key for {@link TypeManager#templateToTypeParameters}
    * @param typeParameter ParameterizedType we want to register
    */
   public void addTypeParameter(
@@ -261,9 +261,9 @@ public class LegacyTypeManager {
         .anyMatch(type -> type.getRoot().getName().toString().equals(name));
   }
 
-  private LegacyTypeManager() {}
+  private TypeManager() {}
 
-  public static @NotNull LegacyTypeManager getInstance() {
+  public static @NotNull TypeManager getInstance() {
     return instance;
   }
 

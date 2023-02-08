@@ -343,7 +343,7 @@ open class JavaLanguageFrontend(
         return try {
             // Resolve type first with ParameterizedType
             var type: de.fraunhofer.aisec.cpg.graph.types.Type? =
-                LegacyTypeManager.getInstance()
+                TypeManager.getInstance()
                     .getTypeParameter(scopeManager.currentRecord, resolved.returnType.describe())
             if (type == null) {
                 type = parseType(resolved.returnType.describe())

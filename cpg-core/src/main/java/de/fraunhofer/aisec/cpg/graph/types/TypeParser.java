@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types;
 
 import de.fraunhofer.aisec.cpg.ScopeManager;
 import de.fraunhofer.aisec.cpg.frontends.*;
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -597,7 +597,7 @@ public class TypeParser {
     counter++;
 
     Type finalType;
-    LegacyTypeManager typeManager = LegacyTypeManager.getInstance();
+    TypeManager typeManager = TypeManager.getInstance();
 
     // Check if type is FunctionPointer
     Matcher funcptr = getFunctionPtrMatcher(typeBlocks.subList(counter, typeBlocks.size()));
@@ -671,7 +671,7 @@ public class TypeParser {
   }
 
   private static Type searchForTemplateTypes(@NotNull String type, ScopeManager scopeManager) {
-    return LegacyTypeManager.getInstance()
+    return TypeManager.getInstance()
         .searchTemplateScopeForDefinedParameterizedTypes(scopeManager.getCurrentScope(), type);
   }
 

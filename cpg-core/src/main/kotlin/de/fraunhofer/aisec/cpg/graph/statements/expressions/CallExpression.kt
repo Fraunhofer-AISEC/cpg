@@ -249,7 +249,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
 
@@ -266,8 +266,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
                 it.returnTypes.firstOrNull()
             }
         val alternative = if (types.isNotEmpty()) types[0] else UnknownType.getUnknownType(language)
-        val commonType =
-            LegacyTypeManager.getInstance().getCommonType(types, this).orElse(alternative)
+        val commonType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
 
         subTypes.remove(oldType)
@@ -280,7 +279,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
 

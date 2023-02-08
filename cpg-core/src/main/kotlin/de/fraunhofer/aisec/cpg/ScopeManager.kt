@@ -539,8 +539,8 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Only used by the [de.fraunhofer.aisec.cpg.graph.LegacyTypeManager], adds typedefs to the
-     * current [ValueDeclarationScope].
+     * Only used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
+     * [ValueDeclarationScope].
      */
     fun addTypedef(typedef: TypedefDeclaration) {
         val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
@@ -762,7 +762,7 @@ class ScopeManager : ScopeProvider {
 
     fun activateTypes(node: Node) {
         val num = AtomicInteger()
-        val typeCache = LegacyTypeManager.getInstance().typeCache
+        val typeCache = TypeManager.getInstance().typeCache
         node.accept(
             { Strategy.AST_FORWARD(it) },
             object : IVisitor<Node?>() {
@@ -771,7 +771,7 @@ class ScopeManager : ScopeProvider {
                         val typeNode = n as HasType
                         typeCache.getOrDefault(typeNode, emptyList()).forEach { t: Type? ->
                             (n as HasType).type =
-                                LegacyTypeManager.getInstance()
+                                TypeManager.getInstance()
                                     .resolvePossibleTypedef(t, this@ScopeManager)
                         }
                         typeCache.remove(n as HasType)
@@ -787,7 +787,7 @@ class ScopeManager : ScopeProvider {
         typeCache.forEach { (n: HasType, types: List<Type>) ->
             types.forEach(
                 Consumer { t: Type? ->
-                    n.type = LegacyTypeManager.getInstance().resolvePossibleTypedef(t, this)
+                    n.type = TypeManager.getInstance().resolvePossibleTypedef(t, this)
                 }
             )
         }

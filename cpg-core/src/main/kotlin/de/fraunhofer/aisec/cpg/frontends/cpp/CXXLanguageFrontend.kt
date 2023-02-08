@@ -550,7 +550,7 @@ class CXXLanguageFrontend(
                 }
             }
 
-        type = LegacyTypeManager.getInstance().registerType(type)
+        type = TypeManager.getInstance().registerType(type)
         type = this.adjustType(declarator, type)
 
         return type
@@ -631,7 +631,7 @@ class CXXLanguageFrontend(
         }
 
         // Make sure, the type manager knows about this type
-        return LegacyTypeManager.getInstance().registerType(type)
+        return TypeManager.getInstance().registerType(type)
     }
 
     companion object {

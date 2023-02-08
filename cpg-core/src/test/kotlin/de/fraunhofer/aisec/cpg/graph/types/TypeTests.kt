@@ -384,12 +384,9 @@ internal class TypeTests : BaseTest() {
         // Check Parameterized
         val recordDeclarations = result.records
         val recordDeclarationBox = findByUniqueName(recordDeclarations, "Box")
-        val typeT = LegacyTypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T")
+        val typeT = TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T")
         assertNotNull(typeT)
-        assertEquals(
-            typeT,
-            LegacyTypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T")
-        )
+        assertEquals(typeT, TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T"))
 
         // Type of field t
         val fieldDeclarations = result.fields
@@ -590,37 +587,37 @@ internal class TypeTests : BaseTest() {
         for (t in listOf(root, level0, level1, level1b, level1c, level2, level2b)) {
             assertEquals(
                 Optional.of(t),
-                LegacyTypeManager.getInstance().getCommonType(listOf(t), provider)
+                TypeManager.getInstance().getCommonType(listOf(t), provider)
             )
         }
         assertEquals(
             Optional.empty(),
-            LegacyTypeManager.getInstance().getCommonType(listOf(root, level0b), provider)
+            TypeManager.getInstance().getCommonType(listOf(root, level0b), provider)
         )
         for (t in listOf(level0, level1, level2)) {
             assertEquals(
                 Optional.empty(),
-                LegacyTypeManager.getInstance().getCommonType(listOf(t, level0b), provider)
+                TypeManager.getInstance().getCommonType(listOf(t, level0b), provider)
             )
         }
         assertEquals(
             Optional.of(level0b),
-            LegacyTypeManager.getInstance().getCommonType(listOf(level1b, level1c), provider)
+            TypeManager.getInstance().getCommonType(listOf(level1b, level1c), provider)
         )
         assertEquals(
             Optional.of(level0),
-            LegacyTypeManager.getInstance()
+            TypeManager.getInstance()
                 .getCommonType(listOf(level1, level1b, level2, level2b), provider)
         )
         assertEquals(
             Optional.of(root),
-            LegacyTypeManager.getInstance().getCommonType(listOf(level1, level1c), provider)
+            TypeManager.getInstance().getCommonType(listOf(level1, level1c), provider)
         )
 
         // level2 and level2b have two intersections, both root and level0 -> level0 is lower
         assertEquals(
             Optional.of(level0),
-            LegacyTypeManager.getInstance().getCommonType(listOf(level2, level2b), provider)
+            TypeManager.getInstance().getCommonType(listOf(level2, level2b), provider)
         )
     }
 
@@ -649,7 +646,7 @@ internal class TypeTests : BaseTest() {
         for (t in listOf(root, level0, level1, level1b, level2)) {
             assertEquals(
                 Optional.of(t),
-                LegacyTypeManager.getInstance().getCommonType(listOf(t), provider)
+                TypeManager.getInstance().getCommonType(listOf(t), provider)
             )
         }
 
@@ -657,7 +654,7 @@ internal class TypeTests : BaseTest() {
         for (t in listOf(level0, level1, level1b, level2)) {
             assertEquals(
                 Optional.of(root),
-                LegacyTypeManager.getInstance().getCommonType(listOf(t, root), provider)
+                TypeManager.getInstance().getCommonType(listOf(t, root), provider)
             )
         }
 
@@ -665,33 +662,33 @@ internal class TypeTests : BaseTest() {
         for (t in listOf(level1, level1b, level2)) {
             assertEquals(
                 Optional.of(level0),
-                LegacyTypeManager.getInstance().getCommonType(listOf(t, level0), provider)
+                TypeManager.getInstance().getCommonType(listOf(t, level0), provider)
             )
         }
 
         // Level1 and Level1B have Level0 as common ancestor
         assertEquals(
             Optional.of(level0),
-            LegacyTypeManager.getInstance().getCommonType(listOf(level1, level1b), provider)
+            TypeManager.getInstance().getCommonType(listOf(level1, level1b), provider)
         )
 
         // Level2 and Level1B have Level0 as common ancestor
         assertEquals(
             Optional.of(level0),
-            LegacyTypeManager.getInstance().getCommonType(listOf(level2, level1b), provider)
+            TypeManager.getInstance().getCommonType(listOf(level2, level1b), provider)
         )
 
         // Level1 and Level2 have Level1 as common ancestor
         assertEquals(
             Optional.of(level1),
-            LegacyTypeManager.getInstance().getCommonType(listOf(level1, level2), provider)
+            TypeManager.getInstance().getCommonType(listOf(level1, level2), provider)
         )
 
         // Check unrelated type behavior: No common root class
         for (t in listOf(root, level0, level1, level1b, level2)) {
             assertEquals(
                 Optional.empty(),
-                LegacyTypeManager.getInstance().getCommonType(listOf(unrelated, t), provider)
+                TypeManager.getInstance().getCommonType(listOf(unrelated, t), provider)
             )
         }
     }

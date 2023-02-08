@@ -346,7 +346,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         try {
             val symbol = fieldAccessExpr.resolve()
             fieldType =
-                LegacyTypeManager.getInstance()
+                TypeManager.getInstance()
                     .getTypeParameter(
                         frontend.scopeManager.currentRecord,
                         symbol.asField().type.describe()
@@ -558,7 +558,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             } else {
                 // Resolve type first with ParameterizedType
                 var type: Type? =
-                    LegacyTypeManager.getInstance()
+                    TypeManager.getInstance()
                         .getTypeParameter(
                             frontend.scopeManager.currentRecord,
                             symbol.type.describe()

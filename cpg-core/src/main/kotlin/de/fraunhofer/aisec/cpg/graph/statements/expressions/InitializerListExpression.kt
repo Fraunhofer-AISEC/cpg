@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
@@ -69,10 +69,10 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
-        if (!LegacyTypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
+        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
             return
         }
         val previous = type
@@ -82,13 +82,13 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
             val types =
                 initializers
                     .map {
-                        LegacyTypeManager.getInstance()
+                        TypeManager.getInstance()
                             .registerType(it.type.reference(PointerOrigin.ARRAY))
                     }
                     .toSet()
             val alternative =
                 if (types.isNotEmpty()) types.iterator().next() else UnknownType.getUnknownType()
-            newType = LegacyTypeManager.getInstance().getCommonType(types, this).orElse(alternative)
+            newType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
             subTypes = ArrayList(possibleSubTypes)
             subTypes.remove(oldType)
             subTypes.addAll(types)
@@ -106,7 +106,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

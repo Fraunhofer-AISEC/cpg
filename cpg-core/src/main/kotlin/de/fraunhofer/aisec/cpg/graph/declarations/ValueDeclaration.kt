@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
@@ -56,10 +56,10 @@ abstract class ValueDeclaration : Declaration(), HasType {
     override var type: Type
         get() {
             val result: Type =
-                if (LegacyTypeManager.isTypeSystemActive()) {
+                if (TypeManager.isTypeSystemActive()) {
                     _type
                 } else {
-                    LegacyTypeManager.getInstance()
+                    TypeManager.getInstance()
                         .typeCache
                         .computeIfAbsent(this) { mutableListOf() }
                         .stream()
@@ -77,8 +77,8 @@ abstract class ValueDeclaration : Declaration(), HasType {
 
     override var possibleSubTypes: List<Type>
         get() {
-            return if (!LegacyTypeManager.isTypeSystemActive()) {
-                LegacyTypeManager.getInstance().typeCache.getOrDefault(this, emptyList())
+            return if (!TypeManager.isTypeSystemActive()) {
+                TypeManager.getInstance().typeCache.getOrDefault(this, emptyList())
             } else _possibleSubTypes
         }
         set(value) {
@@ -133,8 +133,8 @@ abstract class ValueDeclaration : Declaration(), HasType {
     override fun setType(type: Type, root: MutableList<HasType>?) {
         var type: Type? = type
         var root: MutableList<HasType>? = root
-        if (!LegacyTypeManager.isTypeSystemActive()) {
-            LegacyTypeManager.getInstance().cacheType(this, type)
+        if (!TypeManager.isTypeSystemActive()) {
+            TypeManager.getInstance().cacheType(this, type)
             return
         }
         if (root == null) {
@@ -143,7 +143,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
         if (
             type == null ||
                 root.contains(this) ||
-                LegacyTypeManager.getInstance().isUnknown(type) ||
+                TypeManager.getInstance().isUnknown(type) ||
                 this._type is FunctionPointerType && type !is FunctionPointerType
         ) {
             return
@@ -158,14 +158,12 @@ abstract class ValueDeclaration : Declaration(), HasType {
         }
         subTypes.add(type)
         this._type =
-            LegacyTypeManager.getInstance()
-                .registerType(
-                    LegacyTypeManager.getInstance().getCommonType(subTypes, this).orElse(type)
-                )
+            TypeManager.getInstance()
+                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type))
         val newSubtypes: MutableList<Type> = ArrayList()
         for (s in subTypes) {
-            if (LegacyTypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
-                newSubtypes.add(LegacyTypeManager.getInstance().registerType(s))
+            if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
+                newSubtypes.add(TypeManager.getInstance().registerType(s))
             }
         }
         possibleSubTypes = newSubtypes
@@ -186,11 +184,11 @@ abstract class ValueDeclaration : Declaration(), HasType {
         var possibleSubTypes = possibleSubTypes
         possibleSubTypes =
             possibleSubTypes
-                .filterNot { type -> LegacyTypeManager.getInstance().isUnknown(type) }
+                .filterNot { type -> TypeManager.getInstance().isUnknown(type) }
                 .distinct()
                 .toMutableList()
-        if (!LegacyTypeManager.isTypeSystemActive()) {
-            possibleSubTypes.forEach { t -> LegacyTypeManager.getInstance().cacheType(this, t) }
+        if (!TypeManager.isTypeSystemActive()) {
+            possibleSubTypes.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
 
             return
         }

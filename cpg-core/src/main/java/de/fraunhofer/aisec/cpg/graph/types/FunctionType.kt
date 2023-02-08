@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
 /**
@@ -84,7 +84,7 @@ class FunctionType : Type {
                     func.language
                 )
 
-            return LegacyTypeManager.getInstance().registerType(type)
+            return TypeManager.getInstance().registerType(type)
         }
     }
 }

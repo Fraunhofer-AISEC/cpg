@@ -312,7 +312,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 val typeParamDeclaration =
                     frontend.declaratorHandler.handle(templateParameter) as TypeParamDeclaration
                 val parameterizedType =
-                    LegacyTypeManager.getInstance()
+                    TypeManager.getInstance()
                         .createOrGetTypeParameter(
                             templateDeclaration,
                             templateParameter.name.toString(),
@@ -376,7 +376,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         innerDeclaration: RecordDeclaration
     ) {
         val parameterizedTypes =
-            LegacyTypeManager.getInstance().getAllParameterizedType(templateDeclaration)
+            TypeManager.getInstance().getAllParameterizedType(templateDeclaration)
 
         // Loop through all the methods and adjust their receiver types
         for (method in (innerDeclaration as? RecordDeclaration)?.methods ?: listOf()) {
@@ -541,7 +541,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val (nameDecl: IASTDeclarator, _) = declarator.realName()
 
         val declaration =
-            LegacyTypeManager.getInstance()
+            TypeManager.getInstance()
                 .createTypeAlias(
                     frontend,
                     frontend.getCodeFromRawNode(ctx),

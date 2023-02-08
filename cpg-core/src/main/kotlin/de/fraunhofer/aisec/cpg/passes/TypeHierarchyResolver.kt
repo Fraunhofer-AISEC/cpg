@@ -50,9 +50,9 @@ import java.util.*
  * [FunctionDeclaration.getOverriddenBy]
  *
  * **Attention:** Needs to be run before other analysis passes, as it triggers a type refresh. This
- * is needed e.g. for [de.fraunhofer.aisec.cpg.graph.LegacyTypeManager.getCommonType] to be
- * re-evaluated at places where it is crucial to have parsed all [RecordDeclaration]s. Otherwise,
- * type information in the graph might not be fully correct
+ * is needed e.g. for [de.fraunhofer.aisec.cpg.graph.TypeManager.getCommonType] to be re-evaluated
+ * at places where it is crucial to have parsed all [RecordDeclaration]s. Otherwise, type
+ * information in the graph might not be fully correct
  */
 open class TypeHierarchyResolver : Pass() {
     protected val recordMap = mutableMapOf<Name, RecordDeclaration>()

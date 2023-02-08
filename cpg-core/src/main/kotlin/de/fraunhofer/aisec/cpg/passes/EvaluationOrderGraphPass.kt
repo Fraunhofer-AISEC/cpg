@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -555,7 +555,7 @@ open class EvaluationOrderGraphPass : Pass() {
                 if (catchClause.parameter == null) { // e.g. catch (...)
                     currentEOG.addAll(eogEdges)
                 } else if (
-                    LegacyTypeManager.getInstance()
+                    TypeManager.getInstance()
                         .isSupertypeOf(catchClause.parameter!!.type, throwType, node)
                 ) {
                     currentEOG.addAll(eogEdges)

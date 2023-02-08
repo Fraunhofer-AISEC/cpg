@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util.distinctBy
@@ -103,7 +103,7 @@ class UnaryOperator : Expression(), HasType.TypeListener {
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val previous = type
@@ -135,7 +135,7 @@ class UnaryOperator : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         if (src is HasType.TypeListener && getsDataFromInput(src as HasType.TypeListener)) {

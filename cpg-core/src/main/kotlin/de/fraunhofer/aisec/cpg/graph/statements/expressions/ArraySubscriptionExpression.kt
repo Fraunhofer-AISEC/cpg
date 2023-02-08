@@ -67,7 +67,7 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val previous = type
@@ -78,7 +78,7 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

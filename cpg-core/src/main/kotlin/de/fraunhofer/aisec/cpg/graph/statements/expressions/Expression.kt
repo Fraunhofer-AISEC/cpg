@@ -54,10 +54,10 @@ abstract class Expression : Statement(), HasType {
     override var type: Type
         get() {
             val result: Type =
-                if (LegacyTypeManager.isTypeSystemActive()) {
+                if (TypeManager.isTypeSystemActive()) {
                     _type
                 } else {
-                    LegacyTypeManager.getInstance()
+                    TypeManager.getInstance()
                         .typeCache
                         .computeIfAbsent(this) { mutableListOf() }
                         .stream()
@@ -75,8 +75,8 @@ abstract class Expression : Statement(), HasType {
 
     override var possibleSubTypes: List<Type>
         get() {
-            return if (!LegacyTypeManager.isTypeSystemActive()) {
-                LegacyTypeManager.getInstance().typeCache.getOrDefault(this, emptyList())
+            return if (!TypeManager.isTypeSystemActive()) {
+                TypeManager.getInstance().typeCache.getOrDefault(this, emptyList())
             } else _possibleSubTypes
         }
         set(value) {
@@ -99,9 +99,9 @@ abstract class Expression : Statement(), HasType {
 
         // TODO Document this method. It is called very often (potentially for each AST node) and
         //  performs less than optimal.
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             this._type = type
-            LegacyTypeManager.getInstance().cacheType(this, type)
+            TypeManager.getInstance().cacheType(this, type)
             return
         }
 
@@ -113,8 +113,8 @@ abstract class Expression : Statement(), HasType {
         // do.
         if (
             root.contains(this) ||
-                LegacyTypeManager.getInstance().isUnknown(type) ||
-                LegacyTypeManager.getInstance().stopPropagation(this.type, type) ||
+                TypeManager.getInstance().isUnknown(type) ||
+                TypeManager.getInstance().stopPropagation(this.type, type) ||
                 (this.type is FunctionPointerType && type !is FunctionPointerType)
         ) {
             return
@@ -137,17 +137,15 @@ abstract class Expression : Statement(), HasType {
 
         // Probably tries to get something like the best supertype of all possible subtypes.
         this._type =
-            LegacyTypeManager.getInstance()
-                .registerType(
-                    LegacyTypeManager.getInstance().getCommonType(subTypes, this).orElse(type)
-                )
+            TypeManager.getInstance()
+                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type))
 
         // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
         //  getting the common type??
         val newSubtypes = mutableListOf<Type>()
         for (s in subTypes) {
-            if (LegacyTypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
-                newSubtypes.add(LegacyTypeManager.getInstance().registerType(s))
+            if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
+                newSubtypes.add(TypeManager.getInstance().registerType(s))
             }
         }
 
@@ -173,11 +171,11 @@ abstract class Expression : Statement(), HasType {
         var possibleSubTypes = possibleSubTypes
         possibleSubTypes =
             possibleSubTypes
-                .filterNot { type -> LegacyTypeManager.getInstance().isUnknown(type) }
+                .filterNot { type -> TypeManager.getInstance().isUnknown(type) }
                 .distinct()
                 .toMutableList()
-        if (!LegacyTypeManager.isTypeSystemActive()) {
-            possibleSubTypes.forEach { t -> LegacyTypeManager.getInstance().cacheType(this, t) }
+        if (!TypeManager.isTypeSystemActive()) {
+            possibleSubTypes.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
             return
         }
         if (root.contains(this)) {

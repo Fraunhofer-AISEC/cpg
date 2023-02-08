@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import kotlin.test.BeforeTest
 import org.slf4j.Logger
@@ -35,11 +35,11 @@ abstract class BaseTest {
     protected var log: Logger = LoggerFactory.getLogger(this.javaClass)
 
     /**
-     * [TypeParser] and [LegacyTypeManager] hold static state. This needs to be cleared before all
-     * tests in order to avoid strange errors
+     * [TypeParser] and [TypeManager] hold static state. This needs to be cleared before all tests
+     * in order to avoid strange errors
      */
     @BeforeTest
     protected fun resetPersistentState() {
-        LegacyTypeManager.reset()
+        TypeManager.reset()
     }
 }

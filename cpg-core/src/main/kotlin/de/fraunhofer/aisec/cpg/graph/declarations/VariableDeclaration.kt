@@ -86,10 +86,10 @@ class VariableDeclaration :
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
-        if (!LegacyTypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
+        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
             return
         }
         val previous = type
@@ -103,7 +103,7 @@ class VariableDeclaration :
                 // can be ignored once we have a type
                 if (isArray) {
                     src.type
-                } else if (!LegacyTypeManager.getInstance().isUnknown(type)) {
+                } else if (!TypeManager.getInstance().isUnknown(type)) {
                     return
                 } else {
                     src.type.dereference()
@@ -118,7 +118,7 @@ class VariableDeclaration :
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.ArrayList
@@ -59,7 +59,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
         }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val previous = type
@@ -72,10 +72,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
         subTypes.remove(oldType)
         subTypes.addAll(types)
         val alternative = if (types.isNotEmpty()) types[0] else UnknownType.getUnknownType()
-        setType(
-            LegacyTypeManager.getInstance().getCommonType(types, this).orElse(alternative),
-            root
-        )
+        setType(TypeManager.getInstance().getCommonType(types, this).orElse(alternative), root)
         setPossibleSubTypes(subTypes, root)
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW
@@ -83,7 +80,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

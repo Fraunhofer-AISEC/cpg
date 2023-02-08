@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -81,10 +81,10 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
     var modifiers: List<String> = mutableListOf()
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
-        if (!LegacyTypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
+        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
             return
         }
         val previous = type
@@ -98,7 +98,7 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
                 // can be ignored once we have a type
                 if (isArray) {
                     src.type
-                } else if (!LegacyTypeManager.getInstance().isUnknown(type)) {
+                } else if (!TypeManager.getInstance().isUnknown(type)) {
                     return
                 } else {
                     src.type.dereference()
@@ -113,7 +113,7 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!LegacyTypeManager.isTypeSystemActive()) {
+        if (!TypeManager.isTypeSystemActive()) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

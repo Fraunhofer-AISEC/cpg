@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.LegacyTypeManager
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -115,7 +115,7 @@ private constructor(
                     log.debug("Cleaning up {} Frontends", executedFrontends.size)
 
                     executedFrontends.forEach { it.cleanup() }
-                    LegacyTypeManager.getInstance().cleanup()
+                    TypeManager.getInstance().cleanup()
                 }
             }
             result
@@ -220,7 +220,7 @@ private constructor(
                 sourceLocations = list
             }
 
-            LegacyTypeManager.setTypeSystemActive(config.typeSystemActiveInFrontend)
+            TypeManager.setTypeSystemActive(config.typeSystemActiveInFrontend)
 
             usedFrontends.addAll(
                 if (useParallelFrontends) {
@@ -231,7 +231,7 @@ private constructor(
             )
 
             if (!config.typeSystemActiveInFrontend) {
-                LegacyTypeManager.setTypeSystemActive(true)
+                TypeManager.setTypeSystemActive(true)
 
                 result.components.forEach { s ->
                     s.translationUnits.forEach {

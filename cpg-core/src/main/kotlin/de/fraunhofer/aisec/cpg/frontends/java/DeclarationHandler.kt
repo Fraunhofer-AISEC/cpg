@@ -132,7 +132,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         )
         for (parameter in methodDecl.parameters) {
             var resolvedType: Type? =
-                LegacyTypeManager.getInstance()
+                TypeManager.getInstance()
                     .getTypeParameter(
                         functionDeclaration.recordDeclaration,
                         parameter.type.toString()
@@ -208,7 +208,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 .stream()
                 .map { type: ClassOrInterfaceType? -> frontend.getTypeAsGoodAsPossible(type!!) }
                 .collect(Collectors.toList())
-        LegacyTypeManager.getInstance()
+        TypeManager.getInstance()
             .addTypeParameter(
                 recordDeclaration,
                 classInterDecl.typeParameters
@@ -345,7 +345,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         try {
             // Resolve type first with ParameterizedType
             type =
-                LegacyTypeManager.getInstance()
+                TypeManager.getInstance()
                     .getTypeParameter(
                         frontend.scopeManager.currentRecord,
                         variable.resolve().type.describe()
