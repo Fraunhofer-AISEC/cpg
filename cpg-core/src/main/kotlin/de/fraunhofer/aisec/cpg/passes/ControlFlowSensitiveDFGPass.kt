@@ -223,7 +223,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     .filter { it.getProperty(Properties.UNREACHABLE) != true }
                     .map { it.end }
                     .forEach {
-                        val newPair = Pair(it, copyMap(previousWrites))
+                        val newPair = Pair(it, copyMap(previousWrites, it))
                         if (!worklistHasSimilarPair(worklist, alreadyProcessed, newPair))
                             worklist.add(newPair)
                     }
@@ -379,15 +379,32 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             previousWrites[writtenDecl]!!.filter { it == currentWritten }.size >= 2
     }
 
-    /** Copies the map */
+    /**
+     * Copies the map. We remove all the declarations which are no longer relevant because they are
+     * in a child scope of the next hop.
+     */
     private fun copyMap(
-        map: Map<Declaration, MutableList<Node>>
+        map: Map<Declaration, MutableList<Node>>,
+        nextNode: Node
     ): MutableMap<Declaration, MutableList<Node>> {
         val result = mutableMapOf<Declaration, MutableList<Node>>()
         for ((k, v) in map) {
-            result[k] = mutableListOf()
-            result[k]?.addAll(v)
+            if (nextNode.scope == k.scope || !nextNode.hasOuterScopeOf(k)) {
+                result[k] = mutableListOf()
+                result[k]?.addAll(v)
+            }
         }
         return result
+    }
+
+    private fun Node.hasOuterScopeOf(node: Node): Boolean {
+        var parentScope = node.scope?.parent
+        while (parentScope != null) {
+            if (this.scope == parentScope) {
+                return true
+            }
+            parentScope = parentScope.parent
+        }
+        return false
     }
 }
