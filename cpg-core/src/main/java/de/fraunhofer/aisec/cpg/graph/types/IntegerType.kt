@@ -27,33 +27,19 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Name
 
 /** Instances of this class represent integer types. */
 class IntegerType : NumericType {
     constructor() : super()
 
     constructor(
-        typeName: String,
+        typeName: CharSequence,
         bitWidth: Int?,
         language: Language<out LanguageFrontend>?,
         modifier: Modifier = Modifier.SIGNED
     ) : super(typeName, bitWidth, language, modifier)
-    constructor(
-        typeName: String,
-        modifier: Modifier,
-        language: Language<out LanguageFrontend>?,
-        bitWidth: Int?
-    ) : super(typeName, modifier, language, bitWidth)
-
-    constructor(
-        name: Name,
-        modifier: Modifier,
-        language: Language<out LanguageFrontend>?,
-        bitWidth: Int?
-    ) : super(name, modifier, language, bitWidth)
 
     override fun duplicate(): Type {
-        return IntegerType(this.name, modifier, language, bitWidth)
+        return IntegerType(this.name, bitWidth, language, modifier)
     }
 }

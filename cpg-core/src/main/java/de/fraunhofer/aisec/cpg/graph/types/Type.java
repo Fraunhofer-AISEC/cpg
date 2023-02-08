@@ -65,9 +65,9 @@ public abstract class Type extends Node {
     this.origin = type.origin;
   }
 
-  public Type(String typeName, Language<? extends LanguageFrontend> language) {
+  public Type(CharSequence typeName, Language<? extends LanguageFrontend> language) {
     if (this instanceof FunctionType) {
-      this.setName(new Name(typeName, null, language));
+      this.setName(new Name(typeName.toString(), null, language));
     } else {
       this.setName(NameKt.parseName(language, typeName));
     }
@@ -81,11 +81,7 @@ public abstract class Type extends Node {
     this.setLanguage(language);
   }
 
-  /**
-   * All direct supertypes of this type.
-   *
-   * @return
-   */
+  /** All direct supertypes of this type. */
   @NotNull
   public Set<Type> getSuperTypes() {
     return superTypes;

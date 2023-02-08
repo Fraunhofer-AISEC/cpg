@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Name
 import java.util.*
 
 /** This type collects all kind of numeric types. */
@@ -41,7 +40,7 @@ open class NumericType : ObjectType {
     }
 
     constructor(
-        typeName: String,
+        typeName: CharSequence,
         bitWidth: Int?,
         language: Language<out LanguageFrontend>?,
         modifier: Modifier = Modifier.SIGNED
@@ -50,28 +49,8 @@ open class NumericType : ObjectType {
         this.modifier = modifier
     }
 
-    constructor(
-        typeName: String,
-        modifier: Modifier,
-        language: Language<out LanguageFrontend>?,
-        bitWidth: Int?
-    ) : super(typeName, listOf(), true, language) {
-        this.bitWidth = bitWidth
-        this.modifier = modifier
-    }
-
-    constructor(
-        typeName: Name,
-        modifier: Modifier,
-        language: Language<out LanguageFrontend>?,
-        bitWidth: Int?
-    ) : super(typeName, listOf(), true, language) {
-        this.bitWidth = bitWidth
-        this.modifier = modifier
-    }
-
     override fun duplicate(): Type {
-        return NumericType(this.name, modifier, language, bitWidth)
+        return NumericType(this.name, bitWidth, language, modifier)
     }
 
     /**

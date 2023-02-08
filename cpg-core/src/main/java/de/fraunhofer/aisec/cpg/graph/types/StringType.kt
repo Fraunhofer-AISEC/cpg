@@ -27,29 +27,17 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Name
 
 class StringType : ObjectType {
-
     constructor() : super()
 
     constructor(
-        typeName: String,
-        generics: List<Type>,
-        language: Language<out LanguageFrontend>?
+        typeName: CharSequence,
+        language: Language<out LanguageFrontend>?,
+        generics: List<Type> = listOf()
     ) : super(typeName, generics, false, language)
 
-    constructor(
-        typeName: String,
-        language: Language<out LanguageFrontend>?
-    ) : super(typeName, listOf(), false, language)
-    constructor(
-        name: Name,
-        generics: List<Type>,
-        language: Language<out LanguageFrontend>?
-    ) : super(name, generics, false, language)
-
     override fun duplicate(): Type {
-        return StringType(name, generics, language)
+        return StringType(this.name, language, generics)
     }
 }

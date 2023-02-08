@@ -92,7 +92,7 @@ class PerformanceRegressionTest {
                         list,
                         newLiteral(
                             i,
-                            IntegerType("int", NumericType.Modifier.UNSIGNED, CPPLanguage(), 32),
+                            IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.UNSIGNED),
                             null
                         )
                     )

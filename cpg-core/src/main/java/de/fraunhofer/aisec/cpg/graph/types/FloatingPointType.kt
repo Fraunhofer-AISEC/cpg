@@ -27,34 +27,19 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Name
 
 /** Instances of this class represent floating point types. */
 class FloatingPointType : NumericType {
     constructor() : super()
 
     constructor(
-        typeName: String,
+        typeName: CharSequence,
         bitWidth: Int?,
         language: Language<out LanguageFrontend>?,
-        modifier: NumericType.Modifier = Modifier.SIGNED
+        modifier: Modifier = Modifier.SIGNED
     ) : super(typeName, bitWidth, language, modifier)
 
-    constructor(
-        typeName: String,
-        modifier: NumericType.Modifier,
-        language: Language<out LanguageFrontend>?,
-        bitWidth: Int?
-    ) : super(typeName, modifier, language, bitWidth)
-
-    constructor(
-        name: Name,
-        modifier: NumericType.Modifier,
-        language: Language<out LanguageFrontend>?,
-        bitWidth: Int?
-    ) : super(name, modifier, language, bitWidth)
-
     override fun duplicate(): Type {
-        return FloatingPointType(name, modifier, language, bitWidth)
+        return FloatingPointType(name, bitWidth, language, modifier)
     }
 }

@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType.Modifier
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 
-fun MetadataProvider.newPrimitiveType(
+fun LanguageProvider.newPrimitiveType(
     name: String,
     modifier: Modifier = Modifier.SIGNED,
 ): ObjectType {
-    val type = (this as? LanguageProvider)?.language?.getSimpleTypeOf(name)
+    val type = language?.getSimpleTypeOf(name)
     if ((type as? NumericType)?.modifier != modifier) {
         // Try again but explicitly state "signed" or "unsigned" as our best guess.
         val modifierStr =
@@ -42,10 +42,9 @@ fun MetadataProvider.newPrimitiveType(
                 Modifier.UNSIGNED -> "unsigned "
                 else -> ""
             }
-        return (this as? LanguageProvider)?.language?.getSimpleTypeOf(modifierStr + name)
-            as ObjectType
+        return language?.getSimpleTypeOf(modifierStr + name) as ObjectType
     }
-    return type!!
+    return type
 }
 
 fun ObjectType.const(): ObjectType {

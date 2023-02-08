@@ -131,6 +131,10 @@ fun Node.applyMetadata(
     }
 }
 
+/**
+ * Generates a [Name] object from the given [name]. If [localNameOnly] is set, only the localName is
+ * used, otherwise the [namespace] is added to generate a fqn if the [name] is not a fqn anyway.
+ */
 fun LanguageProvider.newName(
     name: CharSequence,
     localNameOnly: Boolean = false,
