@@ -69,13 +69,13 @@ open class ControlFlowSensitiveDFGPass : Pass() {
     protected fun handle(node: Node) {
         if (node is FunctionDeclaration) {
             clearFlowsOfVariableDeclarations(node)
-            handleFunction(node)
+            handleStatementHolder(node)
         }
     }
 
     /**
-     * Removes all the incoming and outgoing DFG edges for each variable declaration in the function
-     * [node].
+     * Removes all the incoming and outgoing DFG edges for each variable declaration in the block of
+     * code [node].
      */
     private fun clearFlowsOfVariableDeclarations(node: Node) {
         for (varDecl in node.variables) {
@@ -94,7 +94,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      * - Assignments with an operation e.g. of the form "variable += rhs"
      * - Read operations on a variable
      */
-    private fun handleFunction(node: Node) {
+    private fun handleStatementHolder(node: Node) {
         // The list of nodes that we have to consider and the last write operations to the different
         // variables.
         val worklist =
