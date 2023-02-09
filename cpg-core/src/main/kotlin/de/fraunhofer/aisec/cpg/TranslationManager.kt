@@ -365,7 +365,10 @@ private constructor(
         return Optional.ofNullable(frontend)
     }
 
-    private fun getFrontend(file: File, scopeManager: ScopeManager): LanguageFrontend? {
+    private fun getFrontend(
+        file: File,
+        scopeManager: ScopeManager,
+    ): LanguageFrontend? {
         val language = file.language
 
         return if (language != null) {

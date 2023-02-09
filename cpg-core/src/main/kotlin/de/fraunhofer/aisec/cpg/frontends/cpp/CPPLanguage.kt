@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
 import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
@@ -35,17 +36,53 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import java.util.regex.Pattern
 
 /** The C++ language. */
 class CPPLanguage :
-    CLanguage(), HasDefaultArguments, HasTemplates, HasComplexCallResolution, HasClasses {
+    CLanguage(),
+    HasDefaultArguments,
+    HasTemplates,
+    HasComplexCallResolution,
+    HasClasses,
+    HasUnknownType {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
+    override val unknownTypeString = listOf("auto")
+
+    @Transient
+    override val simpleTypes =
+        mapOf(
+            "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
+            "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
+            "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
+            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
+            "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
+            "long long int" to IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
+            "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
+            "signed byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
+            "signed short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
+            "signed int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
+            "signed long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
+            "signed long long int" to
+                IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
+            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
+            "unsigned char" to IntegerType("unsigned char", 8, this, NumericType.Modifier.UNSIGNED),
+            "unsigned byte" to IntegerType("unsigned byte", 8, this, NumericType.Modifier.UNSIGNED),
+            "unsigned short" to
+                IntegerType("unsigned short", 16, this, NumericType.Modifier.UNSIGNED),
+            "unsigned int" to IntegerType("unsigned int", 32, this, NumericType.Modifier.UNSIGNED),
+            "unsigned long" to
+                IntegerType("unsigned long", 64, this, NumericType.Modifier.UNSIGNED),
+            "unsigned long long int" to
+                IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
+            "std::string" to StringType("std::string", this),
+        )
 
     /**
      * @param call
@@ -184,6 +221,9 @@ class CPPLanguage :
             }
         return resolveWithDefaultArgs(call, invocationCandidates)
     }
+
+    override val startCharacter = '<'
+    override val endCharacter = '>'
 
     /**
      * @param curClass class the invoked method must be part of.

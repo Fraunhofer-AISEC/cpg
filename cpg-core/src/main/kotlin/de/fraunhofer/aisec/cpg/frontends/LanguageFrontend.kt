@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory
 abstract class LanguageFrontend(
     override val language: Language<out LanguageFrontend>,
     val config: TranslationConfiguration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) :
     ProcessedListener(),
     CodeAndLocationProvider,

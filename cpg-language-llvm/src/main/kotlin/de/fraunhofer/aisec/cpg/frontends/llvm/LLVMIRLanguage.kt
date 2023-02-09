@@ -28,6 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import kotlin.reflect.KClass
 
 /** The LLVM IR language. */
@@ -35,32 +38,29 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val fileExtensions = listOf("ll")
     override val namespaceDelimiter = "::"
     override val frontend: KClass<out LLVMIRLanguageFrontend> = LLVMIRLanguageFrontend::class
-    override val primitiveTypes: Set<String>
-        get() =
-            setOf(
-                "byte",
-                "short",
-                "int",
-                "long",
-                "float",
-                "double",
-                "boolean",
-                "char",
-                "i1",
-                "i8",
-                "i32",
-                "i64",
-                "i128",
-                "half",
-                "bfloat",
-                "fp128",
-                "x86_fp80",
-                "ppc_fp128"
-            )
+
+    // TODO: In theory, the integers can have any bitwidth from 1 to 1^32 bits. It's not known if
+    // they are interpreted as signed or unsigned.
+    @Transient
+    override val simpleTypes =
+        mapOf(
+            "i1" to IntegerType("i1", 1, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i8" to IntegerType("i8", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i32" to IntegerType("i32", 32, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i64" to IntegerType("i64", 64, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i128" to IntegerType("i128", 128, this, NumericType.Modifier.NOT_APPLICABLE),
+            "half" to FloatingPointType("half", 16, this, NumericType.Modifier.SIGNED),
+            "bfloat" to FloatingPointType("bfloat", 16, this, NumericType.Modifier.SIGNED),
+            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
+            "fp128" to FloatingPointType("fp128", 128, this, NumericType.Modifier.SIGNED),
+            "x86_fp80" to FloatingPointType("x86_fp80", 80, this, NumericType.Modifier.SIGNED),
+            "ppc_fp128" to FloatingPointType("ppc_fp128", 128, this, NumericType.Modifier.SIGNED),
+        )
 
     override fun newFrontend(
         config: TranslationConfiguration,
-        scopeManager: ScopeManager
+        scopeManager: ScopeManager,
     ): LLVMIRLanguageFrontend {
         return LLVMIRLanguageFrontend(this, config, scopeManager)
     }

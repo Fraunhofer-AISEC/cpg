@@ -127,11 +127,9 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                 val declared = signature[i]
                 if (declared.isVariadic && targetSignature.size >= signature.size) {
                     // Everything that follows is collected by this param, so the signature is
-                    // fulfilled no
-                    // matter what comes now (potential FIXME: in Java, we could have overloading
-                    // with
-                    // different vararg types, in C++ we can't, as vararg types are not defined here
-                    // anyways)
+                    // fulfilled no matter what comes now (potential FIXME: in Java, we could have
+                    // overloading with different vararg types, in C++ we can't, as vararg types are
+                    // not defined here anyways)
                     return true
                 }
                 val provided = targetSignature[i]

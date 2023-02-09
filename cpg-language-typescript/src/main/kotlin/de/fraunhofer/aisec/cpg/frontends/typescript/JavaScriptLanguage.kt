@@ -42,7 +42,7 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
 
     override fun newFrontend(
         config: TranslationConfiguration,
-        scopeManager: ScopeManager
+        scopeManager: ScopeManager,
     ): TypeScriptLanguageFrontend {
         return TypeScriptLanguageFrontend(this, config, scopeManager)
     }

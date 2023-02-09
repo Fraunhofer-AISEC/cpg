@@ -40,7 +40,7 @@ import kotlin.io.path.absolutePathString
 class PythonLanguageFrontend(
     language: Language<PythonLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) : LanguageFrontend(language, config, scopeManager) {
     private val jep = JepSingleton // configure Jep
 

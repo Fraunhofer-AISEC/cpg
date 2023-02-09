@@ -109,26 +109,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(typeParamDeclaration, functionTemplateDeclaration.parameters[0])
 
         val typeT = ParameterizedType("T", CPPLanguage())
-        val intType =
-            ObjectType(
-                "int",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ArrayList(),
-                ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
-            )
-        val floatType =
-            ObjectType(
-                "float",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ArrayList(),
-                ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
-            )
+        val intType = IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
+        val floatType = FloatingPointType("float", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
         assertEquals(typeT, typeParamDeclaration.type)
         assertEquals(intType, typeParamDeclaration.default)
 
@@ -236,16 +218,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val doubleType =
-            ObjectType(
-                "double",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ArrayList(),
-                ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
-            )
+        val doubleType = FloatingPointType("double", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)
         assertEquals(doubleType, (call.templateParameters[0] as TypeExpression).type)
@@ -376,16 +349,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val doubleType =
-            ObjectType(
-                "double",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ArrayList(),
-                ObjectType.Modifier.SIGNED,
-                true,
-                CPPLanguage()
-            )
+        val doubleType = FloatingPointType("double", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateParameters.size)
         assertEquals(doubleType, (call.templateParameters[0] as TypeExpression).type)

@@ -26,9 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
 import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
 
 /**
- * ReferenceTypes describe CPP References (int&amp;), which are represent an alternative name for a
+ * ReferenceTypes describe CPP References (int&amp;), which represent an alternative name for a
  * variable. It is necessary to make this distinction, and not just rely on the original type as it
  * is required for matching parameters in function arguments to discover which implementation is
  * called.
@@ -51,15 +52,6 @@ public class ReferenceType extends Type implements SecondOrderType {
     this.setLanguage(reference.getLanguage());
     this.setName(reference.getName().append("&"));
     this.reference = reference;
-  }
-
-  public ReferenceType(Storage storage, Qualifier qualifier, Type reference) {
-    this.setName(reference.getName().append("&"));
-    this.storage = storage != null ? storage : Storage.AUTO;
-    this.qualifier = qualifier;
-    this.origin = Origin.UNRESOLVED;
-    this.reference = reference;
-    this.setLanguage(reference.getLanguage());
   }
 
   /**
@@ -93,8 +85,8 @@ public class ReferenceType extends Type implements SecondOrderType {
 
   @Override
   public boolean isSimilar(Type t) {
-    return t instanceof ReferenceType
-        && ((ReferenceType) t).getElementType().equals(this)
+    return t instanceof ReferenceType referenceType
+        && referenceType.getElementType().equals(this)
         && super.isSimilar(t);
   }
 
@@ -105,9 +97,8 @@ public class ReferenceType extends Type implements SecondOrderType {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (!(o instanceof ReferenceType)) return false;
+    if (!(o instanceof ReferenceType that)) return false;
     if (!super.equals(o)) return false;
-    ReferenceType that = (ReferenceType) o;
     return Objects.equals(reference, that.reference);
   }
 
@@ -117,17 +108,13 @@ public class ReferenceType extends Type implements SecondOrderType {
   }
 
   @Override
-  public String toString() {
+  public @NotNull String toString() {
     return "ReferenceType{"
         + "reference="
         + reference
         + ", typeName='"
         + this.getName()
         + '\''
-        + ", storage="
-        + this.getStorage()
-        + ", qualifier="
-        + this.getQualifier()
         + ", origin="
         + this.getTypeOrigin()
         + '}';

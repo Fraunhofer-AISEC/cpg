@@ -70,7 +70,7 @@ import java.util.function.Consumer
 open class JavaLanguageFrontend(
     language: Language<JavaLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) : LanguageFrontend(language, config, scopeManager) {
 
     var context: CompilationUnit? = null
