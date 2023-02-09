@@ -389,7 +389,12 @@ open class ControlFlowSensitiveDFGPass : Pass() {
     ): MutableMap<Declaration, MutableList<Node>> {
         val result = mutableMapOf<Declaration, MutableList<Node>>()
         for ((k, v) in map) {
-            if (nextNode.scope == k.scope || !nextNode.hasOuterScopeOf(k)) {
+            if (
+                nextNode.scope == k.scope ||
+                    !nextNode.hasOuterScopeOf(k) ||
+                    ((nextNode is ForStatement || nextNode is ForEachStatement) &&
+                        k.scope?.parent == nextNode.scope)
+            ) {
                 result[k] = mutableListOf()
                 result[k]?.addAll(v)
             }
