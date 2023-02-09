@@ -30,24 +30,12 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
 
 /** This type collects all kind of numeric types. */
-open class NumericType : ObjectType {
-    val bitWidth: Int?
-    val modifier: Modifier
-
-    constructor() : super() {
-        bitWidth = null
-        modifier = Modifier.SIGNED
-    }
-
-    constructor(
-        typeName: CharSequence,
-        bitWidth: Int?,
-        language: Language<out LanguageFrontend>?,
-        modifier: Modifier = Modifier.SIGNED
-    ) : super(typeName, listOf(), true, language) {
-        this.bitWidth = bitWidth
-        this.modifier = modifier
-    }
+open class NumericType(
+    typeName: CharSequence = "",
+    val bitWidth: Int? = null,
+    language: Language<out LanguageFrontend>? = null,
+    val modifier: Modifier = Modifier.SIGNED
+) : ObjectType(typeName, listOf(), true, language) {
 
     override fun duplicate(): Type {
         return NumericType(this.name, bitWidth, language, modifier)

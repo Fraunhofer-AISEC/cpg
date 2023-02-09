@@ -29,15 +29,12 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 
 /** Instances of this class represent floating point types. */
-class FloatingPointType : NumericType {
-    constructor() : super()
-
-    constructor(
-        typeName: CharSequence,
-        bitWidth: Int?,
-        language: Language<out LanguageFrontend>?,
-        modifier: Modifier = Modifier.SIGNED
-    ) : super(typeName, bitWidth, language, modifier)
+class FloatingPointType(
+    typeName: CharSequence = "",
+    bitWidth: Int? = null,
+    language: Language<out LanguageFrontend>? = null,
+    modifier: Modifier = Modifier.SIGNED
+) : NumericType(typeName, bitWidth, language, modifier) {
 
     override fun duplicate(): Type {
         return FloatingPointType(name, bitWidth, language, modifier)
