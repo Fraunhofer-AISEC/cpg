@@ -33,12 +33,14 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import java.nio.file.Paths
 import jep.JepException
+import kotlin.io.path.absolutePathString
 
 class PythonLanguageFrontend(
     language: Language<PythonLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) : LanguageFrontend(language, config, scopeManager) {
     private val jep = JepSingleton // configure Jep
 
@@ -64,15 +66,16 @@ class PythonLanguageFrontend(
     private fun parseInternal(code: String, path: String): TranslationUnitDeclaration {
         val pythonInterpreter = jep.getInterp()
         val tu: TranslationUnitDeclaration
+        val absolutePath = Paths.get(path).absolutePathString()
         try {
             // run python function parse_code()
             tu =
-                pythonInterpreter.invoke("parse_code", this, code, path)
+                pythonInterpreter.invoke("parse_code", this, code, absolutePath)
                     as TranslationUnitDeclaration
 
             if (config.matchCommentsToNodes) {
                 // Parse comments and attach to nodes
-                pythonInterpreter.invoke("parse_comments", this, code, path, tu)
+                pythonInterpreter.invoke("parse_comments", this, code, absolutePath, tu)
             }
         } catch (e: JepException) {
             e.printStackTrace()

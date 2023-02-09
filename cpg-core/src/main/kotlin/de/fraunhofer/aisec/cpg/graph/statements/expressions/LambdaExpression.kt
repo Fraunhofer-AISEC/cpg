@@ -56,7 +56,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
             return
         }
 
-        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
+        if (!TypeManager.getInstance().isUnknown(type) && src!!.propagationType == oldType) {
             return
         }
 
@@ -72,14 +72,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
         // the incoming "type" is associated to the function and it is only its return type (if it
         // is known). what we really want is to construct a function type, or rather a function
         // pointer type, since this is the closest to what we have
-        val functionType =
-            FunctionPointerType(
-                Type.Qualifier(false, false, false, false),
-                Type.Storage.AUTO,
-                parameterTypes,
-                returnType,
-                this.language
-            )
+        val functionType = FunctionPointerType(parameterTypes, returnType, this.language)
 
         setType(functionType, root)
         if (previous != type) {

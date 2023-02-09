@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.Range
 import com.github.javaparser.TokenRange
-import com.github.javaparser.ast.Modifier
 import com.github.javaparser.ast.Node
 import com.github.javaparser.ast.expr.*
 import com.github.javaparser.ast.expr.Expression
@@ -45,7 +44,6 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
-import java.util.stream.Collectors
 import kotlin.collections.set
 import org.slf4j.LoggerFactory
 
@@ -196,12 +194,6 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         for (variable in variableDeclarationExpr.variables) {
             val resolved = variable.resolve()
             val declarationType = frontend.getTypeAsGoodAsPossible(variable, resolved)
-            declarationType.setAdditionalTypeKeywords(
-                variableDeclarationExpr.modifiers
-                    .stream()
-                    .map { m: Modifier -> m.keyword.asString() }
-                    .collect(Collectors.joining(" "))
-            )
             val declaration =
                 this.newVariableDeclaration(
                     resolved.name,

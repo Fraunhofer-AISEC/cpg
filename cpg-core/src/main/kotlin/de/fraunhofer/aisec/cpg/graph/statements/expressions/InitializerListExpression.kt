@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
-import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -82,13 +81,11 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
         if (initializers.contains(src)) {
             val types =
                 initializers
-                    .parallelStream()
-                    .map { obj: Expression -> obj.type }
-                    .filter { obj: Type? -> Objects.nonNull(obj) }
-                    .map { t: Type ->
-                        TypeManager.getInstance().registerType(t.reference(PointerOrigin.ARRAY))
+                    .map {
+                        TypeManager.getInstance()
+                            .registerType(it.type.reference(PointerOrigin.ARRAY))
                     }
-                    .collect(Collectors.toSet())
+                    .toSet()
             val alternative =
                 if (types.isNotEmpty()) types.iterator().next() else UnknownType.getUnknownType()
             newType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)

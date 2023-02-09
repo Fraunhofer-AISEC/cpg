@@ -124,9 +124,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
 
         // only consider resolving, if the language frontend did not specify a resolution
-        var refersTo = current.refersTo ?: scopeManager.resolveReference(current)
-        // if (current.refersTo == null) scopeManager?.resolveReference(current)
-        // else current.refersTo!!
+        var refersTo = current.refersTo ?: scopeManager.resolveReference(current, current.scope)
+
         var recordDeclType: Type? = null
         if (currentClass != null) {
             recordDeclType = TypeParser.createFrom(currentClass.name, currentClass.language)

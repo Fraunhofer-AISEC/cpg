@@ -28,7 +28,7 @@ import ast
 from de.fraunhofer.aisec.cpg.graph import StatementBuilderKt
 from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.sarif import Region
-from java.net import URI
+from java.io import File
 
 NOT_IMPLEMENTED_MSG = "This has not been implemented, yet. Using a dummy."
 CPG_JAVA = "de.fraunhofer.aisec.cpg"
@@ -84,7 +84,7 @@ def add_mul_loc_infos(self, start_node, end_node, obj):
             (type(start_node)), (type(end_node)), loglevel="ERROR")
         return
 
-    uri = URI("file://" + self.fname)
+    uri = File(self.fname).toURI()
     obj.setLocation(PhysicalLocation(uri,
                                      Region(start_node.lineno,
                                             start_node.col_offset + 1,
