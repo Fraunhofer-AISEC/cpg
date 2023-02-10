@@ -227,7 +227,12 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     when (writtenTo) {
                         is Declaration -> writtenTo
                         is DeclaredReferenceExpression -> writtenTo.refersTo
-                        else -> null // TODO: This shouldn't happen
+                        else -> {
+                            log.error(
+                                "The variable of type ${writtenTo?.javaClass} is not yet supported in the foreach loop"
+                            )
+                            null
+                        }
                     }
 
                 currentNode.variable?.let { currentWritten = it }
