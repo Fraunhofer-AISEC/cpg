@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import java.nio.file.Path
@@ -45,7 +46,10 @@ class DFGTest {
                 listOf(Path.of(topLevel.toString(), "ReturnTest.java").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(JavaLanguage())
+                    .registerPass(JavaExternalTypeHierarchyResolver())
+            }
         val returnFunction = result.functions["testReturn"]
         assertNotNull(returnFunction)
 

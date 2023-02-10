@@ -411,11 +411,15 @@ fun LanguageFrontend.new(init: (NewExpression.() -> Unit)? = null): NewExpressio
 }
 
 fun LanguageFrontend.memberOrRef(name: Name): Expression {
-    return if (name.parent != null) {
-        newMemberExpression(name.localName, memberOrRef(name.parent))
-    } else {
-        newDeclaredReferenceExpression(name.localName, parseType(name.localName))
-    }
+    val node =
+        if (name.parent != null) {
+            newMemberExpression(name.localName, memberOrRef(name.parent))
+        } else {
+            newDeclaredReferenceExpression(name.localName, parseType(name.localName))
+        }
+
+    node.isStaticAccess = name.localName.first().isUpperCase()
+    return node
 }
 
 /**
