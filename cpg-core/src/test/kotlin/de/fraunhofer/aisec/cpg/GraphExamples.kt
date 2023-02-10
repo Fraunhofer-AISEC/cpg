@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import java.io.File
 import java.util.function.Consumer
 
@@ -74,8 +75,12 @@ private fun getVisitorTest(config: TranslationConfiguration) =
                 namespace("compiling") {
                     record("SimpleClass", "class") {
                         field("field", t("int")) {}
-                        constructor() {}
+                        constructor {
+                            receiver = newVariableDeclaration("this", t("SimpleClass"))
+                            body { returnStmt { isImplicit = true } }
+                        }
                         method("method", t("Integer")) {
+                            receiver = newVariableDeclaration("this", t("SimpleClass"))
                             body {
                                 call("System.out.println") { literal("Hello world") }
                                 declare { variable("x", t("int")) { literal(0) } }
