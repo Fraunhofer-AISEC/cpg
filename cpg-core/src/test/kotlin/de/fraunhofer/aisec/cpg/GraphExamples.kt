@@ -104,16 +104,28 @@ private fun getDataflowClass(config: TranslationConfiguration) =
             translationUnit("Dataflow.java") {
                 record("Dataflow") {
                     field("attr", t("String")) { literal("", t("String")) }
-                    constructor() { isImplicit = true }
+                    constructor() {
+                        isImplicit = true
+                        receiver = newVariableDeclaration("this", t("Dataflow"))
+                        body { returnStmt { isImplicit = true } }
+                    }
                     method("toString", t("String")) {
-                        body { returnStmt { literal("ShortcutClass: attr=") + ref("attr") } }
+                        receiver = newVariableDeclaration("this", t("Dataflow"))
+                        body { returnStmt { literal("ShortcutClass: attr=") + member("attr") } }
                     }
 
-                    method("test", t("String")) { body { returnStmt { literal("abcd") } } }
+                    method("test", t("String")) {
+                        receiver = newVariableDeclaration("this", t("Dataflow"))
+                        body { returnStmt { literal("abcd") } }
+                    }
 
                     method("print", t("int")) {
+                        receiver = newVariableDeclaration("this", t("Dataflow"))
                         param("s", t("String"))
-                        body { call("System.out.println") { ref("s") } }
+                        body {
+                            call("System.out.println") { ref("s") }
+                            returnStmt { isImplicit = true }
+                        }
                     }
 
                     // The main method
@@ -139,28 +151,35 @@ private fun getShortcutClass(config: TranslationConfiguration) =
             translationUnit("ShortcutClass.java") {
                 record("ShortcutClass") {
                     field("attr", t("int")) { literal(0, t("int")) }
-                    constructor() { isImplicit = true }
+                    constructor() {
+                        receiver = newVariableDeclaration("this", t("ShortcutClass"))
+                        isImplicit = true
+                        body { returnStmt { isImplicit = true } }
+                    }
                     method("toString", t("String")) {
-                        body { returnStmt { literal("ShortcutClass: attr=") + ref("attr") } }
+                        receiver = newVariableDeclaration("this", t("ShortcutClass"))
+                        body { returnStmt { literal("ShortcutClass: attr=") + member("attr") } }
                     }
 
                     method("print", t("int")) {
+                        receiver = newVariableDeclaration("this", t("ShortcutClass"))
                         body { call("System.out.println") { call("this.toString") } }
                     }
 
                     method("magic") {
+                        receiver = newVariableDeclaration("this", t("ShortcutClass"))
                         param("b", t("int"))
                         body {
                             ifStmt {
                                 condition { ref("b") eq literal(5, t("int")) }
                                 thenStmt {
                                     ifStmt {
-                                        condition { ref("attr") eq literal(2, t("int")) }
-                                        thenStmt { ref("attr") assign literal(3, t("int")) }
-                                        elseStmt { ref("attr") assign literal(3, t("int")) }
+                                        condition { member("attr") eq literal(2, t("int")) }
+                                        thenStmt { member("attr") assign literal(3, t("int")) }
+                                        elseStmt { member("attr") assign literal(2, t("int")) }
                                     }
                                 }
-                                elseStmt { ref("attr") assign ref("b") }
+                                elseStmt { member("attr") assign ref("b") }
                             }
                         }
                     }
@@ -173,9 +192,9 @@ private fun getShortcutClass(config: TranslationConfiguration) =
                                 condition { ref("b") gt literal(5, t("int")) }
                                 thenStmt {
                                     ifStmt {
-                                        condition { ref("attr") eq literal(2, t("int")) }
+                                        condition { member("attr") eq literal(2, t("int")) }
                                         thenStmt { ref("a") assign literal(3, t("int")) }
-                                        elseStmt { ref("a") assign literal(3, t("int")) }
+                                        elseStmt { ref("a") assign literal(2, t("int")) }
                                     }
                                 }
                                 elseStmt { ref("a") assign ref("b") }

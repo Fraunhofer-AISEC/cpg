@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -380,6 +381,7 @@ fun LanguageFrontend.construct(
     init: (ConstructExpression.() -> Unit)? = null
 ): ConstructExpression {
     val node = newConstructExpression(parseName(name))
+    node.type = t(name)
 
     if (init != null) {
         init(node)
@@ -410,13 +412,17 @@ fun LanguageFrontend.new(init: (NewExpression.() -> Unit)? = null): NewExpressio
     return node
 }
 
-fun LanguageFrontend.memberOrRef(name: Name): Expression {
+fun LanguageFrontend.memberOrRef(
+    name: Name,
+    type: Type = UnknownType.getUnknownType()
+): Expression {
     val node =
         if (name.parent != null) {
             newMemberExpression(name.localName, memberOrRef(name.parent))
         } else {
             newDeclaredReferenceExpression(name.localName, parseType(name.localName))
         }
+    node.type = type
 
     node.isStaticAccess = name.localName.first().isUpperCase()
     return node
@@ -528,8 +534,45 @@ fun <N> LanguageFrontend.literal(value: N, type: Type = UnknownType.getUnknownTy
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.ref(name: CharSequence): DeclaredReferenceExpression {
+fun LanguageFrontend.ref(
+    name: CharSequence,
+    type: Type = UnknownType.getUnknownType()
+): DeclaredReferenceExpression {
     val node = newDeclaredReferenceExpression(name)
+    node.type = type
+
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    val holder = this@Holder
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [MemberExpression] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument]
+ * of the nearest enclosing [Holder], but only if it is an [ArgumentHolder]. If the [name] doesn't
+ * already contain a fqn, we add an implicit "this" as base.
+ */
+context(Holder<out Statement>)
+
+fun LanguageFrontend.member(name: CharSequence): MemberExpression {
+    val parsedName = parseName(name)
+    val type =
+        if (parsedName.parent != null) {
+            UnknownType.getUnknownType()
+        } else {
+            var scope = ((this@Holder) as? ScopeProvider)?.scope
+            while (scope != null && scope !is RecordScope) {
+                scope = scope.parent
+            }
+            val scopeType = scope?.name?.let { t(it) } ?: UnknownType.getUnknownType()
+            scopeType
+        }
+    val base = memberOrRef(parsedName.parent ?: parseName("this"))
+
+    val node = newMemberExpression(name, base)
 
     // Only add this to an argument holder if the nearest holder is an argument holder
     val holder = this@Holder
