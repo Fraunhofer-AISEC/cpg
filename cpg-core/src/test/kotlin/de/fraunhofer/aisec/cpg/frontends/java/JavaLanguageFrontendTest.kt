@@ -143,6 +143,12 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         assertLocalName("println", sce)
         assertFullName("java.io.PrintStream.println", sce)
+
+        // Check the flow from the iterable to the variable s
+        assertEquals(1, sDecl.prevDFG.size)
+        assertTrue(forEachStatement.iterable as DeclaredReferenceExpression in sDecl.prevDFG)
+        // Check the flow from the variable s to the print
+        assertTrue(sDecl in sce.arguments.first().prevDFG)
     }
 
     @Test
@@ -743,7 +749,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val forEach = forIterator.bodyOrNull<ForEachStatement>()
         assertNotNull(forEach)
 
-        assertNotNull(forEach.variable)
-        assertContains(forEach.variable!!.prevDFG, forEach.iterable!!)
+        val loopVariable = (forEach.variable as? DeclarationStatement)?.singleDeclaration
+        assertNotNull(loopVariable)
+        assertNotNull(forEach.iterable)
+        assertContains(loopVariable.prevDFG, forEach.iterable!!)
+
+        val jArg = forIterator.calls["println"]?.arguments?.firstOrNull()
+        assertNotNull(jArg)
+        assertContains(jArg.prevDFG, loopVariable)
     }
 }

@@ -97,7 +97,6 @@ def handle_statement_impl(self, stmt):
         return r
     elif isinstance(stmt, ast.Assign):
         return self.handle_assign(stmt)
-
     elif isinstance(stmt, ast.AugAssign):
         return self.handle_assign(stmt)
     elif isinstance(stmt, ast.AnnAssign):
@@ -370,6 +369,7 @@ def handle_function_or_method(self, node, record=None):
 
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            # TODO empty annotation
 
         # add first arg as value
         if len(decorator.args) > 0:
@@ -432,12 +432,25 @@ def handle_for(self, stmt):
     # We can handle the AsyncFor / For statement now:
     for_stmt = StatementBuilderKt.newForEachStatement(self.frontend,
                                                       self.get_src_code(stmt))
-    target = self.handle_expression(stmt.target)
-    if self.is_variable_declaration(target):
-        target = self.wrap_declaration_to_stmt(target)
-    for_stmt.setVariable(target)
+
+    # We handle the iterable before the target so that the type can be set
+    # correctly
     it = self.handle_expression(stmt.iter)
     for_stmt.setIterable(it)
+
+    target = self.handle_expression(stmt.target)
+    resolved_target = self.scopemanager.resolveReference(target)
+    if resolved_target is None:
+        target = DeclarationBuilderKt.newVariableDeclaration(
+            self.frontend, target.getName(),
+            it.getType(),
+            self.get_src_code(stmt.target),
+            False)
+        self.scopemanager.addDeclaration(target)
+        target = self.wrap_declaration_to_stmt(target)
+
+    for_stmt.setVariable(target)
+
     body = self.make_compound_statement(stmt.body)
     for_stmt.setStatement(body)
 
@@ -522,15 +535,15 @@ def handle_assign_impl(self, stmt):
         self.log_with_loc(
             "Expected a DeclaredReferenceExpression or MemberExpression "
             "but got \"%s\". Skipping." %
-            (lhs.java_name), loglevel="ERROR")
+            lhs.java_name, loglevel="ERROR")
         r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
                                                   "=",
                                                   self.get_src_code(stmt))
         return r
 
     resolved_lhs = self.scopemanager.resolveReference(lhs)
-    inRecord = self.scopemanager.isInRecord()
-    inFunction = self.scopemanager.isInFunction()
+    in_record = self.scopemanager.isInRecord()
+    in_function = self.scopemanager.isInFunction()
 
     if resolved_lhs is not None:
         # found var => BinaryOperator "="
@@ -541,7 +554,7 @@ def handle_assign_impl(self, stmt):
             binop.setRhs(rhs)
         return binop
     else:
-        if inRecord and not inFunction:
+        if in_record and not in_function:
             """
             class Foo:
                 class_var = 123
@@ -570,7 +583,7 @@ def handle_assign_impl(self, stmt):
                     None, None, False)  # TODO None -> add infos
             self.scopemanager.addDeclaration(v)
             return v
-        elif inRecord and inFunction:
+        elif in_record and in_function:
             """
             class Foo:
                 def bar(self):
@@ -634,7 +647,7 @@ def handle_assign_impl(self, stmt):
                 self.scopemanager.addDeclaration(v)
                 self.scopemanager.getCurrentRecord().addField(v)
                 return v
-        elif not inRecord:
+        elif not in_record:
             """
             either in a function or at file top-level
             """
