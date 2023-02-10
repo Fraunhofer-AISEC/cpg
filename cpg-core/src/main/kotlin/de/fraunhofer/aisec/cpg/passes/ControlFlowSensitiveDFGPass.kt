@@ -218,8 +218,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 val writtenTo =
                     when (currentNode.variable) {
                         is DeclarationStatement ->
-                            (currentNode.variable as DeclarationStatement).singleDeclaration!!
-                        else -> currentNode.variable!!
+                            (currentNode.variable as DeclarationStatement).singleDeclaration
+                        else -> currentNode.variable
                     }
 
                 // We wrote something to this variable declaration
@@ -230,7 +230,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                         else -> null // TODO: This shouldn't happen
                     }
 
-                currentWritten = currentNode.variable!!
+                currentNode.variable?.let { currentWritten = it }
 
                 if (writtenTo is DeclaredReferenceExpression) {
                     if (currentNode !in loopPoints) {
@@ -255,9 +255,9 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                         .forEach { worklist.add(Pair(it, copyMap(previousWrites))) }
                 }
 
-                iterable?.let { writtenTo.addPrevDFG(it) }
+                iterable?.let { writtenTo?.addPrevDFG(it) }
 
-                if (writtenDecl != null) {
+                if (writtenDecl != null && writtenTo != null) {
                     // Add the variable declaration (or the reference) to the list of previous write
                     // nodes in this path
                     previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(writtenTo)
@@ -417,7 +417,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             val state = loopPoints.computeIfAbsent(currentNode) { mutableMapOf() }
             if (
                 previousWrites.all { (decl, prevs) ->
-                    decl in state && prevs.last() in state[decl]!!
+                    (state[decl]?.contains(prevs.last())) == true
                 }
             ) {
                 // The current state of last write operations has already been seen before =>
@@ -430,7 +430,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
             }
         }
         return writtenDecl != null &&
-            previousWrites[writtenDecl]!!.filter { it == currentWritten }.size >= 2
+            ((previousWrites[writtenDecl]?.filter { it == currentWritten }?.size ?: 0) >= 2)
     }
 
     /** Copies the map */
