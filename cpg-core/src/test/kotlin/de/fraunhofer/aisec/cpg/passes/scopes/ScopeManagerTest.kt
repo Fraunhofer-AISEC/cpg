@@ -88,7 +88,11 @@ internal class ScopeManagerTest : BaseTest() {
     fun testMerge() {
         val s1 = ScopeManager()
         val frontend1 =
-            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s1)
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationConfiguration.builder().build(),
+                s1,
+            )
         s1.resetToGlobal(frontend1.newTranslationUnitDeclaration("f1.cpp", null))
 
         // build a namespace declaration in f1.cpp with the namespace A
@@ -100,7 +104,11 @@ internal class ScopeManagerTest : BaseTest() {
 
         val s2 = ScopeManager()
         val frontend2 =
-            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s2)
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationConfiguration.builder().build(),
+                s2,
+            )
         s2.resetToGlobal(frontend2.newTranslationUnitDeclaration("f1.cpp", null))
 
         // and do the same in the other file
@@ -113,7 +121,11 @@ internal class ScopeManagerTest : BaseTest() {
         // merge the two scopes. this replicates the behaviour of parseParallel
         val final = ScopeManager()
         val frontend =
-            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), final)
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationConfiguration.builder().build(),
+                final,
+            )
         final.mergeFrom(listOf(s1, s2))
 
         // in the final scope manager, there should only be one NameScope "A"
@@ -151,7 +163,11 @@ internal class ScopeManagerTest : BaseTest() {
     fun testScopeFQN() {
         val s = ScopeManager()
         val frontend =
-            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s)
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationConfiguration.builder().build(),
+                s,
+            )
         s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
 
         assertNull(s.currentNamespace)

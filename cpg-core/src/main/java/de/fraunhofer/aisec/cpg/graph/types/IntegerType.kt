@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,27 +23,20 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.types;
+package de.fraunhofer.aisec.cpg.graph.types
 
-import java.util.HashMap;
-import java.util.Map;
-import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 
-public class QualifierConverter implements CompositeAttributeConverter<Type.Qualifier> {
-  @Override
-  public Map<String, ?> toGraphProperties(Type.Qualifier value) {
-    Map<String, Boolean> properties = new HashMap<>();
-    properties.put("isConst", value.isConst());
-    properties.put("isVolatile", value.isVolatile());
-    properties.put("isRestrict", value.isRestrict());
-    properties.put("isAtomic", value.isAtomic());
-    return properties;
-  }
+/** Instances of this class represent integer types. */
+class IntegerType(
+    typeName: CharSequence = "",
+    bitWidth: Int? = null,
+    language: Language<out LanguageFrontend>? = null,
+    modifier: Modifier = Modifier.SIGNED
+) : NumericType(typeName, bitWidth, language, modifier) {
 
-  @Override
-  public Type.Qualifier toEntityAttribute(Map<String, ?> value) {
-    Map<String, Boolean> val = (Map<String, Boolean>) value;
-    return new Type.Qualifier(
-        val.get("isConst"), val.get("isVolatile"), val.get("isRestrict"), val.get("isAtomic"));
-  }
+    override fun duplicate(): Type {
+        return IntegerType(this.name, bitWidth, language, modifier)
+    }
 }

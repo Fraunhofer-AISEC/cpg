@@ -50,7 +50,7 @@ class TestLanguage(namespaceDelimiter: String) : Language<TestLanguageFrontend>(
 
     override fun newFrontend(
         config: TranslationConfiguration,
-        scopeManager: ScopeManager
+        scopeManager: ScopeManager,
     ): TestLanguageFrontend {
         return TestLanguageFrontend()
     }
@@ -63,7 +63,7 @@ class TestLanguageFrontend(
     LanguageFrontend(
         TestLanguage(namespaceDelimiter),
         TranslationConfiguration.builder().build(),
-        scopeManager,
+        ScopeManager(),
     ) {
     override fun parse(file: File): TranslationUnitDeclaration {
         TODO("Not yet implemented")

@@ -25,12 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.JavaCallResolverHelper
 import kotlin.reflect.KClass
 
@@ -40,7 +42,7 @@ open class JavaLanguage :
     // HasComplexCallResolution,
     HasClasses,
     HasSuperClasses,
-    // HasTemplates,
+    HasGenerics,
     HasQualifier,
     HasUnknownType,
     HasShortCircuitOperators {
@@ -54,17 +56,35 @@ open class JavaLanguage :
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
 
+    @Transient
+    @JsonIgnore
+    override val simpleTypes =
+        mapOf(
+            "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
+            "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
+            "char" to IntegerType("char", 16, this, NumericType.Modifier.SIGNED),
+            "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
+            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
+            "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
+            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
+            "String" to StringType("java.lang.String", this),
+            "java.lang.String" to StringType("java.lang.String", this)
+        )
+
     override fun newFrontend(
         config: TranslationConfiguration,
-        scopeManager: ScopeManager
+        scopeManager: ScopeManager,
     ): JavaLanguageFrontend {
         return JavaLanguageFrontend(this, config, scopeManager)
     }
-
     override fun handleSuperCall(
         callee: MemberExpression,
         curClass: RecordDeclaration,
         scopeManager: ScopeManager,
         recordMap: Map<Name, RecordDeclaration>
     ) = JavaCallResolverHelper.handleSuperCall(callee, curClass, scopeManager, recordMap)
+
+    override val startCharacter = '<'
+    override val endCharacter = '>'
 }

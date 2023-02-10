@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -110,8 +111,8 @@ class DFGPass : Pass() {
     }
 
     /**
-     * Adds the DFG edge for a [VariableDeclaration]. The data flows from the return statement(s) to
-     * the function.
+     * Adds the DFG edge for a [VariableDeclaration]. The data flows from initializer to the
+     * variable.
      */
     private fun handleVariableDeclaration(node: VariableDeclaration) {
         node.initializer?.let { node.addPrevDFG(it) }
@@ -142,12 +143,22 @@ class DFGPass : Pass() {
 
     /**
      * Adds the DFG edge for a [ForEachStatement]. The data flows from the
-     * [ForEachStatement.iterable] to the [ForEachStatement.variable] and from
-     * [ForEachStatement.variable] to the [ForEachStatement] to show the dependence between data and
-     * branching node.
+     * [ForEachStatement.iterable] to the [ForEachStatement.variable]. However, since the
+     * [ForEachStatement.variable] is a [Statement], we have to identify the variable which is used
+     * in the loop. In most cases, we should have a [DeclarationStatement] which means that we can
+     * unwrap the [VariableDeclaration]. If this is not the case, we assume that the last
+     * [VariableDeclaration] in the statement is the one we care about.
      */
     private fun handleForEachStatement(node: ForEachStatement) {
-        node.iterable?.let { node.variable?.addPrevDFG(it) }
+        if (node.iterable != null) {
+            if (node.variable is DeclarationStatement) {
+                (node.variable as DeclarationStatement).declarations.forEach {
+                    it.addPrevDFG(node.iterable!!)
+                }
+            } else {
+                node.variable.variables.lastOrNull()?.addPrevDFG(node.iterable!!)
+            }
+        }
         node.variable?.let { node.addPrevDFG(it) }
     }
 

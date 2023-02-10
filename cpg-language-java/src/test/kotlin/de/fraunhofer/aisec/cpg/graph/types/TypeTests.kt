@@ -49,91 +49,37 @@ internal class TypeTests : BaseTest() {
         // Test 1: Ignore Access Modifier Keyword (public, private, protected)
         var typeString = "private int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected =
-            ObjectType(
-                "int",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ArrayList(),
-                ObjectType.Modifier.SIGNED,
-                true,
-                JavaLanguage()
-            )
+        expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
         assertEquals(expected, result)
 
         // Test 2: constant type using final
         typeString = "final int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected =
-            ObjectType(
-                "int",
-                Type.Storage.AUTO,
-                Type.Qualifier(true, false, false, false),
-                ArrayList(),
-                ObjectType.Modifier.SIGNED,
-                true,
-                JavaLanguage()
-            )
+        expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
         assertEquals(expected, result)
 
         // Test 3: static type
         typeString = "static int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected =
-            ObjectType(
-                "int",
-                Type.Storage.STATIC,
-                Type.Qualifier(),
-                ArrayList(),
-                ObjectType.Modifier.SIGNED,
-                true,
-                JavaLanguage()
-            )
+        expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
         assertEquals(expected, result)
 
         // Test 4: volatile type
         typeString = "public volatile int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected =
-            ObjectType(
-                "int",
-                Type.Storage.AUTO,
-                Type.Qualifier(false, true, false, false),
-                ArrayList(),
-                ObjectType.Modifier.SIGNED,
-                true,
-                JavaLanguage()
-            )
+        expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
         assertEquals(expected, result)
 
         // Test 5: combining a storage type and a qualifier
         typeString = "private static final String a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected =
-            ObjectType(
-                "String",
-                Type.Storage.STATIC,
-                Type.Qualifier(true, false, false, false),
-                ArrayList(),
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
+        expected = StringType("java.lang.String", JavaLanguage())
         assertEquals(expected, result)
 
         // Test 6: using two different qualifiers
         typeString = "public final volatile int a"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected =
-            ObjectType(
-                "int",
-                Type.Storage.AUTO,
-                Type.Qualifier(true, true, false, false),
-                ArrayList(),
-                ObjectType.Modifier.SIGNED,
-                true,
-                JavaLanguage()
-            )
+        expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
         assertEquals(expected, result)
 
         // Test 7: Reference level using arrays
@@ -141,15 +87,7 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, JavaLanguage())
         expected =
             PointerType(
-                ObjectType(
-                    "int",
-                    Type.Storage.AUTO,
-                    Type.Qualifier(),
-                    ArrayList(),
-                    ObjectType.Modifier.SIGNED,
-                    true,
-                    JavaLanguage()
-                ),
+                IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED),
                 PointerType.PointerOrigin.ARRAY
             )
         assertEquals(expected, result)
@@ -158,91 +96,27 @@ internal class TypeTests : BaseTest() {
         typeString = "List<String> list"
         result = TypeParser.createFrom(typeString, JavaLanguage())
         var generics: MutableList<Type?> = ArrayList()
-        generics.add(
-            ObjectType(
-                "String",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ArrayList(),
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
-        )
-        expected =
-            ObjectType(
-                "List",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                generics,
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
+        generics.add(StringType("java.lang.String", JavaLanguage()))
+        expected = ObjectType("List", generics, false, JavaLanguage())
         assertEquals(expected, result)
 
         // Test 9: more generics
         typeString = "List<List<List<String>>, List<String>> data"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        val genericStringType =
-            ObjectType(
-                "String",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                ArrayList(),
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
+        val genericStringType = StringType("java.lang.String", JavaLanguage())
         val generics3: MutableList<Type> = ArrayList()
         generics3.add(genericStringType)
-        val genericElement3 =
-            ObjectType(
-                "List",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                generics3,
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
+        val genericElement3 = ObjectType("List", generics3, false, JavaLanguage())
         val generics2a: MutableList<Type> = ArrayList()
         generics2a.add(genericElement3)
         val generics2b: MutableList<Type> = ArrayList()
         generics2b.add(genericStringType)
-        val genericElement1 =
-            ObjectType(
-                "List",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                generics2a,
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
-        val genericElement2 =
-            ObjectType(
-                "List",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                generics2b,
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
+        val genericElement1 = ObjectType("List", generics2a, false, JavaLanguage())
+        val genericElement2 = ObjectType("List", generics2b, false, JavaLanguage())
         generics = ArrayList()
         generics.add(genericElement1)
         generics.add(genericElement2)
-        expected =
-            ObjectType(
-                "List",
-                Type.Storage.AUTO,
-                Type.Qualifier(),
-                generics,
-                ObjectType.Modifier.NOT_APPLICABLE,
-                false,
-                JavaLanguage()
-            )
+        expected = ObjectType("List", generics, false, JavaLanguage())
         assertEquals(expected, result)
     }
 
@@ -254,7 +128,7 @@ internal class TypeTests : BaseTest() {
         val result =
             analyze("java", topLevel, true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
+                    .registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         // Check Parameterized
@@ -288,11 +162,11 @@ internal class TypeTests : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun graphTest() {
-        var topLevel = Path.of("src", "test", "resources", "types")
-        var result =
+        val topLevel = Path.of("src", "test", "resources", "types")
+        val result =
             analyze("java", topLevel, true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
+                    .registerPass(JavaExternalTypeHierarchyResolver())
             }
         val variables = result.allChildren<ObjectType>()
         val recordDeclarations = result.records
@@ -312,16 +186,13 @@ internal class TypeTests : BaseTest() {
 
         // Test propagation of specifiers in primitive fields (final int y)
         val y = findByUniqueName(fieldDeclarations, "y")
-        assertTrue(y.type.qualifier.isConst)
 
         // Test propagation of specifiers in non-primitive fields (final A a)
-        var variableDeclarations = result.variables
+        val variableDeclarations = result.variables
         val aA = findByUniqueName(variableDeclarations, "a")
-        assertTrue(aA.type.qualifier.isConst)
 
         // Test propagation of specifiers in variables (final String s)
         val sString = findByUniqueName(variableDeclarations, "s")
-        assertTrue(sString.type.qualifier.isConst)
 
         // Test PointerType chain with array
         val array = findByUniqueName(variableDeclarations, "array")
@@ -342,10 +213,10 @@ internal class TypeTests : BaseTest() {
     fun testCommonTypeTestJava() {
         disableTypeManagerCleanup()
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy")
-        var result =
+        val result =
             analyze("java", topLevel, true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
+                    .registerPass(JavaExternalTypeHierarchyResolver())
             }
         val root = TypeParser.createFrom("multistep.Root", JavaLanguage())
         val level0 = TypeParser.createFrom("multistep.Level0", JavaLanguage())
@@ -375,7 +246,7 @@ internal class TypeTests : BaseTest() {
                |
              Level2
          */
-        var provider = result.scopeManager
+        val provider = result.scopeManager
 
         // A single type is its own least common ancestor
         for (t in listOf(root, level0, level1, level1b, level2)) {

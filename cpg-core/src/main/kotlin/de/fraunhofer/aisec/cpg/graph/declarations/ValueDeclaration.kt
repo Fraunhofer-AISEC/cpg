@@ -35,8 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import java.util.function.Consumer
-import java.util.function.Predicate
 import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -152,7 +150,6 @@ abstract class ValueDeclaration : Declaration(), HasType {
         }
         val oldType = this.type
         type = type.duplicate()
-        type.qualifier = this.type.qualifier.merge(type.qualifier)
         val subTypes: MutableSet<Type?> = HashSet()
         for (t in possibleSubTypes) {
             if (!t.isSimilar(type)) {
@@ -187,14 +184,12 @@ abstract class ValueDeclaration : Declaration(), HasType {
         var possibleSubTypes = possibleSubTypes
         possibleSubTypes =
             possibleSubTypes
-                .stream()
-                .filter(Predicate.not { type: Type? -> TypeManager.getInstance().isUnknown(type) })
+                .filterNot { type -> TypeManager.getInstance().isUnknown(type) }
                 .distinct()
-                .collect(Collectors.toList())
+                .toMutableList()
         if (!TypeManager.isTypeSystemActive()) {
-            possibleSubTypes.forEach(
-                Consumer { t: Type? -> TypeManager.getInstance().cacheType(this, t) }
-            )
+            possibleSubTypes.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
+
             return
         }
         if (root.contains(this)) {

@@ -50,7 +50,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
             CXXLanguageFrontend(
                     CPPLanguage(),
                     TranslationConfiguration.builder().defaultPasses().build(),
-                    ScopeManager()
+                    ScopeManager(),
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
@@ -92,7 +92,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                         )
                         .defaultPasses()
                         .build(),
-                    ScopeManager()
+                    ScopeManager(),
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)

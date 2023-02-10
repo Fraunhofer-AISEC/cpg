@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
  * This node holds all translation units belonging to this software component as well as (potential)
  * entry points or interactions with other software.
  */
-open class Component : Node() {
+open class Component() : Node() {
     /** All translation units belonging to this application. */
     @field:SubGraph("AST")
     val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()

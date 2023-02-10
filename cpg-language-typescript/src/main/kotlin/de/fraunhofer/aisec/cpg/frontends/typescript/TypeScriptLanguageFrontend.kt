@@ -59,7 +59,7 @@ import java.nio.file.StandardCopyOption
 class TypeScriptLanguageFrontend(
     language: Language<TypeScriptLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) : LanguageFrontend(language, config, scopeManager) {
 
     val declarationHandler = DeclarationHandler(this)
