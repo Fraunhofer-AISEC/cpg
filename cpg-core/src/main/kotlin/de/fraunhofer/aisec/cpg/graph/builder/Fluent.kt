@@ -570,7 +570,7 @@ fun LanguageFrontend.member(name: CharSequence): MemberExpression {
             val scopeType = scope?.name?.let { t(it) } ?: UnknownType.getUnknownType()
             scopeType
         }
-    val base = memberOrRef(parsedName.parent ?: parseName("this"))
+    val base = memberOrRef(parsedName.parent ?: parseName("this"), type)
 
     val node = newMemberExpression(name, base)
 
