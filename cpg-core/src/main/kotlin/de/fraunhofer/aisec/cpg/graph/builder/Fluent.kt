@@ -363,16 +363,11 @@ fun LanguageFrontend.call(
 }
 
 /**
- * Creates a new [CallExpression] (or [MemberCallExpression]) in the Fluent Node DSL with the given
- * [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
+ * Creates a new [ConstructExpression] in the Fluent Node DSL for the translation record/type with
+ * the given [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
  * [StatementHolder] it is added to the list of [StatementHolder.statements] or in case of an
- * [ArgumentHolder], the function [ArgumentHolder.addArgument] is invoked.
- *
- * The type of expression is determined whether [name] is either a [Name] with a [Name.parent] or if
- * it can be parsed as a FQN in the given language. It also automatically creates either a
- * [DeclaredReferenceExpression] or [MemberExpression] and sets it as the [CallExpression.callee].
- * The [init] block can be used to create further sub-nodes as well as configuring the created node
- * itself.
+ * [ArgumentHolder], the function [ArgumentHolder.addArgument] is invoked. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
  */
 context(Holder<out Statement>)
 

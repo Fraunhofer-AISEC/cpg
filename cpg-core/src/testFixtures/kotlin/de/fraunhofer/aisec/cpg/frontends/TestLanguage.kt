@@ -39,7 +39,7 @@ import kotlin.reflect.KClass
  * This is a test language that can be used for unit test, where we need a language but do not have
  * a specific one.
  */
-class TestLanguage(namespaceDelimiter: String) : Language<TestLanguageFrontend>() {
+class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLanguageFrontend>() {
     override val fileExtensions: List<String> = listOf()
     override val namespaceDelimiter: String
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class

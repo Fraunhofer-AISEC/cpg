@@ -42,7 +42,7 @@ publishing {
 
 dependencies {
     api(projects.cpgCore)
-    api(projects.cpgLanguageJava)
+    testImplementation(projects.cpgLanguageJava)
 
     testImplementation(testFixtures(projects.cpgCore))
 }
