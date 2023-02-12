@@ -72,20 +72,27 @@ object Util {
      *
      * @param q
      * - The quantifier, all or any node of n must connect to refs, defaults to ALL.
+     *
      * @param cn
      * - NODE if n itself is the node to connect or SUBTREE if the EOG borders are of interest.
-     * Defaults to SUBTREE
+     *   Defaults to SUBTREE
+     *
      * @param en
      * - The Edge direction and therefore the borders of n to connect to refs
+     *
      * @param n
      * - Node of interest
+     *
      * @param cr
      * - NODE if refs nodes itself are the nodes to connect or SUBTREE if the EOG borders are of
-     * interest
+     *   interest
+     *
      * @param props
      * - All edges must have these properties set to the provided value
+     *
      * @param refs
      * - Multiple reference nodes that can be passed as varargs
+     *
      * @return true if all/any of the connections from node connect to n.
      */
     fun eogConnect(
@@ -95,7 +102,7 @@ object Util {
         n: Node?,
         cr: Connect = Connect.SUBTREE,
         props: Map<Properties, Any?> = mutableMapOf(),
-        refs: List<Node>
+        refs: List<Node?>
     ): Boolean {
         if (n == null) {
             return false
@@ -125,7 +132,7 @@ object Util {
             }
         refSide =
             if (cr == Connect.SUBTREE) {
-                val borders = refs.map { n: Node? -> SubgraphWalker.getEOGPathEdges(n) }
+                val borders = refs.map { n -> SubgraphWalker.getEOGPathEdges(n) }
 
                 borders.flatMap { border: SubgraphWalker.Border ->
                     if (Edge.ENTRIES == er) {
@@ -136,9 +143,9 @@ object Util {
                     } else border.exits
                 }
             } else {
-                refSide.flatMap { node: Node ->
+                refSide.flatMap { node ->
                     if (er == Edge.ENTRIES) {
-                        val pe = node.prevEOGEdges
+                        val pe = node?.prevEOGEdges ?: listOf()
                         if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
                             return false
                         pe.filter { it.containsProperties(props) }.map { it.start }

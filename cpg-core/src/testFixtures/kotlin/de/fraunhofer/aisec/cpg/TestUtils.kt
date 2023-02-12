@@ -75,11 +75,11 @@ object TestUtils {
     }
 
     fun <S : Node> findByUniqueName(nodes: Collection<S>, name: String): S {
-        return findByUniquePredicate(nodes) { m: S -> m.name == name }
+        return findByUniquePredicate(nodes) { m: S -> m.name.lastPartsMatch(name) }
     }
 
     fun <S : Node> findByName(nodes: Collection<S>, name: String): Collection<S> {
-        return nodes.filter { m: S -> m.name == name }
+        return nodes.filter { m: S -> m.name.lastPartsMatch(name) }
     }
 
     /**
@@ -87,11 +87,10 @@ object TestUtils {
      * extension
      *
      * @param fileExtension All files found in the directory must end on this String. An empty
-     * string matches all files
+     *   string matches all files
      * @param topLevel The directory to traverse while looking for files to parse
      * @param usePasses Whether the analysis should run passes after the initial phase
      * @param configModifier An optional modifier for the config
-     *
      * @return A list of [TranslationUnitDeclaration] nodes, representing the CPG roots
      * @throws Exception Any exception thrown during the parsing process
      */
@@ -119,7 +118,6 @@ object TestUtils {
      * @param topLevel The directory to traverse while looking for files to parse
      * @param usePasses Whether the analysis should run passes after the initial phase
      * @param configModifier An optional modifier for the config
-     *
      * @return A list of [TranslationUnitDeclaration] nodes, representing the CPG roots
      * @throws Exception Any exception thrown during the parsing process
      */
@@ -249,6 +247,7 @@ object TestUtils {
      *
      * @param usingNode
      * - The node that shows usage of another node.
+     *
      * @param usedNode
      * - The node that is expected to be used.
      */
@@ -259,7 +258,7 @@ object TestUtils {
         } else {
             assertTrue(usingNode is DeclaredReferenceExpression)
             val reference = usingNode as? DeclaredReferenceExpression
-            assertEquals(reference?.refersTo, usedNode)
+            assertEquals(usedNode, reference?.refersTo)
         }
     }
 
@@ -271,8 +270,10 @@ object TestUtils {
      *
      * @param usingNode
      * - Node that uses some member
+     *
      * @param usedBase
      * - The expected base that is used
+     *
      * @param usedMember
      * - THe expected member that is used
      */
@@ -280,17 +281,26 @@ object TestUtils {
         assertNotNull(usingNode)
         if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
             // Assumtion here is that the target of the member portion of the expression and not the
-            // base
-            // is resolved
+            // base is resolved
             assertUsageOf(usingNode, usedMember)
         } else {
             assertTrue(usingNode is MemberExpression)
             val memberExpression = usingNode as MemberExpression?
             assertNotNull(memberExpression)
 
-            val base: Node = memberExpression.base
+            val base = memberExpression.base
             assertUsageOf(base, usedBase)
             assertUsageOf(memberExpression.refersTo, usedMember)
         }
     }
+}
+
+fun assertFullName(fqn: String, node: Node?, message: String? = null) {
+    assertNotNull(node)
+    asserter.assertEquals(message, fqn, node.name.toString())
+}
+
+fun assertLocalName(localName: String, node: Node?, message: String? = null) {
+    assertNotNull(node)
+    asserter.assertEquals(message, localName, node.name.localName)
 }

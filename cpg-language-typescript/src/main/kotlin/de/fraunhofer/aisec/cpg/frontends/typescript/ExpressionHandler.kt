@@ -63,8 +63,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleJsxAttribute(node: TypeScriptNode): KeyValueExpression {
-        val key = this.handle(node.children?.first())
-        val value = this.handle(node.children?.last())
+        val key = node.children?.first()?.let { this.handle(it) }
+        val value = node.children?.last()?.let { this.handle(it) }
 
         val keyValue = newKeyValueExpression(key, value, this.frontend.getCodeFromRawNode(node))
 
@@ -76,14 +76,15 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val tag = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
         // it contains an Identifier node, we map this into the name
-        this.frontend.getIdentifierName(node).let { tag.name = "</$it>" }
+        this.frontend.getIdentifierName(node).let { tag.name = Name("</$it>") }
 
         return tag
     }
 
     private fun handleJsxExpression(node: TypeScriptNode): Expression {
         // for now, we just treat this as a wrapper and directly return the first node
-        return this.handle(node.children?.first())
+        return node.children?.first()?.let { this.handle(it) }
+            ?: ProblemExpression("problem parsing expression")
     }
 
     private fun handleJsxOpeningElement(node: TypeScriptNode): ExpressionList {
@@ -91,11 +92,12 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val tag = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
         // it contains an Identifier node, we map this into the name
-        this.frontend.getIdentifierName(node).let { tag.name = "<$it>" }
+        this.frontend.getIdentifierName(node).let { tag.name = Name("<$it>") }
 
         // and a container named JsxAttributes, with JsxAttribute nodes
         tag.expressions =
-            node.firstChild("JsxAttributes")?.children?.map { this.handle(it) } ?: emptyList()
+            node.firstChild("JsxAttributes")?.children?.mapNotNull { this.handle(it) }
+                ?: emptyList()
 
         return tag
     }
@@ -103,7 +105,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handeJsxElement(node: TypeScriptNode): ExpressionList {
         val jsx = newExpressionList(this.frontend.getCodeFromRawNode(node))
 
-        jsx.expressions = node.children?.map { this.handle(it) }
+        jsx.expressions = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
 
         return jsx
     }
@@ -137,8 +139,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handlePropertyAssignment(node: TypeScriptNode): KeyValueExpression {
-        val key = this.handle(node.children?.first())
-        val value = this.handle(node.children?.last())
+        val key = node.children?.first()?.let { this.handle(it) }
+        val value = node.children?.last()?.let { this.handle(it) }
 
         val keyValue = newKeyValueExpression(key, value, this.frontend.getCodeFromRawNode(node))
 
@@ -148,7 +150,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
         val ile = newInitializerListExpression(this.frontend.getCodeFromRawNode(node))
 
-        ile.initializers = node.children?.map { this.handle(it) } ?: emptyList()
+        ile.initializers = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
 
         return ile
     }
@@ -183,7 +185,9 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handlePropertyAccessExpression(node: TypeScriptNode): Expression {
-        val base = this.handle(node.children?.first())
+        val base =
+            node.children?.first()?.let { this.handle(it) }
+                ?: ProblemExpression("problem parsing base")
 
         val name = this.frontend.getCodeFromRawNode(node.children?.last()) ?: ""
 
@@ -206,37 +210,21 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val propertyAccess = node.firstChild("PropertyAccessExpression")
 
         if (propertyAccess != null) {
-            val memberExpression = this.handle(propertyAccess) as MemberExpression
+            val memberExpression =
+                this.handle(propertyAccess) as? MemberExpression
+                    ?: return ProblemExpression("node is not a member expression")
 
-            // we need to build a declared reference expression out of the MemberExpression, because
-            // member calls are not really handled well in the CPG. See
-            // https://github.com/Fraunhofer-AISEC/cpg/issues/298
-            val member =
-                newDeclaredReferenceExpression(
-                    memberExpression.name,
-                    memberExpression.type,
-                    memberExpression.name
-                )
-
-            // TODO: fqn - how?
-            val fqn = memberExpression.name
             call =
                 newMemberCallExpression(
-                    memberExpression.name,
-                    fqn,
-                    memberExpression.base,
-                    member,
-                    ".",
-                    this.frontend.getCodeFromRawNode(node)
+                    memberExpression,
+                    code = this.frontend.getCodeFromRawNode(node)
                 )
         } else {
-            val name = this.frontend.getIdentifierName(node)
-
             // TODO: fqn - how?
-            val fqn = name
+            val fqn = this.frontend.getIdentifierName(node)
             // regular function call
 
-            val ref = newDeclaredReferenceExpression(name)
+            val ref = newDeclaredReferenceExpression(fqn)
 
             call = newCallExpression(ref, fqn, this.frontend.getCodeFromRawNode(node), false)
         }
@@ -244,7 +232,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         // parse the arguments. the first node is the identifier, so we skip that
         val remainingNodes = node.children?.drop(1)
 
-        remainingNodes?.forEach { call.addArgument(this.handle(it)) }
+        remainingNodes?.forEach { this.handle(it)?.let { it1 -> call.addArgument(it1) } }
 
         return call
     }

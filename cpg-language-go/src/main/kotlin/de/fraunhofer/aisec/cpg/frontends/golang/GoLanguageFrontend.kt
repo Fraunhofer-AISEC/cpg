@@ -25,13 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.io.FileOutputStream
@@ -40,10 +40,9 @@ import java.io.FileOutputStream
 class GoLanguageFrontend(
     language: Language<GoLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) : LanguageFrontend(language, config, scopeManager) {
     companion object {
-        @JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
 
         init {
             try {

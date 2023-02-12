@@ -25,7 +25,9 @@
  */
 package cpg
 
-import "tekao.net/jnigi"
+import (
+	"tekao.net/jnigi"
+)
 
 type Language Node
 

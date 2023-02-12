@@ -11,6 +11,7 @@ class Foo:
         classFieldWithInit = "shadowed"
         classFieldDeclaredInFunction = "shadowed"
 
+
 foo = Foo()
 foo.classFieldNoInitializer = 345
 foo.classFieldWithInit = 678

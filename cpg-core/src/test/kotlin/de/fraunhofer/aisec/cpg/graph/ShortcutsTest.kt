@@ -115,7 +115,7 @@ class ShortcutsTest {
 
         assertEquals(
             listOf((main.body as CompoundStatement).statements[1] as MemberCallExpression),
-            expected.filterByName("print")
+            expected("print")
         )
     }
 
@@ -235,11 +235,11 @@ class ShortcutsTest {
         val ifStatement = (magic.body as CompoundStatement).statements[0] as IfStatement
 
         val actual = ifStatement.controls()
-        expected.add(ifStatement.thenStatement)
+        ifStatement.thenStatement?.let { expected.add(it) }
         val thenStatement =
             (ifStatement.thenStatement as CompoundStatement).statements[0] as IfStatement
         expected.add(thenStatement)
-        expected.add(thenStatement.condition)
+        thenStatement.condition?.let { expected.add(it) }
         expected.add((thenStatement.condition as BinaryOperator).lhs)
         expected.add(((thenStatement.condition as BinaryOperator).lhs as MemberExpression).base)
         expected.add((thenStatement.condition as BinaryOperator).rhs)
@@ -256,7 +256,7 @@ class ShortcutsTest {
         expected.add(((nestedElse.statements[0] as BinaryOperator).lhs as MemberExpression).base)
         expected.add((nestedElse.statements[0] as BinaryOperator).rhs)
 
-        expected.add(ifStatement.elseStatement)
+        ifStatement.elseStatement?.let { expected.add(it) }
         expected.add((ifStatement.elseStatement as CompoundStatement).statements[0])
         expected.add(
             ((ifStatement.elseStatement as CompoundStatement).statements[0] as BinaryOperator).lhs

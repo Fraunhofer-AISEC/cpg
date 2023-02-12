@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -41,7 +42,6 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.CompressLLVMPass
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer
@@ -53,7 +53,7 @@ import org.bytedeco.llvm.global.LLVM.*
 class LLVMIRLanguageFrontend(
     language: Language<LLVMIRLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) : LanguageFrontend(language, config, scopeManager) {
 
     val statementHandler = StatementHandler(this)
@@ -90,6 +90,10 @@ class LLVMIRLanguageFrontend(
 
         // create a new LLVM context
         ctx = LLVMContextCreate()
+
+        // disable opaque pointers, until all necessary new functions are available in the C API.
+        // See https://llvm.org/docs/OpaquePointers.html
+        LLVMContextSetOpaquePointers(ctx, 0)
 
         // allocate a buffer for a possible error message
         val errorMessage = ByteBuffer.allocate(10000)
@@ -146,7 +150,7 @@ class LLVMIRLanguageFrontend(
         }
 
         var counter = 0
-        val flatAST = SubgraphWalker.flattenAST(tu)
+        val flatAST = SubgraphWalker.flattenAST(tu).toMutableList()
         for (phiInstr in phiList) {
             statementHandler.handlePhi(phiInstr, tu, flatAST)
             counter++
@@ -207,7 +211,7 @@ class LLVMIRLanguageFrontend(
                 }
                 LLVMStructTypeKind -> {
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
-                    record.toType() ?: UnknownType.getUnknownType(language)
+                    record.toType()
                 }
                 else -> {
                     parseType(typeStr)
@@ -239,7 +243,9 @@ class LLVMIRLanguageFrontend(
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
         return this.scopeManager
-            .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) { it.name == name }
+            .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) {
+                it.name.toString() == name
+            }
             .isNotEmpty()
     }
 

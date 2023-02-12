@@ -89,12 +89,12 @@ class SimpleDFAOrderEvaluationTest {
         assertNotNull(p4Decl)
         val consideredDecl = mutableSetOf(p4Decl.declarations[0])
 
-        val nodesToOp = mutableMapOf<Node, String>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "finish()"
+        val nodesToOp = mutableMapOf<Node, Set<String>>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("start()")
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -110,13 +110,13 @@ class SimpleDFAOrderEvaluationTest {
         assertNotNull(p4Decl)
         val consideredDecl = mutableSetOf(p4Decl.declarations[0])
 
-        val nodesToOp = mutableMapOf<Node, String>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
+        val nodesToOp = mutableMapOf<Node, Set<String>>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("start()")
         // We do not model the call to foo() because it does not exist in our model.
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "finish()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -132,24 +132,24 @@ class SimpleDFAOrderEvaluationTest {
         assertNotNull(p4Decl)
         val consideredDecl = mutableSetOf(p4Decl.declarations[0])
 
-        val nodesToOp = mutableMapOf<Node, String>()
+        val nodesToOp = mutableMapOf<Node, Set<String>>()
         // We model the calls to start() for the then and the else branch
         val thenBranch =
             ((functionOk.body as CompoundStatement).statements[2] as? IfStatement)?.thenStatement
                 as? CompoundStatement
         assertNotNull(thenBranch)
-        nodesToOp[thenBranch.statements[0]] = "start()"
+        nodesToOp[thenBranch.statements[0]] = setOf("start()")
         val elseBranch =
             ((functionOk.body as CompoundStatement).statements[2] as? IfStatement)?.elseStatement
                 as? CompoundStatement
         assertNotNull(elseBranch)
-        nodesToOp[elseBranch.statements[0]] = "start()"
+        nodesToOp[elseBranch.statements[0]] = setOf("start()")
 
         // We do not model the call to foo() because it does not exist in our model.
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "finish()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
 
         assertTrue(everythingOk, "Expected correct order")
     }
@@ -165,15 +165,15 @@ class SimpleDFAOrderEvaluationTest {
         assertNotNull(pDecl)
         val consideredBases = mutableSetOf(pDecl.declarations[0])
 
-        val nodesToOp = mutableMapOf<Node, String>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "set_key()"
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "start()"
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "finish()"
+        val nodesToOp = mutableMapOf<Node, Set<String>>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("set_key()")
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("start()")
+        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("finish()")
         // We do not model the call to foo() because it does not exist in our model.
-        nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = "set_key()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("set_key()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredBases, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, pDecl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredBases, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(pDecl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
@@ -189,11 +189,11 @@ class SimpleDFAOrderEvaluationTest {
         assertNotNull(p2Decl)
         val consideredBases = mutableSetOf(p2Decl.declarations[0])
 
-        val nodesToOp = mutableMapOf<Node, String>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
+        val nodesToOp = mutableMapOf<Node, Set<String>>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("start()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredBases, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p2Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredBases, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p2Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
@@ -209,16 +209,16 @@ class SimpleDFAOrderEvaluationTest {
         assertNotNull(p3Decl)
         val consideredDecl = mutableSetOf(p3Decl.declarations[0])
 
-        val nodesToOp = mutableMapOf<Node, String>()
+        val nodesToOp = mutableMapOf<Node, Set<String>>()
         val thenBranch =
             ((functionOk.body as CompoundStatement).statements[1] as? IfStatement)?.thenStatement
                 as? CompoundStatement
         assertNotNull(thenBranch)
-        nodesToOp[thenBranch.statements[0]] = "start()"
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "finish()"
+        nodesToOp[thenBranch.statements[0]] = setOf("start()")
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p3Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p3Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }
@@ -234,18 +234,18 @@ class SimpleDFAOrderEvaluationTest {
         assertNotNull(p4Decl)
         val consideredDecl = mutableSetOf(p4Decl.declarations[0])
 
-        val nodesToOp = mutableMapOf<Node, String>()
+        val nodesToOp = mutableMapOf<Node, Set<String>>()
         val thenBranch =
             ((functionOk.body as CompoundStatement).statements[1] as? IfStatement)?.thenStatement
                 as? CompoundStatement
         assertNotNull(thenBranch)
-        nodesToOp[thenBranch.statements[0]] = "start()"
-        nodesToOp[thenBranch.statements[1]] = "finish()"
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "start()"
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = "finish()"
+        nodesToOp[thenBranch.statements[0]] = setOf("start()")
+        nodesToOp[thenBranch.statements[1]] = setOf("finish()")
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("start()")
+        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("finish()")
 
-        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
-        val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
+        val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
     }

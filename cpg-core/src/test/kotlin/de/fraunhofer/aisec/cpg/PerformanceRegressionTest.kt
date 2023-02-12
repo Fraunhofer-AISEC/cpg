@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.time.Duration
@@ -49,12 +49,11 @@ import org.junit.jupiter.api.assertTimeout
 class PerformanceRegressionTest {
     /**
      * This test demonstrates two performance bottlenecks.
-     *
      * * First, we want to make a large initializer list with literals and make sure we parse this
-     * in reasonable time. We had issues with literals and their hashcode when they were inserted
-     * into a set.
+     *   in reasonable time. We had issues with literals and their hashcode when they were inserted
+     *   into a set.
      * * Second, we want to make that list essentially a one-liner because we had issues when
-     * populating the [Node.location] property using [CXXLanguageFrontend.getLocationFromRawNode].
+     *   populating the [Node.location] property using [CXXLanguageFrontend.getLocationFromRawNode].
      */
     @Test
     fun testParseLargeList() {
@@ -65,9 +64,9 @@ class PerformanceRegressionTest {
         val tmp = kotlin.io.path.createTempFile("c_range", ".c")
         tmp.writeText(string)
 
-        // this should not exceed 25 seconds (it takes about 2800ms on a good machine, about
+        // this should not exceed 30 seconds (it takes about 2800ms on a good machine, about
         // 10-20s on GitHub, depending on the slowness of the runner)
-        assertTimeout(Duration.of(25, ChronoUnit.SECONDS)) {
+        assertTimeout(Duration.of(30, ChronoUnit.SECONDS)) {
             val tu =
                 analyzeAndGetFirstTU(listOf(tmp.toFile()), tmp.parent, true) {
                     // No need for parallel processing for a single file. this might make it fast
@@ -88,20 +87,12 @@ class PerformanceRegressionTest {
             val list = InitializerListExpression()
 
             for (i in 0 until 50000) {
-                list.initializersPropertyEdge.add(
+                list.initializerEdges.add(
                     PropertyEdge(
                         list,
                         newLiteral(
                             i,
-                            ObjectType(
-                                "int",
-                                Type.Storage.AUTO,
-                                Type.Qualifier(),
-                                listOf(),
-                                ObjectType.Modifier.UNSIGNED,
-                                true,
-                                CPPLanguage()
-                            ),
+                            IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.UNSIGNED),
                             null
                         )
                     )

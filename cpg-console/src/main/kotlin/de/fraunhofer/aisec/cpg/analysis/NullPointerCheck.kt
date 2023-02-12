@@ -57,10 +57,6 @@ class NullPointerCheck {
                         handleHasBase(v)
                     }
 
-                    fun visit(v: CallExpression) {
-                        handleHasBase(v)
-                    }
-
                     fun visit(v: MemberExpression) {
                         handleHasBase(v)
                     }
@@ -127,7 +123,7 @@ class NullPointerCheck {
                     if (last is IfStatement) {
                         println()
                         println(
-                            "Branch depends on ${AttributedString("IfStatement", DEFAULT.foreground(GREEN)).toAnsi()} with condition ${AttributedString(last.condition.code, DEFAULT.foreground(CYAN)).toAnsi()} in ${last.fancyLocationLink()}"
+                            "Branch depends on ${AttributedString("IfStatement", DEFAULT.foreground(GREEN)).toAnsi()} with condition ${AttributedString(last.condition?.code, DEFAULT.foreground(CYAN)).toAnsi()} in ${last.fancyLocationLink()}"
                         )
                     }
 

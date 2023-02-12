@@ -25,15 +25,15 @@
 from ._code_extractor import CodeExtractor
 from de.fraunhofer.aisec.cpg.graph import DeclarationBuilderKt
 import ast
+import os
 
 
 class PythonASTToCPG(ast.NodeVisitor):
     def __init__(self, fname, frontend, code):
         self.sourcecode = CodeExtractor(fname)
-        self.frontend = frontend
+        self.frontend = frontend  # absolute path
         self.tud = DeclarationBuilderKt.newTranslationUnitDeclaration(
             self.frontend, fname, code)
-        self.tud.setName(fname)
         self.fname = fname
         self.scopemanager = frontend.getScopeManager()
         self.scopemanager.resetToGlobal(self.tud)
@@ -50,11 +50,14 @@ class PythonASTToCPG(ast.NodeVisitor):
     from ._misc import is_declaration
     from ._misc import is_declared_reference
     from ._misc import is_field_declaration
+    from ._misc import is_method_declaration
+    from ._misc import is_function_declaration
     from ._misc import is_member_expression
     from ._misc import is_statement
     from ._misc import is_variable_declaration
     from ._misc import log_with_loc
     from ._misc import wrap_declaration_to_stmt
+    from ._misc import is_literal
     from ._statements import handle_argument
     from ._statements import handle_assign
     from ._statements import handle_assign_impl
@@ -71,7 +74,7 @@ class PythonASTToCPG(ast.NodeVisitor):
             # Module(stmt* body, type_ignore* type_ignores)
             # TODO how to name the namespace?
             # TODO improve readability
-            nsd_name = ".".join(self.fname.split("/")[-1].split(".")[:-1])
+            nsd_name = ".".join(os.path.basename(self.fname).split(".")[:-1])
             nsd = DeclarationBuilderKt.newNamespaceDeclaration(self.frontend,
                                                                nsd_name, "")
             self.tud.addDeclaration(nsd)

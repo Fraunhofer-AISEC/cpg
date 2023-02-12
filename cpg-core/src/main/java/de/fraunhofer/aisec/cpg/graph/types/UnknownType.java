@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types;
 
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.Name;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 
@@ -42,7 +43,7 @@ public class UnknownType extends Type {
 
   private UnknownType() {
     super();
-    this.setName("UNKNOWN");
+    this.setName(new Name("UNKNOWN", null, this.getLanguage()));
   }
 
   /**
@@ -109,16 +110,6 @@ public class UnknownType extends Type {
   @Override
   public String toString() {
     return "UNKNOWN";
-  }
-
-  @Override
-  public void setStorage(@NotNull Storage storage) {
-    // Only one instance of UnknownType, use default values
-  }
-
-  @Override
-  public void setQualifier(Qualifier qualifier) {
-    // Only one instance of UnknownType, use default values
   }
 
   @Override

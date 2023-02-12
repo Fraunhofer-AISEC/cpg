@@ -42,6 +42,7 @@ import (
 )
 
 const MetadataProviderClass = cpg.GraphPackage + "/MetadataProvider"
+const LanguageProviderClass = cpg.GraphPackage + "/LanguageProvider"
 
 func getImportName(spec *ast.ImportSpec) string {
 	if spec.Name != nil {
@@ -221,7 +222,6 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 			if err != nil {
 				log.Fatal(err)
-
 			}
 
 			if record != nil && !record.IsNil() {
@@ -358,7 +358,7 @@ func (this *GoLanguageFrontend) handleValueSpec(fset *token.FileSet, valueDecl *
 	// TODO: more names
 	var ident = valueDecl.Names[0]
 
-	d := (this.NewVariableDeclaration(fset, valueDecl, ident.Name))
+	d := this.NewVariableDeclaration(fset, valueDecl, ident.Name)
 
 	if valueDecl.Type != nil {
 		t := this.handleType(valueDecl.Type)
@@ -414,11 +414,7 @@ func (this *GoLanguageFrontend) handleImportSpec(fset *token.FileSet, importSpec
 }
 
 func (this *GoLanguageFrontend) handleIdentAsName(ident *ast.Ident) string {
-	if this.isBuiltinType(ident.Name) {
-		return ident.Name
-	} else {
-		return fmt.Sprintf("%s.%s", this.File.Name.Name, ident.Name)
-	}
+	return ident.Name
 }
 
 func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDecl *ast.TypeSpec, structType *ast.StructType) *cpg.RecordDeclaration {
@@ -440,7 +436,7 @@ func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDe
 
 			if field.Names == nil {
 				// retrieve the root type name
-				var typeName = t.GetRoot().GetName()
+				var typeName = t.GetRoot().GetName().ToString()
 
 				this.LogDebug("Handling embedded field of type %s", typeName)
 
@@ -831,7 +827,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		return nil
 	}
 
-	name := reference.GetName()
+	name := reference.GetName().GetLocalName()
 
 	if name == "new" {
 		return this.handleNewExpr(fset, callExpr)
@@ -846,34 +842,15 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 	}
 
 	if isMemberExpression {
-		baseName := (*cpg.Node)((*cpg.MemberExpression)(reference).GetBase()).GetName()
-		// this is not 100% accurate since it should be rather the type not the base name
-		// but FQNs are really broken in the CPG so this is ok for now
-		fqn := fmt.Sprintf("%s.%s", baseName, name)
-
 		this.LogDebug("Fun is a member call to %s", name)
 
-		member := this.NewDeclaredReferenceExpression(fset, nil, name)
-		m := this.NewMemberCallExpression(fset, callExpr, name, fqn, (*cpg.MemberExpression)(reference).GetBase(), member.Node())
+		m := this.NewMemberCallExpression(fset, callExpr, reference)
 
 		c = (*cpg.CallExpression)(m)
 	} else {
 		this.LogDebug("Handling regular call expression to %s", name)
 
-		c = this.NewCallExpression(fset, callExpr)
-
-		// the name is already a FQN if it contains a dot
-		pos := strings.LastIndex(name, ".")
-		if pos != -1 {
-			fqn := name
-
-			c.SetFqn(fqn)
-
-			// need to have the short name
-			c.SetName(name[pos+1:])
-		} else {
-			c.SetName(name)
-		}
+		c = this.NewCallExpression(fset, callExpr, reference, name)
 	}
 
 	for _, arg := range callExpr.Args {
@@ -1011,7 +988,7 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 	// check, if this just a regular reference to a variable with a package scope and not a member expression
 	var isMemberExpression bool = true
 	for _, imp := range this.File.Imports {
-		if base.GetName() == getImportName(imp) {
+		if base.GetName().GetLocalName() == getImportName(imp) {
 			// found a package name, so this is NOT a member expression
 			isMemberExpression = false
 		}
@@ -1026,7 +1003,12 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 		// we need to set the name to a FQN-style, including the package scope. the call resolver will then resolve this
 		fqn := fmt.Sprintf("%s.%s", base.GetName(), selectorExpr.Sel.Name)
 
+		this.LogDebug("Trying to parse the fqn '%s'", fqn)
+
+		name := this.ParseName(fqn)
+
 		decl = this.NewDeclaredReferenceExpression(fset, selectorExpr, fqn)
+		decl.Node().SetName(name)
 	}
 
 	// For now we just let the VariableUsageResolver handle this. Therefore,
@@ -1149,7 +1131,7 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 	if ident.Name == "nil" {
 		lit := this.NewLiteral(fset, ident, nil, &cpg.UnknownType_getUnknown(lang).Type)
 
-		(*cpg.Node)(lit).SetName(ident.Name)
+		(*cpg.Node)(lit).SetName(this.ParseName(ident.Name))
 
 		return (*cpg.Expression)(lit)
 	}
@@ -1196,11 +1178,16 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 
 	switch v := typeExpr.(type) {
 	case *ast.Ident:
-		// make it a fqn according to the current package to make things easier
-		fqn := this.handleIdentAsName(v)
+		var name string
+		if this.isBuiltinType(v.Name) {
+			name = v.Name
+			this.LogDebug("non-fqn type: %s", name)
+		} else {
+			name = fmt.Sprintf("%s.%s", this.File.Name.Name, v.Name)
+			this.LogDebug("fqn type: %s", name)
+		}
 
-		this.LogDebug("FQN type: %s", fqn)
-		return cpg.TypeParser_createFrom(fqn, lang)
+		return cpg.TypeParser_createFrom(name, lang)
 	case *ast.SelectorExpr:
 		// small shortcut
 		fqn := fmt.Sprintf("%s.%s", v.X.(*ast.Ident).Name, v.Sel.Name)
@@ -1342,17 +1329,27 @@ func (this *GoLanguageFrontend) isBuiltinType(s string) bool {
 	}
 }
 
+func (this *GoLanguageFrontend) ParseName(fqn string) *cpg.Name {
+	var n *cpg.Name = (*cpg.Name)(jnigi.NewObjectRef(cpg.NameClass))
+	err := env.CallStaticMethod(cpg.NameKtClass, "parseName", n, this.Cast(LanguageProviderClass), cpg.NewCharSequence(fqn))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return n
+}
+
 // funcTypeName produces a Go-style function type name such as `func(int, string) string` or `func(int) (error, string)`
 func funcTypeName(paramTypes []*cpg.Type, returnTypes []*cpg.Type) string {
 	var rn []string
 	var pn []string
 
 	for _, t := range paramTypes {
-		pn = append(pn, t.GetName())
+		pn = append(pn, t.GetName().ToString())
 	}
 
 	for _, t := range returnTypes {
-		rn = append(rn, t.GetName())
+		rn = append(rn, t.GetName().ToString())
 	}
 
 	var rs string

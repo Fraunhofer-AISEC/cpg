@@ -77,7 +77,7 @@ internal class VariableResolverCppTest : BaseTest() {
                 topLevel.resolve(it).toFile()
             }
         val result = analyze(files, topLevel, true)
-        val calls = result.calls { it.name == "printLog" }
+        val calls = result.calls { it.name.localName == "printLog" }
         val records = result.records
         val functions = result.functions
 
@@ -97,21 +97,14 @@ internal class VariableResolverCppTest : BaseTest() {
         main = functions["main"]
 
         // Functions in the outer and inner object
-        outerFunction1 =
-            outerClass?.methods?.first { method: MethodDeclaration -> method.name == "function1" }
+        outerFunction1 = outerClass?.methods?.first { it.name.localName == "function1" }
         forStatements = outerFunction1.allChildren()
-        outerFunction2 =
-            outerClass?.methods?.first { method: MethodDeclaration -> method.name == "function2" }
-        outerFunction3 =
-            outerClass?.methods?.first { method: MethodDeclaration -> method.name == "function3" }
-        outerFunction4 =
-            outerClass?.methods?.first { method: MethodDeclaration -> method.name == "function4" }
-        outerFunction5 =
-            outerClass?.methods?.first { method: MethodDeclaration -> method.name == "function5" }
-        innerFunction1 =
-            innerClass?.methods?.first { method: MethodDeclaration -> method.name == "function1" }
-        innerFunction2 =
-            innerClass?.methods?.first { method: MethodDeclaration -> method.name == "function2" }
+        outerFunction2 = outerClass?.methods?.first { it.name.localName == "function2" }
+        outerFunction3 = outerClass?.methods?.first { it.name.localName == "function3" }
+        outerFunction4 = outerClass?.methods?.first { it.name.localName == "function4" }
+        outerFunction5 = outerClass?.methods?.first { it.name.localName == "function5" }
+        innerFunction1 = innerClass?.methods?.first { it.name.localName == "function1" }
+        innerFunction2 = innerClass?.methods?.first { it.name.localName == "function2" }
         for (call in calls) {
             val first = call.arguments[0]
             val logId = (first as Literal<*>).value.toString()

@@ -64,11 +64,6 @@ func (*Type) IsArray() bool {
 	return false
 }
 
-func (t *Type) GetName() string {
-	// A little bit hacky until we also convert node to a struct
-	return (*Node)(t.ObjectRef).GetName()
-}
-
 type ObjectType struct {
 	Type
 }
@@ -93,7 +88,7 @@ func InitEnv(e *jnigi.Env) {
 
 func TypeParser_createFrom(s string, l *Language) *Type {
 	var t Type
-	err := env.CallStaticMethod(TypeParserClass, "createFrom", &t, NewString(s), l)
+	err := env.CallStaticMethod(TypeParserClass, "createFrom", &t, NewCharSequence(s), l)
 	if err != nil {
 		log.Fatal(err)
 
@@ -148,6 +143,10 @@ func (h *HasType) GetType() *Type {
 	}
 
 	return &t
+}
+
+func (t *Type) GetName() (fn *Name) {
+	return (*Node)(t.ObjectRef).GetName()
 }
 
 func (t *ObjectType) AddGeneric(g *Type) {

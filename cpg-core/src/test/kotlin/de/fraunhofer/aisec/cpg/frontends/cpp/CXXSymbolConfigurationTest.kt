@@ -26,14 +26,15 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,7 +50,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
             CXXLanguageFrontend(
                     CPPLanguage(),
                     TranslationConfiguration.builder().defaultPasses().build(),
-                    ScopeManager()
+                    ScopeManager(),
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
@@ -63,7 +64,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         // not know)
         val dre = binaryOperator.getRhsAs(DeclaredReferenceExpression::class.java)
         assertNotNull(dre)
-        assertEquals("HELLO_WORLD", dre.name)
+        assertLocalName("HELLO_WORLD", dre)
 
         binaryOperator = funcDecl.getBodyStatementAs(1, BinaryOperator::class.java)
         assertNotNull(binaryOperator)
@@ -72,7 +73,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         // we do not know)
         val call = binaryOperator.getRhsAs(CallExpression::class.java)
         assertNotNull(call)
-        assertEquals("INCREASE", call.name)
+        assertLocalName("INCREASE", call)
     }
 
     @Test
@@ -91,7 +92,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                         )
                         .defaultPasses()
                         .build(),
-                    ScopeManager()
+                    ScopeManager(),
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
@@ -103,6 +104,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
 
         // should be a literal now
         val literal = binaryOperator.getRhsAs(Literal::class.java)
+        assertNotNull(literal)
         assertEquals("Hello World", literal.value)
 
         binaryOperator = funcDecl.getBodyStatementAs(1, BinaryOperator::class.java)
@@ -114,9 +116,11 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         assertEquals("+", add.operatorCode)
 
         val literal2 = add.getLhsAs(Literal::class.java)
+        assertNotNull(literal2)
         assertEquals(2, literal2.value)
 
         val literal1 = add.getRhsAs(Literal::class.java)
+        assertNotNull(literal1)
         assertEquals(1, literal1.value)
     }
 }

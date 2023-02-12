@@ -120,7 +120,7 @@ class CXXCompilationDatabaseTest {
 
         for (i in tus.indices) {
             val tu = tus[i]
-            val value = ref[File(tu.name).name]
+            val value = ref[File(tu.name.toString()).name]
             val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
             assertNotNull(mainFunc)
 

@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import kotlin.reflect.KClass
 
 /** The JavaScript language. */
@@ -39,11 +39,10 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
         TypeScriptLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&", "&&=", "??", "??=")
     override val disjunctiveOperators = listOf("||", "||=")
-    override val stringTypes = setOf("String")
 
     override fun newFrontend(
         config: TranslationConfiguration,
-        scopeManager: ScopeManager
+        scopeManager: ScopeManager,
     ): TypeScriptLanguageFrontend {
         return TypeScriptLanguageFrontend(this, config, scopeManager)
     }

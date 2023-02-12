@@ -1,7 +1,7 @@
 # Prerequsites
 
 * git
-* Java 11 (OpenSDK)
+* Java 17 (OpenSDK)
 
 # Build and Run
 
@@ -27,10 +27,10 @@ Make sure you can build the repository
 ./gradlew clean spotlessApply build publishToMavenLocal
 ```
 
-This project requires Java 11. If Java 11 is not your default Java version, make sure to configure gradle to use it by setting its java.home variable:
+This project requires Java 17. If Java 17 is not your default Java version, make sure to configure gradle to use it by setting its java.home variable:
 
 ```
-./gradlew -Dorg.gradle.java.home="/usr/lib/jvm/java-11-openjdk-amd64/" build
+./gradlew -Dorg.gradle.java.home="/usr/lib/jvm/java-17-openjdk-amd64/" build
 ```
 
 ## Copyright Notice
@@ -63,8 +63,54 @@ This project has the convention of including a license notice header in all sour
  *
  */
 ```
+
 If you are using IntelliJ IDEA, you can import `style/copyright.xml` as a copyright profile to automate the header creation process.
 Click [here](https://www.jetbrains.com/help/idea/copyright.html) for further information on copyright profiles.
+
+## Code Guidelines
+
+Most of our code is written in Kotlin and if you develop new nodes, one should follow the following guidelines.
+
+### Property Edges
+
+On some edges, we want to store additional information (e.g., if a `EOG` node is "unreachable"). In this case, a simple list of nodes for a `@Relationship` is not enough and instead a list of `PropertyEdge` objects is needed. To have a consistent naming, the property holding the edges should be named the singular of the property name + "Edges", e.g. `parameterEdges`. To make it more convenient for users to also access the connected nodes without property edges, the Kotlin delegation feature, with a `PropertyEdgeDelegate` can be used. This property should then be named after the property (plural), e.g. `parameters`.
+
+```kotlin
+/** The list of function parameters. */
+@Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
+@field:SubGraph("AST")
+var parameterEdges = mutableListOf<PropertyEdge<ParamVariableDeclaration>>()
+
+/** Virtual property for accessing [parameterEdges] without property edges. */
+var parameters by PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)
+```
+
+Note: We actually want list property to be immutable so that they can only be modified by the node class itself. However, it is currently not possible to have them immutable on the public getter, but mutable for the class itself. There is a Kotlin issue tracking this feature request. Once https://youtrack.jetbrains.com/issue/KT-14663 is resolved, we should set the public type for all those lists to `List` instead of `MutableList`. Properties delegated by `PropertyEdgeDelegate` are already immutable.
+
+### Required Properties
+
+Properties which can be considered as a required part of an expression, should be non-nullable and be initialized to a `ProblemNode`. In this case we can represent parsing problems in the graph and still avoid too many null checks. For example in the `MemberExpression`:
+```kotlin
+var base: Expression = ProblemExpression("could not parse base expression")
+```
+
+There might be cases, where either one or the other property might be required (if a property can either be an `Expression` or a `Declaration`, in this case we need to resort of having both properties nullable.
+
+Note: In the future, we might move required properties into the constructor of a node. 
+
+### `equals` and `hashCode`
+
+Because of the special nature of the `PropertyEdge`, one needs to be careful in comparing them in `equals`, to avoid stack overflows. Therefore, the special function `propertyEqualsList` needs to be used:
+```kotlin
+return (super.equals(other) &&
+    parameters == other.parameters &&
+    propertyEqualsList(parameterEdges, other.parameterEdges)
+```
+
+`hashCode` needs to include all properties that are also compared in `equals`. For easier readability, we should use the Kotlin expression body feature:
+```kotlin
+override fun hashCode() = Objects.hash(super.hashCode(), constructor, arguments)
+```
 
 # Pull Requests
 

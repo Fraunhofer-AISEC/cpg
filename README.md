@@ -21,6 +21,11 @@ We aim to provide more specifications over time and also include them in a new g
 
 ## Usage
 
+To build the project from source, you have to generate a `gradle.properties` file locally.
+This file also enables and disables the supported programming languages.
+We provide a sample file [here](./gradle.properties.example) - simply copy it to `gradle.properties` in the directory of the cpg-project.
+Instead of manually generating or editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties setting the supported programming languages for you.
+
 ### For Visualization Purposes
 
 In order to get familiar with the graph itself, you can use the subproject [cpg-neo4j](https://github.com/Fraunhofer-AISEC/cpg/tree/master/cpg-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
@@ -31,7 +36,7 @@ The most recent version is being published to Maven central and can be used as a
 ```
 repositories {
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/10.3/cdt-10.3.2/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/11.0/cdt-11.0.0/plugins")
         metadataSources {
             artifact()
         }
@@ -71,8 +76,9 @@ The library can be used on the command line using the `cpg-console` subproject. 
 ### Experimental Languages
 
 Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included as gradle submodules by default.
-To include them as submodules simply toggle them on in the [gradle properties](./gradle.properties) file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
-Instead of manually editing the [gradle properties](./gradle.properties) file, you can also use the `configure_frontends.sh` script, which edits the properties for you.
+To include them as submodules simply toggle them on in your local `gradle.properties` file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
+We provide a sample file [here](./gradle.properties.example).
+Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you.
 
 #### Golang
 
@@ -82,7 +88,7 @@ In the case of Golang, the necessary native code can be found in the `src/main/g
 
 You need to install [jep](https://github.com/ninia/jep/). This can either be system-wide or in a virtual environment. Your jep version has to match the version used by the CPG (see [version catalog](./gradle/libs.versions.toml)).
 
-Currently, only Python 3.10 is supported.
+Currently, only Python 3.{9,10,11,12} is supported.
 
 ##### System Wide
 

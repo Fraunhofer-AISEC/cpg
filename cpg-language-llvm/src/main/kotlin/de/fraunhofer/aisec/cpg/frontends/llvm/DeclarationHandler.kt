@@ -159,11 +159,15 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                 functionDeclaration.body = stmt
             } else if (LLVMGetEntryBasicBlock(func) == bb) {
                 functionDeclaration.body = newCompoundStatement()
-                (functionDeclaration.body as CompoundStatement).addStatement(stmt)
+                if (stmt != null) {
+                    (functionDeclaration.body as CompoundStatement).addStatement(stmt)
+                }
             } else {
                 // add the label statement, containing this basic block as a compound statement to
                 // our body (if we have none, which we should)
-                (functionDeclaration.body as? CompoundStatement)?.addStatement(stmt)
+                if (stmt != null) {
+                    (functionDeclaration.body as? CompoundStatement)?.addStatement(stmt)
+                }
             }
 
             bb = LLVMGetNextBasicBlock(bb)
@@ -182,8 +186,8 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      * there are two different types of structs:
      * - identified structs, which have a name are explicitly declared
      * - literal structs, which do not have a name, but are structurally unique To emulate this
-     * uniqueness, we create a [RecordDeclaration] for each literal struct and name it according to
-     * its element types (see [getLiteralStructName]).
+     *   uniqueness, we create a [RecordDeclaration] for each literal struct and name it according
+     *   to its element types (see [getLiteralStructName]).
      */
     fun handleStructureType(
         typeRef: LLVMTypeRef,
@@ -201,7 +205,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         var record =
             frontend.scopeManager
                 .resolve<RecordDeclaration>(frontend.scopeManager.globalScope, true) {
-                    it.name == name
+                    it.name.toString() == name
                 }
                 .firstOrNull()
 
@@ -257,7 +261,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     ): String {
         val typeStr = LLVMPrintTypeToString(typeRef).string
         if (typeStr in frontend.typeCache && frontend.typeCache[typeStr] != null) {
-            return frontend.typeCache[typeStr]!!.name
+            return frontend.typeCache[typeStr]!!.name.localName
         }
 
         var name = "literal"

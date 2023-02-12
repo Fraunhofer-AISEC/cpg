@@ -30,9 +30,8 @@ import "tekao.net/jnigi"
 type ScopeManager jnigi.ObjectRef
 type Scope jnigi.ObjectRef
 
-const PassesPackage = CPGPackage + "/passes"
-const ScopesPackage = PassesPackage + "/scopes"
-const ScopeManagerClass = ScopesPackage + "/ScopeManager"
+const ScopesPackage = GraphPackage + "/scopes"
+const ScopeManagerClass = CPGPackage + "/ScopeManager"
 const ScopeClass = ScopesPackage + "/Scope"
 
 func (s *ScopeManager) EnterScope(n *Node) {
@@ -71,14 +70,14 @@ func (s *ScopeManager) GetCurrentBlock() *CompoundStatement {
 	return (*CompoundStatement)(o)
 }
 
-func (s *ScopeManager) GetRecordForName(scope *Scope, recordName string) (record *RecordDeclaration, err error) {
+func (s *ScopeManager) GetRecordForName(scope *Scope, recordName *Name) (record *RecordDeclaration, err error) {
 	var o = jnigi.NewObjectRef(RecordDeclarationClass)
 
 	err = (*jnigi.ObjectRef)(s).CallMethod(env,
 		"getRecordForName",
 		o,
 		(*jnigi.ObjectRef)(scope).Cast(ScopeClass),
-		NewString(recordName))
+		recordName)
 
 	record = (*RecordDeclaration)(o)
 

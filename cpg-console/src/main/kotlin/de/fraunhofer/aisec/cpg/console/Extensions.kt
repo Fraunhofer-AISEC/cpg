@@ -181,22 +181,18 @@ fun getCode(file: String, region: Region): String {
 
 val styles = SyntaxPlugin.HighlightStylesFromConfiguration(object : ReplConfigurationBase() {})
 
-fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region>> {
+fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Region>> {
     val list = mutableListOf<Pair<AttributedStyle, Region>>()
 
     when (node) {
-        is MemberCallExpression -> {
-            // only color the member
-            list.addAll(getFanciesFor(node, node.member))
+        is MemberExpression -> {
+            // color the member
+            node.location?.let { list += Pair(styles.identifier!!, it.region) }
 
             return list
         }
         is DeclaredReferenceExpression -> {
-            if ((original as? MemberCallExpression)?.member == node) {
-                node.location?.let { list += Pair(styles.identifier!!, it.region) }
-            }
-
-            // also color it, if its on its own
+            // also color it, if it's on its own
             if (original == node) {
                 node.location?.let { list += Pair(styles.identifier!!, it.region) }
             }
@@ -230,7 +226,7 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
             // look for the if keyword
             fancyWord("if", node, list, styles.keyword)
 
-            list.addAll(getFanciesFor(original, node.thenStatement))
+            node.thenStatement?.let { list.addAll(getFanciesFor(original, it)) }
 
             return list
         }
@@ -274,7 +270,7 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
             }
 
             // color the name
-            fancyWord(node.name, node, list, styles.function)
+            fancyWord(node.name.toString(), node, list, styles.function)
 
             node.body?.let {
                 // forward it to the body
@@ -294,7 +290,7 @@ private fun fancyType(
     list: MutableList<Pair<AttributedStyle, Region>>
 ) {
     val types = outer.language?.primitiveTypes?.toMutableSet() ?: mutableSetOf()
-    types += node.type.name
+    types += node.type.name.toString()
 
     // check for primitive types
     for (type in types) {

@@ -28,7 +28,7 @@ import ast
 from de.fraunhofer.aisec.cpg.graph import StatementBuilderKt
 from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.sarif import Region
-from java.net import URI
+from java.io import File
 
 NOT_IMPLEMENTED_MSG = "This has not been implemented, yet. Using a dummy."
 CPG_JAVA = "de.fraunhofer.aisec.cpg"
@@ -84,7 +84,7 @@ def add_mul_loc_infos(self, start_node, end_node, obj):
             (type(start_node)), (type(end_node)), loglevel="ERROR")
         return
 
-    uri = URI("file://" + self.fname)
+    uri = File(self.fname).toURI()
     obj.setLocation(PhysicalLocation(uri,
                                      Region(start_node.lineno,
                                             start_node.col_offset + 1,
@@ -115,6 +115,11 @@ def is_field_declaration(self, target):
     return target is not None and target.java_name == n
 
 
+def is_function_declaration(self, target):
+    n = CPG_JAVA + ".graph.declarations.FunctionDeclaration"
+    return target is not None and target.java_name == n
+
+
 def is_member_expression(self, target):
     n = CPG_JAVA + ".graph.statements.expressions.MemberExpression"
     return target is not None and target.java_name == n
@@ -138,8 +143,12 @@ def is_ctor_declaration(self, target):
 
 def is_statement(self, target):
     n = CPG_JAVA + ".graph.statements."
-    return target is not None and target.java_name.startswith(
-        n)
+    return target is not None and target.java_name.startswith(n)
+
+
+def is_literal(self, target):
+    n = CPG_JAVA + ".graph.statements.expressions.Literal"
+    return target is not None and target.java_name.startswith(n)
 
 
 def wrap_declaration_to_stmt(self, stmt):

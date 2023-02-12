@@ -25,7 +25,7 @@ repositories {
     mavenCentral()
 
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/10.3/cdt-10.3.2/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/11.0/cdt-11.0.0/plugins")
         metadataSources {
             artifact()
         }
@@ -38,7 +38,7 @@ repositories {
 //
 // common documentation, signing and publishing configuration
 //
-// this disables gradles alternative to POM files, which cause problems when publishing on Maven
+// this disables gradle's alternative to POM files, which cause problems when publishing on Maven
 tasks.withType<GenerateModuleMetadata> {
     enabled = false
 }
@@ -114,7 +114,7 @@ signing {
 // specify Java & Kotlin JVM version
 kotlin {
     jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(11))
+        languageVersion.set(JavaLanguageVersion.of(17))
     }
 }
 

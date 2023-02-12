@@ -67,13 +67,14 @@ internal class TypedefTest : BaseTest() {
         val fpType = uintfp1.type as? FunctionPointerType
         assertNotNull(fpType)
 
-        val returnType = fpType.returnType as? ObjectType
+        val returnType = fpType.returnType as? NumericType
         assertNotNull(returnType)
-        assertEquals(ObjectType.Modifier.UNSIGNED, returnType.modifier)
+        assertEquals(NumericType.Modifier.UNSIGNED, returnType.modifier)
         assertEquals(uintfp1.type, uintfp2.type)
 
         val typedefs = result.scopeManager.currentTypedefs
-        val def = typedefs.stream().filter { it.alias.name == "test" }.findAny().orElse(null)
+        val def =
+            typedefs.stream().filter { it.alias.name.localName == "test" }.findAny().orElse(null)
         assertNotNull(def)
     }
 

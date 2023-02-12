@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
@@ -36,6 +37,7 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import java.io.File
 import kotlin.test.*
 
@@ -89,7 +91,11 @@ internal class ScopeManagerTest : BaseTest() {
     fun testMerge() {
         val s1 = ScopeManager()
         val frontend1 =
-            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s1)
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationConfiguration.builder().build(),
+                s1,
+            )
         s1.resetToGlobal(frontend1.newTranslationUnitDeclaration("f1.cpp", null))
 
         // build a namespace declaration in f1.cpp with the namespace A
@@ -101,7 +107,11 @@ internal class ScopeManagerTest : BaseTest() {
 
         val s2 = ScopeManager()
         val frontend2 =
-            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s2)
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationConfiguration.builder().build(),
+                s2,
+            )
         s2.resetToGlobal(frontend2.newTranslationUnitDeclaration("f1.cpp", null))
 
         // and do the same in the other file
@@ -114,17 +124,21 @@ internal class ScopeManagerTest : BaseTest() {
         // merge the two scopes. this replicates the behaviour of parseParallel
         val final = ScopeManager()
         val frontend =
-            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), final)
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationConfiguration.builder().build(),
+                final,
+            )
         final.mergeFrom(listOf(s1, s2))
 
-        // in the final scope manager, the should only be one NameScope "A"
-        val scopes = final.filterScopes { it.scopedName == "A" }
+        // in the final scope manager, there should only be one NameScope "A"
+        val scopes = final.filterScopes { it.name.toString() == "A" }
         assertEquals(1, scopes.size)
 
         val scopeA = scopes.firstOrNull() as? NameScope
         assertNotNull(scopeA)
 
-        // should also be able to look-up via the FQN
+        // should also be able to look up via the FQN
         assertEquals(scopeA, final.lookupScope("A"))
 
         // and it should contain both functions from the different file in the same namespace
@@ -138,7 +152,7 @@ internal class ScopeManagerTest : BaseTest() {
         // resolve symbol
         val call =
             frontend.newCallExpression(
-                frontend.newDeclaredReferenceExpression("func1"),
+                frontend.newDeclaredReferenceExpression("A::func1"),
                 "A::func1",
                 null,
                 false
@@ -152,21 +166,25 @@ internal class ScopeManagerTest : BaseTest() {
     fun testScopeFQN() {
         val s = ScopeManager()
         val frontend =
-            CXXLanguageFrontend(CPPLanguage(), TranslationConfiguration.builder().build(), s)
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationConfiguration.builder().build(),
+                s,
+            )
         s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
 
-        assertEquals("", s.currentNamePrefix)
+        assertNull(s.currentNamespace)
 
         val namespaceA = frontend.newNamespaceDeclaration("A", null)
         s.enterScope(namespaceA)
 
-        assertEquals("A", s.currentNamePrefix)
+        assertEquals("A", s.currentNamespace.toString())
 
-        // nested namespace A::B. the name needs to be a FQN
-        val namespaceB = frontend.newNamespaceDeclaration("A::B", null)
+        // nested namespace A::B
+        val namespaceB = frontend.newNamespaceDeclaration("B", null)
         s.enterScope(namespaceB)
 
-        assertEquals("A::B", s.currentNamePrefix)
+        assertEquals("A::B", s.currentNamespace.toString())
 
         val func = frontend.newFunctionDeclaration("func", null)
         s.addDeclaration(func)

@@ -27,15 +27,20 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newTypedefDeclaration;
 
+import de.fraunhofer.aisec.cpg.ScopeManager;
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope;
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope;
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope;
+import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import de.fraunhofer.aisec.cpg.passes.scopes.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -62,7 +67,7 @@ public class TypeManager {
       Collections.synchronizedMap(new IdentityHashMap<>());
 
   @NotNull
-  private final Map<String, RecordDeclaration> typeToRecord =
+  private final Map<Type, RecordDeclaration> typeToRecord =
       Collections.synchronizedMap(new HashMap<>());
 
   /**
@@ -103,7 +108,7 @@ public class TypeManager {
     if (this.recordToTypeParameters.containsKey(recordDeclaration)) {
       for (ParameterizedType parameterizedType :
           this.recordToTypeParameters.get(recordDeclaration)) {
-        if (parameterizedType.getName().equals(name)) {
+        if (parameterizedType.getName().toString().equals(name)) {
           return parameterizedType;
         }
       }
@@ -136,7 +141,7 @@ public class TypeManager {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
       for (ParameterizedType parameterizedType :
           this.templateToTypeParameters.get(templateDeclaration)) {
-        if (parameterizedType.getName().equals(name)) {
+        if (parameterizedType.getName().toString().equals(name)) {
           return parameterizedType;
         }
       }
@@ -174,9 +179,8 @@ public class TypeManager {
 
       // We need an additional check here, because of parsing or other errors, the AST node might
       // not necessarily be a template declaration.
-      if (node instanceof TemplateDeclaration) {
-        TemplateDeclaration template = (TemplateDeclaration) node;
-        ParameterizedType parameterizedType = getTypeParameter(template, name);
+      if (node instanceof TemplateDeclaration templateDeclaration) {
+        ParameterizedType parameterizedType = getTypeParameter(templateDeclaration, name);
         if (parameterizedType != null) {
           return parameterizedType;
         }
@@ -233,6 +237,7 @@ public class TypeManager {
     return typeState;
   }
 
+  @NotNull
   public <T extends Type> T registerType(T t) {
     if (t.isFirstOrderType()) {
       this.firstOrderTypes.add(t);
@@ -252,12 +257,13 @@ public class TypeManager {
   }
 
   public boolean typeExists(String name) {
-    return firstOrderTypes.stream().anyMatch(type -> type.getRoot().getName().equals(name));
+    return firstOrderTypes.stream()
+        .anyMatch(type -> type.getRoot().getName().toString().equals(name));
   }
 
   private TypeManager() {}
 
-  public static TypeManager getInstance() {
+  public static @NotNull TypeManager getInstance() {
     return instance;
   }
 
@@ -292,7 +298,7 @@ public class TypeManager {
   }
 
   /**
-   * @param generics
+   * @param generics the list of parameter types
    * @return true if the generics contain parameterized Types
    */
   public boolean containsParameterizedType(List<Type> generics) {
@@ -311,13 +317,13 @@ public class TypeManager {
    *     with parameterizedTypes as generics false otherwise
    */
   public boolean stopPropagation(Type type, Type newType) {
-    if (type instanceof ObjectType
-        && newType instanceof ObjectType
-        && ((ObjectType) type).getGenerics() != null
-        && ((ObjectType) newType).getGenerics() != null
+    if (type instanceof ObjectType typeObjectType
+        && newType instanceof ObjectType newObjectType
+        && typeObjectType.getGenerics() != null
+        && newObjectType.getGenerics() != null
         && type.getName().equals(newType.getName())) {
-      return containsParameterizedType(((ObjectType) newType).getGenerics())
-          && !(containsParameterizedType(((ObjectType) type).getGenerics()));
+      return containsParameterizedType(newObjectType.getGenerics())
+          && !(containsParameterizedType(typeObjectType.getGenerics()));
     }
     return false;
   }
@@ -453,7 +459,9 @@ public class TypeManager {
 
     for (var child : globalScope.getChildren()) {
       if (child instanceof RecordScope && child.getAstNode() instanceof RecordDeclaration) {
-        typeToRecord.put(child.getAstNode().getName(), (RecordDeclaration) child.getAstNode());
+        typeToRecord.put(
+            ((RecordDeclaration) child.getAstNode()).toType(),
+            (RecordDeclaration) child.getAstNode());
       }
 
       // HACKY HACK HACK
@@ -461,7 +469,8 @@ public class TypeManager {
         for (var child2 : child.getChildren()) {
           if (child2 instanceof RecordScope && child2.getAstNode() instanceof RecordDeclaration) {
             typeToRecord.put(
-                child2.getAstNode().getName(), (RecordDeclaration) child2.getAstNode());
+                ((RecordDeclaration) child2.getAstNode()).toType(),
+                (RecordDeclaration) child2.getAstNode());
           }
         }
       }
@@ -469,10 +478,10 @@ public class TypeManager {
 
     List<Set<Ancestor>> allAncestors =
         types.stream()
-            .map(t -> typeToRecord.getOrDefault(t.getTypeName(), null))
+            .map(t -> typeToRecord.getOrDefault(t, null))
             .filter(Objects::nonNull)
             .map(r -> getAncestors(r, 0))
-            .collect(Collectors.toList());
+            .toList();
 
     // normalize/reverse depth: roots start at 0, increasing on each level
     for (Set<Ancestor> ancestors : allAncestors) {
@@ -533,7 +542,7 @@ public class TypeManager {
     }
     Set<Ancestor> ancestors =
         recordDeclaration.getSuperTypes().stream()
-            .map(s -> typeToRecord.getOrDefault(s.getTypeName(), null))
+            .map(s -> typeToRecord.getOrDefault(s, null))
             .filter(Objects::nonNull)
             .map(s -> getAncestors(s, depth + 1))
             .flatMap(Collection::stream)
@@ -542,23 +551,35 @@ public class TypeManager {
     return ancestors;
   }
 
-  public boolean isSupertypeOf(Type superType, Type subType, ScopeProvider provider) {
+  public boolean isSupertypeOf(Type superType, Type subType, MetadataProvider provider) {
+    Language<?> language = null;
 
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
       return false;
     }
 
-    // arrays and pointers match in C++
-    if (checkArrayAndPointer(superType, subType)) {
+    if (provider instanceof LanguageProvider languageProvider) {
+      language = languageProvider.getLanguage();
+    }
+
+    // arrays and pointers match in C/C++
+    // TODO: Make this independent from the specific language
+    if (language instanceof CLanguage && checkArrayAndPointer(superType, subType)) {
       return true;
     }
 
     // ObjectTypes can be passed as ReferenceTypes
-    if (superType instanceof ReferenceType) {
-      return isSupertypeOf(((ReferenceType) superType).getElementType(), subType, provider);
+    if (superType instanceof ReferenceType referenceType) {
+      return isSupertypeOf(referenceType.getElementType(), subType, provider);
     }
 
-    Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)), provider);
+    // We cannot proceed without a scope provider
+    if (!(provider instanceof ScopeProvider scopeProvider)) {
+      return false;
+    }
+
+    Optional<Type> commonType =
+        getCommonType(new HashSet<>(List.of(superType, subType)), scopeProvider);
     if (commonType.isPresent()) {
       return commonType.get().equals(superType);
     } else {
@@ -578,7 +599,8 @@ public class TypeManager {
     int firstDepth = first.getReferenceDepth();
     int secondDepth = second.getReferenceDepth();
     if (firstDepth == secondDepth) {
-      return first.getTypeName().equals(second.getTypeName()) && first.isSimilar(second);
+      return first.getRoot().getName().equals(second.getRoot().getName())
+          && first.isSimilar(second);
     } else {
       return false;
     }

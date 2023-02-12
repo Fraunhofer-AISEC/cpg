@@ -23,7 +23,6 @@
 #                    \______/ \__|       \______/
 #
 from ._misc import NOT_IMPLEMENTED_MSG
-from ._misc import handle_operator_code
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import DeclarationBuilderKt
 from de.fraunhofer.aisec.cpg.graph import NodeBuilderKt
@@ -51,13 +50,8 @@ def handle_statement_impl(self, stmt):
     elif isinstance(stmt, ast.AsyncFunctionDef):
         return self.handle_function_or_method(stmt)
     elif isinstance(stmt, ast.ClassDef):
-        # TODO: NodeBuilder requires a "kind" parameters. Setting this to
-        # "class" would automagically create a "this" receiver field.
-        # However, the receiver can have any name in python (and even different
-        # names per method).
         cls = DeclarationBuilderKt.newRecordDeclaration(
-            self.frontend, stmt.name, "", self.get_src_code(stmt))
-        self.scopemanager.enterScope(cls)
+            self.frontend, stmt.name, "class", self.get_src_code(stmt))
         bases = []
         for base in stmt.bases:
             if not isinstance(base, ast.Name):
@@ -65,10 +59,15 @@ def handle_statement_impl(self, stmt):
                     "Expected a name, but got: %s" %
                     (type(base)), loglevel="ERROR")
             else:
-                tname = "%s" % (base.id)
+                namespace = self.scopemanager.getCurrentNamespace()
+                tname = "%s.%s" % (namespace.toString(), base.id)
+                self.log_with_loc("Building super type using current "
+                                  "namespace: %s" % tname)
                 t = NodeBuilderKt.parseType(self.frontend, tname)
                 bases.append(t)
         cls.setSuperClasses(bases)
+
+        self.scopemanager.enterScope(cls)
         for keyword in stmt.keywords:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         for s in stmt.body:
@@ -98,7 +97,6 @@ def handle_statement_impl(self, stmt):
         return r
     elif isinstance(stmt, ast.Assign):
         return self.handle_assign(stmt)
-
     elif isinstance(stmt, ast.AugAssign):
         return self.handle_assign(stmt)
     elif isinstance(stmt, ast.AnnAssign):
@@ -347,38 +345,47 @@ def handle_function_or_method(self, node, record=None):
         members = []
 
         if isinstance(decorator.func, ast.Attribute):
+            # unfortunately, FQN'ing does not work here correctly because at
+            # this point the base of the MemberExpression is not yet resolved.
+            # So instead we use the ref's "code" property to have the correct
+            # name like @app.route. In the future it might make sense to have
+            # a type listener in the Annotation to correctly resolve the base
             ref = self.handle_expression(decorator.func)
-            annotation = self.frontend.newAnnotation(
-                ref.getName(), self.get_src_code(decorator.func))
+            annotation = NodeBuilderKt.newAnnotation(
+                self.frontend, ref.getCode(),
+                self.get_src_code(decorator.func))
 
             # add the base as a receiver annotation
-            member = self.frontend.newAnnotationMember(
-                "receiver", ref.getBase(), self.get_src_code(decorator.func))
+            member = NodeBuilderKt.newAnnotationMember(
+                self.frontend, "receiver", ref.getBase(),
+                self.get_src_code(decorator.func))
 
             members.append(member)
         elif isinstance(decorator.func, ast.Name):
             ref = self.handle_expression(decorator.func)
-            annotation = self.frontend.newAnnotation(
-                ref.getName(), self.get_src_code(decorator.func))
+            annotation = NodeBuilderKt.newAnnotation(
+                self.frontend, ref.getName(),
+                self.get_src_code(decorator.func))
 
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            # TODO empty annotation
 
         # add first arg as value
         if len(decorator.args) > 0:
             arg0 = decorator.args[0]
             value = self.handle_expression(arg0)
 
-            member = self.frontend.newAnnotationMember(
-                "value", value, self.get_src_code(arg0))
+            member = NodeBuilderKt.newAnnotationMember(
+                self.frontend, "value", value, self.get_src_code(arg0))
 
             members.append(member)
 
         # loop through keywords args
         for kw in decorator.keywords:
-            member = self.frontend.newAnnotationMember(
-                kw.arg, self.handle_expression(
-                    kw.value), self.get_src_code(kw))
+            member = NodeBuilderKt.newAnnotationMember(
+                self.frontend, kw.arg, self.handle_expression(kw.value),
+                self.get_src_code(kw))
 
             members.append(member)
 
@@ -425,12 +432,25 @@ def handle_for(self, stmt):
     # We can handle the AsyncFor / For statement now:
     for_stmt = StatementBuilderKt.newForEachStatement(self.frontend,
                                                       self.get_src_code(stmt))
-    target = self.handle_expression(stmt.target)
-    if self.is_variable_declaration(target):
-        target = self.wrap_declaration_to_stmt(target)
-    for_stmt.setVariable(target)
+
+    # We handle the iterable before the target so that the type can be set
+    # correctly
     it = self.handle_expression(stmt.iter)
     for_stmt.setIterable(it)
+
+    target = self.handle_expression(stmt.target)
+    resolved_target = self.scopemanager.resolveReference(target)
+    if resolved_target is None:
+        target = DeclarationBuilderKt.newVariableDeclaration(
+            self.frontend, target.getName(),
+            it.getType(),
+            self.get_src_code(stmt.target),
+            False)
+        self.scopemanager.addDeclaration(target)
+        target = self.wrap_declaration_to_stmt(target)
+
+    for_stmt.setVariable(target)
+
     body = self.make_compound_statement(stmt.body)
     for_stmt.setStatement(body)
 
@@ -515,15 +535,15 @@ def handle_assign_impl(self, stmt):
         self.log_with_loc(
             "Expected a DeclaredReferenceExpression or MemberExpression "
             "but got \"%s\". Skipping." %
-            (lhs.java_name), loglevel="ERROR")
+            lhs.java_name, loglevel="ERROR")
         r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
                                                   "=",
                                                   self.get_src_code(stmt))
         return r
 
     resolved_lhs = self.scopemanager.resolveReference(lhs)
-    inRecord = self.scopemanager.isInRecord()
-    inFunction = self.scopemanager.isInFunction()
+    in_record = self.scopemanager.isInRecord()
+    in_function = self.scopemanager.isInFunction()
 
     if resolved_lhs is not None:
         # found var => BinaryOperator "="
@@ -534,7 +554,7 @@ def handle_assign_impl(self, stmt):
             binop.setRhs(rhs)
         return binop
     else:
-        if inRecord and not inFunction:
+        if in_record and not in_function:
             """
             class Foo:
                 class_var = 123
@@ -563,7 +583,7 @@ def handle_assign_impl(self, stmt):
                     None, None, False)  # TODO None -> add infos
             self.scopemanager.addDeclaration(v)
             return v
-        elif inRecord and inFunction:
+        elif in_record and in_function:
             """
             class Foo:
                 def bar(self):
@@ -627,7 +647,7 @@ def handle_assign_impl(self, stmt):
                 self.scopemanager.addDeclaration(v)
                 self.scopemanager.getCurrentRecord().addField(v)
                 return v
-        elif not inRecord:
+        elif not in_record:
             """
             either in a function or at file top-level
             """

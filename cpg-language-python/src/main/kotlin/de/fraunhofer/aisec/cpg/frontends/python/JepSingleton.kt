@@ -25,23 +25,29 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import java.io.File
 import java.net.JarURLConnection
+import java.nio.file.Path
+import java.nio.file.Paths
 import jep.JepConfig
+import jep.JepException
 import jep.MainInterpreter
+import jep.SubInterpreter
+import kotlin.io.path.exists
 import org.slf4j.LoggerFactory
 
 /**
  * Takes care of configuring Jep according to some well known paths on popular operating systems.
  */
 object JepSingleton {
-    var config = JepConfig()
+    private var config = JepConfig()
+    private val classLoader = javaClass
 
     private val LOGGER = LoggerFactory.getLogger(javaClass)
 
     init {
         val tempFileHolder = PyTempFileHolder()
-        val classLoader = javaClass
         val pyInitFile = classLoader.getResource("/CPGPython/__init__.py")
 
         config.redirectStdErr(System.err)
@@ -54,12 +60,11 @@ object JepSingleton {
             // we can point JEP to the folder and get better debug messages with python source code
             // locations
 
-            // we want to have the parent folder of "CPGPython" so that we can do "import CPGPython"
-            // in python
-            var pyFolder = pyInitFile.file.dropLastWhile { it != File.separatorChar }
-            pyFolder = pyFolder.dropLast(1)
-            pyFolder = pyFolder.dropLastWhile { it != File.separatorChar }
-            config.addIncludePaths(pyFolder)
+            // We want to have the parent folder of "CPGPython" so that we can do "import CPGPython"
+            // in python. The layout looks like `.../main/CPGPython/__init__.py` -> we have to go
+            // two levels up to get the path of `main`.
+            var pyFolder = Paths.get(pyInitFile.toURI()).parent.parent
+            config.addIncludePaths(pyFolder.toString())
         } else {
             val targetFolder = tempFileHolder.pyFolder
             config.addIncludePaths(tempFileHolder.pyFolder.toString())
@@ -108,6 +113,9 @@ object JepSingleton {
             if (library.exists()) {
                 MainInterpreter.setJepLibraryPath(library.path)
                 config.addIncludePaths(
+                    // We want to have the parent folder of "CPGPython" so that we can do "import
+                    // CPGPython" in python. The layout looks like `.../main/CPGPython/__init__.py`
+                    // -> we have to go two levels up to get the path of `main`.
                     library.toPath().parent.parent.toString()
                 ) // this assumes that the python code is also at the library's location
             }
@@ -118,41 +126,117 @@ object JepSingleton {
                 virtualEnv = System.getenv("CPG_PYTHON_VIRTUALENV")
             }
 
-            val wellKnownPaths =
-                listOf(
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.11/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.11/site-packages/jep/libjep.jnilib"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.10/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.10/site-packages/jep/libjep.jnilib"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.so"
-                    ),
-                    File(
-                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.jnilib"
-                    ),
-                    File("/usr/lib/libjep.so"),
-                    File("/Library/Java/Extensions/libjep.jnilib")
+            val virtualEnvPath =
+                Paths.get(System.getProperty("user.home"), ".virtualenvs", "${virtualEnv}/")
+            val pythonVersions = listOf("3.9", "3.10", "3.11", "3.12")
+            val wellKnownPaths = mutableListOf<Path>()
+            pythonVersions.forEach { version ->
+                // Linux
+                wellKnownPaths.add(
+                    Paths.get(
+                        "$virtualEnvPath",
+                        "lib",
+                        "python${version}",
+                        "site-packages",
+                        "jep",
+                        "libjep.so"
+                    )
                 )
+                // Mac OS
+                wellKnownPaths.add(
+                    Paths.get(
+                        "$virtualEnvPath",
+                        "lib",
+                        "python${version}",
+                        "site-packages",
+                        "jep",
+                        "libjep.jnilib"
+                    )
+                )
+                wellKnownPaths.add(
+                    Paths.get(
+                        "$virtualEnvPath",
+                        "lib",
+                        "python${version}",
+                        "site-packages",
+                        "jep",
+                        "libjep.dll"
+                    )
+                )
+            }
+            try {
+                wellKnownPaths.add(Paths.get("/", "usr", "lib", "libjep.so"))
+                wellKnownPaths.add(Paths.get("/", "Library", "Java", "Extensions", "libjep.jnilib"))
+            } catch (e: Exception) {
+                // noop
+            }
 
             wellKnownPaths.forEach {
                 if (it.exists()) {
                     // Jep's configuration must be set before the first instance is created. Later
                     // calls
                     // to setJepLibraryPath and co result in failures.
-                    MainInterpreter.setJepLibraryPath(it.path)
+                    MainInterpreter.setJepLibraryPath(it.toString())
                     config.addIncludePaths(
-                        it.toPath().parent.parent.toString()
+                        // We want to have the parent folder of "CPGPython" so that we can do
+                        // "import CPGPython" in python. The layout looks like
+                        // `.../main/CPGPython/__init__.py` -> we have to go two levels up to get
+                        // the path of `main`.
+                        it.parent.parent.toString()
                     ) // this assumes that the python code is also at the library's location
                 }
             }
         }
+    }
+
+    /** Setup and configure (load the Python code and trigger the debug script) an interpreter. */
+    fun getInterp(): SubInterpreter {
+        val interp = SubInterpreter(config)
+        var found = false
+        // load the python code
+        // check, if the cpg.py is either directly available in the current directory or in the
+        // src/main/python folder
+        val modulePath = Path.of("cpg.py")
+
+        val possibleLocations =
+            listOf(
+                Paths.get(".").resolve(modulePath),
+                Paths.get("src", "main", "python").resolve(modulePath),
+                Paths.get("cpg-library", "src", "main", "python").resolve(modulePath)
+            )
+
+        var entryScript: Path? = null
+        possibleLocations.forEach {
+            if (it.toFile().exists()) {
+                found = true
+                entryScript = it.toAbsolutePath()
+            }
+        }
+
+        try {
+
+            val debugEgg = System.getenv("DEBUG_PYTHON_EGG")
+            val debugHost = System.getenv("DEBUG_PYTHON_HOST") ?: "localhost"
+            val debugPort = System.getenv("DEBUG_PYTHON_PORT") ?: 52190
+
+            // load script
+            if (found) {
+                interp.runScript(entryScript.toString())
+            } else {
+                // fall back to the cpg.py in the class's resources
+                interp.exec(classLoader.getResource("/cpg.py")?.readText())
+            }
+
+            if (debugEgg != null) {
+                interp.invoke("enable_debugger", debugEgg, debugHost, debugPort)
+            }
+        } catch (e: JepException) {
+            e.printStackTrace()
+            throw TranslationException("Initializing Python failed with message: $e")
+        } catch (e: Exception) {
+            throw e
+        }
+
+        return interp
     }
 }

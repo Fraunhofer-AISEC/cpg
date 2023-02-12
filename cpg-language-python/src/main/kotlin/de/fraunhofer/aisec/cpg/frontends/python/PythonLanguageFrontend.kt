@@ -25,22 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import java.nio.file.Path
+import java.nio.file.Paths
 import jep.JepException
-import jep.SubInterpreter
+import kotlin.io.path.absolutePathString
 
 class PythonLanguageFrontend(
     language: Language<PythonLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) : LanguageFrontend(language, config, scopeManager) {
     private val jep = JepSingleton // configure Jep
 
@@ -64,52 +64,18 @@ class PythonLanguageFrontend(
     }
 
     private fun parseInternal(code: String, path: String): TranslationUnitDeclaration {
-        // check, if the cpg.py is either directly available in the current directory or in the
-        // src/main/python folder
-        val modulePath = Path.of("cpg.py")
-
-        val possibleLocations =
-            listOf(
-                Path.of(".").resolve(modulePath),
-                Path.of("src/main/python").resolve(modulePath),
-                Path.of("cpg-library/src/main/python").resolve(modulePath)
-            )
-
-        var found = false
-
-        var entryScript: Path? = null
-        possibleLocations.forEach {
-            if (it.toFile().exists()) {
-                found = true
-                entryScript = it.toAbsolutePath()
-            }
-        }
-
+        val pythonInterpreter = jep.getInterp()
         val tu: TranslationUnitDeclaration
-        var interp: SubInterpreter? = null
+        val absolutePath = Paths.get(path).absolutePathString()
         try {
-            interp = SubInterpreter(jep.config)
-
-            // load script
-            if (found) {
-                interp.runScript(entryScript.toString())
-            } else {
-                // fall back to the cpg.py in the class's resources
-                val classLoader = javaClass
-                val pyInitFile = classLoader.getResource("/cpg.py")
-                interp.exec(pyInitFile?.readText())
-            }
-
             // run python function parse_code()
-            tu = interp.invoke("parse_code", code, path, this) as TranslationUnitDeclaration
+            tu =
+                pythonInterpreter.invoke("parse_code", this, code, absolutePath)
+                    as TranslationUnitDeclaration
 
             if (config.matchCommentsToNodes) {
                 // Parse comments and attach to nodes
-                val pyOptional = javaClass.getResource("/CPGPython/_comment_parsing.py")
-                pyOptional?.let {
-                    interp.exec(it.readText())
-                    interp.invoke("parse_comments", code, path, this, tu)
-                }
+                pythonInterpreter.invoke("parse_comments", this, code, absolutePath, tu)
             }
         } catch (e: JepException) {
             e.printStackTrace()
@@ -117,7 +83,7 @@ class PythonLanguageFrontend(
         } catch (e: Exception) {
             throw e
         } finally {
-            interp?.close()
+            pythonInterpreter.close()
         }
 
         return tu

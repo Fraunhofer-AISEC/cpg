@@ -41,7 +41,7 @@ import org.neo4j.ogm.annotation.Relationship;
  * return type.
  */
 public class FunctionPointerType extends Type {
-  @Relationship(value = "PARAMETERS", direction = "OUTGOING")
+  @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
   private List<PropertyEdge<Type>> parameters;
 
   private Type returnType;
@@ -57,15 +57,10 @@ public class FunctionPointerType extends Type {
   private FunctionPointerType() {}
 
   public FunctionPointerType(
-      Type.Qualifier qualifier,
-      Type.Storage storage,
-      List<Type> parameters,
-      Type returnType,
-      Language<? extends LanguageFrontend> language) {
-    super("", storage, qualifier);
+      List<Type> parameters, Type returnType, Language<? extends LanguageFrontend> language) {
+    super("", language);
     this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
     this.returnType = returnType;
-    this.setLanguage(language);
   }
 
   public FunctionPointerType(
@@ -125,9 +120,8 @@ public class FunctionPointerType extends Type {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (!(o instanceof FunctionPointerType)) return false;
+    if (!(o instanceof FunctionPointerType that)) return false;
     if (!super.equals(o)) return false;
-    FunctionPointerType that = (FunctionPointerType) o;
     return Objects.equals(this.getParameters(), that.getParameters())
         && PropertyEdge.propertyEqualsList(parameters, that.parameters)
         && Objects.equals(returnType, that.returnType);
@@ -149,10 +143,6 @@ public class FunctionPointerType extends Type {
         + ", typeName='"
         + getName()
         + '\''
-        + ", storage="
-        + this.getStorage()
-        + ", qualifier="
-        + this.getQualifier()
         + ", origin="
         + this.getTypeOrigin()
         + '}';

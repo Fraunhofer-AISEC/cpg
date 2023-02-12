@@ -23,7 +23,6 @@
 #                    \______/ \__|       \______/
 #
 from ._misc import NOT_IMPLEMENTED_MSG
-from ._misc import handle_operator_code
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
 from de.fraunhofer.aisec.cpg.graph import NodeBuilderKt
@@ -52,12 +51,42 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
     elif isinstance(expr, ast.BinOp):
-        opcode = self.handle_operator_code(expr.op)
-        binop = ExpressionBuilderKt.newBinaryOperator(
-            self.frontend, opcode, self.get_src_code(expr))
-        binop.setLhs(self.handle_expression(expr.left))
-        binop.setRhs(self.handle_expression(expr.right))
-        return binop
+        # This could be a simple + or a complex number like 3+5j
+        lhs = self.handle_expression(expr.left)
+        rhs = self.handle_expression(expr.right)
+        if (isinstance(expr.right, ast.Constant)
+                and isinstance(expr.right.value, complex)):
+            if not (self.is_literal(lhs) and self.is_literal(rhs)):
+                self.log_with_loc(
+                    "Expected two literals. Returning a \"None\" Literal.",
+                    loglevel="ERROR")
+                return ExpressionBuilderKt(
+                    self.frontend,
+                    None,
+                    UnknownType.getUnknownType(),
+                    self.get_src_code(expr),
+                    expr)
+            # we got a complex number
+            complextype = NodeBuilderKt.parseType(self.frontend, "complex")
+
+            # TODO: fix this once the CPG supports complex numbers
+            realpart = complex(lhs.getValue())
+            imagpart = complex(rhs.getValue())
+            ret = ExpressionBuilderKt.newLiteral(
+                self.frontend,
+                # currently no support for complex numbers in the java part
+                str(realpart + imagpart),
+                complextype,
+                self.get_src_code(expr),
+                expr)
+            return ret
+        else:
+            opcode = self.handle_operator_code(expr.op)
+            binop = ExpressionBuilderKt.newBinaryOperator(
+                self.frontend, opcode, self.get_src_code(expr))
+            binop.setLhs(lhs)
+            binop.setRhs(rhs)
+            return binop
     elif isinstance(expr, ast.UnaryOp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
@@ -74,8 +103,6 @@ def handle_expression_impl(self, expr):
             self.frontend, test, body, orelse, UnknownType.getUnknownType())
         return r
     elif isinstance(expr, ast.Dict):
-        self.log_with_loc("Handling a \"dict\": %s" %
-                          (ast.dump(expr)))
         ile = ExpressionBuilderKt.newInitializerListExpression(
             self.frontend, self.get_src_code(expr))
 
@@ -189,36 +216,28 @@ def handle_expression_impl(self, expr):
         #
         # We parse node.func regularly using a visitor and decide what it is
         ref = self.handle_expression(expr.func)
-        self.log_with_loc("Parsed ref as %s" % (ref))
+        self.log_with_loc("Parsed ref as %s" % ref)
 
-        name = ref.getName()
+        refname = ref.getName()
 
         if self.is_member_expression(ref):
-            base_name = ref.getBase().getName()
-
-            fqn = "%s.%s" % (base_name, name)
-
-            member = ExpressionBuilderKt.newDeclaredReferenceExpression(
-                self.frontend,
-                name, UnknownType.getUnknownType(), self.get_src_code(expr))
             call = ExpressionBuilderKt.newMemberCallExpression(
                 self.frontend,
-                name, fqn, ref.getBase(),
-                member, ".", self.get_src_code(expr))
+                ref, False, self.get_src_code(expr))
         else:
-            # this can be a simple function call or a ctor
+            # try to see, whether this refers to a known class and thus is a
+            # constructor.
             record = self.scopemanager.getRecordForName(
-                self.scopemanager.getCurrentScope(), name)
+                self.scopemanager.getCurrentScope(), refname)
             if record is not None:
-                self.log_with_loc("Received a record: %s" % (record))
+                self.log_with_loc("Received a record: %s" % record)
                 call = ExpressionBuilderKt.newConstructExpression(
-                    self.frontend, self.get_src_code(expr))
-                call.setName(expr.func.id)
-                tpe = NodeBuilderKt.parseType(self.frontend, record.getName())
+                    self.frontend, expr.func.id, self.get_src_code(expr))
+                tpe = record.toType()
                 call.setType(tpe)
             else:
                 # TODO int, float, ...
-                if name == "str" and len(expr.args) == 1:
+                if refname == "str" and len(expr.args) == 1:
                     cast = ExpressionBuilderKt.newCastExpression(
                         self.frontend, self.get_src_code(expr))
                     cast.setCastType(
@@ -229,7 +248,7 @@ def handle_expression_impl(self, expr):
                 else:
                     call = ExpressionBuilderKt.newCallExpression(
                         self.frontend,
-                        ref, name, self.get_src_code(expr))
+                        ref, refname, self.get_src_code(expr))
         for a in expr.args:
             call.addArgument(self.handle_expression(a))
         for keyword in expr.keywords:
@@ -241,7 +260,7 @@ def handle_expression_impl(self, expr):
                 # TODO: keywords without args, aka **arg
                 self.log_with_loc(
                     NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        self.log_with_loc("Parsed call: %s" % (call))
+        self.log_with_loc("Parsed call: %s" % call)
         return call
 
     elif isinstance(expr, ast.FormattedValue):
@@ -253,6 +272,7 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
     elif isinstance(expr, ast.Constant):
+        resultvalue = expr.value
         if isinstance(expr.value, type(None)):
             tpe = NodeBuilderKt.parseType(self.frontend, "None")
         elif isinstance(expr.value, bool):
@@ -263,6 +283,8 @@ def handle_expression_impl(self, expr):
             tpe = NodeBuilderKt.parseType(self.frontend, "float")
         elif isinstance(expr.value, complex):
             tpe = NodeBuilderKt.parseType(self.frontend, "complex")
+            # TODO: fix this once the CPG supports complex numbers
+            resultvalue = str(resultvalue)
         elif isinstance(expr.value, str):
             tpe = NodeBuilderKt.parseType(self.frontend, "str")
         elif isinstance(expr.value, bytes):
@@ -275,13 +297,12 @@ def handle_expression_impl(self, expr):
             tpe = UnknownType.getUnknownType()
         lit = ExpressionBuilderKt.newLiteral(
             self.frontend,
-            expr.value, tpe, self.get_src_code(expr))
-        lit.setName(str(expr.value))
+            resultvalue, tpe, self.get_src_code(expr))
         return lit
 
     elif isinstance(expr, ast.Attribute):
         value = self.handle_expression(expr.value)
-        self.log_with_loc("Parsed base/value as: %s" % (value))
+        self.log_with_loc("Parsed base/value as: %s" % value)
         if self.is_declaration(value):
             self.log_with_loc(
                 ("Found a new declaration. "
@@ -311,6 +332,19 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newDeclaredReferenceExpression(
             self.frontend, expr.id, UnknownType.getUnknownType(),
             self.get_src_code(expr))
+
+        # Take a little shortcut and set refersTo, in case this is a method
+        # receiver. This allows us to play more nicely with member (call)
+        # expressions on the current class, since then their base type is
+        # known.
+        current_function = self.scopemanager.getCurrentFunction()
+        if self.is_method_declaration(current_function):
+            recv = current_function.getReceiver()
+            if recv is not None:
+                if expr.id == recv.getName().getLocalName():
+                    r.setRefersTo(recv)
+                    r.setType(recv.getType())
+
         return r
     elif isinstance(expr, ast.List):
         ile = ExpressionBuilderKt.newInitializerListExpression(

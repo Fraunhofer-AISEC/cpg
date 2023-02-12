@@ -45,18 +45,17 @@ class WalkerTest : BaseTest() {
         // Traversal of about 80.000 nodes should not exceed 1s (on GitHub). On a recently fast
         // machine, such as MacBook M1, this should take about 200-300ms.
         assertTimeout(Duration.of(1500, ChronoUnit.MILLIS)) {
-            val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")
             val tu = TranslationUnitDeclaration()
 
             // Let's build some fake CPG trees with a good amount of classes
             for (i in 0..100) {
                 val record = RecordDeclaration()
-                record.name = "class${i}"
+                record.name = Name("class${i}")
 
                 // Each class should have a couple of dozen functions
                 for (j in 0..20) {
                     val method = MethodDeclaration()
-                    method.name = "method${j}"
+                    method.name = Name("method${j}", record.name)
 
                     val comp = CompoundStatement()
 
@@ -64,7 +63,7 @@ class WalkerTest : BaseTest() {
                     for (k in 0..10) {
                         val stmt = DeclarationStatement()
                         val decl = VariableDeclaration()
-                        decl.name = "var${i}"
+                        decl.name = Name("var${i}")
 
                         // With a literal initializer
                         val lit = Literal<Int>()
@@ -84,7 +83,7 @@ class WalkerTest : BaseTest() {
                 // And a couple of fields
                 for (j in 0..40) {
                     val field = FieldDeclaration()
-                    field.name = "field${j}"
+                    field.name = Name("field${j}", record.name)
 
                     // With a literal initializer
                     val lit = Literal<Int>()
@@ -97,15 +96,39 @@ class WalkerTest : BaseTest() {
                 tu.addDeclaration(record)
             }
 
+            val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")
             val flat = SubgraphWalker.flattenAST(tu)
+            bench.stop()
 
             assertNotNull(flat)
 
             assertEquals(82619, flat.size)
 
             log.info("Flat AST has {} nodes", flat.size)
-
-            bench.stop()
         }
+    }
+
+    // 741ms with branch
+    @Test
+    fun test2() {
+        val stmt = DeclarationStatement()
+
+        for (k in 0..1000) {
+            val decl = VariableDeclaration()
+            decl.name = Name("var${k}")
+
+            stmt.addToPropertyEdgeDeclaration(decl)
+        }
+
+        val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")
+        val flat = SubgraphWalker.flattenAST(stmt)
+
+        assertNotNull(flat)
+
+        assertEquals(1002, flat.size)
+
+        log.info("Flat AST has {} nodes", flat.size)
+
+        bench.stop()
     }
 }
