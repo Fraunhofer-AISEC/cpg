@@ -319,13 +319,15 @@ fun <N> LanguageFrontend.literal(value: N): Literal<N> {
  * Creates a new [DeclaredReferenceExpression] in the Fluent Node DSL and invokes
  * [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(ArgumentHolder)
+context(Holder<out Statement>)
 
 fun LanguageFrontend.ref(name: CharSequence): DeclaredReferenceExpression {
     val node = newDeclaredReferenceExpression(name)
 
-    (this@ArgumentHolder) += node
-
+    val holder = this@Holder
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
     return node
 }
 
@@ -357,6 +359,22 @@ infix fun Expression.eq(rhs: Expression): BinaryOperator {
     node.rhs = rhs
 
     (this@ArgumentHolder) += node
+
+    return node
+}
+
+/**
+ * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
+ * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend, StatementHolder)
+
+infix fun Expression.assign(rhs: Expression): BinaryOperator {
+    val node = (this@LanguageFrontend).newBinaryOperator("=")
+    node.lhs = this
+    node.rhs = rhs
+
+    (this@StatementHolder) += node
 
     return node
 }

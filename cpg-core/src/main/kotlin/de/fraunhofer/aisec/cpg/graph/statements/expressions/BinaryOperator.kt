@@ -71,8 +71,8 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
                 lhs.access = AccessValues.WRITE
             }
             if (lhs is HasType.TypeListener) {
-                registerTypeListener((lhs as HasType.TypeListener))
-                registerTypeListener((this.lhs as HasType.TypeListener?)!!)
+                registerTypeListener(lhs as HasType.TypeListener)
+                registerTypeListener(this.lhs as HasType.TypeListener)
             }
         } else if (compoundOperators.contains(operatorCode)) {
             if (lhs is DeclaredReferenceExpression) {
@@ -81,8 +81,8 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
                 lhs.access = AccessValues.READWRITE
             }
             if (lhs is HasType.TypeListener) {
-                registerTypeListener((lhs as HasType.TypeListener))
-                registerTypeListener((this.lhs as HasType.TypeListener?)!!)
+                registerTypeListener(lhs as HasType.TypeListener)
+                registerTypeListener(this.lhs as HasType.TypeListener)
             }
         }
     }
@@ -90,7 +90,7 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
     private fun disconnectOldLhs() {
         lhs.unregisterTypeListener(this)
         if ("=" == operatorCode && lhs is HasType.TypeListener) {
-            unregisterTypeListener((lhs as HasType.TypeListener?)!!)
+            unregisterTypeListener(lhs as HasType.TypeListener)
         }
     }
 
@@ -101,14 +101,14 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
     private fun connectNewRhs(rhs: Expression) {
         rhs.registerTypeListener(this)
         if ("=" == operatorCode && rhs is HasType.TypeListener) {
-            registerTypeListener((rhs as HasType.TypeListener))
+            registerTypeListener(rhs as HasType.TypeListener)
         }
     }
 
     private fun disconnectOldRhs() {
         rhs.unregisterTypeListener(this)
         if ("=" == operatorCode && rhs is HasType.TypeListener) {
-            unregisterTypeListener((rhs as HasType.TypeListener?)!!)
+            unregisterTypeListener(rhs as HasType.TypeListener)
         }
     }
 
