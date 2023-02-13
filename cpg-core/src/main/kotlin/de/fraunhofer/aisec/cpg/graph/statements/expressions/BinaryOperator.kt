@@ -119,10 +119,14 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
         val previous = type
         if (operatorCode == "=") {
             setType(src.propagationType, root)
-        } else if (operatorCode == "+" && (lhs.type is StringType || rhs.type is StringType)) {
+        } else if (
+            operatorCode == "+" &&
+                (lhs.propagationType is StringType || rhs.propagationType is StringType)
+        ) {
             // String + any other type results in a String
             _possibleSubTypes.clear() // TODO: Why do we clear the list here?
-            val stringType = if (lhs.type is StringType) lhs.type else rhs.type
+            val stringType =
+                if (lhs.propagationType is StringType) lhs.propagationType else rhs.propagationType
             setType(stringType, root)
         } else if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
             // Propagate the function pointer type to the expression itself. This helps us later in

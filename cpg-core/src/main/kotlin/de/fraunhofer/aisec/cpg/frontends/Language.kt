@@ -132,15 +132,18 @@ abstract class Language<T : LanguageFrontend> : Node() {
 
         return when (operation.operatorCode) {
             "+" ->
-                if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
+                if (
+                    operation.lhs.propagationType.isPrimitive &&
+                        operation.rhs.propagationType.isPrimitive
+                ) {
                     // primitive type 1 + primitive type 2 => primitive type 1
-                    operation.lhs.type
-                } else if (operation.lhs.type is StringType) {
+                    operation.lhs.propagationType
+                } else if (operation.lhs.propagationType is StringType) {
                     // string + anything => string
-                    operation.lhs.type
-                } else if (operation.rhs.type is StringType) {
+                    operation.lhs.propagationType
+                } else if (operation.rhs.propagationType is StringType) {
                     // anything + string => string
-                    operation.rhs.type
+                    operation.rhs.propagationType
                 } else {
                     UnknownType.getUnknownType(this)
                 }
@@ -149,9 +152,12 @@ abstract class Language<T : LanguageFrontend> : Node() {
             "/",
             "<<",
             ">>" ->
-                if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
+                if (
+                    operation.lhs.propagationType.isPrimitive &&
+                        operation.rhs.propagationType.isPrimitive
+                ) {
                     // primitive type 1 OP primitive type 2 => primitive type 1
-                    operation.lhs.type
+                    operation.lhs.propagationType
                 } else {
                     UnknownType.getUnknownType(this)
                 }
