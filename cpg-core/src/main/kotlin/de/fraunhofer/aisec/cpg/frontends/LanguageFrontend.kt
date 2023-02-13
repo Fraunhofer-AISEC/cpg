@@ -83,18 +83,10 @@ abstract class LanguageFrontend(
     @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnitDeclaration
 
     /**
-     * Similar to [parse], this function returns a [TranslationUnitDeclaration], but rather than
-     * parsing source code, the function [init] is used to build nodes in the Node Fluent DSL.
+     * This function returns a [TranslationResult], but rather than parsing source code, the
+     * function [init] is used to build nodes in the Node Fluent DSL.
      */
-    fun build(init: LanguageFrontend.() -> TranslationUnitDeclaration): TranslationUnitDeclaration {
-        return init(this)
-    }
-
-    /**
-     * Similar to [parse], this function returns a [TranslationResult], but rather than parsing
-     * source code, the function [init] is used to build nodes in the Node Fluent DSL.
-     */
-    fun buildTR(init: LanguageFrontend.() -> TranslationResult): TranslationResult {
+    fun build(init: LanguageFrontend.() -> TranslationResult): TranslationResult {
         return init(this)
     }
 

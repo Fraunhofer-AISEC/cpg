@@ -73,23 +73,6 @@ fun LanguageFrontend.translationUnit(
 }
 
 /**
- * Creates a new [TranslationUnitDeclaration] in the Fluent Node DSL with the given [name]. The
- * declaration will be set to the [ScopeManager.globalScope]. The [init] block can be used to create
- * further sub-nodes as well as configuring the created node itself.
- */
-fun LanguageFrontend.translationUnit(
-    name: CharSequence,
-    init: TranslationUnitDeclaration.() -> Unit
-): TranslationUnitDeclaration {
-    val node = (this@LanguageFrontend).newTranslationUnitDeclaration(name)
-
-    scopeManager.resetToGlobal(node)
-    init(node)
-
-    return node
-}
-
-/**
  * Creates a new [NamespaceDeclaration] in the Fluent Node DSL with the given [name]. The
  * declaration will be set to the [ScopeManager.globalScope]. The [init] block can be used to create
  * further sub-nodes as well as configuring the created node itself.

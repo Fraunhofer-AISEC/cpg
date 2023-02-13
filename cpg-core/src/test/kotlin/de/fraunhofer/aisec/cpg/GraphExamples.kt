@@ -69,7 +69,7 @@ class GraphExamples {
 }
 
 private fun getVisitorTest(config: TranslationConfiguration) =
-    TestLanguageFrontend(ScopeManager(), ".").buildTR {
+    TestLanguageFrontend(ScopeManager(), ".").build {
         translationResult(config) {
             translationUnit("RecordDeclaration.java") {
                 namespace("compiling") {
@@ -99,7 +99,7 @@ private fun getVisitorTest(config: TranslationConfiguration) =
     }
 
 private fun getDataflowClass(config: TranslationConfiguration) =
-    TestLanguageFrontend(ScopeManager(), ".").buildTR {
+    TestLanguageFrontend(ScopeManager(), ".").build {
         translationResult(config) {
             translationUnit("Dataflow.java") {
                 record("Dataflow") {
@@ -146,7 +146,7 @@ private fun getDataflowClass(config: TranslationConfiguration) =
     }
 
 private fun getShortcutClass(config: TranslationConfiguration) =
-    TestLanguageFrontend(ScopeManager(), ".").buildTR {
+    TestLanguageFrontend(ScopeManager(), ".").build {
         translationResult(config) {
             translationUnit("ShortcutClass.java") {
                 record("ShortcutClass") {

@@ -45,32 +45,34 @@ class FluentTest {
     @Test
     fun test() {
         val scopeManager = ScopeManager()
-        val tu =
+        val result =
             TestLanguageFrontend(scopeManager).build {
-                translationUnit("file.cpp") {
-                    function("main", t("int")) {
-                        param("argc", t("int"))
-                        body {
-                            declare { variable("a", t("short")) { literal(1) } }
-                            ifStmt {
-                                condition { ref("argc") eq literal(1) }
-                                thenStmt { call("printf") { literal("then") } }
-                                elseIf {
+                translationResult(TranslationConfiguration.builder().build()) {
+                    translationUnit("file.cpp") {
+                        function("main", t("int")) {
+                            param("argc", t("int"))
+                            body {
+                                declare { variable("a", t("short")) { literal(1) } }
+                                ifStmt {
                                     condition { ref("argc") eq literal(1) }
-                                    thenStmt { call("printf") { literal("elseIf") } }
-                                    elseStmt { call("printf") { literal("else") } }
+                                    thenStmt { call("printf") { literal("then") } }
+                                    elseIf {
+                                        condition { ref("argc") eq literal(1) }
+                                        thenStmt { call("printf") { literal("elseIf") } }
+                                        elseStmt { call("printf") { literal("else") } }
+                                    }
                                 }
-                            }
-                            call("do") { call("some::func") }
+                                call("do") { call("some::func") }
 
-                            returnStmt { ref("a") + literal(2) }
+                                returnStmt { ref("a") + literal(2) }
+                            }
                         }
                     }
                 }
             }
 
         // Let's assert that we did this correctly
-        val main = tu.functions["main"]
+        val main = result.functions["main"]
         assertNotNull(main)
         assertNotNull(main.scope)
         assertTrue(main.scope is GlobalScope)
@@ -166,8 +168,8 @@ class FluentTest {
         assertNotNull(lit2.scope)
         assertEquals(2, lit2.value)
 
-        val result = TranslationResult(TranslationManager.builder().build(), scopeManager)
-        result.addTranslationUnit(tu)
+        // val result = TranslationResult(TranslationManager.builder().build(), scopeManager)
+        // result.addTranslationUnit(tu)
         VariableUsageResolver().accept(result)
 
         // Now the reference should be resolved
