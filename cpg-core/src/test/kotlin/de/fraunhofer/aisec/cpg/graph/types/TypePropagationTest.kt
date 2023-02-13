@@ -80,7 +80,7 @@ class TypePropagationTest {
                     function("main", t("int")) {
                         body {
                             declare { variable("intVar", t("int")) {} }
-                            declare { variable("intVar2", t("short")) {} }
+                            declare { variable("shortVar", t("short")) {} }
                             ref("shortVar") assign ref("intVar")
                             returnStmt { literal(0) }
                         }

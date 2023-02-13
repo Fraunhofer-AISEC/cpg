@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.StringType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -118,6 +119,15 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
         }
         val previous = type
         if (operatorCode == "=") {
+            if (
+                src == rhs &&
+                    lhs.type is NumericType &&
+                    src.type is NumericType &&
+                    (lhs.type as NumericType).bitWidth!! < (src.type as NumericType).bitWidth!!
+            ) {
+                // Do not propagate anything if the new type is too big for the current type.
+                return
+            }
             setType(src.propagationType, root)
         } else if (
             operatorCode == "+" &&

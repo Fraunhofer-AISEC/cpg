@@ -166,6 +166,15 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
         if (refersTo != null) {
             current.refersTo = refersTo
+            if (
+                refersTo is VariableDeclaration &&
+                    refersTo.type is NumericType &&
+                    refersTo.type != current.type
+            ) {
+                // Check if the type of the variable matches the current type. If not, we update the
+                // type of the reference.
+                current.type = refersTo.type
+            }
         } else {
             Util.warnWithFileLocation(
                 current,
