@@ -133,6 +133,7 @@ open class EvaluationOrderGraphPass : Pass() {
             handleSynchronizedStatement(it as SynchronizedStatement)
         }
         map[NewExpression::class.java] = { handleNewExpression(it as NewExpression) }
+        map[KeyValueExpression::class.java] = { handleKeyValueExpression(it as KeyValueExpression) }
         map[CastExpression::class.java] = { handleCastExpression(it as CastExpression) }
         map[ExpressionList::class.java] = { handleExpressionList(it as ExpressionList) }
         map[ConditionalExpression::class.java] = {
@@ -645,6 +646,12 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleNewExpression(node: NewExpression) {
         createEOG(node.initializer)
+        pushToEOG(node)
+    }
+
+    protected fun handleKeyValueExpression(node: KeyValueExpression) {
+        createEOG(node.key)
+        createEOG(node.value)
         pushToEOG(node)
     }
 
