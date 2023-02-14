@@ -71,6 +71,44 @@ A published artifact of every commit can be requested through [JitPack](https://
 
 The library can be used on the command line using the `cpg-console` subproject. Please refer to the [README.md](./cpg-console/README.md) of the `cpg-console` as well as our small [tutorial](./tutorial.md) for further details.
 
+### Configuration
+
+The behavior of the library can be configured in several ways. Most of this is done through the `TranslationConfiguration`
+and the `InferenceConfiguration`.
+
+#### TranslationConfiguration
+
+The `TranslationConfiguration` configures various aspects of the translation. E.g., it determines which languages/language
+frontends and passes will be used, which information should be inferred, which files will be included, among others. The
+configuration is set through a builder pattern.
+
+#### InferenceConfiguration
+
+The class `InferenceConfiguration` can be used to affect the behavior or the passes if they identify missing nodes.
+Currently, there are three flags which can be enabled:
+
+* `guessCastExpression` enables guessing if a CPP expression is a cast or a call expression if it is not clear.
+* `inferRecords` enables the inference of missing record declarations (i.e., classes and structs)
+* `inferDfgForUnresolvedSymbols` adds DFG edges to method calls represent all potential data flows if the called function
+  is not present in the source code under analysis.
+
+Only `inferDfgForUnresolvedSymbols` is turned on by default.
+
+The configuration can be made through a builder pattern and is set in the `TranslationConfiguration` as follows:
+```kt
+val inferenceConfig = InferenceConfiguration
+    .builder()
+    .guessCastExpression(true)
+    .inferRecords(true)
+    .inferDfgForUnresolvedSymbols(true)
+    .build()
+
+val translationConfig = TranslationConfiguration
+    .builder()
+    .inferenceConfiguration(inferenceConfig)
+    .build()
+```
+
 ## Development Setup
 
 ### Experimental Languages
