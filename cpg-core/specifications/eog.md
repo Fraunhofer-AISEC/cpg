@@ -186,6 +186,26 @@ flowchart LR
   initializer --EOG--> parent
 ```
 
+## KeyValueExpression
+Represents a key / value pair that could be used in associative arrays, among others.
+
+Interesting fields:
+
+* `key: Expression`: The key used for later accessing this pair.
+* `value: Expression`: The value of the pair.
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child
+  child --EOG--> child2["value"]
+  parent(["KeyValueExpression"]) --EOG--> next:::outer
+  parent -.-> child["key"]
+  parent -.-> child2
+  child2 --EOG--> parent
+```
+
 ## DeclarationStatement
 
 Here, the EOG is only drawn to the child component if that component is a VariableDeclaration, not if it is a FunctionDeclaration.
