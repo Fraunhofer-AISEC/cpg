@@ -71,6 +71,7 @@ private constructor(
         return ToStringBuilder(this, ToStringStyle.JSON_STYLE)
             .append("guessCastExpressions", guessCastExpressions)
             .append("inferRecords", inferRecords)
+            .append("inferDfgForUnresolvedCalls", inferDfgForUnresolvedSymbols)
             .toString()
     }
 }
