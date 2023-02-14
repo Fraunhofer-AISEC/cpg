@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
@@ -73,5 +74,34 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
         scopeManager: ScopeManager,
     ): PythonLanguageFrontend {
         return PythonLanguageFrontend(this, config, scopeManager)
+    }
+
+    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
+        if (
+            operation.operatorCode == "/" &&
+                operation.lhs.propagationType is NumericType &&
+                operation.rhs.propagationType is NumericType
+        ) {
+            // In Python, the / operation automatically casts the result to a float
+            return simpleTypes["float"]!!
+        } else if (
+            operation.operatorCode == "//" &&
+                operation.lhs.propagationType is NumericType &&
+                operation.rhs.propagationType is NumericType
+        ) {
+            if (
+                operation.lhs.propagationType is IntegerType &&
+                    operation.rhs.propagationType is IntegerType
+            ) {
+                // In Python, the // operation keeps the type as an int if both inputs are integers
+                // or casts it to a float otherwise.
+                return simpleTypes["int"]!!
+            } else {
+                return simpleTypes["float"]!!
+            }
+        }
+
+        // The rest behaves like other languages
+        return super.propagateTypeOfBinaryOperation(operation)
     }
 }
