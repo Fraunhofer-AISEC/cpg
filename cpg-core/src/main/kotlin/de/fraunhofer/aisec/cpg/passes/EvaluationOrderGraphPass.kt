@@ -350,7 +350,7 @@ open class EvaluationOrderGraphPass : Pass() {
         if (callable != null) {
             callable(node)
         } else {
-            LOGGER.info("Parsing of type " + node.javaClass + " is not supported (yet)")
+            LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
         }
     }
 

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -72,10 +73,27 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is CASTDesignatedInitializer -> handleCDesignatedInitializer(node)
             is CPPASTDeleteExpression -> handleDeleteExpression(node)
             is CPPASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
+            is CPPASTLambdaExpression -> handleLambdaExpression(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)
             }
         }
+    }
+
+    private fun handleLambdaExpression(node: CPPASTLambdaExpression): Expression {
+        val lambda = newLambdaExpression(frontend.getCodeFromRawNode(node))
+
+        val anonymousFunction =
+            frontend.declaratorHandler.handle(node.declarator) as? FunctionDeclaration
+                ?: return lambda
+
+        frontend.scopeManager.enterScope(anonymousFunction)
+        anonymousFunction.body = frontend.statementHandler.handle(node.body)
+        frontend.scopeManager.leaveScope(anonymousFunction)
+
+        lambda.function = anonymousFunction
+
+        return lambda
     }
 
     private fun handleCompoundStatementExpression(

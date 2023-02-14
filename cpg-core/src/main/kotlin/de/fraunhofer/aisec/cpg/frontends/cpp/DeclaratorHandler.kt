@@ -197,7 +197,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // treats these levels as separate declarators, so we need to get to the bottom for the
         // actual name using the realName extension function.
         val (nameDecl: IASTDeclarator, hasPointer) = ctx.realName()
-        var name = parseName(nameDecl.name.toString())
+        var name =
+            if (nameDecl.name == null) {
+                Name("")
+            } else {
+                parseName(nameDecl.name.toString())
+            }
 
         // Attention! This might actually be a function pointer (requires at least one level of
         // parentheses and a pointer operator)
