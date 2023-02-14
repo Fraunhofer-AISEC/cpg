@@ -344,6 +344,41 @@ fun LanguageFrontend.call(
 
     return node
 }
+/**
+ * Creates a new [CallExpression] (or [MemberCallExpression]) in the Fluent Node DSL with the given
+ * [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
+ * [StatementHolder] it is added to the list of [StatementHolder.statements] or in case of an
+ * [ArgumentHolder], the function [ArgumentHolder.addArgument] is invoked.
+ *
+ * The type of expression is determined whether [name] is either a [Name] with a [Name.parent] or if
+ * it can be parsed as a FQN in the given language. It also automatically creates either a
+ * [DeclaredReferenceExpression] or [MemberExpression] and sets it as the [CallExpression.callee].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
+ */
+context(Holder<out Statement>)
+
+fun LanguageFrontend.memberCall(
+    localName: CharSequence,
+    member: Expression,
+    isStatic: Boolean = false,
+    init: (CallExpression.() -> Unit)? = null
+): MemberCallExpression {
+    // Try to parse the name
+    val node = newMemberCallExpression(newMemberExpression(localName, member), isStatic)
+    if (init != null) {
+        init(node)
+    }
+
+    val holder = this@Holder
+    if (holder is StatementHolder) {
+        holder += node
+    } else if (holder is ArgumentHolder) {
+        holder += node
+    }
+
+    return node
+}
 
 /**
  * Creates a new [ConstructExpression] in the Fluent Node DSL for the translation record/type with
@@ -402,7 +437,6 @@ fun LanguageFrontend.memberOrRef(
         }
     node.type = type
 
-    node.isStaticAccess = name.localName.first().isUpperCase()
     return node
 }
 
@@ -514,10 +548,15 @@ context(Holder<out Statement>)
 
 fun LanguageFrontend.ref(
     name: CharSequence,
-    type: Type = UnknownType.getUnknownType()
+    type: Type = UnknownType.getUnknownType(),
+    init: (DeclaredReferenceExpression.() -> Unit)? = null
 ): DeclaredReferenceExpression {
     val node = newDeclaredReferenceExpression(name)
     node.type = type
+
+    if (init != null) {
+        init(node)
+    }
 
     // Only add this to an argument holder if the nearest holder is an argument holder
     val holder = this@Holder
@@ -535,7 +574,7 @@ fun LanguageFrontend.ref(
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.member(name: CharSequence): MemberExpression {
+fun LanguageFrontend.member(name: CharSequence, base: Expression? = null): MemberExpression {
     val parsedName = parseName(name)
     val type =
         if (parsedName.parent != null) {
@@ -548,9 +587,9 @@ fun LanguageFrontend.member(name: CharSequence): MemberExpression {
             val scopeType = scope?.name?.let { t(it) } ?: UnknownType.getUnknownType()
             scopeType
         }
-    val base = memberOrRef(parsedName.parent ?: parseName("this"), type)
+    val memberBase = base ?: memberOrRef(parsedName.parent ?: parseName("this"), type)
 
-    val node = newMemberExpression(name, base)
+    val node = newMemberExpression(name, memberBase)
 
     // Only add this to an argument holder if the nearest holder is an argument holder
     val holder = this@Holder

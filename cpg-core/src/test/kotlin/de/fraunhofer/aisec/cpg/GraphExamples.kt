@@ -82,10 +82,20 @@ private fun getVisitorTest(config: TranslationConfiguration) =
                         method("method", t("Integer")) {
                             receiver = newVariableDeclaration("this", t("SimpleClass"))
                             body {
-                                call("System.out.println") { literal("Hello world") }
+                                memberCall(
+                                    "println",
+                                    member("out", ref("System") { isStaticAccess = true })
+                                ) {
+                                    literal("Hello world")
+                                }
                                 declare { variable("x", t("int")) { literal(0) } }
                                 ifStmt {
-                                    condition { call("System.currentTimeMillis") gt literal(0) }
+                                    condition {
+                                        memberCall(
+                                            "currentTimeMillis",
+                                            ref("System") { isStaticAccess = true }
+                                        ) gt literal(0)
+                                    }
                                     thenStmt { ref("x") assign { ref("x") + literal(1) } }
                                     elseStmt { ref("x") assign { ref("x") - literal(1) } }
                                 }
@@ -123,7 +133,12 @@ private fun getDataflowClass(config: TranslationConfiguration) =
                         receiver = newVariableDeclaration("this", t("Dataflow"))
                         param("s", t("String"))
                         body {
-                            call("System.out.println") { ref("s") }
+                            memberCall(
+                                "println",
+                                member("out", ref("System") { isStaticAccess = true })
+                            ) {
+                                ref("s")
+                            }
                             returnStmt { isImplicit = true }
                         }
                     }
@@ -163,7 +178,14 @@ private fun getShortcutClass(config: TranslationConfiguration) =
 
                     method("print", t("int")) {
                         receiver = newVariableDeclaration("this", t("ShortcutClass"))
-                        body { call("System.out.println") { call("this.toString") } }
+                        body {
+                            memberCall(
+                                "println",
+                                member("out", ref("System") { isStaticAccess = true })
+                            ) {
+                                call("this.toString")
+                            }
+                        }
                     }
 
                     method("magic") {
