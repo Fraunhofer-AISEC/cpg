@@ -69,7 +69,9 @@ import java.io.IOException
 import java.util.function.Consumer
 
 /** Main parser for ONE Java file. */
-@RegisterExtraPass(JavaExternalTypeHierarchyResolver::class) // this pass is always required for Java
+@RegisterExtraPass(
+    JavaExternalTypeHierarchyResolver::class
+) // this pass is always required for Java
 open class JavaLanguageFrontend(
     language: Language<JavaLanguageFrontend>,
     config: TranslationConfiguration,
