@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -45,10 +44,7 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testJava() {
         val result =
-            TestUtils.analyze("java", topLevel, true) {
-                it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
-            }
+            TestUtils.analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
         val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg = findByUniquePredicate(constructors) { it.parameters.size == 0 }
         val singleArg = findByUniquePredicate(constructors) { it.parameters.size == 1 }

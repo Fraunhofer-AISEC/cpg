@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
 import kotlin.test.Test
@@ -189,11 +188,7 @@ internal class VariableResolverJavaTest : BaseTest() {
                         topLevel.resolve("ExternalClass.java")
                     )
                     .map(Path::toFile)
-            val result =
-                analyze(fileNames, topLevel, true) {
-                    it.registerLanguage(JavaLanguage())
-                    it.registerPass(JavaExternalTypeHierarchyResolver())
-                }
+            val result = analyze(fileNames, topLevel, true) { it.registerLanguage(JavaLanguage()) }
 
             val calls = result.calls { it.name.localName == "printLog" }
             val records = result.records

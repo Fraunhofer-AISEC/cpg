@@ -120,10 +120,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testJava() {
         val result =
-            TestUtils.analyze("java", topLevel, true) {
-                it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
-            }
+            TestUtils.analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
         val records = result.records
         val intType = TypeParser.createFrom("int", JavaLanguage())
         val stringType = TypeParser.createFrom("java.lang.String", JavaLanguage())

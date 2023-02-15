@@ -59,6 +59,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -66,7 +68,10 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.function.Consumer
 
-/** Main parser for ONE Java files. */
+/** Main parser for ONE Java file. */
+@RegisterExtraPass(
+    JavaExternalTypeHierarchyResolver::class
+) // this pass is always required for Java
 open class JavaLanguageFrontend(
     language: Language<JavaLanguageFrontend>,
     config: TranslationConfiguration,

@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -54,7 +53,6 @@ internal class StaticImportsTest : BaseTest() {
                 true
             ) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         val methods = result.methods
         val test = findByUniqueName(methods, "test")
@@ -86,7 +84,6 @@ internal class StaticImportsTest : BaseTest() {
         val result =
             analyze("java", topLevel.resolve("asterisk"), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         val methods = result.methods
         val main = methods["main", SearchModifier.UNIQUE]

@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.nio.file.Path
 import java.util.*
 import kotlin.test.*
@@ -125,11 +124,7 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     fun testParameterizedTypes() {
         val topLevel = Path.of("src", "test", "resources", "types")
-        val result =
-            analyze("java", topLevel, true) {
-                it.registerLanguage(JavaLanguage())
-                    .registerPass(JavaExternalTypeHierarchyResolver())
-            }
+        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
 
         // Check Parameterized
         val recordDeclarations = result.records
@@ -163,11 +158,7 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     fun graphTest() {
         val topLevel = Path.of("src", "test", "resources", "types")
-        val result =
-            analyze("java", topLevel, true) {
-                it.registerLanguage(JavaLanguage())
-                    .registerPass(JavaExternalTypeHierarchyResolver())
-            }
+        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
         val variables = result.allChildren<ObjectType>()
         val recordDeclarations = result.records
 
@@ -213,11 +204,7 @@ internal class TypeTests : BaseTest() {
     fun testCommonTypeTestJava() {
         disableTypeManagerCleanup()
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy")
-        val result =
-            analyze("java", topLevel, true) {
-                it.registerLanguage(JavaLanguage())
-                    .registerPass(JavaExternalTypeHierarchyResolver())
-            }
+        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
         val root = TypeParser.createFrom("multistep.Root", JavaLanguage())
         val level0 = TypeParser.createFrom("multistep.Level0", JavaLanguage())
         val level1 = TypeParser.createFrom("multistep.Level1", JavaLanguage())

@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -734,7 +733,6 @@ class QueryTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -809,7 +807,6 @@ class QueryTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
                 .registerPass(EdgeCachePass())
                 .build()
 
@@ -864,7 +861,6 @@ class QueryTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
                 .registerPass(EdgeCachePass())
                 .build()
 
@@ -919,7 +915,6 @@ class QueryTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
                 .registerPass(EdgeCachePass())
                 .build()
 

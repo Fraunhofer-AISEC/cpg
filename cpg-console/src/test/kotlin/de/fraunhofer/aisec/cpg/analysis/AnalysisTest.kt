@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -78,7 +77,6 @@ class AnalysisTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()

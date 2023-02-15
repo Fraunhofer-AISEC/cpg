@@ -42,7 +42,6 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -769,7 +768,6 @@ internal class EOGTest : BaseTest() {
         val result =
             analyze(listOf(topLevel.resolve("EOG.java").toFile()), topLevel, true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         // Test If-Block
@@ -963,7 +961,6 @@ internal class EOGTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         assertTrue(EvaluationOrderGraphPass.checkEOGInvariant(tu))
     }
@@ -981,7 +978,6 @@ internal class EOGTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(toTranslate), topLevel, true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         var nodes = SubgraphWalker.flattenAST(tu)
         // TODO: until explicitly added Return Statements are either removed again or code and
