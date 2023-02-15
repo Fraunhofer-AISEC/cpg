@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -52,7 +51,6 @@ internal class DFGTest {
                 true
             ) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         // Test If-Block
@@ -115,7 +113,6 @@ internal class DFGTest {
                 true
             ) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         val b = result.variables["b"]
@@ -140,7 +137,6 @@ internal class DFGTest {
                 true
             ) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         val a = result.variables["a"]
@@ -211,7 +207,6 @@ internal class DFGTest {
                 true
             ) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         val binaryOperatorAssignment = findByUniqueName(result.allChildren<BinaryOperator>(), "=")
@@ -275,7 +270,6 @@ internal class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         val varA = findByUniqueName(result.variables, "a")
         assertNotNull(varA)
@@ -291,7 +285,6 @@ internal class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("LoopDFGs.java").toFile()), topLevel, true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         val looping = result.methods["looping"]
         val methodNodes = SubgraphWalker.flattenAST(looping)
@@ -339,7 +332,6 @@ internal class DFGTest {
                 true
             ) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         val looping = tu.methods["labeledBreakContinue"]
         val methodNodes = SubgraphWalker.flattenAST(looping)

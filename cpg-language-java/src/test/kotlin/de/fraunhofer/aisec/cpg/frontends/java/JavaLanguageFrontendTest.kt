@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.math.BigInteger
@@ -57,7 +56,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         val declaration = tu.byNameOrNull<RecordDeclaration>("LargeNegativeNumber")
@@ -95,7 +93,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         val declaration = tu.declarations[0] as? RecordDeclaration
@@ -124,7 +121,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
@@ -170,7 +166,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         val declaration = tu.declarations[0] as? RecordDeclaration
@@ -216,7 +211,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         val declaration = tu.declarations[0] as? RecordDeclaration
@@ -294,7 +288,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val declaration =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         // TODO: Use GraphExamples here as well.
         assertNotNull(declaration)
@@ -329,7 +322,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val declaration =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         assertNotNull(declaration)
     }
@@ -340,7 +332,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val declaration =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         val graphNodes = SubgraphWalker.flattenAST(declaration)
 
@@ -365,7 +356,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val declaration =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         assertNotNull(declaration)
 
@@ -419,7 +409,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         assertNotNull(tu)
 
@@ -470,7 +459,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         assertNotNull(tu)
 
@@ -501,7 +489,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         assertNotNull(tu)
 
@@ -515,7 +502,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         assertNotNull(tu)
 
@@ -547,7 +533,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                     .defaultPasses()
                     .defaultLanguages()
                     .registerLanguage(JavaLanguage())
-                    .registerPass(JavaExternalTypeHierarchyResolver())
                     .processAnnotations(true)
             )
         assertFalse(declarations.isEmpty())
@@ -596,7 +581,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         val record = tu.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(record)
@@ -635,7 +619,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val result =
             TestUtils.analyze(listOf(file1, file2), file1.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         val tu = findByUniqueName(result.translationUnits, "src/test/resources/fix-328/Cat.java")
         val namespace = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
@@ -732,7 +715,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
                 .debugParser(true)
                 .failOnError(true)
                 .build()
@@ -758,7 +740,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
                 .debugParser(true)
                 .failOnError(true)
                 .build()
@@ -775,7 +756,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val result =
             TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
         val tu = result.translationUnits.firstOrNull()
         assertNotNull(tu)
@@ -814,7 +794,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         val p = tu.namespaces["compiling"]

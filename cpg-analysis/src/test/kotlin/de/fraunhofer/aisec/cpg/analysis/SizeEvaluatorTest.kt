@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -53,7 +52,6 @@ class SizeEvaluatorTest {
                 true
             ) {
                 it.registerLanguage(JavaLanguage())
-                    .registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         assertNotNull(tu)
@@ -87,7 +85,6 @@ class SizeEvaluatorTest {
                 true
             ) {
                 it.registerLanguage(JavaLanguage())
-                    .registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         assertNotNull(tu)
@@ -124,7 +121,6 @@ class SizeEvaluatorTest {
                 true
             ) {
                 it.registerLanguage(JavaLanguage())
-                    .registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         assertNotNull(tu)

@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import kotlin.test.*
@@ -54,7 +53,6 @@ class FrontendHelperTest {
                 .defaultLanguages()
                 .failOnError(true)
                 .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -139,7 +137,6 @@ class FrontendHelperTest {
                 .debugParser(true)
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(JavaExternalTypeHierarchyResolver())
                 .failOnError(true)
                 .build()
 

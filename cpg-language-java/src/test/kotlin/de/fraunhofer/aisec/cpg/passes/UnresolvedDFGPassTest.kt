@@ -54,7 +54,6 @@ class UnresolvedDFGPassTest {
                     InferenceConfiguration.builder().inferDfgForUnresolvedCalls(true).build()
                 )
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         // Flow from base to return value
@@ -98,7 +97,6 @@ class UnresolvedDFGPassTest {
                     InferenceConfiguration.builder().inferDfgForUnresolvedCalls(false).build()
                 )
                 it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
             }
 
         // No flow from base to return value

@@ -48,7 +48,6 @@ class DFGTest {
                 true
             ) {
                 it.registerLanguage(JavaLanguage())
-                    .registerPass(JavaExternalTypeHierarchyResolver())
             }
         val returnFunction = result.functions["testReturn"]
         assertNotNull(returnFunction)

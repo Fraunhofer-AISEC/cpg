@@ -48,11 +48,7 @@ internal class VariableResolverTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testFields() {
-        val result =
-            analyze("java", topLevel, true) {
-                it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
-            }
+        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
         val methods = result.methods
         val fields = result.fields
         val field = findByUniqueName(fields, "field")
@@ -71,11 +67,7 @@ internal class VariableResolverTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testLocalVars() {
-        val result =
-            analyze("java", topLevel, true) {
-                it.registerLanguage(JavaLanguage())
-                it.registerPass(JavaExternalTypeHierarchyResolver())
-            }
+        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
         val methods = result.methods
         val fields = result.fields
         val field = findByUniqueName(fields, "field")
