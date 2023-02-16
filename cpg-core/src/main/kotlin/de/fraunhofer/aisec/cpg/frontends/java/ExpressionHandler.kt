@@ -855,6 +855,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             // class' superclass
             val anonymousClassName = constructorName + location
             val anonymousRecord = newRecordDeclaration(anonymousClassName, "class")
+            anonymousRecord.isImplicit = true
             frontend.scopeManager.enterScope(anonymousRecord)
             anonymousRecord.addSuperClass(TypeParser.createFrom(constructorName, language))
             val anonymousClassBody = objectCreationExpr.anonymousClassBody.get()
@@ -882,6 +883,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 anonymousRecord.addConstructor(constructorDeclaration)
                 ctor.constructor = constructorDeclaration
                 frontend.scopeManager.addDeclaration(constructorDeclaration)
+                anonymousRecord.isImplicit
 
                 frontend.scopeManager.leaveScope(anonymousRecord)
             }

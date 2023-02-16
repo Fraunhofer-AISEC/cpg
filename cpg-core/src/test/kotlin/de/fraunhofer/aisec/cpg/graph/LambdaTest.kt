@@ -27,12 +27,11 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.LambdaExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -82,8 +81,32 @@ class LambdaTest {
         assertNotNull(testfunctionBody)
         assertEquals(outerVar, (testfunctionBody.lhs as? DeclaredReferenceExpression)?.refersTo)
 
-        val lambdaVar = result.variables["lambdaVar"]?.initializer
+        val lambdaVar = result.variables["lambdaVar"]
         assertNotNull(lambdaVar)
+        val constructExpression =
+            (lambdaVar.initializer as? NewExpression)?.initializer as? ConstructExpression
+        assertNotNull(constructExpression)
+        val anonymousRecord = constructExpression.instantiates as? RecordDeclaration
+        assertNotNull(anonymousRecord)
+        assertTrue(anonymousRecord.isImplicit)
+        assertEquals(1, anonymousRecord.superClasses.size)
+        // TODO: We only get "BiFunction" here.
+        assertEquals(
+            "java.util.function.BiFunction",
+            anonymousRecord.superClasses.first().name.toString()
+        )
+
+        val applyMethod = anonymousRecord.methods["apply"]
+        assertNotNull(applyMethod)
+        val returnStmt =
+            (applyMethod.body as? CompoundStatement)?.statements?.firstOrNull() as? ReturnStatement
+        assertNotNull(returnStmt)
+        // TODO: This isn't resolved (yet)
+        assertEquals(
+            outerVar,
+            ((returnStmt.returnValue as? BinaryOperator)?.lhs as? DeclaredReferenceExpression)
+                ?.refersTo
+        )
     }
 
     @Test
