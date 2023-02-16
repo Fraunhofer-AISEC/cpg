@@ -27,11 +27,15 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.LambdaExpression
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -60,6 +64,22 @@ class LambdaTest {
         val mapArg = result.calls["map"]?.arguments?.first()
         assertTrue(mapArg is LambdaExpression)
         assertNotNull(mapArg.function)
+
+        val mapBody = mapArg.function?.body as? BinaryOperator
+        assertNotNull(mapBody)
+        val outerVar = result.variables["outerVar"]
+        assertNotNull(outerVar)
+        assertEquals(outerVar, (mapBody.lhs as? DeclaredReferenceExpression)?.refersTo)
+
+        val testfunctionArg = result.calls["testFunction"]?.arguments?.first()
+        assertTrue(testfunctionArg is DeclaredReferenceExpression)
+        assertTrue(
+            (testfunctionArg.refersTo as? VariableDeclaration)?.initializer is LambdaExpression
+        )
+
+        val testfunctionBody = mapArg.function?.body as? BinaryOperator
+        assertNotNull(testfunctionBody)
+        assertEquals(outerVar, (testfunctionBody.lhs as? DeclaredReferenceExpression)?.refersTo)
     }
 
     @Test
