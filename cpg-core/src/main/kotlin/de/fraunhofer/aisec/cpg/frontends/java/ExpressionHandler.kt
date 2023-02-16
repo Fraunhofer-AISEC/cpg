@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
 import kotlin.collections.set
@@ -825,11 +826,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val t = frontend.getTypeAsGoodAsPossible(objectCreationExpr.type)
         val newExpression = this.newNewExpression(expr.toString(), t)
         val arguments = objectCreationExpr.arguments
-        var code = expr.toString()
-        if (code.length > 4) {
-            code = code.substring(4) // remove "new "
+
+        var constructorName = expr.toString()
+        if (constructorName.length > 4) {
+            constructorName = constructorName.substring(4) // remove "new "
         }
-        val ctor = this.newConstructExpression(code)
+        constructorName = constructorName.substringBefore("(").substringBefore("<").strip()
+
+        val ctor = this.newConstructExpression(constructorName)
         ctor.type = t
         frontend.setCodeAndLocation(ctor, expr)
 
@@ -842,6 +846,47 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             ctor.addArgument(argument)
         }
         newExpression.initializer = ctor
+
+        if (objectCreationExpr.anonymousClassBody.isPresent) {
+            // We have an anonymous class and will create a RecordDeclaration for it and add all the
+            // implemented methods.
+            val location = frontend.getLocationFromRawNode(objectCreationExpr)?.hashCode()
+            // We use the hash of the location to distinguish multiple instances of the anonymous
+            // class' superclass
+            val anonymousClassName = constructorName + location
+            val anonymousRecord = newRecordDeclaration(anonymousClassName, "class")
+            frontend.scopeManager.enterScope(anonymousRecord)
+            anonymousRecord.addSuperClass(TypeParser.createFrom(constructorName, language))
+            val anonymousClassBody = objectCreationExpr.anonymousClassBody.get()
+            for (classBody in anonymousClassBody) {
+                // Whatever is implemented in the anonymous class has to be added to the record
+                // declaration
+                val classBodyDecl = frontend.declarationHandler.handle(classBody)
+                classBodyDecl?.let { anonymousRecord.addDeclaration(it) }
+            }
+            ctor.instantiates = anonymousRecord
+
+            if (anonymousRecord.constructors.isEmpty()) {
+                val constructorDeclaration =
+                    this.newConstructorDeclaration(
+                        anonymousRecord.name.localName,
+                        anonymousRecord.name.localName,
+                        anonymousRecord
+                    )
+
+                ctor.arguments.forEachIndexed { i, arg ->
+                    constructorDeclaration.addParameter(
+                        newParamVariableDeclaration("arg${i}", arg.type)
+                    )
+                }
+                anonymousRecord.addConstructor(constructorDeclaration)
+                ctor.constructor = constructorDeclaration
+                frontend.scopeManager.addDeclaration(constructorDeclaration)
+
+                frontend.scopeManager.leaveScope(anonymousRecord)
+            }
+        }
+
         return newExpression
     }
 

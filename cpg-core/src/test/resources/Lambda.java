@@ -18,5 +18,13 @@ public class Lambda {
 
         BiFunction<String, Integer, String> lambda = (strV, intV) -> outerVar + strV + intV;
         Lambda.testFunction(lambda);
+
+        BiFunction<String, Integer, String> lambdaVar = new BiFunction<String, Integer, String>() {
+            @Override
+            public String apply(String s, Integer integer) {
+                return outerVar + s + integer;
+            }
+        };
+        Lambda.testFunction(lambdaVar);
     }
 }

@@ -71,7 +71,8 @@ class LambdaTest {
         assertNotNull(outerVar)
         assertEquals(outerVar, (mapBody.lhs as? DeclaredReferenceExpression)?.refersTo)
 
-        val testfunctionArg = result.calls["testFunction"]?.arguments?.first()
+        val testfunctionArg =
+            result.calls { it.name.localName == "testFunction" }[0].arguments.first()
         assertTrue(testfunctionArg is DeclaredReferenceExpression)
         assertTrue(
             (testfunctionArg.refersTo as? VariableDeclaration)?.initializer is LambdaExpression
@@ -80,6 +81,9 @@ class LambdaTest {
         val testfunctionBody = mapArg.function?.body as? BinaryOperator
         assertNotNull(testfunctionBody)
         assertEquals(outerVar, (testfunctionBody.lhs as? DeclaredReferenceExpression)?.refersTo)
+
+        val lambdaVar = result.variables["lambdaVar"]?.initializer
+        assertNotNull(lambdaVar)
     }
 
     @Test
