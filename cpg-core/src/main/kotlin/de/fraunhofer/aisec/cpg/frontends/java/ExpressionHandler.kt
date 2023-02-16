@@ -865,7 +865,6 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 val classBodyDecl = frontend.declarationHandler.handle(classBody)
                 classBodyDecl?.let { anonymousRecord.addDeclaration(it) }
             }
-            ctor.instantiates = anonymousRecord
 
             if (anonymousRecord.constructors.isEmpty()) {
                 val constructorDeclaration =
@@ -881,9 +880,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     )
                 }
                 anonymousRecord.addConstructor(constructorDeclaration)
-                ctor.constructor = constructorDeclaration
+                ctor.anoymousClass = anonymousRecord
                 frontend.scopeManager.addDeclaration(constructorDeclaration)
-                anonymousRecord.isImplicit
 
                 frontend.scopeManager.leaveScope(anonymousRecord)
             }
