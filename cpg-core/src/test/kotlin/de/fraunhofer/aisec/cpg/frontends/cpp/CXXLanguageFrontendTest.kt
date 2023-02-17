@@ -1425,6 +1425,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(callFoo.invokes.none { it.isInferred })
     }
 
+    @Test
+    @Throws(Exception::class)
+    fun testLambdas() {
+        val file = File("src/test/resources/cxx/lambdas.cpp")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        assertNotNull(tu)
+    }
+
     private fun createTypeFrom(typename: String, resolveAlias: Boolean) =
         TypeParser.createFrom(typename, CPPLanguage(), resolveAlias, null)
 }
