@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -48,13 +49,16 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ShortcutsTest {
     @Test
     fun followDFGUntilHitTest() {
-        val result = GraphExamples.getTRWithConfig("src/test/resources/Dataflow.java")
+        val result = GraphExamples.getDataflowClass()
 
-        val toStringCall = result!!.callsByName("toString")[0]
+        val toStringCall = result.callsByName("toString")[0]
         val printDecl =
             result.translationUnits[0]
                 .byNameOrNull<RecordDeclaration>("Dataflow")
@@ -69,12 +73,10 @@ class ShortcutsTest {
 
     @Test
     fun testCalls() {
-        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
-
-        val actual = result.calls
+        val actual = shortcutClassResult.calls
 
         val expected = mutableListOf<CallExpression>()
-        val classDecl = result.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
         val main = classDecl.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
@@ -105,9 +107,9 @@ class ShortcutsTest {
 
     @Test
     fun testCallsByName() {
-        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
+        val result = GraphExamples.getShortcutClass()
 
-        val actual = result!!.callsByName("print")
+        val actual = result.callsByName("print")
 
         val expected = mutableListOf<CallExpression>()
         val classDecl = result.records["ShortcutClass"]
@@ -121,10 +123,8 @@ class ShortcutsTest {
 
     @Test
     fun testCalleesOf() {
-        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
-
         val expected = mutableListOf<FunctionDeclaration>()
-        val classDecl = result.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
         val print = classDecl.byNameOrNull<MethodDeclaration>("print")
         assertNotNull(print)
@@ -157,14 +157,12 @@ class ShortcutsTest {
 
     @Test
     fun testCallersOf() {
-        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
-
-        val classDecl = result.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
         val print = classDecl.byNameOrNull<MethodDeclaration>("print")
         assertNotNull(print)
 
-        val actual = result!!.callersOf(print)
+        val actual = shortcutClassResult.callersOf(print)
 
         val expected = mutableListOf<FunctionDeclaration>()
         val main = classDecl.byNameOrNull<MethodDeclaration>("main")
@@ -176,10 +174,8 @@ class ShortcutsTest {
 
     @Test
     fun testControls() {
-        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
-
         val expected = mutableListOf<Node>()
-        val classDecl = result.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
@@ -228,8 +224,7 @@ class ShortcutsTest {
     @Test
     fun testControlledBy() {
         val result =
-            GraphExamples.getTRWithConfig(
-                "src/test/resources/ShortcutClass.java",
+            GraphExamples.getShortcutClass(
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerPass(EdgeCachePass())
@@ -260,9 +255,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevDFGEdgesUntilHit() {
-        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
-
-        val classDecl = result.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
         val magic2 = classDecl.byNameOrNull<MethodDeclaration>("magic2")
         assertNotNull(magic2)
@@ -297,8 +290,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevEOGEdgesUntilHit() {
-        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
-        val classDecl = result.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
@@ -321,9 +313,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowNextEOGEdgesUntilHit() {
-        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
-
-        val classDecl = result.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
@@ -345,9 +335,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevDFGEdges() {
-        val result = GraphExamples.getTRWithConfig("src/test/resources/ShortcutClass.java")
-
-        val classDecl = result.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
@@ -362,5 +350,12 @@ class ShortcutsTest {
         val paramPassed = attrAssignment.followPrevDFG { it is Literal<*> }
         assertNotNull(paramPassed)
         assertEquals(3, (paramPassed.last() as? Literal<*>)?.value)
+    }
+
+    private lateinit var shortcutClassResult: TranslationResult
+
+    @BeforeAll
+    fun getShortcutClass() {
+        shortcutClassResult = GraphExamples.getShortcutClass()
     }
 }

@@ -57,8 +57,7 @@ internal class SubgraphWalkerTest : BaseTest() {
     @Throws(Exception::class)
     fun testASTChildrenGetter() {
         val tu =
-            GraphExamples.getTRWithConfig(
-                    "src/test/resources/compiling/RecordDeclaration.java",
+            GraphExamples.getVisitorTest(
                     TranslationConfiguration.builder()
                         .loadIncludes(true)
                         .disableCleanup()

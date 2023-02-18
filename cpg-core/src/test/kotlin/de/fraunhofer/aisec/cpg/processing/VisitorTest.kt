@@ -143,8 +143,7 @@ class VisitorTest : BaseTest() {
             TimeoutException::class
         )
         fun setup() {
-            val cpg =
-                GraphExamples.getTRWithConfig("src/test/resources/compiling/RecordDeclaration.java")
+            val cpg = GraphExamples.getVisitorTest()
             recordDecl = cpg.records.firstOrNull()
         }
     }
