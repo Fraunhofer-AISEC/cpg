@@ -388,11 +388,7 @@ open class EvaluationOrderGraphPass : Pass() {
         // Todo add call as throwexpression to outer scope of call can throw (which is trivial to
         // find out for java, but impossible for c++)
 
-        // evaluate base first, if there is one
-        if (node is MemberCallExpression && node.base != null) {
-            createEOG(node.base!!)
-        }
-        // then the expression declaring the call target
+        // evaluate the call target first, optional base should be the callee or in its subtree
         node.callee?.let { createEOG(it) }
 
         // then the arguments
