@@ -57,6 +57,7 @@ class CPPLanguage :
     override val simpleTypes =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
+            "bool" to IntegerType("bool", 1, this, NumericType.Modifier.SIGNED),
             "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
             "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
             "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),

@@ -42,6 +42,7 @@ import kotlin.math.max
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression.*
 import org.eclipse.cdt.core.dom.ast.IASTLiteralExpression.*
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTLambdaExpression
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTDesignatedInitializer
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
@@ -82,6 +83,32 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleLambdaExpression(node: CPPASTLambdaExpression): Expression {
         val lambda = newLambdaExpression(frontend.getCodeFromRawNode(node))
+
+        // Variables passed by reference are mutable. If we have initializers, we have to model the
+        // variable explicitly.
+        for (capture in node.captures) {
+            if (capture is CPPASTInitCapture) {
+                // TODO: The scope manager isn't able to resolve this correctly.
+                frontend.declaratorHandler.handle(capture.declarator)?.let {
+                    it.isImplicit = true
+                    lambda.addDeclaration(it)
+                }
+            } else {
+                if (capture.isByReference) {
+                    val valueDeclaration =
+                        frontend.scopeManager.resolveReference(
+                            newDeclaredReferenceExpression(capture.identifier.toString())
+                        )
+                    valueDeclaration?.let { lambda.mutableVariables.add(it) }
+                }
+            }
+        }
+
+        // By default, the outer variables passed by value to the lambda are unmutable. But we can
+        // either make the function "mutable" or pass everything by reference.
+        lambda.areVariablesMutable =
+            (node.declarator as? CPPASTFunctionDeclarator)?.isMutable == true ||
+                node.captureDefault == ICPPASTLambdaExpression.CaptureDefault.BY_REFERENCE
 
         val anonymousFunction =
             frontend.declaratorHandler.handle(node.declarator) as? FunctionDeclaration

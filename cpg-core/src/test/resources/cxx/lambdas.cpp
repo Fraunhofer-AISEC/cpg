@@ -49,7 +49,7 @@ void lambda4() {
   uint64_t a_number = 42;
   auto this_is_a_lambda = [a_number]() {
     std::cout << a_number << std::endl;
-    // a_number++; NOT ALLOWED!
+    a_number++; //NOT ALLOWED!
   };
   this_is_a_lambda();
 }
