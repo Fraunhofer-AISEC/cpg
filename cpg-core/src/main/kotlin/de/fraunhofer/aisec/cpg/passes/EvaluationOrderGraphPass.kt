@@ -153,6 +153,7 @@ open class EvaluationOrderGraphPass : Pass() {
         map[DefaultStatement::class.java] = { handleDefault(it) }
         map[TypeIdExpression::class.java] = { handleDefault(it) }
         map[DeclaredReferenceExpression::class.java] = { handleDefault(it) }
+        map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
     }
 
     private fun doNothing(node: Node) {
@@ -267,6 +268,28 @@ open class EvaluationOrderGraphPass : Pass() {
         currentEOG.clear()
     }
 
+    protected fun handleLambdaExpression(node: LambdaExpression) {
+        val tmpCurrentEOG = currentEOG.toMutableList()
+        val tmpCurrentProperties = currentProperties.toMutableMap()
+        val tmpIntermediateNodes = intermediateNodes.toMutableList()
+
+        currentProperties.clear()
+        currentEOG.clear()
+        intermediateNodes.clear()
+
+        createEOG(node.function)
+
+        currentProperties.clear()
+        currentEOG.clear()
+        intermediateNodes.clear()
+
+        currentProperties.putAll(tmpCurrentProperties)
+        currentEOG.addAll(tmpCurrentEOG)
+        intermediateNodes.addAll(tmpIntermediateNodes)
+
+        pushToEOG(node)
+    }
+
     protected fun handleFunctionDeclaration(node: FunctionDeclaration) {
         // reset EOG
         currentEOG.clear()
@@ -369,12 +392,14 @@ open class EvaluationOrderGraphPass : Pass() {
         if (node is MemberCallExpression && node.base != null) {
             createEOG(node.base!!)
         }
+        // then the expression declaring the call target
+        node.callee?.let { createEOG(it) }
 
-        // first the arguments
+        // then the arguments
         for (arg in node.arguments) {
             createEOG(arg)
         }
-        // then the call itself
+        // finally the call itself
         pushToEOG(node)
     }
 
