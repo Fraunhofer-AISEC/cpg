@@ -215,7 +215,7 @@ class LambdaTest {
         // Check the param type
         assertEquals("bool", lambda.function?.parameters?.first()?.type?.name?.localName)
         // Check the return type
-        assertEquals("float", lambda.function?.returnTypes?.first()?.name?.localName)
+        assertEquals("float", lambda.function?.returnTypes?.firstOrNull()?.name?.localName)
     }
 
     @Test
