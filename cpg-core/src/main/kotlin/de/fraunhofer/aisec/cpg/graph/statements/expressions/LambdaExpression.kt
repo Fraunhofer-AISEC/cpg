@@ -66,7 +66,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
             return
         }
 
-        if (!TypeManager.getInstance().isUnknown(type) && src!!.propagationType == oldType) {
+        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
             return
         }
 
