@@ -2,6 +2,6 @@
   {
     "command": "/usr/bin/gcc -c main_simple.c -o main_simple",
     "directory": "src/test/resources/cxxCompilationDatabase",
-    "file": "src/test/resources/cxxCompilationDatabase/main_simple.c"
+    "file": "main_simple.c"
   }
 ]

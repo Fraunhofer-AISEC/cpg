@@ -34,6 +34,7 @@ import java.io.File
 import java.nio.file.Paths
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.io.path.absolutePathString
 
 /**
  * A compilation database contains necessary information about the include paths and possible
@@ -98,7 +99,6 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
 
             for (entry in db) {
                 val fileNameInTheObject = entry.file
-                var srcFile = File(fileNameInTheObject)
 
                 val parsedEntry =
                     if (entry.arguments != null) {
@@ -109,16 +109,11 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
                         ParsedCompilationDatabaseEntry()
                     }
                 val basedir = entry.directory
-                if (
-                    !srcFile.isAbsolute &&
-                        basedir != null &&
-                        Paths.get(basedir, fileNameInTheObject).toFile().exists()
-                ) {
-                    srcFile = Paths.get(basedir, fileNameInTheObject).toFile()
-                }
+                var srcFile = File(resolveRelativePath(fileNameInTheObject, basedir))
 
                 if (srcFile.exists()) {
-                    db.includePaths[srcFile] = parsedEntry.includes
+                    db.includePaths[srcFile] =
+                        parsedEntry.includes.map { resolveRelativePath(it, basedir) }
                 }
 
                 db.symbols[srcFile] =
@@ -152,6 +147,18 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
                 return listOf()
             }
             return listOf(*command.split(" ").toTypedArray())
+        }
+
+        /** Try to convert relative path to absolut path by using basedir as root */
+        private fun resolveRelativePath(path: String, basedir: String?): String {
+            if (
+                !File(path).isAbsolute &&
+                    basedir != null &&
+                    Paths.get(basedir, path).toFile().exists()
+            ) {
+                return Paths.get(basedir, path).absolutePathString()
+            }
+            return path
         }
 
         /**
