@@ -69,17 +69,20 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     /**
      * The [CPPASTFunctionDeclarator] extends the [IASTStandardFunctionDeclarator] and has some more
-     * attributes which we want to consider. Currently, this is the return type which will be added
-     * to the FunctionDeclaration.
+     * attributes which we want to consider. Currently, this is the
+     * [CPPASTFunctionDeclarator.trailingReturnType] which will be added to the FunctionDeclaration.
+     * This represents the return-type of a lambda function.
      */
     private fun handleCPPFunctionDeclarator(node: CPPASTFunctionDeclarator): Declaration {
-        val standardFunction = handleFunctionDeclarator(node)
-        if (node.trailingReturnType != null) {
-            val retVal = node.trailingReturnType.declSpecifier.toString()
-            (standardFunction as? FunctionDeclaration)?.returnTypes =
-                listOf(frontend.parseType(retVal))
+        // Handle it as a regular C function first
+        val function = handleFunctionDeclarator(node)
+
+        // If we have a trailing return type, we specify the return type of the (lambda) function
+        if (function is FunctionDeclaration && node.trailingReturnType != null) {
+            function.returnTypes = listOf(frontend.typeOf(node.trailingReturnType))
         }
-        return standardFunction
+
+        return function
     }
 
     /**
