@@ -112,14 +112,14 @@ Represents any type of call in a program.
 
 Interesting fields:
 
-* `base: Expression`: The base in a `MemberCallExpression` or a function pointer in a `CallExpression` evaluated to determine the call target.
+* `callee: Expression`: The expression declaring the target of a call. This can be a base in a `MemberCallExpression` or a function pointer in a `CallExpression`or a reference.
 * `arguments: List<Expression>`: Mapped to the parameters of the call target but evaluated before the call happens.
 
 Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> child["base"]
+  prev:::outer --EOG--> child["callee"]
   parent(["CallExpression"]) --EOG--> next:::outer
   child --EOG--> arg1["Argument(i-1)"]
   arg1--EOG--> arg2["Argument(i)"]
