@@ -77,14 +77,15 @@ open class EvaluationOrderGraphPass : Pass() {
     private val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
 
     /**
-     * Allows to register EOG creation logic when a currently visited node can depend on future visited nodes.
-     * Currently used to connect goto statements and the target labeled statements. Implemented as listener to connect nodes
-     * when the goto appears before the label.
+     * Allows to register EOG creation logic when a currently visited node can depend on future
+     * visited nodes. Currently used to connect goto statements and the target labeled statements.
+     * Implemented as listener to connect nodes when the goto appears before the label.
      */
     private val processedListener = ProcessedListener()
 
     /**
-     * Stores all nodes currently handled to add them to the processedListener even if a sub node is the next target of an EOG edge.
+     * Stores all nodes currently handled to add them to the processedListener even if a sub node is
+     * the next target of an EOG edge.
      */
     private val intermediateNodes = mutableListOf<Node>()
 

@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.allChildren
@@ -37,9 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect
@@ -1201,6 +1201,78 @@ internal class EOGTest : BaseTest() {
                 refs = listOf(prints[2])
             )
         )
+    }
+
+    @Test
+    fun testLambdaExpression() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        assertNotNull(result)
+        val function = result.functions["lambda2"]
+        assertNotNull(function)
+
+        val lambdaVar = function.variables["this_is_a_lambda"]
+        assertNotNull(lambdaVar)
+        val lambda = lambdaVar.initializer as? LambdaExpression
+        assertNotNull(lambda)
+
+        // The "outer" EOG is assembled correctly.
+        assertTrue(lambda in lambdaVar.prevEOG)
+        val printFunctionCall = function.calls["print_function"]
+        assertNotNull(printFunctionCall)
+        assertTrue(printFunctionCall in lambda.prevEOG)
+
+        // The "inner" EOG is assembled correctly.
+        val body = (lambda.function?.body as? CompoundStatement)
+        assertNotNull(body)
+        assertEquals(1, lambda.function?.nextEOG?.size)
+        assertEquals(
+            "std::cout",
+            (lambda.function?.nextEOG?.get(0) as? DeclaredReferenceExpression)?.name.toString()
+        )
+
+        val cout = lambda.function?.nextEOG?.get(0) as? DeclaredReferenceExpression
+        assertEquals(1, cout?.nextEOG?.size)
+        assertEquals("Hello ", (cout?.nextEOG?.get(0) as? Literal<*>)?.value.toString())
+
+        val hello = cout?.nextEOG?.get(0) as? Literal<*>
+        assertEquals(1, hello?.nextEOG?.size)
+        assertEquals("<<", (hello?.nextEOG?.get(0) as? BinaryOperator)?.operatorCode)
+
+        val binOpLeft = (hello?.nextEOG?.get(0) as? BinaryOperator)
+        assertEquals(1, binOpLeft?.nextEOG?.size)
+        assertEquals(
+            "number",
+            (binOpLeft?.nextEOG?.get(0) as? DeclaredReferenceExpression)?.name.toString()
+        )
+
+        val number = binOpLeft?.nextEOG?.get(0) as? DeclaredReferenceExpression
+        assertEquals(1, number?.nextEOG?.size)
+        assertEquals("<<", (number?.nextEOG?.get(0) as? BinaryOperator)?.operatorCode)
+
+        val binOpCenter = (number?.nextEOG?.get(0) as? BinaryOperator)
+        assertEquals(1, binOpCenter?.nextEOG?.size)
+        assertEquals(
+            "std::endl",
+            (binOpCenter?.nextEOG?.get(0) as? DeclaredReferenceExpression)?.name.toString()
+        )
+
+        val endl = (binOpCenter?.nextEOG?.get(0) as? DeclaredReferenceExpression)
+        assertEquals(1, endl?.nextEOG?.size)
+        assertEquals("<<", (endl?.nextEOG?.get(0) as? BinaryOperator)?.operatorCode)
+
+        val binOpRight = (endl?.nextEOG?.get(0) as? BinaryOperator)
+        assertEquals(1, binOpRight?.nextEOG?.size)
+        assertTrue(binOpRight?.nextEOG?.firstOrNull() is CompoundStatement)
+
+        assertEquals(0, (binOpRight?.nextEOG?.firstOrNull() as? CompoundStatement)?.nextEOG?.size)
     }
 
     @Test
