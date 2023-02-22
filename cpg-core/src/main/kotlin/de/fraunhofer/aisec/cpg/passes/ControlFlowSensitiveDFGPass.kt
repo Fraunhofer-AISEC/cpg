@@ -224,8 +224,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     .map { it.end }
                     .forEach {
                         val newPair = Pair(it, copyMap(previousWrites, it))
-                        if (!worklistHasSimilarPair(worklist, alreadyProcessed, newPair))
-                            worklist.add(newPair)
+                        if (!worklistHasSimilarPair(worklist, newPair)) worklist.add(newPair)
                     }
             }
         }
@@ -259,7 +258,6 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      */
     private fun worklistHasSimilarPair(
         worklist: MutableList<Pair<Node, MutableMap<Declaration, MutableList<Node>>>>,
-        alreadyProcessed: MutableSet<Pair<Node, Map<Declaration, Node>>>,
         newPair: Pair<Node, MutableMap<Declaration, MutableList<Node>>>
     ): Boolean {
         // We collect all states in the worklist which are only a subset of the new pair. We will
@@ -271,7 +269,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                 // The next nodes match. Now check the last writes for each declaration.
                 var allWritesMatch = true
                 var allExistingWritesMatch = true
-                for ((lastWriteDecl, lastWriteList) in newPairLastMap) {
+                for ((lastWriteDecl, lastWrite) in newPairLastMap) {
 
                     // We ignore FieldDeclarations because we cannot be sure how interprocedural
                     // data flows affect the field. Handling them in the state would only blow up
@@ -281,19 +279,19 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                     // Will we generate the same "prev DFG" with the item that is already in the
                     // list?
                     allWritesMatch =
-                        allWritesMatch &&
-                            existingPair.second[lastWriteDecl]?.last() == lastWriteList
+                        allWritesMatch && existingPair.second[lastWriteDecl]?.last() == lastWrite
                     // All last writes which exist in the "existing pair" match but we have new
                     // declarations in the current one
                     allExistingWritesMatch =
                         allExistingWritesMatch &&
                             (lastWriteDecl !in existingPair.second ||
-                                existingPair.second[lastWriteDecl]?.last() == lastWriteList)
+                                existingPair.second[lastWriteDecl]?.last() == lastWrite)
                 }
                 // We found a matching pair in the worklist? Done. Otherwise, maybe there's another
                 // pair...
                 if (allWritesMatch) return true
-                // The new state is a superset of the old one? We delete the old one.
+                // The new state is a superset of the old one? We will add the missing pieces to the
+                // old one.
                 if (allExistingWritesMatch) {
                     subsets.add(existingPair)
                 }
