@@ -114,11 +114,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             frontend.declaratorHandler.handle(node.declarator) as? FunctionDeclaration
                 ?: return lambda
 
-        if (node.declarator.trailingReturnType != null) {
-            val retVal = node.declarator.trailingReturnType.declSpecifier.toString()
-            anonymousFunction.returnTypes = listOf(frontend.parseType(retVal))
-        }
-
         frontend.scopeManager.enterScope(anonymousFunction)
         anonymousFunction.body = frontend.statementHandler.handle(node.body)
         frontend.scopeManager.leaveScope(anonymousFunction)
