@@ -55,6 +55,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     override fun handleNode(node: IASTNameOwner): Declaration {
         return when (node) {
+            is CPPASTFunctionDeclarator -> handleCPPFunctionDeclarator(node)
             is IASTStandardFunctionDeclarator -> handleFunctionDeclarator(node)
             is IASTFieldDeclarator -> handleFieldDeclarator(node)
             is IASTDeclarator -> handleDeclarator(node)
@@ -64,6 +65,21 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 return handleNotSupported(node, node.javaClass.name)
             }
         }
+    }
+
+    /**
+     * The [CPPASTFunctionDeclarator] extends the [IASTStandardFunctionDeclarator] and has some more
+     * attributes which we want to consider. Currently, this is the return type which will be added
+     * to the FunctionDeclaration.
+     */
+    private fun handleCPPFunctionDeclarator(node: CPPASTFunctionDeclarator): Declaration {
+        val standardFunction = handleFunctionDeclarator(node)
+        if (node.trailingReturnType != null) {
+            val retVal = node.trailingReturnType.declSpecifier.toString()
+            (standardFunction as? FunctionDeclaration)?.returnTypes =
+                listOf(frontend.parseType(retVal))
+        }
+        return standardFunction
     }
 
     /**
