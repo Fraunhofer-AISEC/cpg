@@ -15,6 +15,6 @@
       "main.c"
     ],
     "directory": "src/test/resources/cxxCompilationDatabase",
-    "file": "src/test/resources/cxxCompilationDatabase/main.c"
+    "file": "main.c"
   }
 ]
