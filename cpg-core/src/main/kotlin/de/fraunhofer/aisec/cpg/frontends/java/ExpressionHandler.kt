@@ -822,18 +822,15 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             log.warn("Scope {}", o)
         }
 
-        // todo can we merge newNewExpression and newConstructExpression?
         val t = frontend.getTypeAsGoodAsPossible(objectCreationExpr.type)
+        val constructorName = t.name.localName
+
+        // To be consistent with other languages, we need to create a NewExpression (for the "new X"
+        // part) as well as a ConstructExpression (for the constructor call)
         val newExpression = this.newNewExpression(expr.toString(), t)
         val arguments = objectCreationExpr.arguments
 
-        var constructorName = expr.toString()
-        if (constructorName.length > 4) {
-            constructorName = constructorName.substring(4) // remove "new "
-        }
-        constructorName = constructorName.substringBefore("(").substringBefore("<").strip()
-
-        val ctor = this.newConstructExpression(constructorName)
+        val ctor = this.newConstructExpression()
         ctor.type = t
         frontend.setCodeAndLocation(ctor, expr)
 
@@ -841,8 +838,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         for (i in arguments.indices) {
             val argument =
                 handle(arguments[i])
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-            argument!!.argumentIndex = i
+                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    ?: continue
+            argument.argumentIndex = i
             ctor.addArgument(argument)
         }
         newExpression.initializer = ctor
@@ -850,13 +848,16 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         if (objectCreationExpr.anonymousClassBody.isPresent) {
             // We have an anonymous class and will create a RecordDeclaration for it and add all the
             // implemented methods.
-            val location = frontend.getLocationFromRawNode(objectCreationExpr)?.hashCode()
+            val locationHash = frontend.getLocationFromRawNode(objectCreationExpr)?.hashCode()
+
             // We use the hash of the location to distinguish multiple instances of the anonymous
             // class' superclass
-            val anonymousClassName = constructorName + location
+            val anonymousClassName = "$constructorName$locationHash"
             val anonymousRecord = newRecordDeclaration(anonymousClassName, "class")
             anonymousRecord.isImplicit = true
+
             frontend.scopeManager.enterScope(anonymousRecord)
+
             anonymousRecord.addSuperClass(TypeParser.createFrom(constructorName, language))
             val anonymousClassBody = objectCreationExpr.anonymousClassBody.get()
             for (classBody in anonymousClassBody) {
@@ -881,8 +882,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 }
                 anonymousRecord.addConstructor(constructorDeclaration)
                 ctor.anoymousClass = anonymousRecord
-                frontend.scopeManager.addDeclaration(constructorDeclaration)
 
+                frontend.scopeManager.addDeclaration(constructorDeclaration)
                 frontend.scopeManager.leaveScope(anonymousRecord)
             }
         }
