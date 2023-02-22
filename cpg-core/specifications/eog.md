@@ -745,6 +745,23 @@ flowchart LR
   parent -.-> child
 
 ```
+## LambdaExpression
+The expression itself is connected to the outer EOG. A separate EOG is built for the expressed code, as the code itself is not executed at this point.
+
+Interesting fields:
+
+* `function: FunctionDeclaration`: The function declared by the lambda that can be executed at different points in the program.
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["LambdaExpression"]
+  parent --EOG--> next:::outer
+  parent -.-> child
+  child(["function"]) --EOG-->internalNext:::outer
+
+```
 
 
 
