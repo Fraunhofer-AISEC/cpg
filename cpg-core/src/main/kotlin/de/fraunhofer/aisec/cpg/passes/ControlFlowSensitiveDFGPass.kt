@@ -257,7 +257,7 @@ open class ControlFlowSensitiveDFGPass : Pass() {
                         }
                     nodesOutsideTheLoop
                         .map { it.end }
-                        .forEach { worklist.add(Pair(it, copyMap(previousWrites))) }
+                        .forEach { worklist.add(Pair(it, copyMap(previousWrites, it))) }
                 }
 
                 iterable?.let { writtenTo?.addPrevDFG(it) }
