@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
-    private val LOGGER = LoggerFactory.getLogger(NodeBuilder::class.java)
+    internal val LOGGER = LoggerFactory.getLogger(NodeBuilder::class.java)
 
     fun log(node: Node?) {
         LOGGER.trace("Creating {}", node)

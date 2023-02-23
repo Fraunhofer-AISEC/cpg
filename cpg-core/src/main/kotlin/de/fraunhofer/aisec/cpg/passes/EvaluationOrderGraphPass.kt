@@ -120,6 +120,7 @@ open class EvaluationOrderGraphPass : Pass() {
         }
         map[ReturnStatement::class.java] = { handleReturnStatement(it as ReturnStatement) }
         map[BinaryOperator::class.java] = { handleBinaryOperator(it as BinaryOperator) }
+        map[AssignExpression::class.java] = { handleAssignExpression(it as AssignExpression) }
         map[UnaryOperator::class.java] = { handleUnaryOperator(it as UnaryOperator) }
         map[CompoundStatement::class.java] = { handleCompoundStatement(it as CompoundStatement) }
         map[CompoundStatementExpression::class.java] = {
@@ -499,6 +500,20 @@ open class EvaluationOrderGraphPass : Pass() {
         } else {
             createEOG(node.rhs)
         }
+        pushToEOG(node)
+    }
+
+    protected fun handleAssignExpression(node: AssignExpression) {
+        for (declaration in node.declarations) {
+            createEOG(declaration)
+        }
+
+        // Handle left hand side(s) first
+        node.lhs.forEach { createEOG(it) }
+
+        // Then the right side(s)
+        node.rhs.forEach { createEOG(it) }
+
         pushToEOG(node)
     }
 

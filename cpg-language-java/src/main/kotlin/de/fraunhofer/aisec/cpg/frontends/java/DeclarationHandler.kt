@@ -151,8 +151,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             frontend.processAnnotations(param, parameter)
             frontend.scopeManager.addDeclaration(param)
         }
-        val returnTypes =
-            java.util.List.of(frontend.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod))
+        val returnTypes = listOf(frontend.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod))
         functionDeclaration.returnTypes = returnTypes
         val type = computeType(functionDeclaration)
         functionDeclaration.type = type

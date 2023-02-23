@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.AssignmentTarget
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -43,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
  * expression `a = b`, which itself is a [BinaryOperator], contains two [ ]s, one for the variable
  * `a` and one for variable `b ` * , which have been previously been declared.
  */
-open class DeclaredReferenceExpression : Expression(), HasType.TypeListener, AssignmentTarget {
+open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
     /** The [Declaration]s this expression might refer to. */
     @Relationship(value = "REFERS_TO")
     var refersTo: Declaration? = null

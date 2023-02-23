@@ -34,24 +34,47 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /** Represents a statement that returns out of the current function. */
 class ReturnStatement : Statement(), ArgumentHolder {
     /** The expression whose value will be returned. */
-    @AST var returnValue: Expression? = null
+    @AST var returnValues: MutableList<Expression> = mutableListOf()
+
+    /**
+     * A utility property to handle single-valued return statements. In case [returnValues] contains
+     * a single [Expression], it is returned in the getter. The setter can be used to populate
+     * [returnValues] with a single entry.
+     */
+    var returnValue: Expression?
+        get() {
+            return returnValues.singleOrNull()
+        }
+        set(value) {
+            value?.let { returnValues = mutableListOf(it) }
+        }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
-            .append("returnValue", returnValue)
+            .append("returnValues", returnValues)
             .toString()
     }
 
     override fun addArgument(expression: Expression) {
-        this.returnValue = expression
+        this.returnValues += expression
+    }
+
+    override fun removeArgument(expression: Expression): Boolean {
+        this.returnValues -= expression
+        return true
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        this.returnValue = new
+        return true
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ReturnStatement) return false
-        return super.equals(other) && returnValue == other.returnValue
+        return super.equals(other) && returnValues == other.returnValues
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), returnValue)
+    override fun hashCode() = Objects.hash(super.hashCode(), returnValues)
 }
