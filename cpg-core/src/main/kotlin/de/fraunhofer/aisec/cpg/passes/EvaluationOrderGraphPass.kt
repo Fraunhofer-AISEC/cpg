@@ -105,6 +105,9 @@ open class EvaluationOrderGraphPass : Pass() {
         map[ArrayCreationExpression::class.java] = {
             handleArrayCreationExpression(it as ArrayCreationExpression)
         }
+        map[ArrayRangeExpression::class.java] = {
+            handleArrayRangeExpression(it as ArrayRangeExpression)
+        }
         map[DeclarationStatement::class.java] = {
             handleDeclarationStatement(it as DeclarationStatement)
         }
@@ -133,6 +136,7 @@ open class EvaluationOrderGraphPass : Pass() {
             handleSynchronizedStatement(it as SynchronizedStatement)
         }
         map[NewExpression::class.java] = { handleNewExpression(it as NewExpression) }
+        map[KeyValueExpression::class.java] = { handleKeyValueExpression(it as KeyValueExpression) }
         map[CastExpression::class.java] = { handleCastExpression(it as CastExpression) }
         map[ExpressionList::class.java] = { handleExpressionList(it as ExpressionList) }
         map[ConditionalExpression::class.java] = {
@@ -395,6 +399,13 @@ open class EvaluationOrderGraphPass : Pass() {
         pushToEOG(node)
     }
 
+    protected fun handleArrayRangeExpression(node: ArrayRangeExpression) {
+        createEOG(node.floor)
+        createEOG(node.ceiling)
+        createEOG(node.step)
+        pushToEOG(node)
+    }
+
     protected fun handleDeclarationStatement(node: DeclarationStatement) {
         // loop through declarations
         for (declaration in node.declarations) {
@@ -645,6 +656,12 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleNewExpression(node: NewExpression) {
         createEOG(node.initializer)
+        pushToEOG(node)
+    }
+
+    protected fun handleKeyValueExpression(node: KeyValueExpression) {
+        createEOG(node.key)
+        createEOG(node.value)
         pushToEOG(node)
     }
 

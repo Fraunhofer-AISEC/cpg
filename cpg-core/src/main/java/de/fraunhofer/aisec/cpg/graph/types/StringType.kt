@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,30 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
-import de.fraunhofer.aisec.cpg.graph.types.NumericType.Modifier
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 
-fun LanguageProvider.newPrimitiveType(
-    name: String,
-    modifier: Modifier = Modifier.SIGNED,
-): ObjectType {
-    val type = language?.getSimpleTypeOf(name)
-    if ((type as? NumericType)?.modifier != modifier) {
-        // Try again but explicitly state "signed" or "unsigned" as our best guess.
-        val modifierStr =
-            when (modifier) {
-                Modifier.SIGNED -> "signed "
-                Modifier.UNSIGNED -> "unsigned "
-                else -> ""
-            }
-        return language?.getSimpleTypeOf(modifierStr + name) as ObjectType
+class StringType(
+    typeName: CharSequence = "",
+    language: Language<out LanguageFrontend>? = null,
+    generics: List<Type> = listOf()
+) : ObjectType(typeName, generics, false, language) {
+
+    override fun duplicate(): Type {
+        return StringType(this.name, language, generics)
     }
-    return type
-}
-
-fun ObjectType.const(): ObjectType {
-    return ObjectType(this, listOf(), this.isPrimitive, this.language)
 }

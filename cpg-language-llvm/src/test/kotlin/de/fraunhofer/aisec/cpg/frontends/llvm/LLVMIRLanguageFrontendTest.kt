@@ -52,7 +52,7 @@ class LLVMIRLanguageFrontendTest {
             LLVMIRLanguageFrontend(
                 LLVMIRLanguage(),
                 TranslationConfiguration.builder().build(),
-                ScopeManager()
+                ScopeManager(),
             )
         frontend.parse(topLevel.resolve("main.ll").toFile())
     }

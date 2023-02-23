@@ -79,7 +79,7 @@ import org.slf4j.LoggerFactory
 class CXXLanguageFrontend(
     language: Language<CXXLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) : LanguageFrontend(language, config, scopeManager) {
 
     /**
@@ -402,10 +402,15 @@ class CXXLanguageFrontend(
                 130 -> // a string
                 newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
-                        newPrimitiveType("char").const().reference(),
+                        newPrimitiveType("char", NumericType.Modifier.NOT_APPLICABLE).reference(),
                         code
                     )
-                else -> newLiteral(code, newPrimitiveType("char").const().reference(), code)
+                else ->
+                    newLiteral(
+                        code,
+                        newPrimitiveType("char", NumericType.Modifier.NOT_APPLICABLE).reference(),
+                        code
+                    )
             }
         return newAnnotationMember("", expression, code)
     }
@@ -568,7 +573,7 @@ class CXXLanguageFrontend(
                         type.reference(PointerType.PointerOrigin.POINTER)
                     }
                     is ICPPASTReferenceOperator -> {
-                        ReferenceType(type.storage, type.qualifier, type)
+                        ReferenceType(type)
                     }
                     else -> {
                         type
@@ -614,8 +619,7 @@ class CXXLanguageFrontend(
                 ) {
                     it.typeName
                 } + type.typeName
-            type =
-                FunctionType(name, paramTypes, listOf(type), language, type.qualifier, type.storage)
+            type = FunctionType(name, paramTypes, listOf(type), language)
         }
 
         // Lastly, there might be further nested declarators that adjust the type further.

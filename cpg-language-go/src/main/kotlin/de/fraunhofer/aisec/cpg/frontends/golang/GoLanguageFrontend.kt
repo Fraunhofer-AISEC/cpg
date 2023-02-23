@@ -40,10 +40,9 @@ import java.io.FileOutputStream
 class GoLanguageFrontend(
     language: Language<GoLanguageFrontend>,
     config: TranslationConfiguration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) : LanguageFrontend(language, config, scopeManager) {
     companion object {
-        @JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
 
         init {
             try {

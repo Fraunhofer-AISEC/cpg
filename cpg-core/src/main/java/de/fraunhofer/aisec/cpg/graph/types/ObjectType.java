@@ -67,18 +67,6 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
     }
   }
 
-  /**
-   * ObjectTypes can have a modifier if they are primitive datatypes. The default is signed for
-   * primitive data types if there is no more information provided. In case of non primitive
-   * datatypes the modifier is NOT_APPLICABLE
-   */
-  public enum Modifier {
-    SIGNED,
-    UNSIGNED,
-    NOT_APPLICABLE,
-  }
-
-  private final Modifier modifier;
   // Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
   private RecordDeclaration recordDeclaration = null;
 
@@ -86,16 +74,12 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
   private List<PropertyEdge<Type>> generics;
 
   public ObjectType(
-      String typeName,
-      Storage storage,
-      Qualifier qualifier,
+      CharSequence typeName,
       List<Type> generics,
-      Modifier modifier,
       boolean primitive,
       Language<? extends LanguageFrontend> language) {
-    super(typeName, storage, qualifier, language);
+    super(typeName, language);
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
-    this.modifier = modifier;
     this.primitive = primitive;
     this.setLanguage(language);
   }
@@ -103,13 +87,11 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
   public ObjectType(
       Type type,
       List<Type> generics,
-      Modifier modifier,
       boolean primitive,
       Language<? extends LanguageFrontend> language) {
     super(type);
     this.setLanguage(language);
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
-    this.modifier = modifier;
     this.primitive = primitive;
   }
 
@@ -117,7 +99,6 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
   public ObjectType() {
     super();
     this.generics = new ArrayList<>();
-    this.modifier = Modifier.NOT_APPLICABLE;
     this.primitive = false;
   }
 
@@ -165,8 +146,7 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
   @Override
   public Type duplicate() {
     ObjectType newObject =
-        new ObjectType(this, this.getGenerics(), this.modifier, this.primitive, this.getLanguage());
-    newObject.setLanguage(this.getLanguage());
+        new ObjectType(this, this.getGenerics(), this.primitive, this.getLanguage());
     return newObject;
   }
 
@@ -186,31 +166,25 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
     }
   }
 
-  public Modifier getModifier() {
-    return modifier;
-  }
-
   @Override
   public boolean isSimilar(Type t) {
-    return t instanceof ObjectType
-        && this.getGenerics().equals(((ObjectType) t).getGenerics())
+    return t instanceof ObjectType that
+        && this.getGenerics().equals(that.getGenerics())
         && super.isSimilar(t);
   }
 
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (!(o instanceof ObjectType)) return false;
+    if (!(o instanceof ObjectType that)) return false;
     if (!super.equals(o)) return false;
-    ObjectType that = (ObjectType) o;
     return Objects.equals(this.getGenerics(), that.getGenerics())
         && PropertyEdge.propertyEqualsList(generics, that.generics)
-        && this.primitive == that.primitive
-        && this.modifier.equals(that.modifier);
+        && this.primitive == that.primitive;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), generics, modifier, primitive);
+    return Objects.hash(super.hashCode(), generics, primitive);
   }
 }
