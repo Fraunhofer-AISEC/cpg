@@ -23,112 +23,19 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import java.io.File
 import kotlin.test.*
 
-class LambdaTest {
-    @Test
-    fun testJavaLambda() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/Lambda.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        assertNotNull(result)
-
-        val foreachArg = result.calls["forEach"]?.arguments?.first()
-        assertTrue(foreachArg is LambdaExpression)
-        assertNotNull(foreachArg.function)
-
-        val replaceAllArg = result.calls["replaceAll"]?.arguments?.first()
-        assertTrue(replaceAllArg is LambdaExpression)
-        assertNotNull(replaceAllArg.function)
-
-        val mapArg = result.calls["map"]?.arguments?.first()
-        assertTrue(mapArg is LambdaExpression)
-        assertNotNull(mapArg.function)
-
-        val mapBody = mapArg.function?.body as? BinaryOperator
-        assertNotNull(mapBody)
-        val outerVar = result.variables["outerVar"]
-        assertNotNull(outerVar)
-        assertEquals(outerVar, (mapBody.lhs as? DeclaredReferenceExpression)?.refersTo)
-
-        val testfunctionArg =
-            result.calls { it.name.localName == "testFunction" }[0].arguments.first()
-        assertTrue(testfunctionArg is DeclaredReferenceExpression)
-        assertTrue(
-            (testfunctionArg.refersTo as? VariableDeclaration)?.initializer is LambdaExpression
-        )
-
-        val testfunctionBody = mapArg.function?.body as? BinaryOperator
-        assertNotNull(testfunctionBody)
-        assertEquals(outerVar, (testfunctionBody.lhs as? DeclaredReferenceExpression)?.refersTo)
-
-        val lambdaVar = result.variables["lambdaVar"]
-        assertNotNull(lambdaVar)
-        val constructExpression =
-            (lambdaVar.initializer as? NewExpression)?.initializer as? ConstructExpression
-        assertNotNull(constructExpression)
-        val anonymousRecord = constructExpression.instantiates as? RecordDeclaration
-        assertNotNull(anonymousRecord)
-        assertTrue(anonymousRecord.isImplicit)
-        assertEquals(1, anonymousRecord.superClasses.size)
-        // TODO: We only get "BiFunction" here.
-        // assertEquals("java.util.function.BiFunction",
-        // anonymousRecord.superClasses.first().name.toString() )
-
-        val applyMethod = anonymousRecord.methods["apply"]
-        assertNotNull(applyMethod)
-        val returnStmt =
-            (applyMethod.body as? CompoundStatement)?.statements?.firstOrNull() as? ReturnStatement
-        assertNotNull(returnStmt)
-        assertEquals(
-            outerVar,
-            (((returnStmt.returnValue as? BinaryOperator)?.lhs as? BinaryOperator)?.lhs
-                    as? DeclaredReferenceExpression)
-                ?.refersTo
-        )
-    }
+class CPPLambdaTest {
 
     @Test
-    fun testCPPLambda() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/lambda.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        assertNotNull(result)
-
-        val verifyArg = result.calls["SSL_CTX_set_verify"]?.arguments?.last()
-        assertTrue(verifyArg is LambdaExpression)
-        assertNotNull(verifyArg.function)
-        assertTrue(
-            (verifyArg.function?.body as? CompoundStatement)?.statements?.firstOrNull()
-                is ReturnStatement
-        )
-    }
-
-    @Test
-    fun testCPPLambda1() {
+    fun testLambdaSimple() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -158,7 +65,7 @@ class LambdaTest {
     }
 
     @Test
-    fun testCPPLambda2() {
+    fun testLambdaArgument() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -192,7 +99,7 @@ class LambdaTest {
     }
 
     @Test
-    fun testCPPLambda3() {
+    fun testLambdaSignature() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -219,7 +126,7 @@ class LambdaTest {
     }
 
     @Test
-    fun testCPPLambda4() {
+    fun testLambdaCaptureByValue() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -255,7 +162,7 @@ class LambdaTest {
     }
 
     @Test
-    fun testCPPLambda5() {
+    fun testLambdaCaptureByReference() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -292,7 +199,7 @@ class LambdaTest {
     }
 
     @Test
-    fun testCPPLambda6() {
+    fun testLambdaMutable() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -328,7 +235,7 @@ class LambdaTest {
     }
 
     @Test
-    fun testCPPLambda7() {
+    fun testLambdaCaptureAllByValue() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -362,7 +269,7 @@ class LambdaTest {
     }
 
     @Test
-    fun testCPPLambda8() {
+    fun testLambdaCaptureAllByReference() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -398,7 +305,7 @@ class LambdaTest {
     }
 
     @Test
-    fun testCPPLambda9() {
+    fun testLambdaForeach() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -425,7 +332,7 @@ class LambdaTest {
     }
 
     @Test
-    fun testCPPLambda10() {
+    fun testLambdaInitializedCaptures() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
