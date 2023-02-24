@@ -9,7 +9,7 @@
       "main_tu_1.c"
     ],
     "directory": "src/test/resources/cxxCompilationDatabase",
-    "file": "src/test/resources/cxxCompilationDatabase/main_tu_1.c"
+    "file": "main_tu_1.c"
   },
   {
     "arguments": [
@@ -21,7 +21,7 @@
       "main_tu_2.c"
     ],
     "directory": "src/test/resources/cxxCompilationDatabase",
-    "file": "src/test/resources/cxxCompilationDatabase/main_tu_2.c"
+    "file": "main_tu_2.c"
   },
   {
     "arguments": [
@@ -30,7 +30,7 @@
       "missing_file.c"
     ],
     "directory": "src/test/resources/cxxCompilationDatabase",
-    "file": "src/test/resources/cxxCompilationDatabase/missing_file.c"
+    "file": "missing_file.c"
   }
 
 ]
