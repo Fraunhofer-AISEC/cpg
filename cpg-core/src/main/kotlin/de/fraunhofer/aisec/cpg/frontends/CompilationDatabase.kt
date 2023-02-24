@@ -62,10 +62,21 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
             return includePaths.keys.toList()
         }
 
+    fun addIncludePath(srcFile: File, paths: List<String>) {
+        includePaths[srcFile] = paths
+    }
+
     /** Returns the include paths for the specified file. */
     fun getIncludePaths(file: File): List<String>? {
         return includePaths[file]
     }
+
+    /** Returns the include paths for all files in compilation database. */
+    val allIncludePaths: List<String>
+        get() {
+            return includePaths.values.flatten()
+        }
+
     /** Returns defined symbols for the specified file. */
     fun getSymbols(file: File): Map<String, String>? {
         return symbols[file]
@@ -109,11 +120,13 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
                         ParsedCompilationDatabaseEntry()
                     }
                 val basedir = entry.directory
-                var srcFile = File(resolveRelativePath(fileNameInTheObject, basedir))
+                val srcFile = File(resolveRelativePath(fileNameInTheObject, basedir))
 
                 if (srcFile.exists()) {
-                    db.includePaths[srcFile] =
+                    db.addIncludePath(
+                        srcFile,
                         parsedEntry.includes.map { resolveRelativePath(it, basedir) }
+                    )
                 }
 
                 db.symbols[srcFile] =
