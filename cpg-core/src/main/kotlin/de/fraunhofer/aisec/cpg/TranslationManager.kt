@@ -216,6 +216,13 @@ private constructor(
                 }
 
                 sourceLocations = listOf(tmpFile)
+                if (config.compilationDatabase != null) {
+                    // merge include paths from all translation units
+                    config.compilationDatabase.addIncludePath(
+                        tmpFile,
+                        config.compilationDatabase.allIncludePaths
+                    )
+                }
             } else {
                 sourceLocations = list
             }
