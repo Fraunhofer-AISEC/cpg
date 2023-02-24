@@ -8,4 +8,5 @@ auto hex = 0xfull;
 
 // ms is a custom literal suffix (provided by <chrono>. however, we are not handling this at the moment, so this
 // will result in an error
-auto duration = 250ms;
+auto duration_ms = 250ms;
+auto duration_s = 2.5s;

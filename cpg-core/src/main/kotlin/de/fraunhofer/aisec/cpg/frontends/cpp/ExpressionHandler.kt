@@ -720,11 +720,20 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleFloatLiteral(ctx: IASTLiteralExpression): Expression {
         val (strippedValue, suffix) = ctx.valueWithSuffix
 
-        return when (suffix) {
-            "f" -> newLiteral(strippedValue.toFloat(), parseType("float"), ctx.rawSignature)
-            "l" ->
-                newLiteral(strippedValue.toBigDecimal(), parseType("long double"), ctx.rawSignature)
-            else -> newLiteral(strippedValue.toDouble(), parseType("double"), ctx.rawSignature)
+        return try {
+            when (suffix) {
+                "f" -> newLiteral(strippedValue.toFloat(), parseType("float"), ctx.rawSignature)
+                "l" ->
+                    newLiteral(
+                        strippedValue.toBigDecimal(),
+                        parseType("long double"),
+                        ctx.rawSignature
+                    )
+                else -> newLiteral(strippedValue.toDouble(), parseType("double"), ctx.rawSignature)
+            }
+        } catch (ex: NumberFormatException) {
+            // It could be that we cannot parse the literal, in this case we return an error
+            ProblemExpression("could not parse literal: ${ex.message}")
         }
     }
 

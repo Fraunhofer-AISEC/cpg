@@ -843,9 +843,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertIs<IntegerType>(hex.type)
         assertLocalName("unsigned long long", hex.type)
 
-        val duration = tu.variables["duration"]
-        assertNotNull(duration)
-        assertIs<ProblemExpression>(duration.initializer)
+        val duration_ms = tu.variables["duration_ms"]
+        assertNotNull(duration_ms)
+        assertIs<ProblemExpression>(duration_ms.initializer)
+
+        val duration_s = tu.variables["duration_s"]
+        assertNotNull(duration_s)
+        assertIs<ProblemExpression>(duration_s.initializer)
     }
 
     @Test
