@@ -351,4 +351,25 @@ class CPPLambdaTest {
         val lambda = (lambdaVar.initializer as? CallExpression)?.callee as? LambdaExpression
         assertNotNull(lambda)
     }
+
+    @Test
+    fun testLambdaFunctionNull() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        assertNotNull(result)
+        val function = result.functions["lambda11"]
+        assertNotNull(function)
+
+        val lambdaVar = function.variables["this_is_a_lambda"]
+        assertNotNull(lambdaVar)
+        assertNotNull(lambdaVar.initializer as? LambdaExpression)
+        assertNotNull((lambdaVar.initializer as? LambdaExpression)?.function)
+    }
 }

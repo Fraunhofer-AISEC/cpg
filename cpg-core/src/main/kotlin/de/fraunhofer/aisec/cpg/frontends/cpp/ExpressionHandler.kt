@@ -97,7 +97,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 if (capture.isByReference) {
                     val valueDeclaration =
                         frontend.scopeManager.resolveReference(
-                            newDeclaredReferenceExpression(capture.identifier.toString())
+                            newDeclaredReferenceExpression(capture?.identifier?.toString())
                         )
                     valueDeclaration?.let { lambda.mutableVariables.add(it) }
                 }
@@ -111,8 +111,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 node.captureDefault == ICPPASTLambdaExpression.CaptureDefault.BY_REFERENCE
 
         val anonymousFunction =
-            frontend.declaratorHandler.handle(node.declarator) as? FunctionDeclaration
-                ?: return lambda
+            node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
+                ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
 
         frontend.scopeManager.enterScope(anonymousFunction)
         anonymousFunction.body = frontend.statementHandler.handle(node.body)

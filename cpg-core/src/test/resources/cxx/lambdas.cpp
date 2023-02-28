@@ -122,6 +122,11 @@ void lambda10() {
   std::cout << a_number << std::endl;
 }
 
+void lambda11() {
+    auto this_is_a_lambda = [this] { return !my_list.empty(); };
+    return 0;
+}
+
 int main() {
   lambda1();
   lambda2();
@@ -133,5 +138,6 @@ int main() {
   lambda8();
   lambda9();
   lambda10();
+  lambda11();
   return EXIT_SUCCESS;
 }
