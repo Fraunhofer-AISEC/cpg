@@ -56,8 +56,7 @@ class CPPLanguage :
     @Transient
     override val simpleTypes =
         mapOf(
-            "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
-            "bool" to IntegerType("bool", 1, this, NumericType.Modifier.SIGNED),
+            "bool" to BooleanType("bool", 1, this, NumericType.Modifier.SIGNED),
             "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
             "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
             "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
@@ -80,6 +79,8 @@ class CPPLanguage :
             "unsigned int" to IntegerType("unsigned int", 32, this, NumericType.Modifier.UNSIGNED),
             "unsigned long" to
                 IntegerType("unsigned long", 64, this, NumericType.Modifier.UNSIGNED),
+            "unsigned long long" to
+                IntegerType("unsigned long long", 64, this, NumericType.Modifier.UNSIGNED),
             "unsigned long long int" to
                 IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
             "std::string" to StringType("std::string", this),
