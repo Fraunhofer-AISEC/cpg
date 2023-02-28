@@ -34,7 +34,7 @@
     <div class="library-name">
 <a href="../../index.html">
 <span>cpg</span>            </a>    </div>
-    <div>6.1.0
+    <div>6.2.0
     </div>
     <div class="pull-right d-flex">
         <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
@@ -110,7 +110,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-binary-operator/index.html">BinaryOperator</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment/index.html">Assignment</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-base/index.html">HasBase</a></div><div class="brief ">A binary operation expression, such as "a + b".</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-binary-operator/index.html">BinaryOperator</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment/index.html">Assignment</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-base/index.html">HasBase</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a></div><div class="brief "><p class="paragraph">A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a right hand expression (rhs) and an operatorCode.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -125,7 +125,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-call-expression/index.html">CallExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-secondary-type-edge/index.html">HasType.SecondaryTypeEdge</a></div><div class="brief "><p class="paragraph">An expression, which calls another function. It has a list of arguments (list of <a href="-expression/index.html">Expression</a>s) and is connected via the INVOKES edge to its <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a>.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-call-expression/index.html">CallExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-secondary-type-edge/index.html">HasType.SecondaryTypeEdge</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a></div><div class="brief "><p class="paragraph">An expression, which calls another function. It has a list of arguments (list of <a href="-expression/index.html">Expression</a>s) and is connected via the INVOKES edge to its <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a>.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -140,7 +140,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-cast-expression/index.html">CastExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-cast-expression/index.html">CastExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div></div></div>
               </div>
             </div>
           </div>
@@ -200,7 +200,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-declared-reference-expression/index.html">DeclaredReferenceExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment-target/index.html">AssignmentTarget</a></div><div class="brief ">An expression, which refers to something which is declared, e.g.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-declared-reference-expression/index.html">DeclaredReferenceExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment-target/index.html">AssignmentTarget</a></div><div class="brief "><p class="paragraph">An expression, which refers to something which is declared, e.g. a variable. For example, the expression <code class="lang-kotlin">a = b</code>, which itself is a <a href="-binary-operator/index.html">BinaryOperator</a>, contains two [ ]s, one for the variable <code class="lang-kotlin">a</code> and one for variable <code class="lang-kotlin">b </code> * , which have been previously been declared.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -260,7 +260,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-expression/index.html">Expression</a> : <a href="../de.fraunhofer.aisec.cpg.graph.statements/-statement/index.html">Statement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/index.html">HasType</a></div><div class="brief ">Represents one expression.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-expression/index.html">Expression</a> : <a href="../de.fraunhofer.aisec.cpg.graph.statements/-statement/index.html">Statement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/index.html">HasType</a></div><div class="brief "><p class="paragraph">Represents one expression. It is used as a base class for multiple different types of expressions. The only constraint is, that each expression has a type.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -275,7 +275,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-expression-list/index.html">ExpressionList</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-expression-list/index.html">ExpressionList</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div></div></div>
               </div>
             </div>
           </div>
@@ -395,7 +395,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-problem-expression/index.html">ProblemExpression</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>problem<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">""</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>type<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/-problem-type/index.html">ProblemNode.ProblemType</a><span class="token operator"> = </span>ProblemNode.ProblemType.TRANSLATION</span></span><span class="token punctuation">)</span> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/index.html">ProblemNode</a></div><div class="brief "><p class="paragraph">A node where the statement could not be translated by the graph. We use ProblemExpressions whenever the CPG library requires an <a href="-expression/index.html">Expression</a>.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-problem-expression/index.html">ProblemExpression</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>problem<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">""</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>problemType<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/-problem-type/index.html">ProblemNode.ProblemType</a><span class="token operator"> = </span>ProblemNode.ProblemType.TRANSLATION</span></span><span class="token punctuation">)</span> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-problem-node/index.html">ProblemNode</a></div><div class="brief "><p class="paragraph">A node where the statement could not be translated by the graph. We use ProblemExpressions whenever the CPG library requires an <a href="-expression/index.html">Expression</a>.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -440,7 +440,7 @@
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-unary-operator/index.html">UnaryOperator</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div><div class="brief ">A unary operator expression, involving one expression and an operator, such as <code class="lang-kotlin">a++</code>.</div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-unary-operator/index.html">UnaryOperator</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a></div><div class="brief "><p class="paragraph">A unary operator expression, involving one expression and an operator, such as <code class="lang-kotlin">a++</code>.</p></div></div></div>
               </div>
             </div>
           </div>
