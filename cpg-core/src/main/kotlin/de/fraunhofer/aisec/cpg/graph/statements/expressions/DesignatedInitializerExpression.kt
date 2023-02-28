@@ -37,9 +37,9 @@ class DesignatedInitializerExpression : Expression() {
     @field:SubGraph("AST") var rhs: Expression? = null
 
     @Relationship(value = "LHS", direction = Relationship.Direction.OUTGOING)
+    @field:SubGraph("AST")
     var lhsEdges: MutableList<PropertyEdge<Expression>> = mutableListOf()
 
-    @property:SubGraph("AST")
     var lhs: List<Expression> by PropertyEdgeDelegate(DesignatedInitializerExpression::lhsEdges)
 
     override fun toString(): String {
