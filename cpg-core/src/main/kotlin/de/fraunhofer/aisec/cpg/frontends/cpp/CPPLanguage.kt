@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import java.util.regex.Pattern
+import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
 class CPPLanguage :

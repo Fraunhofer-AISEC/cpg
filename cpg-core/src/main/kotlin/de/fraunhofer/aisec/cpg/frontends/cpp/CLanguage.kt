@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
+import org.neo4j.ogm.annotation.Transient
 
 /** The C language. */
 open class CLanguage :
@@ -42,7 +43,7 @@ open class CLanguage :
     HasShortCircuitOperators {
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
-    override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
+    @Transient override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
     override val qualifiers = listOf("const", "volatile", "restrict", "atomic")
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
     override val conjunctiveOperators = listOf("&&")

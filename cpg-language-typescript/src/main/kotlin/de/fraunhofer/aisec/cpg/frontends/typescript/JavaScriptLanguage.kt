@@ -30,11 +30,13 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import kotlin.reflect.KClass
+import org.neo4j.ogm.annotation.Transient
 
 /** The JavaScript language. */
 open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShortCircuitOperators {
     override val fileExtensions = listOf("js", "jsx")
     override val namespaceDelimiter = "."
+    @Transient
     override val frontend: KClass<out TypeScriptLanguageFrontend> =
         TypeScriptLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&", "&&=", "??", "??=")

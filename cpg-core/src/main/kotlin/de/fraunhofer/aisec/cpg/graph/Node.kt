@@ -86,6 +86,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * class would be a [RecordScope] pointing to the [RecordDeclaration].
      */
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
+    @JsonBackReference
     override var scope: Scope? = null
 
     /** Optional comment of this node. */
