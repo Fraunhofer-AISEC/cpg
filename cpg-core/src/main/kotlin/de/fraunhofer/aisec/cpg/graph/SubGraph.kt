@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
  * [SubgraphWalker.getAstChildren]. Could be replaced with @Relationship{sub-graph:'ast'} if
  * switching to an OGM that supports relationship properties.
  */
+@Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
 @EdgeProperty(key = "sub-graph")
 annotation class SubGraph(vararg val value: String)

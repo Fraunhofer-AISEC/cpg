@@ -36,17 +36,17 @@ import org.neo4j.ogm.annotation.Relationship
 
 class IncludeDeclaration : Declaration() {
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
+    @field:SubGraph("AST")
     private val includeEdges: MutableList<PropertyEdge<IncludeDeclaration>> = ArrayList()
 
     @Relationship(value = "PROBLEMS", direction = Relationship.Direction.OUTGOING)
+    @field:SubGraph("AST")
     private val problemEdges: MutableList<PropertyEdge<ProblemDeclaration>> = ArrayList()
 
     var filename: String? = null
 
-    @property:SubGraph("AST")
     val includes: List<IncludeDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::includeEdges)
 
-    @property:SubGraph("AST")
     val problems: List<ProblemDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::problemEdges)
 
     fun addInclude(includeDeclaration: IncludeDeclaration?) {
