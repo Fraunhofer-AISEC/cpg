@@ -37,7 +37,8 @@ import org.neo4j.ogm.annotation.Transient
 class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperators {
     override val fileExtensions = listOf("py")
     override val namespaceDelimiter = "."
-    @Transient override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
+    @Transient
+    override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
 

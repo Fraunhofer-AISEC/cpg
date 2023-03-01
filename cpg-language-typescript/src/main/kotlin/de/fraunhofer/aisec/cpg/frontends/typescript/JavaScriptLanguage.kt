@@ -36,7 +36,8 @@ import org.neo4j.ogm.annotation.Transient
 open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShortCircuitOperators {
     override val fileExtensions = listOf("js", "jsx")
     override val namespaceDelimiter = "."
-    @Transient override val frontend: KClass<out TypeScriptLanguageFrontend> =
+    @Transient
+    override val frontend: KClass<out TypeScriptLanguageFrontend> =
         TypeScriptLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&", "&&=", "??", "??=")
     override val disjunctiveOperators = listOf("||", "||=")
