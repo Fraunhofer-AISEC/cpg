@@ -127,7 +127,9 @@ abstract class Language<T : LanguageFrontend> : Node() {
     open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
         if (operation.operatorCode == "==" || operation.operatorCode == "===") {
             // A comparison, so we return the type "boolean"
-            return TypeParser.createFrom("boolean", this)
+            return this.simpleTypes.values.firstOrNull { it is BooleanType }
+                ?: this.simpleTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
+                    ?: TypeParser.createFrom("boolean", this)
         }
 
         return when (operation.operatorCode) {
