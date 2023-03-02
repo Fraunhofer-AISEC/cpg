@@ -34,12 +34,13 @@ import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.StringType
+import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
 open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
-    override val frontend = GoLanguageFrontend::class
+    @Transient override val frontend = GoLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
     override val startCharacter = '['

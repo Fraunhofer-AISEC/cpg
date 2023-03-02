@@ -31,11 +31,13 @@ import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
+import org.neo4j.ogm.annotation.Transient
 
 /** The Python language. */
 class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperators {
     override val fileExtensions = listOf("py")
     override val namespaceDelimiter = "."
+    @Transient
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
