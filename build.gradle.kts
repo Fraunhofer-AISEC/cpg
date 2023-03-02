@@ -65,6 +65,12 @@ sonarqube {
 // Load the properties that define which frontends to include
 //
 // this code block also exists in settings.gradle.kts
+val enableJavaFrontend by extra {
+    val enableJavaFrontend: String by project
+    enableJavaFrontend.toBoolean()
+}
+project.logger.lifecycle("Java frontend is ${if (enableJavaFrontend) "enabled" else "disabled"}")
+
 val enableGoFrontend by extra {
     val enableGoFrontend: String by project
     enableGoFrontend.toBoolean()
