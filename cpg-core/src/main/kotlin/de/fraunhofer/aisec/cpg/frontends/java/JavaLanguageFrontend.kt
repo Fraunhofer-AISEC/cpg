@@ -79,7 +79,7 @@ open class JavaLanguageFrontend(
 
     lateinit var expressionHandler: ExpressionHandler
     lateinit var statementHandler: StatementHandler
-    protected lateinit var declarationHandler: DeclarationHandler
+    lateinit var declarationHandler: DeclarationHandler
 
     init {
         setupHandlers()

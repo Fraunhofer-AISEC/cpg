@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
@@ -37,6 +38,15 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  * anonymous function to the user of a lambda function with an expression.
  */
 class LambdaExpression : Expression(), HasType.TypeListener {
+
+    /**
+     * If [areVariablesMutable] is false, only the (outer) variables in this list can be modified
+     * inside the lambda.
+     */
+    val mutableVariables: MutableList<ValueDeclaration> = mutableListOf()
+
+    /** Determines if we can modify variables declared outside the lambda from inside the lambda */
+    var areVariablesMutable: Boolean = true
 
     @field:SubGraph("AST")
     var function: FunctionDeclaration? = null
@@ -56,7 +66,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
             return
         }
 
-        if (!TypeManager.getInstance().isUnknown(type) && src!!.propagationType == oldType) {
+        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
             return
         }
 

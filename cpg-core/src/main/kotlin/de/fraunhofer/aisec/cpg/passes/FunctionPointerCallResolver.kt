@@ -33,8 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.LambdaExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
@@ -127,8 +129,15 @@ class FunctionPointerCallResolver : Pass() {
             if (!seen.add(curr)) {
                 continue
             }
+            val isLambda = curr is VariableDeclaration && curr.initializer is LambdaExpression
+            val currentFunction =
+                if (isLambda) {
+                    ((curr as VariableDeclaration).initializer as LambdaExpression).function
+                } else {
+                    curr
+                }
 
-            if (curr is FunctionDeclaration) {
+            if (currentFunction is FunctionDeclaration) {
                 // Even if it is a function declaration, the dataflow might just come from a
                 // situation where the target of a fptr is passed through via a return value. Keep
                 // searching if return type or signature don't match
@@ -136,22 +145,29 @@ class FunctionPointerCallResolver : Pass() {
                 // In some languages, there might be no explicit return type. In this case we are
                 // using a single void return type.
                 val returnType: Type =
-                    if (curr.returnTypes.isEmpty()) {
+                    if (currentFunction.returnTypes.isEmpty()) {
                         IncompleteType()
                     } else {
                         // TODO(oxisto): support multiple return types
-                        curr.returnTypes[0]
+                        currentFunction.returnTypes[0]
                     }
+
                 if (
+                    isLambda &&
+                        currentFunction.returnTypes.isEmpty() &&
+                        currentFunction.hasSignature(pointerType.parameters)
+                ) {
+                    invocationCandidates.add(currentFunction)
+                    continue
+                } else if (
                     TypeManager.getInstance()
                         .isSupertypeOf(pointerType.returnType, returnType, call) &&
-                        curr.hasSignature(pointerType.parameters)
+                        currentFunction.hasSignature(pointerType.parameters)
                 ) {
-                    invocationCandidates.add(curr)
+                    invocationCandidates.add(currentFunction)
                     // We have found a target. Don't follow this path any further, but still
                     // continue the other paths that might be left, as we could have several
-                    // potential targets at
-                    // runtime
+                    // potential targets at runtime
                     continue
                 }
             }

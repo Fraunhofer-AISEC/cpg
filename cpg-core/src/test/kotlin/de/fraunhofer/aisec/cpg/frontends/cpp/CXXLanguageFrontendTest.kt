@@ -781,55 +781,75 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testLiterals() {
-        val file = File("src/test/resources/literals.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val s = declaration.getDeclarationAs(0, VariableDeclaration::class.java)
-        assertEquals(createTypeFrom("char[]", true), s!!.type)
-        assertLocalName("s", s)
+        val file = File("src/test/resources/cxx/literals.cpp")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+
+        val s = tu.variables["s"]
+        assertNotNull(s)
+        assertIs<PointerType>(s.type)
+        assertLocalName("char[]", s.type)
 
         var initializer = s.initializer as? Literal<*>
         assertNotNull(initializer)
         assertEquals("string", initializer.value)
 
-        val i = declaration.getDeclarationAs(1, VariableDeclaration::class.java)
-        assertEquals(createTypeFrom("int", true), i!!.type)
-        assertLocalName("i", i)
+        val i = tu.variables["i"]
+        assertNotNull(i)
+        assertIs<IntegerType>(i.type)
+        assertLocalName("int", i.type)
 
         initializer = i.initializer as? Literal<*>
         assertNotNull(initializer)
         assertEquals(1, initializer.value)
 
-        val f = declaration.getDeclarationAs(2, VariableDeclaration::class.java)
-        assertEquals(createTypeFrom("float", true), f!!.type)
-        assertLocalName("f", f)
+        val f = tu.variables["f"]
+        assertNotNull(f)
+        assertIs<FloatingPointType>(f.type)
+        assertLocalName("float", f.type)
 
         initializer = f.initializer as? Literal<*>
         assertNotNull(initializer)
         assertEquals(0.2f, initializer.value)
 
-        val d = declaration.getDeclarationAs(3, VariableDeclaration::class.java)
-        assertEquals(createTypeFrom("double", true), d!!.type)
-        assertLocalName("d", d)
+        val d = tu.variables["d"]
+        assertNotNull(d)
+        assertIs<FloatingPointType>(d.type)
+        assertLocalName("double", d.type)
 
         initializer = d.initializer as? Literal<*>
         assertNotNull(initializer)
         assertEquals(0.2, initializer.value)
 
-        val b = declaration.getDeclarationAs(4, VariableDeclaration::class.java)
-        assertEquals(createTypeFrom("bool", true), b!!.type)
-        assertLocalName("b", b)
+        val b = tu.variables["b"]
+        assertNotNull(b)
+        assertIs<BooleanType>(b.type)
+        assertLocalName("bool", b.type)
 
         initializer = b.initializer as? Literal<*>
         assertNotNull(initializer)
         assertEquals(false, initializer.value)
 
-        val c = declaration.getDeclarationAs(5, VariableDeclaration::class.java)
-        assertEquals(createTypeFrom("char", true), c!!.type)
-        assertLocalName("c", c)
+        val c = tu.variables["c"]
+        assertNotNull(c)
+        assertIs<IntegerType>(c.type)
+        assertLocalName("char", c.type)
 
         initializer = c.initializer as? Literal<*>
         assertNotNull(initializer)
         assertEquals('c', initializer.value)
+
+        val hex = tu.variables["hex"]
+        assertNotNull(hex)
+        assertIs<IntegerType>(hex.type)
+        assertLocalName("unsigned long long", hex.type)
+
+        val duration_ms = tu.variables["duration_ms"]
+        assertNotNull(duration_ms)
+        assertIs<ProblemExpression>(duration_ms.initializer)
+
+        val duration_s = tu.variables["duration_s"]
+        assertNotNull(duration_s)
+        assertIs<ProblemExpression>(duration_s.initializer)
     }
 
     @Test
@@ -1423,6 +1443,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(callFoo)
         assertInvokes(callFoo, foo)
         assertTrue(callFoo.invokes.none { it.isInferred })
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testLambdas() {
+        val file = File("src/test/resources/cxx/lambdas.cpp")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        assertNotNull(tu)
     }
 
     private fun createTypeFrom(typename: String, resolveAlias: Boolean) =
