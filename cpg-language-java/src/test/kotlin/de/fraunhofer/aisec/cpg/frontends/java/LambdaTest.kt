@@ -50,6 +50,7 @@ class JavaLambdaTest {
                 .sourceLocations(File("src/test/resources/Lambda.java"))
                 .defaultPasses()
                 .defaultLanguages()
+                .registerLanguage(JavaLanguage())
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
