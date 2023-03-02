@@ -317,7 +317,8 @@ fun <N> LanguageFrontend.literal(value: N): Literal<N> {
 
 /**
  * Creates a new [DeclaredReferenceExpression] in the Fluent Node DSL and invokes
- * [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ * [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder] if the context is an
+ * ArgumentHolder.
  */
 context(Holder<out Statement>)
 
