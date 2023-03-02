@@ -89,6 +89,8 @@ class UnknownType : Type {
         // Only one instance of UnknownType for better representation in the graph
         val unknownType = UnknownType()
 
+        val UNKNOWN_TYPE_STRING = "UNKNOWN_TYPE"
+
         /**
          * Use this function to obtain an UnknownType or call the TypeParser with the typeString
          * UNKNOWN

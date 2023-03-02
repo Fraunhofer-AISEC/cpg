@@ -495,9 +495,9 @@ open class JavaLanguageFrontend(
         var root = config.topLevel
         if (root == null && config.softwareComponents.size == 1) {
             root =
-                CommonPath.commonPath(
-                    config.softwareComponents[config.softwareComponents.keys.first()]
-                )
+                config.softwareComponents[config.softwareComponents.keys.first()]?.let {
+                    CommonPath.commonPath(it)
+                }
         }
         if (root == null) {
             log.warn("Could not determine source root for {}", config.softwareComponents)

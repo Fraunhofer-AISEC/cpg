@@ -51,10 +51,9 @@ class JavaExternalTypeHierarchyResolver : Pass() {
         var root = translationResult.config.topLevel
         if (root == null && translationResult.config.softwareComponents.size == 1) {
             root =
-                CommonPath.commonPath(
-                    translationResult.config.softwareComponents[
-                            translationResult.config.softwareComponents.keys.first()]
-                )
+                translationResult.config.softwareComponents[
+                        translationResult.config.softwareComponents.keys.first()]
+                    ?.let { CommonPath.commonPath(it) }
         }
         if (root == null) {
             log.warn(

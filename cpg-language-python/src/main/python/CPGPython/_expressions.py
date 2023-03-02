@@ -63,7 +63,7 @@ def handle_expression_impl(self, expr):
                 return ExpressionBuilderKt(
                     self.frontend,
                     None,
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(self.frontend.getLanguage()),
                     self.get_src_code(expr),
                     expr)
             # we got a complex number
@@ -100,7 +100,7 @@ def handle_expression_impl(self, expr):
         body = self.handle_expression(expr.body)
         orelse = self.handle_expression(expr.orelse)
         r = ExpressionBuilderKt.newConditionalExpression(
-            self.frontend, test, body, orelse, UnknownType.getUnknownType())
+            self.frontend, test, body, orelse, UnknownType.getUnknownType(self.frontend.getLanguage()))
         return r
     elif isinstance(expr, ast.Dict):
         ile = ExpressionBuilderKt.newInitializerListExpression(
@@ -294,7 +294,7 @@ def handle_expression_impl(self, expr):
                 "Found unexpected type - using a dummy: %s" %
                 (type(expr.value)),
                 loglevel="ERROR")
-            tpe = UnknownType.getUnknownType()
+            tpe = UnknownType.getUnknownType(self.frontend.getLanguage())
         lit = ExpressionBuilderKt.newLiteral(
             self.frontend,
             resultvalue, tpe, self.get_src_code(expr))
@@ -312,7 +312,7 @@ def handle_expression_impl(self, expr):
                 self.frontend,
                 value.getName(), value.getType(), value.getCode())
         mem = ExpressionBuilderKt.newMemberExpression(
-            self.frontend, expr.attr, value, UnknownType.getUnknownType(),
+            self.frontend, expr.attr, value, UnknownType.getUnknownType(self.frontend.getLanguage()),
             ".", self.get_src_code(expr))
         return mem
 
@@ -330,7 +330,7 @@ def handle_expression_impl(self, expr):
         return r
     elif isinstance(expr, ast.Name):
         r = ExpressionBuilderKt.newDeclaredReferenceExpression(
-            self.frontend, expr.id, UnknownType.getUnknownType(),
+            self.frontend, expr.id, UnknownType.getUnknownType(self.frontend.getLanguage()),
             self.get_src_code(expr))
 
         # Take a little shortcut and set refersTo, in case this is a method
