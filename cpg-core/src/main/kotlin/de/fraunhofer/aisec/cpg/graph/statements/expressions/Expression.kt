@@ -48,7 +48,7 @@ import org.neo4j.ogm.annotation.Transient
  */
 abstract class Expression : Statement(), HasType {
 
-    private var _type: Type = UnknownType.getUnknownType()
+    private var _type: Type = UnknownType.unknownType
 
     /** The type of the value after evaluation. */
     override var type: Type
@@ -62,7 +62,7 @@ abstract class Expression : Statement(), HasType {
                         .computeIfAbsent(this) { mutableListOf() }
                         .stream()
                         .findAny()
-                        .orElse(UnknownType.getUnknownType())
+                        .orElse(UnknownType.unknownType)
                 }
             return result
         }
@@ -88,7 +88,7 @@ abstract class Expression : Statement(), HasType {
     override val propagationType: Type
         get() {
             return if (type is ReferenceType) {
-                (type as ReferenceType?)?.elementType ?: UnknownType.getUnknownType()
+                (type as ReferenceType?)?.elementType ?: UnknownType.unknownType
             } else type
         }
 

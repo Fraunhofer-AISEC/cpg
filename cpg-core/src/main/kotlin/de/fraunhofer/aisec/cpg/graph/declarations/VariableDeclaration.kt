@@ -111,7 +111,7 @@ class VariableDeclaration :
             } else {
                 src.propagationType
             }
-        setType(newType, root)
+        newType?.let { setType(it, root) }
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW
         }

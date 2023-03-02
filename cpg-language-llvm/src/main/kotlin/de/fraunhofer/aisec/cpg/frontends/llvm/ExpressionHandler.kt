@@ -531,7 +531,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     newMemberExpression(
                         fieldName,
                         base,
-                        field?.type ?: UnknownType.getUnknownType(),
+                        field?.type ?: UnknownType.unknownType,
                         ".",
                         ""
                     )

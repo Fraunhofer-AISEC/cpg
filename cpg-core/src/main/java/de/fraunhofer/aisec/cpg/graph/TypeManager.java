@@ -397,10 +397,10 @@ public class TypeManager {
       }
     }
 
-    wrapState.setDepth(depth);
+    wrapState.depth = depth;
     wrapState.setPointerOrigin(pointerOrigins);
     wrapState.setReference(reference);
-    wrapState.setReferenceType(referenceType);
+    wrapState.referenceType = referenceType;
 
     if (unwrappedTypes.isEmpty() && !original.isEmpty()) {
       return original;
@@ -439,10 +439,10 @@ public class TypeManager {
     } else if (types.size() == 1) {
       return rewrapType(
           types.iterator().next(),
-          wrapState.getDepth(),
-          wrapState.getPointerOrigins(),
+          wrapState.depth,
+          wrapState.pointerOrigins,
           wrapState.isReference(),
-          wrapState.getReferenceType());
+          wrapState.referenceType);
     }
 
     var scope = provider.getScope();
@@ -528,10 +528,10 @@ public class TypeManager {
 
     return rewrapType(
         finalType,
-        wrapState.getDepth(),
-        wrapState.getPointerOrigins(),
+        wrapState.depth,
+        wrapState.pointerOrigins,
         wrapState.isReference(),
-        wrapState.getReferenceType());
+        wrapState.referenceType);
   }
 
   private Set<Ancestor> getAncestors(RecordDeclaration recordDeclaration, int depth) {

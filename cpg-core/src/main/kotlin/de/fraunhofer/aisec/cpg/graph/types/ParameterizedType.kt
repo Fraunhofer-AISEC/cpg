@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,33 +27,30 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import java.util.*
+import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 
-/** This type collects all kind of numeric types. */
-open class NumericType(
-    typeName: CharSequence = "",
-    val bitWidth: Int? = null,
-    language: Language<out LanguageFrontend>? = null,
-    val modifier: Modifier = Modifier.SIGNED
-) : ObjectType(typeName, listOf(), true, language) {
+/**
+ * ParameterizedTypes describe types, that are passed as Paramters to Classes E.g. uninitialized
+ * generics in the graph are represented as ParameterizedTypes
+ */
+class ParameterizedType : Type {
+    constructor(type: Type) : super(type) {
+        language = type.language
+    }
+
+    constructor(typeName: String?, language: Language<out LanguageFrontend>?) : super(typeName) {
+        this.language = language
+    }
+
+    override fun reference(pointer: PointerOrigin?): Type {
+        return PointerType(this, pointer)
+    }
+
+    override fun dereference(): Type {
+        return this
+    }
 
     override fun duplicate(): Type {
-        return NumericType(this.name, bitWidth, language, modifier)
+        return ParameterizedType(this)
     }
-
-    /**
-     * NumericTypes can have a modifier. The default is signed. Some types (e.g. char in C) may be
-     * neither of the signed/unsigned option. TODO: maybe replace with a flag "signed" or
-     * "unsigned"?
-     */
-    enum class Modifier {
-        SIGNED,
-        UNSIGNED,
-        NOT_APPLICABLE
-    }
-
-    override fun equals(other: Any?) =
-        super.equals(other) && this.modifier == (other as? NumericType)?.modifier
-
-    override fun hashCode() = Objects.hash(super.hashCode(), generics, modifier, primitive)
 }

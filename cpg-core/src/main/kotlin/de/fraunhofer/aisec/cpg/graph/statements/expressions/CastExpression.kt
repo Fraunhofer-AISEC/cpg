@@ -39,7 +39,7 @@ class CastExpression : Expression(), HasType.TypeListener {
     @field:SubGraph("AST")
     var expression: Expression = ProblemExpression("could not parse inner expression")
 
-    var castType: Type = UnknownType.getUnknownType()
+    var castType: Type = UnknownType.unknownType
         set(value) {
             field = value
             type = value

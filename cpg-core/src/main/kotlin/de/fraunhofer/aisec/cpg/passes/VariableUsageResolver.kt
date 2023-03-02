@@ -186,7 +186,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             val parentName = (current.name.parent ?: current.name).toString()
             return TypeParser.createFrom(parentName, language)
         } else {
-            return UnknownType.getUnknownType()
+            return UnknownType.unknownType
         }
     }
 
@@ -394,11 +394,13 @@ open class VariableUsageResolver : SymbolResolverPass() {
         val target =
             if (declarationHolder != null) {
                 declarationHolder.methods.firstOrNull { f ->
-                    f.matches(name, fctPtrType.returnType, fctPtrType.parameters)
+                    fctPtrType.returnType?.let { f.matches(name, it, fctPtrType.parameters) } ==
+                        true
                 }
             } else {
                 currentTU.functions.firstOrNull { f ->
-                    f.matches(name, fctPtrType.returnType, fctPtrType.parameters)
+                    fctPtrType.returnType?.let { f.matches(name, it, fctPtrType.parameters) } ==
+                        true
                 }
             }
         // If we didn't find anything, we create a new function or method declaration

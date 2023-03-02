@@ -82,6 +82,6 @@ class MemberExpression : DeclaredReferenceExpression(), HasBase {
     override fun hashCode() = Objects.hash(super.hashCode(), base)
 
     private fun updateName() {
-        this.name = base.type.root.name.fqn(name.localName)
+        this.name = base.type.root?.name.fqn(name.localName)
     }
 }

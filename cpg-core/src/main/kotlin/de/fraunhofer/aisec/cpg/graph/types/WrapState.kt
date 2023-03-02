@@ -23,39 +23,22 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.types;
+package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.frontends.Language;
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 
-/**
- * ParameterizedTypes describe types, that are passed as Paramters to Classes E.g. uninitialized
- * generics in the graph are represented as ParameterizedTypes
- */
-public class ParameterizedType extends Type {
+/** Stores State for rewrap when typeinformation has been unwrapped */
+class WrapState {
+    @JvmField var depth = 0
+    var isReference = false
+    @JvmField var pointerOrigins: Array<PointerOrigin>
+    @JvmField var referenceType: ReferenceType? = null
 
-  public ParameterizedType(Type type) {
-    super(type);
-    this.setLanguage(type.getLanguage());
-  }
+    init {
+        pointerOrigins = arrayOf(PointerOrigin.ARRAY)
+    }
 
-  public ParameterizedType(String typeName, Language<? extends LanguageFrontend> language) {
-    super(typeName);
-    this.setLanguage(language);
-  }
-
-  @Override
-  public Type reference(PointerType.PointerOrigin pointer) {
-    return new PointerType(this, pointer);
-  }
-
-  @Override
-  public Type dereference() {
-    return this;
-  }
-
-  @Override
-  public Type duplicate() {
-    return new ParameterizedType(this);
-  }
+    fun setPointerOrigin(pointerOrigin: Array<PointerOrigin>) {
+        pointerOrigins = pointerOrigin
+    }
 }

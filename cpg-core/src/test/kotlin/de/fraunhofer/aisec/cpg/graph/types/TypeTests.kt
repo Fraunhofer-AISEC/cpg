@@ -218,7 +218,7 @@ internal class TypeTests : BaseTest() {
         // Test 8: Generics
         typeString = "Array<int> array"
         result = TypeParser.createFrom(typeString, CPPLanguage())
-        var generics: MutableList<Type?> = ArrayList()
+        var generics = mutableListOf<Type>()
         generics.add(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
         expected = ObjectType("Array", generics, false, CPPLanguage())
         assertEquals(expected, result)

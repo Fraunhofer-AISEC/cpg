@@ -87,7 +87,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
                     }
                     .toSet()
             val alternative =
-                if (types.isNotEmpty()) types.iterator().next() else UnknownType.getUnknownType()
+                if (types.isNotEmpty()) types.iterator().next() else UnknownType.unknownType
             newType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
             subTypes = ArrayList(possibleSubTypes)
             subTypes.remove(oldType)

@@ -403,7 +403,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * @param parameterizedTypes
      */
     private fun addParameterizedTypesToType(
-        type: Type,
+        type: Type?,
         parameterizedTypes: List<ParameterizedType>
     ) {
         if (type is ObjectType) {

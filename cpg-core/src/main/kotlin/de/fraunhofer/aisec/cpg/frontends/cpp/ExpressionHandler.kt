@@ -395,7 +395,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val reference = handle(ctx.functionNameExpression)
         val callExpression: CallExpression
         if (reference is MemberExpression) {
-            val baseType: Type = reference.base.type.root
+            val baseType = reference.base.type.root
             assert(baseType !is SecondOrderType)
             callExpression = newMemberCallExpression(reference, code = ctx.rawSignature)
             if (
@@ -547,7 +547,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             lk_true -> newLiteral(true, parseType("bool"), ctx.rawSignature)
             lk_false -> newLiteral(false, parseType("bool"), ctx.rawSignature)
             lk_nullptr -> newLiteral(null, parseType("nullptr_t"), ctx.rawSignature)
-            else -> newLiteral(String(ctx.value), UnknownType.getUnknownType(), ctx.rawSignature)
+            else -> newLiteral(String(ctx.value), UnknownType.unknownType, ctx.rawSignature)
         }
     }
 
@@ -790,8 +790,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleThisLiteral(ctx: IASTLiteralExpression): DeclaredReferenceExpression {
         // We should be in a record here. However since we are a fuzzy parser, maybe things went
         // wrong, so we might have an unknown type.
-        val recordType =
-            frontend.scopeManager.currentRecord?.toType() ?: UnknownType.getUnknownType()
+        val recordType = frontend.scopeManager.currentRecord?.toType() ?: UnknownType.unknownType
         // We do want to make sure that the type of the expression is at least a pointer.
         val pointerType = recordType.reference(PointerOrigin.POINTER)
 

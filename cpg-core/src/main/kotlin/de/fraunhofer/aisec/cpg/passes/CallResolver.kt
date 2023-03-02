@@ -113,7 +113,7 @@ open class CallResolver : SymbolResolverPass() {
     private fun fixInitializers(node: Node) {
         if (node is VariableDeclaration) {
             // check if we have the corresponding class for this type
-            val typeString = node.type.root.name
+            val typeString = node.type.root?.name
             if (typeString in recordMap) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
@@ -126,7 +126,7 @@ open class CallResolver : SymbolResolverPass() {
                 } else if (
                     currInitializer !is ConstructExpression &&
                         currInitializer is CallExpression &&
-                        currInitializer.name.localName == node.type.root.name.localName
+                        currInitializer.name.localName == node.type.root?.name?.localName
                 ) {
                     // This should actually be a construct expression, not a call!
                     val arguments = currInitializer.arguments
@@ -338,7 +338,7 @@ open class CallResolver : SymbolResolverPass() {
                 callee.name.localName.isNotEmpty() &&
                 (callee.language !is CPPLanguage || shouldSearchForInvokesInParent(call))
         ) {
-            val records = possibleContainingTypes.mapNotNull { recordMap[it.root.name] }.toSet()
+            val records = possibleContainingTypes.mapNotNull { recordMap[it.root?.name] }.toSet()
             invocationCandidates =
                 getInvocationCandidatesFromParents(callee.name.localName, call, records)
                     .toMutableList()
@@ -388,11 +388,11 @@ open class CallResolver : SymbolResolverPass() {
     ): List<FunctionDeclaration> {
         return possibleContainingTypes
             .mapNotNull {
-                var record = recordMap[it.root.name]
+                var record = recordMap[it.root?.name]
                 if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
                     record = it.startInference().inferRecordDeclaration(it, currentTU)
                     // update the record map
-                    if (record != null) recordMap[it.root.name] = record
+                    if (record != null) it.root?.name?.let { name -> recordMap[name] = record }
                 }
                 record
             }

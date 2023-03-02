@@ -131,7 +131,7 @@ fun MetadataProvider.newConstructorDeclaration(
 @JvmOverloads
 fun MetadataProvider.newParamVariableDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = UnknownType.unknownType,
     variadic: Boolean = false,
     code: String? = null,
     rawNode: Any? = null
@@ -155,7 +155,7 @@ fun MetadataProvider.newParamVariableDeclaration(
 @JvmOverloads
 fun MetadataProvider.newVariableDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = UnknownType.unknownType,
     code: String? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
@@ -325,7 +325,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
 @JvmOverloads
 fun MetadataProvider.newFieldDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = UnknownType.unknownType,
     modifiers: List<String>? = listOf(),
     code: String? = null,
     location: PhysicalLocation? = null,

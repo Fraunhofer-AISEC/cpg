@@ -23,57 +23,40 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.types;
+package de.fraunhofer.aisec.cpg.graph.types
 
-import java.util.Objects;
+import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
+import java.util.*
 
 /**
  * IncompleteTypes are defined as object with unknown size. For instance: void, arrays of unknown
  * length, forward declarated classes in C++
  *
- * <p>Right now we are only dealing with void for objects with unknown size, therefore the name is
+ * Right now we are only dealing with void for objects with unknown size, therefore the name is
  * fixed to void. However, this can be changed in the future, in order to support other objects with
  * unknown size apart from void. Therefore, this Type is not called VoidType
  */
-public class IncompleteType extends Type {
+class IncompleteType : Type {
+    constructor() : super("void", null)
+    constructor(type: Type?) : super(type!!)
 
-  public IncompleteType() {
-    super("void", null);
-  }
+    /** @return PointerType to a IncompleteType, e.g. void* */
+    override fun reference(pointer: PointerOrigin?): Type {
+        return PointerType(this, pointer)
+    }
 
-  public IncompleteType(Type type) {
-    super(type);
-  }
+    /** @return dereferencing void results in void therefore the same type is returned */
+    override fun dereference(): Type {
+        return this
+    }
 
-  /**
-   * @return PointerType to a IncompleteType, e.g. void*
-   */
-  @Override
-  public Type reference(PointerType.PointerOrigin pointerOrigin) {
-    return new PointerType(this, pointerOrigin);
-  }
+    override fun duplicate(): Type {
+        return IncompleteType(this)
+    }
 
-  /**
-   * @return dereferencing void results in void therefore the same type is returned
-   */
-  @Override
-  public Type dereference() {
-    return this;
-  }
+    override fun equals(other: Any?): Boolean {
+        return other is IncompleteType
+    }
 
-  @Override
-  public Type duplicate() {
-    return new IncompleteType(this);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    return o instanceof IncompleteType;
-  }
-
-  @Override
-  public int hashCode() {
-
-    return Objects.hash(super.hashCode());
-  }
+    override fun hashCode() = Objects.hash(super.hashCode())
 }

@@ -136,7 +136,7 @@ open class TypeResolver : Pass() {
     protected fun removeDuplicatesInFields(t: Type) {
         // Remove duplicates from fields
         if (t is FunctionPointerType) {
-            t.returnType = obtainType(t.returnType)
+            t.returnType = t.returnType?.let { obtainType(it) }
             t.parameters = t.parameters.map(::obtainType)
         } else if (t is ObjectType) {
             t.generics = t.generics.map(::obtainType)
