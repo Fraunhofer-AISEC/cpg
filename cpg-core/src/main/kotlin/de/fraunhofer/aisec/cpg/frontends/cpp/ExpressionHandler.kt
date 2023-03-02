@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -41,6 +42,7 @@ import kotlin.math.max
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression.*
 import org.eclipse.cdt.core.dom.ast.IASTLiteralExpression.*
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTLambdaExpression
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTDesignatedInitializer
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
@@ -72,10 +74,53 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is CASTDesignatedInitializer -> handleCDesignatedInitializer(node)
             is CPPASTDeleteExpression -> handleDeleteExpression(node)
             is CPPASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
+            is CPPASTLambdaExpression -> handleLambdaExpression(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)
             }
         }
+    }
+
+    private fun handleLambdaExpression(node: CPPASTLambdaExpression): Expression {
+        val lambda = newLambdaExpression(frontend.getCodeFromRawNode(node))
+
+        // Variables passed by reference are mutable. If we have initializers, we have to model the
+        // variable explicitly.
+        for (capture in node.captures) {
+            if (capture is CPPASTInitCapture) {
+                // TODO: The scope manager isn't able to resolve this correctly.
+                frontend.declaratorHandler.handle(capture.declarator)?.let {
+                    it.isImplicit = true
+                    lambda.addDeclaration(it)
+                }
+            } else {
+                if (capture.isByReference) {
+                    val valueDeclaration =
+                        frontend.scopeManager.resolveReference(
+                            newDeclaredReferenceExpression(capture?.identifier?.toString())
+                        )
+                    valueDeclaration?.let { lambda.mutableVariables.add(it) }
+                }
+            }
+        }
+
+        // By default, the outer variables passed by value to the lambda are unmutable. But we can
+        // either make the function "mutable" or pass everything by reference.
+        lambda.areVariablesMutable =
+            (node.declarator as? CPPASTFunctionDeclarator)?.isMutable == true ||
+                node.captureDefault == ICPPASTLambdaExpression.CaptureDefault.BY_REFERENCE
+
+        val anonymousFunction =
+            node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
+                ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
+
+        frontend.scopeManager.enterScope(anonymousFunction)
+        anonymousFunction.body = frontend.statementHandler.handle(node.body)
+        frontend.scopeManager.leaveScope(anonymousFunction)
+
+        lambda.function = anonymousFunction
+
+        return lambda
     }
 
     private fun handleCompoundStatementExpression(
@@ -627,24 +672,20 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return die
     }
 
-    private fun handleIntegerLiteral(ctx: IASTLiteralExpression): Literal<*> {
-        val value = String(ctx.value).lowercase(Locale.getDefault())
+    private fun handleIntegerLiteral(ctx: IASTLiteralExpression): Expression {
+        var (strippedValue, suffix) = ctx.valueWithSuffix
         val bigValue: BigInteger
-        val suffix = value.suffix
-
-        // first, strip the suffix from the value
-        var strippedValue = value.substring(0, value.length - suffix.length)
 
         // next, check for possible prefixes
         var radix = 10
         var offset = 0
-        if (value.startsWith("0b")) {
+        if (strippedValue.startsWith("0b")) {
             radix = 2 // binary
             offset = 2 // len("0b")
-        } else if (value.startsWith("0x")) {
+        } else if (strippedValue.startsWith("0x")) {
             radix = 16 // hex
             offset = 2 // len("0x")
-        } else if (value.startsWith("0") && strippedValue.length > 1) {
+        } else if (strippedValue.startsWith("0") && strippedValue.length > 1) {
             radix = 8 // octal
             offset = 1 // len("0")
         }
@@ -656,15 +697,32 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         strippedValue = strippedValue.replace("'", "")
 
         // basically we parse everything as BigInteger and then decide what to do
-        bigValue = BigInteger(strippedValue, radix)
-        val numberValue: Number
-        if ("ull" == suffix || "ul" == suffix) {
-            // unsigned long (long) will always be represented as BigInteger
-            numberValue = bigValue
-        } else if ("ll" == suffix || "l" == suffix) {
-            // both long and long long can be represented in Java long, but only within
-            // Long.MAX_VALUE
-            if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
+        try {
+            bigValue = BigInteger(strippedValue, radix)
+            val numberValue: Number
+            if ("ull" == suffix || "ul" == suffix) {
+                // unsigned long (long) will always be represented as BigInteger
+                numberValue = bigValue
+            } else if ("ll" == suffix || "l" == suffix) {
+                // both long and long long can be represented in Java long, but only within
+                // Long.MAX_VALUE
+                if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
+                    // keep it as BigInteger
+                    numberValue = bigValue
+                    Util.warnWithFileLocation(
+                        frontend,
+                        ctx,
+                        log,
+                        "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
+                        ctx
+                    )
+                } else {
+                    numberValue = bigValue.toLong()
+                }
+            } else if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
+                // No suffix, we just cast it to the appropriate signed type that is required, but
+                // only within Long.MAX_VALUE
+
                 // keep it as BigInteger
                 numberValue = bigValue
                 Util.warnWithFileLocation(
@@ -674,59 +732,53 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
                     ctx
                 )
-            } else {
+            } else if (bigValue.toLong() > Int.MAX_VALUE) {
                 numberValue = bigValue.toLong()
-            }
-        } else if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
-            // No suffix, we just cast it to the appropriate signed type that is required, but only
-            // within Long.MAX_VALUE
-
-            // keep it as BigInteger
-            numberValue = bigValue
-            Util.warnWithFileLocation(
-                frontend,
-                ctx,
-                log,
-                "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
-                ctx
-            )
-        } else if (bigValue.toLong() > Int.MAX_VALUE) {
-            numberValue = bigValue.toLong()
-        } else {
-            numberValue = bigValue.toInt()
-        }
-
-        // retrieve type based on stored Java number
-        val type =
-            if (numberValue is BigInteger && "ul" == suffix) {
-                // we follow the way clang/llvm handles this and this seems to always
-                // be an unsigned long long, except if it is explicitly specified as ul
-                parseType("unsigned long")
-            } else if (numberValue is BigInteger) {
-                parseType("unsigned long long")
-            } else if (numberValue is Long && "ll" == suffix) {
-                // differentiate between long and long long
-                parseType("long long")
-            } else if (numberValue is Long) {
-                parseType("long")
             } else {
-                parseType("int")
+                numberValue = bigValue.toInt()
             }
 
-        return newLiteral(numberValue, type, ctx.rawSignature)
+            // retrieve type based on stored Java number
+            val type =
+                if (numberValue is BigInteger && "ul" == suffix) {
+                    // we follow the way clang/llvm handles this and this seems to always
+                    // be an unsigned long long, except if it is explicitly specified as ul
+                    parseType("unsigned long")
+                } else if (numberValue is BigInteger) {
+                    parseType("unsigned long long")
+                } else if (numberValue is Long && "ll" == suffix) {
+                    // differentiate between long and long long
+                    parseType("long long")
+                } else if (numberValue is Long) {
+                    parseType("long")
+                } else {
+                    parseType("int")
+                }
+
+            return newLiteral(numberValue, type, ctx.rawSignature)
+        } catch (ex: NumberFormatException) {
+            // It could be that we cannot parse the literal, in this case we return an error
+            return ProblemExpression("could not parse literal: ${ex.message}")
+        }
     }
 
     private fun handleFloatLiteral(ctx: IASTLiteralExpression): Expression {
-        val value = String(ctx.value).lowercase(Locale.getDefault())
-        val suffix = value.suffix
+        val (strippedValue, suffix) = ctx.valueWithSuffix
 
-        // first, strip the suffix from the value
-        val strippedValue = value.substring(0, value.length - suffix.length)
-
-        return if (suffix == "f") {
-            newLiteral(strippedValue.toFloat(), parseType("float"), ctx.rawSignature)
-        } else {
-            newLiteral(strippedValue.toDouble(), parseType("double"), ctx.rawSignature)
+        return try {
+            when (suffix) {
+                "f" -> newLiteral(strippedValue.toFloat(), parseType("float"), ctx.rawSignature)
+                "l" ->
+                    newLiteral(
+                        strippedValue.toBigDecimal(),
+                        parseType("long double"),
+                        ctx.rawSignature
+                    )
+                else -> newLiteral(strippedValue.toDouble(), parseType("double"), ctx.rawSignature)
+            }
+        } catch (ex: NumberFormatException) {
+            // It could be that we cannot parse the literal, in this case we return an error
+            ProblemExpression("could not parse literal: ${ex.message}")
         }
     }
 
@@ -746,20 +798,25 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return newDeclaredReferenceExpression("this", pointerType, ctx.rawSignature, ctx)
     }
 
-    private val String.suffix: String
+    private val IASTLiteralExpression.valueWithSuffix: Pair<String, String>
         get() {
+            val value = String(this.value).lowercase(Locale.getDefault())
+
             var suffix = ""
 
-            // maximum suffix length is 3
+            // Maximum suffix length is 3
             for (i in 1..3) {
-                val digit = this.substring(max(0, this.length - i))
+                val digit = value.substring(max(0, value.length - i))
                 suffix =
                     if (
-                        digit.chars().allMatch { character ->
-                            character == 'u'.code ||
-                                character == 'l'.code ||
-                                character == 'f'.code ||
-                                character == 'd'.code
+                        digit.chars().allMatch {
+                            // We need to match on different suffixes, based on the kind of literal
+                            when (this.kind) {
+                                // See https://en.cppreference.com/w/cpp/language/floating_literal
+                                lk_float_constant -> it == 'f'.code || it == 'l'.code
+                                lk_integer_constant -> it == 'u'.code || it == 'l'.code
+                                else -> false
+                            }
                         }
                     ) {
                         digit
@@ -768,7 +825,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     }
             }
 
-            return suffix
+            // Supply the value with the suffix stripped, as well as the suffix
+            return Pair(value.substring(0, value.length - suffix.length), suffix)
         }
 }
 

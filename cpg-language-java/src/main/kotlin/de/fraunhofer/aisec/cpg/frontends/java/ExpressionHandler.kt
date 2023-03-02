@@ -40,8 +40,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
 import kotlin.collections.set
@@ -49,6 +51,38 @@ import org.slf4j.LoggerFactory
 
 class ExpressionHandler(lang: JavaLanguageFrontend) :
     Handler<Statement, Expression, JavaLanguageFrontend>(Supplier { ProblemExpression() }, lang) {
+
+    private fun handleLambdaExpr(expr: Expression): Statement {
+        val lambdaExpr = expr.asLambdaExpr()
+        val lambda = newLambdaExpression(frontend.getCodeFromRawNode(lambdaExpr))
+        val anonymousFunction = newFunctionDeclaration("", frontend.getCodeFromRawNode(lambdaExpr))
+        frontend.scopeManager.enterScope(anonymousFunction)
+        for (parameter in lambdaExpr.parameters) {
+            val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
+            val param =
+                this.newParamVariableDeclaration(
+                    parameter.nameAsString,
+                    resolvedType,
+                    parameter.isVarArgs
+                )
+            anonymousFunction.addParameter(param)
+            frontend.setCodeAndLocation(param, parameter)
+            frontend.processAnnotations(param, parameter)
+            frontend.scopeManager.addDeclaration(param)
+        }
+
+        // TODO: We cannot easily identify the signature of the lambda
+        // val type = lambdaExpr.calculateResolvedType()
+        val functionType = FunctionType.computeType(anonymousFunction)
+        anonymousFunction.type = functionType
+        anonymousFunction.body = frontend.statementHandler.handle(lambdaExpr.body)
+        frontend.scopeManager.leaveScope(anonymousFunction)
+
+        lambda.function = anonymousFunction
+
+        return lambda
+    }
+
     private fun handleCastExpr(expr: Expression): Statement {
         val castExpr = expr.asCastExpr()
         val castExpression = this.newCastExpression(expr.toString())
@@ -788,15 +822,15 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             log.warn("Scope {}", o)
         }
 
-        // todo can we merge newNewExpression and newConstructExpression?
         val t = frontend.getTypeAsGoodAsPossible(objectCreationExpr.type)
+        val constructorName = t.name.localName
+
+        // To be consistent with other languages, we need to create a NewExpression (for the "new X"
+        // part) as well as a ConstructExpression (for the constructor call)
         val newExpression = this.newNewExpression(expr.toString(), t)
         val arguments = objectCreationExpr.arguments
-        var code = expr.toString()
-        if (code.length > 4) {
-            code = code.substring(4) // remove "new "
-        }
-        val ctor = this.newConstructExpression(code)
+
+        val ctor = this.newConstructExpression()
         ctor.type = t
         frontend.setCodeAndLocation(ctor, expr)
 
@@ -804,11 +838,56 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         for (i in arguments.indices) {
             val argument =
                 handle(arguments[i])
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-            argument!!.argumentIndex = i
+                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    ?: continue
+            argument.argumentIndex = i
             ctor.addArgument(argument)
         }
         newExpression.initializer = ctor
+
+        if (objectCreationExpr.anonymousClassBody.isPresent) {
+            // We have an anonymous class and will create a RecordDeclaration for it and add all the
+            // implemented methods.
+            val locationHash = frontend.getLocationFromRawNode(objectCreationExpr)?.hashCode()
+
+            // We use the hash of the location to distinguish multiple instances of the anonymous
+            // class' superclass
+            val anonymousClassName = "$constructorName$locationHash"
+            val anonymousRecord = newRecordDeclaration(anonymousClassName, "class")
+            anonymousRecord.isImplicit = true
+
+            frontend.scopeManager.enterScope(anonymousRecord)
+
+            anonymousRecord.addSuperClass(TypeParser.createFrom(constructorName, language))
+            val anonymousClassBody = objectCreationExpr.anonymousClassBody.get()
+            for (classBody in anonymousClassBody) {
+                // Whatever is implemented in the anonymous class has to be added to the record
+                // declaration
+                val classBodyDecl = frontend.declarationHandler.handle(classBody)
+                classBodyDecl?.let { anonymousRecord.addDeclaration(it) }
+            }
+
+            if (anonymousRecord.constructors.isEmpty()) {
+                val constructorDeclaration =
+                    this.newConstructorDeclaration(
+                        anonymousRecord.name.localName,
+                        anonymousRecord.name.localName,
+                        anonymousRecord
+                    )
+
+                ctor.arguments.forEachIndexed { i, arg ->
+                    constructorDeclaration.addParameter(
+                        newParamVariableDeclaration("arg${i}", arg.type)
+                    )
+                }
+                anonymousRecord.addConstructor(constructorDeclaration)
+                ctor.anoymousClass = anonymousRecord
+
+                frontend.scopeManager.addDeclaration(constructorDeclaration)
+                frontend.scopeManager.leaveScope(anonymousRecord)
+            }
+        }
+
         return newExpression
     }
 
@@ -817,79 +896,27 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     init {
-        map[AssignExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleAssignmentExpression(expr)
-            }
-        map[FieldAccessExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleFieldAccessExpression(expr)
-            }
-        map[LiteralExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleLiteralExpression(expr)
-            }
-        map[ThisExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleThisExpression(expr)
-            }
-        map[SuperExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleSuperExpression(expr)
-            }
-        map[ClassExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleClassExpression(expr)
-            }
-        map[NameExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleNameExpression(expr)
-            }
-        map[InstanceOfExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleInstanceOfExpression(expr)
-            }
-        map[UnaryExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleUnaryExpression(expr)
-            }
-        map[BinaryExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleBinaryExpression(expr)
-            }
-        map[VariableDeclarationExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleVariableDeclarationExpr(expr)
-            }
-        map[MethodCallExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleMethodCallExpression(expr)
-            }
-        map[ObjectCreationExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleObjectCreationExpr(expr)
-            }
-        map[ConditionalExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleConditionalExpression(expr)
-            }
-        map[EnclosedExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleEnclosedExpression(expr)
-            }
-        map[ArrayAccessExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleArrayAccessExpr(expr)
-            }
-        map[ArrayCreationExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleArrayCreationExpr(expr)
-            }
-        map[ArrayInitializerExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression ->
-                handleArrayInitializerExpr(expr)
-            }
-        map[CastExpr::class.java] =
-            HandlerInterface<Statement, Expression> { expr: Expression -> handleCastExpr(expr) }
+        map[AssignExpr::class.java] = HandlerInterface { handleAssignmentExpression(it) }
+        map[FieldAccessExpr::class.java] = HandlerInterface { handleFieldAccessExpression(it) }
+        map[LiteralExpr::class.java] = HandlerInterface { handleLiteralExpression(it) }
+        map[ThisExpr::class.java] = HandlerInterface { handleThisExpression(it) }
+        map[SuperExpr::class.java] = HandlerInterface { handleSuperExpression(it) }
+        map[ClassExpr::class.java] = HandlerInterface { handleClassExpression(it) }
+        map[NameExpr::class.java] = HandlerInterface { handleNameExpression(it) }
+        map[InstanceOfExpr::class.java] = HandlerInterface { handleInstanceOfExpression(it) }
+        map[UnaryExpr::class.java] = HandlerInterface { handleUnaryExpression(it) }
+        map[BinaryExpr::class.java] = HandlerInterface { handleBinaryExpression(it) }
+        map[VariableDeclarationExpr::class.java] = HandlerInterface {
+            handleVariableDeclarationExpr(it)
+        }
+        map[MethodCallExpr::class.java] = HandlerInterface { handleMethodCallExpression(it) }
+        map[ObjectCreationExpr::class.java] = HandlerInterface { handleObjectCreationExpr(it) }
+        map[ConditionalExpr::class.java] = HandlerInterface { handleConditionalExpression(it) }
+        map[EnclosedExpr::class.java] = HandlerInterface { handleEnclosedExpression(it) }
+        map[ArrayAccessExpr::class.java] = HandlerInterface { handleArrayAccessExpr(it) }
+        map[ArrayCreationExpr::class.java] = HandlerInterface { handleArrayCreationExpr(it) }
+        map[ArrayInitializerExpr::class.java] = HandlerInterface { handleArrayInitializerExpr(it) }
+        map[CastExpr::class.java] = HandlerInterface { handleCastExpr(it) }
+        map[LambdaExpr::class.java] = HandlerInterface { handleLambdaExpr(it) }
     }
 }

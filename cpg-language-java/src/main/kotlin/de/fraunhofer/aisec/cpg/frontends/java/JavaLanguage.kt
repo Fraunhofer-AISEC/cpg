@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.JavaCallResolverHelper
 import kotlin.reflect.KClass
+import org.neo4j.ogm.annotation.Transient
 
 /** The Java language. */
 open class JavaLanguage :
@@ -48,7 +49,7 @@ open class JavaLanguage :
     HasShortCircuitOperators {
     override val fileExtensions = listOf("java")
     override val namespaceDelimiter = "."
-    override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
+    @Transient override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
     override val superClassKeyword = "super"
 
     override val qualifiers = listOf("final", "volatile")

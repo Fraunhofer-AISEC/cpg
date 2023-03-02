@@ -91,7 +91,7 @@ class VisitorTest : BaseTest() {
                 }
             }
         )
-        assertEquals(23, nodeList.size)
+        assertEquals(24, nodeList.size)
     }
 
     /** Visits all nodes along AST. */

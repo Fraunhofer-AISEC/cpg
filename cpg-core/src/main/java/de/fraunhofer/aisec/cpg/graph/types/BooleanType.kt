@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,17 +23,20 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 
-/**
- * Annotates single member variables of supertype [Node] or a collection of nodes to be part of the
- * a sub-graph of the current Node. This is used to iterate over all AST sub-nodes with
- * [SubgraphWalker.getAstChildren]. Could be replaced with @Relationship{sub-graph:'ast'} if
- * switching to an OGM that supports relationship properties.
- */
-@Target(AnnotationTarget.FIELD)
-@Retention(AnnotationRetention.RUNTIME)
-@EdgeProperty(key = "sub-graph")
-annotation class SubGraph(vararg val value: String)
+/** Instances of this class represent boolean types. */
+class BooleanType(
+    typeName: CharSequence = "bool",
+    bitWidth: Int? = 1,
+    language: Language<out LanguageFrontend>? = null,
+    modifier: Modifier = Modifier.UNSIGNED
+) : NumericType(typeName, bitWidth, language, modifier) {
+
+    override fun duplicate(): Type {
+        return BooleanType(this.name, bitWidth, language, modifier)
+    }
+}

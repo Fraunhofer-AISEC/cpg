@@ -27,11 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.HasType
+import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -53,6 +51,12 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
      */
     @PopulatedByPass(CallResolver::class)
     var constructor: ConstructorDeclaration? = null
+        get() =
+            if (anoymousClass != null) {
+                anoymousClass?.constructors?.firstOrNull()
+            } else {
+                field
+            }
         set(value) {
             field = value
 
@@ -62,9 +66,17 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
             }
         }
 
+    @field:SubGraph("AST") var anoymousClass: RecordDeclaration? = null
+
     /** The [Declaration] of the type this expression instantiates. */
     @PopulatedByPass(CallResolver::class)
     var instantiates: Declaration? = null
+        get() =
+            if (anoymousClass != null) {
+                anoymousClass
+            } else {
+                field
+            }
         set(value) {
             field = value
             if (value != null && this.type is UnknownType) {

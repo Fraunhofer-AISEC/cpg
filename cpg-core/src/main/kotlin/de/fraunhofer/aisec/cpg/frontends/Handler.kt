@@ -67,9 +67,7 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
         var ret: S?
         if (ctx == null) {
             log.error(
-                "ctx is NULL. This can happen when ast children are optional in {}. Called by {}",
-                this.javaClass,
-                Thread.currentThread().stackTrace[2]
+                "ctx is NULL. This can happen when ast children are optional in ${this.javaClass}. Called by ${Thread.currentThread().stackTrace[2]}"
             )
             return null
         }
@@ -81,7 +79,7 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
                 astNode.fileLocation != null &&
                     astNode.fileLocation.contextInclusionStatement != null
             ) {
-                log.debug("Skip parsing include file {}", astNode.containingFilename)
+                log.debug("Skip parsing include file ${astNode.containingFilename}")
                 return null
             }
         }
@@ -98,9 +96,7 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
                     frontend,
                     ctx,
                     log,
-                    "No handler for type {}, resolving for its superclass {}.",
-                    ctx.javaClass,
-                    toHandle
+                    "No handler for type ${ctx.javaClass}, resolving for its superclass $toHandle."
                 )
             }
             if (toHandle == typeOfT || typeOfT != null && !typeOfT.isAssignableFrom(toHandle)) {
@@ -124,14 +120,13 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
                 frontend,
                 ctx,
                 log,
-                "Parsing of type {} is not supported (yet)",
-                ctx.javaClass
+                "Parsing of type ${ctx.javaClass} is not supported (yet)"
             )
             ret = configConstructor.get()
             if (ret is ProblemNode) {
                 val problem = ret
                 problem.problem =
-                    String.format("Parsing of type {} is not supported (yet)", ctx.javaClass)
+                    String.format("Parsing of type ${ctx.javaClass} is not supported (yet)")
             }
         }
 
@@ -141,8 +136,7 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
                 frontend,
                 ctx,
                 log,
-                "Parsing of type {} did not produce a proper CPG node",
-                ctx.javaClass
+                "Parsing of type ${ctx.javaClass} did not produce a proper CPG node"
             )
             ret = configConstructor.get()
         }

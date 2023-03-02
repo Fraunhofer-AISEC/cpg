@@ -55,6 +55,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     override fun handleNode(node: IASTNameOwner): Declaration {
         return when (node) {
+            is CPPASTFunctionDeclarator -> handleCPPFunctionDeclarator(node)
             is IASTStandardFunctionDeclarator -> handleFunctionDeclarator(node)
             is IASTFieldDeclarator -> handleFieldDeclarator(node)
             is IASTDeclarator -> handleDeclarator(node)
@@ -64,6 +65,24 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 return handleNotSupported(node, node.javaClass.name)
             }
         }
+    }
+
+    /**
+     * The [CPPASTFunctionDeclarator] extends the [IASTStandardFunctionDeclarator] and has some more
+     * attributes which we want to consider. Currently, this is the
+     * [CPPASTFunctionDeclarator.trailingReturnType] which will be added to the FunctionDeclaration.
+     * This represents the return-type of a lambda function.
+     */
+    private fun handleCPPFunctionDeclarator(node: CPPASTFunctionDeclarator): Declaration {
+        // Handle it as a regular C function first
+        val function = handleFunctionDeclarator(node)
+
+        // If we have a trailing return type, we specify the return type of the (lambda) function
+        if (function is FunctionDeclaration && node.trailingReturnType != null) {
+            function.returnTypes = listOf(frontend.typeOf(node.trailingReturnType))
+        }
+
+        return function
     }
 
     /**
@@ -197,7 +216,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // treats these levels as separate declarators, so we need to get to the bottom for the
         // actual name using the realName extension function.
         val (nameDecl: IASTDeclarator, hasPointer) = ctx.realName()
-        var name = parseName(nameDecl.name.toString())
+        var name =
+            if (nameDecl.name == null) {
+                Name("")
+            } else {
+                parseName(nameDecl.name.toString())
+            }
 
         // Attention! This might actually be a function pointer (requires at least one level of
         // parentheses and a pointer operator)

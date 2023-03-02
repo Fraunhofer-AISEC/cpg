@@ -112,14 +112,14 @@ Represents any type of call in a program.
 
 Interesting fields:
 
-* `base: Expression`: The base in a `MemberCallExpression` or a function pointer in a `CallExpression` evaluated to determine the call target.
+* `callee: Expression`: The expression declaring the target of a call. This can be a base in a `MemberCallExpression` or a function pointer in a `CallExpression`or a reference.
 * `arguments: List<Expression>`: Mapped to the parameters of the call target but evaluated before the call happens.
 
 Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> child["base"]
+  prev:::outer --EOG--> child["callee"]
   parent(["CallExpression"]) --EOG--> next:::outer
   child --EOG--> arg1["Argument(i-1)"]
   arg1--EOG--> arg2["Argument(i)"]
@@ -743,6 +743,23 @@ flowchart LR
   child --EOG--> parent
   parent(["CaseStatement"]) --EOG--> next:::outer
   parent -.-> child
+
+```
+## LambdaExpression
+The expression itself is connected to the outer EOG. A separate EOG is built for the expressed code, as the code itself is not executed at this point.
+
+Interesting fields:
+
+* `function: FunctionDeclaration`: The function declared by the lambda that can be executed at different points in the program.
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["LambdaExpression"]
+  parent --EOG--> next:::outer
+  parent -.-> child
+  child(["function"]) --EOG-->internalNext:::outer
 
 ```
 

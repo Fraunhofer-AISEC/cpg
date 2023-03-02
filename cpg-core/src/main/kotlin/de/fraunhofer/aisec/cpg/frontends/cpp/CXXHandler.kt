@@ -80,8 +80,7 @@ abstract class CXXHandler<S : Node, T : Any>(
             frontend,
             node,
             log,
-            "Parsing of type {} is not supported (yet)",
-            name
+            "Parsing of type $name is not supported (yet)"
         )
 
         val cpgNode = this.configConstructor.get()
