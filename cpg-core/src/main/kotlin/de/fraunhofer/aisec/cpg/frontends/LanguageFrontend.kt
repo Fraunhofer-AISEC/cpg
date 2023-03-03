@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -82,10 +83,10 @@ abstract class LanguageFrontend(
     @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnitDeclaration
 
     /**
-     * Similar to [parse], this function returns a [TranslationUnitDeclaration], but rather than
-     * parsing source code, the function [init] is used to build nodes in the Node Fluent DSL.
+     * This function returns a [TranslationResult], but rather than parsing source code, the
+     * function [init] is used to build nodes in the Node Fluent DSL.
      */
-    fun build(init: LanguageFrontend.() -> TranslationUnitDeclaration): TranslationUnitDeclaration {
+    fun build(init: LanguageFrontend.() -> TranslationResult): TranslationResult {
         return init(this)
     }
 

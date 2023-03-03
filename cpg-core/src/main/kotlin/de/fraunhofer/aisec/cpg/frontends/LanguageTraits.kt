@@ -26,10 +26,12 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import java.util.regex.Pattern
@@ -161,6 +163,13 @@ interface HasSuperClasses : LanguageTrait {
      * (often "super).
      */
     val superClassKeyword: String
+
+    fun handleSuperCall(
+        callee: MemberExpression,
+        curClass: RecordDeclaration,
+        scopeManager: ScopeManager,
+        recordMap: Map<Name, RecordDeclaration>
+    ): Boolean
 }
 
 /**

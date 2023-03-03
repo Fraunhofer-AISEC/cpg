@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -49,7 +50,9 @@ class SizeEvaluatorTest {
                 listOf(topLevel.resolve("size.java").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(JavaLanguage())
+            }
 
         assertNotNull(tu)
 
@@ -80,7 +83,9 @@ class SizeEvaluatorTest {
                 listOf(topLevel.resolve("size.java").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(JavaLanguage())
+            }
 
         assertNotNull(tu)
 
@@ -114,7 +119,9 @@ class SizeEvaluatorTest {
                 listOf(topLevel.resolve("size.java").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(JavaLanguage())
+            }
 
         assertNotNull(tu)
 

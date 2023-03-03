@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
 import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
+import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -317,7 +318,12 @@ open class CallResolver : SymbolResolverPass() {
                 callee.base is DeclaredReferenceExpression &&
                 isSuperclassReference(callee.base as DeclaredReferenceExpression)
         ) {
-            handleSuperCall(callee, curClass!!)
+            (callee.language as? HasSuperClasses)?.handleSuperCall(
+                callee,
+                curClass!!,
+                scopeManager,
+                recordMap
+            )
         }
 
         val possibleContainingTypes = getPossibleContainingTypes(call)

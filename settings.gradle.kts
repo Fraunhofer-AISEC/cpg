@@ -20,6 +20,10 @@ include(":cpg-neo4j")
 include(":cpg-console")
 
 // this code block also exists in the root build.gradle.kts
+val enableJavaFrontend by extra {
+    val enableJavaFrontend: String by settings
+    enableJavaFrontend.toBoolean()
+}
 val enableGoFrontend by extra {
     val enableGoFrontend: String by settings
     enableGoFrontend.toBoolean()
@@ -37,6 +41,7 @@ val enableTypeScriptFrontend by extra {
     enableTypeScriptFrontend.toBoolean()
 }
 
+if (enableJavaFrontend) include(":cpg-language-java")
 if (enableGoFrontend) include(":cpg-language-go")
 if (enableLLVMFrontend) include(":cpg-language-llvm")
 if (enablePythonFrontend) include(":cpg-language-python")

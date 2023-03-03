@@ -26,36 +26,18 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.GraphExamples
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import java.io.File
 import kotlin.test.*
 
 internal class SubgraphWalkerTest : BaseTest() {
-    @Test
-    @Throws(Exception::class)
-    fun testASTChildrenGetter() {
-        val file = File("src/test/resources/compiling/RecordDeclaration.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), false)
-        val namespace = tu.byNameOrNull<NamespaceDeclaration>("compiling")
-        assertNotNull(namespace)
-
-        val recordDeclaration = namespace.byNameOrNull<RecordDeclaration>("compiling.SimpleClass")
-        assertNotNull(recordDeclaration)
-
-        // This calls SubgraphWalker.getAstChildren()
-        val ast = recordDeclaration.astChildren
-        assertFalse(ast.isEmpty())
-
-        // should contain 3 AST nodes, 1 field, 1 method, 1 constructor
-        assertEquals(3, ast.size)
-    }
-
     @Test
     fun testLoopDetection() {
         // Let's create an intentional loop
@@ -69,5 +51,40 @@ internal class SubgraphWalkerTest : BaseTest() {
         val flat = SubgraphWalker.flattenAST(tu)
 
         assertEquals(listOf<Node>(tu, name, func), flat)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testASTChildrenGetter() {
+        val tu =
+            GraphExamples.getVisitorTest(
+                    TranslationConfiguration.builder()
+                        .loadIncludes(true)
+                        .disableCleanup()
+                        .debugParser(true)
+                        .failOnError(true)
+                        .typeSystemActiveInFrontend(false)
+                        .useParallelFrontends(true)
+                        .defaultLanguages()
+                        .registerLanguage(TestLanguage("."))
+                        .defaultPasses()
+                        .build()
+                )
+                .components
+                .first()
+                .translationUnits
+                .first()
+        val namespace = tu.byNameOrNull<NamespaceDeclaration>("compiling")
+        assertNotNull(namespace)
+
+        val recordDeclaration = namespace.byNameOrNull<RecordDeclaration>("compiling.SimpleClass")
+        assertNotNull(recordDeclaration)
+
+        // This calls SubgraphWalker.getAstChildren()
+        val ast = recordDeclaration.astChildren
+        assertFalse(ast.isEmpty())
+
+        // should contain 3 AST nodes, 1 field, 1 method, 1 constructor
+        assertEquals(3, ast.size)
     }
 }
