@@ -60,7 +60,8 @@ class IdentitySet<T : Any> : MutableSet<T> {
     }
 
     override fun equals(other: Any?): Boolean {
-        val otherSet = other as? Set<T>
+        if (other !is Set<*>) return false
+        @Suppress("UNCHECKED_CAST") val otherSet = other as? Set<T>
         return otherSet != null && this.containsAll(otherSet) && otherSet.containsAll(this)
     }
 
@@ -132,6 +133,8 @@ class IdentitySet<T : Any> : MutableSet<T> {
     override fun retainAll(elements: Collection<T>): Boolean {
         throw UnsupportedOperationException()
     }
+
+    override fun hashCode() = map.hashCode()
 
     override val size: Int
         get() = map.size
