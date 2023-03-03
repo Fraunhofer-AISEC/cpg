@@ -290,7 +290,7 @@ public class TypeManager {
   }
 
   public static boolean isPrimitive(Type type, Language<? extends LanguageFrontend> language) {
-    return language.getPrimitiveTypes().contains(type.getTypeName());
+    return language.getPrimitiveTypeNames().contains(type.getTypeName());
   }
 
   public boolean isUnknown(Type type) {

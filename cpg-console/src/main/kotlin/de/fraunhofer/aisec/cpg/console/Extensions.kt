@@ -248,7 +248,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
             fancyWord("new", node, list, styles.keyword)
 
             // check for primitive types
-            for (primitive in node.language?.primitiveTypes ?: listOf()) {
+            for (primitive in node.language?.primitiveTypeNames ?: listOf()) {
                 fancyWord(primitive, node, list, styles.keyword)
             }
 
@@ -289,7 +289,7 @@ private fun fancyType(
     node: HasType,
     list: MutableList<Pair<AttributedStyle, Region>>
 ) {
-    val types = outer.language?.primitiveTypes?.toMutableSet() ?: mutableSetOf()
+    val types = outer.language?.primitiveTypeNames?.toMutableSet() ?: mutableSetOf()
     types += node.type.name.toString()
 
     // check for primitive types

@@ -55,9 +55,9 @@ class CPPLanguage :
     override val unknownTypeString = listOf("auto")
 
     @Transient
-    override val simpleTypes =
+    override val builtInTypes =
         mapOf(
-            "bool" to BooleanType("bool", 1, this, NumericType.Modifier.SIGNED),
+            "bool" to BooleanType("bool", language = this),
             "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
             "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
             "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),

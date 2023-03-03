@@ -30,6 +30,10 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.util.function.Supplier
@@ -43,7 +47,17 @@ class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLanguageFro
     override val fileExtensions: List<String> = listOf()
     override val namespaceDelimiter: String
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
-
+    override val builtInTypes: Map<String, Type> =
+        mapOf(
+            "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
+            "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
+            "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
+            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
+            "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
+            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
+        )
     init {
         this.namespaceDelimiter = namespaceDelimiter
     }

@@ -30,14 +30,11 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasGenerics
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
-import de.fraunhofer.aisec.cpg.graph.types.IntegerType
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
-import de.fraunhofer.aisec.cpg.graph.types.StringType
+import de.fraunhofer.aisec.cpg.graph.types.*
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
-open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics {
+class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     @Transient override val frontend = GoLanguageFrontend::class
@@ -46,21 +43,62 @@ open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators
     override val startCharacter = '['
     override val endCharacter = ']'
 
+    /** See [Documentation](https://pkg.go.dev/builtin). */
     @Transient
-    override val simpleTypes =
+    override val builtInTypes =
         mapOf(
+            // https://pkg.go.dev/builtin#any
+            // TODO: Actually, this should be a type alias to interface{}
+            "any" to ObjectType("any", listOf(), false, this),
+            // https://pkg.go.dev/builtin#error
+            // TODO: Actually, this is an interface{ Error() string } type.
+            "error" to ObjectType("error", listOf(), false, this),
+            // https://pkg.go.dev/builtin#bool
+            "bool" to BooleanType("bool", language = this),
+            // https://pkg.go.dev/builtin#int
+            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
+            // // https://pkg.go.dev/builtin#int8
             "int8" to IntegerType("int8", 8, this, NumericType.Modifier.SIGNED),
+            // https://pkg.go.dev/builtin#int16
             "int16" to IntegerType("int16", 16, this, NumericType.Modifier.SIGNED),
+            // https://pkg.go.dev/builtin#int32
             "int32" to IntegerType("int32", 32, this, NumericType.Modifier.SIGNED),
+            // https://pkg.go.dev/builtin#int64
             "int64" to IntegerType("int64", 64, this, NumericType.Modifier.SIGNED),
+            // https://pkg.go.dev/builtin#uint
+            "uint" to IntegerType("uint", 32, this, NumericType.Modifier.UNSIGNED),
+            // https://pkg.go.dev/builtin#uint8
             "uint8" to IntegerType("uint8", 8, this, NumericType.Modifier.UNSIGNED),
+            // https://pkg.go.dev/builtin#uint16
             "uint16" to IntegerType("uint16", 16, this, NumericType.Modifier.UNSIGNED),
+            // https://pkg.go.dev/builtin#uint32
             "uint32" to IntegerType("uint32", 32, this, NumericType.Modifier.UNSIGNED),
+            // https://pkg.go.dev/builtin#uint64
             "uint64" to IntegerType("uint64", 64, this, NumericType.Modifier.UNSIGNED),
+            // https://pkg.go.dev/builtin#uintptr
+            "uintptr" to
+                IntegerType(
+                    "uintptr",
+                    null /* depends on the architecture, so we don't know */,
+                    this,
+                    NumericType.Modifier.UNSIGNED
+                ),
+            // https://pkg.go.dev/builtin#float32
             "float32" to FloatingPointType("float32", 32, this, NumericType.Modifier.SIGNED),
+            // https://pkg.go.dev/builtin#float64
             "float64" to FloatingPointType("float64", 64, this, NumericType.Modifier.SIGNED),
-            "complex32" to NumericType("complex32", 32, this, NumericType.Modifier.NOT_APPLICABLE),
-            "complex64" to NumericType("complex54", 64, this, NumericType.Modifier.NOT_APPLICABLE),
+            // https://pkg.go.dev/builtin#complex64
+            "complex64" to NumericType("complex64", 64, this, NumericType.Modifier.NOT_APPLICABLE),
+            // https://pkg.go.dev/builtin#complex128
+            "complex128" to
+                NumericType("complex128", 128, this, NumericType.Modifier.NOT_APPLICABLE),
+            // https://pkg.go.dev/builtin#rune
+            // TODO: Actually, this should be a type alias to int32
+            "rune" to IntegerType("int32", 32, this, NumericType.Modifier.SIGNED),
+            // https://pkg.go.dev/builtin#byte
+            // TODO: Actually, this should be a type alias to uint8
+            "byte" to IntegerType("uint8", 8, this, NumericType.Modifier.UNSIGNED),
+            // https://pkg.go.dev/builtin#string
             "string" to StringType("string", this)
         )
 
