@@ -38,7 +38,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 class ReferenceType : Type, SecondOrderType {
     private var reference: Type? = null
 
-    private constructor()
+    constructor() : super()
+
     constructor(reference: Type) : super() {
         language = reference.language
         name = reference.name.append("&")
