@@ -651,8 +651,6 @@ infix fun Expression.eq(rhs: Expression): BinaryOperator {
 }
 
 /**
- * <<<<<<< HEAD
- * =======
  * Creates a new [BinaryOperator] with a `>` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
@@ -685,9 +683,8 @@ infix fun Expression.assign(init: BinaryOperator.() -> Expression): BinaryOperat
 }
 
 /**
- * >>>>>>> main Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the
- * Fluent Node DSL and invokes [ArgumentHolder.addArgument] of the nearest enclosing
- * [StatementHolder].
+ * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
+ * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend, StatementHolder)
 
