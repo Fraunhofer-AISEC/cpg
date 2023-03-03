@@ -23,13 +23,17 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.helpers
+package de.fraunhofer.aisec.cpg.helpers.neo4j
 
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 
+/**
+ * This class converts a [PhysicalLocation] into the the necessary composite attributes when
+ * persisting a node into a Neo4J graph database.
+ */
 class LocationConverter : CompositeAttributeConverter<PhysicalLocation?> {
     override fun toGraphProperties(value: PhysicalLocation?): Map<String, *> {
         val properties: MutableMap<String, Any> = HashMap()
@@ -43,7 +47,7 @@ class LocationConverter : CompositeAttributeConverter<PhysicalLocation?> {
         return properties
     }
 
-    override fun toEntityAttribute(value: Map<String?, *>?): PhysicalLocation? {
+    override fun toEntityAttribute(value: Map<String, *>?): PhysicalLocation? {
         return try {
             val startLine = toInt(value?.get(START_LINE)) ?: return null
             val endLine = toInt(value?.get(END_LINE)) ?: return null

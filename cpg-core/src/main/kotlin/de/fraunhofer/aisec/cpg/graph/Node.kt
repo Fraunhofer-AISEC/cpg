@@ -39,9 +39,9 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.helpers.LocationConverter
-import de.fraunhofer.aisec.cpg.helpers.NameConverter
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
+import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*

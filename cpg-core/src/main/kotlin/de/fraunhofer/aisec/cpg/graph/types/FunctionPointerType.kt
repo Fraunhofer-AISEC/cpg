@@ -34,38 +34,42 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
- * FunctionPointerType represents FunctionPointers in CPP containing a list of parameters and a
- * return type.
+ * FunctionPointerType represents function pointers containing a list of parameters and a return
+ * type.
+ *
+ * This class is currently only used in the C++ language frontend.
+ *
+ * TODO(oxisto): We want to replace this dedicated type with a simple [PointerType] to a
+ *   [FunctionType] in the future
  */
 class FunctionPointerType : Type {
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     var parametersPropertyEdge: MutableList<PropertyEdge<Type>> = mutableListOf()
         private set
 
-    var returnType: Type? = null
+    var returnType: Type = UnknownType.unknownType
 
     var parameters by PropertyEdgeDelegate(FunctionPointerType::parametersPropertyEdge)
 
-    private constructor()
-
     constructor(
-        parameters: List<Type>,
-        returnType: Type?,
-        language: Language<out LanguageFrontend>?
-    ) : super("", language) {
+        parameters: List<Type> = listOf(),
+        returnType: Type = UnknownType.unknownType,
+        language: Language<out LanguageFrontend>? = null
+    ) : super(EMPTY_NAME, language) {
         parametersPropertyEdge = transformIntoOutgoingPropertyEdgeList(parameters, this)
         this.returnType = returnType
     }
 
     constructor(
-        type: Type?,
-        parameters: List<Type>,
-        returnType: Type?,
-        language: Language<out LanguageFrontend>?
-    ) : super(type!!) {
+        type: Type,
+        parameters: List<Type> = listOf(),
+        returnType: Type = UnknownType.unknownType,
+        language: Language<out LanguageFrontend>? = null
+    ) : super(type) {
         parametersPropertyEdge = transformIntoOutgoingPropertyEdgeList(parameters, this)
         this.returnType = returnType
         this.language = language
@@ -86,9 +90,7 @@ class FunctionPointerType : Type {
 
     override fun isSimilar(t: Type?): Boolean {
         return if (t is FunctionPointerType) {
-            if (returnType == null || t.returnType == null) {
-                parametersPropertyEdge == t.parametersPropertyEdge && returnType == t.returnType
-            } else parametersPropertyEdge == t.parametersPropertyEdge && returnType == t.returnType
+            parametersPropertyEdge == t.parametersPropertyEdge && returnType == t.returnType
         } else false
     }
 
@@ -105,16 +107,11 @@ class FunctionPointerType : Type {
     override fun hashCode() = Objects.hash(super.hashCode(), parametersPropertyEdge, returnType)
 
     override fun toString(): String {
-        return ("FunctionPointerType{" +
-            "parameters=" +
-            parameters +
-            ", returnType=" +
-            returnType +
-            ", typeName='" +
-            name +
-            '\'' +
-            ", origin=" +
-            typeOrigin +
-            '}')
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("parameters", parameters)
+            .append("returnType", returnType)
+            .append("typeOrigin", typeOrigin)
+            .toString()
     }
 }

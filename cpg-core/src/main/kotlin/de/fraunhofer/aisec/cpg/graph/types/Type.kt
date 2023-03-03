@@ -66,11 +66,12 @@ abstract class Type : Node {
     }
 
     constructor(typeName: CharSequence, language: Language<out LanguageFrontend>?) {
-        if (this is FunctionType) {
-            name = Name(typeName.toString(), null, language)
-        } else {
-            name = language.parseName(typeName)
-        }
+        name =
+            if (this is FunctionType) {
+                Name(typeName.toString(), null, language)
+            } else {
+                language.parseName(typeName)
+            }
         this.language = language
         typeOrigin = Origin.UNRESOLVED
     }
@@ -115,12 +116,12 @@ abstract class Type : Node {
             } else {
                 this
             }
-        set(newRoot) {
+        set(value) {
             if (this is SecondOrderType) {
                 if ((this as SecondOrderType).elementType is SecondOrderType) {
-                    ((this as SecondOrderType).elementType as SecondOrderType).elementType = newRoot
+                    ((this as SecondOrderType).elementType as SecondOrderType).elementType = value
                 } else {
-                    (this as SecondOrderType).elementType = newRoot
+                    (this as SecondOrderType).elementType = value
                 }
             }
         }
@@ -128,6 +129,7 @@ abstract class Type : Node {
     /** Creates an exact copy of the current type (chain) */
     abstract fun duplicate(): Type
 
+    /** A shortcut to the fully qualified name of this type, based on [name]. */
     val typeName: String
         get() = name.toString()
 
@@ -139,16 +141,15 @@ abstract class Type : Node {
         get() = 0
 
     /**
-     * True if the Type parameter t is a FirstOrderType (Root of a chain) and not a Pointer or
-     * ReferenceType
+     * True if this type is a so called "first order type" (root of a chain), i.e., not a pointer or
+     * reference to a type.
      */
     val isFirstOrderType: Boolean
         get() =
             (this is ObjectType ||
                 this is UnknownType ||
-                this is
-                    FunctionType // TODO(oxisto): convert FunctionPointerType to second order type
-                ||
+                this is FunctionType || // TODO(oxisto): convert FunctionPointerType to second order
+                // type
                 this is FunctionPointerType ||
                 this is IncompleteType ||
                 this is ParameterizedType)
@@ -162,7 +163,7 @@ abstract class Type : Node {
     open fun isSimilar(t: Type?): Boolean {
         return if (this == t) {
             true
-        } else this.root?.name == t?.root?.name
+        } else this.root.name == t?.root?.name
     }
 
     override fun equals(other: Any?): Boolean {

@@ -394,13 +394,11 @@ open class VariableUsageResolver : SymbolResolverPass() {
         val target =
             if (declarationHolder != null) {
                 declarationHolder.methods.firstOrNull { f ->
-                    fctPtrType.returnType?.let { f.matches(name, it, fctPtrType.parameters) } ==
-                        true
+                    f.matches(name, fctPtrType.returnType, fctPtrType.parameters)
                 }
             } else {
                 currentTU.functions.firstOrNull { f ->
-                    fctPtrType.returnType?.let { f.matches(name, it, fctPtrType.parameters) } ==
-                        true
+                    f.matches(name, fctPtrType.returnType, fctPtrType.parameters)
                 }
             }
         // If we didn't find anything, we create a new function or method declaration

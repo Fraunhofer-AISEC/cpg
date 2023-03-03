@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * be very resource-intensive if nodes are very similar but not the *same*, in a work-list however
  * we only want just to avoid to place the exact node twice.
  */
-class IdentitySet<T : Any> : MutableSet<T> {
+class IdentitySet<T> : MutableSet<T> {
     /**
      * The backing hashmap for our set. The [IdentityHashMap] offers reference-equality for keys and
      * values. In this case we use it to determine, if a node is already in our set or not. The
@@ -138,4 +138,11 @@ class IdentitySet<T : Any> : MutableSet<T> {
 
     override val size: Int
         get() = map.size
+}
+
+fun <T> identitySetOf(vararg elements: T): IdentitySet<T> {
+    val set = IdentitySet<T>()
+    for (element in elements) set.add(element)
+
+    return set
 }
