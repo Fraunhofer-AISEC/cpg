@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
-open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics {
+class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     @Transient override val frontend = GoLanguageFrontend::class
@@ -45,7 +45,7 @@ open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators
 
     /** See [Documentation](https://pkg.go.dev/builtin). */
     @Transient
-    override val simpleTypes =
+    override val builtInTypes =
         mapOf(
             // https://pkg.go.dev/builtin#any
             // TODO: Actually, this should be a type alias to interface{}
@@ -54,7 +54,7 @@ open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators
             // TODO: Actually, this is an interface{ Error() string } type.
             "error" to ObjectType("error", listOf(), false, this),
             // https://pkg.go.dev/builtin#bool
-            "bool" to BooleanType("bool", 1, this),
+            "bool" to BooleanType("bool", language = this),
             // https://pkg.go.dev/builtin#int
             "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
             // // https://pkg.go.dev/builtin#int8
@@ -78,8 +78,8 @@ open class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators
             // https://pkg.go.dev/builtin#uintptr
             "uintptr" to
                 IntegerType(
-                    "uint64",
-                    null /* probably 64 bits */,
+                    "uintptr",
+                    null /* depends on the architecture, so we don't know */,
                     this,
                     NumericType.Modifier.UNSIGNED
                 ),

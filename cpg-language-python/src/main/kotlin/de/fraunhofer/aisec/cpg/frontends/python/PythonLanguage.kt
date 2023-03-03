@@ -44,9 +44,9 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
 
     /** See [Documentation](https://docs.python.org/3/library/stdtypes.html#). */
     @Transient
-    override val simpleTypes =
+    override val builtInTypes =
         mapOf(
-            "bool" to IntegerType("bool", 1, this, NumericType.Modifier.NOT_APPLICABLE),
+            "bool" to BooleanType("bool", language = this),
             "int" to
                 IntegerType(
                     "int",

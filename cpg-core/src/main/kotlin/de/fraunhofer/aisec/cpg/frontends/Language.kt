@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.io.File
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
 
 /**
  * Represents a programming language. When creating new languages in the CPG, one must derive custom
@@ -57,25 +56,13 @@ abstract class Language<T : LanguageFrontend> : Node() {
     /** The class of the frontend which is used to parse files of this language. */
     abstract val frontend: KClass<out T>
 
-    /** The primitive types of this language. */
+    /** The primitive type names of this language. */
     @get:JsonIgnore
-    val primitiveTypes: Set<String>
-        get() = simpleTypes.keys
+    val primitiveTypeNames: Set<String>
+        get() = builtInTypes.keys
 
-    // TODO: Maybe make this abstract?
-    @get:JsonIgnore
-    @Transient
-    open val simpleTypes: Map<String, Type> =
-        mapOf(
-            "boolean" to BooleanType("boolean", 1, this),
-            "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
-            "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
-            "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
-            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
-            "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
-            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
-            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
-        )
+    /** The built-in types of this language. */
+    @get:JsonIgnore abstract val builtInTypes: Map<String, Type>
 
     /** The access modifiers of this programming language */
     open val accessModifiers: Set<String>
@@ -87,7 +74,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
         scopeManager: ScopeManager = ScopeManager(),
     ): T
 
-    fun getSimpleTypeOf(typeString: String) = simpleTypes[typeString]
+    fun getSimpleTypeOf(typeString: String) = builtInTypes[typeString]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
     fun handlesFile(file: File): Boolean {
@@ -103,7 +90,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
         result = 31 * result + fileExtensions.hashCode()
         result = 31 * result + namespaceDelimiter.hashCode()
         result = 31 * result + frontend.hashCode()
-        result = 31 * result + primitiveTypes.hashCode()
+        result = 31 * result + primitiveTypeNames.hashCode()
         result = 31 * result + accessModifiers.hashCode()
         return result
     }

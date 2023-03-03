@@ -38,7 +38,7 @@ import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The Java language. */
-open class JavaLanguage :
+class JavaLanguage :
     Language<JavaLanguageFrontend>(),
     // HasComplexCallResolution,
     HasClasses,
@@ -63,13 +63,13 @@ open class JavaLanguage :
      */
     @Transient
     @JsonIgnore
-    override val simpleTypes =
+    override val builtInTypes =
         mapOf(
             // Boolean Types:
             // https://docs.oracle.com/javase/specs/jls/se19/html/jls-4.html#jls-4.2.5
-            "boolean" to BooleanType("boolean", 1, this),
-            "Boolean" to BooleanType("java.lang.Boolean", 1, this),
-            "java.lang.Boolean" to BooleanType("java.lang.Boolean", 1, this),
+            "boolean" to BooleanType("boolean", language = this),
+            "Boolean" to BooleanType("java.lang.Boolean", language = this),
+            "java.lang.Boolean" to BooleanType("java.lang.Boolean", language = this),
 
             // Integral Types:
             // https://docs.oracle.com/javase/specs/jls/se19/html/jls-4.html#jls-4.2.1

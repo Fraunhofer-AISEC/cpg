@@ -51,7 +51,7 @@ open class CLanguage :
 
     @Transient
     @JsonIgnore
-    override val simpleTypes: Map<String, Type> =
+    override val builtInTypes: Map<String, Type> =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
             "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
