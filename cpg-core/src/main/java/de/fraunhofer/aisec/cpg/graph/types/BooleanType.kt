@@ -33,7 +33,7 @@ class BooleanType(
     typeName: CharSequence = "bool",
     bitWidth: Int? = 1,
     language: Language<out LanguageFrontend>? = null,
-    modifier: Modifier = Modifier.UNSIGNED
+    modifier: Modifier = Modifier.NOT_APPLICABLE
 ) : NumericType(typeName, bitWidth, language, modifier) {
 
     override fun duplicate(): Type {

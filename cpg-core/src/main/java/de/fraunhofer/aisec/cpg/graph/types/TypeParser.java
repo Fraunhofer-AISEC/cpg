@@ -382,7 +382,7 @@ public class TypeParser {
    */
   private static boolean isPrimitiveType(
       @NotNull List<String> stringList, @NotNull Language<? extends LanguageFrontend> language) {
-    return stringList.stream().anyMatch(s -> language.getPrimitiveTypes().contains(s));
+    return stringList.stream().anyMatch(s -> language.getPrimitiveTypeNames().contains(s));
   }
 
   /**
@@ -400,7 +400,7 @@ public class TypeParser {
     int index = 0;
 
     for (String s : typeBlocks) {
-      if (language.getPrimitiveTypes().contains(s)) {
+      if (language.getPrimitiveTypeNames().contains(s)) {
         if (primitiveType.length() > 0) {
           primitiveType.append(" ");
         } else {

@@ -42,9 +42,9 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val frontend: KClass<out LLVMIRLanguageFrontend> = LLVMIRLanguageFrontend::class
 
     // TODO: In theory, the integers can have any bitwidth from 1 to 1^32 bits. It's not known if
-    // they are interpreted as signed or unsigned.
+    //  they are interpreted as signed or unsigned.
     @Transient
-    override val simpleTypes =
+    override val builtInTypes =
         mapOf(
             "i1" to IntegerType("i1", 1, this, NumericType.Modifier.NOT_APPLICABLE),
             "i8" to IntegerType("i8", 8, this, NumericType.Modifier.NOT_APPLICABLE),
