@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.io.File
 import kotlin.reflect.KClass
@@ -129,7 +128,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
             // A comparison, so we return the type "boolean"
             return this.simpleTypes.values.firstOrNull { it is BooleanType }
                 ?: this.simpleTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
-                    ?: TypeParser.createFrom("boolean", this)
+                    ?: UnknownType.getUnknownType(this)
         }
 
         return when (operation.operatorCode) {
