@@ -60,8 +60,8 @@ class IdentitySet<T : Any> : MutableSet<T> {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is Set<*>) return false
-        @Suppress("UNCHECKED_CAST") val otherSet = other as? Set<T>
+        if (other !is IdentitySet<*>) return false
+        val otherSet = other as? IdentitySet<*>
         return otherSet != null && this.containsAll(otherSet) && otherSet.containsAll(this)
     }
 
