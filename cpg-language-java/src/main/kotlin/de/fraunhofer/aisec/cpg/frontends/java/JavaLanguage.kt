@@ -38,7 +38,7 @@ import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The Java language. */
-class JavaLanguage :
+open class JavaLanguage :
     Language<JavaLanguageFrontend>(),
     // HasComplexCallResolution,
     HasClasses,
