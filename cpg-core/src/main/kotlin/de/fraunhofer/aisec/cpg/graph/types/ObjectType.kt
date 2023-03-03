@@ -72,11 +72,11 @@ open class ObjectType : Type, SecondaryTypeEdge {
     var generics by PropertyEdgeDelegate(ObjectType::genericsPropertyEdges)
 
     constructor(
-        typeName: CharSequence?,
+        typeName: CharSequence,
         generics: List<Type>,
         primitive: Boolean,
         language: Language<out LanguageFrontend>?
-    ) : super(typeName!!, language!!) {
+    ) : super(typeName, language) {
         this.genericsPropertyEdges = transformIntoOutgoingPropertyEdgeList(generics, this)
         isPrimitive = primitive
         this.language = language
