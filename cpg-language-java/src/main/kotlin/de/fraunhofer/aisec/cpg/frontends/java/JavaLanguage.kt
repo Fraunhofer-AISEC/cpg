@@ -96,7 +96,7 @@ open class JavaLanguage :
                 (operation.lhs.type as? IntegerType)?.name?.localName?.equals("char") == true &&
                 (operation.rhs.type as? IntegerType)?.name?.localName?.equals("char") == true
         ) {
-            return simpleTypes["int"]!!
+            return builtInTypes["int"]!!
         } else super.propagateTypeOfBinaryOperation(operation)
     }
 

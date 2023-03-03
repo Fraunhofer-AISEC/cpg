@@ -86,7 +86,7 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
                 operation.rhs.propagationType is NumericType
         ) {
             // In Python, the / operation automatically casts the result to a float
-            return simpleTypes["float"]!!
+            return builtInTypes["float"]!!
         } else if (
             operation.operatorCode == "//" &&
                 operation.lhs.propagationType is NumericType &&
@@ -98,9 +98,9 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
             ) {
                 // In Python, the // operation keeps the type as an int if both inputs are integers
                 // or casts it to a float otherwise.
-                return simpleTypes["int"]!!
+                return builtInTypes["int"]!!
             } else {
-                return simpleTypes["float"]!!
+                return builtInTypes["float"]!!
             }
         }
 

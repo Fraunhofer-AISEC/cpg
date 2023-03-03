@@ -137,8 +137,8 @@ abstract class Language<T : LanguageFrontend> : Node() {
     open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
         if (operation.operatorCode == "==" || operation.operatorCode == "===") {
             // A comparison, so we return the type "boolean"
-            return this.simpleTypes.values.firstOrNull { it is BooleanType }
-                ?: this.simpleTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
+            return this.builtInTypes.values.firstOrNull { it is BooleanType }
+                ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
                     ?: UnknownType.getUnknownType(this)
         }
 
