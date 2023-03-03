@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -41,6 +42,19 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
         TypeScriptLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&", "&&=", "??", "??=")
     override val disjunctiveOperators = listOf("||", "||=")
+
+    /**
+     * See
+     * [Documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_values).
+     */
+    @Transient
+    override val simpleTypes =
+        mapOf(
+            "boolean" to BooleanType("boolean", 1, this),
+            "number" to FloatingPointType("number", 64, this, NumericType.Modifier.SIGNED),
+            "bigint" to IntegerType("bigint", null, this, NumericType.Modifier.SIGNED),
+            "string" to StringType("string", this),
+        )
 
     override fun newFrontend(
         config: TranslationConfiguration,

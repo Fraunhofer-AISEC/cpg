@@ -42,6 +42,7 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
 
+    /** See [Documentation](https://docs.python.org/3/library/stdtypes.html#). */
     @Transient
     override val simpleTypes =
         mapOf(

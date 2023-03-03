@@ -67,7 +67,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
     @Transient
     open val simpleTypes: Map<String, Type> =
         mapOf(
-            "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
+            "boolean" to BooleanType("boolean", 1, this),
             "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
             "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
             "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),

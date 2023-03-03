@@ -380,6 +380,10 @@ private constructor(
 
         return if (language != null) {
             try {
+                // Make sure, that our simple types are also known to the type manager
+                language.simpleTypes.values.forEach { TypeManager.getInstance().registerType(it) }
+
+                // Return a new language frontend
                 language.newFrontend(config, scopeManager)
             } catch (e: Exception) {
                 when (e) {
