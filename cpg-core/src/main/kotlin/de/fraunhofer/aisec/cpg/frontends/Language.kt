@@ -119,6 +119,30 @@ abstract class Language<T : LanguageFrontend> : Node() {
         this.also { this.language = it }
     }
 
+    private fun arithmeticOpTypePropagation(lhs: Type, rhs: Type): Type {
+        return if (lhs is FloatingPointType && rhs !is FloatingPointType) {
+            lhs
+        } else if (lhs !is FloatingPointType && rhs is FloatingPointType) {
+            rhs
+        } else if (lhs is FloatingPointType && rhs is FloatingPointType) {
+            // We take the one with the bigger bitwidth
+            if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
+                lhs
+            } else {
+                rhs
+            }
+        } else if (lhs is IntegerType && rhs is IntegerType) {
+            // We take the one with the bigger bitwidth
+            if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
+                lhs
+            } else {
+                rhs
+            }
+        } else {
+            UnknownType.getUnknownType(this)
+        }
+    }
+
     /**
      * Determines how to propagate types across binary operations since these may differ among the
      * programming languages.
@@ -133,24 +157,25 @@ abstract class Language<T : LanguageFrontend> : Node() {
 
         return when (operation.operatorCode) {
             "+" ->
-                if (
-                    operation.lhs.propagationType.isPrimitive &&
-                        operation.rhs.propagationType.isPrimitive
-                ) {
-                    // primitive type 1 + primitive type 2 => primitive type 1
-                    operation.lhs.propagationType
-                } else if (operation.lhs.propagationType is StringType) {
+                if (operation.lhs.propagationType is StringType) {
                     // string + anything => string
                     operation.lhs.propagationType
                 } else if (operation.rhs.propagationType is StringType) {
                     // anything + string => string
                     operation.rhs.propagationType
                 } else {
-                    UnknownType.getUnknownType(this)
+                    arithmeticOpTypePropagation(
+                        operation.lhs.propagationType,
+                        operation.rhs.propagationType
+                    )
                 }
             "-",
             "*",
-            "/",
+            "/" ->
+                arithmeticOpTypePropagation(
+                    operation.lhs.propagationType,
+                    operation.rhs.propagationType
+                )
             "<<",
             ">>" ->
                 if (

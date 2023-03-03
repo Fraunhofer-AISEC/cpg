@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.JavaCallResolverHelper
@@ -72,6 +73,16 @@ open class JavaLanguage :
             "String" to StringType("java.lang.String", this),
             "java.lang.String" to StringType("java.lang.String", this)
         )
+
+    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
+        return if (
+            operation.operatorCode == "+" &&
+                (operation.lhs.type as? IntegerType)?.name?.localName?.equals("char") == true &&
+                (operation.rhs.type as? IntegerType)?.name?.localName?.equals("char") == true
+        ) {
+            return simpleTypes["int"]!!
+        } else super.propagateTypeOfBinaryOperation(operation)
+    }
 
     override fun newFrontend(
         config: TranslationConfiguration,
