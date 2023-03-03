@@ -44,26 +44,9 @@ import org.neo4j.ogm.annotation.Relationship
  * This also includes primitive data types.
  */
 open class ObjectType : Type, SecondaryTypeEdge {
-    override fun updateType(typeState: Collection<Type>) {
-        for (t in generics) {
-            for (t2 in typeState) {
-                if (t2 == t) {
-                    replaceGenerics(t, t2)
-                }
-            }
-        }
-    }
-
-    fun replaceGenerics(oldType: Type?, newType: Type) {
-        for (i in genericsPropertyEdges.indices) {
-            val propertyEdge = genericsPropertyEdges[i]
-            if (propertyEdge.end.equals(oldType)) {
-                propertyEdge.end = newType
-            }
-        }
-    }
-
-    // Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
+    /**
+     * Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
+     */
     var recordDeclaration: RecordDeclaration? = null
 
     @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
@@ -99,13 +82,24 @@ open class ObjectType : Type, SecondaryTypeEdge {
         isPrimitive = false
     }
 
-    /*fun getGenerics(): List<Type> {
-        val genericValues: MutableList<Type> = ArrayList()
-        for (edge in genericsPropertyEdges) {
-            genericValues.add(edge.end)
+    override fun updateType(typeState: Collection<Type>) {
+        for (t in generics) {
+            for (t2 in typeState) {
+                if (t2 == t) {
+                    replaceGenerics(t, t2)
+                }
+            }
         }
-        return Collections.unmodifiableList(genericValues)
-    }*/
+    }
+
+    fun replaceGenerics(oldType: Type?, newType: Type) {
+        for (i in genericsPropertyEdges.indices) {
+            val propertyEdge = genericsPropertyEdges[i]
+            if (propertyEdge.end.equals(oldType)) {
+                propertyEdge.end = newType
+            }
+        }
+    }
 
     /** @return PointerType to a ObjectType, e.g. int* */
     override fun reference(pointer: PointerOrigin?): PointerType {
@@ -128,10 +122,6 @@ open class ObjectType : Type, SecondaryTypeEdge {
         return ObjectType(this, generics, isPrimitive, language)
     }
 
-    /*fun setGenerics(generics: List<Type>) {
-        this.genericsPropertyEdges = transformIntoOutgoingPropertyEdgeList(generics, this)
-    }*/
-
     fun addGeneric(generic: Type) {
         val propertyEdge = PropertyEdge(this, generic)
         propertyEdge.addProperty(Properties.INDEX, genericsPropertyEdges.size)
@@ -151,11 +141,10 @@ open class ObjectType : Type, SecondaryTypeEdge {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ObjectType) return false
-        return if (!super.equals(other)) false
-        else
-            (generics == other.generics &&
-                propertyEqualsList(genericsPropertyEdges, other.genericsPropertyEdges) &&
-                isPrimitive === other.isPrimitive)
+        if (!super.equals(other)) return false
+        return generics == other.generics &&
+            propertyEqualsList(genericsPropertyEdges, other.genericsPropertyEdges) &&
+            isPrimitive == other.isPrimitive
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), generics, isPrimitive)

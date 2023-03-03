@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
+import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
  * ReferenceTypes describe CPP References (int&amp;), which represent an alternative name for a
@@ -94,14 +95,11 @@ class ReferenceType : Type, SecondOrderType {
     }
 
     override fun toString(): String {
-        return ("ReferenceType{" +
-            "reference=" +
-            reference +
-            ", typeName='" +
-            name +
-            '\'' +
-            ", origin=" +
-            typeOrigin +
-            '}')
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("reference", reference)
+            .append("name", name)
+            .append("typeOrigin", typeOrigin)
+            .toString()
     }
 }

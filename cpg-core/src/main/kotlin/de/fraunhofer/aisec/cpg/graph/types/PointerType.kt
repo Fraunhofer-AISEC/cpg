@@ -45,7 +45,8 @@ class PointerType : Type, SecondOrderType {
     var pointerOrigin: PointerOrigin? = null
         private set
 
-    private constructor()
+    constructor() : super()
+
     constructor(elementType: Type, pointerOrigin: PointerOrigin?) : super() {
         language = elementType.language
         if (pointerOrigin == PointerOrigin.ARRAY) {
@@ -87,21 +88,21 @@ class PointerType : Type, SecondOrderType {
 
     override fun refreshNames() {
         if (elementType is PointerType) {
-            elementType?.refreshNames()
+            elementType.refreshNames()
         }
-        var localName = elementType!!.name.localName
+        var localName = elementType.name.localName
         localName +=
             if (pointerOrigin == PointerOrigin.ARRAY) {
                 "[]"
             } else {
                 "*"
             }
-        val fullTypeName = Name(localName, elementType!!.name.parent, elementType!!.name.delimiter)
+        val fullTypeName = Name(localName, elementType.name.parent, elementType.name.delimiter)
         name = fullTypeName
     }
 
     override fun duplicate(): Type {
-        return PointerType(this, elementType!!.duplicate(), pointerOrigin)
+        return PointerType(this, elementType.duplicate(), pointerOrigin)
     }
 
     val isArray: Boolean
@@ -112,7 +113,7 @@ class PointerType : Type, SecondOrderType {
             return false
         }
         return (referenceDepth == t.referenceDepth &&
-            elementType?.isSimilar(t.root) == true &&
+            elementType.isSimilar(t.root) &&
             super.isSimilar(t))
     }
 
