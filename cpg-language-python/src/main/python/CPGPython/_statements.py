@@ -578,7 +578,8 @@ def handle_assign_impl(self, stmt):
                     None, rhs, False)  # TODO None -> add infos
             else:
                 v = DeclarationBuilderKt.newFieldDeclaration(
-                    self.frontend, name, UnknownType.getUnknownType(self.frontend.getLanguage()),
+                    self.frontend, name,
+                    UnknownType.getUnknownType(self.frontend.getLanguage()),
                     None, self.get_src_code(stmt),
                     None, None, False)  # TODO None -> add infos
             self.scopemanager.addDeclaration(v)
@@ -603,7 +604,8 @@ def handle_assign_impl(self, stmt):
                 else:
                     v = DeclarationBuilderKt.newVariableDeclaration(
                         self.frontend, lhs.getName(),
-                        UnknownType.getUnknownType(self.frontend.getLanguage()),
+                        UnknownType.getUnknownType(
+                            self.frontend.getLanguage()),
                         self.get_src_code(stmt),
                         False)
                 if rhs is not None:
@@ -641,7 +643,8 @@ def handle_assign_impl(self, stmt):
                 else:
                     v = DeclarationBuilderKt.newFieldDeclaration(
                         self.frontend, lhs.getName(),
-                        UnknownType.getUnknownType(self.frontend.getLanguage()),
+                        UnknownType.getUnknownType(
+                            self.frontend.getLanguage()),
                         None, self.get_src_code(stmt),
                         None, None, False)
                 self.scopemanager.addDeclaration(v)

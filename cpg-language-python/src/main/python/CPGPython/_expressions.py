@@ -100,7 +100,8 @@ def handle_expression_impl(self, expr):
         body = self.handle_expression(expr.body)
         orelse = self.handle_expression(expr.orelse)
         r = ExpressionBuilderKt.newConditionalExpression(
-            self.frontend, test, body, orelse, UnknownType.getUnknownType(self.frontend.getLanguage()))
+            self.frontend, test, body, orelse,
+            UnknownType.getUnknownType(self.frontend.getLanguage()))
         return r
     elif isinstance(expr, ast.Dict):
         ile = ExpressionBuilderKt.newInitializerListExpression(
@@ -312,7 +313,8 @@ def handle_expression_impl(self, expr):
                 self.frontend,
                 value.getName(), value.getType(), value.getCode())
         mem = ExpressionBuilderKt.newMemberExpression(
-            self.frontend, expr.attr, value, UnknownType.getUnknownType(self.frontend.getLanguage()),
+            self.frontend, expr.attr, value,
+            UnknownType.getUnknownType(self.frontend.getLanguage()),
             ".", self.get_src_code(expr))
         return mem
 
@@ -330,7 +332,8 @@ def handle_expression_impl(self, expr):
         return r
     elif isinstance(expr, ast.Name):
         r = ExpressionBuilderKt.newDeclaredReferenceExpression(
-            self.frontend, expr.id, UnknownType.getUnknownType(self.frontend.getLanguage()),
+            self.frontend, expr.id,
+            UnknownType.getUnknownType(self.frontend.getLanguage()),
             self.get_src_code(expr))
 
         # Take a little shortcut and set refersTo, in case this is a method
