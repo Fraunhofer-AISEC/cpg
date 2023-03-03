@@ -32,8 +32,6 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -53,8 +51,7 @@ internal class ScopeManagerTest : BaseTest() {
     @Test
     @Throws(TranslationException::class)
     fun testSetScope() {
-        val frontend: LanguageFrontend =
-            JavaLanguageFrontend(JavaLanguage(), config, ScopeManager())
+        val frontend: LanguageFrontend = CXXLanguageFrontend(CPPLanguage(), config, ScopeManager())
         assertEquals(frontend, frontend.scopeManager.lang)
 
         frontend.scopeManager = ScopeManager()

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -150,7 +151,9 @@ class ValueEvaluatorTest {
                 listOf(topLevel.resolve("complex.java").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(JavaLanguage())
+            }
 
         assertNotNull(tu)
 

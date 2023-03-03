@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.enhancements
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
@@ -37,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -48,7 +46,6 @@ import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import java.nio.file.Path
 import java.util.function.Consumer
 import java.util.stream.Collectors
 import java.util.stream.Stream
@@ -60,12 +57,6 @@ import kotlin.test.*
  * @author konrad.weiss@aisec.fraunhofer.de
  */
 internal class EOGTest : BaseTest() {
-    @Test
-    @Throws(Exception::class)
-    fun testJavaIf() {
-        testIf("src/test/resources/cfg/If.java", REFNODESTRINGJAVA)
-    }
-
     @Test
     @Throws(Exception::class)
     fun testCppIf() {
@@ -236,194 +227,6 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = ifBranched,
                 refs = listOf(ifBranched.condition)
-            )
-        )
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun testConditionShortCircuit() {
-        val nodes = translateToNodes("src/test/resources/cfg/ShortCircuit.java")
-        val binaryOperators =
-            nodes.filterIsInstance<BinaryOperator>().filter { bo: BinaryOperator ->
-                bo.operatorCode == "&&" || bo.operatorCode == "||"
-            }
-        for (bo in binaryOperators) {
-            assertTrue(
-                Util.eogConnect(
-                    q = Util.Quantifier.ALL,
-                    cn = Connect.SUBTREE,
-                    en = Util.Edge.ENTRIES,
-                    n = bo.rhs,
-                    cr = Connect.SUBTREE,
-                    props = mutableMapOf(Properties.BRANCH to (bo.operatorCode == "&&")),
-                    refs = listOf(bo.lhs)
-                )
-            )
-            assertTrue(
-                Util.eogConnect(
-                    q = Util.Quantifier.ALL,
-                    cn = Connect.NODE,
-                    en = Util.Edge.ENTRIES,
-                    n = bo,
-                    cr = Connect.SUBTREE,
-                    refs = listOf(bo.lhs, bo.rhs)
-                )
-            )
-            assertTrue(
-                Util.eogConnect(
-                    q = Util.Quantifier.ANY,
-                    cn = Connect.NODE,
-                    en = Util.Edge.ENTRIES,
-                    n = bo,
-                    cr = Connect.SUBTREE,
-                    refs = listOf(bo.rhs)
-                )
-            )
-            assertTrue(
-                Util.eogConnect(
-                    q = Util.Quantifier.ANY,
-                    cn = Connect.NODE,
-                    en = Util.Edge.ENTRIES,
-                    n = bo,
-                    cr = Connect.SUBTREE,
-                    props = mutableMapOf(Properties.BRANCH to (bo.operatorCode != "&&")),
-                    refs = listOf(bo.lhs)
-                )
-            )
-            assertTrue(bo.lhs.nextEOG.size == 2)
-        }
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun testJavaFor() {
-        val nodes = translateToNodes("src/test/resources/cfg/ForLoop.java")
-        val prints =
-            nodes
-                .stream()
-                .filter { node: Node -> node.code == REFNODESTRINGJAVA }
-                .collect(Collectors.toList())
-        val fstat = nodes.filterIsInstance<ForStatement>()
-        var fs = fstat[0]
-        assertTrue(
-            Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[0],
-                cr = Connect.SUBTREE,
-                refs = listOf(fs)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[0],
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.initializerStatement)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.initializerStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.condition)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.condition,
-                cr = Connect.NODE,
-                refs = listOf(fs)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = fs,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.statement, prints[1])
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.statement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.iterationStatement)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.iterationStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.condition)
-            )
-        )
-        fs = fstat[1]
-        assertTrue(
-            Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[1],
-                cr = Connect.SUBTREE,
-                refs = listOf(fs)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[1],
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.initializerStatement)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.initializerStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.condition)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.condition,
-                cr = Connect.NODE,
-                refs = listOf(fs)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.statement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.iterationStatement)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.iterationStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.condition)
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = fs,
-                cr = Connect.SUBTREE,
-                props = mutableMapOf(Properties.BRANCH to false),
-                refs = listOf(prints[2])
             )
         )
     }
@@ -653,12 +456,6 @@ internal class EOGTest : BaseTest() {
 
         target = findByUniqueName(functions, "fourth")
         assertEquals(listOf(target), fourth.invokes)
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun testJavaLoops() {
-        testLoops("src/test/resources/cfg/Loops.java", "System.out.println();")
     }
 
     @Test
@@ -993,79 +790,8 @@ internal class EOGTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testJavaSwitch() {
-        testSwitch("src/test/resources/cfg/Switch.java", REFNODESTRINGJAVA)
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun testJavaBreakContinue() {
-        testBreakContinue("src/test/resources/cfg/BreakContinue.java", "System.out.println();")
-    }
-
-    @Test
-    @Throws(Exception::class)
     fun testCppBreakContinue() {
         testBreakContinue("src/test/resources/cfg/break_continue.cpp", "printf(\"\\n\");")
-    }
-
-    /**
-     * Tests EOG branch edge property in if/else if/else construct
-     *
-     * @throws Exception
-     */
-    @Test
-    @Throws(Exception::class)
-    fun testBranchProperty() {
-        val topLevel = Path.of("src", "test", "resources", "eog")
-        val result = analyze(listOf(topLevel.resolve("EOG.java").toFile()), topLevel, true)
-
-        // Test If-Block
-        val firstIf: IfStatement =
-            result.allChildren<IfStatement>().filter { l -> l.location?.region?.startLine == 6 }[0]
-        val a =
-            result.refs[
-                    { l: DeclaredReferenceExpression ->
-                        l.location?.region?.startLine == 8 && l.name.localName == "a"
-                    }]
-        assertNotNull(a)
-        val b = result.refs[{ it.location?.region?.startLine == 7 && it.name.localName == "b" }]
-        assertNotNull(b)
-        var nextEOG: List<PropertyEdge<Node>> = firstIf.nextEOGEdges
-        assertEquals(2, nextEOG.size)
-        for (edge in nextEOG) {
-            assertEquals(firstIf, edge.start)
-            if (edge.end == b) {
-                assertEquals(true, edge.getProperty(Properties.BRANCH))
-                assertEquals(0, edge.getProperty(Properties.INDEX))
-            } else {
-                assertEquals(a, edge.end)
-                assertEquals(false, edge.getProperty(Properties.BRANCH))
-                assertEquals(1, edge.getProperty(Properties.INDEX))
-            }
-        }
-        val elseIf: IfStatement =
-            result
-                .allChildren<IfStatement>()
-                .filter { l: IfStatement -> l.location?.region?.startLine == 8 }[0]
-        assertEquals(elseIf, firstIf.elseStatement)
-        val b2 = result.refs[{ it.location?.region?.startLine == 9 && it.name.localName == "b" }]
-        assertNotNull(b2)
-        val x = result.refs[{ it.location?.region?.startLine == 11 && it.name.localName == "x" }]
-        assertNotNull(x)
-        nextEOG = elseIf.nextEOGEdges
-        assertEquals(2, nextEOG.size)
-        for (edge in nextEOG) {
-            assertEquals(elseIf, edge.start)
-            if (edge.end == b2) {
-                assertEquals(true, edge.getProperty(Properties.BRANCH))
-                assertEquals(0, edge.getProperty(Properties.INDEX))
-            } else {
-                assertEquals(x, edge.end)
-                assertEquals(false, edge.getProperty(Properties.BRANCH))
-                assertEquals(1, edge.getProperty(Properties.INDEX))
-            }
-        }
     }
 
     /**

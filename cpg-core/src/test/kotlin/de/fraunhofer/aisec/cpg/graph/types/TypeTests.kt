@@ -29,12 +29,9 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.disableTypeManagerCleanup
-import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import java.nio.file.Path
 import java.util.*
@@ -107,85 +104,6 @@ internal class TypeTests : BaseTest() {
         // Test 5: Due to the definition in the C-Standard dereferencing function pointer yields the
         // same function pointer
         assertEquals(functionPointerType, functionPointerType.dereference())
-    }
-
-    @Test
-    fun createFromJava() {
-        var result: Type
-        var expected: Type
-
-        // Test 1: Ignore Access Modifier Keyword (public, private, protected)
-        var typeString = "private int a"
-        result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
-        assertEquals(expected, result)
-
-        // Test 2: constant type using final
-        typeString = "final int a"
-        result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
-        assertEquals(expected, result)
-
-        // Test 3: static type
-        typeString = "static int a"
-        result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
-        assertEquals(expected, result)
-
-        // Test 4: volatile type
-        typeString = "public volatile int a"
-        result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
-        assertEquals(expected, result)
-
-        // Test 5: combining a storage type and a qualifier
-        typeString = "private static final String a"
-        result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = StringType("java.lang.String", JavaLanguage())
-        assertEquals(expected, result)
-
-        // Test 6: using two different qualifiers
-        typeString = "public final volatile int a"
-        result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
-        assertEquals(expected, result)
-
-        // Test 7: Reference level using arrays
-        typeString = "int[] a"
-        result = TypeParser.createFrom(typeString, JavaLanguage())
-        expected =
-            PointerType(
-                IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED),
-                PointerType.PointerOrigin.ARRAY
-            )
-        assertEquals(expected, result)
-
-        // Test 8: generics
-        typeString = "List<String> list"
-        result = TypeParser.createFrom(typeString, JavaLanguage())
-        var generics: MutableList<Type?> = ArrayList()
-        generics.add(StringType("java.lang.String", JavaLanguage()))
-        expected = ObjectType("List", generics, false, JavaLanguage())
-        assertEquals(expected, result)
-
-        // Test 9: more generics
-        typeString = "List<List<List<String>>, List<String>> data"
-        result = TypeParser.createFrom(typeString, JavaLanguage())
-        val genericStringType = StringType("java.lang.String", JavaLanguage())
-        val generics3: MutableList<Type> = ArrayList()
-        generics3.add(genericStringType)
-        val genericElement3 = ObjectType("List", generics3, false, JavaLanguage())
-        val generics2a: MutableList<Type> = ArrayList()
-        generics2a.add(genericElement3)
-        val generics2b: MutableList<Type> = ArrayList()
-        generics2b.add(genericStringType)
-        val genericElement1 = ObjectType("List", generics2a, false, JavaLanguage())
-        val genericElement2 = ObjectType("List", generics2b, false, JavaLanguage())
-        generics = ArrayList()
-        generics.add(genericElement1)
-        generics.add(genericElement2)
-        expected = ObjectType("List", generics, false, JavaLanguage())
-        assertEquals(expected, result)
     }
 
     @Test
@@ -374,104 +292,6 @@ internal class TypeTests : BaseTest() {
         assertEquals(expected, result)
     }
 
-    // Tests on the resulting graph
-    @Test
-    @Throws(Exception::class)
-    fun testParameterizedTypes() {
-        val topLevel = Path.of("src", "test", "resources", "types")
-        val result = analyze("java", topLevel, true)
-
-        // Check Parameterized
-        val recordDeclarations = result.records
-        val recordDeclarationBox = findByUniqueName(recordDeclarations, "Box")
-        val typeT = TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T")
-        assertNotNull(typeT)
-        assertEquals(typeT, TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T"))
-
-        // Type of field t
-        val fieldDeclarations = result.fields
-        val fieldDeclarationT = findByUniqueName(fieldDeclarations, "t")
-        assertEquals(typeT, fieldDeclarationT.type)
-        assertTrue(fieldDeclarationT.possibleSubTypes.contains(typeT))
-
-        // Parameter of set Method
-        val methodDeclarations = result.methods
-        val methodDeclarationSet = findByUniqueName(methodDeclarations, "set")
-        val t = methodDeclarationSet.parameters[0]
-        assertEquals(typeT, t.type)
-        assertTrue(t.possibleSubTypes.contains(typeT))
-
-        // Return Type of get Method
-        val methodDeclarationGet = findByUniqueName(methodDeclarations, "get")
-        assertEquals(
-            FunctionType("get()T", listOf(), listOf(typeT), JavaLanguage()),
-            methodDeclarationGet.type
-        )
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun graphTest() {
-        var topLevel = Path.of("src", "test", "resources", "types")
-        var result = analyze("java", topLevel, true)
-        val variables = result.allChildren<ObjectType>()
-        val recordDeclarations = result.records
-
-        // Test RecordDeclaration relationship
-        val objectTypes = findByName(variables, "A")
-        val recordDeclarationA = findByUniqueName(recordDeclarations, "A")
-        for (objectType in objectTypes) {
-            assertEquals(recordDeclarationA, objectType.recordDeclaration)
-        }
-
-        // Test uniqueness of types x and y have same type
-        val fieldDeclarations = result.fields
-        val x = findByUniqueName(fieldDeclarations, "x")
-        val z = findByUniqueName(fieldDeclarations, "z")
-        assertSame(x.type, z.type)
-
-        // Test propagation of specifiers in primitive fields (final int y)
-        val y = findByUniqueName(fieldDeclarations, "y")
-
-        // Test propagation of specifiers in non-primitive fields (final A a)
-        var variableDeclarations = result.variables
-        val aA = findByUniqueName(variableDeclarations, "a")
-
-        // Test propagation of specifiers in variables (final String s)
-        val sString = findByUniqueName(variableDeclarations, "s")
-
-        // Test PointerType chain with array
-        val array = findByUniqueName(variableDeclarations, "array")
-        assertTrue(array.type is PointerType)
-        assertEquals((array.type as PointerType).elementType, x.type)
-
-        // Test java generics
-        val map = findByUniqueName(variableDeclarations, "map")
-        assertTrue(map.type is ObjectType)
-        assertLocalName("C", map.type)
-        assertEquals(2, (map.type as ObjectType).generics.size)
-        assertLocalName("D", (map.type as ObjectType).generics[0])
-        assertLocalName("E", (map.type as ObjectType).generics[1])
-
-        topLevel = Path.of("src", "test", "resources", "types")
-        result = analyze("cpp", topLevel, true)
-        variableDeclarations = result.variables
-
-        // Test PointerType chain with pointer
-        val regularInt = findByUniqueName(variableDeclarations, "regularInt")
-        val ptr = findByUniqueName(variableDeclarations, "ptr")
-        assertTrue(ptr.type is PointerType)
-        assertEquals((ptr.type as PointerType).elementType, regularInt.type)
-
-        // Test type Propagation (auto) UnknownType
-        val unknown = findByUniqueName(variableDeclarations, "unknown")
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), unknown.type)
-
-        // Test type Propagation auto
-        val propagated = findByUniqueName(variableDeclarations, "propagated")
-        assertEquals(regularInt.type, propagated.type)
-    }
-
     /**
      * Test for usage of getTypeStringFromDeclarator to determine function pointer raw type string
      *
@@ -523,21 +343,6 @@ internal class TypeTests : BaseTest() {
         val globalOneParam = findByUniqueName(variables, "global_one_param")
         assertNotNull(globalOneParam)
         assertEquals(oneParamType, globalOneParam.type)
-    }
-
-    @Throws(Exception::class)
-    @Test
-    fun testCommonTypeTestJava() {
-        disableTypeManagerCleanup()
-        val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy")
-        val result = analyze("java", topLevel, true)
-        val root = TypeParser.createFrom("multistep.Root", JavaLanguage())
-        val level0 = TypeParser.createFrom("multistep.Level0", JavaLanguage())
-        val level1 = TypeParser.createFrom("multistep.Level1", JavaLanguage())
-        val level1b = TypeParser.createFrom("multistep.Level1B", JavaLanguage())
-        val level2 = TypeParser.createFrom("multistep.Level2", JavaLanguage())
-        val unrelated = TypeParser.createFrom("multistep.Unrelated", JavaLanguage())
-        getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated, result)
     }
 
     @Throws(Exception::class)
@@ -619,6 +424,27 @@ internal class TypeTests : BaseTest() {
             Optional.of(level0),
             TypeManager.getInstance().getCommonType(listOf(level2, level2b), provider)
         )
+    }
+    @Test
+    @Throws(Exception::class)
+    fun graphTest() {
+        val topLevel = Path.of("src", "test", "resources", "types")
+        val result = analyze("cpp", topLevel, true)
+        val variableDeclarations = result.variables
+
+        // Test PointerType chain with pointer
+        val regularInt = findByUniqueName(variableDeclarations, "regularInt")
+        val ptr = findByUniqueName(variableDeclarations, "ptr")
+        assertTrue(ptr.type is PointerType)
+        assertEquals((ptr.type as PointerType).elementType, regularInt.type)
+
+        // Test type Propagation (auto) UnknownType
+        val unknown = findByUniqueName(variableDeclarations, "unknown")
+        assertEquals(UnknownType.getUnknownType(CPPLanguage()), unknown.type)
+
+        // Test type Propagation auto
+        val propagated = findByUniqueName(variableDeclarations, "propagated")
+        assertEquals(regularInt.type, propagated.type)
     }
 
     private fun getCommonTypeTestGeneral(

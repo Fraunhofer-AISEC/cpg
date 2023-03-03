@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
@@ -422,7 +421,6 @@ private constructor(
          *
          * This will register
          * - [TypeHierarchyResolver]
-         * - [JavaExternalTypeHierarchyResolver]
          * - [ImportResolver]
          * - [VariableUsageResolver]
          * - [CallResolver]
@@ -437,7 +435,6 @@ private constructor(
          */
         fun defaultPasses(): Builder {
             registerPass(TypeHierarchyResolver())
-            registerPass(JavaExternalTypeHierarchyResolver())
             registerPass(ImportResolver())
             registerPass(VariableUsageResolver())
             registerPass(CallResolver()) // creates CG
@@ -480,7 +477,6 @@ private constructor(
         fun defaultLanguages(): Builder {
             registerLanguage(CLanguage())
             registerLanguage(CPPLanguage())
-            registerLanguage(JavaLanguage())
 
             return this
         }

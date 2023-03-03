@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -43,24 +45,18 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ShortcutsTest {
     @Test
     fun followDFGUntilHitTest() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/Dataflow.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = GraphExamples.getDataflowClass()
 
         val toStringCall = result.callsByName("toString")[0]
         val printDecl =
@@ -77,21 +73,11 @@ class ShortcutsTest {
 
     @Test
     fun testCalls() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val actual = result.calls
+        val actual = shortcutClassResult.calls
 
         val expected = mutableListOf<CallExpression>()
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val main = classDecl.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
         expected.add(
@@ -121,21 +107,13 @@ class ShortcutsTest {
 
     @Test
     fun testCallsByName() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = GraphExamples.getShortcutClass()
 
         val actual = result.callsByName("print")
 
         val expected = mutableListOf<CallExpression>()
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val main = classDecl.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
         expected.add((main.body as CompoundStatement).statements[1] as MemberCallExpression)
@@ -145,20 +123,9 @@ class ShortcutsTest {
 
     @Test
     fun testCalleesOf() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
         val expected = mutableListOf<FunctionDeclaration>()
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
-
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val print = classDecl.byNameOrNull<MethodDeclaration>("print")
         assertNotNull(print)
         expected.add(print)
@@ -190,22 +157,12 @@ class ShortcutsTest {
 
     @Test
     fun testCallersOf() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val print = classDecl.byNameOrNull<MethodDeclaration>("print")
         assertNotNull(print)
 
-        val actual = result.callersOf(print)
+        val actual = shortcutClassResult.callersOf(print)
 
         val expected = mutableListOf<FunctionDeclaration>()
         val main = classDecl.byNameOrNull<MethodDeclaration>("main")
@@ -217,19 +174,9 @@ class ShortcutsTest {
 
     @Test
     fun testControls() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
         val expected = mutableListOf<Node>()
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
         val ifStatement = (magic.body as CompoundStatement).statements[0] as IfStatement
@@ -276,20 +223,18 @@ class ShortcutsTest {
 
     @Test
     fun testControlledBy() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass(EdgeCachePass())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result =
+            GraphExamples.getShortcutClass(
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerPass(EdgeCachePass())
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+            )
 
         val expected = mutableListOf<Node>()
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = result.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
@@ -310,19 +255,8 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevDFGEdgesUntilHit() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass(EdgeCachePass())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic2 = classDecl.byNameOrNull<MethodDeclaration>("magic2")
         assertNotNull(magic2)
 
@@ -356,19 +290,8 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevEOGEdgesUntilHit() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass(EdgeCachePass())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
@@ -390,19 +313,8 @@ class ShortcutsTest {
 
     @Test
     fun testFollowNextEOGEdgesUntilHit() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass(EdgeCachePass())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
@@ -423,19 +335,8 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevDFGEdges() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/ShortcutClass.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass(EdgeCachePass())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        val classDecl =
-            result.translationUnits.firstOrNull()?.declarations?.firstOrNull() as RecordDeclaration
+        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        assertNotNull(classDecl)
         val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
@@ -449,5 +350,12 @@ class ShortcutsTest {
         val paramPassed = attrAssignment.followPrevDFG { it is Literal<*> }
         assertNotNull(paramPassed)
         assertEquals(3, (paramPassed.last() as? Literal<*>)?.value)
+    }
+
+    private lateinit var shortcutClassResult: TranslationResult
+
+    @BeforeAll
+    fun getShortcutClass() {
+        shortcutClassResult = GraphExamples.getShortcutClass()
     }
 }

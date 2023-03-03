@@ -26,8 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
@@ -44,15 +43,19 @@ class TypePropagationTest {
     fun testBinopTypePropagation() {
         val result =
             TestLanguageFrontend().build {
-                translationUnit("test") {
-                    function("main", t("int")) {
-                        body {
-                            declare { variable("intVar", t("int")) {} }
-                            declare { variable("intVar2", t("int")) { literal(5) } }
-                            declare {
-                                variable("addResult", t("int")) { ref("intVar") + ref("intVar2") }
+                translationResult(TranslationConfiguration.builder().build()) {
+                    translationUnit("test") {
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("intVar", t("int")) {} }
+                                declare { variable("intVar2", t("int")) { literal(5) } }
+                                declare {
+                                    variable("addResult", t("int")) {
+                                        ref("intVar") + ref("intVar2")
+                                    }
+                                }
+                                returnStmt { literal(0) }
                             }
-                            returnStmt { literal(0) }
                         }
                     }
                 }
@@ -76,20 +79,20 @@ class TypePropagationTest {
         val scopeManager = ScopeManager()
         val result =
             TestLanguageFrontend(scopeManager).build {
-                translationUnit("test") {
-                    function("main", t("int")) {
-                        body {
-                            declare { variable("intVar", t("int")) {} }
-                            declare { variable("shortVar", t("short")) {} }
-                            ref("shortVar") assign ref("intVar")
-                            returnStmt { literal(0) }
+                translationResult(TranslationConfiguration.builder().build()) {
+                    translationUnit("test") {
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("intVar", t("int")) {} }
+                                declare { variable("shortVar", t("short")) {} }
+                                ref("shortVar") assign ref("intVar")
+                                returnStmt { literal(0) }
+                            }
                         }
                     }
                 }
             }
-        val tr = TranslationResult(TranslationManager.builder().build(), scopeManager)
-        tr.addTranslationUnit(result)
-        VariableUsageResolver().accept(tr)
+        VariableUsageResolver().accept(result)
 
         val binaryOp =
             (result.functions["main"]?.body as? CompoundStatement)?.statements?.get(2)
