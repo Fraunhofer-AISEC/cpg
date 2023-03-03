@@ -29,9 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.ByteArrayOutputStream
@@ -40,10 +38,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.util.*
-import java.util.function.Consumer
 import java.util.function.Function
 import java.util.function.Predicate
-import java.util.stream.Collectors
 import java.util.stream.IntStream
 import java.util.stream.Stream
 import org.slf4j.Logger
@@ -57,10 +53,9 @@ object Util {
      * @return a list of nodes with the specified String.
      */
     fun subnodesOfCode(node: Node?, searchCode: String): List<Node> {
-        return SubgraphWalker.flattenAST(node)
-            .stream()
-            .filter { n: Node -> n.code != null && n.code == searchCode }
-            .collect(Collectors.toList())
+        return SubgraphWalker.flattenAST(node).filter { n: Node ->
+            n.code != null && n.code == searchCode
+        }
     }
 
     /**
@@ -115,7 +110,7 @@ object Util {
             if (cn == Connect.SUBTREE) {
                 val border = SubgraphWalker.getEOGPathEdges(n)
                 if (en == Edge.ENTRIES) {
-                    val pe = border.entries.flatMap { r: Node -> r.prevEOGEdges }
+                    val pe = border.entries.flatMap { it.prevEOGEdges }
                     if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
                         return false
                     pe.filter { it.containsProperties(props) }.map { it.start }
@@ -132,11 +127,11 @@ object Util {
             }
         refSide =
             if (cr == Connect.SUBTREE) {
-                val borders = refs.map { n -> SubgraphWalker.getEOGPathEdges(n) }
+                val borders = refs.map { SubgraphWalker.getEOGPathEdges(it) }
 
-                borders.flatMap { border: SubgraphWalker.Border ->
+                borders.flatMap { border ->
                     if (Edge.ENTRIES == er) {
-                        val pe = border.entries.flatMap { r: Node -> r.prevEOGEdges }
+                        val pe = border.entries.flatMap { it.prevEOGEdges }
                         if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
                             return false
                         pe.filter { it.containsProperties(props) }.map { it.start }
@@ -149,11 +144,11 @@ object Util {
                         if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
                             return false
                         pe.filter { it.containsProperties(props) }.map { it.start }
-                    } else java.util.List.of(node)
+                    } else listOf(node)
                 }
             }
         val refNodes = refSide
-        return if (Quantifier.ANY == q) nodeSide.any { o -> refNodes.contains(o) }
+        return if (Quantifier.ANY == q) nodeSide.any { it in refNodes }
         else refNodes.containsAll(nodeSide)
     }
 
@@ -171,7 +166,7 @@ object Util {
 
     @JvmStatic
     fun <T> distinctBy(by: Function<in T, *>): Predicate<T> {
-        val seen: MutableSet<Any> = HashSet()
+        val seen = mutableSetOf<Any>()
         return Predicate { t: T -> seen.add(by.apply(t)) }
     }
 
@@ -248,7 +243,7 @@ object Util {
      * @return A list of all parts of the input, as divided by any delimiter
      */
     fun splitLeavingParenthesisContents(toSplit: String, delimiters: String): List<String> {
-        val result: MutableList<String> = ArrayList()
+        val result = mutableListOf<String>()
         var openParentheses = 0
         var currPart = StringBuilder()
         for (c in toSplit.toCharArray()) {
@@ -263,7 +258,7 @@ object Util {
             } else if (delimiters.contains("" + c)) {
                 if (openParentheses == 0) {
                     val toAdd = currPart.toString().strip()
-                    if (!toAdd.isEmpty()) {
+                    if (toAdd.isNotEmpty()) {
                         result.add(currPart.toString().strip())
                     }
                     currPart = StringBuilder()
@@ -274,7 +269,7 @@ object Util {
                 currPart.append(c)
             }
         }
-        if (currPart.length > 0) {
+        if (currPart.isNotEmpty()) {
             result.add(currPart.toString().strip())
         }
         return result
@@ -339,11 +334,7 @@ object Util {
      * @param arguments The call's arguments to be connected to the target's parameters
      */
     fun attachCallParameters(target: FunctionDeclaration, arguments: List<Expression?>) {
-        target.parameterEdges.sortWith(
-            Comparator.comparing { pe: PropertyEdge<ParamVariableDeclaration> ->
-                pe.end.argumentIndex
-            }
-        )
+        target.parameterEdges.sortWith(Comparator.comparing { it.end.argumentIndex })
         var j = 0
         while (j < arguments.size) {
             val parameters = target.parameters
@@ -382,7 +373,7 @@ object Util {
         var name = name
         if (language != null) {
             val delimiter = language.namespaceDelimiter
-            if (name.contains(delimiter)) {
+            if (delimiter in name) {
                 name = name.substring(0, name.lastIndexOf(delimiter))
             }
         }
@@ -398,18 +389,14 @@ object Util {
     fun detachCallParameters(target: FunctionDeclaration, arguments: List<Expression?>) {
         for (param in target.parameters) {
             // A param could be variadic, so multiple arguments could be set as incoming DFG
-            param.prevDFG
-                .stream()
-                .filter { o: Node? -> arguments.contains(o) }
-                .forEach { next: Node? -> param.removeNextDFG(next) }
+            param.prevDFG.filter { o: Node? -> o in arguments }.forEach { param.removeNextDFG(it) }
         }
     }
 
     @JvmStatic
     fun <T> reverse(input: Stream<T>): Stream<T> {
         val temp = input.toArray()
-        return IntStream.range(0, temp.size).mapToObj { i: Int -> temp[temp.size - i - 1] }
-            as Stream<T>
+        return IntStream.range(0, temp.size).mapToObj { i -> temp[temp.size - i - 1] } as Stream<T>
     }
 
     /**
@@ -421,18 +408,11 @@ object Util {
      */
     fun getAdjacentDFGNodes(n: Node?, incoming: Boolean): MutableList<Node> {
         val subnodes = SubgraphWalker.getAstChildren(n)
-        val adjacentNodes: MutableList<Node>
-        adjacentNodes =
+        val adjacentNodes =
             if (incoming) {
-                subnodes
-                    .stream()
-                    .filter { prevCandidate: Node -> prevCandidate.nextDFG.contains(n) }
-                    .collect(Collectors.toList())
+                subnodes.filter { it.nextDFG.contains(n) }.toMutableList()
             } else {
-                subnodes
-                    .stream()
-                    .filter { nextCandidate: Node -> nextCandidate.prevDFG.contains(n) }
-                    .collect(Collectors.toList())
+                subnodes.filter { it.prevDFG.contains(n) }.toMutableList()
             }
         return adjacentNodes
     }
@@ -451,14 +431,14 @@ object Util {
         branchingExp: Node?,
         branchingDecl: Node?
     ) {
-        var conditionNodes: MutableList<Node> = ArrayList()
+        var conditionNodes = mutableListOf<Node>()
         if (branchingExp != null) {
-            conditionNodes = ArrayList()
+            conditionNodes = mutableListOf()
             conditionNodes.add(branchingExp)
         } else if (branchingDecl != null) {
             conditionNodes = getAdjacentDFGNodes(branchingDecl, true)
         }
-        conditionNodes.forEach(Consumer { prev: Node? -> n.addPrevDFG(prev!!) })
+        conditionNodes.forEach { n.addPrevDFG(it) }
     }
 
     enum class Connect {
