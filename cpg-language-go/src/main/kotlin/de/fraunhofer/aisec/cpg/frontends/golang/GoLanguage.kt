@@ -29,12 +29,14 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasGenerics
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
+import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
-class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics {
+class GoLanguage :
+    Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics, HasStructs {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     @Transient override val frontend = GoLanguageFrontend::class

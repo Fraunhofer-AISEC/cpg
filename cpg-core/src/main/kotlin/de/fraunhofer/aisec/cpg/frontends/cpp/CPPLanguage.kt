@@ -48,6 +48,7 @@ class CPPLanguage :
     HasDefaultArguments,
     HasTemplates,
     HasComplexCallResolution,
+    HasStructs,
     HasClasses,
     HasUnknownType {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "hpp", "hh")
@@ -300,7 +301,7 @@ class CPPLanguage :
             // If we want to use an inferred functionTemplateDeclaration, this needs to be provided.
             // Otherwise, we could not resolve to a template and no modifications are made
             val functionTemplateDeclaration =
-                holder.startInference().createInferredFunctionTemplate(templateCall)
+                holder.startInference(scopeManager).createInferredFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
             val edges = templateCall.templateParameterEdges
             // Set instantiation propertyEdges

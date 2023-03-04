@@ -345,7 +345,8 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 } else {
                     "class"
                 }
-            val record = base.startInference().inferRecordDeclaration(base, currentTU, kind)
+            val record =
+                base.startInference(scopeManager).inferRecordDeclaration(base, currentTU, kind)
             // update the record map
             if (record != null) recordMap[base.name] = record
         }
@@ -404,7 +405,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // If we didn't find anything, we create a new function or method declaration
         return target
             ?: (declarationHolder ?: currentTU)
-                .startInference()
+                .startInference(scopeManager)
                 .createInferredFunctionDeclaration(
                     name,
                     null,

@@ -441,7 +441,9 @@ class ScopeManager : ScopeProvider {
 
     /** This function returns the [Scope] associated with a node. */
     fun lookupScope(node: Node): Scope? {
-        return scopeMap[node]
+        return if (node is TranslationUnitDeclaration) {
+            globalScope
+        } else scopeMap[node]
     }
 
     /** This function looks up scope by its FQN. This only works for [NameScope]s */
@@ -635,13 +637,19 @@ class ScopeManager : ScopeProvider {
         call: CallExpression,
         scope: Scope? = currentScope
     ): List<FunctionDeclaration> {
+        val s = extractScope(call.name, scope)
+
+        return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
+    }
+
+    fun extractScope(name: Name, scope: Scope? = currentScope): Scope? {
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
-        if (call.language != null && call.name.parent != null) {
+        if (name.parent != null) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = call.name.parent
+            val scopeName = name.parent
 
             // TODO: proper scope selection
 
@@ -650,17 +658,51 @@ class ScopeManager : ScopeProvider {
             s =
                 if (scopes.isEmpty()) {
                     LOGGER.error(
-                        "Could not find the scope {} needed to resolve the call {}. Falling back to the current scope",
+                        "Could not find the scope {} needed to resolve the call {}. Falling back to the default (current) scope",
                         scopeName,
-                        call.name
+                        name
                     )
-                    currentScope
+                    scope
                 } else {
                     scopes[0]
                 }
         }
 
-        return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
+        return s
+    }
+
+    /**
+     * Directly jumps to a given scope.
+     *
+     * Handle with care, here be dragons. Should not be exposed outside of the cpg-core module.
+     */
+    @PleaseBeCareful
+    internal fun jumpTo(scope: Scope?): Scope? {
+        val oldScope = currentScope
+        currentScope = scope
+        return oldScope
+    }
+
+    /**
+     * Directly jumps to the scope a given node defines (if it exists).
+     *
+     * Handle with care, here be dragons. Should not be exposed outside of the cpg-core module.
+     */
+    @PleaseBeCareful
+    internal fun jumpTo(node: Node): Scope? {
+        return jumpTo(lookupScope(node))
+    }
+
+    /**
+     * This function can be used to wrap multiple statements contained in [init] into the scope of
+     * [node]. It will execute [enterScope] before calling [init] and [leaveScope] afterwards.
+     */
+    fun <T : Node> withScope(node: T, init: (T.() -> Unit)) {
+        enterScope(node)
+
+        init(node)
+
+        leaveScope(node)
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(

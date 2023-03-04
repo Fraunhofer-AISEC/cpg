@@ -117,6 +117,7 @@ class CallResolverTest : BaseTest() {
         val inferenceSignature = listOf(intType, intType, intType)
         for (inferredCall in
             calls.filter { c: CallExpression -> c.signature == inferenceSignature }) {
+
             val inferredTarget =
                 findByUniquePredicate(methods) { m: FunctionDeclaration ->
                     m.hasSignature(inferenceSignature)
