@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.functions
 import java.io.File
 import java.nio.file.Paths
 import kotlin.test.Test
@@ -60,6 +61,8 @@ class ApplicationTest {
             TranslationManager.builder().config(translationConfiguration).build()
         translationResult = translationManager.analyze().get()
 
+        assertEquals(31, translationResult.functions.size)
+
         val application = Application()
 
         application.pushToNeo4j(translationResult!!)
@@ -71,7 +74,7 @@ class ApplicationTest {
             val functions = session.loadAll(FunctionDeclaration::class.java)
             assertNotNull(functions)
 
-            assertEquals(38, functions.size)
+            assertEquals(31, functions.size)
 
             transaction.commit()
         }
