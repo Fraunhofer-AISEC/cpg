@@ -41,7 +41,6 @@ import org.neo4j.ogm.exception.ConnectionException
 import org.neo4j.ogm.session.Session
 import org.neo4j.ogm.session.SessionFactory
 import org.neo4j.ogm.session.event.Event
-import org.neo4j.ogm.session.event.EventListener
 import org.neo4j.ogm.session.event.EventListenerAdapter
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

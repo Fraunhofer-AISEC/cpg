@@ -46,8 +46,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
      * A dedicated backing field, so that [setType] can actually set the type without any loops,
      * since we are using a custom setter in [type] (which calls [setType]).
      */
-    @Relationship("TYPE")
-    protected var _type: Type = UnknownType.getUnknownType()
+    @Relationship("TYPE") protected var _type: Type = UnknownType.getUnknownType()
 
     /**
      * The type of this declaration. In order to maximize compatibility with Java legacy code
@@ -74,8 +73,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
             setType(value, null)
         }
 
-    @Relationship("POSSIBLE_SUB_TYPES")
-    protected var _possibleSubTypes = mutableListOf<Type>()
+    @Relationship("POSSIBLE_SUB_TYPES") protected var _possibleSubTypes = mutableListOf<Type>()
 
     override var possibleSubTypes: List<Type>
         get() {

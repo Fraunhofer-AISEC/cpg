@@ -118,7 +118,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * Note: This only returns the *direct* children of this node. If you want to have *all*
      * children, e.g., a flattened AST, you need to call [Node.allChildren].
      *
-     * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM persistence. Therefore, this property is a `var` and not a `val`.
+     * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM
+     * persistence. Therefore, this property is a `var` and not a `val`.
      */
     @Relationship("AST")
     var astChildren: List<Node> = listOf()
