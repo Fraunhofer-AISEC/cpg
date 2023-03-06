@@ -319,8 +319,6 @@ public class TypeManager {
   public boolean stopPropagation(Type type, Type newType) {
     if (type instanceof ObjectType typeObjectType
         && newType instanceof ObjectType newObjectType
-        && typeObjectType.getGenerics() != null
-        && newObjectType.getGenerics() != null
         && type.getName().equals(newType.getName())) {
       return containsParameterizedType(newObjectType.getGenerics())
           && !(containsParameterizedType(typeObjectType.getGenerics()));

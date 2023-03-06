@@ -44,7 +44,7 @@ class UnknownType : Type {
     /**
      * This is only intended to be used by [TypeParser] for edge cases like distinct unknown types,
      * such as "UNKNOWN1", thus the package-private visibility. Other users should see
-     * [ ][.getUnknownType] instead
+     * [getUnknownType] instead
      *
      * @param typeName The name of this unknown type, usually a variation of UNKNOWN
      */
@@ -67,9 +67,7 @@ class UnknownType : Type {
         return unknownType
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(super.hashCode())
-    }
+    override fun hashCode() = Objects.hash(super.hashCode())
 
     override fun equals(other: Any?): Boolean {
         return other is UnknownType
@@ -85,8 +83,8 @@ class UnknownType : Type {
         }
 
     companion object {
-        // TODO: This is just a temporary solution.
         // Only one instance of UnknownType for better representation in the graph
+        @Deprecated("This should be replaced by calling getUnknownType(Language)")
         val unknownType = UnknownType()
 
         val UNKNOWN_TYPE_STRING = "UNKNOWN_TYPE"

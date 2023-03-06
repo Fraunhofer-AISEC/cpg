@@ -43,8 +43,7 @@ open class NumericType(
 
     /**
      * NumericTypes can have a modifier. The default is signed. Some types (e.g. char in C) may be
-     * neither of the signed/unsigned option. TODO: maybe replace with a flag "signed" or
-     * "unsigned"?
+     * neither of the signed/unsigned option.
      */
     enum class Modifier {
         SIGNED,

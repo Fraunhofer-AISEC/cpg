@@ -36,20 +36,20 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * called.
  */
 class ReferenceType : Type, SecondOrderType {
-    private var reference: Type? = null
+    override var elementType: Type = UnknownType.getUnknownType(this.language)
 
     constructor() : super()
 
     constructor(reference: Type) : super() {
         language = reference.language
         name = reference.name.append("&")
-        this.reference = reference
+        this.elementType = reference
     }
 
-    constructor(type: Type?, reference: Type?) : super(type!!) {
-        language = reference!!.language
+    constructor(type: Type, reference: Type) : super(type) {
+        language = reference.language
         name = reference.name.append("&")
-        this.reference = reference
+        this.elementType = reference
     }
 
     /**
@@ -64,41 +64,33 @@ class ReferenceType : Type, SecondOrderType {
      *   type
      */
     override fun dereference(): Type {
-        return reference!!.dereference()
+        return elementType.dereference()
     }
 
     override fun duplicate(): Type {
-        return ReferenceType(this, reference)
+        return ReferenceType(this, elementType)
     }
 
     override fun isSimilar(t: Type?): Boolean {
-        return (t is ReferenceType && t.elementType == this && super.isSimilar(t))
+        return t is ReferenceType && t.elementType == this && super.isSimilar(t)
     }
 
     fun refreshName() {
-        name = reference!!.name.append("&")
+        name = elementType.name.append("&")
     }
-
-    override var elementType: Type
-        get() = reference!!
-        set(value) {
-            this.reference = value
-        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ReferenceType) return false
-        return if (!super.equals(other)) false else reference == other.reference
+        return super.equals(other) && elementType == other.elementType
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(super.hashCode(), reference)
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), elementType)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
-            .append("reference", reference)
+            .append("elementType", elementType)
             .append("name", name)
             .append("typeOrigin", typeOrigin)
             .toString()

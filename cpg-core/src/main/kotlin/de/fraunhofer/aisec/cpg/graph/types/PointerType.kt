@@ -131,8 +131,9 @@ class PointerType : Type, SecondOrderType {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is PointerType) return false
-        return if (!super.equals(other)) false
-        else elementType == other.elementType && pointerOrigin == other.pointerOrigin
+        return super.equals(other) &&
+            elementType == other.elementType &&
+            pointerOrigin == other.pointerOrigin
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), elementType, pointerOrigin)

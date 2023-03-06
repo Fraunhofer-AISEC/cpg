@@ -103,7 +103,10 @@ abstract class Type : Node {
      */
     abstract fun dereference(): Type
 
-    open fun refreshNames() {}
+    open fun refreshNames() {
+        // By default, this does nothing. TODO: Why do all types have this?? This method has
+        // functionality only for PointerTypes!
+    }
 
     /**
      * The root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a Object-,
@@ -168,7 +171,8 @@ abstract class Type : Node {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        return if (other !is Type) false else name == other.name && language == other.language
+        if (other !is Type) return false
+        return name == other.name && language == other.language
     }
 
     override fun hashCode() = Objects.hash(name, language)

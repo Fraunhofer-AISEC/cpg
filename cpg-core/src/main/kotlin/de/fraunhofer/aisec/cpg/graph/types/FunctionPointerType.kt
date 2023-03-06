@@ -97,11 +97,10 @@ class FunctionPointerType : Type {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is FunctionPointerType) return false
-        return if (!super.equals(other)) false
-        else
-            (parameters == other.parameters &&
-                propertyEqualsList(parametersPropertyEdge, other.parametersPropertyEdge) &&
-                returnType == other.returnType)
+        return super.equals(other) &&
+            parameters == other.parameters &&
+            propertyEqualsList(parametersPropertyEdge, other.parametersPropertyEdge) &&
+            returnType == other.returnType
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), parametersPropertyEdge, returnType)

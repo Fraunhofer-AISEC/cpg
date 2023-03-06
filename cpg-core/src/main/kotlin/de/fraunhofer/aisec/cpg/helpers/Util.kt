@@ -287,7 +287,7 @@ object Util {
         val result = original.toCharArray()
         val marker = '\uffff'
         val openingParentheses: Deque<Int> = ArrayDeque()
-        for (i in 0 until original.length) {
+        for (i in original.indices) {
             val c = original[i]
             when (c) {
                 '(' -> openingParentheses.push(i)
