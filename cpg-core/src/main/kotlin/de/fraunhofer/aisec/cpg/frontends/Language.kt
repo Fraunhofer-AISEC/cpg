@@ -81,6 +81,11 @@ abstract class Language<T : LanguageFrontend> : Node() {
         scopeManager: ScopeManager = ScopeManager(),
     ): T
 
+    /**
+     * Returns the type conforming to the given [typeString]. If no matching type is found in the
+     * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
+     * map.
+     */
     fun getSimpleTypeOf(typeString: String) = builtInTypes[typeString]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
