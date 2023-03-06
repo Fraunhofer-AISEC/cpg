@@ -27,7 +27,9 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -38,6 +40,9 @@ import org.neo4j.ogm.config.Configuration
 import org.neo4j.ogm.exception.ConnectionException
 import org.neo4j.ogm.session.Session
 import org.neo4j.ogm.session.SessionFactory
+import org.neo4j.ogm.session.event.Event
+import org.neo4j.ogm.session.event.EventListener
+import org.neo4j.ogm.session.event.EventListenerAdapter
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
@@ -256,6 +261,8 @@ class Application : Callable<Int> {
                         "de.fraunhofer.aisec.cpg.graph",
                         "de.fraunhofer.aisec.cpg.frontends"
                     )
+                sessionFactory.register(AstChildrenEventListener())
+
                 session = sessionFactory.openSession()
             } catch (ex: ConnectionException) {
                 sessionFactory = null
@@ -401,6 +408,13 @@ class Application : Callable<Int> {
         }
 
         return EXIT_SUCCESS
+    }
+}
+
+class AstChildrenEventListener : EventListenerAdapter() {
+    override fun onPreSave(event: Event?) {
+        val node = event?.`object` as? Node ?: return
+        node.ast = SubgraphWalker.getAstChildren(node)
     }
 }
 

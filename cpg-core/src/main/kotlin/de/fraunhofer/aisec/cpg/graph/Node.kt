@@ -63,6 +63,15 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @Convert(NameConverter::class) open var name: Name = Name(EMPTY_NAME)
 
     /**
+     * This relationship will be automatically filled by a pre-save event before OGM persistance.
+     */
+    @Relationship("AST")
+    var ast = listOf<Node>()
+        get() {
+            return SubgraphWalker.getAstChildren(this)
+        }
+
+    /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
      * where nodes are created artificially, it may be null.
      */
