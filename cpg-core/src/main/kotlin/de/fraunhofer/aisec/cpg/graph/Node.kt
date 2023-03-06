@@ -63,15 +63,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @Convert(NameConverter::class) open var name: Name = Name(EMPTY_NAME)
 
     /**
-     * This relationship will be automatically filled by a pre-save event before OGM persistance.
-     */
-    @Relationship("AST")
-    var ast = listOf<Node>()
-        get() {
-            return SubgraphWalker.getAstChildren(this)
-        }
-
-    /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
      * where nodes are created artificially, it may be null.
      */
@@ -126,8 +117,11 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      *
      * Note: This only returns the *direct* children of this node. If you want to have *all*
      * children, e.g., a flattened AST, you need to call [Node.allChildren].
+     *
+     * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM persistence. Therefore, this property is a `var` and not a `val`.
      */
-    val astChildren: List<Node>
+    @Relationship("AST")
+    var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */

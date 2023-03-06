@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /**
@@ -48,6 +49,7 @@ import org.neo4j.ogm.annotation.Transient
  */
 abstract class Expression : Statement(), HasType {
 
+    @Relationship("TYPE")
     private var _type: Type = UnknownType.getUnknownType()
 
     /** The type of the value after evaluation. */
@@ -71,6 +73,7 @@ abstract class Expression : Statement(), HasType {
             setType(value, null)
         }
 
+    @Relationship("POSSIBLE_SUB_TYPES")
     protected var _possibleSubTypes = mutableListOf<Type>()
 
     override var possibleSubTypes: List<Type>
