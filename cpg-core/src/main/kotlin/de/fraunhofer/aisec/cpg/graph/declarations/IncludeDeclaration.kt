@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
@@ -36,11 +36,11 @@ import org.neo4j.ogm.annotation.Relationship
 
 class IncludeDeclaration : Declaration() {
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     private val includeEdges: MutableList<PropertyEdge<IncludeDeclaration>> = ArrayList()
 
     @Relationship(value = "PROBLEMS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     private val problemEdges: MutableList<PropertyEdge<ProblemDeclaration>> = ArrayList()
 
     var filename: String? = null

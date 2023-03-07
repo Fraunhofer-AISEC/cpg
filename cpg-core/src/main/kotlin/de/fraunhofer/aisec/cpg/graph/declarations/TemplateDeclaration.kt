@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
@@ -51,7 +51,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
 
     /** Parameters the Template requires for instantiation */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var parameterEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
 
     val parameters by PropertyEdgeDelegate(TemplateDeclaration::parameterEdges)

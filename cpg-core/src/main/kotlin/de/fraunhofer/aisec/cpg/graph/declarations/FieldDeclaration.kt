@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
@@ -41,7 +41,7 @@ import org.neo4j.ogm.annotation.Relationship
  * the field as well as an initializer [Expression] which provides an initial value for the field.
  */
 class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitializer {
-    @field:SubGraph("AST")
+    @AST
     override var initializer: Expression? = null
         set(value) {
             if (field != null) {

@@ -25,17 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 
 /** Represents an assert statement */
 class AssertStatement : Statement() {
     /** The condition to be evaluated. */
-    @field:SubGraph("AST") var condition: Expression? = null
+    @AST var condition: Expression? = null
 
     /** The _optional_ message that is shown, if the assert is evaluated as true */
-    @field:SubGraph("AST") var message: Statement? = null
+    @AST var message: Statement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

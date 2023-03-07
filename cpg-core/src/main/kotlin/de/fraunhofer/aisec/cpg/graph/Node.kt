@@ -176,7 +176,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     var argumentIndex = 0
 
     /** List of annotations associated with that node. */
-    @field:SubGraph("AST") var annotations: MutableList<Annotation> = ArrayList()
+    @AST var annotations: MutableList<Annotation> = ArrayList()
 
     fun removePrevEOGEntry(eog: Node) {
         removePrevEOGEntries(listOf(eog))

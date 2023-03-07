@@ -25,14 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import java.util.Objects
 
 class CatchClause : Statement() {
-    @field:SubGraph("AST") var parameter: VariableDeclaration? = null
+    @AST var parameter: VariableDeclaration? = null
 
-    @field:SubGraph("AST") var body: CompoundStatement? = null
+    @AST var body: CompoundStatement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

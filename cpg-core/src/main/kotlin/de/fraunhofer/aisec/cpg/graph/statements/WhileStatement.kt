@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
@@ -34,16 +34,16 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /** Represents a conditional loop statement of the form: `while(...){...}`. */
 class WhileStatement : Statement() {
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
-    @field:SubGraph("AST") var conditionDeclaration: Declaration? = null
+    @AST var conditionDeclaration: Declaration? = null
 
     /** The condition that decides if the block is executed. */
-    @field:SubGraph("AST") var condition: Expression? = null
+    @AST var condition: Expression? = null
 
     /**
      * The statement that is going to be executed, until the condition evaluates to false for the
      * first time. Usually a [CompoundStatement].
      */
-    @field:SubGraph("AST") var statement: Statement? = null
+    @AST var statement: Statement? = null
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
@@ -35,13 +35,13 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /** Represents a condition control flow statement, usually indicating by `If`. */
 class IfStatement : Statement(), ArgumentHolder {
     /** C++ initializer statement. */
-    @field:SubGraph("AST") var initializerStatement: Statement? = null
+    @AST var initializerStatement: Statement? = null
 
     /** C++ alternative to the condition. */
-    @field:SubGraph("AST") var conditionDeclaration: Declaration? = null
+    @AST var conditionDeclaration: Declaration? = null
 
     /** The condition to be evaluated. */
-    @field:SubGraph("AST") var condition: Expression? = null
+    @AST var condition: Expression? = null
 
     /** C++ constexpr construct. */
     var isConstExpression = false
@@ -50,13 +50,13 @@ class IfStatement : Statement(), ArgumentHolder {
      * The statement that is executed, if the condition is evaluated as true. Usually a
      * [CompoundStatement].
      */
-    @field:SubGraph("AST") var thenStatement: Statement? = null
+    @AST var thenStatement: Statement? = null
 
     /**
      * The statement that is executed, if the condition is evaluated as false. Usually a
      * [CompoundStatement].
      */
-    @field:SubGraph("AST") var elseStatement: Statement? = null
+    @AST var elseStatement: Statement? = null
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

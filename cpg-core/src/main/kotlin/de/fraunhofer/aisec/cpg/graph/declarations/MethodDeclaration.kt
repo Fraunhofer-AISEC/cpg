@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
@@ -72,5 +72,5 @@ open class MethodDeclaration : FunctionDeclaration() {
      * declaration do not share the same name. The [CallResolver] will recognize this and treat the
      * scoping aspect of the super-call accordingly.
      */
-    @field:SubGraph("AST") var receiver: VariableDeclaration? = null
+    @AST var receiver: VariableDeclaration? = null
 }

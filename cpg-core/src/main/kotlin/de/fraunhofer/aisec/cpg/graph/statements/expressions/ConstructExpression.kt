@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -66,7 +66,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
             }
         }
 
-    @field:SubGraph("AST") var anoymousClass: RecordDeclaration? = null
+    @AST var anoymousClass: RecordDeclaration? = null
 
     /** The [Declaration] of the type this expression instantiates. */
     @PopulatedByPass(CallResolver::class)

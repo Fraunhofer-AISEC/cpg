@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.Objects
 
@@ -35,7 +35,7 @@ import java.util.Objects
  */
 class CompoundStatementExpression : Expression() {
     /** The list of arguments. */
-    @field:SubGraph("AST") var statement: Statement? = null
+    @AST var statement: Statement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

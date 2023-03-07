@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -40,7 +40,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * property of a [MemberCallExpression].
  */
 class MemberExpression : DeclaredReferenceExpression(), HasBase {
-    @field:SubGraph("AST")
+    @AST
     override var base: Expression = ProblemExpression("could not parse base expression")
         set(value) {
             field.unregisterTypeListener(this)

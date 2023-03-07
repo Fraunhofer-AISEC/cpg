@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import java.util.*
 
 /**
@@ -41,10 +41,10 @@ class KeyValueExpression : Expression() {
      * The key of this pair. It is usually a literal, but some languages even allow references to
      * variables as a key.
      */
-    @field:SubGraph("AST") var key: Expression? = null
+    @AST var key: Expression? = null
 
     /** The value of this pair. It can be any expression */
-    @field:SubGraph("AST") var value: Expression? = null
+    @AST var value: Expression? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
