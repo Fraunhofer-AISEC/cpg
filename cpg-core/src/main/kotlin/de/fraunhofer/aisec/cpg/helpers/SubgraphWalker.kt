@@ -408,18 +408,18 @@ object SubgraphWalker {
          * Callback function(s) getting three arguments: the type of the class we're currently in,
          * the root node of the current declaration scope, the currently visited node.
          */
-        private val handlers: MutableList<TriConsumer<RecordDeclaration?, Node, Node>> = ArrayList()
+        private val handlers = mutableListOf<TriConsumer<RecordDeclaration?, Node?, Node?>>()
         fun clearCallbacks() {
             handlers.clear()
         }
 
-        fun registerHandler(handler: TriConsumer<RecordDeclaration?, Node, Node>) {
+        fun registerHandler(handler: TriConsumer<RecordDeclaration?, Node?, Node?>) {
             handlers.add(handler)
         }
 
-        fun registerHandler(handler: BiConsumer<Node, RecordDeclaration?>) {
+        fun registerHandler(handler: BiConsumer<Node?, RecordDeclaration?>) {
             handlers.add(
-                TriConsumer { currClass: RecordDeclaration?, _: Node?, currNode: Node ->
+                TriConsumer { currClass: RecordDeclaration?, _: Node?, currNode: Node? ->
                     handler.accept(currNode, currClass)
                 }
             )
@@ -432,18 +432,14 @@ object SubgraphWalker {
          */
         fun iterate(root: Node) {
             walker = IterativeGraphWalker()
-            handlers.forEach(
-                Consumer { h: TriConsumer<RecordDeclaration?, Node, Node> ->
-                    walker!!.registerOnNodeVisit { n: Node -> handleNode(n, h) }
-                }
-            )
+            handlers.forEach { h -> walker!!.registerOnNodeVisit { n -> handleNode(n, h) } }
             walker!!.registerOnScopeExit { exiting: Node -> leaveScope(exiting) }
             walker!!.iterate(root)
         }
 
         private fun handleNode(
             current: Node,
-            handler: TriConsumer<RecordDeclaration?, Node, Node>
+            handler: TriConsumer<RecordDeclaration?, Node?, Node?>
         ) {
             scopeManager.enterScopeIfExists(current)
             val parent = walker!!.backlog!!.peek()
@@ -457,7 +453,9 @@ object SubgraphWalker {
             scopeManager.leaveScope(exiting)
         }
 
-        fun collectDeclarations(current: Node) {
+        fun collectDeclarations(current: Node?) {
+            if (current == null) return
+
             var parentBlock: Node? = null
 
             // get containing Record or Compound

@@ -110,9 +110,9 @@ open class VariableUsageResolver : SymbolResolverPass() {
     private fun resolveLocalVarUsage(
         currentClass: RecordDeclaration?,
         parent: Node?,
-        current: Node
+        current: Node?
     ) {
-        val language = current.language
+        val language = current?.language
 
         if (current !is DeclaredReferenceExpression || current is MemberExpression) return
 
@@ -190,7 +190,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         }
     }
 
-    private fun resolveFieldUsages(curClass: RecordDeclaration?, parent: Node?, current: Node) {
+    private fun resolveFieldUsages(curClass: RecordDeclaration?, parent: Node?, current: Node?) {
         if (current !is MemberExpression) {
             return
         }

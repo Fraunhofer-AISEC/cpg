@@ -42,14 +42,14 @@ abstract class SymbolResolverPass : Pass() {
     protected val superTypesMap = mutableMapOf<Name, List<Type>>()
 
     /** Maps the name of the type of record declarations to its declaration. */
-    protected fun findRecords(node: Node) {
+    protected fun findRecords(node: Node?) {
         if (node is RecordDeclaration) {
             recordMap.putIfAbsent(node.name, node)
         }
     }
 
     /** Maps the type of enums to its declaration. */
-    protected fun findEnums(node: Node) {
+    protected fun findEnums(node: Node?) {
         if (node is EnumDeclaration) {
             // TODO: Use the name instead of the type.
             val type = TypeParser.createFrom(node.name, node.language)
@@ -58,7 +58,7 @@ abstract class SymbolResolverPass : Pass() {
     }
 
     /** Caches all TemplateDeclarations in [templateList] */
-    protected fun findTemplates(node: Node) {
+    protected fun findTemplates(node: Node?) {
         if (node is TemplateDeclaration) {
             templateList.add(node)
         }

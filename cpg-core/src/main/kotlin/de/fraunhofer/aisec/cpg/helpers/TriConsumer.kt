@@ -23,9 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.helpers;
+package de.fraunhofer.aisec.cpg.helpers
 
-@FunctionalInterface
-public interface TriConsumer<A, B, C> {
-  void accept(A first, B second, C third);
+fun interface TriConsumer<A, B, C> {
+    fun accept(first: A, second: B, third: C)
 }

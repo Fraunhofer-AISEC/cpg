@@ -103,14 +103,14 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    private fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node) {
+    private fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node?) {
         if (currentNode is MethodDeclaration && currentClass != null) {
             containingType[currentNode] =
                 TypeParser.createFrom(currentClass.name, currentClass.language)
         }
     }
 
-    private fun fixInitializers(node: Node) {
+    private fun fixInitializers(node: Node?) {
         if (node is VariableDeclaration) {
             // check if we have the corresponding class for this type
             val typeString = node.type.root.name
@@ -142,7 +142,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun handleNode(node: Node) {
+    protected fun handleNode(node: Node?) {
         when (node) {
             is TranslationUnitDeclaration -> {
                 currentTU = node
