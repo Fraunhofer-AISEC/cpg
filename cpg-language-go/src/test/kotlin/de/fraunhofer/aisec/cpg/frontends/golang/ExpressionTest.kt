@@ -27,22 +27,19 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.assertFullName
+import de.fraunhofer.aisec.cpg.assertLiteralValue
+import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import java.nio.file.Path
-import kotlin.test.assertNotNull
-import kotlin.test.assertSame
-import org.junit.jupiter.api.Test
+import kotlin.test.*
 
 class ExpressionTest {
     @Test
-    fun testTypeAssert() {
+    fun testCastExpression() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -54,10 +51,10 @@ class ExpressionTest {
             }
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<NamespaceDeclaration>("main")
+        val main = tu.namespaces["main"]
         assertNotNull(main)
 
-        val mainFunc = main.byNameOrNull<FunctionDeclaration>("main")
+        val mainFunc = main.functions["main"]
         assertNotNull(mainFunc)
 
         val f =
@@ -74,5 +71,69 @@ class ExpressionTest {
         assertNotNull(cast)
         assertFullName("main.MyStruct", cast.castType)
         assertSame(f, (cast.expression as? DeclaredReferenceExpression)?.refersTo)
+
+        val ignored = main.variables("_")
+        ignored.forEach { assertIs<CastExpression>(it.initializer) }
+    }
+
+    @Test
+    fun testSliceExpression() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("slices.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val a = tu.variables["a"]
+        assertNotNull(a)
+        assertLocalName("int[]", a.type)
+
+        val b = tu.variables["b"]
+        assertNotNull(b)
+        assertLocalName("int[]", b.type)
+
+        // [:1]
+        var slice =
+            assertIs<SliceExpression>(
+                assertIs<ArraySubscriptionExpression>(b.initializer).subscriptExpression
+            )
+        assertNull(slice.lowerBound)
+        assertLiteralValue(1, slice.upperBound)
+        assertNull(slice.third)
+
+        val c = tu.variables["c"]
+        assertNotNull(c)
+        assertLocalName("int[]", c.type)
+
+        // [1:]
+        slice = assertIs(assertIs<ArraySubscriptionExpression>(c.initializer).subscriptExpression)
+        assertLiteralValue(1, slice.lowerBound)
+        assertNull(slice.upperBound)
+        assertNull(slice.third)
+
+        val d = tu.variables["d"]
+        assertNotNull(d)
+        assertLocalName("int[]", d.type)
+
+        // [0:1]
+        slice = assertIs(assertIs<ArraySubscriptionExpression>(d.initializer).subscriptExpression)
+        assertLiteralValue(0, slice.lowerBound)
+        assertLiteralValue(1, slice.upperBound)
+        assertNull(slice.third)
+
+        val e = tu.variables["e"]
+        assertNotNull(e)
+        assertLocalName("int[]", e.type)
+
+        // [0:1:1]
+        slice = assertIs(assertIs<ArraySubscriptionExpression>(e.initializer).subscriptExpression)
+        assertLiteralValue(0, slice.lowerBound)
+        assertLiteralValue(1, slice.upperBound)
+        assertLiteralValue(1, slice.third)
     }
 }

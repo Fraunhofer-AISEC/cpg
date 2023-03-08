@@ -128,6 +128,11 @@ class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitial
             .toString()
     }
 
+    override val assignments: List<Assignment>
+        get() {
+            return initializer?.let { listOf(Assignment(it, this, this)) } ?: listOf()
+        }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true

@@ -50,8 +50,8 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
 
     /**
      * The expression which represents the "subscription" or index on which the array is accessed.
-     * This can for example be a reference to another variable ([DeclaredReferenceExpression]) or a
-     * [Literal].
+     * This can for example be a reference to another variable ([DeclaredReferenceExpression]), a
+     * [Literal] or a [SliceExpression].
      */
     @AST var subscriptExpression: Expression = ProblemExpression("could not parse index expression")
 
@@ -61,8 +61,18 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
     override val operatorCode: String
         get() = "[]"
 
+    /**
+     * This helper function returns the subscript type of the [arrayType]. We have to differentiate
+     * here between to types of subscripts:
+     * * Slices (in the form of a [SliceExpression] return the same type as the array
+     * * Everything else (for example a [Literal] or any other [Expression] that is being evaluated)
+     *   returns the de-referenced type
+     */
     private fun getSubscriptType(arrayType: Type): Type {
-        return arrayType.dereference()
+        return when (subscriptExpression) {
+            is SliceExpression -> arrayType
+            else -> arrayType.dereference()
+        }
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {

@@ -46,8 +46,12 @@ func (frontend *GoLanguageFrontend) NewIncludeDeclaration(fset *token.FileSet, a
 	return (*cpg.IncludeDeclaration)(frontend.NewDeclaration("IncludeDeclaration", fset, astNode, name))
 }
 
-func (frontend *GoLanguageFrontend) NewFunctionDeclaration(fset *token.FileSet, astNode ast.Node, name string) *cpg.FunctionDeclaration {
-	return (*cpg.FunctionDeclaration)(frontend.NewDeclaration("FunctionDeclaration", fset, astNode, name))
+func (frontend *GoLanguageFrontend) NewFunctionDeclaration(fset *token.FileSet, astNode ast.Node, name string, code string, localNameOnly bool) *cpg.FunctionDeclaration {
+	return (*cpg.FunctionDeclaration)(frontend.NewDeclaration("FunctionDeclaration", fset, astNode, name,
+		cpg.NewString(code),
+		jnigi.NewObjectRef("java/lang/Object"),
+		localNameOnly,
+	))
 }
 
 func (frontend *GoLanguageFrontend) NewMethodDeclaration(fset *token.FileSet, astNode ast.Node, name string) *cpg.MethodDeclaration {

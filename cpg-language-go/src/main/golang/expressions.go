@@ -59,15 +59,19 @@ type CastExpression Expression
 type NewExpression Expression
 type ArrayCreationExpression Expression
 type ArraySubscriptionExpression Expression
+type SliceExpression Expression
 type ConstructExpression Expression
 type InitializerListExpression Expression
 type MemberCallExpression CallExpression
 type MemberExpression Expression
 type BinaryOperator Expression
+type AssignExpression Expression
 type UnaryOperator Expression
 type Literal Expression
 type DeclaredReferenceExpression Expression
 type KeyValueExpression Expression
+type LambdaExpression Expression
+type ProblemExpression Expression
 
 func (e *Expression) SetType(t *Type) {
 	(*HasType)(e).SetType(t)
@@ -143,6 +147,28 @@ func (b *BinaryOperator) SetOperatorCode(s string) (err error) {
 	return (*jnigi.ObjectRef)(b).SetField(env, "operatorCode", NewString(s))
 }
 
+func (a *AssignExpression) SetLHS(e []*Expression) {
+	list, err := ListOf(e)
+	if err != nil {
+		panic(err)
+	}
+
+	(*jnigi.ObjectRef)(a).CallMethod(env, "setLhs", nil, list.Cast("java/util/List"))
+}
+
+func (a *AssignExpression) SetRHS(e []*Expression) {
+	list, err := ListOf(e)
+	if err != nil {
+		panic(err)
+	}
+
+	(*jnigi.ObjectRef)(a).CallMethod(env, "setRhs", nil, list.Cast("java/util/List"))
+}
+
+func (a *AssignExpression) SetOperatorCode(op string) {
+	(*jnigi.ObjectRef)(a).CallMethod(env, "setOperatorCode", nil, NewString(op))
+}
+
 func (u *UnaryOperator) SetInput(e *Expression) {
 	(*jnigi.ObjectRef)(u).CallMethod(env, "setInput", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }
@@ -184,6 +210,18 @@ func (r *ArraySubscriptionExpression) SetSubscriptExpression(e *Expression) {
 	(*jnigi.ObjectRef)(r).CallMethod(env, "setSubscriptExpression", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }
 
+func (s *SliceExpression) SetLowerBound(e *Expression) {
+	(*jnigi.ObjectRef)(s).CallMethod(env, "setLowerBound", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
+}
+
+func (s *SliceExpression) SetUpperBound(e *Expression) {
+	(*jnigi.ObjectRef)(s).CallMethod(env, "setUpperBound", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
+}
+
+func (s *SliceExpression) SetThird(e *Expression) {
+	(*jnigi.ObjectRef)(s).CallMethod(env, "setThird", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
+}
+
 func (c *ConstructExpression) AddArgument(e *Expression) {
 	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }
@@ -198,8 +236,13 @@ func (n *NewExpression) SetInitializer(e *Expression) (err error) {
 	return
 }
 
-func (c *InitializerListExpression) AddInitializer(e *Expression) {
-	(*jnigi.ObjectRef)(c).CallMethod(env, "addInitializer", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
+func (c *InitializerListExpression) SetInitializers(e []*Expression) {
+	l, err := ListOf(e)
+	if err != nil {
+		panic(err)
+	}
+
+	(*jnigi.ObjectRef)(c).CallMethod(env, "setInitializers", nil, l.Cast("java/util/List"))
 }
 
 func (k *KeyValueExpression) SetKey(e *Expression) {
@@ -208,4 +251,11 @@ func (k *KeyValueExpression) SetKey(e *Expression) {
 
 func (k *KeyValueExpression) SetValue(e *Expression) {
 	(*jnigi.ObjectRef)(k).CallMethod(env, "setValue", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
+}
+
+func (l *LambdaExpression) SetFunction(f *FunctionDeclaration) {
+	err := (*jnigi.ObjectRef)(l).CallMethod(env, "setFunction", nil, (*jnigi.ObjectRef)(f).Cast(FunctionDeclarationClass))
+	if err != nil {
+		panic(err)
+	}
 }

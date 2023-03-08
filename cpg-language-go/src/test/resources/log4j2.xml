@@ -2,7 +2,7 @@
     <Appenders>
         <Console name="STDOUT" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss,SSS} %-5p %C{1} %m%n"/>
-            <ThresholdFilter level="DEBUG"/>
+            <ThresholdFilter level="TRACE"/>
         </Console>
     </Appenders>
     <Loggers>

@@ -114,6 +114,7 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
             scopeManager.addDeclaration(inferred)
 
             // Some magic that adds it to static imports. Not sure if this really needed
+
             if (record != null) {
                 if (isStatic) {
                     record.staticImports.add(inferred)
@@ -149,6 +150,7 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
     private fun <T : Declaration> inferInScopeOf(start: Node, init: () -> T): T {
         return scopeManager.withScope(scopeManager.lookupScope(start), init)
     }
+
 
     private fun createInferredParameters(function: FunctionDeclaration, signature: List<Type?>) {
         // To save some unnecessary scopes, we only want to "enter" the function if it is necessary,
@@ -330,6 +332,33 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
         // add this record declaration to the current TU (this bypasses the scope manager)
         currentTU.addDeclaration(declaration)
         return declaration
+    }
+
+    fun createInferredNamespaceDeclaration(name: Name, path: String?): NamespaceDeclaration {
+        // Here be dragons. Jump to the scope that the node defines directly, so that we can
+        // delegate further operations to the scope manager. We also save the old scope so we can
+        // restore it.
+        return inferInScopeOf(start) {
+            log.debug(
+                "Inferring a new namespace declaration $name ${
+                    if (path != null) {
+                        "with path '$path'"
+                    } else {
+                        ""
+                    }
+                }"
+            )
+
+            val inferred = newNamespaceDeclaration(name)
+            inferred.path = path
+
+            scopeManager.addDeclaration(inferred)
+
+            // We need to "enter" the scope to make it known to the scope map of the ScopeManager
+            scopeManager.enterScope(inferred)
+            scopeManager.leaveScope(inferred)
+            inferred
+        }
     }
 }
 

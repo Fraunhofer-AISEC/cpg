@@ -462,7 +462,7 @@ class ScopeManager : ScopeProvider {
             if (scope == null) {
                 LOGGER.error(
                     "Break inside of unbreakable scope. The break will be ignored, but may lead " +
-                        "to an incorrect graph. The source code is not valid or incomplete."
+                            "to an incorrect graph. The source code is not valid or incomplete."
                 )
                 return
             }
@@ -487,7 +487,7 @@ class ScopeManager : ScopeProvider {
             if (scope == null) {
                 LOGGER.error(
                     "Continue inside of not continuable scope. The continue will be ignored, but may lead " +
-                        "to an incorrect graph. The source code is not valid or incomplete."
+                            "to an incorrect graph. The source code is not valid or incomplete."
                 )
                 return
             }
@@ -599,30 +599,30 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = currentScope
     ): ValueDeclaration? {
         return resolve<ValueDeclaration>(scope) {
-                if (
-                    it.name.lastPartsMatch(ref.name)
-                ) { // TODO: This place is likely to make things fail
-                    // If the reference seems to point to a function the entire signature is checked
-                    // for equality
-                    if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
-                        val fptrType = (ref as HasType).type as FunctionPointerType
-                        // TODO(oxisto): This is the third place where function pointers are
-                        //   resolved. WHY?
-                        // TODO(oxisto): Support multiple return values
-                        val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
-                        if (
-                            returnType == fptrType.returnType &&
-                                it.hasSignature(fptrType.parameters)
-                        ) {
-                            return@resolve true
-                        }
-                    } else {
-                        return@resolve it !is FunctionDeclaration
+            if (
+                it.name.lastPartsMatch(ref.name)
+            ) { // TODO: This place is likely to make things fail
+                // If the reference seems to point to a function the entire signature is checked
+                // for equality
+                if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
+                    val fptrType = (ref as HasType).type as FunctionPointerType
+                    // TODO(oxisto): This is the third place where function pointers are
+                    //   resolved. WHY?
+                    // TODO(oxisto): Support multiple return values
+                    val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
+                    if (
+                        returnType == fptrType.returnType &&
+                        it.hasSignature(fptrType.parameters)
+                    ) {
+                        return@resolve true
                     }
+                } else {
+                    return@resolve it !is FunctionDeclaration
                 }
-
-                return@resolve false
             }
+
+            return@resolve false
+        }
             .firstOrNull()
     }
 
@@ -637,19 +637,19 @@ class ScopeManager : ScopeProvider {
         call: CallExpression,
         scope: Scope? = currentScope
     ): List<FunctionDeclaration> {
-        val s = extractScope(call.name, scope)
+        val s = extractScope(call, scope)
 
         return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
     }
 
-    fun extractScope(name: Name, scope: Scope? = currentScope): Scope? {
+    fun extractScope(node: Node, scope: Scope? = currentScope): Scope? {
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
-        if (name.parent != null) {
+        if (node.name.parent != null) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = name.parent
+            val scopeName = node.name.parent
 
             // TODO: proper scope selection
 
@@ -657,12 +657,12 @@ class ScopeManager : ScopeProvider {
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
-                    LOGGER.error(
-                        "Could not find the scope {} needed to resolve the call {}. Falling back to the default (current) scope",
-                        scopeName,
-                        name
+                    Util.errorWithFileLocation(
+                        node,
+                        LOGGER,
+                        "Could not find the scope $scopeName needed to resolve the call ${node.name}. Falling back to the default (current) scope"
                     )
-                    scope
+                    s
                 } else {
                     scopes[0]
                 }

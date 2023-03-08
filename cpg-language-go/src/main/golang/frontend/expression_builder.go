@@ -70,6 +70,10 @@ func (frontend *GoLanguageFrontend) NewArraySubscriptionExpression(fset *token.F
 	return (*cpg.ArraySubscriptionExpression)(frontend.NewExpression("ArraySubscriptionExpression", fset, astNode))
 }
 
+func (frontend *GoLanguageFrontend) NewSliceExpression(fset *token.FileSet, astNode ast.Node) *cpg.SliceExpression {
+	return (*cpg.SliceExpression)(frontend.NewExpression("SliceExpression", fset, astNode))
+}
+
 func (frontend *GoLanguageFrontend) NewConstructExpression(fset *token.FileSet, astNode ast.Node) *cpg.ConstructExpression {
 	return (*cpg.ConstructExpression)(frontend.NewExpression("ConstructExpression", fset, astNode))
 }
@@ -80,6 +84,12 @@ func (frontend *GoLanguageFrontend) NewInitializerListExpression(fset *token.Fil
 
 func (frontend *GoLanguageFrontend) NewBinaryOperator(fset *token.FileSet, astNode ast.Node, opCode string) *cpg.BinaryOperator {
 	return (*cpg.BinaryOperator)(frontend.NewExpression("BinaryOperator", fset, astNode,
+		cpg.NewString(opCode),
+	))
+}
+
+func (frontend *GoLanguageFrontend) NewAssignExpression(fset *token.FileSet, astNode ast.Node, opCode string) *cpg.AssignExpression {
+	return (*cpg.AssignExpression)(frontend.NewExpression("AssignExpression", fset, astNode,
 		cpg.NewString(opCode),
 	))
 }
@@ -98,6 +108,10 @@ func (frontend *GoLanguageFrontend) NewLiteral(fset *token.FileSet, astNode ast.
 		value = value.Cast("java/lang/Object")
 	}
 
+	if typ == nil {
+		panic("typ is nil")
+	}
+
 	return (*cpg.Literal)(frontend.NewExpression("Literal", fset, astNode, value, typ.Cast(cpg.TypeClass)))
 }
 
@@ -107,6 +121,14 @@ func (frontend *GoLanguageFrontend) NewDeclaredReferenceExpression(fset *token.F
 
 func (frontend *GoLanguageFrontend) NewKeyValueExpression(fset *token.FileSet, astNode ast.Node) *cpg.KeyValueExpression {
 	return (*cpg.KeyValueExpression)(frontend.NewExpression("KeyValueExpression", fset, astNode))
+}
+
+func (frontend *GoLanguageFrontend) NewLambdaExpression(fset *token.FileSet, astNode ast.Node) *cpg.LambdaExpression {
+	return (*cpg.LambdaExpression)(frontend.NewExpression("LambdaExpression", fset, astNode))
+}
+
+func (frontend *GoLanguageFrontend) NewProblemExpression(fset *token.FileSet, astNode ast.Node, problem string) *cpg.ProblemExpression {
+	return (*cpg.ProblemExpression)(frontend.NewExpression("ProblemExpression", fset, astNode, cpg.NewString(problem)))
 }
 
 func (frontend *GoLanguageFrontend) NewExpression(typ string, fset *token.FileSet, astNode ast.Node, args ...any) *jnigi.ObjectRef {

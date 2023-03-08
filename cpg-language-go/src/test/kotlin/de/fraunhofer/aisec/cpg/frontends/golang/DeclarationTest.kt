@@ -27,11 +27,15 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.assertFullName
+import de.fraunhofer.aisec.cpg.assertLiteralValue
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.variables
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -112,5 +116,58 @@ class DeclarationTest {
         // since it is embedded and thus MyInterface "extends" it
         assertContains(myInterface.superTypeDeclarations, myOtherInterface)
         assertTrue(myInterface.superClasses.any { it.name == myOtherInterface.name })
+    }
+
+    @Test
+    fun testMultipleDeclarations() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("declare.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val main = tu.functions["main.main"]
+        assertNotNull(main)
+
+        // We should have 7 variables (a, b, c, d, e, f, g)
+        assertEquals(7, tu.variables.size)
+
+        // Four should have (literal) initializers
+        val a = main.variables["a"]
+        assertLiteralValue(1, a?.initializer)
+
+        val b = main.variables["b"]
+        assertLiteralValue(2, b?.initializer)
+
+        val c = main.variables["c"]
+        assertLiteralValue(3, c?.initializer)
+
+        val d = main.variables["d"]
+        assertLiteralValue(4, d?.initializer)
+
+        // The next two variables are using a short assignment, therefore they do not have an
+        // initializer, but we can use the firstAssignment function
+        val e = main.variables["e"]
+        assertLiteralValue(5, e?.firstAssignment)
+
+        val f = main.variables["f"]
+        assertLiteralValue(6, f?.firstAssignment)
+
+        // And they should all be connected to the arguments of the Printf call
+        val printf = main.calls["Printf"]
+        assertNotNull(printf)
+
+        printf.arguments.drop(1).forEach {
+            val ref = assertIs<DeclaredReferenceExpression>(it)
+            assertNotNull(ref.refersTo)
+        }
+
+        // We have eight assignments in total (6 initializers + 2 assign expressions)
+        assertEquals(8, tu.assignments.size)
     }
 }

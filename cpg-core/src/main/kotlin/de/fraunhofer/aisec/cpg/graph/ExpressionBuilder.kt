@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
@@ -405,6 +406,24 @@ fun MetadataProvider.newArraySubscriptionExpression(
     rawNode: Any? = null
 ): ArraySubscriptionExpression {
     val node = ArraySubscriptionExpression()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [SliceExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newSliceExpression(
+    code: String? = null,
+    rawNode: Any? = null
+): SliceExpression {
+    val node = SliceExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
