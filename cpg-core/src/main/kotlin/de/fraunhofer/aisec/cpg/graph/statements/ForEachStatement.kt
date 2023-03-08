@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import java.util.Objects
 
 class ForEachStatement : Statement() {
@@ -33,13 +33,13 @@ class ForEachStatement : Statement() {
      * This field contains the iteration variable of the loop. It can be either a new variable
      * declaration or a reference to an existing variable.
      */
-    @field:SubGraph("AST") var variable: Statement? = null
+    @AST var variable: Statement? = null
 
     /** This field contains the iteration subject of the loop. */
-    @field:SubGraph("AST") var iterable: Statement? = null
+    @AST var iterable: Statement? = null
 
     /** This field contains the body of the loop. */
-    @field:SubGraph("AST") var statement: Statement? = null
+    @AST var statement: Statement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

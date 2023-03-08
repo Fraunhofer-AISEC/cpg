@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -35,7 +35,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  */
 class LabelStatement : Statement() {
     /** Statement that the label is attached to. Can be a simple or compound statement. */
-    @field:SubGraph("AST") var subStatement: Statement? = null
+    @AST var subStatement: Statement? = null
 
     /** Label in the form of a String */
     var label: String? = null

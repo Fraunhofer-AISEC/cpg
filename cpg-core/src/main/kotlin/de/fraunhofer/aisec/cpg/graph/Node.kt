@@ -117,8 +117,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      *
      * Note: This only returns the *direct* children of this node. If you want to have *all*
      * children, e.g., a flattened AST, you need to call [Node.allChildren].
+     *
+     * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM
+     * persistence. Therefore, this property is a `var` and not a `val`.
      */
-    val astChildren: List<Node>
+    @Relationship("AST")
+    var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
@@ -172,7 +176,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     var argumentIndex = 0
 
     /** List of annotations associated with that node. */
-    @field:SubGraph("AST") var annotations: MutableList<Annotation> = ArrayList()
+    @AST var annotations: MutableList<Annotation> = ArrayList()
 
     fun removePrevEOGEntry(eog: Node) {
         removePrevEOGEntries(listOf(eog))

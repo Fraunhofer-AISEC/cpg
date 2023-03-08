@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -50,11 +50,11 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder {
      * Edges to nested namespaces, records, functions, fields etc. contained in the current
      * namespace.
      */
-    @field:SubGraph("AST") override val declarations: MutableList<Declaration> = ArrayList()
+    @AST override val declarations: MutableList<Declaration> = ArrayList()
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
 
     /**

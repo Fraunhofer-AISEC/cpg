@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -47,7 +47,7 @@ open class DeclarationStatement : Statement() {
      * it only contains a single [Declaration].
      */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var declarationEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
 
     override var declarations by PropertyEdgeDelegate(DeclarationStatement::declarationEdges)

@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
@@ -41,22 +41,22 @@ import org.neo4j.ogm.annotation.Relationship
 class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHolder {
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     val declarationEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
 
     /** A list of includes within this unit. */
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     val includeEdges: MutableList<PropertyEdge<IncludeDeclaration>> = ArrayList()
 
     /** A list of namespaces within this unit. */
     @Relationship(value = "NAMESPACES", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     val namespaceEdges: MutableList<PropertyEdge<NamespaceDeclaration>> = ArrayList()
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
 
     override val declarations: List<Declaration>

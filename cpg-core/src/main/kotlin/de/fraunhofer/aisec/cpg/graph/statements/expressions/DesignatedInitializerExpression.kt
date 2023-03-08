@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import java.util.Objects
@@ -34,10 +34,10 @@ import org.neo4j.ogm.annotation.Relationship
 
 // TODO: Document this class!
 class DesignatedInitializerExpression : Expression() {
-    @field:SubGraph("AST") var rhs: Expression? = null
+    @AST var rhs: Expression? = null
 
     @Relationship(value = "LHS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var lhsEdges: MutableList<PropertyEdge<Expression>> = mutableListOf()
 
     var lhs: List<Expression> by PropertyEdgeDelegate(DesignatedInitializerExpression::lhsEdges)

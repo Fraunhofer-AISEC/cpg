@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
@@ -37,19 +37,19 @@ import java.util.Objects
  */
 class SwitchStatement : Statement() {
     /** Selector that determines the case/default statement of the subsequent execution */
-    @field:SubGraph("AST") var selector: Expression? = null
+    @AST var selector: Expression? = null
 
     /** C++ can have an initializer statement in a switch */
-    @field:SubGraph("AST") var initializerStatement: Statement? = null
+    @AST var initializerStatement: Statement? = null
 
     /** C++ allows to use a declaration instead of a expression as selector */
-    @field:SubGraph("AST") var selectorDeclaration: Declaration? = null
+    @AST var selectorDeclaration: Declaration? = null
 
     /**
      * The compound statement that contains break/default statements with regular statements on the
      * same hierarchy
      */
-    @field:SubGraph("AST") var statement: Statement? = null
+    @AST var statement: Statement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

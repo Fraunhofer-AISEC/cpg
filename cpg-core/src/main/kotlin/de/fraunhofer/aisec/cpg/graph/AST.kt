@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 
 /**
  * Annotates single member variables of supertype [Node] or a collection of nodes to be part of the
- * a sub-graph of the current Node. This is used to iterate over all AST sub-nodes with
- * [SubgraphWalker.getAstChildren]. Could be replaced with @Relationship{sub-graph:'ast'} if
- * switching to an OGM that supports relationship properties.
+ * AST of the current [Node]. This is used to iterate over all AST sub-nodes with
+ * [SubgraphWalker.getAstChildren].
  */
-@Target(AnnotationTarget.FIELD)
-@Retention(AnnotationRetention.RUNTIME)
-@EdgeProperty(key = "sub-graph")
-annotation class SubGraph(vararg val value: String)
+@Target(AnnotationTarget.FIELD) @Retention(AnnotationRetention.RUNTIME) annotation class AST

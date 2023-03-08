@@ -25,14 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 
 class SynchronizedStatement : Statement() {
-    @field:SubGraph("AST") var expression: Expression? = null
+    @AST var expression: Expression? = null
 
-    @field:SubGraph("AST") var blockStatement: CompoundStatement? = null
+    @AST var blockStatement: CompoundStatement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

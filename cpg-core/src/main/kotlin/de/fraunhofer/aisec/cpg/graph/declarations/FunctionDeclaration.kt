@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -45,7 +45,7 @@ import org.neo4j.ogm.annotation.Relationship
 /** Represents the declaration or definition of a function. */
 open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     /** The function body. Usually a [CompoundStatement]. */
-    @field:SubGraph("AST") var body: Statement? = null
+    @AST var body: Statement? = null
 
     /**
      * Classes and Structs can be declared inside a function and are only valid within the function.
@@ -55,7 +55,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
 
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var parameterEdges = mutableListOf<PropertyEdge<ParamVariableDeclaration>>()
 
     /** Virtual property for accessing [parameterEdges] without property edges. */

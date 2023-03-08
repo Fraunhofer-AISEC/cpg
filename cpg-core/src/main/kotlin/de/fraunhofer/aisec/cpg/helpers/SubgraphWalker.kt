@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -59,7 +59,7 @@ object SubgraphWalker {
 
     /**
      * Returns all the fields for a specific class type. Because this information is static during
-     * runtime, we do cache this information in [.fieldCache] for performance reasons.
+     * runtime, we do cache this information in [fieldCache] for performance reasons.
      *
      * @param classType the class type
      * @return its fields, including the ones from its superclass
@@ -86,7 +86,7 @@ object SubgraphWalker {
 
     /**
      * Retrieves a list of AST children of the specified node by iterating all fields that are
-     * annotated with the [SubGraph] annotation and its value "AST".
+     * annotated with the [AST] annotation.
      *
      * Please note, that you SHOULD NOT call this directly in a recursive function, since the AST
      * might have loops and you will probably run into a [StackOverflowError]. Therefore, use of
@@ -148,8 +148,8 @@ object SubgraphWalker {
         // We currently need to stick to pure Java reflection, since Kotlin reflection
         // is EXTREMELY slow. See https://youtrack.jetbrains.com/issue/KT-32198
         for (field in getAllFields(classType)) {
-            val subGraph = field.getAnnotation(SubGraph::class.java)
-            if (subGraph != null && listOf(*subGraph.value).contains("AST")) {
+            val ast = field.getAnnotation(AST::class.java)
+            if (ast != null) {
                 try {
                     // disable access mechanisms
                     field.trySetAccessible()

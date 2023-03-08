@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 
@@ -40,7 +40,7 @@ class CaseStatement : Statement() {
      * Primitive side effect free statement that has to match with the evaluated selector in
      * SwitchStatement
      */
-    @field:SubGraph("AST") var caseExpression: Expression? = null
+    @AST var caseExpression: Expression? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -39,10 +39,9 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * valueIfFalse`;
  */
 class ConditionalExpression : Expression(), HasType.TypeListener {
-    @field:SubGraph("AST")
-    var condition: Expression = ProblemExpression("could not parse condition expression")
+    @AST var condition: Expression = ProblemExpression("could not parse condition expression")
 
-    @field:SubGraph("AST")
+    @AST
     var thenExpr: Expression? = null
         set(value) {
             field?.unregisterTypeListener(this)
@@ -50,7 +49,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
             value?.registerTypeListener(this)
         }
 
-    @field:SubGraph("AST")
+    @AST
     var elseExpr: Expression? = null
         set(value) {
             field?.unregisterTypeListener(this)
