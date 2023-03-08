@@ -367,7 +367,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 recordDeclaration.newFieldDeclaration(
                     name.localName,
                     type,
-                    listOf<String>(),
+                    listOf(),
                     "",
                     null,
                     null,

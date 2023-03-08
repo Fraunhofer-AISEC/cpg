@@ -398,17 +398,23 @@ class CXXLanguageFrontend(
                 1 -> // a variable
                 newDeclaredReferenceExpression(code, UnknownType.getUnknownType(language), code)
                 2 -> // an integer
-                newLiteral(code.toInt(), newPrimitiveType("int"), code)
+                newLiteral(
+                        code.toInt(),
+                        (language.getSimpleTypeOf("int") as? ObjectType) ?: parseType("int"),
+                        code
+                    )
                 130 -> // a string
                 newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
-                        newPrimitiveType("char", NumericType.Modifier.NOT_APPLICABLE).reference(),
+                        (language.getSimpleTypeOf("char") as? ObjectType)?.reference()
+                            ?: parseType("char"),
                         code
                     )
                 else ->
                     newLiteral(
                         code,
-                        newPrimitiveType("char", NumericType.Modifier.NOT_APPLICABLE).reference(),
+                        (language.getSimpleTypeOf("char") as? ObjectType)?.reference()
+                            ?: parseType("char"),
                         code
                     )
             }

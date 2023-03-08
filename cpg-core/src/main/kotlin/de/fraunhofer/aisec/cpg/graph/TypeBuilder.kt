@@ -25,27 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
-import de.fraunhofer.aisec.cpg.graph.types.NumericType.Modifier
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-
-fun LanguageProvider.newPrimitiveType(
-    name: String,
-    modifier: Modifier = Modifier.SIGNED,
-): ObjectType {
-    val type = language?.getSimpleTypeOf(name)
-    if ((type as? NumericType)?.modifier != modifier) {
-        // Try again but explicitly state "signed" or "unsigned" as our best guess.
-        val modifierStr =
-            when (modifier) {
-                Modifier.SIGNED -> "signed "
-                Modifier.UNSIGNED -> "unsigned "
-                else -> ""
-            }
-        return language?.getSimpleTypeOf(modifierStr + name) as ObjectType
-    }
-    return type
-}
 
 fun ObjectType.const(): ObjectType {
     return ObjectType(this, listOf(), this.isPrimitive, this.language)
