@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -48,7 +48,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
     /** Determines if we can modify variables declared outside the lambda from inside the lambda */
     var areVariablesMutable: Boolean = true
 
-    @field:SubGraph("AST")
+    @AST
     var function: FunctionDeclaration? = null
         set(value) {
             if (value != null) {

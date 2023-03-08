@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
@@ -47,38 +47,38 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
     var kind: String? = null
 
     @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var fieldEdges: MutableList<PropertyEdge<FieldDeclaration>> = ArrayList()
 
     var fields by PropertyEdgeDelegate(RecordDeclaration::fieldEdges)
 
     @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var methodEdges: MutableList<PropertyEdge<MethodDeclaration>> = ArrayList()
 
     var methods by PropertyEdgeDelegate(RecordDeclaration::methodEdges)
 
     @Relationship(value = "CONSTRUCTORS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var constructorEdges: MutableList<PropertyEdge<ConstructorDeclaration>> = ArrayList()
 
     var constructors by PropertyEdgeDelegate(RecordDeclaration::constructorEdges)
 
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var recordEdges: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
 
     var records by PropertyEdgeDelegate(RecordDeclaration::recordEdges)
 
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var templateEdges: MutableList<PropertyEdge<TemplateDeclaration>> = ArrayList()
 
     var templates by PropertyEdgeDelegate(RecordDeclaration::templateEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
 
     override var statements by PropertyEdgeDelegate(RecordDeclaration::statementEdges)

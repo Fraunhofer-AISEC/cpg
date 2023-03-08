@@ -25,21 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 
 class ForStatement : Statement() {
-    @field:SubGraph("AST") var statement: Statement? = null
+    @AST var statement: Statement? = null
 
-    @field:SubGraph("AST") var initializerStatement: Statement? = null
+    @AST var initializerStatement: Statement? = null
 
-    @field:SubGraph("AST") var conditionDeclaration: Declaration? = null
+    @AST var conditionDeclaration: Declaration? = null
 
-    @field:SubGraph("AST") var condition: Expression? = null
+    @AST var condition: Expression? = null
 
-    @field:SubGraph("AST") var iterationStatement: Statement? = null
+    @AST var iterationStatement: Statement? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

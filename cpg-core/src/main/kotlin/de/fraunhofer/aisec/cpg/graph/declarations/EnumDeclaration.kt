@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -34,7 +34,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 class EnumDeclaration : Declaration() {
     @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var entryEdges: MutableList<PropertyEdge<EnumConstantDeclaration>> = ArrayList()
 
     @Relationship(value = "SUPER_TYPES", direction = Relationship.Direction.OUTGOING)

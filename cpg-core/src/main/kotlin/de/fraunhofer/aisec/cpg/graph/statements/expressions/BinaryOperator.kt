@@ -40,7 +40,7 @@ import org.neo4j.ogm.annotation.Transient
  */
 class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, ArgumentHolder {
     /** The left-hand expression. */
-    @field:SubGraph("AST")
+    @AST
     var lhs: Expression = ProblemExpression("could not parse lhs")
         set(value) {
             disconnectOldLhs()
@@ -49,7 +49,7 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
         }
 
     /** The right-hand expression. */
-    @field:SubGraph("AST")
+    @AST
     var rhs: Expression = ProblemExpression("could not parse rhs")
         set(value) {
             disconnectOldRhs()

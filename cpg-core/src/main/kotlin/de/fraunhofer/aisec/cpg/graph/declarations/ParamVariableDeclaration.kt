@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasDefault
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -36,7 +36,7 @@ class ParamVariableDeclaration : ValueDeclaration(), HasDefault<Expression?> {
     var isVariadic = false
 
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     private var defaultValue: Expression? = null
 
     override var default: Expression?

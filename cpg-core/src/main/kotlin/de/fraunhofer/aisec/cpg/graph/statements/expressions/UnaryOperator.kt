@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -39,7 +39,7 @@ import org.neo4j.ogm.annotation.Transient
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
 class UnaryOperator : Expression(), HasType.TypeListener {
     /** The expression on which the operation is applied. */
-    @field:SubGraph("AST")
+    @AST
     var input: Expression = ProblemExpression("could not parse input")
         set(value) {
             field.unregisterTypeListener(this)

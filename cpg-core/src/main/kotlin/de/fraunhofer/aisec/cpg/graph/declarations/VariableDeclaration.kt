@@ -48,7 +48,7 @@ class VariableDeclaration :
      * used often, we intentionally make this a nullable list instead of an empty list.
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var templateParameters: List<Node>? = null
 
     /**
@@ -63,7 +63,7 @@ class VariableDeclaration :
     var isArray = false
 
     /** The (optional) initializer of the declaration. */
-    @field:SubGraph("AST")
+    @AST
     override var initializer: Expression? = null
         set(value) {
             field?.unregisterTypeListener(this)

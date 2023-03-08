@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -35,14 +35,14 @@ import org.neo4j.ogm.annotation.Relationship
 /** Represents the creation of a new object through the `new` keyword. */
 class NewExpression : Expression(), HasInitializer {
     /** The initializer expression. */
-    @field:SubGraph("AST") override var initializer: Expression? = null
+    @AST override var initializer: Expression? = null
 
     /**
      * We need a way to store the templateParameters that a NewExpression might have before the
      * ConstructExpression is created
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var templateParameters: List<Node>? = null
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasDefault
 import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -41,7 +41,7 @@ class TypeParamDeclaration : ValueDeclaration(), SecondaryTypeEdge, HasDefault<T
      * be able to merge the type nodes.
      */
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     override var default: Type? = null
 
     override fun equals(other: Any?): Boolean {

@@ -25,17 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import java.util.Objects
 
 /** Expressions of the form `floor ... ceiling` */
 class ArrayRangeExpression : Expression() {
-    @field:SubGraph("AST") var floor: Expression? = null
+    @AST var floor: Expression? = null
 
-    @field:SubGraph("AST") var step: Expression? = newLiteral(1)
+    @AST var step: Expression? = newLiteral(1)
 
-    @field:SubGraph("AST") var ceiling: Expression? = null
+    @AST var ceiling: Expression? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -45,7 +45,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
      * The initializer of the expression, if present. Many languages, such as Java, either specify
      * [dimensions] or an initializer.
      */
-    @field:SubGraph("AST")
+    @AST
     var initializer: Expression? = null
         set(value) {
             field?.unregisterTypeListener(this)
@@ -59,7 +59,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
      * dimensions. In the graph, this will NOT be done.
      */
     @Relationship(value = "DIMENSIONS", direction = Relationship.Direction.OUTGOING)
-    @field:SubGraph("AST")
+    @AST
     var dimensionEdges = mutableListOf<PropertyEdge<Expression>>()
 
     /** Virtual property to access [dimensionEdges] without property edges. */
