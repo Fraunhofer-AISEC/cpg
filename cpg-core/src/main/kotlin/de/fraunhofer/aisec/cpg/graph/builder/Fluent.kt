@@ -116,7 +116,7 @@ fun LanguageFrontend.record(
 
 /**
  * Creates a new [FieldDeclaration] in the Fluent Node DSL with the given [name] and optional
- * [returnType]. The [init] block can be used to create further sub-nodes as well as configuring the
+ * [type]. The [init] block can be used to create further sub-nodes as well as configuring the
  * created node itself.
  */
 context(DeclarationHolder)
@@ -128,6 +128,8 @@ fun LanguageFrontend.field(
 ): FieldDeclaration {
     val node = newFieldDeclaration(name)
     node.type = type
+
+    init(node)
 
     scopeManager.addDeclaration(node)
 
@@ -184,9 +186,9 @@ fun LanguageFrontend.method(
 }
 
 /**
- * Creates a new [ConstructorDeclaration] in the Fluent Node DSL with the given [name] and optional
- * [returnType]. The [init] block can be used to create further sub-nodes as well as configuring the
- * created node itself.
+ * Creates a new [ConstructorDeclaration] in the Fluent Node DSL for the enclosing
+ * [RecordDeclaration]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
 context(RecordDeclaration)
 
@@ -346,12 +348,12 @@ fun LanguageFrontend.call(
 }
 /**
  * Creates a new [CallExpression] (or [MemberCallExpression]) in the Fluent Node DSL with the given
- * [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
+ * [localName] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
  * [StatementHolder] it is added to the list of [StatementHolder.statements] or in case of an
  * [ArgumentHolder], the function [ArgumentHolder.addArgument] is invoked.
  *
- * The type of expression is determined whether [name] is either a [Name] with a [Name.parent] or if
- * it can be parsed as a FQN in the given language. It also automatically creates either a
+ * The type of expression is determined whether [localName] is either a [Name] with a [Name.parent]
+ * or if it can be parsed as a FQN in the given language. It also automatically creates either a
  * [DeclaredReferenceExpression] or [MemberExpression] and sets it as the [CallExpression.callee].
  * The [init] block can be used to create further sub-nodes as well as configuring the created node
  * itself.

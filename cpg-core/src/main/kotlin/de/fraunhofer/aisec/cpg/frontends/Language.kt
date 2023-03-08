@@ -33,7 +33,10 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.io.File
 import kotlin.reflect.KClass
 
@@ -68,12 +71,21 @@ abstract class Language<T : LanguageFrontend> : Node() {
     open val accessModifiers: Set<String>
         get() = setOf("public", "protected", "private")
 
+    /** The arithmetic operations of this language */
+    open val arithmeticOperations: Set<String>
+        get() = setOf("+", "-", "*", "/", "%", "<<", ">>")
+
     /** Creates a new [LanguageFrontend] object to parse the language. */
     abstract fun newFrontend(
         config: TranslationConfiguration,
         scopeManager: ScopeManager = ScopeManager(),
     ): T
 
+    /**
+     * Returns the type conforming to the given [typeString]. If no matching type is found in the
+     * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
+     * map.
+     */
     fun getSimpleTypeOf(typeString: String) = builtInTypes[typeString]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
@@ -97,6 +109,78 @@ abstract class Language<T : LanguageFrontend> : Node() {
 
     init {
         this.also { this.language = it }
+    }
+
+    private fun arithmeticOpTypePropagation(lhs: Type, rhs: Type): Type {
+        return if (lhs is FloatingPointType && rhs !is FloatingPointType) {
+            lhs
+        } else if (lhs !is FloatingPointType && rhs is FloatingPointType) {
+            rhs
+        } else if (lhs is FloatingPointType && rhs is FloatingPointType) {
+            // We take the one with the bigger bitwidth
+            if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
+                lhs
+            } else {
+                rhs
+            }
+        } else if (lhs is IntegerType && rhs is IntegerType) {
+            // We take the one with the bigger bitwidth
+            if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
+                lhs
+            } else {
+                rhs
+            }
+        } else {
+            UnknownType.getUnknownType(this)
+        }
+    }
+
+    /**
+     * Determines how to propagate types across binary operations since these may differ among the
+     * programming languages.
+     */
+    open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
+        if (operation.operatorCode == "==" || operation.operatorCode == "===") {
+            // A comparison, so we return the type "boolean"
+            return this.builtInTypes.values.firstOrNull { it is BooleanType }
+                ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
+                    ?: UnknownType.getUnknownType(this)
+        }
+
+        return when (operation.operatorCode) {
+            "+" ->
+                if (operation.lhs.propagationType is StringType) {
+                    // string + anything => string
+                    operation.lhs.propagationType
+                } else if (operation.rhs.propagationType is StringType) {
+                    // anything + string => string
+                    operation.rhs.propagationType
+                } else {
+                    arithmeticOpTypePropagation(
+                        operation.lhs.propagationType,
+                        operation.rhs.propagationType
+                    )
+                }
+            "-",
+            "*",
+            "/" ->
+                arithmeticOpTypePropagation(
+                    operation.lhs.propagationType,
+                    operation.rhs.propagationType
+                )
+            "<<",
+            ">>" ->
+                if (
+                    operation.lhs.propagationType.isPrimitive &&
+                        operation.rhs.propagationType.isPrimitive
+                ) {
+                    // primitive type 1 OP primitive type 2 => primitive type 1
+                    operation.lhs.propagationType
+                } else {
+                    UnknownType.getUnknownType(this)
+                }
+            else -> UnknownType.getUnknownType(this) // We don't know what is this thing
+        }
     }
 }
 
