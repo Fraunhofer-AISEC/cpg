@@ -1026,7 +1026,7 @@ func (this *GoLanguageFrontend) handleIndexExpr(fset *token.FileSet, indexExpr *
 
 // handleSliceExpr handles a [ast.SliceExpr], which is an extended version of
 // [ast.IndexExpr]. We are modelling this as a combination of a
-// [cpg.ArraySubscriptionExpression] that contains a [cpg.SliceExpression] as
+// [cpg.ArraySubscriptionExpression] that contains a [cpg.RangeExpression] as
 // its subscriptExpression to share some code between this and an index
 // expression.
 func (this *GoLanguageFrontend) handleSliceExpr(fset *token.FileSet, sliceExpr *ast.SliceExpr) *cpg.ArraySubscriptionExpression {
@@ -1035,7 +1035,7 @@ func (this *GoLanguageFrontend) handleSliceExpr(fset *token.FileSet, sliceExpr *
 	a.SetArrayExpression(this.handleExpr(fset, sliceExpr.X))
 
 	// Build the slice expression
-	s := this.NewSliceExpression(fset, sliceExpr)
+	s := this.NewRangeExpression(fset, sliceExpr)
 	if sliceExpr.Low != nil {
 		s.SetLowerBound(this.handleExpr(fset, sliceExpr.Low))
 	}

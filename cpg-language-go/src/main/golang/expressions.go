@@ -59,7 +59,7 @@ type CastExpression Expression
 type NewExpression Expression
 type ArrayCreationExpression Expression
 type ArraySubscriptionExpression Expression
-type SliceExpression Expression
+type RangeExpression Expression
 type ConstructExpression Expression
 type InitializerListExpression Expression
 type MemberCallExpression CallExpression
@@ -210,15 +210,15 @@ func (r *ArraySubscriptionExpression) SetSubscriptExpression(e *Expression) {
 	(*jnigi.ObjectRef)(r).CallMethod(env, "setSubscriptExpression", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }
 
-func (s *SliceExpression) SetLowerBound(e *Expression) {
+func (s *RangeExpression) SetLowerBound(e *Expression) {
 	(*jnigi.ObjectRef)(s).CallMethod(env, "setLowerBound", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }
 
-func (s *SliceExpression) SetUpperBound(e *Expression) {
+func (s *RangeExpression) SetUpperBound(e *Expression) {
 	(*jnigi.ObjectRef)(s).CallMethod(env, "setUpperBound", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }
 
-func (s *SliceExpression) SetThird(e *Expression) {
+func (s *RangeExpression) SetThird(e *Expression) {
 	(*jnigi.ObjectRef)(s).CallMethod(env, "setThird", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }
 

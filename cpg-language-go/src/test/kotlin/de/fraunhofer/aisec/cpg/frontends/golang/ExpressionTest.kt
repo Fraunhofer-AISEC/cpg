@@ -99,11 +99,11 @@ class ExpressionTest {
 
         // [:1]
         var slice =
-            assertIs<SliceExpression>(
+            assertIs<RangeExpression>(
                 assertIs<ArraySubscriptionExpression>(b.initializer).subscriptExpression
             )
-        assertNull(slice.lowerBound)
-        assertLiteralValue(1, slice.upperBound)
+        assertNull(slice.floor)
+        assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
 
         val c = tu.variables["c"]
@@ -112,8 +112,8 @@ class ExpressionTest {
 
         // [1:]
         slice = assertIs(assertIs<ArraySubscriptionExpression>(c.initializer).subscriptExpression)
-        assertLiteralValue(1, slice.lowerBound)
-        assertNull(slice.upperBound)
+        assertLiteralValue(1, slice.floor)
+        assertNull(slice.ceiling)
         assertNull(slice.third)
 
         val d = tu.variables["d"]
@@ -122,8 +122,8 @@ class ExpressionTest {
 
         // [0:1]
         slice = assertIs(assertIs<ArraySubscriptionExpression>(d.initializer).subscriptExpression)
-        assertLiteralValue(0, slice.lowerBound)
-        assertLiteralValue(1, slice.upperBound)
+        assertLiteralValue(0, slice.floor)
+        assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
 
         val e = tu.variables["e"]
@@ -132,8 +132,8 @@ class ExpressionTest {
 
         // [0:1:1]
         slice = assertIs(assertIs<ArraySubscriptionExpression>(e.initializer).subscriptExpression)
-        assertLiteralValue(0, slice.lowerBound)
-        assertLiteralValue(1, slice.upperBound)
+        assertLiteralValue(0, slice.floor)
+        assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)
     }
 }

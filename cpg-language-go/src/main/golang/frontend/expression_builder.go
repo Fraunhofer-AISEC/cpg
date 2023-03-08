@@ -70,8 +70,8 @@ func (frontend *GoLanguageFrontend) NewArraySubscriptionExpression(fset *token.F
 	return (*cpg.ArraySubscriptionExpression)(frontend.NewExpression("ArraySubscriptionExpression", fset, astNode))
 }
 
-func (frontend *GoLanguageFrontend) NewSliceExpression(fset *token.FileSet, astNode ast.Node) *cpg.SliceExpression {
-	return (*cpg.SliceExpression)(frontend.NewExpression("SliceExpression", fset, astNode))
+func (frontend *GoLanguageFrontend) NewRangeExpression(fset *token.FileSet, astNode ast.Node) *cpg.RangeExpression {
+	return (*cpg.RangeExpression)(frontend.NewExpression("RangeExpression", fset, astNode))
 }
 
 func (frontend *GoLanguageFrontend) NewConstructExpression(fset *token.FileSet, astNode ast.Node) *cpg.ConstructExpression {
