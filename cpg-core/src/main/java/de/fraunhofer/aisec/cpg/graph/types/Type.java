@@ -171,6 +171,7 @@ public abstract class Type extends Node {
     return this instanceof ObjectType
         || this instanceof UnknownType
         || this instanceof FunctionType
+        || this instanceof TupleType
         // TODO(oxisto): convert FunctionPointerType to second order type
         || this instanceof FunctionPointerType
         || this instanceof IncompleteType

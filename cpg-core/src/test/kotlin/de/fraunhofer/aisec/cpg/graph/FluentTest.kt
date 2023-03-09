@@ -70,6 +70,7 @@ class FluentTest {
                     }
                 }
             }
+        val tu = result.translationUnits.firstOrNull()
 
         // Let's assert that we did this correctly
         val main = result.functions["main"]
@@ -168,8 +169,6 @@ class FluentTest {
         assertNotNull(lit2.scope)
         assertEquals(2, lit2.value)
 
-        // val result = TranslationResult(TranslationManager.builder().build(), scopeManager)
-        // result.addTranslationUnit(tu)
         VariableUsageResolver().accept(result)
 
         // Now the reference should be resolved

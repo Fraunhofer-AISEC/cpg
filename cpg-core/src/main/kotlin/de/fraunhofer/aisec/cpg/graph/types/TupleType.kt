@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,25 +23,34 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.types
 
-import com.fasterxml.jackson.annotation.JsonIgnore
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.Name
 
-/** An assignment holder is a node that intentionally contains assignment edges. */
-interface AssignmentHolder {
-    val assignments: List<Assignment>
+/**
+ * Represents a tuple of types. Primarily used in resolving function calls with multiple return
+ * values.
+ */
+class TupleType(types: List<Type>) : Type() {
+    var types: List<Type> = listOf()
+        set(value) {
+            field = value
+            name = Name(value.joinToString(", ", "(", ")") { it.name.toString() })
+        }
+
+    init {
+        this.types = types
+    }
+
+    override fun reference(pointer: PointerType.PointerOrigin?): Type {
+        TODO("Not yet implemented")
+    }
+
+    override fun dereference(): Type {
+        TODO("Not yet implemented")
+    }
+
+    override fun duplicate(): Type {
+        return TupleType(types.map { it.duplicate() })
+    }
 }
-
-/** An assignment assigns a certain value (usually an [Expression]) to a certain target. */
-class Assignment(
-    /** The value expression that is assigned to the target. */
-    val value: Expression,
-
-    /** The target(s) of this assignment. */
-    val target: HasType,
-
-    /** The holder of this assignment */
-    @JsonIgnore val holder: AssignmentHolder
-) : PropertyEdge<Node>(value, target as Node)
