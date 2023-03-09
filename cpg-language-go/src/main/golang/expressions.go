@@ -210,12 +210,12 @@ func (r *ArraySubscriptionExpression) SetSubscriptExpression(e *Expression) {
 	(*jnigi.ObjectRef)(r).CallMethod(env, "setSubscriptExpression", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }
 
-func (s *RangeExpression) SetLowerBound(e *Expression) {
-	(*jnigi.ObjectRef)(s).CallMethod(env, "setLowerBound", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
+func (s *RangeExpression) SetFloor(e *Expression) {
+	(*jnigi.ObjectRef)(s).CallMethod(env, "setFloor", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }
 
-func (s *RangeExpression) SetUpperBound(e *Expression) {
-	(*jnigi.ObjectRef)(s).CallMethod(env, "setUpperBound", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
+func (s *RangeExpression) SetCeiling(e *Expression) {
+	(*jnigi.ObjectRef)(s).CallMethod(env, "setCeiling", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
 }
 
 func (s *RangeExpression) SetThird(e *Expression) {

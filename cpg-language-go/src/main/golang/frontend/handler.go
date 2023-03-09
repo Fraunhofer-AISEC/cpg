@@ -1037,10 +1037,10 @@ func (this *GoLanguageFrontend) handleSliceExpr(fset *token.FileSet, sliceExpr *
 	// Build the slice expression
 	s := this.NewRangeExpression(fset, sliceExpr)
 	if sliceExpr.Low != nil {
-		s.SetLowerBound(this.handleExpr(fset, sliceExpr.Low))
+		s.SetFloor(this.handleExpr(fset, sliceExpr.Low))
 	}
 	if sliceExpr.High != nil {
-		s.SetUpperBound(this.handleExpr(fset, sliceExpr.High))
+		s.SetCeiling(this.handleExpr(fset, sliceExpr.High))
 	}
 	if sliceExpr.Max != nil {
 		s.SetThird(this.handleExpr(fset, sliceExpr.Max))
