@@ -38,7 +38,8 @@ import org.neo4j.ogm.annotation.Transient
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
  * right hand expression (rhs) and an operatorCode.
  */
-class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, ArgumentHolder {
+class BinaryOperator :
+    Expression(), HasType.TypeListener, AssignmentHolder, HasBase, ArgumentHolder {
     /** The left-hand expression. */
     @AST
     var lhs: Expression = ProblemExpression("could not parse lhs")
@@ -58,6 +59,14 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
         }
     /** The operator code. */
     override var operatorCode: String? = null
+        set(value) {
+            field = value
+            if (compoundOperators.contains(operatorCode) || operatorCode == "=") {
+                NodeBuilder.LOGGER.warn(
+                    "Creating a BinaryOperator with an assignment operator code is deprecated. The class AssignExpression should be used instead."
+                )
+            }
+        }
 
     fun <T : Expression?> getLhsAs(clazz: Class<T>): T? {
         return if (clazz.isInstance(lhs)) clazz.cast(lhs) else null
@@ -174,6 +183,16 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
             .toString()
     }
 
+    @Deprecated("BinaryOperator should not be used for assignments anymore")
+    override val assignments: List<Assignment>
+        get() {
+            return if (isAssignment) {
+                listOf(Assignment(rhs, lhs, this))
+            } else {
+                listOf()
+            }
+        }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
@@ -189,15 +208,6 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
 
     override fun hashCode() = Objects.hash(super.hashCode(), lhs, rhs, operatorCode)
 
-    // We only want to supply a target if this is an assignment
-    override val target: AssignmentTarget?
-        get() = // We only want to supply a target if this is an assignment
-        if (isAssignment) (if (lhs is AssignmentTarget) lhs as AssignmentTarget? else null)
-            else null
-
-    override val value: Expression?
-        get() = if (isAssignment) rhs else null
-
     private val isAssignment: Boolean
         get() {
             // TODO(oxisto): We need to discuss, if the other operators are also assignments and if
@@ -212,6 +222,18 @@ class BinaryOperator : Expression(), HasType.TypeListener, Assignment, HasBase, 
             lhs = expression
         } else {
             rhs = expression
+        }
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        return if (lhs == old) {
+            lhs = new
+            true
+        } else if (rhs == old) {
+            rhs = new
+            true
+        } else {
+            false
         }
     }
 

@@ -43,12 +43,10 @@ import org.neo4j.ogm.annotation.Relationship
 abstract class Type : Node {
     /** All direct supertypes of this type. */
     @Relationship(value = "SUPER_TYPE", direction = Relationship.Direction.OUTGOING)
-    var superTypes: MutableSet<Type> = HashSet()
+    var superTypes: Set<Type> = HashSet()
         protected set
-
     var isPrimitive = false
         protected set
-
     open var typeOrigin: Origin? = null
 
     constructor() {
@@ -61,17 +59,16 @@ abstract class Type : Node {
     }
 
     constructor(type: Type?) {
-        name = type?.name?.clone() ?: Name(UNKNOWN_TYPE_STRING)
+        type?.name?.let { name = it.clone() }
         typeOrigin = type?.typeOrigin
     }
 
     constructor(typeName: CharSequence, language: Language<out LanguageFrontend>?) {
-        name =
-            if (this is FunctionType) {
-                Name(typeName.toString(), null, language)
-            } else {
-                language.parseName(typeName)
-            }
+        if (this is FunctionType) {
+            name = Name(typeName.toString(), null, language)
+        } else {
+            name = language.parseName(typeName)
+        }
         this.language = language
         typeOrigin = Origin.UNRESOLVED
     }
@@ -102,57 +99,52 @@ abstract class Type : Node {
      *   pointer type we obtain the type the pointer is pointing towards
      */
     abstract fun dereference(): Type
-
-    open fun refreshNames() {
-        // By default, this does nothing. TODO: Why do all types have this?? This method has
-        // functionality only for PointerTypes!
-    }
-
-    /**
-     * The root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a Object-,
-     * Incomplete-, or FunctionPtrType is reached).
-     */
+    open fun refreshNames() {}
     var root: Type
+        /**
+         * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a
+         * Object-, Incomplete-, or FunctionPtrType is reached).
+         *
+         * @return root Type
+         */
         get() =
             if (this is SecondOrderType) {
                 (this as SecondOrderType).elementType.root
             } else {
                 this
             }
-        set(value) {
+        set(newRoot) {
             if (this is SecondOrderType) {
                 if ((this as SecondOrderType).elementType is SecondOrderType) {
-                    ((this as SecondOrderType).elementType as SecondOrderType).elementType = value
+                    ((this as SecondOrderType).elementType as SecondOrderType).elementType = newRoot
                 } else {
-                    (this as SecondOrderType).elementType = value
+                    (this as SecondOrderType).elementType = newRoot
                 }
             }
         }
 
-    /** Creates an exact copy of the current type (chain) */
+    /** @return Creates an exact copy of the current type (chain) */
     abstract fun duplicate(): Type
 
-    /** A shortcut to the fully qualified name of this type, based on [name]. */
     val typeName: String
         get() = name.toString()
-
-    /**
-     * The number of steps that are required in order to traverse the type chain until the root is
-     * reached
-     */
     open val referenceDepth: Int
+        /**
+         * @return number of steps that are required in order to traverse the type chain until the
+         *   root is reached
+         */
         get() = 0
-
-    /**
-     * True if this type is a so called "first order type" (root of a chain), i.e., not a pointer or
-     * reference to a type.
-     */
     val isFirstOrderType: Boolean
+        /**
+         * @return True if the Type parameter t is a FirstOrderType (Root of a chain) and not a
+         *   Pointer or ReferenceType
+         */
         get() =
             (this is ObjectType ||
                 this is UnknownType ||
-                this is FunctionType || // TODO(oxisto): convert FunctionPointerType to second order
-                // type
+                this is FunctionType ||
+                this is TupleType // TODO(oxisto): convert FunctionPointerType to second order type
+                ||
                 this is FunctionPointerType ||
                 this is IncompleteType ||
                 this is ParameterizedType)
@@ -171,8 +163,7 @@ abstract class Type : Node {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Type) return false
-        return name == other.name && language == other.language
+        return if (other !is Type) false else name == other.name && language == other.language
     }
 
     override fun hashCode() = Objects.hash(name, language)

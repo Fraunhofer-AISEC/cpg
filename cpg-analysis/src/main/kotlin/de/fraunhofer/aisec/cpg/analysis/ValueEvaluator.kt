@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import kotlin.UnsupportedOperationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -95,10 +96,20 @@ open class ValueEvaluator(
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
+            is AssignExpression -> return handleAssignExpression(node)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
         // this helps
+        return cannotEvaluate(node, this)
+    }
+
+    /** Under certain circumstances, an assignment can also be used as an expression. */
+    private fun handleAssignExpression(node: AssignExpression): Any? {
+        if (node.usedAsExpression) {
+            return node.expressionValue
+        }
+
         return cannotEvaluate(node, this)
     }
 

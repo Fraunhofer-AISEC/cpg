@@ -526,6 +526,10 @@ val Node?.functions: List<FunctionDeclaration>
 val Node?.records: List<RecordDeclaration>
     get() = this.allChildren()
 
+/** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
+val Node?.namespaces: List<NamespaceDeclaration>
+    get() = this.allChildren()
+
 /** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
 val Node?.variables: List<VariableDeclaration>
     get() = this.allChildren()
@@ -537,6 +541,35 @@ val Node?.literals: List<Literal<*>>
 /** Returns all [DeclaredReferenceExpression] children in this graph, starting with this [Node]. */
 val Node?.refs: List<DeclaredReferenceExpression>
     get() = this.allChildren()
+
+/** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
+val Node?.assignments: List<Assignment>
+    get() {
+        return this?.allChildren<Node>()?.filterIsInstance<AssignmentHolder>()?.flatMap {
+            it.assignments
+        }
+            ?: listOf()
+    }
+
+/**
+ * Returns the [Assignment.value] of the first (by EOG order beginning from) [Assignment] that this
+ * variable has as its [Assignment.target] in the scope of the variable.
+ */
+val VariableDeclaration.firstAssignment: Expression?
+    get() {
+        val start = this.scope?.astNode ?: return null
+        val assignments =
+            start.assignments.filter {
+                (it.target as? DeclaredReferenceExpression)?.refersTo == this
+            }
+
+        // We need to measure the distance between the start and each assignment value
+        return assignments
+            .map { Pair(it, start.eogDistanceTo(it.value)) }
+            .minByOrNull { it.second }
+            ?.first
+            ?.value
+    }
 
 operator fun <N : Expression> Expression.invoke(): N? {
     return this as? N
@@ -609,3 +642,17 @@ val ArraySubscriptionExpression.arraySize: Expression
         (((this.arrayExpression as DeclaredReferenceExpression).refersTo as VariableDeclaration)
                 .initializer as ArrayCreationExpression)
             .dimensions[0]
+
+/**
+ * This helper function calculates the "distance", i.e., number of EOG edges between this node and
+ * the node specified in [to].
+ */
+private fun Node.eogDistanceTo(to: Node): Int {
+    var i = 0
+    this.followNextEOG {
+        i++
+        it.end == to
+    }
+
+    return i
+}

@@ -60,7 +60,7 @@ fun LanguageFrontend.translationResult(
 context(TranslationResult)
 
 fun LanguageFrontend.translationUnit(
-    name: CharSequence,
+    name: CharSequence = Node.EMPTY_NAME,
     init: TranslationUnitDeclaration.() -> Unit
 ): TranslationUnitDeclaration {
     val node = (this@LanguageFrontend).newTranslationUnitDeclaration(name)
@@ -145,14 +145,20 @@ context(DeclarationHolder)
 
 fun LanguageFrontend.function(
     name: CharSequence,
-    returnType: Type = UnknownType.unknownType,
-    init: FunctionDeclaration.() -> Unit
+    returnType: Type = UnknownType.getUnknownType(this.language),
+    returnTypes: List<Type>? = null,
+    init: (FunctionDeclaration.() -> Unit)? = null
 ): FunctionDeclaration {
     val node = newFunctionDeclaration(name)
-    node.returnTypes = listOf(returnType)
+
+    if (returnTypes != null) {
+        node.returnTypes = returnTypes
+    } else {
+        node.returnTypes = listOf(returnType)
+    }
 
     scopeManager.enterScope(node)
-    init(node)
+    init?.let { it(node) }
     scopeManager.leaveScope(node)
 
     scopeManager.addDeclaration(node)
@@ -611,6 +617,12 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
     node.rhs = rhs
 
     (this@ArgumentHolder) += node
+
+    // We need to do a little trick here. Because of the evaluation order, lhs and rhs might also
+    // been added to the argument holders arguments (and we do not want that). However, we cannot
+    // prevent it, so we need to remove them again
+    (this@ArgumentHolder) -= node.lhs
+    (this@ArgumentHolder) -= node.rhs
 
     return node
 }

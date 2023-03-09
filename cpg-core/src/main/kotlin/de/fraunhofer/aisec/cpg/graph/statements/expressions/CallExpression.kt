@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsL
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
+import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.CallResolver
@@ -134,6 +135,22 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         }
 
         argumentEdges.add(edge)
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        // First, we need to find the old index
+        val idx = this.arguments.indexOf(old)
+        if (idx == -1) {
+            return false
+        }
+
+        setArgument(idx, new)
+        return true
+    }
+
+    override fun removeArgument(expression: Expression): Boolean {
+        arguments -= expression
+        return true
     }
 
     /** Returns the function signature as list of types of the call arguments. */
@@ -262,8 +279,12 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
         val previous = type
         val types =
             invokeEdges.map(PropertyEdge<FunctionDeclaration>::end).mapNotNull {
-                // TODO(oxisto): Support multiple return values
-                it.returnTypes.firstOrNull()
+                if (it.returnTypes.size == 1) {
+                    return@mapNotNull it.returnTypes.firstOrNull()
+                } else if (it.returnTypes.size > 1) {
+                    return@mapNotNull TupleType(it.returnTypes)
+                }
+                null
             }
         val alternative = if (types.isNotEmpty()) types[0] else UnknownType.getUnknownType(language)
         val commonType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)

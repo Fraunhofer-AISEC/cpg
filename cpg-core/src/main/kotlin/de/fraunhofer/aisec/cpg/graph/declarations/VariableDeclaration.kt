@@ -33,12 +33,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration of a variable. */
-class VariableDeclaration :
-    ValueDeclaration(), HasType.TypeListener, HasInitializer, Assignment, AssignmentTarget {
-    override val value: Expression?
-        get() {
-            return initializer
-        }
+class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitializer {
 
     /**
      * We need a way to store the templateParameters that a VariableDeclaration might have before
@@ -94,13 +89,12 @@ class VariableDeclaration :
         }
         val previous = type
         val newType =
-            if (src === value && value is InitializerListExpression) {
+            if (src === initializer && initializer is InitializerListExpression) {
                 // Init list is seen as having an array type, but can be used ambiguously. It can be
-                // either
-                // used to initialize an array, or to initialize some objects. If it is used as an
+                // either used to initialize an array, or to initialize some objects. If it is used
+                // as an
                 // array initializer, we need to remove the array/pointer layer from the type,
-                // otherwise it
-                // can be ignored once we have a type
+                // otherwise it can be ignored once we have a type
                 if (isArray) {
                     src.type
                 } else if (!TypeManager.getInstance().isUnknown(type)) {
@@ -130,7 +124,7 @@ class VariableDeclaration :
         return ToStringBuilder(this, TO_STRING_STYLE)
             .append("name", name)
             .append("location", location)
-            .append("initializer", value)
+            .append("initializer", initializer)
             .toString()
     }
 
@@ -140,13 +134,10 @@ class VariableDeclaration :
         }
         return if (other !is VariableDeclaration) {
             false
-        } else super.equals(other) && value == other.value
+        } else super.equals(other) && initializer == other.initializer
     }
 
     override fun hashCode(): Int {
         return super.hashCode()
     }
-
-    override val target: AssignmentTarget
-        get() = this
 }

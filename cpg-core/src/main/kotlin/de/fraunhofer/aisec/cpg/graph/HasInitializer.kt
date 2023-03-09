@@ -31,11 +31,30 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
  * Specifies that a certain node has an initializer. It is a special case of [ArgumentHolder], in
  * which the initializer is treated as the first (and only) argument.
  */
-interface HasInitializer : ArgumentHolder {
+interface HasInitializer : HasType, ArgumentHolder, AssignmentHolder {
 
     var initializer: Expression?
 
     override fun addArgument(expression: Expression) {
         this.initializer = expression
     }
+
+    override fun removeArgument(expression: Expression): Boolean {
+        return if (this.initializer == expression) {
+            this.initializer = null
+            true
+        } else {
+            false
+        }
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        this.initializer = new
+        return true
+    }
+
+    override val assignments: List<Assignment>
+        get() {
+            return initializer?.let { listOf(Assignment(it, this, this)) } ?: listOf()
+        }
 }

@@ -703,26 +703,32 @@ class QueryTest {
         val result = analyzer.analyze().get()
 
         val queryTreeResult =
-            result.all<Assignment>(
-                { it.target?.type?.isPrimitive == true },
+            result.all<AssignmentHolder>(
+                { it.assignments.all { assign -> assign.target.type.isPrimitive } },
                 {
-                    max(it.value) <= maxSizeOfType(it.target!!.type) &&
-                        min(it.value) >= minSizeOfType(it.target!!.type)
+                    it.assignments.any {
+                        max(it.value) <= maxSizeOfType(it.target.type) &&
+                            min(it.value) >= minSizeOfType(it.target.type)
+                    }
                 }
             )
         assertFalse(queryTreeResult.first)
 
+        /*
+        TODO: This test will not work anymore because we cannot put it into a QueryTree
         val queryTreeResult2 =
-            result.allExtended<Assignment>(
-                { it.target?.type?.isPrimitive == true },
+            result.allExtended<AssignmentHolder>(
+                { it.assignments.all { assign -> assign.target.type.isPrimitive } },
                 {
-                    (max(it.value) le maxSizeOfType(it.target!!.type)) and
-                        (min(it.value) ge minSizeOfType(it.target!!.type))
+                    QueryTree(it.assignments.any {
+                        (max(it.value) le maxSizeOfType(it.target!!.type)) and
+                                (min(it.value) ge minSizeOfType(it.target!!.type))
+                    })
                 }
             )
 
         println(queryTreeResult2.printNicely())
-        assertFalse(queryTreeResult2.value)
+        assertFalse(queryTreeResult2.value)*/
     }
 
     @Test
