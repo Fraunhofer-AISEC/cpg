@@ -52,7 +52,7 @@ class NullPointerCheck {
         for (tu in result.translationUnits) {
             tu.accept(
                 Strategy::AST_FORWARD,
-                object : IVisitor<Node?>() {
+                object : IVisitor<Node>() {
                     fun visit(v: MemberCallExpression) {
                         handleHasBase(v)
                     }
