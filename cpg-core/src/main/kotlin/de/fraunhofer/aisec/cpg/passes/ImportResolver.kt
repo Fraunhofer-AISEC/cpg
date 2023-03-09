@@ -155,14 +155,14 @@ open class ImportResolver : Pass() {
     protected fun findImportables(node: Node) {
         // Using a visitor to avoid loops in the AST
         node.accept(
-            { Strategy.AST_FORWARD(it) },
-            object : IVisitor<Node?>() {
-                override fun visit(child: Node) {
-                    if (child is RecordDeclaration) {
-                        records.add(child)
-                        importables.putIfAbsent(child.name.toString(), child)
-                    } else if (child is EnumDeclaration) {
-                        importables.putIfAbsent(child.name.toString(), child)
+            Strategy::AST_FORWARD,
+            object : IVisitor<Node>() {
+                override fun visit(t: Node) {
+                    if (t is RecordDeclaration) {
+                        records.add(t)
+                        importables.putIfAbsent(t.name.toString(), t)
+                    } else if (t is EnumDeclaration) {
+                        importables.putIfAbsent(t.name.toString(), t)
                     }
                 }
             }

@@ -23,20 +23,26 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.processing;
-
-import java.util.Iterator;
-import org.jetbrains.annotations.NotNull;
+package de.fraunhofer.aisec.cpg.processing
 
 /**
- * The strategy determines the order in which nodes in the structure are traversed.
+ * An object that can be visited by a visitor.
  *
- * <p>For each node, the strategy returns a non-null but possibly empty iterator over the
- * successors.
- *
- * @param <V>
+ * @param <V> </V>
  */
-public interface IStrategy<V> {
-  @NotNull
-  Iterator<V> getIterator(V v);
+interface IVisitable<V : IVisitable<V>> {
+    /**
+     * @param strategy Traversal strategy.
+     * @param visitor Instance of the visitor to call.
+     */
+    fun accept(strategy: IStrategy<V>, visitor: IVisitor<V>) {
+        @Suppress("UNCHECKED_CAST")
+        if (visitor.visited.add(this as V)) {
+            visitor.visit(this)
+            val it = strategy.getIterator(this)
+            while (it.hasNext()) {
+                it.next()!!.accept(strategy, visitor)
+            }
+        }
+    }
 }

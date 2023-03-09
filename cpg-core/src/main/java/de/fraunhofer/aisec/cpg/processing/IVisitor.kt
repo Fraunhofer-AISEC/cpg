@@ -23,29 +23,25 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.processing;
+package de.fraunhofer.aisec.cpg.processing
 
-import java.util.Iterator;
-import org.jetbrains.annotations.NotNull;
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import java.lang.reflect.InvocationTargetException
 
 /**
- * An object that can be visited by a visitor.
+ * Reflective visitor that visits the most specific implementation of visit() methods.
  *
- * @param <V>
+ * @param <V> V must implement `IVisitable`. </V>
  */
-public interface IVisitable<V extends IVisitable> {
-
-  /**
-   * @param strategy Traversal strategy.
-   * @param visitor Instance of the visitor to call.
-   */
-  default void accept(IStrategy<V> strategy, IVisitor<V> visitor) {
-    if (visitor.getVisited().add((V) this)) {
-      visitor.visit((V) this);
-      @NotNull Iterator<V> it = strategy.getIterator((V) this);
-      while (it.hasNext()) {
-        it.next().accept(strategy, visitor);
-      }
+abstract class IVisitor<V : IVisitable<V>> {
+    @JvmField val visited = IdentitySet<V>()
+    open fun visit(t: V) {
+        try {
+            val mostSpecificVisit = this.javaClass.getMethod("visit", t::class.java)
+            mostSpecificVisit.isAccessible = true
+            mostSpecificVisit.invoke(this, t)
+        } catch (e: NoSuchMethodException) {
+            // Nothing to do here
+        } catch (e: InvocationTargetException) {} catch (e: IllegalAccessException) {}
     }
-  }
 }

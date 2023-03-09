@@ -23,33 +23,15 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.processing;
-
-import de.fraunhofer.aisec.cpg.helpers.IdentitySet;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import org.jetbrains.annotations.NotNull;
+package de.fraunhofer.aisec.cpg.processing
 
 /**
- * Reflective visitor that visits the most specific implementation of visit() methods.
+ * The strategy determines the order in which nodes in the structure are traversed.
  *
- * @param <V> V must implement {@code IVisitable}.
+ * For each node, the strategy returns a non-null but possibly empty iterator over the successors.
+ *
+ * @param <V> </V>
  */
-public abstract class IVisitor<V extends IVisitable> {
-  private final IdentitySet<V> visited = new IdentitySet<>();
-
-  public IdentitySet<V> getVisited() {
-    return visited;
-  }
-
-  public void visit(@NotNull V t) {
-    try {
-      Method mostSpecificVisit = this.getClass().getMethod("visit", t.getClass());
-
-      mostSpecificVisit.setAccessible(true);
-      mostSpecificVisit.invoke(this, t);
-    } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-      // Nothing to do here
-    }
-  }
+fun interface IStrategy<V> {
+    fun getIterator(v: V): Iterator<V>
 }

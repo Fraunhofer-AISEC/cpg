@@ -255,11 +255,11 @@ object SubgraphWalker {
     fun refreshType(node: Node) {
         // Using a visitor to avoid loops in the AST
         node.accept(
-            { x: Node? -> Strategy.AST_FORWARD(x!!) },
-            object : IVisitor<Node?>() {
-                override fun visit(child: Node) {
-                    if (child is HasType) {
-                        (child as HasType).refreshType()
+            Strategy::AST_FORWARD,
+            object : IVisitor<Node>() {
+                override fun visit(t: Node) {
+                    if (t is HasType) {
+                        (t as HasType).refreshType()
                     }
                 }
             }
