@@ -43,7 +43,7 @@ import org.neo4j.ogm.annotation.Relationship
 abstract class Type : Node {
     /** All direct supertypes of this type. */
     @Relationship(value = "SUPER_TYPE", direction = Relationship.Direction.OUTGOING)
-    var superTypes: Set<Type> = HashSet()
+    var superTypes = mutableSetOf<Type>()
         protected set
     var isPrimitive = false
         protected set
