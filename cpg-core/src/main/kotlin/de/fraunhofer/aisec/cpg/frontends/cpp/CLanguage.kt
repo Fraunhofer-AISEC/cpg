@@ -57,14 +57,22 @@ open class CLanguage :
             "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
             "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
             "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
+            "short int" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
             "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
             "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
+            "long int" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
+            "long long" to IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
             "long long int" to IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
             "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
             "signed byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
             "signed short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
+            "signed short int" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
+            "signed" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
             "signed int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
             "signed long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
+            "signed long int" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
+            "signed long long" to
+                IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
             "signed long long int" to
                 IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
             "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
@@ -73,9 +81,16 @@ open class CLanguage :
             "unsigned byte" to IntegerType("unsigned byte", 8, this, NumericType.Modifier.UNSIGNED),
             "unsigned short" to
                 IntegerType("unsigned short", 16, this, NumericType.Modifier.UNSIGNED),
+            "unsigned short int" to
+                IntegerType("unsigned short", 16, this, NumericType.Modifier.UNSIGNED),
+            "unsigned" to IntegerType("unsigned int", 32, this, NumericType.Modifier.UNSIGNED),
             "unsigned int" to IntegerType("unsigned int", 32, this, NumericType.Modifier.UNSIGNED),
             "unsigned long" to
                 IntegerType("unsigned long", 64, this, NumericType.Modifier.UNSIGNED),
+            "unsigned long int" to
+                IntegerType("unsigned long", 64, this, NumericType.Modifier.UNSIGNED),
+            "unsigned long long" to
+                IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
             "unsigned long long int" to
                 IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED)
         )
