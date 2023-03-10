@@ -57,16 +57,16 @@ internal class FunctionTemplateTest : BaseTest() {
             )
         val variableDeclarations = result.variables
         val x = findByUniqueName(variableDeclarations, "x")
-        assertEquals(UnknownType.unknownType, x.type)
+        assertEquals(UnknownType.getUnknownType(CPPLanguage()), x.type)
 
         val declaredReferenceExpressions = result.refs
         val xDeclaredReferenceExpression = findByUniqueName(declaredReferenceExpressions, "x")
-        assertEquals(UnknownType.unknownType, xDeclaredReferenceExpression.type)
+        assertEquals(UnknownType.getUnknownType(CPPLanguage()), xDeclaredReferenceExpression.type)
 
         val binaryOperators = result.allChildren<BinaryOperator>()
         val dependentOperation =
             findByUniquePredicate(binaryOperators) { b: BinaryOperator -> b.code == "val * N" }
-        assertEquals(UnknownType.unknownType, dependentOperation.type)
+        assertEquals(UnknownType.getUnknownType(CPPLanguage()), dependentOperation.type)
     }
 
     private fun testFunctionTemplateArguments(
@@ -583,7 +583,7 @@ internal class FunctionTemplateTest : BaseTest() {
         )
 
         // Check return values
-        assertEquals(UnknownType.unknownType, callInt2.type)
-        assertEquals(UnknownType.unknownType, callDouble3.type)
+        assertEquals(UnknownType.getUnknownType(CPPLanguage()), callInt2.type)
+        assertEquals(UnknownType.getUnknownType(CPPLanguage()), callDouble3.type)
     }
 }

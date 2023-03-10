@@ -51,14 +51,14 @@ class FunctionPointerType : Type {
     var parametersPropertyEdge: MutableList<PropertyEdge<Type>> = mutableListOf()
         private set
 
-    var returnType: Type = UnknownType.unknownType
+    var returnType: Type
 
     var parameters by PropertyEdgeDelegate(FunctionPointerType::parametersPropertyEdge)
 
     constructor(
         parameters: List<Type> = listOf(),
-        returnType: Type = UnknownType.unknownType,
-        language: Language<out LanguageFrontend>? = null
+        language: Language<out LanguageFrontend>? = null,
+        returnType: Type = UnknownType.getUnknownType(language)
     ) : super(EMPTY_NAME, language) {
         parametersPropertyEdge = transformIntoOutgoingPropertyEdgeList(parameters, this)
         this.returnType = returnType
@@ -67,8 +67,8 @@ class FunctionPointerType : Type {
     constructor(
         type: Type,
         parameters: List<Type> = listOf(),
-        returnType: Type = UnknownType.unknownType,
-        language: Language<out LanguageFrontend>? = null
+        language: Language<out LanguageFrontend>? = null,
+        returnType: Type = UnknownType.getUnknownType(language)
     ) : super(type) {
         parametersPropertyEdge = transformIntoOutgoingPropertyEdgeList(parameters, this)
         this.returnType = returnType
@@ -85,7 +85,7 @@ class FunctionPointerType : Type {
 
     override fun duplicate(): Type {
         val copiedParameters: List<Type> = ArrayList(unwrap(parametersPropertyEdge))
-        return FunctionPointerType(this, copiedParameters, returnType, language)
+        return FunctionPointerType(this, copiedParameters, language, returnType)
     }
 
     override fun isSimilar(t: Type?): Boolean {

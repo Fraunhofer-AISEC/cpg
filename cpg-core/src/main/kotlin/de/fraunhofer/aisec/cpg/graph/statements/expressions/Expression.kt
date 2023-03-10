@@ -61,9 +61,8 @@ abstract class Expression : Statement(), HasType {
                     TypeManager.getInstance()
                         .typeCache
                         .computeIfAbsent(this) { mutableListOf() }
-                        .stream()
-                        .findAny()
-                        .orElse(UnknownType.unknownType)
+                        .firstOrNull()
+                        ?: UnknownType.getUnknownType(language)
                 }
             return result
         }
@@ -89,7 +88,7 @@ abstract class Expression : Statement(), HasType {
     override val propagationType: Type
         get() {
             return if (type is ReferenceType) {
-                (type as ReferenceType?)?.elementType ?: UnknownType.unknownType
+                (type as ReferenceType?)?.elementType ?: UnknownType.getUnknownType(language)
             } else type
         }
 

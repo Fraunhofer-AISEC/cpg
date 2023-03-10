@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory
 class CastExpression : Expression(), HasType.TypeListener {
     @AST var expression: Expression = ProblemExpression("could not parse inner expression")
 
-    var castType: Type = UnknownType.unknownType
+    var castType: Type = UnknownType.getUnknownType(language)
         set(value) {
             field = value
             type = value

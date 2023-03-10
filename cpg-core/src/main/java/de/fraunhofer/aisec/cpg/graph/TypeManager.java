@@ -552,6 +552,8 @@ public class TypeManager {
   public boolean isSupertypeOf(Type superType, Type subType, MetadataProvider provider) {
     Language<?> language = null;
 
+    if (superType instanceof UnknownType && subType instanceof UnknownType) return true;
+
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
       return false;
     }

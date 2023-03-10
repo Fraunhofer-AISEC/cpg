@@ -64,7 +64,8 @@ class UnknownType : Type {
     }
 
     override fun duplicate(): Type {
-        return unknownType
+        // We don't duplicate because we cannot change any properties.
+        return this
     }
 
     override fun hashCode() = Objects.hash(super.hashCode())
@@ -89,6 +90,8 @@ class UnknownType : Type {
 
         val UNKNOWN_TYPE_STRING = "UNKNOWN_TYPE"
 
+        private val unknownTypes = mutableMapOf<Language<*>?, UnknownType>()
+
         /**
          * Use this function to obtain an UnknownType or call the TypeParser with the typeString
          * UNKNOWN
@@ -97,8 +100,13 @@ class UnknownType : Type {
          */
         @JvmStatic
         fun getUnknownType(language: Language<out LanguageFrontend>?): UnknownType {
-            unknownType.language = language
-            return unknownType
+            if (language == null) return unknownType
+
+            return unknownTypes.computeIfAbsent(language) {
+                val unknownType = UnknownType()
+                unknownType.language = language
+                unknownType
+            }
         }
     }
 }

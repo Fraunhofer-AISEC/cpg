@@ -186,7 +186,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
             val parentName = (current.name.parent ?: current.name).toString()
             return TypeParser.createFrom(parentName, language)
         } else {
-            return UnknownType.unknownType
+            return UnknownType.getUnknownType(language)
         }
     }
 

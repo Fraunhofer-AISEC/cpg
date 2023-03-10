@@ -47,7 +47,7 @@ internal class TypeTests : BaseTest() {
         val parameterList =
             listOf<Type>(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
         val functionPointerType: Type =
-            FunctionPointerType(parameterList, IncompleteType(), CPPLanguage())
+            FunctionPointerType(parameterList, CPPLanguage(), IncompleteType())
 
         // Test 1: ObjectType becomes PointerType containing the original ObjectType as ElementType
         assertEquals(
@@ -86,7 +86,7 @@ internal class TypeTests : BaseTest() {
         val parameterList =
             listOf<Type>(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
         val functionPointerType: Type =
-            FunctionPointerType(parameterList, IncompleteType(), CPPLanguage())
+            FunctionPointerType(parameterList, CPPLanguage(), IncompleteType())
 
         // Test 1: Dereferencing an ObjectType results in an UnknownType, since we cannot track the
         // type
@@ -115,7 +115,7 @@ internal class TypeTests : BaseTest() {
         result = TypeParser.createFrom(typeString, CPPLanguage())
         val parameterList =
             listOf<Type>(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
-        var expected: Type = FunctionPointerType(parameterList, IncompleteType(), CPPLanguage())
+        var expected: Type = FunctionPointerType(parameterList, CPPLanguage(), IncompleteType())
         assertEquals(expected, result)
 
         // Test 1.1: interleaved brackets in function pointer
@@ -303,12 +303,12 @@ internal class TypeTests : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "types")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("fptr_type.cpp").toFile()), topLevel, true)
-        val noParamType = FunctionPointerType(emptyList(), IncompleteType(), CPPLanguage())
+        val noParamType = FunctionPointerType(emptyList(), CPPLanguage(), IncompleteType())
         val oneParamType =
             FunctionPointerType(
                 listOf<Type>(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)),
-                IncompleteType(),
-                CPPLanguage()
+                CPPLanguage(),
+                IncompleteType()
             )
         val twoParamType =
             FunctionPointerType(
@@ -316,8 +316,8 @@ internal class TypeTests : BaseTest() {
                     IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED),
                     IntegerType("unsigned long", 64, CPPLanguage(), NumericType.Modifier.UNSIGNED)
                 ),
-                IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED),
-                CPPLanguage()
+                CPPLanguage(),
+                IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
             )
         val variables = tu.variables
         val localTwoParam = findByUniqueName(variables, "local_two_param")

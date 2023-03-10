@@ -57,7 +57,7 @@ class FunctionType : Type {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         // TODO(oxisto): In the future, we actually could just remove the FunctionPointerType
         //  and just have a regular PointerType here
-        return FunctionPointerType(parameters.toList(), returnTypes.first(), language)
+        return FunctionPointerType(parameters.toList(), language, returnTypes.first())
     }
 
     override fun dereference(): Type {

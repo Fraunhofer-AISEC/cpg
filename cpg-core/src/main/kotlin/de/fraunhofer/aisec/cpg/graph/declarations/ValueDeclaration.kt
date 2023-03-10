@@ -46,7 +46,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
      * A dedicated backing field, so that [setType] can actually set the type without any loops,
      * since we are using a custom setter in [type] (which calls [setType]).
      */
-    @Relationship("TYPE") protected var _type: Type = UnknownType.unknownType
+    @Relationship("TYPE") protected var _type: Type = UnknownType.getUnknownType(null)
 
     /**
      * The type of this declaration. In order to maximize compatibility with Java legacy code
@@ -62,9 +62,8 @@ abstract class ValueDeclaration : Declaration(), HasType {
                     TypeManager.getInstance()
                         .typeCache
                         .computeIfAbsent(this) { mutableListOf() }
-                        .stream()
-                        .findAny()
-                        .orElse(UnknownType.unknownType)
+                        .firstOrNull()
+                        ?: UnknownType.getUnknownType(language)
                 }
             return result
         }
@@ -126,7 +125,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
     override val propagationType: Type
         get() {
             return if (type is ReferenceType) {
-                (type as ReferenceType?)?.elementType ?: UnknownType.unknownType
+                (type as ReferenceType?)?.elementType ?: UnknownType.getUnknownType(language)
             } else type
         }
 
