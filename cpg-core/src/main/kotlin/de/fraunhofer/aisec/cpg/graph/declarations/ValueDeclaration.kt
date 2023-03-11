@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
@@ -63,7 +64,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
                         .typeCache
                         .computeIfAbsent(this) { mutableListOf() }
                         .firstOrNull()
-                        ?: UnknownType.getUnknownType(language)
+                        ?: newUnknownType()
                 }
             return result
         }
@@ -125,7 +126,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
     override val propagationType: Type
         get() {
             return if (type is ReferenceType) {
-                (type as ReferenceType?)?.elementType ?: UnknownType.getUnknownType(language)
+                (type as ReferenceType?)?.elementType ?: newUnknownType()
             } else type
         }
 

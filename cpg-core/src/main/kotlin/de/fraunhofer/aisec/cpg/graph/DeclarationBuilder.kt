@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 /**
@@ -131,7 +130,7 @@ fun MetadataProvider.newConstructorDeclaration(
 @JvmOverloads
 fun MetadataProvider.newParamVariableDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType((this as? LanguageProvider)?.language),
+    type: Type = newUnknownType(),
     variadic: Boolean = false,
     code: String? = null,
     rawNode: Any? = null
@@ -155,7 +154,7 @@ fun MetadataProvider.newParamVariableDeclaration(
 @JvmOverloads
 fun MetadataProvider.newVariableDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType((this as? LanguageProvider)?.language),
+    type: Type = newUnknownType(),
     code: String? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
@@ -325,7 +324,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
 @JvmOverloads
 fun MetadataProvider.newFieldDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType((this as? LanguageProvider)?.language),
+    type: Type = newUnknownType(),
     modifiers: List<String>? = listOf(),
     code: String? = null,
     location: PhysicalLocation? = null,

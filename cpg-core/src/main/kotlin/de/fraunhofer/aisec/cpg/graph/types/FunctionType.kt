@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 
 /**
  * A type representing a function. It contains a list of parameters and one or more return types.
@@ -61,7 +62,7 @@ class FunctionType : Type {
     }
 
     override fun dereference(): Type {
-        return UnknownType.getUnknownType(language)
+        return newUnknownType()
     }
 
     override fun duplicate(): Type {

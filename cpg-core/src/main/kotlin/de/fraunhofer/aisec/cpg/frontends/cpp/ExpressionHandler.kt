@@ -141,7 +141,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // there are a lot of other constants defined for type traits, but they are not really
         // parsed as type id expressions
         var operatorCode = ""
-        var type: Type = UnknownType.getUnknownType(language)
+        var type: Type = newUnknownType()
         when (ctx.operator) {
             IASTTypeIdExpression.op_sizeof -> {
                 operatorCode = "sizeof"
@@ -326,7 +326,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return newMemberExpression(
             name,
             base,
-            UnknownType.getUnknownType(language),
+            newUnknownType(),
             if (ctx.isPointerDereference) "->" else ".",
             ctx.rawSignature
         )
@@ -464,7 +464,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // TODO: handle this? convert the declared reference expression into a member expression?
         return newDeclaredReferenceExpression(
             ctx.name.toString(),
-            UnknownType.getUnknownType(language),
+            newUnknownType(),
             ctx.rawSignature
         )
     }
@@ -547,12 +547,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             lk_true -> newLiteral(true, parseType("bool"), ctx.rawSignature)
             lk_false -> newLiteral(false, parseType("bool"), ctx.rawSignature)
             lk_nullptr -> newLiteral(null, parseType("nullptr_t"), ctx.rawSignature)
-            else ->
-                newLiteral(
-                    String(ctx.value),
-                    UnknownType.getUnknownType(language),
-                    ctx.rawSignature
-                )
+            else -> newLiteral(String(ctx.value), newUnknownType(), ctx.rawSignature)
         }
     }
 
@@ -589,7 +584,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         oneLhs =
                             newDeclaredReferenceExpression(
                                 des.name.toString(),
-                                UnknownType.getUnknownType(language),
+                                newUnknownType(),
                                 des.getRawSignature()
                             )
                     }
@@ -642,7 +637,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         oneLhs =
                             newDeclaredReferenceExpression(
                                 des.name.toString(),
-                                UnknownType.getUnknownType(language),
+                                newUnknownType(),
                                 des.getRawSignature()
                             )
                     }
@@ -795,8 +790,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleThisLiteral(ctx: IASTLiteralExpression): DeclaredReferenceExpression {
         // We should be in a record here. However since we are a fuzzy parser, maybe things went
         // wrong, so we might have an unknown type.
-        val recordType =
-            frontend.scopeManager.currentRecord?.toType() ?: UnknownType.getUnknownType(language)
+        val recordType = frontend.scopeManager.currentRecord?.toType() ?: newUnknownType()
         // We do want to make sure that the type of the expression is at least a pointer.
         val pointerType = recordType.reference(PointerOrigin.POINTER)
 

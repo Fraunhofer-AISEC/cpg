@@ -396,7 +396,7 @@ class CXXLanguageFrontend(
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                newDeclaredReferenceExpression(code, UnknownType.getUnknownType(language), code)
+                newDeclaredReferenceExpression(code, newUnknownType(), code)
                 2 -> // an integer
                 newLiteral(
                         code.toInt(),
@@ -552,7 +552,7 @@ class CXXLanguageFrontend(
                     TypeParser.createFrom(name, true, this)
                 }
                 else -> {
-                    UnknownType.getUnknownType(language)
+                    newUnknownType()
                 }
             }
 

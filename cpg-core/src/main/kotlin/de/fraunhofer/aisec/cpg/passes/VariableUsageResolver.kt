@@ -182,11 +182,11 @@ open class VariableUsageResolver : SymbolResolverPass() {
     private fun getEnclosingTypeOf(current: Node): Type {
         val language = current.language
 
-        if (language != null && language.namespaceDelimiter.isNotEmpty()) {
+        return if (language != null && language.namespaceDelimiter.isNotEmpty()) {
             val parentName = (current.name.parent ?: current.name).toString()
-            return TypeParser.createFrom(parentName, language)
+            TypeParser.createFrom(parentName, language)
         } else {
-            return UnknownType.getUnknownType(language)
+            current.language.newUnknownType()
         }
     }
 

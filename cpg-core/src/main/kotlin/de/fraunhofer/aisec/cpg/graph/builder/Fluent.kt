@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 fun LanguageFrontend.translationResult(
     config: TranslationConfiguration,
@@ -123,7 +122,7 @@ context(DeclarationHolder)
 
 fun LanguageFrontend.field(
     name: CharSequence,
-    type: Type = UnknownType.getUnknownType(language),
+    type: Type = newUnknownType(),
     init: FieldDeclaration.() -> Unit
 ): FieldDeclaration {
     val node = newFieldDeclaration(name)
@@ -145,7 +144,7 @@ context(DeclarationHolder)
 
 fun LanguageFrontend.function(
     name: CharSequence,
-    returnType: Type = UnknownType.getUnknownType(this.language),
+    returnType: Type = newUnknownType(),
     returnTypes: List<Type>? = null,
     init: (FunctionDeclaration.() -> Unit)? = null
 ): FunctionDeclaration {
@@ -175,7 +174,7 @@ context(RecordDeclaration)
 
 fun LanguageFrontend.method(
     name: CharSequence,
-    returnType: Type = UnknownType.getUnknownType(language),
+    returnType: Type = newUnknownType(),
     init: MethodDeclaration.() -> Unit
 ): MethodDeclaration {
     val node = newMethodDeclaration(name)
@@ -240,7 +239,7 @@ context(FunctionDeclaration)
 
 fun LanguageFrontend.param(
     name: CharSequence,
-    type: Type = UnknownType.getUnknownType(language),
+    type: Type = newUnknownType(),
     init: (ParamVariableDeclaration.() -> Unit)? = null
 ): ParamVariableDeclaration {
     val node =
@@ -296,7 +295,7 @@ context(DeclarationStatement)
 
 fun LanguageFrontend.variable(
     name: String,
-    type: Type = UnknownType.getUnknownType(language),
+    type: Type = newUnknownType(),
     init: (VariableDeclaration.() -> Unit)? = null
 ): VariableDeclaration {
     val node = newVariableDeclaration(name, type)
@@ -433,10 +432,7 @@ fun LanguageFrontend.new(init: (NewExpression.() -> Unit)? = null): NewExpressio
     return node
 }
 
-fun LanguageFrontend.memberOrRef(
-    name: Name,
-    type: Type = UnknownType.getUnknownType(language)
-): Expression {
+fun LanguageFrontend.memberOrRef(name: Name, type: Type = newUnknownType()): Expression {
     val node =
         if (name.parent != null) {
             newMemberExpression(name.localName, memberOrRef(name.parent))
@@ -535,10 +531,7 @@ fun LanguageFrontend.elseStmt(
  */
 context(Holder<out Statement>)
 
-fun <N> LanguageFrontend.literal(
-    value: N,
-    type: Type = UnknownType.getUnknownType(language)
-): Literal<N> {
+fun <N> LanguageFrontend.literal(value: N, type: Type = newUnknownType()): Literal<N> {
     val node = newLiteral(value, type)
 
     // Only add this to an argument holder if the nearest holder is an argument holder
@@ -559,7 +552,7 @@ context(Holder<out Statement>)
 
 fun LanguageFrontend.ref(
     name: CharSequence,
-    type: Type = UnknownType.getUnknownType(language),
+    type: Type = newUnknownType(),
     init: (DeclaredReferenceExpression.() -> Unit)? = null
 ): DeclaredReferenceExpression {
     val node = newDeclaredReferenceExpression(name)
@@ -589,13 +582,13 @@ fun LanguageFrontend.member(name: CharSequence, base: Expression? = null): Membe
     val parsedName = parseName(name)
     val type =
         if (parsedName.parent != null) {
-            UnknownType.getUnknownType(language)
+            newUnknownType()
         } else {
             var scope = ((this@Holder) as? ScopeProvider)?.scope
             while (scope != null && scope !is RecordScope) {
                 scope = scope.parent
             }
-            val scopeType = scope?.name?.let { t(it) } ?: UnknownType.getUnknownType(language)
+            val scopeType = scope?.name?.let { t(it) } ?: newUnknownType()
             scopeType
         }
     val memberBase = base ?: memberOrRef(parsedName.parent ?: parseName("this"), type)

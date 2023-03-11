@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -36,7 +37,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * called.
  */
 class ReferenceType : Type, SecondOrderType {
-    override var elementType: Type = UnknownType.getUnknownType(this.language)
+    override var elementType: Type = newUnknownType()
 
     constructor() : super()
 

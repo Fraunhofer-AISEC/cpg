@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemDeclaration, lang) {
@@ -58,8 +57,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     private fun handlePropertySignature(node: TypeScriptNode): FieldDeclaration {
         val name = this.frontend.getIdentifierName(node)
         val type =
-            node.typeChildNode?.let { this.frontend.typeHandler.handle(it) }
-                ?: UnknownType.getUnknownType(language)
+            node.typeChildNode?.let { this.frontend.typeHandler.handle(it) } ?: newUnknownType()
 
         val field =
             newFieldDeclaration(
@@ -113,8 +111,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleParameter(node: TypeScriptNode): Declaration {
         val name = this.frontend.getIdentifierName(node)
         val type =
-            node.typeChildNode?.let { this.frontend.typeHandler.handle(it) }
-                ?: UnknownType.getUnknownType(language)
+            node.typeChildNode?.let { this.frontend.typeHandler.handle(it) } ?: newUnknownType()
 
         val param =
             newParamVariableDeclaration(name, type, false, this.frontend.getCodeFromRawNode(node))
@@ -176,8 +173,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             }
 
         node.typeChildNode?.let {
-            func.type =
-                this.frontend.typeHandler.handle(it) ?: UnknownType.getUnknownType(this.language)
+            func.type = this.frontend.typeHandler.handle(it) ?: newUnknownType()
         }
 
         this.frontend.scopeManager.enterScope(func)
@@ -220,7 +216,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val `var` =
             newVariableDeclaration(
                 name,
-                UnknownType.getUnknownType(language),
+                newUnknownType(),
                 this.frontend.getCodeFromRawNode(node),
                 false
             )

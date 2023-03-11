@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.ArrayList
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -70,7 +70,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
         subTypes.remove(oldType)
         subTypes.addAll(types)
-        val alternative = if (types.isNotEmpty()) types[0] else UnknownType.getUnknownType(language)
+        val alternative = if (types.isNotEmpty()) types[0] else newUnknownType()
         setType(TypeManager.getInstance().getCommonType(types, this).orElse(alternative), root)
         setPossibleSubTypes(subTypes, root)
         if (previous != type) {

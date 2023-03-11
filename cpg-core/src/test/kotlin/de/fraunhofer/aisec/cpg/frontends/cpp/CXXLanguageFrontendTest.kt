@@ -1204,15 +1204,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(returnStatement)
 
         // we need to assert, that we have a consistent chain of EOG edges from the first statement
-        // to
-        // the return statement. otherwise, the EOG chain is somehow broken
+        // to the return statement. otherwise, the EOG chain is somehow broken
         val eogEdges = ArrayList<Node>()
         main.accept(
             Strategy::EOG_FORWARD,
             object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    println(n)
-                    eogEdges.add(n)
+                override fun visit(t: Node) {
+                    println(t)
+                    eogEdges.add(t)
                 }
             }
         )

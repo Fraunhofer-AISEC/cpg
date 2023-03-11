@@ -178,14 +178,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 if (s != null) {
                     this.parseType(s)
                 } else {
-                    UnknownType.getUnknownType(this.language)
+                    newUnknownType()
                 }
             } catch (e: NoClassDefFoundError) {
                 val s = frontend.recoverTypeFromUnsolvedException(e)
                 if (s != null) {
                     this.parseType(s)
                 } else {
-                    UnknownType.getUnknownType(this.language)
+                    newUnknownType()
                 }
             }
         val condition =
@@ -296,7 +296,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                             this.parseType(qualifiedNameFromImports)
                         } else {
                             log.info("Unknown base type 1 for {}", fieldAccessExpr)
-                            UnknownType.getUnknownType(language)
+                            newUnknownType()
                         }
                 }
             } catch (ex: NoClassDefFoundError) {
@@ -319,7 +319,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                             this.parseType(qualifiedNameFromImports)
                         } else {
                             log.info("Unknown base type 1 for {}", fieldAccessExpr)
-                            UnknownType.getUnknownType(language)
+                            newUnknownType()
                         }
                 }
             }
@@ -362,7 +362,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         this.parseType(qualifiedNameFromImports)
                     } else {
                         log.info("Unknown base type 2 for {}", fieldAccessExpr)
-                        UnknownType.getUnknownType(language)
+                        newUnknownType()
                     }
                 base =
                     this.newDeclaredReferenceExpression(
@@ -397,7 +397,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     this.parseType("int")
                 } else {
                     log.info("Unknown field type for {}", fieldAccessExpr)
-                    UnknownType.getUnknownType(language)
+                    newUnknownType()
                 }
             val memberExpression =
                 this.newMemberExpression(
@@ -417,7 +417,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     this.parseType("int")
                 } else {
                     log.info("Unknown field type for {}", fieldAccessExpr)
-                    UnknownType.getUnknownType(language)
+                    newUnknownType()
                 }
             val memberExpression =
                 this.newMemberExpression(fieldAccessExpr.name.identifier, base!!, fieldType, ".")
@@ -514,11 +514,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // about the inheritance structure. Thus, we delay the resolving to the variable resolving
         // process
         val superExpression =
-            this.newDeclaredReferenceExpression(
-                expr.toString(),
-                UnknownType.getUnknownType(language),
-                expr.toString()
-            )
+            this.newDeclaredReferenceExpression(expr.toString(), newUnknownType(), expr.toString())
         frontend.setCodeAndLocation(superExpression, expr)
         return superExpression
     }
@@ -616,7 +612,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 }
             val t: Type
             if (typeString == null) {
-                t = UnknownType.getUnknownType(language)
+                t = newUnknownType()
             } else {
                 t = this.parseType(typeString)
                 t.typeOrigin = Type.Origin.GUESSED
@@ -774,8 +770,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 base = createImplicitThis()
             }
         }
-        val member =
-            this.newMemberExpression(name, base!!, UnknownType.getUnknownType(language), ".")
+        val member = this.newMemberExpression(name, base!!, newUnknownType(), ".")
         frontend.setCodeAndLocation(
             member,
             methodCallExpr.name
@@ -806,7 +801,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         val thisType =
             (frontend.scopeManager.currentFunction as MethodDeclaration?)?.receiver?.type
-                ?: UnknownType.getUnknownType(language)
+                ?: newUnknownType()
         base = this.newDeclaredReferenceExpression("this", thisType, "this")
         base.isImplicit = true
         return base

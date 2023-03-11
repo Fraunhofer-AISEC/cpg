@@ -32,11 +32,11 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -198,7 +198,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                 if (paramVariableDeclaration.default != null) {
                     signature.add(paramVariableDeclaration.type)
                 } else {
-                    signature.add(UnknownType.getUnknownType(language))
+                    signature.add(newUnknownType())
                 }
             }
             return signature

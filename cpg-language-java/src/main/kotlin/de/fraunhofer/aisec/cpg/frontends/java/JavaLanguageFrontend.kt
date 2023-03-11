@@ -56,7 +56,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
@@ -218,7 +217,7 @@ open class JavaLanguageFrontend(
         return try {
             val type = nodeWithType.typeAsString
             if (type == "var") {
-                UnknownType.getUnknownType(language)
+                newUnknownType()
             } else parseType(resolved.type.describe())
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
@@ -230,7 +229,7 @@ open class JavaLanguageFrontend(
     fun getTypeAsGoodAsPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {
         return try {
             if (type.toString() == "var") {
-                UnknownType.getUnknownType(language)
+                newUnknownType()
             } else parseType(type.resolve().describe())
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(type)
