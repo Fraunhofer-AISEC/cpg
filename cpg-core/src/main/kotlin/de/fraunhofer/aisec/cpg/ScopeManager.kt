@@ -764,17 +764,17 @@ class ScopeManager : ScopeProvider {
         val num = AtomicInteger()
         val typeCache = TypeManager.getInstance().typeCache
         node.accept(
-            { Strategy.AST_FORWARD(it) },
-            object : IVisitor<Node?>() {
-                override fun visit(n: Node) {
-                    if (n is HasType) {
-                        val typeNode = n as HasType
-                        typeCache.getOrDefault(typeNode, emptyList()).forEach { t: Type? ->
-                            (n as HasType).type =
+            Strategy::AST_FORWARD,
+            object : IVisitor<Node>() {
+                override fun visit(t: Node) {
+                    if (t is HasType) {
+                        val typeNode = t as HasType
+                        typeCache.getOrDefault(typeNode, emptyList()).forEach { it: Type? ->
+                            (t as HasType).type =
                                 TypeManager.getInstance()
-                                    .resolvePossibleTypedef(t, this@ScopeManager)
+                                    .resolvePossibleTypedef(it, this@ScopeManager)
                         }
-                        typeCache.remove(n as HasType)
+                        typeCache.remove(t as HasType)
                         num.getAndIncrement()
                     }
                 }

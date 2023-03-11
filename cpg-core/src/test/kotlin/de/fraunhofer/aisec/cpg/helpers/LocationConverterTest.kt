@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import com.google.common.base.Objects
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -37,7 +38,7 @@ import kotlin.test.assertNull
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 
 internal class LocationConverterTest : BaseTest() {
-    private val sut: CompositeAttributeConverter<PhysicalLocation>
+    private val sut: CompositeAttributeConverter<PhysicalLocation?>
         get() {
             return LocationConverter()
         }
@@ -45,7 +46,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithNullValueLine() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         // act
         val have = sut.toEntityAttribute(null)
         // assert
@@ -55,7 +56,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithNullStartLine() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value = mutableMapOf<String, Any?>()
         value[LocationConverter.START_LINE] = null
         // act
@@ -67,7 +68,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithInteger() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue = 1
         value[LocationConverter.START_LINE] = startLineValue // autoboxing to Integer
@@ -88,7 +89,7 @@ internal class LocationConverterTest : BaseTest() {
 
     @Test
     fun toEntityAttributeWithNullGraph() {
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val have = sut.toGraphProperties(null)
         assertEquals(mapOf(), have)
     }
@@ -96,7 +97,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithIntegerGraph() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue = 1
         value[LocationConverter.START_LINE] = startLineValue // autoboxing to Integer
@@ -118,7 +119,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithLong() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue: Long = 1
         value[LocationConverter.START_LINE] = startLineValue // autoboxing to Long
@@ -146,7 +147,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithIntegerAndLong() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue = 1
         value[LocationConverter.START_LINE] = startLineValue // autoboxing to Integer
@@ -169,7 +170,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithStrings() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue = "1"
         value[LocationConverter.START_LINE] = startLineValue
@@ -197,7 +198,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithCustomTypes() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue: Any = CustomNumber(1)
         value[LocationConverter.START_LINE] = startLineValue
@@ -225,7 +226,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithMixedTypes() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue: Any = 1
         value[LocationConverter.START_LINE] = startLineValue
@@ -253,7 +254,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithValueBiggerMaxIntBooms() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue = Int.MAX_VALUE.toLong() + 1
         value[LocationConverter.START_LINE] = startLineValue
@@ -265,7 +266,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithValueSmallerMinIntBooms() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue = Int.MIN_VALUE.toLong() - 1
         value[LocationConverter.START_LINE] = startLineValue
@@ -277,7 +278,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithAFloatBooms() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue = 1.0.toFloat()
         value[LocationConverter.START_LINE] = startLineValue
@@ -289,7 +290,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithADoubleBooms() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue = 1.0
         value[LocationConverter.START_LINE] = startLineValue
@@ -301,7 +302,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithAStringBooms() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue: Any = "TEST STRING"
         value[LocationConverter.START_LINE] = startLineValue
@@ -313,7 +314,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithAObjectBooms() {
         // arrange
-        val sut: CompositeAttributeConverter<PhysicalLocation> = sut
+        val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val value: MutableMap<String, Any?> = HashMap()
         val startLineValue = Any()
         value[LocationConverter.START_LINE] = startLineValue

@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.annotations.FunctionReplacement
 import java.util.function.BiConsumer
@@ -646,8 +645,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 base =
                     newDeclaredReferenceExpression(
                         copy.singleDeclaration?.name?.localName,
-                        (copy.singleDeclaration as? VariableDeclaration)?.type
-                            ?: UnknownType.getUnknownType(this.language),
+                        (copy.singleDeclaration as? VariableDeclaration)?.type ?: newUnknownType(),
                         frontend.getCodeFromRawNode(instr)
                     )
             }
@@ -697,7 +695,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val field = record.fields["field_$index"]
 
                 // our new base-type is the type of the field
-                baseType = field?.type ?: UnknownType.getUnknownType(language)
+                baseType = field?.type ?: newUnknownType()
 
                 // construct our member expression
                 expr = newMemberExpression(field?.name?.localName, base, baseType, ".", "")
@@ -1175,7 +1173,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             catchClause.parameter =
                 newVariableDeclaration(
                     "e_${gotoCatch.labelName}",
-                    UnknownType.getUnknownType(language),
+                    newUnknownType(),
                     instrStr,
                     true,
                     frontend.language
@@ -1256,7 +1254,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         arrayExpr.arrayExpression =
             newDeclaredReferenceExpression(
                 decl?.name?.toString() ?: Node.EMPTY_NAME,
-                decl?.type ?: UnknownType.getUnknownType(this.language),
+                decl?.type ?: newUnknownType(),
                 instrStr
             )
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 2)

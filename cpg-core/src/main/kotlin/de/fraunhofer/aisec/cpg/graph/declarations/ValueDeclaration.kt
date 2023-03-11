@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
@@ -46,7 +47,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
      * A dedicated backing field, so that [setType] can actually set the type without any loops,
      * since we are using a custom setter in [type] (which calls [setType]).
      */
-    @Relationship("TYPE") protected var _type: Type = UnknownType.getUnknownType()
+    @Relationship("TYPE") protected var _type: Type = UnknownType.getUnknownType(null)
 
     /**
      * The type of this declaration. In order to maximize compatibility with Java legacy code
@@ -62,9 +63,8 @@ abstract class ValueDeclaration : Declaration(), HasType {
                     TypeManager.getInstance()
                         .typeCache
                         .computeIfAbsent(this) { mutableListOf() }
-                        .stream()
-                        .findAny()
-                        .orElse(UnknownType.getUnknownType())
+                        .firstOrNull()
+                        ?: newUnknownType()
                 }
             return result
         }
@@ -126,40 +126,40 @@ abstract class ValueDeclaration : Declaration(), HasType {
     override val propagationType: Type
         get() {
             return if (type is ReferenceType) {
-                (type as ReferenceType?)?.elementType ?: UnknownType.getUnknownType()
+                (type as ReferenceType?)?.elementType ?: newUnknownType()
             } else type
         }
 
     override fun setType(type: Type, root: MutableList<HasType>?) {
-        var type: Type? = type
-        var root: MutableList<HasType>? = root
+        var t: Type? = type
+        var r: MutableList<HasType>? = root
         if (!TypeManager.isTypeSystemActive()) {
-            TypeManager.getInstance().cacheType(this, type)
+            TypeManager.getInstance().cacheType(this, t)
             return
         }
-        if (root == null) {
-            root = ArrayList()
+        if (r == null) {
+            r = ArrayList()
         }
         if (
-            type == null ||
-                root.contains(this) ||
-                TypeManager.getInstance().isUnknown(type) ||
-                this._type is FunctionPointerType && type !is FunctionPointerType
+            t == null ||
+                r.contains(this) ||
+                TypeManager.getInstance().isUnknown(t) ||
+                this._type is FunctionPointerType && t !is FunctionPointerType
         ) {
             return
         }
         val oldType = this.type
-        type = type.duplicate()
+        t = t.duplicate()
         val subTypes: MutableSet<Type?> = HashSet()
         for (t in possibleSubTypes) {
-            if (!t.isSimilar(type)) {
+            if (!t.isSimilar(t)) {
                 subTypes.add(t)
             }
         }
-        subTypes.add(type)
+        subTypes.add(t)
         this._type =
             TypeManager.getInstance()
-                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type))
+                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(t))
         val newSubtypes: MutableList<Type> = ArrayList()
         for (s in subTypes) {
             if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
@@ -167,28 +167,28 @@ abstract class ValueDeclaration : Declaration(), HasType {
             }
         }
         possibleSubTypes = newSubtypes
-        if (oldType == type) {
+        if (oldType == t) {
             // Nothing changed, so we do not have to notify the listeners.
             return
         }
-        root.add(this) // Add current node to the set of "triggers" to detect potential loops.
+        r.add(this) // Add current node to the set of "triggers" to detect potential loops.
         // Notify all listeners about the changed type
         for (l in typeListeners) {
             if (l != this) {
-                l.typeChanged(this, root, oldType)
+                l.typeChanged(this, r, oldType)
             }
         }
     }
 
     override fun setPossibleSubTypes(possibleSubTypes: List<Type>, root: MutableList<HasType>) {
-        var possibleSubTypes = possibleSubTypes
-        possibleSubTypes =
-            possibleSubTypes
+        var list = possibleSubTypes
+        list =
+            list
                 .filterNot { type -> TypeManager.getInstance().isUnknown(type) }
                 .distinct()
                 .toMutableList()
         if (!TypeManager.isTypeSystemActive()) {
-            possibleSubTypes.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
+            list.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
 
             return
         }
@@ -196,9 +196,9 @@ abstract class ValueDeclaration : Declaration(), HasType {
             return
         }
         val oldSubTypes = this.possibleSubTypes
-        this._possibleSubTypes = possibleSubTypes
+        this._possibleSubTypes = list
 
-        if (HashSet(oldSubTypes).containsAll(possibleSubTypes)) {
+        if (HashSet(oldSubTypes).containsAll(list)) {
             // Nothing changed, so we do not have to notify the listeners.
             return
         }

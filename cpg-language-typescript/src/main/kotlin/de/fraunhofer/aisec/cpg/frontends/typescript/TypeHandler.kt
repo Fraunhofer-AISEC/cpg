@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -50,13 +51,11 @@ class TypeHandler(frontend: TypeScriptLanguageFrontend) :
             "ArrayType" -> return handleArrayType(node)
         }
 
-        return UnknownType.getUnknownType(language)
+        return newUnknownType()
     }
 
     private fun handleArrayType(node: TypeScriptNode): Type {
-        val type =
-            node.firstChild("TypeReference")?.let { this.handle(it) }
-                ?: UnknownType.getUnknownType(language)
+        val type = node.firstChild("TypeReference")?.let { this.handle(it) } ?: newUnknownType()
 
         return type.reference(PointerType.PointerOrigin.ARRAY)
     }
@@ -78,6 +77,6 @@ class TypeHandler(frontend: TypeScriptLanguageFrontend) :
             return parseType(this.frontend.getIdentifierName(node))
         }
 
-        return UnknownType.getUnknownType(language)
+        return newUnknownType()
     }
 }

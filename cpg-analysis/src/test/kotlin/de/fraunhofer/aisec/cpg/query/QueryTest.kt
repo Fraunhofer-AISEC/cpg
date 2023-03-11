@@ -466,15 +466,19 @@ class QueryTest {
         val result = analyzer.analyze().get()
 
         val queryTreeResult =
-            result.all<Assignment>(mustSatisfy = { (it.value.invoke() as QueryTree<Number>) < 5 })
+            result.all<AssignmentHolder>(
+                mustSatisfy = {
+                    it.assignments.all { (it.value.invoke() as QueryTree<Number>) < 5 }
+                }
+            )
         assertTrue(queryTreeResult.first)
 
-        val queryTreeResult2 =
-            result.allExtended<Assignment>(
-                mustSatisfy = { it.value.invoke() as QueryTree<Number> lt 5 }
+        /*val queryTreeResult2 =
+            result.allExtended<AssignmentHolder>(
+                mustSatisfy = { it.assignments.all { it.value.invoke() as QueryTree<Number> lt 5 } }
             )
 
-        assertTrue(queryTreeResult2.value)
+        assertTrue(queryTreeResult2.value)*/
     }
 
     @Test

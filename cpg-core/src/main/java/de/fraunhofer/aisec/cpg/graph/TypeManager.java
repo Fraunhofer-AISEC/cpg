@@ -319,8 +319,6 @@ public class TypeManager {
   public boolean stopPropagation(Type type, Type newType) {
     if (type instanceof ObjectType typeObjectType
         && newType instanceof ObjectType newObjectType
-        && typeObjectType.getGenerics() != null
-        && newObjectType.getGenerics() != null
         && type.getName().equals(newType.getName())) {
       return containsParameterizedType(newObjectType.getGenerics())
           && !(containsParameterizedType(typeObjectType.getGenerics()));
@@ -397,10 +395,10 @@ public class TypeManager {
       }
     }
 
-    wrapState.setDepth(depth);
+    wrapState.depth = depth;
     wrapState.setPointerOrigin(pointerOrigins);
     wrapState.setReference(reference);
-    wrapState.setReferenceType(referenceType);
+    wrapState.referenceType = referenceType;
 
     if (unwrappedTypes.isEmpty() && !original.isEmpty()) {
       return original;
@@ -439,10 +437,10 @@ public class TypeManager {
     } else if (types.size() == 1) {
       return rewrapType(
           types.iterator().next(),
-          wrapState.getDepth(),
-          wrapState.getPointerOrigins(),
+          wrapState.depth,
+          wrapState.pointerOrigins,
           wrapState.isReference(),
-          wrapState.getReferenceType());
+          wrapState.referenceType);
     }
 
     var scope = provider.getScope();
@@ -528,10 +526,10 @@ public class TypeManager {
 
     return rewrapType(
         finalType,
-        wrapState.getDepth(),
-        wrapState.getPointerOrigins(),
+        wrapState.depth,
+        wrapState.pointerOrigins,
         wrapState.isReference(),
-        wrapState.getReferenceType());
+        wrapState.referenceType);
   }
 
   private Set<Ancestor> getAncestors(RecordDeclaration recordDeclaration, int depth) {
@@ -553,6 +551,8 @@ public class TypeManager {
 
   public boolean isSupertypeOf(Type superType, Type subType, MetadataProvider provider) {
     Language<?> language = null;
+
+    if (superType instanceof UnknownType && subType instanceof UnknownType) return true;
 
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
       return false;

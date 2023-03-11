@@ -81,13 +81,13 @@ open class TypeHierarchyResolver : Pass() {
     protected fun findRecordsAndEnums(node: Node) {
         // Using a visitor to avoid loops in the AST
         node.accept(
-            { Strategy.AST_FORWARD(it) },
-            object : IVisitor<Node?>() {
-                override fun visit(child: Node) {
-                    if (child is RecordDeclaration) {
-                        recordMap.putIfAbsent(child.name, child)
-                    } else if (child is EnumDeclaration) {
-                        enums.add(child)
+            Strategy::AST_FORWARD,
+            object : IVisitor<Node>() {
+                override fun visit(t: Node) {
+                    if (t is RecordDeclaration) {
+                        recordMap.putIfAbsent(t.name, t)
+                    } else if (t is EnumDeclaration) {
+                        enums.add(t)
                     }
                 }
             }

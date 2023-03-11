@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
@@ -116,7 +115,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // the function will (probably) not have a defined return type, so we try to deduce this
         // from a return statement
-        if (func?.type == UnknownType.getUnknownType(language)) {
+        if (func?.type == newUnknownType()) {
             val returnValue = func.bodyOrNull<ReturnStatement>()?.returnValue
 
             /*if (returnValue == null) {
@@ -124,7 +123,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 func.type = TypeParser.createFrom("void", false)
             } else {*/
 
-            val returnType = returnValue?.type ?: UnknownType.getUnknownType(language)
+            val returnType = returnValue?.type ?: newUnknownType()
 
             func.type = returnType
             // }
@@ -177,7 +176,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val ref =
             newDeclaredReferenceExpression(
                 name,
-                UnknownType.getUnknownType(language),
+                newUnknownType(),
                 this.frontend.getCodeFromRawNode(node)
             )
 
@@ -195,7 +194,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             newMemberExpression(
                 name,
                 base,
-                UnknownType.getUnknownType(language),
+                newUnknownType(),
                 ".",
                 this.frontend.getCodeFromRawNode(node)
             )

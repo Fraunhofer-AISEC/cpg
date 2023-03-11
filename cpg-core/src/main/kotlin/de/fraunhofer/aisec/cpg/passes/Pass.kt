@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.passes.order.*
 import java.util.function.Consumer
@@ -93,17 +92,6 @@ abstract class Pass protected constructor() : Consumer<TranslationResult> {
 
     abstract fun cleanup()
 
-    /**
-     * Specifies, whether this pass supports this particular language. This defaults to `true ` *
-     * and needs to be overridden if a different behaviour is wanted.
-     *
-     * @param language the language
-     * @return truw by default
-     */
-    fun supportsLanguage(language: Language<out LanguageFrontend>): Boolean {
-        return true
-    }
-
     val isLastPass: Boolean
         get() =
             try {
@@ -111,6 +99,7 @@ abstract class Pass protected constructor() : Consumer<TranslationResult> {
             } catch (e: Exception) {
                 false
             }
+
     val isFirstPass: Boolean
         get() =
             try {

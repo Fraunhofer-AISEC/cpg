@@ -33,10 +33,10 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.io.File
 import kotlin.reflect.KClass
 
@@ -131,7 +131,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
                 rhs
             }
         } else {
-            UnknownType.getUnknownType(this)
+            newUnknownType()
         }
     }
 
@@ -144,7 +144,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
             // A comparison, so we return the type "boolean"
             return this.builtInTypes.values.firstOrNull { it is BooleanType }
                 ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
-                    ?: UnknownType.getUnknownType(this)
+                    ?: newUnknownType()
         }
 
         return when (operation.operatorCode) {
@@ -177,9 +177,9 @@ abstract class Language<T : LanguageFrontend> : Node() {
                     // primitive type 1 OP primitive type 2 => primitive type 1
                     operation.lhs.propagationType
                 } else {
-                    UnknownType.getUnknownType(this)
+                    newUnknownType()
                 }
-            else -> UnknownType.getUnknownType(this) // We don't know what is this thing
+            else -> newUnknownType() // We don't know what is this thing
         }
     }
 }
