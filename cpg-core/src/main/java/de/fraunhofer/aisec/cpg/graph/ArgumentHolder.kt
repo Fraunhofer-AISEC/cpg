@@ -44,7 +44,28 @@ interface ArgumentHolder : Holder<Expression> {
     /** Adds the [expression] to the list of arguments. */
     fun addArgument(expression: Expression)
 
+    /**
+     * Removes the [expression] from the list of arguments.
+     *
+     * An indication whether this operation was successful needs to be returned.
+     */
+    fun removeArgument(expression: Expression): Boolean {
+        return false
+    }
+
+    /**
+     * Replaces the existing argument specified in [old] with the one in [new]. Implementation how
+     * to do that might be specific to the argument holder.
+     *
+     * An indication whether this operation was successful needs to be returned.
+     */
+    fun replaceArgument(old: Expression, new: Expression): Boolean
+
     override operator fun plusAssign(node: Expression) {
         addArgument(node)
+    }
+
+    operator fun minusAssign(node: Expression) {
+        removeArgument(node)
     }
 }

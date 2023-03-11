@@ -6,7 +6,7 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger level="DEBUG" name="de.fraunhofer.aisec.cpg"/>
+        <Logger level="TRACE" name="de.fraunhofer.aisec.cpg"/>
         <Root level="DEBUG">
             <AppenderRef ref="STDOUT"/>
         </Root>

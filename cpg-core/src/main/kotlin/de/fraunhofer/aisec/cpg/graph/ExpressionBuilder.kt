@@ -105,6 +105,31 @@ fun MetadataProvider.newUnaryOperator(
 }
 
 /**
+ * Creates a new [AssignExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newAssignExpression(
+    operatorCode: String = "=",
+    lhs: List<Expression> = listOf(),
+    rhs: List<Expression> = listOf(),
+    code: String? = null,
+    rawNode: Any? = null
+): AssignExpression {
+    val node = AssignExpression()
+    node.applyMetadata(this, operatorCode, rawNode, code, true)
+    node.operatorCode = operatorCode
+    node.lhs = lhs
+    node.rhs = rhs
+
+    log(node)
+
+    return node
+}
+
+/**
  * Creates a new [NewExpression]. This is the top-most [Node] that a [LanguageFrontend] or [Handler]
  * should create. The [MetadataProvider] receiver will be used to fill different meta-data using
  * [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an appropriate

@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
@@ -42,6 +41,7 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(VariableUsageResolver::class)
+@DependsOn(CallResolver::class)
 class DFGPass : Pass() {
     override fun accept(tr: TranslationResult) {
         val inferDfgForUnresolvedCalls =
@@ -65,6 +65,7 @@ class DFGPass : Pass() {
             is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
+            is AssignExpression -> handleAssignExpression(node)
             is ArrayCreationExpression -> handleArrayCreationExpression(node)
             is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
@@ -90,8 +91,29 @@ class DFGPass : Pass() {
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
             is VariableDeclaration -> handleVariableDeclaration(node)
-            // Other
-            is Assignment -> handleAssignment(node)
+        }
+    }
+
+    private fun handleAssignExpression(node: AssignExpression) {
+        // If this is a compound assign, we also need to model a dataflow to the node itself
+        if (node.isCompoundAssignment) {
+            node.lhs.firstOrNull()?.let {
+                node.addPrevDFG(it)
+                node.addNextDFG(it)
+            }
+            node.rhs.firstOrNull()?.let { node.addPrevDFG(it) }
+        } else {
+            // Find all targets of rhs and connect them
+            node.rhs.forEach {
+                val targets = node.findTargets(it)
+                targets.forEach { target -> it.addNextDFG(target) }
+            }
+        }
+
+        // If the assignment is used as an expression, we also model a data flow from the (first)
+        // rhs to the node itself
+        if (node.usedAsExpression) {
+            node.expressionValue?.addNextDFG(node)
         }
     }
 
@@ -138,7 +160,7 @@ class DFGPass : Pass() {
      * statement.
      */
     private fun handleReturnStatement(node: ReturnStatement) {
-        node.returnValue?.let { node.addPrevDFG(it) }
+        node.returnValues.forEach { node.addPrevDFG(it) }
     }
 
     /**
@@ -361,11 +383,6 @@ class DFGPass : Pass() {
                 node.rhs.let { node.addPrevDFG(it) }
             }
         }
-    }
-
-    /** Adds the DFG edge to an [Assignment]. The value flows to the target. */
-    private fun handleAssignment(node: Assignment) {
-        node.value?.let { (node.target as? Node)?.addPrevDFG(it) }
     }
 
     /**

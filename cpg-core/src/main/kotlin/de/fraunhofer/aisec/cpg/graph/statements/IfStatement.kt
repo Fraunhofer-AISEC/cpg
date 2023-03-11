@@ -71,6 +71,11 @@ class IfStatement : Statement(), ArgumentHolder {
         this.condition = expression
     }
 
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        this.condition = new
+        return true
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is IfStatement) return false
