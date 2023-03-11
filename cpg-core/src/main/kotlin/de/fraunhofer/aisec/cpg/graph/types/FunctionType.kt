@@ -37,20 +37,14 @@ import de.fraunhofer.aisec.cpg.graph.newUnknownType
  * It can be referenced into a [FunctionPointerType]. In the future, we will probably change this
  * and remove the [FunctionPointerType] and directly use a [PointerType].
  */
-class FunctionType : Type {
-
-    constructor(
-        typeName: String = "",
-        parameters: List<Type> = listOf(),
-        returnTypes: List<Type> = listOf(),
-        language: Language<out LanguageFrontend>? = null,
-    ) : super(typeName, language) {
-        this.parameters = parameters
-        this.returnTypes = returnTypes
-    }
-
-    var parameters: List<Type> = listOf()
-    var returnTypes: List<Type> = listOf()
+class FunctionType
+@JvmOverloads
+constructor(
+    typeName: String = "",
+    var parameters: List<Type> = listOf(),
+    var returnTypes: List<Type> = listOf(),
+    language: Language<out LanguageFrontend>? = null
+) : Type(typeName, language) {
 
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         // TODO(oxisto): In the future, we actually could just remove the FunctionPointerType
