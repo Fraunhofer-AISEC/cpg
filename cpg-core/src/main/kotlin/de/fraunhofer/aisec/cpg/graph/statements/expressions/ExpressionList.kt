@@ -94,16 +94,16 @@ class ExpressionList : Expression(), HasType.TypeListener {
         setPossibleSubTypes(ArrayList(src.possibleSubTypes), root)
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
             return true
         }
-        if (o !is ExpressionList) {
+        if (other !is ExpressionList) {
             return false
         }
-        return (super.equals(o) &&
-            expressions == o.expressions &&
-            propertyEqualsList(expressionEdges, o.expressionEdges))
+        return (super.equals(other) &&
+            expressions == other.expressions &&
+            propertyEqualsList(expressionEdges, other.expressionEdges))
     }
 
     override fun hashCode(): Int {

@@ -44,7 +44,6 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
 import kotlin.collections.set
 import org.slf4j.LoggerFactory
@@ -708,7 +707,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         if (name.contains(".")) {
             name = name.substring(name.lastIndexOf('.') + 1)
         }
-        var typeString = UnknownType.UNKNOWN_TYPE_STRING
+        var typeString: String? = null
         var isStatic = false
         var resolved: ResolvedMethodDeclaration? = null
         try {
@@ -777,7 +776,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         ) // This will also overwrite the code set to the empty string set above
         callExpression =
             this.newMemberCallExpression(member, isStatic, methodCallExpr.toString(), expr)
-        callExpression.type = this.parseType(typeString)
+        callExpression.type = typeString?.let { this.parseType(it) } ?: newUnknownType()
         val arguments = methodCallExpr.arguments
 
         // handle the arguments

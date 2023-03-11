@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -40,8 +39,6 @@ import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.function.Function
 import java.util.function.Predicate
-import java.util.stream.IntStream
-import java.util.stream.Stream
 import org.slf4j.Logger
 
 object Util {
@@ -257,9 +254,9 @@ object Util {
                 currPart.append(c)
             } else if (delimiters.contains("" + c)) {
                 if (openParentheses == 0) {
-                    val toAdd = currPart.toString().strip()
+                    val toAdd = currPart.toString().trim()
                     if (toAdd.isNotEmpty()) {
-                        result.add(currPart.toString().strip())
+                        result.add(currPart.toString().trim())
                     }
                     currPart = StringBuilder()
                 } else {
@@ -270,7 +267,7 @@ object Util {
             }
         }
         if (currPart.isNotEmpty()) {
-            result.add(currPart.toString().strip())
+            result.add(currPart.toString().trim())
         }
         return result
     }
@@ -288,8 +285,7 @@ object Util {
         val marker = '\uffff'
         val openingParentheses: Deque<Int> = ArrayDeque()
         for (i in original.indices) {
-            val c = original[i]
-            when (c) {
+            when (original[i]) {
                 '(' -> openingParentheses.push(i)
                 ')' -> {
                     val matching = openingParentheses.pollFirst()
@@ -333,7 +329,7 @@ object Util {
      * @param target The call's target [FunctionDeclaration]
      * @param arguments The call's arguments to be connected to the target's parameters
      */
-    fun attachCallParameters(target: FunctionDeclaration, arguments: List<Expression?>) {
+    fun attachCallParameters(target: FunctionDeclaration, arguments: List<Expression>) {
         target.parameterEdges.sortWith(Comparator.comparing { it.end.argumentIndex })
         var j = 0
         while (j < arguments.size) {
@@ -344,7 +340,7 @@ object Util {
                     while (j < arguments.size) {
 
                         // map all the following arguments to this variadic param
-                        param.addPrevDFG(arguments[j]!!)
+                        param.addPrevDFG(arguments[j])
                         j++
                     }
                     break
@@ -356,32 +352,8 @@ object Util {
         }
     }
 
-    // TODO(oxisto): Remove at some point and directly use name class
-    fun getSimpleName(language: Language<out LanguageFrontend>?, name: String): String {
-        var name = name
-        if (language != null) {
-            val delimiter = language.namespaceDelimiter
-            if (name.contains(delimiter)) {
-                name = name.substring(name.lastIndexOf(delimiter) + delimiter.length)
-            }
-        }
-        return name
-    }
-
-    // TODO(oxisto): Remove at some point and directly use name class
-    fun getParentName(language: Language<out LanguageFrontend>?, name: String): String {
-        var name = name
-        if (language != null) {
-            val delimiter = language.namespaceDelimiter
-            if (delimiter in name) {
-                name = name.substring(0, name.lastIndexOf(delimiter))
-            }
-        }
-        return name
-    }
-
     /**
-     * Inverse operation of [.attachCallParameters]
+     * Inverse operation of [attachCallParameters]
      *
      * @param target
      * @param arguments
@@ -391,12 +363,6 @@ object Util {
             // A param could be variadic, so multiple arguments could be set as incoming DFG
             param.prevDFG.filter { o: Node? -> o in arguments }.forEach { param.removeNextDFG(it) }
         }
-    }
-
-    @JvmStatic
-    fun <T> reverse(input: Stream<T>): Stream<T> {
-        val temp = input.toArray()
-        return IntStream.range(0, temp.size).mapToObj { i -> temp[temp.size - i - 1] } as Stream<T>
     }
 
     /**

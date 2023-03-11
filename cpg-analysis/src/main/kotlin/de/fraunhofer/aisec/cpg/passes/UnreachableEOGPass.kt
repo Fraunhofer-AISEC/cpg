@@ -46,13 +46,13 @@ class UnreachableEOGPass : Pass() {
             tu.accept(
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node>() {
-                    override fun visit(n: Node) {
-                        when (n) {
-                            is IfStatement -> handleIfStatement(n)
-                            is WhileStatement -> handleWhileStatement(n)
+                    override fun visit(t: Node) {
+                        when (t) {
+                            is IfStatement -> handleIfStatement(t)
+                            is WhileStatement -> handleWhileStatement(t)
                         }
 
-                        super.visit(n)
+                        super.visit(t)
                     }
                 }
             )

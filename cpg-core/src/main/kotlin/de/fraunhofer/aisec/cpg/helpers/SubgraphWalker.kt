@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.checkForPropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.helpers.Util.reverse
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
@@ -334,8 +333,7 @@ object SubgraphWalker {
                     onScopeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })
                 } else {
                     // re-place the current node as a marker for the above check to find out when we
-                    // need to
-                    // exit a scope
+                    // need to exit a scope
                     (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(current, parent))
                     onNodeVisit.forEach(Consumer { c: Consumer<Node> -> c.accept(current) })
                     onNodeVisit2.forEach(
@@ -347,7 +345,7 @@ object SubgraphWalker {
                             .filter(Predicate.not { o: Node -> seen.contains(o) })
                             .collect(Collectors.toList())
                     seen.addAll(unseenChildren)
-                    reverse(unseenChildren.stream()).forEach { child: Node ->
+                    unseenChildren.asReversed().forEach { child: Node ->
                         (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(child, current))
                     }
                     (backlog as ArrayDeque<Node>).push(current)
@@ -498,10 +496,7 @@ object SubgraphWalker {
             var currentScope = scope
 
             // iterate all declarations from the current scope and all its parent scopes
-            while (
-                currentScope != null &&
-                    nodeToParentBlockAndContainedValueDeclarations.containsKey(scope)
-            ) {
+            while (nodeToParentBlockAndContainedValueDeclarations.containsKey(scope)) {
                 val entry = nodeToParentBlockAndContainedValueDeclarations[currentScope]!!
                 for (`val` in entry.right) {
                     if (predicate.test(`val`)) {

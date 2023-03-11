@@ -131,35 +131,35 @@ abstract class ValueDeclaration : Declaration(), HasType {
         }
 
     override fun setType(type: Type, root: MutableList<HasType>?) {
-        var type: Type? = type
-        var root: MutableList<HasType>? = root
+        var t: Type? = type
+        var r: MutableList<HasType>? = root
         if (!TypeManager.isTypeSystemActive()) {
-            TypeManager.getInstance().cacheType(this, type)
+            TypeManager.getInstance().cacheType(this, t)
             return
         }
-        if (root == null) {
-            root = ArrayList()
+        if (r == null) {
+            r = ArrayList()
         }
         if (
-            type == null ||
-                root.contains(this) ||
-                TypeManager.getInstance().isUnknown(type) ||
-                this._type is FunctionPointerType && type !is FunctionPointerType
+            t == null ||
+                r.contains(this) ||
+                TypeManager.getInstance().isUnknown(t) ||
+                this._type is FunctionPointerType && t !is FunctionPointerType
         ) {
             return
         }
         val oldType = this.type
-        type = type.duplicate()
+        t = t.duplicate()
         val subTypes: MutableSet<Type?> = HashSet()
         for (t in possibleSubTypes) {
-            if (!t.isSimilar(type)) {
+            if (!t.isSimilar(t)) {
                 subTypes.add(t)
             }
         }
-        subTypes.add(type)
+        subTypes.add(t)
         this._type =
             TypeManager.getInstance()
-                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type))
+                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(t))
         val newSubtypes: MutableList<Type> = ArrayList()
         for (s in subTypes) {
             if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
@@ -167,28 +167,28 @@ abstract class ValueDeclaration : Declaration(), HasType {
             }
         }
         possibleSubTypes = newSubtypes
-        if (oldType == type) {
+        if (oldType == t) {
             // Nothing changed, so we do not have to notify the listeners.
             return
         }
-        root.add(this) // Add current node to the set of "triggers" to detect potential loops.
+        r.add(this) // Add current node to the set of "triggers" to detect potential loops.
         // Notify all listeners about the changed type
         for (l in typeListeners) {
             if (l != this) {
-                l.typeChanged(this, root, oldType)
+                l.typeChanged(this, r, oldType)
             }
         }
     }
 
     override fun setPossibleSubTypes(possibleSubTypes: List<Type>, root: MutableList<HasType>) {
-        var possibleSubTypes = possibleSubTypes
-        possibleSubTypes =
-            possibleSubTypes
+        var list = possibleSubTypes
+        list =
+            list
                 .filterNot { type -> TypeManager.getInstance().isUnknown(type) }
                 .distinct()
                 .toMutableList()
         if (!TypeManager.isTypeSystemActive()) {
-            possibleSubTypes.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
+            list.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
 
             return
         }
@@ -196,9 +196,9 @@ abstract class ValueDeclaration : Declaration(), HasType {
             return
         }
         val oldSubTypes = this.possibleSubTypes
-        this._possibleSubTypes = possibleSubTypes
+        this._possibleSubTypes = list
 
-        if (HashSet(oldSubTypes).containsAll(possibleSubTypes)) {
+        if (HashSet(oldSubTypes).containsAll(list)) {
             // Nothing changed, so we do not have to notify the listeners.
             return
         }

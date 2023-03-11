@@ -66,13 +66,13 @@ inline fun <reified T> Node.allExtended(
  *
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
-inline fun <reified T> Node.all(
+inline fun <reified T : Node> Node.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean
 ): Pair<Boolean, List<Node>> {
     val nodes = this.allChildren(sel)
 
-    val failedNodes = nodes.filterNot(mustSatisfy) as List<Node>
+    val failedNodes = nodes.filterNot(mustSatisfy)
     return Pair(failedNodes.isEmpty(), failedNodes)
 }
 

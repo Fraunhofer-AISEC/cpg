@@ -41,7 +41,7 @@ interface IVisitable<V : IVisitable<V>> {
             visitor.visit(this)
             val it = strategy.getIterator(this)
             while (it.hasNext()) {
-                it.next()!!.accept(strategy, visitor)
+                it.next().accept(strategy, visitor)
             }
         }
     }

@@ -106,7 +106,7 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
             } else {
                 src.propagationType
             }
-        newType?.let { setType(it, root) }
+        setType(newType, root)
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW
         }

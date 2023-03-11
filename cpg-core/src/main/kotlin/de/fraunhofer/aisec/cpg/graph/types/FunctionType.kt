@@ -39,18 +39,15 @@ import de.fraunhofer.aisec.cpg.graph.newUnknownType
  */
 class FunctionType : Type {
 
-    @JvmOverloads
     constructor(
-        typeName: String,
-        parameters: List<Type>,
-        returnTypes: List<Type>,
-        language: Language<out LanguageFrontend>?,
+        typeName: String = "",
+        parameters: List<Type> = listOf(),
+        returnTypes: List<Type> = listOf(),
+        language: Language<out LanguageFrontend>? = null,
     ) : super(typeName, language) {
         this.parameters = parameters
         this.returnTypes = returnTypes
     }
-
-    constructor() : super()
 
     var parameters: List<Type> = listOf()
     var returnTypes: List<Type> = listOf()

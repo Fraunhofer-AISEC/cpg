@@ -177,22 +177,22 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
             .toString()
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) return true
-        if (o !is RecordDeclaration) return false
-        return super.equals(o) &&
-            kind == o.kind &&
-            fields == o.fields &&
-            propertyEqualsList(fieldEdges, o.fieldEdges) &&
-            methods == o.methods &&
-            propertyEqualsList(methodEdges, o.methodEdges) &&
-            constructors == o.constructors &&
-            propertyEqualsList(constructorEdges, o.constructorEdges) &&
-            records == o.records &&
-            propertyEqualsList(recordEdges, o.recordEdges) &&
-            superClasses == o.superClasses &&
-            implementedInterfaces == o.implementedInterfaces &&
-            superTypeDeclarations == o.superTypeDeclarations
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is RecordDeclaration) return false
+        return super.equals(other) &&
+            kind == other.kind &&
+            fields == other.fields &&
+            propertyEqualsList(fieldEdges, other.fieldEdges) &&
+            methods == other.methods &&
+            propertyEqualsList(methodEdges, other.methodEdges) &&
+            constructors == other.constructors &&
+            propertyEqualsList(constructorEdges, other.constructorEdges) &&
+            records == other.records &&
+            propertyEqualsList(recordEdges, other.recordEdges) &&
+            superClasses == other.superClasses &&
+            implementedInterfaces == other.implementedInterfaces &&
+            superTypeDeclarations == other.superTypeDeclarations
     }
 
     override fun hashCode() = super.hashCode() // TODO: Which fields can be safely added?

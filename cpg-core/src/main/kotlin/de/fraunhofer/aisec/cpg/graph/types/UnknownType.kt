@@ -38,7 +38,7 @@ import java.util.*
  */
 class UnknownType : Type {
     private constructor() : super() {
-        name = Name("UNKNOWN", null, language)
+        name = Name(UNKNOWN_TYPE_STRING, null, language)
     }
 
     /**
@@ -79,29 +79,14 @@ class UnknownType : Type {
     }
 
     override var typeOrigin: Origin? = null
-        set(value) {
-            // Only one instance of UnknownType, use default values
-        }
 
     companion object {
-        // Only one instance of UnknownType for better representation in the graph
-        @Deprecated("This should be replaced by calling getUnknownType(Language)")
-        val unknownType = UnknownType()
-
-        val UNKNOWN_TYPE_STRING = "UNKNOWN_TYPE"
-
+        /** A map of [UnknownType] and their respective [Language]. */
         private val unknownTypes = mutableMapOf<Language<*>?, UnknownType>()
 
-        /**
-         * Use this function to obtain an UnknownType or call the TypeParser with the typeString
-         * UNKNOWN
-         *
-         * @return UnknownType instance
-         */
+        /** Use this function to obtain an [UnknownType] for the particular [language]. */
         @JvmStatic
         fun getUnknownType(language: Language<out LanguageFrontend>?): UnknownType {
-            if (language == null) return unknownType
-
             return unknownTypes.computeIfAbsent(language) {
                 val unknownType = UnknownType()
                 unknownType.language = language
