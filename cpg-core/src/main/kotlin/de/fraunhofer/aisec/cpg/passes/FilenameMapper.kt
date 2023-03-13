@@ -44,10 +44,10 @@ class FilenameMapper : Pass() {
     private fun handle(node: Node, file: String) {
         // Using a visitor to avoid loops in the AST
         node.accept(
-            { Strategy.AST_FORWARD(it) },
-            object : IVisitor<Node?>() {
-                override fun visit(child: Node) {
-                    child.file = file
+            Strategy::AST_FORWARD,
+            object : IVisitor<Node>() {
+                override fun visit(t: Node) {
+                    t.file = file
                 }
             }
         )

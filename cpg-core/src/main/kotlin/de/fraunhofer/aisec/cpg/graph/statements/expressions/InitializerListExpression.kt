@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -86,8 +86,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
                             .registerType(it.type.reference(PointerOrigin.ARRAY))
                     }
                     .toSet()
-            val alternative =
-                if (types.isNotEmpty()) types.iterator().next() else UnknownType.getUnknownType()
+            val alternative = if (types.isNotEmpty()) types.iterator().next() else newUnknownType()
             newType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
             subTypes = ArrayList(possibleSubTypes)
             subTypes.remove(oldType)

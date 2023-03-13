@@ -132,7 +132,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         assertStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        thenStatement.ifPresent { statement: Expression? ->
+        thenStatement.ifPresent {
             assertStatement.message = frontend.expressionHandler.handle(thenStatement.get())
         }
         return assertStatement

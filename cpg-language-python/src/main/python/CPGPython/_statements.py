@@ -170,7 +170,7 @@ def handle_statement_impl(self, stmt):
             else:
                 name = s.name
                 src = name
-            tpe = UnknownType.getUnknownType()
+            tpe = UnknownType.getUnknownType(self.frontend.getLanguage())
             v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
                                                             name, tpe, src,
                                                             False)
@@ -200,7 +200,7 @@ def handle_statement_impl(self, stmt):
             else:
                 name = s.name
                 src = name
-            tpe = UnknownType.getUnknownType()
+            tpe = UnknownType.getUnknownType(self.frontend.getLanguage())
             v = DeclarationBuilderKt.newVariableDeclaration(
                 self.frontend, name, tpe, src, False)
             # inaccurate but ast.alias does not hold location information
@@ -408,7 +408,7 @@ def handle_argument(self, arg: ast.arg):
     if arg.annotation is not None:
         tpe = NodeBuilderKt.parseType(self.frontend, arg.annotation.id)
     else:
-        tpe = UnknownType.getUnknownType()
+        tpe = UnknownType.getUnknownType(self.frontend.getLanguage())
     # TODO variadic
     pvd = DeclarationBuilderKt.newParamVariableDeclaration(
         self.frontend, arg.arg, tpe, False, self.get_src_code(arg))
@@ -578,7 +578,8 @@ def handle_assign_impl(self, stmt):
                     None, rhs, False)  # TODO None -> add infos
             else:
                 v = DeclarationBuilderKt.newFieldDeclaration(
-                    self.frontend, name, UnknownType.getUnknownType(),
+                    self.frontend, name,
+                    UnknownType.getUnknownType(self.frontend.getLanguage()),
                     None, self.get_src_code(stmt),
                     None, None, False)  # TODO None -> add infos
             self.scopemanager.addDeclaration(v)
@@ -603,7 +604,8 @@ def handle_assign_impl(self, stmt):
                 else:
                     v = DeclarationBuilderKt.newVariableDeclaration(
                         self.frontend, lhs.getName(),
-                        UnknownType.getUnknownType(),
+                        UnknownType.getUnknownType(
+                            self.frontend.getLanguage()),
                         self.get_src_code(stmt),
                         False)
                 if rhs is not None:
@@ -641,7 +643,8 @@ def handle_assign_impl(self, stmt):
                 else:
                     v = DeclarationBuilderKt.newFieldDeclaration(
                         self.frontend, lhs.getName(),
-                        UnknownType.getUnknownType(),
+                        UnknownType.getUnknownType(
+                            self.frontend.getLanguage()),
                         None, self.get_src_code(stmt),
                         None, None, False)
                 self.scopemanager.addDeclaration(v)
@@ -663,7 +666,7 @@ def handle_assign_impl(self, stmt):
             else:
                 v = DeclarationBuilderKt.newVariableDeclaration(
                     self.frontend, lhs.getName(),
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(self.frontend.getLanguage()),
                     self.get_src_code(stmt),
                     False)
             if rhs is not None:

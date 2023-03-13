@@ -332,7 +332,7 @@ fun applyTemplateInstantiation(
     val templateInstantiationParameters =
         mutableListOf<Node>(*orderedInitializationSignature.keys.toTypedArray())
     for ((key, value) in orderedInitializationSignature) {
-        templateInstantiationParameters[value] = initializationSignature[key]!!
+        initializationSignature[key]?.let { templateInstantiationParameters[value] = it }
     }
     templateCall.templateInstantiation = functionTemplateDeclaration
 

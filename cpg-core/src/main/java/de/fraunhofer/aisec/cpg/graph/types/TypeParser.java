@@ -609,7 +609,7 @@ public class TypeParser {
       Type returnType = createFrom(typeName, language);
       List<Type> parameterList = getParameterList(funcptr.group("args"), language);
 
-      return typeManager.registerType(new FunctionPointerType(parameterList, returnType, language));
+      return typeManager.registerType(new FunctionPointerType(parameterList, language, returnType));
     } else if (isIncompleteType(typeName)) {
       // IncompleteType e.g. void
       finalType = new IncompleteType();

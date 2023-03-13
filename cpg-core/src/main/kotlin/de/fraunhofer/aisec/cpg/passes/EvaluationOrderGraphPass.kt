@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -90,7 +89,7 @@ open class EvaluationOrderGraphPass : Pass() {
     private val intermediateNodes = mutableListOf<Node>()
 
     init {
-        map[IncludeDeclaration::class.java] = { doNothing(it) }
+        map[IncludeDeclaration::class.java] = { doNothing() }
         map[TranslationUnitDeclaration::class.java] = {
             handleTranslationUnitDeclaration(it as TranslationUnitDeclaration)
         }
@@ -164,7 +163,7 @@ open class EvaluationOrderGraphPass : Pass() {
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
     }
 
-    private fun doNothing(node: Node) {
+    private fun doNothing() {
         // Nothing to do for this node type
     }
 
@@ -534,38 +533,14 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleUnaryOperator(node: UnaryOperator) {
         val input = node.input
-        if (input != null) {
-            createEOG(input)
-        }
+        createEOG(input)
         if (node.operatorCode == "throw") {
             val catchingScope =
                 scopeManager.firstScopeOrNull { scope ->
                     scope is TryScope || scope is FunctionScope
                 }
 
-            val throwType =
-                if (input != null) {
-                    input.type
-                } else {
-                    // do not check via instanceof, since we do not want to allow subclasses of
-                    // DeclarationScope here
-                    val decl =
-                        scopeManager.firstScopeOrNull { scope ->
-                            scope.javaClass == ValueDeclarationScope::class.java
-                        }
-
-                    if (
-                        decl != null &&
-                            decl.astNode is CatchClause &&
-                            (decl.astNode as CatchClause?)!!.parameter != null
-                    ) {
-                        val param = (decl.astNode as CatchClause?)!!.parameter!!
-                        param.type
-                    } else {
-                        LOGGER.info("Unknown throw type, potentially throw; in a method")
-                        TypeParser.createFrom("UNKNOWN_THROW_TYPE", node.language)
-                    }
-                }
+            val throwType = input.type
             pushToEOG(node)
             if (catchingScope is TryScope) {
                 catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)

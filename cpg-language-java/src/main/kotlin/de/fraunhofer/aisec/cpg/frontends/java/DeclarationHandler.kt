@@ -49,7 +49,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
 import java.util.stream.Collectors
 import kotlin.collections.set
@@ -178,8 +177,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val receiver =
             this.newVariableDeclaration(
                 "this",
-                if (recordDecl != null) this.parseType(recordDecl.name)
-                else UnknownType.getUnknownType(language),
+                if (recordDecl != null) this.parseType(recordDecl.name) else newUnknownType(),
                 "this",
                 false
             )

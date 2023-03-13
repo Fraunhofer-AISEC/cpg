@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import org.bytedeco.javacpp.IntPointer
 import org.bytedeco.javacpp.SizeTPointer
@@ -65,11 +64,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 newDeclaredReferenceExpression("poison", frontend.typeOf(value), "poison")
             }
             LLVMConstantTokenNoneValueKind ->
-                newLiteral(
-                    null,
-                    UnknownType.getUnknownType(language),
-                    frontend.getCodeFromRawNode(value)
-                )
+                newLiteral(null, newUnknownType(), frontend.getCodeFromRawNode(value))
             LLVMUndefValueValueKind ->
                 initializeAsUndef(frontend.typeOf(value), frontend.getCodeFromRawNode(value)!!)
             LLVMConstantAggregateZeroValueKind ->
@@ -524,17 +519,11 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     }
 
                 // our new base-type is the type of the field
-                baseType = field?.type ?: UnknownType.getUnknownType(language)
+                baseType = field?.type ?: newUnknownType()
 
                 // construct our member expression
                 expr =
-                    newMemberExpression(
-                        fieldName,
-                        base,
-                        field?.type ?: UnknownType.getUnknownType(),
-                        ".",
-                        ""
-                    )
+                    newMemberExpression(fieldName, base, field?.type ?: newUnknownType(), ".", "")
                 log.info("{}", expr)
 
                 // the current expression is the new base

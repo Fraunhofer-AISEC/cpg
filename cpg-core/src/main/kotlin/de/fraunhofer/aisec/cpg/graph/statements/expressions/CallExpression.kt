@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
@@ -286,7 +285,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
                 }
                 null
             }
-        val alternative = if (types.isNotEmpty()) types[0] else UnknownType.getUnknownType(language)
+        val alternative = if (types.isNotEmpty()) types[0] else newUnknownType()
         val commonType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
 

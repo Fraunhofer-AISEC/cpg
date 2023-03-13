@@ -57,14 +57,12 @@ abstract class CXXHandler<S : Node, T : Any>(
 
         // The language frontend might set a location, which we should respect. Otherwise, we will
         // set the location here.
-        if (node != null && node.location == null) {
+        if (node.location == null) {
             frontend.setCodeAndLocation<S, T>(node, ctx)
         }
 
         frontend.setComment(node, ctx)
-        if (node != null) {
-            frontend.process(ctx, node)
-        }
+        frontend.process(ctx, node)
 
         return node
     }

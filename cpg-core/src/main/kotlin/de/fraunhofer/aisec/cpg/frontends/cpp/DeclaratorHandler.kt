@@ -118,7 +118,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             val declaration =
                 newVariableDeclaration(
                     ctx.name.toString(),
-                    UnknownType.getUnknownType(language), // Type will be filled out later by
+                    newUnknownType(), // Type will be filled out later by
                     // handleSimpleDeclaration
                     ctx.rawSignature,
                     implicitInitializerAllowed,
@@ -152,7 +152,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 val fieldName = rr[rr.size - 1]
                 newFieldDeclaration(
                     fieldName,
-                    UnknownType.getUnknownType(language),
+                    newUnknownType(),
                     emptyList(),
                     ctx.rawSignature,
                     frontend.getLocationFromRawNode(ctx),
@@ -162,7 +162,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             } else {
                 newFieldDeclaration(
                     name,
-                    UnknownType.getUnknownType(language),
+                    newUnknownType(),
                     emptyList(),
                     ctx.rawSignature,
                     frontend.getLocationFromRawNode(ctx),
@@ -273,9 +273,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // (probably the global scope), but associate it to the named scope.
         if (parentScope != null && outsideOfScope) {
             // Bypass the scope manager and manually add it to the AST parent
-            val parent = frontend.scopeManager.currentScope?.astNode
-            if (parent != null && parent is DeclarationHolder) {
-                parent.addDeclaration(declaration)
+            val scopeParent = frontend.scopeManager.currentScope?.astNode
+            if (scopeParent != null && scopeParent is DeclarationHolder) {
+                scopeParent.addDeclaration(declaration)
             }
 
             // Enter the record scope
@@ -345,13 +345,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
         // declaration that wraps this list
         if (ctx.takesVarArgs()) {
-            val varargs =
-                newParamVariableDeclaration(
-                    "va_args",
-                    UnknownType.getUnknownType(language),
-                    true,
-                    ""
-                )
+            val varargs = newParamVariableDeclaration("va_args", newUnknownType(), true, "")
             varargs.isImplicit = true
             varargs.argumentIndex = i
             frontend.scopeManager.addDeclaration(varargs)
@@ -395,11 +389,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // Create a pointer to the class type (if we know it)
         val type =
-            if (recordDeclaration != null) {
-                recordDeclaration.toType().reference(PointerType.PointerOrigin.POINTER)
-            } else {
-                UnknownType.getUnknownType(language)
-            }
+            recordDeclaration?.toType()?.reference(PointerType.PointerOrigin.POINTER)
+                ?: newUnknownType()
 
         // Create the receiver. implicitInitializerAllowed must be false, otherwise fixInitializers
         // will create another implicit constructexpression for this variable, and we don't want
@@ -426,13 +417,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         val recordDeclaration = frontend.scopeManager.currentRecord
         if (recordDeclaration == null) {
             // variable
-            result =
-                newVariableDeclaration(
-                    name,
-                    UnknownType.getUnknownType(language),
-                    ctx.rawSignature,
-                    true
-                )
+            result = newVariableDeclaration(name, newUnknownType(), ctx.rawSignature, true)
             result.initializer = initializer
         } else {
             // field
@@ -446,7 +431,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             result =
                 newFieldDeclaration(
                     fieldName,
-                    UnknownType.getUnknownType(language),
+                    newUnknownType(),
                     emptyList(),
                     code,
                     frontend.getLocationFromRawNode(ctx),

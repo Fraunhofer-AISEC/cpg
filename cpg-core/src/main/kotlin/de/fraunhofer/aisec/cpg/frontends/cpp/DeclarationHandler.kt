@@ -133,7 +133,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Retrieve the type. This should parse as a function type, otherwise it is unknown.
         val type = frontend.typeOf(ctx.declarator, ctx.declSpecifier, declaration) as? FunctionType
-        declaration.type = type ?: UnknownType.getUnknownType(language)
+        declaration.type = type ?: newUnknownType()
         declaration.isDefinition = true
 
         // We also need to set the return type, based on the function type.
@@ -403,7 +403,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * @param parameterizedTypes
      */
     private fun addParameterizedTypesToType(
-        type: Type,
+        type: Type?,
         parameterizedTypes: List<ParameterizedType>
     ) {
         if (type is ObjectType) {
