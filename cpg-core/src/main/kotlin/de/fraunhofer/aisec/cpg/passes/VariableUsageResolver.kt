@@ -110,9 +110,9 @@ open class VariableUsageResolver : SymbolResolverPass() {
     private fun resolveLocalVarUsage(
         currentClass: RecordDeclaration?,
         parent: Node?,
-        current: Node
+        current: Node?
     ) {
-        val language = current.language
+        val language = current?.language
 
         if (current !is DeclaredReferenceExpression || current is MemberExpression) return
 
@@ -182,15 +182,15 @@ open class VariableUsageResolver : SymbolResolverPass() {
     private fun getEnclosingTypeOf(current: Node): Type {
         val language = current.language
 
-        if (language != null && language.namespaceDelimiter.isNotEmpty()) {
+        return if (language != null && language.namespaceDelimiter.isNotEmpty()) {
             val parentName = (current.name.parent ?: current.name).toString()
-            return TypeParser.createFrom(parentName, language)
+            TypeParser.createFrom(parentName, language)
         } else {
-            return UnknownType.getUnknownType()
+            current.language.newUnknownType()
         }
     }
 
-    private fun resolveFieldUsages(curClass: RecordDeclaration?, parent: Node?, current: Node) {
+    private fun resolveFieldUsages(curClass: RecordDeclaration?, parent: Node?, current: Node?) {
         if (current !is MemberExpression) {
             return
         }

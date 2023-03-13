@@ -94,7 +94,7 @@ internal class TypeTests : BaseTest() {
         // Test 8: generics
         typeString = "List<String> list"
         result = TypeParser.createFrom(typeString, JavaLanguage())
-        var generics: MutableList<Type?> = ArrayList()
+        var generics = mutableListOf<Type>()
         generics.add(StringType("java.lang.String", JavaLanguage()))
         expected = ObjectType("List", generics, false, JavaLanguage())
         assertEquals(expected, result)

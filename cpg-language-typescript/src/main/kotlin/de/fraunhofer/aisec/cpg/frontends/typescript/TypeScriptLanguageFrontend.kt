@@ -127,17 +127,15 @@ class TypeScriptLanguageFrontend(
         // acceptable.
         val matches: Sequence<MatchResult> =
             Regex("(?:/\\*((?:[^*]|(?:\\*+[^*/]))*)\\*+/)|(?://(.*))").findAll(currentFileContent!!)
-        matches.toList().forEach {
-            val groups = it.groups
+        matches.toList().forEach { result ->
+            val groups = result.groups
             groups[0]?.let {
-                var comment = it.value
-
                 val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
 
                 // We only want the actual comment text and therefore take the value we captured in
                 // the first, or second group.
                 // Only as a last resort we take the entire match, although this should never occurs
-                comment = groups[1]?.value ?: (groups[2]?.value ?: it.value)
+                var comment = groups[1]?.value ?: (groups[2]?.value ?: it.value)
 
                 comment = comment.trim()
 

@@ -1204,15 +1204,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(returnStatement)
 
         // we need to assert, that we have a consistent chain of EOG edges from the first statement
-        // to
-        // the return statement. otherwise, the EOG chain is somehow broken
+        // to the return statement. otherwise, the EOG chain is somehow broken
         val eogEdges = ArrayList<Node>()
         main.accept(
-            { x: Node? -> Strategy.EOG_FORWARD(x!!) },
+            Strategy::EOG_FORWARD,
             object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    println(n)
-                    eogEdges.add(n)
+                override fun visit(t: Node) {
+                    println(t)
+                    eogEdges.add(t)
                 }
             }
         )
@@ -1290,7 +1289,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     fun testEnum() {
         val file = File("src/test/resources/c/enum.c")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        // TU should only contains two AST declarations (EnumDeclaration and FunctionDeclaration),
+        // TU should only contain two AST declarations (EnumDeclaration and FunctionDeclaration),
         // but NOT any EnumConstantDeclarations
         assertEquals(2, tu.declarations.size)
 

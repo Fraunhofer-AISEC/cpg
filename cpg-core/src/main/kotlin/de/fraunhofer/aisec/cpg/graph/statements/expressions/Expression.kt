@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -49,7 +48,7 @@ import org.neo4j.ogm.annotation.Transient
  */
 abstract class Expression : Statement(), HasType {
 
-    @Relationship("TYPE") private var _type: Type = UnknownType.getUnknownType()
+    @Relationship("TYPE") private var _type: Type = newUnknownType()
 
     /** The type of the value after evaluation. */
     override var type: Type
@@ -61,9 +60,8 @@ abstract class Expression : Statement(), HasType {
                     TypeManager.getInstance()
                         .typeCache
                         .computeIfAbsent(this) { mutableListOf() }
-                        .stream()
-                        .findAny()
-                        .orElse(UnknownType.getUnknownType())
+                        .firstOrNull()
+                        ?: newUnknownType()
                 }
             return result
         }
@@ -89,34 +87,34 @@ abstract class Expression : Statement(), HasType {
     override val propagationType: Type
         get() {
             return if (type is ReferenceType) {
-                (type as ReferenceType?)?.elementType ?: UnknownType.getUnknownType()
+                (type as ReferenceType?)?.elementType ?: newUnknownType()
             } else type
         }
 
     @Override
     override fun setType(type: Type, root: MutableList<HasType>?) {
-        var type: Type = type
-        var root: MutableList<HasType>? = root
+        var t: Type = type
+        var r: MutableList<HasType>? = root
 
         // TODO Document this method. It is called very often (potentially for each AST node) and
         //  performs less than optimal.
         if (!TypeManager.isTypeSystemActive()) {
-            this._type = type
-            TypeManager.getInstance().cacheType(this, type)
+            this._type = t
+            TypeManager.getInstance().cacheType(this, t)
             return
         }
 
-        if (root == null) {
-            root = mutableListOf()
+        if (r == null) {
+            r = mutableListOf()
         }
 
         // No (or only unknown) type given, loop detected? Stop early because there's nothing we can
         // do.
         if (
-            root.contains(this) ||
-                TypeManager.getInstance().isUnknown(type) ||
-                TypeManager.getInstance().stopPropagation(this.type, type) ||
-                (this.type is FunctionPointerType && type !is FunctionPointerType)
+            r.contains(this) ||
+                TypeManager.getInstance().isUnknown(t) ||
+                TypeManager.getInstance().stopPropagation(this.type, t) ||
+                (this.type is FunctionPointerType && t !is FunctionPointerType)
         ) {
             return
         }
@@ -124,22 +122,22 @@ abstract class Expression : Statement(), HasType {
         val oldType = this.type
         // Backup to check if something changed
 
-        type = type.duplicate()
+        t = t.duplicate()
         val subTypes = mutableSetOf<Type>()
 
         // Check all current subtypes and consider only those which are "different enough" to type.
-        for (t in possibleSubTypes) {
-            if (!t.isSimilar(type)) {
-                subTypes.add(t)
+        for (s in possibleSubTypes) {
+            if (!s.isSimilar(s)) {
+                subTypes.add(s)
             }
         }
 
-        subTypes.add(type)
+        subTypes.add(t)
 
         // Probably tries to get something like the best supertype of all possible subtypes.
         this._type =
             TypeManager.getInstance()
-                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type))
+                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(t))
 
         // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
         //  getting the common type??
@@ -152,40 +150,40 @@ abstract class Expression : Statement(), HasType {
 
         possibleSubTypes = newSubtypes
 
-        if (oldType == type) {
+        if (oldType == t) {
             // Nothing changed, so we do not have to notify the listeners.
             return
         }
 
         // Add current node to the set of "triggers" to detect potential loops.
-        root.add(this)
+        r.add(this)
 
         // Notify all listeners about the changed type
         for (l in typeListeners) {
             if (l != this) {
-                l.typeChanged(this, root, oldType)
+                l.typeChanged(this, r, oldType)
             }
         }
     }
 
     override fun setPossibleSubTypes(possibleSubTypes: List<Type>, root: MutableList<HasType>) {
-        var possibleSubTypes = possibleSubTypes
-        possibleSubTypes =
-            possibleSubTypes
+        var list = possibleSubTypes
+        list =
+            list
                 .filterNot { type -> TypeManager.getInstance().isUnknown(type) }
                 .distinct()
                 .toMutableList()
         if (!TypeManager.isTypeSystemActive()) {
-            possibleSubTypes.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
+            list.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
             return
         }
         if (root.contains(this)) {
             return
         }
         val oldSubTypes = this.possibleSubTypes
-        this._possibleSubTypes = possibleSubTypes
+        this._possibleSubTypes = list
 
-        if (HashSet(oldSubTypes).containsAll(possibleSubTypes)) {
+        if (HashSet(oldSubTypes).containsAll(list)) {
             // Nothing changed, so we do not have to notify the listeners.
             return
         }

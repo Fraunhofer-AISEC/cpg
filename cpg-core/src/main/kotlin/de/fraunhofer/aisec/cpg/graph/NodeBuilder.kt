@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import org.slf4j.LoggerFactory
 
@@ -204,6 +205,18 @@ fun MetadataProvider.newAnnotationMember(
 
     log(node)
     return node
+}
+
+/**
+ * Creates a new [UnknownType] and sets the appropriate language, if this [MetadataProvider]
+ * includes a [LanguageProvider].
+ */
+fun MetadataProvider?.newUnknownType(): UnknownType {
+    return if (this is LanguageProvider) {
+        UnknownType.getUnknownType(language)
+    } else {
+        UnknownType.getUnknownType(null)
+    }
 }
 
 /**

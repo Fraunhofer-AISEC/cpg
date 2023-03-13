@@ -65,32 +65,32 @@ sonarqube {
 // Load the properties that define which frontends to include
 //
 // this code block also exists in settings.gradle.kts
-val enableJavaFrontend by extra {
-    val enableJavaFrontend: String by project
+val enableJavaFrontend: Boolean by extra {
+    val enableJavaFrontend: String? by project
     enableJavaFrontend.toBoolean()
 }
 project.logger.lifecycle("Java frontend is ${if (enableJavaFrontend) "enabled" else "disabled"}")
 
-val enableGoFrontend by extra {
-    val enableGoFrontend: String by project
+val enableGoFrontend: Boolean by extra {
+    val enableGoFrontend: String? by project
     enableGoFrontend.toBoolean()
 }
 project.logger.lifecycle("Go frontend is ${if (enableGoFrontend) "enabled" else "disabled"}")
 
-val enablePythonFrontend by extra {
-    val enablePythonFrontend: String by project
+val enablePythonFrontend: Boolean by extra {
+    val enablePythonFrontend: String? by project
     enablePythonFrontend.toBoolean()
 }
 project.logger.lifecycle("Python frontend is ${if (enablePythonFrontend) "enabled" else "disabled"}")
 
-val enableLLVMFrontend by extra {
-    val enableLLVMFrontend: String by project
+val enableLLVMFrontend: Boolean by extra {
+    val enableLLVMFrontend: String? by project
     enableLLVMFrontend.toBoolean()
 }
 project.logger.lifecycle("LLVM frontend is ${if (enableLLVMFrontend) "enabled" else "disabled"}")
 
-val enableTypeScriptFrontend by extra {
-    val enableTypeScriptFrontend: String by project
+val enableTypeScriptFrontend: Boolean by extra {
+    val enableTypeScriptFrontend: String? by project
     enableTypeScriptFrontend.toBoolean()
 }
 project.logger.lifecycle("TypeScript frontend is ${if (enableTypeScriptFrontend) "enabled" else "disabled"}")

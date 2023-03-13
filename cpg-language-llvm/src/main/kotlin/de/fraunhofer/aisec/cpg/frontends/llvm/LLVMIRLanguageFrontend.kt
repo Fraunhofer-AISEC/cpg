@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -194,7 +195,7 @@ class LLVMIRLanguageFrontend(
             return alreadyVisited[typeRef]!!
         } else if (typeRef in alreadyVisited) {
             // Recursive call but we can't resolve it.
-            return UnknownType.getUnknownType(language)
+            return newUnknownType()
         }
         alreadyVisited[typeRef] = null
         val res: Type =

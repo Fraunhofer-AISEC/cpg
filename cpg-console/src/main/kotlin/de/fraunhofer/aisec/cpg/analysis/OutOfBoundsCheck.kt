@@ -52,7 +52,7 @@ class OutOfBoundsCheck {
         for (tu in result.translationUnits) {
             tu.accept(
                 Strategy::AST_FORWARD,
-                object : IVisitor<Node?>() {
+                object : IVisitor<Node>() {
                     fun visit(v: ArraySubscriptionExpression) {
                         val evaluator = ValueEvaluator()
                         val resolvedIndex = evaluator.evaluate(v.subscriptExpression)

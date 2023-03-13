@@ -25,11 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class IdentitySetTest {
     @Test
@@ -66,15 +62,15 @@ class IdentitySetTest {
         set.add(1)
         set.add(2)
 
-        assertTrue(set.equals(setOf(1, 2)))
-        assertFalse(set.equals(setOf(1, 2, 3)))
-        assertFalse(set.equals(setOf("1", "2", 3)))
-        assertFalse(set.equals(setOf(1)))
+        assertEquals(set, identitySetOf(1, 2))
+        assertNotEquals(set, identitySetOf(1, 2, 3))
+        assertFalse(set == identitySetOf("1", "2", 3))
+        assertNotEquals(set, identitySetOf(1))
 
-        assertEquals(setOf(1, 2), set)
-        assertNotEquals(setOf(1, 2, 3), set)
-        assertNotEquals(setOf(1), set)
-        assertNotEquals(setOf("1", "2", 3), set)
+        assertEquals(identitySetOf(1, 2), set)
+        assertNotEquals(identitySetOf(1, 2, 3), set)
+        assertNotEquals(identitySetOf(1), set)
+        assertFalse(set == identitySetOf("1", "2", 3))
     }
 
     @Test

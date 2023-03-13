@@ -25,12 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import kotlin.collections.ArrayList
 import org.slf4j.LoggerFactory
@@ -38,7 +34,7 @@ import org.slf4j.LoggerFactory
 class CastExpression : Expression(), HasType.TypeListener {
     @AST var expression: Expression = ProblemExpression("could not parse inner expression")
 
-    var castType: Type = UnknownType.getUnknownType()
+    var castType: Type = newUnknownType()
         set(value) {
             field = value
             type = value

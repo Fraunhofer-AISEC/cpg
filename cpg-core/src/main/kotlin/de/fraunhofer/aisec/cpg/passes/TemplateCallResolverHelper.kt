@@ -132,10 +132,9 @@ fun applyMissingParams(
             )
             // If template argument is a type add it as a generic to the type as well
             if (templateParametersExplicitInitialization[missingParam] is TypeExpression) {
-                (constructExpression.type as ObjectType).addGeneric(
-                    (templateParametersExplicitInitialization[missingParam] as TypeExpression?)
-                        ?.type
-                )
+                (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
+                    ?.type
+                    ?.let { (constructExpression.type as ObjectType).addGeneric(it) }
             }
         } else if (missingParam in templateParameterRealDefaultInitialization) {
             // Add default of template parameter to construct declaration
@@ -144,10 +143,9 @@ fun applyMissingParams(
                 TemplateDeclaration.TemplateInitialization.DEFAULT
             )
             if (templateParametersExplicitInitialization[missingParam] is Type) {
-                (constructExpression.type as ObjectType).addGeneric(
-                    (templateParametersExplicitInitialization[missingParam] as TypeExpression?)
-                        ?.type
-                )
+                (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
+                    ?.type
+                    ?.let { (constructExpression.type as ObjectType).addGeneric(it) }
             }
         }
     }
