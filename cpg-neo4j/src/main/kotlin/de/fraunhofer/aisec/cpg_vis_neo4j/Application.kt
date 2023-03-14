@@ -313,6 +313,7 @@ class Application : Callable<Int> {
             TranslationConfiguration.builder()
                 .topLevel(topLevel)
                 .defaultLanguages()
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
