@@ -77,6 +77,10 @@ open class ValueEvaluator(
         return evaluateInternal(node as? Node, 0)
     }
 
+    fun clearPath() {
+        path.clear()
+    }
+
     /** Tries to evaluate this node. Anything can happen. */
     protected open fun evaluateInternal(node: Node?, depth: Int): Any? {
         // Add the expression to the current path

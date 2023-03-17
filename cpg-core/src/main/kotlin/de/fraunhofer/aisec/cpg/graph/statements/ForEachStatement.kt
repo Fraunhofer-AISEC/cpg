@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import java.util.Objects
 
 class ForEachStatement : Statement() {
@@ -33,7 +35,14 @@ class ForEachStatement : Statement() {
      * This field contains the iteration variable of the loop. It can be either a new variable
      * declaration or a reference to an existing variable.
      */
-    @AST var variable: Statement? = null
+    @AST
+    var variable: Statement? = null
+        set(value) {
+            if (value is DeclaredReferenceExpression) {
+                value.access = AccessValues.WRITE
+            }
+            field = value
+        }
 
     /** This field contains the iteration subject of the loop. */
     @AST var iterable: Statement? = null
