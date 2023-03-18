@@ -25,14 +25,24 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.SplitsControlFlow
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import java.util.Objects
 
-class CatchClause : Statement() {
+class CatchClause : Statement(), SplitsControlFlow {
     @AST var parameter: VariableDeclaration? = null
 
     @AST var body: CompoundStatement? = null
+
+    override val splittingNode: Node?
+        get() = parameter
+
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    override val affectedNodes = mutableListOf<Node>()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

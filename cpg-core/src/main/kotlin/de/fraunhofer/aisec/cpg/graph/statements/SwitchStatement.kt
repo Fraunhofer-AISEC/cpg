@@ -25,9 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.SplitsControlFlow
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import java.util.Objects
 
 /**
@@ -35,7 +39,7 @@ import java.util.Objects
  * and default statements. Break statements break out of the switch and labeled breaks in JAva are
  * handled properly.
  */
-class SwitchStatement : Statement() {
+class SwitchStatement : Statement(), SplitsControlFlow {
     /** Selector that determines the case/default statement of the subsequent execution */
     @AST var selector: Expression? = null
 
@@ -50,6 +54,12 @@ class SwitchStatement : Statement() {
      * same hierarchy
      */
     @AST var statement: Statement? = null
+
+    override val splittingNode: Node?
+        get() = selector
+
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    override val affectedNodes = mutableListOf<Node>()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

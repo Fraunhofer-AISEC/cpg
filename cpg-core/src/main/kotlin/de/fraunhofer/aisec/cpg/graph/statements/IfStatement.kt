@@ -25,15 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.SplitsControlFlow
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-class IfStatement : Statement(), ArgumentHolder {
+class IfStatement : Statement(), SplitsControlFlow, ArgumentHolder {
     /** C++ initializer statement. */
     @AST var initializerStatement: Statement? = null
 
@@ -42,6 +46,12 @@ class IfStatement : Statement(), ArgumentHolder {
 
     /** The condition to be evaluated. */
     @AST var condition: Expression? = null
+
+    override val splittingNode: Node?
+        get() = condition ?: conditionDeclaration
+
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    override val affectedNodes = mutableListOf<Node>()
 
     /** C++ constexpr construct. */
     var isConstExpression = false

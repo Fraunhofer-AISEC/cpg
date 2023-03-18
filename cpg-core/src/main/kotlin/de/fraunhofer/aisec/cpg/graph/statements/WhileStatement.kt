@@ -25,14 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.SplitsControlFlow
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a conditional loop statement of the form: `while(...){...}`. */
-class WhileStatement : Statement() {
+class WhileStatement : Statement(), SplitsControlFlow {
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
     @AST var conditionDeclaration: Declaration? = null
 
@@ -44,6 +48,12 @@ class WhileStatement : Statement() {
      * first time. Usually a [CompoundStatement].
      */
     @AST var statement: Statement? = null
+
+    override val splittingNode: Node?
+        get() = condition ?: conditionDeclaration
+
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    override val affectedNodes = mutableListOf<Node>()
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
