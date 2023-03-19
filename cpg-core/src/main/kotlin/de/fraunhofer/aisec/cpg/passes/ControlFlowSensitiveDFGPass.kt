@@ -77,7 +77,7 @@ class ControlFlowSensitiveDFGPass : Pass() {
                 }
             )
 
-            for ((key, value) in (finalState as DFGPassState).generalState) {
+            for ((key, value) in finalState.generalState) {
                 key.addAllPrevDFG(
                     value.elements.filterNot { it is VariableDeclaration && key == it }
                 )
@@ -109,9 +109,9 @@ class ControlFlowSensitiveDFGPass : Pass() {
         @JvmStatic
         fun transfer(
             currentNode: Node,
-            state: State<Set<Node>>,
-            worklist: Worklist<Set<Node>>
-        ): Pair<State<Set<Node>>, Boolean> {
+            state: State<Node, Set<Node>>,
+            worklist: Worklist<Node, Set<Node>>
+        ): Pair<State<Node, Set<Node>>, Boolean> {
             // We will set this if we write to a variable
             val writtenDecl: Declaration?
 
@@ -289,5 +289,51 @@ class ControlFlowSensitiveDFGPass : Pass() {
                 lastStatement !in reachableReturnStatements
         )
             lastStatement.removeNextDFG(node)
+    }
+}
+
+/**
+ * A state which actually holds a state for all nodes, one only for declarations and one for
+ * ReturnStatements.
+ */
+class DFGPassState<V>(
+    /** A mapping of a [Node] to its [Lattice]. */
+    var generalState: State<Node, V> = State(),
+    /** A mapping of [Declaration] to its [Lattice]. */
+    var declarationsState: State<Node, V> = State(),
+    /** The [returnStatements] which are reachable. */
+    var returnStatements: State<Node, V> = State()
+) : State<Node, V>() {
+    override fun duplicate(): DFGPassState<V> {
+        return DFGPassState(generalState.duplicate(), declarationsState.duplicate())
+    }
+
+    override fun lub(other: State<Node, V>): Pair<State<Node, V>, Boolean> {
+        return if (other is DFGPassState) {
+            val (_, generalUpdate) = generalState.lub(other.generalState)
+            val (_, declUpdate) = declarationsState.lub(other.declarationsState)
+            Pair(this, generalUpdate || declUpdate)
+        } else {
+            val (_, generalUpdate) = generalState.lub(other)
+            Pair(this, generalUpdate)
+        }
+    }
+
+    override fun needsUpdate(other: State<Node, V>): Boolean {
+        return if (other is DFGPassState) {
+            generalState.needsUpdate(other.generalState) ||
+                declarationsState.needsUpdate(other.declarationsState)
+        } else {
+            generalState.needsUpdate(other)
+        }
+    }
+
+    override fun push(newNode: Node, newLattice: Lattice<V>?): Boolean {
+        return generalState.push(newNode, newLattice)
+    }
+
+    /** Pushes the [newNode] and its [newLattice] to the [declarationsState]. */
+    fun pushToDeclarationsState(newNode: Declaration, newLattice: Lattice<V>?): Boolean {
+        return declarationsState.push(newNode, newLattice)
     }
 }
