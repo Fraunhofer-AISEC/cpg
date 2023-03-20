@@ -1495,6 +1495,18 @@ func (this *GoLanguageFrontend) handleType(fset *token.FileSet, typeExpr ast.Exp
 		(*cpg.ObjectType)(t).AddGeneric(genericType)
 
 		return t
+	case *ast.IndexListExpr:
+		// This is a type with two type parameters. First we need to parse the "X" expression as a type
+		var t = this.handleType(fset, v.X)
+
+		// Then we parse the "Indices" as a type parameter
+		for _, index := range v.Indices {
+			var genericType = this.handleType(fset, index)
+
+			(*cpg.ObjectType)(t).AddGeneric(genericType)
+		}
+
+		return t
 	default:
 		this.LogError("Not parsing type of type %T yet. Defaulting to unknown type", v)
 	}

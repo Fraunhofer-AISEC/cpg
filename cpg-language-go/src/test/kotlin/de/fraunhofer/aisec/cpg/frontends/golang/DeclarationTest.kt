@@ -170,4 +170,24 @@ class DeclarationTest {
         // We have eight assignments in total (6 initializers + 2 assign expressions)
         assertEquals(8, tu.assignments.size)
     }
+
+    @Test
+    fun testTypeConstraints() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("type_constraints.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val myStruct = tu.records["MyStruct"]
+        assertNotNull(myStruct)
+
+        val myInterface = tu.records["MyInterface"]
+        assertNotNull(myInterface)
+    }
 }
