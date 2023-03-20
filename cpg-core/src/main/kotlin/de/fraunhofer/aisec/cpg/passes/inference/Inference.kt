@@ -82,72 +82,82 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
             )
         }
 
-        // Here be dragons. Jump to the scope that the node defines directly, so that we can
-        // delegate further operations to the scope manager. We also save the old scope so we can
-        // restore it.
-        val oldScope = scopeManager.jumpTo(start)
+        return inferInScopeOf(start) {
+            log.debug(
+                "Inferring a new function declaration $name with parameter types ${signature.map { it?.name }}"
+            )
 
-        log.debug(
-            "Inferring a new function declaration $name with parameter types ${signature.map { it?.name }}"
-        )
+            // "upgrade" our struct to a class, if it was inferred by us, since we are calling
+            // methods on it. But only if the language supports classes in the first place.
+            if (
+                record?.isInferred == true &&
+                    record.kind == "struct" &&
+                    record.language is HasClasses
+            ) {
+                record.kind = "class"
+            }
 
-        // "upgrade" our struct to a class, if it was inferred by us, since we are calling
-        // methods on it. But only if the language supports classes in the first place.
-        if (
-            record?.isInferred == true && record.kind == "struct" && record.language is HasClasses
-        ) {
-            record.kind = "class"
-        }
+            val inferred: FunctionDeclaration =
+                if (record != null) {
+                    newMethodDeclaration(name ?: "", code, isStatic, record)
+                } else {
+                    newFunctionDeclaration(name ?: "", code)
+                }
 
-        val inferred: FunctionDeclaration =
+            createInferredParameters(inferred, signature)
+
+            // Set the type and return type(s)
+            returnType?.let { inferred.returnTypes = listOf(it) }
+            inferred.type = FunctionType.computeType(inferred)
+
+            // Add it to the scope
+            scopeManager.addDeclaration(inferred)
+
+            // Some magic that adds it to static imports. Not sure if this really needed
             if (record != null) {
-                newMethodDeclaration(name ?: "", code, isStatic, record)
-            } else {
-                newFunctionDeclaration(name ?: "", code)
+                if (isStatic) {
+                    record.staticImports.add(inferred)
+                }
             }
 
-        createInferredParameters(inferred, signature)
-
-        // Set the type and return type(s)
-        returnType?.let { inferred.returnTypes = listOf(it) }
-        inferred.type = FunctionType.computeType(inferred)
-
-        // Add it to the scope
-        scopeManager.addDeclaration(inferred)
-
-        // Some magic that adds it to static imports. Not sure if this really needed
-        if (record != null) {
-            if (isStatic) {
-                record.staticImports.add(inferred)
-            }
+            inferred
         }
-
-        // Revert back to the old scope, so that whoever called us can continue safely
-        scopeManager.jumpTo(oldScope)
-
-        return inferred
     }
 
     fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {
-        // Here be dragons. Jump to the scope that the node defines directly, so that we can
-        // delegate further operations to the scope manager. We also save the old scope so we can
-        // restore it.
-        val oldScope = scopeManager.jumpTo(start)
+        return inferInScopeOf(start) {
+            val inferred =
+                newConstructorDeclaration(
+                    start.name.localName,
+                    "",
+                    start as? RecordDeclaration,
+                )
+            createInferredParameters(inferred, signature)
 
-        val inferred =
-            newConstructorDeclaration(
-                start.name.localName,
-                "",
-                start as? RecordDeclaration,
-            )
-        createInferredParameters(inferred, signature)
+            scopeManager.addDeclaration(inferred)
 
-        scopeManager.addDeclaration(inferred)
+            inferred
+        }
+    }
 
-        // Revert back to the old scope, so that whoever called us can continue safely
+    /**
+     * This wrapper should be used around any kind of inference code that actually creates a
+     * [Declaration]. It takes cares of "jumping" to the appropriate scope of the [start] node,
+     * executing the commands in [init] (which needs to create an inferred node of [T]) as well as
+     * restoring the previous scope.
+     */
+    private fun <T : Declaration> inferInScopeOf(start: Node, init: () -> T): T {
+        // Jump to the scope defined by the start node
+        val oldScope = scopeManager.jumpTo(scopeManager.lookupScope(start))
+
+        // Execute our function code. This code must create a new inferred node
+        val node = init()
+
+        // Restore the old scope
         scopeManager.jumpTo(oldScope)
 
-        return inferred
+        // Return the inferred node
+        return node
     }
 
     private fun createInferredParameters(function: FunctionDeclaration, signature: List<Type?>) {

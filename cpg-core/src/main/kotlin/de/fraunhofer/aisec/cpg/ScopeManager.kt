@@ -684,16 +684,6 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Directly jumps to the scope a given node defines (if it exists).
-     *
-     * Handle with care, here be dragons. Should not be exposed outside of the cpg-core module.
-     */
-    @PleaseBeCareful
-    internal fun jumpTo(node: Node): Scope? {
-        return jumpTo(lookupScope(node))
-    }
-
-    /**
      * This function can be used to wrap multiple statements contained in [init] into the scope of
      * [node]. It will execute [enterScope] before calling [init] and [leaveScope] afterwards.
      */
