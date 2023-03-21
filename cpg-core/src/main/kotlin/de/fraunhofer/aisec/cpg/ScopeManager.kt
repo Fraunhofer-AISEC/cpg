@@ -672,27 +672,30 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Directly jumps to a given scope.
+     * Directly jumps to a given scope. Returns the previous scope. Do not forget to set the scope
+     * back to the old scope after performing the actions inside this scope.
      *
      * Handle with care, here be dragons. Should not be exposed outside of the cpg-core module.
      */
     @PleaseBeCareful
-    internal fun jumpTo(scope: Scope?): Scope? {
+    private fun jumpTo(scope: Scope?): Scope? {
         val oldScope = currentScope
         currentScope = scope
         return oldScope
     }
 
     /**
-     * This function can be used to wrap multiple statements contained in [init] into the scope of
-     * [node]. It will execute [enterScope] before calling [init] and [leaveScope] afterwards.
+     * This function can be used to execute multiple statements contained in [init] in the scope of
+     * [scope]. The specified scope will be selected using [jumpTo]. The last expression in [init]
+     * will also be used as a return value of this function. This can be useful, if you create
+     * objects, such as a [Node] inside this scope and want to return it to the calling function.
      */
-    fun <T : Node> withScope(node: T, init: (T.() -> Unit)) {
-        enterScope(node)
+    fun <T : Any> withScope(scope: Scope?, init: () -> T): T {
+        val oldScope = jumpTo(scope)
+        val ret = init()
+        jumpTo(oldScope)
 
-        init(node)
-
-        leaveScope(node)
+        return ret
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(

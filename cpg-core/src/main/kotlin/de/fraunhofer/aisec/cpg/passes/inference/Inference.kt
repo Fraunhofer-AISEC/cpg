@@ -147,33 +147,25 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
      * restoring the previous scope.
      */
     private fun <T : Declaration> inferInScopeOf(start: Node, init: () -> T): T {
-        // Jump to the scope defined by the start node
-        val oldScope = scopeManager.jumpTo(scopeManager.lookupScope(start))
-
-        // Execute our function code. This code must create a new inferred node
-        val node = init()
-
-        // Restore the old scope
-        scopeManager.jumpTo(oldScope)
-
-        // Return the inferred node
-        return node
+        return scopeManager.withScope(scopeManager.lookupScope(start), init)
     }
 
     private fun createInferredParameters(function: FunctionDeclaration, signature: List<Type?>) {
         // To save some unnecessary scopes, we only want to "enter" the function if it is necessary,
         // e.g., if we need to create parameters
         if (signature.isNotEmpty()) {
-            scopeManager.withScope(function) {
-                for (i in signature.indices) {
-                    val targetType = signature[i]
-                    val paramName = generateParamName(i, targetType!!)
-                    val param = newParamVariableDeclaration(paramName, targetType, false, "")
-                    param.argumentIndex = i
+            scopeManager.enterScope(function)
 
-                    scopeManager.addDeclaration(param)
-                }
+            for (i in signature.indices) {
+                val targetType = signature[i]
+                val paramName = generateParamName(i, targetType!!)
+                val param = newParamVariableDeclaration(paramName, targetType, false, "")
+                param.argumentIndex = i
+
+                scopeManager.addDeclaration(param)
             }
+
+            scopeManager.leaveScope(function)
         }
     }
 
