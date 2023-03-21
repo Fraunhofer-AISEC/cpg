@@ -53,7 +53,7 @@ class WhileStatement : Statement(), SplitsControlFlow {
         get() = condition ?: conditionDeclaration
 
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    override val affectedNodes = mutableListOf<Node>()
+    override val dominatedNodes = mutableListOf<Node>()
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

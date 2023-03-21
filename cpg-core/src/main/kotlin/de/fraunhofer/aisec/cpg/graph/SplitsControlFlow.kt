@@ -34,5 +34,5 @@ interface SplitsControlFlow {
      * The nodes which can be conditionally visited depending on [splittingNode]. It does only
      * contain the "next hop", not the child nodes of the subtree.
      */
-    val affectedNodes: MutableList<Node>
+    val dominatedNodes: MutableList<Node>
 }

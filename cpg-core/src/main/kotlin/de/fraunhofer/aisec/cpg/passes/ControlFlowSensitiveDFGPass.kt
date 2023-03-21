@@ -32,10 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
@@ -131,6 +128,25 @@ class ControlFlowSensitiveDFGPass : Pass() {
                     currentNode,
                     PowersetLattice(setOf(currentNode))
                 )
+            } else if (currentNode is AssignExpression) {
+                expectedUpdate = true
+                // It's an assignment which can have one or multiple things on the lhs and on the
+                // rhs. The lhs could be a declaration or a reference (or multiple of these things).
+                // The rhs can be anything. The rhs flows to the respective lhs. To identify the
+                // correct mapping, we use the "assignments" property which already searches for us.
+                currentNode.assignments.forEach { assignment ->
+                    // The rhs flows to the lhs
+                    (assignment.target as? Node)?.let {
+                        state.push(it, PowersetLattice(setOf(assignment.value)))
+                    }
+                    // This was the last write to the respective declaration.
+                    (assignment.target as? Declaration
+                            ?: (assignment.target as? DeclaredReferenceExpression)?.refersTo)
+                        ?.let {
+                            doubleState.declarationsState[it] =
+                                PowersetLattice(setOf(assignment.target as Node))
+                        }
+                }
             } else if (isIncOrDec(currentNode)) {
                 expectedUpdate = true
                 // Increment or decrement => Add the prevWrite of the input to the input. After the

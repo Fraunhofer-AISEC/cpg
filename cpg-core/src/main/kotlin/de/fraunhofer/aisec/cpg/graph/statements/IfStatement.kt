@@ -51,7 +51,7 @@ class IfStatement : Statement(), SplitsControlFlow, ArgumentHolder {
         get() = condition ?: conditionDeclaration
 
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    override val affectedNodes = mutableListOf<Node>()
+    override val dominatedNodes = mutableListOf<Node>()
 
     /** C++ constexpr construct. */
     var isConstExpression = false

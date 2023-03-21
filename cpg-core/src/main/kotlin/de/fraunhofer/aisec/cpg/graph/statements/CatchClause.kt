@@ -42,7 +42,7 @@ class CatchClause : Statement(), SplitsControlFlow {
         get() = parameter
 
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    override val affectedNodes = mutableListOf<Node>()
+    override val dominatedNodes = mutableListOf<Node>()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
