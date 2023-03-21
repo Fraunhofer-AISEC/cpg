@@ -1415,6 +1415,42 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
+    fun testFunctionPointerCall() {
+        val file = File("src/test/resources/c/func_ptr_call.c")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+
+        val target = tu.functions["target"]
+        assertNotNull(target)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        // We do not want any inferred functions
+        assertTrue(tu.functions.none { it.isInferred })
+
+        val noParamPointerCall = tu.calls("no_param").firstOrNull { it.callee is UnaryOperator }
+        assertInvokes(assertNotNull(noParamPointerCall), target)
+
+        val noParamNoInitPointerCall =
+            tu.calls("no_param_uninitialized").firstOrNull { it.callee is UnaryOperator }
+        assertInvokes(assertNotNull(noParamNoInitPointerCall), target)
+
+        val noParamCall =
+            tu.calls("no_param").firstOrNull { it.callee is DeclaredReferenceExpression }
+        assertInvokes(assertNotNull(noParamCall), target)
+
+        val noParamNoInitCall =
+            tu.calls("no_param_uninitialized").firstOrNull {
+                it.callee is DeclaredReferenceExpression
+            }
+        assertInvokes(assertNotNull(noParamNoInitCall), target)
+
+        val targetCall = tu.calls["target"]
+        assertInvokes(assertNotNull(targetCall), target)
+    }
+
+    @Test
+    @Throws(Exception::class)
     fun testNamespacedFunction() {
         val file = File("src/test/resources/cxx/namespaced_function.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)

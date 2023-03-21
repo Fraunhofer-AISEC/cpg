@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -88,21 +87,13 @@ class FunctionPointerCallResolver : Pass() {
     }
 
     /**
-     * Resolves function pointers in a [CallExpression] node. We could be referring to a function
-     * pointer even though it is not a member call if the usual function pointer syntax (*fp)() has
-     * been omitted: fp(). Looks like a normal call, but it isn't.
+     * Resolves function pointers in a [CallExpression] node. As long as the [CallExpression.callee]
+     * has a [FunctionPointerType], we should be able to resolve it.
      */
     private fun handleCallExpression(call: CallExpression) {
-        // Since we are using a scoped walker, we can access the current scope here and try to
-        // resolve the call expression to a declaration that contains the pointer.
-        val pointer =
-            scopeManager
-                .resolve<ValueDeclaration>(scopeManager.currentScope, true) {
-                    it.type is FunctionPointerType && it.name.lastPartsMatch(call.name)
-                }
-                .firstOrNull()
-        if (pointer != null) {
-            handleFunctionPointerCall(call, pointer)
+        val callee = call.callee
+        if (callee?.type is FunctionPointerType) {
+            handleFunctionPointerCall(call, callee)
         }
     }
 
@@ -118,12 +109,12 @@ class FunctionPointerCallResolver : Pass() {
         }
     }
 
-    private fun handleFunctionPointerCall(call: CallExpression, pointer: Node?) {
-        val pointerType = (pointer as HasType).type as FunctionPointerType
+    private fun handleFunctionPointerCall(call: CallExpression, pointer: HasType) {
+        val pointerType = pointer.type as FunctionPointerType
         val invocationCandidates: MutableList<FunctionDeclaration> = ArrayList()
         val work: Deque<Node> = ArrayDeque()
         val seen = IdentitySet<Node>()
-        work.push(pointer)
+        work.push(pointer as Node)
         while (!work.isEmpty()) {
             val curr = work.pop()
             if (!seen.add(curr)) {
