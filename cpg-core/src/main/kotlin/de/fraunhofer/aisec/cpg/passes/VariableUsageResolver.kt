@@ -125,18 +125,23 @@ open class VariableUsageResolver : SymbolResolverPass() {
         // of this call expression back to its original variable declaration. In the future, we want
         // to extend this particular code to resolve all callee references to their declarations,
         // i.e., their function definitions and get rid of the separate CallResolver.
+        var wouldResolveTo: Declaration? = null
         if (parent is CallExpression && parent.callee === current) {
             // Peek into the declaration, and if it is a variable, we can proceed normally, as we
             // are running into the special case explained above. Otherwise, we abort here (for
             // now).
-            val wouldResolveTo = scopeManager.resolveReference(current, current.scope)
+            wouldResolveTo = scopeManager.resolveReference(current, current.scope)
             if (wouldResolveTo !is VariableDeclaration) {
                 return
             }
         }
 
-        // only consider resolving, if the language frontend did not specify a resolution
-        var refersTo = current.refersTo ?: scopeManager.resolveReference(current, current.scope)
+        // Only consider resolving, if the language frontend did not specify a resolution. If we
+        // already have populated the wouldResolveTo variable, we can re-use this instead of
+        // resolving again
+        var refersTo =
+            current.refersTo
+                ?: wouldResolveTo ?: scopeManager.resolveReference(current, current.scope)
 
         var recordDeclType: Type? = null
         if (currentClass != null) {

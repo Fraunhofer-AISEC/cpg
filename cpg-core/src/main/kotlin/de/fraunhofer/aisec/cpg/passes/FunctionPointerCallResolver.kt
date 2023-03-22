@@ -27,16 +27,12 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.LambdaExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -109,12 +105,12 @@ class FunctionPointerCallResolver : Pass() {
         }
     }
 
-    private fun handleFunctionPointerCall(call: CallExpression, pointer: HasType) {
+    private fun handleFunctionPointerCall(call: CallExpression, pointer: Expression) {
         val pointerType = pointer.type as FunctionPointerType
         val invocationCandidates: MutableList<FunctionDeclaration> = ArrayList()
         val work: Deque<Node> = ArrayDeque()
         val seen = IdentitySet<Node>()
-        work.push(pointer as Node)
+        work.push(pointer)
         while (!work.isEmpty()) {
             val curr = work.pop()
             if (!seen.add(curr)) {
