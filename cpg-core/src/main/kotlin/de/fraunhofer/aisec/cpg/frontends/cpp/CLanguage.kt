@@ -39,9 +39,9 @@ import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import de.fraunhofer.aisec.cpg.passes.resolveWithImplicitCast
-import org.neo4j.ogm.annotation.Transient
 import java.util.regex.Pattern
 import kotlin.reflect.KClass
+import org.neo4j.ogm.annotation.Transient
 
 /** The C language. */
 open class CLanguage :
