@@ -29,7 +29,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.resolveWithImplicitCast
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -100,5 +103,19 @@ open class CLanguage :
         scopeManager: ScopeManager,
     ): CXXLanguageFrontend {
         return CXXLanguageFrontend(this, config, scopeManager)
+    }
+
+    /**
+     * @param call we want to find invocation targets for by performing implicit casts
+     * @param scopeManager the scope manager used
+     * @return list of invocation candidates by applying implicit casts
+     */
+    protected fun resolveWithImplicitCastFunc(
+        call: CallExpression,
+        scopeManager: ScopeManager
+    ): List<FunctionDeclaration> {
+        val initialInvocationCandidates =
+            listOf(*scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray())
+        return resolveWithImplicitCast(call, initialInvocationCandidates)
     }
 }

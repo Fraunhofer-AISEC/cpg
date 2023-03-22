@@ -27,10 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.frontends.HasClasses
-import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
-import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
-import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -316,19 +312,5 @@ class CPPLanguage :
         }
 
         return Pair(false, listOf())
-    }
-
-    /**
-     * @param call we want to find invocation targets for by performing implicit casts
-     * @param scopeManager the scope manager used
-     * @return list of invocation candidates by applying implicit casts
-     */
-    private fun resolveWithImplicitCastFunc(
-        call: CallExpression,
-        scopeManager: ScopeManager
-    ): List<FunctionDeclaration> {
-        val initialInvocationCandidates =
-            listOf(*scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray())
-        return resolveWithImplicitCast(call, initialInvocationCandidates)
     }
 }
