@@ -135,11 +135,6 @@ class ControlFlowSensitiveDFGPass : Pass() {
                 // The rhs can be anything. The rhs flows to the respective lhs. To identify the
                 // correct mapping, we use the "assignments" property which already searches for us.
                 currentNode.assignments.forEach { assignment ->
-                    // The rhs flows to the lhs
-                    (assignment.target as? Node)?.let {
-                        state.push(it, PowersetLattice(setOf(assignment.value)))
-                    } // TODO: This should be irrelevant
-
                     // This was the last write to the respective declaration.
                     (assignment.target as? Declaration
                             ?: (assignment.target as? DeclaredReferenceExpression)?.refersTo)
@@ -162,11 +157,6 @@ class ControlFlowSensitiveDFGPass : Pass() {
                 }
             } else if (isSimpleAssignment(currentNode)) {
                 expectedUpdate = true
-                // We write to the target => the rhs flows to the lhs
-                state.push(
-                    (currentNode as BinaryOperator).lhs,
-                    PowersetLattice(setOf(currentNode.rhs))
-                ) // TODO: This should be irrelevant
 
                 // Only the lhs is the last write statement here and the variable which is written
                 // to.
@@ -189,23 +179,6 @@ class ControlFlowSensitiveDFGPass : Pass() {
                 if (writtenDecl != null) {
                     // Data flows from the last writes to the lhs variable to this node
                     state.push(currentNode.lhs, doubleState.declarationsState[writtenDecl])
-
-                    state.push(
-                        currentNode,
-                        PowersetLattice(setOf(currentNode.lhs))
-                    ) // TODO: This should be irrelevant
-                    // Data flows from whatever is the rhs to this node
-                    state.push(
-                        currentNode,
-                        PowersetLattice(setOf(currentNode.rhs))
-                    ) // TODO: This should be irrelevant
-
-                    // TODO: Similar to the ++ case: Should the DFG edge go back to the reference?
-                    //  If it shouldn't, remove the following statement:
-                    state.push(
-                        currentNode.lhs,
-                        PowersetLattice(setOf(currentNode))
-                    ) // TODO: This should be irrelevant
 
                     // The whole current node is the place of the last update, not (only) the lhs!
                     doubleState.declarationsState[writtenDecl] =
