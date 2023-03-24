@@ -120,7 +120,7 @@ class GoExtraPass : Pass(), ScopeProvider {
             when (node) {
                 is CallExpression -> handleCall(node, parent)
                 is IncludeDeclaration -> handleInclude(node)
-                is AssignExpression -> handleAssign(node, parent)
+                is AssignExpression -> handleAssign(node)
                 is ForEachStatement -> handleForEachStatement(node)
             }
         }
@@ -170,7 +170,7 @@ class GoExtraPass : Pass(), ScopeProvider {
      * This function gets called for every [AssignExpression], to check, whether we need to
      * implicitly define any variables assigned in the statement.
      */
-    private fun handleAssign(assign: AssignExpression, parent: Node?) {
+    private fun handleAssign(assign: AssignExpression) {
         // Only filter nodes that could potentially declare
         if (assign.operatorCode != ":=") {
             return

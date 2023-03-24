@@ -151,7 +151,6 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
         return scopeManager.withScope(scopeManager.lookupScope(start), init)
     }
 
-
     private fun createInferredParameters(function: FunctionDeclaration, signature: List<Type?>) {
         // To save some unnecessary scopes, we only want to "enter" the function if it is necessary,
         // e.g., if we need to create parameters

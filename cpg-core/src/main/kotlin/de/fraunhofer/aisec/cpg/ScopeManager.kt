@@ -462,7 +462,7 @@ class ScopeManager : ScopeProvider {
             if (scope == null) {
                 LOGGER.error(
                     "Break inside of unbreakable scope. The break will be ignored, but may lead " +
-                            "to an incorrect graph. The source code is not valid or incomplete."
+                        "to an incorrect graph. The source code is not valid or incomplete."
                 )
                 return
             }
@@ -487,7 +487,7 @@ class ScopeManager : ScopeProvider {
             if (scope == null) {
                 LOGGER.error(
                     "Continue inside of not continuable scope. The continue will be ignored, but may lead " +
-                            "to an incorrect graph. The source code is not valid or incomplete."
+                        "to an incorrect graph. The source code is not valid or incomplete."
                 )
                 return
             }
@@ -599,30 +599,30 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = currentScope
     ): ValueDeclaration? {
         return resolve<ValueDeclaration>(scope) {
-            if (
-                it.name.lastPartsMatch(ref.name)
-            ) { // TODO: This place is likely to make things fail
-                // If the reference seems to point to a function the entire signature is checked
-                // for equality
-                if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
-                    val fptrType = (ref as HasType).type as FunctionPointerType
-                    // TODO(oxisto): This is the third place where function pointers are
-                    //   resolved. WHY?
-                    // TODO(oxisto): Support multiple return values
-                    val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
-                    if (
-                        returnType == fptrType.returnType &&
-                        it.hasSignature(fptrType.parameters)
-                    ) {
-                        return@resolve true
+                if (
+                    it.name.lastPartsMatch(ref.name)
+                ) { // TODO: This place is likely to make things fail
+                    // If the reference seems to point to a function the entire signature is checked
+                    // for equality
+                    if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
+                        val fptrType = (ref as HasType).type as FunctionPointerType
+                        // TODO(oxisto): This is the third place where function pointers are
+                        //   resolved. WHY?
+                        // TODO(oxisto): Support multiple return values
+                        val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
+                        if (
+                            returnType == fptrType.returnType &&
+                                it.hasSignature(fptrType.parameters)
+                        ) {
+                            return@resolve true
+                        }
+                    } else {
+                        return@resolve it !is FunctionDeclaration
                     }
-                } else {
-                    return@resolve it !is FunctionDeclaration
                 }
-            }
 
-            return@resolve false
-        }
+                return@resolve false
+            }
             .firstOrNull()
     }
 
