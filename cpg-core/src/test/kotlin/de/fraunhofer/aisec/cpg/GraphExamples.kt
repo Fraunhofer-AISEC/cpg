@@ -29,9 +29,58 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
+import java.net.URI
 
 class GraphExamples {
     companion object {
+        fun getReturnTest(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("ReturnTest.java") {
+                        record("ReturnTest", "class") {
+                            method("testReturn", t("int")) {
+                                receiver = newVariableDeclaration("this", t("ReturnTest"))
+                                body {
+                                    declare { variable("a", t("int")) { literal(1, t("int")) } }
+                                    ifStmt {
+                                        condition { ref("a") eq literal(5, t("int")) }
+                                        thenStmt {
+                                            returnStmt {
+                                                returnValue = literal(2, t("int"))
+                                                location =
+                                                    PhysicalLocation(
+                                                        URI("ReturnTest.java"),
+                                                        Region(5, 13, 5, 21)
+                                                    )
+                                            }
+                                        }
+                                        elseStmt {
+                                            returnStmt {
+                                                returnValue = ref("a")
+                                                location =
+                                                    PhysicalLocation(
+                                                        URI("ReturnTest.java"),
+                                                        Region(7, 13, 7, 21)
+                                                    )
+                                            }
+                                        }
+                                    }
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getVisitorTest(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,18 +23,24 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.enhancements
+package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
+import de.fraunhofer.aisec.cpg.GraphExamples
+import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import java.nio.file.Path
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-internal class DFGTest {
-    // Test DFG
-    // Test ControlFlowSensitiveDFGPass
+class DFGTest {
+    // Test DFGPass and ControlFlowSensitiveDFGPass
+
     /**
      * To test assignments of different value in an expression that then has a joinPoint. a = a == b
      * ? b = 2: b = 3;
@@ -46,7 +52,11 @@ internal class DFGTest {
     fun testConditionalExpression() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result =
-            analyze(listOf(topLevel.resolve("conditional_expression.cpp").toFile()), topLevel, true)
+            TestUtils.analyze(
+                listOf(topLevel.resolve("conditional_expression.cpp").toFile()),
+                topLevel,
+                true
+            )
         val bJoin = result.refs[{ it.name.localName == "b" && it.location?.region?.startLine == 6 }]
         val a5 = result.refs[{ it.name.localName == "a" && it.location?.region?.startLine == 5 }]
         val a6 = result.refs[{ it.name.localName == "a" && it.location?.region?.startLine == 6 }]
@@ -109,11 +119,15 @@ internal class DFGTest {
     fun testCompoundOperatorDFG() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
         val result =
-            analyze(listOf(topLevel.resolve("compoundoperator.cpp").toFile()), topLevel, true)
-        val rwCompoundOperator = findByUniqueName(result.allChildren(), "+=")
+            TestUtils.analyze(
+                listOf(topLevel.resolve("compoundoperator.cpp").toFile()),
+                topLevel,
+                true
+            )
+        val rwCompoundOperator = TestUtils.findByUniqueName(result.allChildren(), "+=")
         assertNotNull(rwCompoundOperator)
 
-        val expression = findByUniqueName(result.refs, "i")
+        val expression = TestUtils.findByUniqueName(result.refs, "i")
         assertNotNull(expression)
 
         val prevDFGOperator = rwCompoundOperator.prevDFG
@@ -129,11 +143,16 @@ internal class DFGTest {
     @Throws(Exception::class)
     fun testUnaryOperatorDFG() {
         val topLevel = Path.of("src", "test", "resources", "dfg")
-        val result = analyze(listOf(topLevel.resolve("unaryoperator.cpp").toFile()), topLevel, true)
-        val rwUnaryOperator = findByUniqueName(result.allChildren<UnaryOperator>(), "++")
+        val result =
+            TestUtils.analyze(
+                listOf(topLevel.resolve("unaryoperator.cpp").toFile()),
+                topLevel,
+                true
+            )
+        val rwUnaryOperator = TestUtils.findByUniqueName(result.allChildren<UnaryOperator>(), "++")
         assertNotNull(rwUnaryOperator)
 
-        val expression = findByUniqueName(result.refs, "i")
+        val expression = TestUtils.findByUniqueName(result.refs, "i")
         assertNotNull(expression)
 
         val prevDFGOperator: Set<Node> = rwUnaryOperator.prevDFG
@@ -203,5 +222,29 @@ internal class DFGTest {
             }
         }
         return dfgNodes
+    }
+
+    /**
+     * Tests if the last artificial (implicit) return statement is removed by the
+     * [ControlFlowSensitiveDFGPass].
+     */
+    @Test
+    fun testReturnStatement() {
+        val result = GraphExamples.getReturnTest()
+
+        val returnFunction = result.functions["testReturn"]
+        assertNotNull(returnFunction)
+
+        assertEquals(2, returnFunction.prevDFG.size)
+
+        val allRealReturns = returnFunction.allChildren<ReturnStatement> { it.location != null }
+        assertEquals(allRealReturns.toSet() as Set<Node>, returnFunction.prevDFG)
+
+        assertEquals(1, allRealReturns[0].prevDFG.size)
+        assertTrue(returnFunction.literals.first { it.value == 2 } in allRealReturns[0].prevDFG)
+        assertEquals(1, allRealReturns[1].prevDFG.size)
+        assertTrue(
+            returnFunction.refs.last { it.name.localName == "a" } in allRealReturns[1].prevDFG
+        )
     }
 }
