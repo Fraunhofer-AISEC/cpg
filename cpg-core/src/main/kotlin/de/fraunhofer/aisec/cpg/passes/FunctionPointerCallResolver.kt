@@ -28,14 +28,12 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -116,6 +114,7 @@ class FunctionPointerCallResolver : Pass() {
             if (!seen.add(curr)) {
                 continue
             }
+
             val isLambda = curr is VariableDeclaration && curr.initializer is LambdaExpression
             val currentFunction =
                 if (isLambda) {
@@ -128,17 +127,8 @@ class FunctionPointerCallResolver : Pass() {
                 // Even if it is a function declaration, the dataflow might just come from a
                 // situation where the target of a fptr is passed through via a return value. Keep
                 // searching if return type or signature don't match
-
-                // In some languages, there might be no explicit return type. In this case we are
-                // using a single void return type.
-                val returnType: Type =
-                    if (currentFunction.returnTypes.isEmpty()) {
-                        IncompleteType()
-                    } else {
-                        // TODO(oxisto): support multiple return types
-                        currentFunction.returnTypes[0]
-                    }
-
+                val functionPointerType =
+                    currentFunction.type.reference(PointerType.PointerOrigin.POINTER)
                 if (
                     isLambda &&
                         currentFunction.returnTypes.isEmpty() &&
@@ -146,11 +136,7 @@ class FunctionPointerCallResolver : Pass() {
                 ) {
                     invocationCandidates.add(currentFunction)
                     continue
-                } else if (
-                    TypeManager.getInstance()
-                        .isSupertypeOf(pointerType.returnType, returnType, call) &&
-                        currentFunction.hasSignature(pointerType.parameters)
-                ) {
+                } else if (functionPointerType == pointerType) {
                     invocationCandidates.add(currentFunction)
                     // We have found a target. Don't follow this path any further, but still
                     // continue the other paths that might be left, as we could have several
