@@ -29,9 +29,7 @@ import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -113,7 +111,71 @@ class DFGTest {
         // The b which got assigned 3 flows to the b in line 6
         assertTrue(bJoin.prevDFG.contains(b3))
     }
-    // Test DFG when ReadWrite access occurs, such as compound operators or unary operators
+
+    /**
+     * Ensures that if there is an assignment like a = a + b the replacement of the current value of
+     * the VariableDeclaration is delayed until the entire assignment has been traversed. This is
+     * necessary, since if the replacement was not delayed the rhs a would have an incoming dfg edge
+     * from a + b
+     *
+     * @throws Exception
+     */
+    @Test
+    @Throws(Exception::class)
+    fun testDelayedAssignment() {
+        val result = GraphExamples.getDelayedAssignmentAfterRHS()
+
+        val binaryOperatorAssignment =
+            TestUtils.findByUniqueName(result.allChildren<BinaryOperator>(), "=")
+        assertNotNull(binaryOperatorAssignment)
+
+        val binaryOperatorAddition =
+            TestUtils.findByUniqueName(result.allChildren<BinaryOperator>(), "+")
+        assertNotNull(binaryOperatorAddition)
+
+        val varA = TestUtils.findByUniqueName(result.variables, "a")
+        assertNotNull(varA)
+
+        val varB = TestUtils.findByUniqueName(result.variables, "b")
+        assertNotNull(varB)
+
+        val lhsA = binaryOperatorAssignment.lhs as DeclaredReferenceExpression
+        val rhsA = binaryOperatorAddition.lhs as DeclaredReferenceExpression
+        val b = TestUtils.findByUniqueName(result.refs, "b")
+        assertNotNull(b)
+
+        val literal0 = result.literals[{ it.value == 0 }]
+        assertNotNull(literal0)
+
+        val literal1 = result.literals[{ it.value == 1 }]
+        assertNotNull(literal1)
+        // a and b flow to the DeclaredReferenceExpressions in (a+b)
+        assertEquals(1, varA.nextDFG.size)
+        assertEquals(1, varB.nextDFG.size)
+        assertTrue(varA.nextDFG.contains(rhsA))
+        assertTrue(varB.nextDFG.contains(b))
+        assertEquals(1, rhsA.prevDFG.size)
+        assertTrue(rhsA.prevDFG.contains(varA))
+        assertEquals(1, b.prevDFG.size)
+        assertTrue(b.prevDFG.contains(varB))
+
+        // The literals flow to the VariableDeclarationExpression
+        assertEquals(1, literal0.nextDFG.size)
+        assertEquals(varA, literal0.nextDFG.first())
+        assertEquals(1, literal0.nextDFG.size)
+        assertEquals(varB, literal1.nextDFG.first())
+
+        // a and b flow to the + Binary Op
+        assertEquals(2, binaryOperatorAddition.prevDFG.size)
+        assertTrue(binaryOperatorAddition.prevDFG.contains(b))
+        assertTrue(binaryOperatorAddition.prevDFG.contains(rhsA))
+
+        // The + binary op flows to the lhs
+        assertEquals(1, binaryOperatorAddition.nextDFG.size)
+        assertTrue(binaryOperatorAddition.nextDFG.contains(lhsA))
+    }
+
+    /** Test DFG when ReadWrite access occurs, such as compound operators or unary operators. */
     @Test
     @Throws(Exception::class)
     fun testCompoundOperatorDFG() {

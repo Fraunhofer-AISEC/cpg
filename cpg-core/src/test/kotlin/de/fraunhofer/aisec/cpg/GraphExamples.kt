@@ -35,6 +35,32 @@ import java.net.URI
 
 class GraphExamples {
     companion object {
+        fun getDelayedAssignmentAfterRHS(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("DelayedAssignmentAfterRHS.java") {
+                        record("DelayedAssignmentAfterRHS") {
+                            // The main method
+                            method("main") {
+                                this.isStatic = true
+                                param("args", t("String[]"))
+                                body {
+                                    declare { variable("a", t("int")) { literal(0, t("int")) } }
+                                    declare { variable("b", t("int")) { literal(1, t("int")) } }
+                                    ref("a") assign { ref("a") + ref("b") }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getReturnTest(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
@@ -172,6 +198,7 @@ class GraphExamples {
 
                             // The main method
                             method("main") {
+                                this.isStatic = true
                                 param("args", t("String[]"))
                                 body {
                                     declare {
@@ -267,6 +294,7 @@ class GraphExamples {
 
                             // The main method
                             method("main") {
+                                this.isStatic = true
                                 param("args", t("int[]"))
                                 body {
                                     declare {

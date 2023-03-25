@@ -707,8 +707,12 @@ infix fun Expression.assign(rhs: Expression): BinaryOperator {
 }
 
 /** Creates a new [Type] with the given [name] in the Fluent Node DSL. */
-fun LanguageFrontend.t(name: CharSequence): Type {
-    return parseType(name)
+fun LanguageFrontend.t(name: CharSequence, init: (Type.() -> Unit)? = null): Type {
+    val type = parseType(name)
+    if (init != null) {
+        init(type)
+    }
+    return type
 }
 
 /**
