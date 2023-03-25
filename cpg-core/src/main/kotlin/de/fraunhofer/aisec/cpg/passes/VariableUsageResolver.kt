@@ -118,13 +118,30 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
-        // property to actually resolve the function call.
+        // property to actually resolve the function call. However, there is a special case that
+        // we want to catch already, that is if we are "calling" a reference to a variable. This
+        // can be done in several languages, e.g., in C/C++ as function pointers or in Go as
+        // function references. In this case, we want to resolve the declared reference expression
+        // of this call expression back to its original variable declaration. In the future, we want
+        // to extend this particular code to resolve all callee references to their declarations,
+        // i.e., their function definitions and get rid of the separate CallResolver.
+        var wouldResolveTo: Declaration? = null
         if (parent is CallExpression && parent.callee === current) {
-            return
+            // Peek into the declaration, and if it is a variable, we can proceed normally, as we
+            // are running into the special case explained above. Otherwise, we abort here (for
+            // now).
+            wouldResolveTo = scopeManager.resolveReference(current, current.scope)
+            if (wouldResolveTo !is VariableDeclaration) {
+                return
+            }
         }
 
-        // only consider resolving, if the language frontend did not specify a resolution
-        var refersTo = current.refersTo ?: scopeManager.resolveReference(current, current.scope)
+        // Only consider resolving, if the language frontend did not specify a resolution. If we
+        // already have populated the wouldResolveTo variable, we can re-use this instead of
+        // resolving again
+        var refersTo =
+            current.refersTo
+                ?: wouldResolveTo ?: scopeManager.resolveReference(current, current.scope)
 
         var recordDeclType: Type? = null
         if (currentClass != null) {
