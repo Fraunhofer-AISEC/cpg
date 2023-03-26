@@ -35,6 +35,409 @@ import java.net.URI
 
 class GraphExamples {
     companion object {
+
+        fun getBasicSlice(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("BasicSlice.java") {
+                        record("BasicSlice") {
+                            // The main method
+                            method("main") {
+                                this.isStatic = true
+                                param("args", t("String[]"))
+                                body {
+                                    declare { variable("a", t("int")) { literal(0, t("int")) } }
+                                    declare {
+                                        variable("b", t("int")) { literal(1, t("int")) }
+                                        variable("c", t("int")) { literal(0, t("int")) }
+                                        variable("d", t("int")) { literal(0, t("int")) }
+                                    }
+                                    declare {
+                                        variable("sunShines", t("boolean")) {
+                                            literal(true, t("boolean"))
+                                        }
+                                    }
+
+                                    ifStmt {
+                                        condition { ref("a") gt literal(0, t("int")) }
+                                        thenStmt {
+                                            ref("d") assign literal(5, t("int"))
+                                            ref("c") assign literal(2, t("int"))
+                                            ifStmt {
+                                                condition { ref("b") gt literal(0, t("int")) }
+                                                thenStmt {
+                                                    ref("d") assign ref("a") * literal(2, t("int"))
+                                                    ref("a") assign
+                                                        ref("a") + ref("d") * literal(2, t("int"))
+                                                }
+                                                elseIf {
+                                                    condition { ref("b") lt literal(-2, t("int")) }
+                                                    thenStmt {
+                                                        ref("a") assign
+                                                            ref("a") - literal(10, t("int"))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        elseStmt {
+                                            ref("b") assign literal(-2, t("int"))
+                                            ref("d") assign literal(-2, t("int"))
+                                            ref("a").dec()
+                                        }
+                                    }
+
+                                    ref("a") assign { ref("a") + ref("b") }
+
+                                    switchStmt(ref("sunShines")) {
+                                        switchBody {
+                                            case(
+                                                ref("True")
+                                            ) // No idea why it was "True" and not "true". Bug? On
+                                            // purpose? I just keep it
+                                            ref("a") assign { ref("a") * literal(2, t("int")) }
+                                            ref("c") assign literal(-2, t("int"))
+                                            breakStmt()
+                                            case(
+                                                ref("False")
+                                            ) // No idea why it was "False" and not "false". Bug? On
+                                            // purpose? I just keep it
+                                            ref("a") assign literal(290, t("int"))
+                                            ref("d") assign literal(-2, t("int"))
+                                            ref("b") assign literal(-2, t("int"))
+                                            breakStmt()
+                                        }
+                                    }
+
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getControlFlowSensitiveDFGIfMerge(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("ControlFlowSensitiveDFGIfMerge.java") {
+                        record("ControlFlowSensitiveDFGIfMerge") {
+                            field("bla", t("int")) {}
+                            constructor() {
+                                isImplicit = true
+                                receiver =
+                                    newVariableDeclaration(
+                                        "this",
+                                        t("ControlFlowSensitiveDFGIfMerge")
+                                    )
+                                body { returnStmt { isImplicit = true } }
+                            }
+                            method("func") {
+                                receiver =
+                                    newVariableDeclaration(
+                                        "this",
+                                        t("ControlFlowSensitiveDFGIfMerge")
+                                    )
+                                param("args", t("int[]"))
+                                body {
+                                    declare { variable("a", t("int")) { literal(1, t("int")) } }
+                                    ifStmt {
+                                        condition {
+                                            member("length", ref("args")) gt literal(3, t("int"))
+                                        }
+                                        thenStmt { ref("a") assign literal(2, t("int")) }
+                                        elseStmt {
+                                            memberCall(
+                                                "println",
+                                                member(
+                                                    "out",
+                                                    ref("System") { isStaticAccess = true }
+                                                )
+                                            ) {
+                                                ref("a")
+                                            }
+                                        }
+                                    }
+
+                                    declare { variable("b", t("int")) { ref("a") } }
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+
+                            // The main method
+                            method("main") {
+                                this.isStatic = true
+                                param("args", t("String[]"))
+                                body {
+                                    declare {
+                                        variable("obj", t("ControlFlowSensitiveDFGIfMerge")) {
+                                            new { construct("ControlFlowSensitiveDFGIfMerge") }
+                                        }
+                                    }
+                                    member("bla", ref("obj")) assign literal(3, t("int"))
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getControlFlowSesitiveDFGSwitch(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("ControlFlowSesitiveDFGSwitch.java") {
+                        record("ControlFlowSesitiveDFGSwitch") {
+                            // The main method
+                            method("func3") {
+                                receiver =
+                                    newVariableDeclaration(
+                                        "this",
+                                        t("ControlFlowSesitiveDFGSwitch")
+                                    )
+                                body {
+                                    declare {
+                                        variable("switchVal", t("int")) { literal(3, t("int")) }
+                                    }
+                                    declare { variable("a", t("int")) { literal(0, t("int")) } }
+                                    switchStmt(ref("switchVal")) {
+                                        switchBody {
+                                            case(literal(1, t("int")))
+                                            ref("a") {
+                                                location =
+                                                    PhysicalLocation(
+                                                        URI("ControlFlowSesitiveDFGSwitch.java"),
+                                                        Region(8, 9, 8, 10)
+                                                    )
+                                            } assign literal(10, t("int"))
+                                            breakStmt()
+                                            case(literal(2, t("int")))
+                                            ref("a") {
+                                                location =
+                                                    PhysicalLocation(
+                                                        URI("ControlFlowSesitiveDFGSwitch.java"),
+                                                        Region(11, 9, 11, 10)
+                                                    )
+                                            } assign literal(11, t("int"))
+                                            breakStmt()
+                                            case(literal(3, t("int")))
+                                            ref("a") {
+                                                location =
+                                                    PhysicalLocation(
+                                                        URI("ControlFlowSesitiveDFGSwitch.java"),
+                                                        Region(14, 9, 14, 10)
+                                                    )
+                                            } assign literal(12, t("int"))
+                                            default()
+                                            memberCall(
+                                                "println",
+                                                member(
+                                                    "out",
+                                                    ref("System") { isStaticAccess = true }
+                                                )
+                                            ) {
+                                                ref("a")
+                                            }
+                                            breakStmt()
+                                        }
+                                    }
+
+                                    declare { variable("b", t("int")) { ref("a") } }
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getControlFlowSensitiveDFGIfNoMerge(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("ControlFlowSensitiveDFGIfNoMerge.java") {
+                        record("ControlFlowSensitiveDFGIfNoMerge") {
+                            // The main method
+                            method("func2") {
+                                receiver =
+                                    newVariableDeclaration(
+                                        "this",
+                                        t("ControlFlowSensitiveDFGIfNoMerge")
+                                    )
+                                body {
+                                    declare { variable("a", t("int")) { literal(1, t("int")) } }
+                                    ifStmt {
+                                        condition {
+                                            member("length", ref("args")) gt literal(3, t("int"))
+                                        }
+                                        thenStmt { ref("a") assign literal(2, t("int")) }
+                                        elseStmt {
+                                            ref("a") assign literal(4, t("int"))
+                                            declare { variable("b", t("int")) { ref("a") } }
+                                        }
+                                    }
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getLabeledBreakContinueLoopDFG(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("LoopDFGs.java") {
+                        record("LoopDFGs") {
+                            // The main method
+                            method("labeledBreakContinue") {
+                                receiver = newVariableDeclaration("this", t("LoopDFGs"))
+                                param("param", t("int"))
+                                body {
+                                    declare { variable("a", t("int")) { literal(0, t("int")) } }
+                                    label("lab1") {
+                                        whileStmt {
+                                            whileCondition { ref("param") lt literal(5, t("int")) }
+                                            loopBody {
+                                                whileStmt {
+                                                    whileCondition {
+                                                        ref("param") gt literal(6, t("int"))
+                                                    }
+                                                    loopBody {
+                                                        ifStmt {
+                                                            condition {
+                                                                ref("param") gt literal(7, t("int"))
+                                                            }
+                                                            thenStmt {
+                                                                ref("a") assign literal(1, t("int"))
+                                                                continueStmt("lab1")
+                                                            }
+                                                            elseStmt {
+                                                                memberCall(
+                                                                    "println",
+                                                                    member(
+                                                                        "out",
+                                                                        ref("System") {
+                                                                            isStaticAccess = true
+                                                                        }
+                                                                    )
+                                                                ) {
+                                                                    ref("a")
+                                                                }
+                                                                ref("a") assign literal(2, t("int"))
+                                                                breakStmt("lab1")
+                                                            }
+                                                        }
+                                                        ref("a") assign literal(4, t("int"))
+                                                    }
+                                                }
+                                                memberCall(
+                                                    "println",
+                                                    member(
+                                                        "out",
+                                                        ref("System") { isStaticAccess = true }
+                                                    )
+                                                ) {
+                                                    ref("a")
+                                                }
+                                                ref("a") assign literal(3, t("int"))
+                                            }
+                                        }
+                                    }
+
+                                    memberCall(
+                                        "println",
+                                        member("out", ref("System") { isStaticAccess = true })
+                                    ) {
+                                        ref("a")
+                                    }
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getLoopingDFG(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("LoopDFGs.java") {
+                        record("LoopDFGs") {
+                            // The main method
+                            method("looping") {
+                                receiver = newVariableDeclaration("this", t("LoopDFGs"))
+                                param("param", t("int"))
+                                body {
+                                    declare { variable("a", t("int")) { literal(0, t("int")) } }
+                                    whileStmt {
+                                        whileCondition {
+                                            (ref("param") % literal(6, t("int"))) eq
+                                                literal(5, t("int"))
+                                        }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { ref("param") gt literal(7, t("int")) }
+                                                thenStmt { ref("a") assign literal(1, t("int")) }
+                                                elseStmt {
+                                                    memberCall(
+                                                        "println",
+                                                        member(
+                                                            "out",
+                                                            ref("System") { isStaticAccess = true }
+                                                        )
+                                                    ) {
+                                                        ref("a")
+                                                    }
+                                                    ref("a") assign literal(2, t("int"))
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    ref("a") assign { literal(3, t("int")) }
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getDelayedAssignmentAfterRHS(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()

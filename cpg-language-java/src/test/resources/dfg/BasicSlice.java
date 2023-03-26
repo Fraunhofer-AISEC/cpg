@@ -5,17 +5,6 @@ public class BasicSlice {
         int b = 1, c = 0, d = 0;
         boolean sunShines = true; // and i am still inside :(
 
-        /*
-        if (b > 2) {
-            a +=2; // 3
-        } else {
-            a -=2; // 2
-        }
-        b = a; // 1
-        a -= 4; // 4
-
-         */
-
         if (a > 0) {
             d = 5;
             c = 2;
@@ -45,6 +34,4 @@ public class BasicSlice {
                 break;
         }
     }
-
-
 }
