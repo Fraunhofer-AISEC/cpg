@@ -36,6 +36,57 @@ import java.net.URI
 class GraphExamples {
     companion object {
 
+        fun getVariables(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("Variables.java") {
+                        record("Variables") {
+                            field("field", t("int")) {
+                                literal(42, t("int"))
+                                modifiers = listOf("private")
+                            }
+                            method("getField", t("int")) {
+                                receiver = newVariableDeclaration("this", t("Variables"))
+                                body { returnStmt { member("field") } }
+                            }
+                            method("getLocal", t("int")) {
+                                receiver = newVariableDeclaration("this", t("Variables"))
+                                body {
+                                    declare {
+                                        variable("local", t("int")) { literal(42, t("int")) }
+                                    }
+                                    returnStmt { ref("local") }
+                                }
+                            }
+                            method("getShadow", t("int")) {
+                                receiver = newVariableDeclaration("this", t("Variables"))
+                                body {
+                                    declare {
+                                        variable("field", t("int")) { literal(43, t("int")) }
+                                    }
+                                    returnStmt { ref("field") }
+                                }
+                            }
+                            method("getNoShadow", t("int")) {
+                                receiver = newVariableDeclaration("this", t("Variables"))
+                                body {
+                                    declare {
+                                        variable("field", t("int")) { literal(43, t("int")) }
+                                    }
+                                    returnStmt { member("field", ref("this")) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getUnaryOperator(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
@@ -45,7 +96,7 @@ class GraphExamples {
         ) =
             TestLanguageFrontend(ScopeManager(), ".").build {
                 translationResult(config) {
-                    translationUnit("compoundoperator.cpp") {
+                    translationUnit("unaryoperator.cpp") {
                         // The main method
                         function("somefunc") {
                             body {
