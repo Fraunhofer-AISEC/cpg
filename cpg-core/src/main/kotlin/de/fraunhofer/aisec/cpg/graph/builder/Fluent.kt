@@ -831,6 +831,20 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
 
 /**
  * Creates a new [BinaryOperator] with a `+` [BinaryOperator.operatorCode] in the Fluent Node DSL
+ * and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend, StatementHolder)
+
+operator fun Expression.plusAssign(rhs: Expression): Unit {
+    val node = (this@LanguageFrontend).newBinaryOperator("+=")
+    node.lhs = this
+    node.rhs = rhs
+
+    (this@StatementHolder) += node
+}
+
+/**
+ * Creates a new [BinaryOperator] with a `+` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
 context(LanguageFrontend, ArgumentHolder)
@@ -875,6 +889,23 @@ context(LanguageFrontend, Holder<out Statement>)
 
 operator fun Expression.dec(): UnaryOperator {
     val node = (this@LanguageFrontend).newUnaryOperator("--", true, false)
+    node.input = this
+
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [UnaryOperator] with a `++` [UnaryOperator.operatorCode] in the Fluent Node DSL and
+ * invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
+context(LanguageFrontend, Holder<out Statement>)
+
+operator fun Expression.inc(): UnaryOperator {
+    val node = (this@LanguageFrontend).newUnaryOperator("++", true, false)
     node.input = this
 
     if (this@Holder is StatementHolder) {
@@ -933,6 +964,24 @@ infix fun Expression.lt(rhs: Expression): BinaryOperator {
 }
 
 /**
+ * Creates a new [ConditionalExpression] with a `=` [BinaryOperator.operatorCode] in the Fluent Node
+ * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend, StatementHolder)
+
+fun Expression.conditional(
+    condition: Expression,
+    thenExpr: Expression,
+    elseExpr: Expression
+): ConditionalExpression {
+    val node = (this@LanguageFrontend).newConditionalExpression(condition, thenExpr, elseExpr)
+
+    (this@StatementHolder) += node
+
+    return node
+}
+
+/**
  * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
@@ -950,16 +999,18 @@ infix fun Expression.assign(init: BinaryOperator.() -> Expression): BinaryOperat
 
 /**
  * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [StatementHolder].
+ * and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
-context(LanguageFrontend, StatementHolder)
+context(LanguageFrontend, Holder<out Node>)
 
 infix fun Expression.assign(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator("=")
     node.lhs = this
     node.rhs = rhs
 
-    (this@StatementHolder) += node
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
+    }
 
     return node
 }

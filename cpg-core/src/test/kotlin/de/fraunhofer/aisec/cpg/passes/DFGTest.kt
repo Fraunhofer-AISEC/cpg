@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import java.nio.file.Path
 import kotlin.test.*
 
 class DFGTest {
@@ -47,22 +46,23 @@ class DFGTest {
     @Test
     @Throws(Exception::class)
     fun testConditionalExpression() {
-        val topLevel = Path.of("src", "test", "resources", "dfg")
-        val result =
-            TestUtils.analyze(
-                listOf(topLevel.resolve("conditional_expression.cpp").toFile()),
-                topLevel,
-                true
-            )
+        val result = GraphExamples.getConditionalExpression()
+
         val bJoin = result.refs[{ it.name.localName == "b" && it.location?.region?.startLine == 6 }]
-        val a5 = result.refs[{ it.name.localName == "a" && it.location?.region?.startLine == 5 }]
+        val a5 =
+            result.refs[
+                    {
+                        it.name.localName == "a" &&
+                            it.location?.region?.startLine == 5 &&
+                            it.location?.region?.startColumn == 3
+                    }]
         val a6 = result.refs[{ it.name.localName == "a" && it.location?.region?.startLine == 6 }]
         val bCond =
             result.refs[
                     {
                         it.name.localName == "b" &&
                             it.location?.region?.startLine == 5 &&
-                            it.location?.region?.startColumn == 16
+                            it.location?.region?.startColumn == 12
                     }]
         val b2 =
             result.refs[
@@ -178,13 +178,8 @@ class DFGTest {
     @Test
     @Throws(Exception::class)
     fun testCompoundOperatorDFG() {
-        val topLevel = Path.of("src", "test", "resources", "dfg")
-        val result =
-            TestUtils.analyze(
-                listOf(topLevel.resolve("compoundoperator.cpp").toFile()),
-                topLevel,
-                true
-            )
+        val result = GraphExamples.getCompoundOperator()
+
         val rwCompoundOperator = TestUtils.findByUniqueName(result.allChildren(), "+=")
         assertNotNull(rwCompoundOperator)
 
@@ -203,13 +198,8 @@ class DFGTest {
     @Test
     @Throws(Exception::class)
     fun testUnaryOperatorDFG() {
-        val topLevel = Path.of("src", "test", "resources", "dfg")
-        val result =
-            TestUtils.analyze(
-                listOf(topLevel.resolve("unaryoperator.cpp").toFile()),
-                topLevel,
-                true
-            )
+        val result = GraphExamples.getUnaryOperator()
+
         val rwUnaryOperator = TestUtils.findByUniqueName(result.allChildren<UnaryOperator>(), "++")
         assertNotNull(rwUnaryOperator)
 
@@ -373,7 +363,6 @@ class DFGTest {
     @Test
     @Throws(Exception::class)
     fun testControlSensitiveDFGPassIfNoMerge() {
-        val topLevel = Path.of("src", "test", "resources", "dfg")
         val result = GraphExamples.getControlFlowSensitiveDFGIfNoMerge()
 
         val b = result.variables["b"]
@@ -390,7 +379,6 @@ class DFGTest {
     @Test
     @Throws(Exception::class)
     fun testControlSensitiveDFGPassIfMerge() {
-        val topLevel = Path.of("src", "test", "resources", "dfg")
         val result = GraphExamples.getControlFlowSensitiveDFGIfMerge()
 
         // Test If-Block
@@ -499,6 +487,8 @@ class DFGTest {
     @Test
     @Throws(Exception::class)
     fun testOutgoingDFGFromVariableDeclaration() {
+        // TODO: IMHO this test is quite useless and can be merged into another one (e.g.
+        // testControlSensitiveDFGPassIfMerge).
         val result = GraphExamples.getBasicSlice()
 
         val varA = TestUtils.findByUniqueName(result.variables, "a")

@@ -36,6 +36,126 @@ import java.net.URI
 class GraphExamples {
     companion object {
 
+        fun getUnaryOperator(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("compoundoperator.cpp") {
+                        // The main method
+                        function("somefunc") {
+                            body {
+                                declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                ref("i").inc()
+                                returnStmt { isImplicit = true }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getCompoundOperator(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("compoundoperator.cpp") {
+                        // The main method
+                        function("somefunc") {
+                            body {
+                                declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                ref("i") += literal(0, t("int"))
+                                returnStmt { isImplicit = true }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getConditionalExpression(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("conditional_expression.cpp") {
+                        // The main method
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("a", t("int")) { literal(0, t("int")) } }
+                                declare { variable("b", t("int")) { literal(1, t("int")) } }
+
+                                ref("a") {
+                                    location =
+                                        PhysicalLocation(
+                                            URI("conditional_expression.cpp"),
+                                            Region(5, 3, 5, 4)
+                                        )
+                                } assign
+                                    {
+                                        conditional(
+                                            ref("a") {
+                                                location =
+                                                    PhysicalLocation(
+                                                        URI("conditional_expression.cpp"),
+                                                        Region(5, 7, 5, 8)
+                                                    )
+                                            } eq
+                                                ref("b") {
+                                                    location =
+                                                        PhysicalLocation(
+                                                            URI("conditional_expression.cpp"),
+                                                            Region(5, 12, 5, 13)
+                                                        )
+                                                },
+                                            ref("b") {
+                                                location =
+                                                    PhysicalLocation(
+                                                        URI("conditional_expression.cpp"),
+                                                        Region(5, 16, 5, 17)
+                                                    )
+                                            } assign literal(2, t("int")),
+                                            ref("b") {
+                                                location =
+                                                    PhysicalLocation(
+                                                        URI("conditional_expression.cpp"),
+                                                        Region(5, 23, 5, 24)
+                                                    )
+                                            } assign literal(3, t("int"))
+                                        )
+                                    }
+                                ref("a") {
+                                    location =
+                                        PhysicalLocation(
+                                            URI("conditional_expression.cpp"),
+                                            Region(6, 3, 6, 4)
+                                        )
+                                } assign
+                                    ref("b") {
+                                        location =
+                                            PhysicalLocation(
+                                                URI("conditional_expression.cpp"),
+                                                Region(6, 7, 6, 8)
+                                            )
+                                    }
+                                returnStmt { isImplicit = true }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getBasicSlice(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
