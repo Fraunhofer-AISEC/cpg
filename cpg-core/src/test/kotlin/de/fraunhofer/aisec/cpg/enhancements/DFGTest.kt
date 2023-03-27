@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements
 
+import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.*
@@ -35,6 +36,31 @@ import kotlin.test.*
 internal class DFGTest {
     // Test DFG
     // Test ControlFlowSensitiveDFGPass
+    @Test
+    fun testInitializerListExpression() {
+        val result = GraphExamples.getInitializerListExprDFG()
+        val variable = result.variables["i"]
+        assertNotNull(variable)
+        assertEquals(1, variable.prevDFG.size)
+        val initializer = variable.prevDFG.first()
+        assertEquals(1, initializer.prevDFG.size)
+    }
+    @Test
+    fun testInitializerListExpressionCode() {
+        val topLevel = Path.of("src", "test", "resources", "dfg")
+        val result =
+            analyze(
+                listOf(topLevel.resolve("initializerListExpression.cpp").toFile()),
+                topLevel,
+                true
+            )
+        val variable = result.variables["i"]
+        assertNotNull(variable)
+        assertEquals(1, variable.prevDFG.size)
+        val initializer = variable.prevDFG.first()
+        assertEquals(1, initializer.prevDFG.size)
+    }
+
     /**
      * To test assignments of different value in an expression that then has a joinPoint. a = a == b
      * ? b = 2: b = 3;

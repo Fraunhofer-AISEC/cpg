@@ -28,10 +28,38 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 
 class GraphExamples {
     companion object {
+        fun getInitializerListExprDFG(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(config) {
+                    translationUnit("initializerListExprDFG.cpp") {
+                        function("foo", t("int")) { body { returnStmt { literal(0, t("int")) } } }
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("i", t("int")) {
+                                        val initList = newInitializerListExpression()
+                                        initList.initializers = listOf(call("foo"))
+                                        initializer = initList
+                                    }
+                                }
+                                returnStmt { ref("i") }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getVisitorTest(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
