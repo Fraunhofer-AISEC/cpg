@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -36,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -74,7 +76,6 @@ abstract class ValueDeclaration : Declaration(), HasType {
         }
 
     @Relationship("POSSIBLE_SUB_TYPES") protected var _possibleSubTypes = mutableListOf<Type>()
-
     override var possibleSubTypes: List<Type>
         get() {
             return if (!TypeManager.isTypeSystemActive()) {
@@ -91,13 +92,15 @@ abstract class ValueDeclaration : Declaration(), HasType {
      * Links to all the [DeclaredReferenceExpression]s accessing the variable and the respective
      * access value (read, write, readwrite).
      */
+    @PopulatedByPass(VariableUsageResolver::class)
     @Relationship(value = "USAGE")
     var usageEdges: MutableList<PropertyEdge<DeclaredReferenceExpression>> = ArrayList()
 
     /** All usages of the variable/field. */
-    /** Set all usages of the variable/field and assembles the access properties. */
+    @PopulatedByPass(VariableUsageResolver::class)
     var usages: List<DeclaredReferenceExpression>
         get() = unwrap(usageEdges, true)
+        /** Set all usages of the variable/field and assembles the access properties. */
         set(usages) {
             usageEdges =
                 usages

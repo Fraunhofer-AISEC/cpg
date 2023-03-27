@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -42,6 +43,10 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.FilenameMapper
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -99,14 +104,16 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * Name of the containing file. It can be null for artificially created nodes or if just
      * analyzing snippets of code without an associated file name.
      */
-    var file: String? = null
+    @PopulatedByPass(FilenameMapper::class) var file: String? = null
 
     /** Incoming control flow edges. */
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
     var prevEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
 
     /** outgoing control flow edges. */
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
     @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
     var nextEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
@@ -126,6 +133,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         get() = SubgraphWalker.getAstChildren(this)
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
     var prevEOG: List<Node>
         get() = unwrap(prevEOGEdges, false)
         set(value) {
@@ -141,6 +149,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         }
 
     /** Virtual property for accessing [nextEOGEdges] without property edges. */
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
     var nextEOG: List<Node>
         get() = unwrap(nextEOGEdges)
         set(value) {
@@ -148,9 +157,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         }
 
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     var prevDFG: MutableSet<Node> = HashSet()
 
-    @Relationship(value = "DFG") var nextDFG: MutableSet<Node> = HashSet()
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @Relationship(value = "DFG")
+    var nextDFG: MutableSet<Node> = HashSet()
 
     var typedefs: MutableSet<TypedefDeclaration> = HashSet()
 
