@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
@@ -35,6 +36,72 @@ import java.net.URI
 
 class GraphExamples {
     companion object {
+
+        fun getInferenceRecordPtr(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(StructTestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder().inferRecords(true).build()
+                    )
+                    .build()
+        ) =
+            TestLanguageFrontend(
+                    ScopeManager(),
+                    config.languages.first().namespaceDelimiter,
+                    config.languages.first()
+                )
+                .build {
+                    translationResult(config) {
+                        translationUnit("record.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    declare { variable("node", t("T*")) }
+                                    member("value", ref("node"), "->") assign literal(42, t("int"))
+                                    member("next", ref("node"), "->") assign ref("node")
+                                    memberCall(
+                                        "dump",
+                                        ref("node")
+                                    ) // TODO: Do we have to encode the "->" here?
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+
+        fun getInferenceRecord(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(StructTestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder().inferRecords(true).build()
+                    )
+                    .build()
+        ) =
+            TestLanguageFrontend(
+                    ScopeManager(),
+                    config.languages.first().namespaceDelimiter,
+                    config.languages.first()
+                )
+                .build {
+                    translationResult(config) {
+                        translationUnit("record.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    declare { variable("node", t("T")) }
+                                    member("value", ref("node")) assign literal(42, t("int"))
+                                    member("next", ref("node")) assign { reference(ref("node")) }
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
 
         fun getVariables(
             config: TranslationConfiguration =

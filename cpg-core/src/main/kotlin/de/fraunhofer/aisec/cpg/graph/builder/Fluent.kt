@@ -759,7 +759,11 @@ fun LanguageFrontend.ref(
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.member(name: CharSequence, base: Expression? = null): MemberExpression {
+fun LanguageFrontend.member(
+    name: CharSequence,
+    base: Expression? = null,
+    operatorCode: String = "."
+): MemberExpression {
     val parsedName = parseName(name)
     val type =
         if (parsedName.parent != null) {
@@ -774,7 +778,7 @@ fun LanguageFrontend.member(name: CharSequence, base: Expression? = null): Membe
         }
     val memberBase = base ?: memberOrRef(parsedName.parent ?: parseName("this"), type)
 
-    val node = newMemberExpression(name, memberBase)
+    val node = newMemberExpression(name, memberBase, operatorCode = operatorCode)
 
     // Only add this to an argument holder if the nearest holder is an argument holder
     val holder = this@Holder
@@ -882,8 +886,23 @@ operator fun Expression.minus(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [UnaryOperator] with a `--` [UnaryOperator.operatorCode] in the Fluent Node DSL and
+ * Creates a new [UnaryOperator] with a `&` [UnaryOperator.operatorCode] in the Fluent Node DSL and
  * invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
+context(LanguageFrontend, ArgumentHolder)
+
+fun reference(input: Expression): UnaryOperator {
+    val node = (this@LanguageFrontend).newUnaryOperator("&", false, false)
+    node.input = input
+
+    this@ArgumentHolder += node
+
+    return node
+}
+
+/**
+ * Creates a new [UnaryOperator] with a `--` [UnaryOperator.operatorCode] in the Fluent Node DSL and
+ * invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend, Holder<out Statement>)
 
