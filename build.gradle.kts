@@ -29,7 +29,6 @@
 //
 plugins {
     id("org.jetbrains.dokka")
-    id("org.sonarqube")
 }
 
 // this is needed for the plugins block
@@ -54,13 +53,6 @@ tasks.dokkaHtmlMultiModule {
         dependsOn(it.tasks.withType<JacocoReport>())
     }
 }*/
-
-sonarqube {
-    properties {
-        property("sonar.sourceEncoding", "UTF-8")
-        property("sonar.jacoco.reportPaths", "cpg-all/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml")
-    }
-}
 
 //
 // Load the properties that define which frontends to include
