@@ -37,10 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class GoLanguageFrontendTest : BaseTest() {
 
@@ -679,6 +676,15 @@ class GoLanguageFrontendTest : BaseTest() {
         val call = (a.singleDeclaration as? VariableDeclaration)?.initializer as? CallExpression
         assertNotNull(call)
         assertTrue(call.invokes.contains(newAwesome))
+
+        val util = result.namespaces["util"]
+        assertNotNull(util)
+
+        // Check, if we correctly inferred this function in the namespace
+        val doSomethingElse = util.functions["DoSomethingElse"]
+        assertNotNull(doSomethingElse)
+        assertTrue(doSomethingElse.isInferred)
+        assertSame(util, doSomethingElse.scope?.astNode)
     }
 
     @Test

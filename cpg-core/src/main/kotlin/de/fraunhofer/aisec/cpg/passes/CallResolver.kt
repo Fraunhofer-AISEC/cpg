@@ -201,7 +201,26 @@ open class CallResolver : SymbolResolverPass() {
             val suitableBases = getPossibleContainingTypes(call)
             candidates =
                 if (suitableBases.isEmpty()) {
-                    listOf(currentTU.inferFunction(call))
+                    // This is not really the most ideal place, but for now this will do. While this
+                    // is definitely a function, it could still be a function inside a namespace. In
+                    // this case, we want to start inference in that particular namespace and not in
+                    // the TU. It is also a little bit redundant, since ScopeManager.resolveFunction
+                    // (which gets called before) already extracts the scope, but this information
+                    // gets lost.
+                    val scope = scopeManager.extractScope(call.name, scopeManager.globalScope)
+
+                    // We have two possible start points, a namespace declaration or a translation
+                    // unit. Nothing else is allowed (fow now)
+                    val func =
+                        when (val start = scope?.astNode) {
+                            is TranslationUnitDeclaration ->
+                                start.inferFunction(call, scopeManager = scopeManager)
+                            is NamespaceDeclaration ->
+                                start.inferFunction(call, scopeManager = scopeManager)
+                            else -> null
+                        }
+
+                    listOfNotNull(func)
                 } else {
                     createMethodDummies(suitableBases, call)
                 }
@@ -390,13 +409,13 @@ open class CallResolver : SymbolResolverPass() {
             .mapNotNull {
                 var record = recordMap[it.root.name]
                 if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
-                    record = it.startInference().inferRecordDeclaration(it, currentTU)
+                    record = it.startInference(scopeManager).inferRecordDeclaration(it, currentTU)
                     // update the record map
                     if (record != null) it.root.name.let { name -> recordMap[name] = record }
                 }
                 record
             }
-            .map { record -> record.inferMethod(call) }
+            .map { record -> record.inferMethod(call, scopeManager = scopeManager) }
     }
 
     /**
@@ -597,7 +616,7 @@ open class CallResolver : SymbolResolverPass() {
 
         return constructorCandidate
             ?: recordDeclaration
-                .startInference()
+                .startInference(scopeManager)
                 .createInferredConstructor(constructExpression.signature)
     }
 
@@ -606,7 +625,7 @@ open class CallResolver : SymbolResolverPass() {
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
         return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
-            ?: recordDeclaration.startInference().createInferredConstructor(signature)
+            ?: recordDeclaration.startInference(scopeManager).createInferredConstructor(signature)
     }
 
     companion object {

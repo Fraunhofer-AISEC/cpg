@@ -439,10 +439,10 @@ private constructor(
             registerPass(VariableUsageResolver())
             registerPass(CallResolver()) // creates CG
             registerPass(DFGPass())
-            registerPass(FunctionPointerCallResolver())
             registerPass(EvaluationOrderGraphPass()) // creates EOG
             registerPass(TypeResolver())
             registerPass(ControlFlowSensitiveDFGPass())
+            registerPass(FunctionPointerCallResolver())
             registerPass(FilenameMapper())
             return this
         }

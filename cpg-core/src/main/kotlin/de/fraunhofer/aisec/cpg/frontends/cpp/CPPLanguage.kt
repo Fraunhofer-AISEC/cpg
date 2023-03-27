@@ -27,10 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.frontends.HasClasses
-import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
-import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
-import de.fraunhofer.aisec.cpg.frontends.HasTemplates
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -48,6 +44,7 @@ class CPPLanguage :
     HasDefaultArguments,
     HasTemplates,
     HasComplexCallResolution,
+    HasStructs,
     HasClasses,
     HasUnknownType {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "hpp", "hh")
@@ -300,7 +297,7 @@ class CPPLanguage :
             // If we want to use an inferred functionTemplateDeclaration, this needs to be provided.
             // Otherwise, we could not resolve to a template and no modifications are made
             val functionTemplateDeclaration =
-                holder.startInference().createInferredFunctionTemplate(templateCall)
+                holder.startInference(scopeManager).createInferredFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
             val edges = templateCall.templateParameterEdges
             // Set instantiation propertyEdges
@@ -315,19 +312,5 @@ class CPPLanguage :
         }
 
         return Pair(false, listOf())
-    }
-
-    /**
-     * @param call we want to find invocation targets for by performing implicit casts
-     * @param scopeManager the scope manager used
-     * @return list of invocation candidates by applying implicit casts
-     */
-    private fun resolveWithImplicitCastFunc(
-        call: CallExpression,
-        scopeManager: ScopeManager
-    ): List<FunctionDeclaration> {
-        val initialInvocationCandidates =
-            listOf(*scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray())
-        return resolveWithImplicitCast(call, initialInvocationCandidates)
     }
 }

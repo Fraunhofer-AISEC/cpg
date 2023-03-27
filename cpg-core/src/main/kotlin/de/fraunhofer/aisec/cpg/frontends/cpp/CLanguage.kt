@@ -29,13 +29,24 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.CallResolver
+import de.fraunhofer.aisec.cpg.passes.resolveWithImplicitCast
+import java.util.regex.Pattern
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The C language. */
 open class CLanguage :
     Language<CXXLanguageFrontend>(),
+    HasComplexCallResolution,
     HasStructs,
     HasFunctionPointers,
     HasQualifier,
@@ -100,5 +111,47 @@ open class CLanguage :
         scopeManager: ScopeManager,
     ): CXXLanguageFrontend {
         return CXXLanguageFrontend(this, config, scopeManager)
+    }
+
+    override fun refineNormalCallResolution(
+        call: CallExpression,
+        scopeManager: ScopeManager,
+        currentTU: TranslationUnitDeclaration
+    ): List<FunctionDeclaration> {
+        val invocationCandidates = scopeManager.resolveFunction(call).toMutableList()
+        if (invocationCandidates.isEmpty()) {
+            // Check for implicit casts
+            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, scopeManager))
+        }
+        return invocationCandidates
+    }
+
+    override fun refineMethodCallResolution(
+        curClass: RecordDeclaration?,
+        possibleContainingTypes: Set<Type>,
+        call: CallExpression,
+        scopeManager: ScopeManager,
+        currentTU: TranslationUnitDeclaration,
+        callResolver: CallResolver
+    ): List<FunctionDeclaration> = emptyList()
+
+    override fun refineInvocationCandidatesFromRecord(
+        recordDeclaration: RecordDeclaration,
+        call: CallExpression,
+        namePattern: Pattern
+    ): List<FunctionDeclaration> = emptyList()
+
+    /**
+     * @param call we want to find invocation targets for by performing implicit casts
+     * @param scopeManager the scope manager used
+     * @return list of invocation candidates by applying implicit casts
+     */
+    protected fun resolveWithImplicitCastFunc(
+        call: CallExpression,
+        scopeManager: ScopeManager
+    ): List<FunctionDeclaration> {
+        val initialInvocationCandidates =
+            listOf(*scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray())
+        return resolveWithImplicitCast(call, initialInvocationCandidates)
     }
 }
