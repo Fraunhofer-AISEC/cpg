@@ -71,7 +71,7 @@ open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLangua
 }
 
 class StructTestLanguage(namespaceDelimiter: String = "::") :
-    TestLanguage(namespaceDelimiter), HasStructs, HasClasses
+    TestLanguage(namespaceDelimiter), HasStructs, HasClasses, HasDefaultArguments
 
 class TestLanguageFrontend(
     scopeManager: ScopeManager = ScopeManager(),
