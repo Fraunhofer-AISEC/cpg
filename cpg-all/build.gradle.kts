@@ -1,6 +1,7 @@
 plugins {
     id("cpg.library-conventions")
     id("cpg.frontend-dependency-conventions")
+    id("jacoco-report-aggregation")
 }
 
 publishing {
@@ -21,4 +22,7 @@ dependencies {
     // this exposes all of our (published) modules as dependency
     api(projects.cpgCore)
     api(projects.cpgAnalysis)
+
+    jacocoAggregation(projects.cpgCore)
+    jacocoAggregation(projects.cpgAnalysis)
 }
