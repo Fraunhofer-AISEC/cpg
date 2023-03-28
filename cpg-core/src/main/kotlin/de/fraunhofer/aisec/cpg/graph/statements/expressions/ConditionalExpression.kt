@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import java.util.ArrayList
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -95,8 +97,8 @@ class ConditionalExpression : Expression(), HasType.TypeListener, SplitsControlF
 
     override val splittingNode: Node
         get() = condition
-    override val dominatedNodes: MutableList<Node>
-        get() = listOfNotNull(thenExpr, elseExpr).toMutableList()
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    override val dominatedNodes: MutableList<Node> = mutableListOf()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
