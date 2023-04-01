@@ -2,7 +2,6 @@ plugins {
     id("cpg.library-conventions")
     id("cpg.frontend-dependency-conventions")
     id("jacoco-report-aggregation")
-    id("org.sonarqube")
 }
 
 publishing {
@@ -18,6 +17,7 @@ publishing {
     }
 }
 
+tasks.getByPath(":sonar").dependsOn(tasks.named<JacocoReport>("testCodeCoverageReport"))
 
 dependencies {
     // this exposes all of our (published) modules as dependency
@@ -26,15 +26,4 @@ dependencies {
 
     jacocoAggregation(projects.cpgCore)
     jacocoAggregation(projects.cpgAnalysis)
-}
-
-tasks.sonar {
-    dependsOn(tasks.named<JacocoReport>("testCodeCoverageReport"))
-}
-
-sonarqube {
-    properties {
-        property("sonar.sourceEncoding", "UTF-8")
-        property("sonar.coverage.jacoco.xmlReportPaths", "./build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml")
-    }
 }

@@ -29,6 +29,7 @@
 //
 plugins {
     id("org.jetbrains.dokka")
+    id("org.sonarqube")
 }
 
 // this is needed for the plugins block
@@ -48,11 +49,14 @@ tasks.dokkaHtmlMultiModule {
 // the submodules do not configure sonarqube
 // this makes sure that jacoco reports are generated when executing the top-level 'sonar' task
 // so that the whole cpg project gets one combined coverage report
-/*tasks.sonar {
-    subprojects.forEach {
-        dependsOn(it.tasks.withType<JacocoReport>())
+sonarqube {
+    properties {
+        property("sonar.sourceEncoding", "UTF-8")
+        property("sonar.coverage.jacoco.xmlReportPaths", "../cpg-all/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml,cpg-all/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml")
     }
-}*/
+}
+
+
 
 //
 // Load the properties that define which frontends to include
