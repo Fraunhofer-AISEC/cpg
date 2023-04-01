@@ -46,12 +46,11 @@ tasks.dokkaHtmlMultiModule {
 //
 // Configure sonarqube for the whole cpg project
 //
-// the submodules do not configure sonarqube
-// this makes sure that jacoco reports are generated when executing the top-level 'sonar' task
-// so that the whole cpg project gets one combined coverage report
 sonarqube {
     properties {
         property("sonar.sourceEncoding", "UTF-8")
+        // The report part is either relative to the submodules or the main module. We want to specify our
+        // aggregated jacoco report here
         property("sonar.coverage.jacoco.xmlReportPaths", "../cpg-all/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml,cpg-all/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml")
     }
 }
