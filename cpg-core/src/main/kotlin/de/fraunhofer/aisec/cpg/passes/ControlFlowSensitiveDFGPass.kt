@@ -378,7 +378,8 @@ open class ControlFlowSensitiveDFGPass : Pass() {
      */
     private fun isCompoundAssignment(currentNode: Node) =
         currentNode is BinaryOperator &&
-            currentNode.operatorCode in BinaryOperator.compoundOperators &&
+            currentNode.operatorCode in
+                (currentNode.language?.compoundAssignmentOperators ?: setOf()) &&
             (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
 
     /** Checks if the node is a simple assignment of the form `var = ...` */

@@ -44,6 +44,8 @@ class GoLanguage :
     override val disjunctiveOperators = listOf("||")
     override val startCharacter = '['
     override val endCharacter = ']'
+    override val compoundAssignmentOperators =
+        setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&^=", "&=", "|=", "^=")
 
     /** See [Documentation](https://pkg.go.dev/builtin). */
     @Transient

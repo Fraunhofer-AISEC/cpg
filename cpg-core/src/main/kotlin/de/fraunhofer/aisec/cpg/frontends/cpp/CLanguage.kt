@@ -59,6 +59,8 @@ open class CLanguage :
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
+    override val compoundAssignmentOperators =
+        setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "|=", "^=")
 
     @Transient
     @JsonIgnore
