@@ -166,6 +166,12 @@ class Application : Callable<Int> {
     private var noDefaultPasses: Boolean = false
 
     @CommandLine.Option(
+        names = ["--custom-pass-list"],
+        description = ["Add custom list of passes (includes --no-default-passes)"]
+    )
+    private var customPasses: String = "ALL"
+
+    @CommandLine.Option(
         names = ["--no-neo4j"],
         description = ["Do not push cpg into neo4j [used for debugging]"]
     )
@@ -197,6 +203,12 @@ class Application : Callable<Int> {
         description = ["Save benchmark results to json file"]
     )
     private var benchmarkJson: File? = null
+
+    @CommandLine.Option(
+        names = ["--list-passes"],
+        description = ["Prints the list available passes"]
+    )
+    private var listPasses: Boolean = false
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -334,8 +346,13 @@ class Application : Callable<Int> {
             translationConfiguration.sourceLocations(filePaths)
         }
 
-        if (!noDefaultPasses) {
+        if (!noDefaultPasses && customPasses == "ALL") {
             translationConfiguration.defaultPasses()
+        } else if (!noDefaultPasses && customPasses != "ALL") {
+            val pieces = customPasses.split(",")
+            for (pass in pieces) {
+                translationConfiguration.registerPass(pass)
+            }
         }
 
         if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
@@ -378,6 +395,15 @@ class Application : Callable<Int> {
      */
     @Throws(Exception::class, ConnectException::class, IllegalArgumentException::class)
     override fun call(): Int {
+        if (listPasses) {
+            val translationConfiguration = TranslationConfiguration.builder()
+            log.info("List of passes:")
+            translationConfiguration.getPassList().iterator().forEach { log.info("- " + it) }
+            log.info("--")
+            log.info("End of list. Stopping.")
+            return EXIT_SUCCESS
+        }
+
         val translationConfiguration = setupTranslationConfiguration()
 
         val startTime = System.currentTimeMillis()
