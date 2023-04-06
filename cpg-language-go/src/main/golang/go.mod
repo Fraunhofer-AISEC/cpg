@@ -4,5 +4,5 @@ go 1.19
 
 require (
 	golang.org/x/mod v0.9.0
-	tekao.net/jnigi v0.0.0-20221227053512-56e0101fa996
+	tekao.net/jnigi v0.0.0-20230402215112-69b87aaf8714
 )
