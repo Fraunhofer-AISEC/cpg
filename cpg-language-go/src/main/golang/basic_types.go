@@ -32,13 +32,16 @@ import (
 )
 
 func NewString(s string) *jnigi.ObjectRef {
-	o, err := env.NewObject("java/lang/String", []byte(s))
-	if err != nil {
-		log.Fatal(err)
+	if s != "" {
+		o, err := env.NewObject("java/lang/String", []byte(s))
+		if err != nil {
+			log.Fatal(err)
+		}
 
+		return o
+	} else {
+		return jnigi.NewObjectRef("java/lang/String")
 	}
-
-	return o
 }
 
 func NewCharSequence(s string) *jnigi.ObjectRef {

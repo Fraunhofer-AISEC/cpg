@@ -139,7 +139,8 @@ class FluentTest {
         assertNotNull(lit1)
         assertEquals(1, lit1.value)
 
-        // Third line is the CallExpression (containing another MemberCallExpression as argument)
+        // Third line is th
+        // e CallExpression (containing another MemberCallExpression as argument)
         val call = main[2] as? CallExpression
         assertNotNull(call)
         assertLocalName("do", call)

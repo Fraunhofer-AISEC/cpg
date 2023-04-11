@@ -31,10 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -297,10 +294,18 @@ object TestUtils {
 
 fun assertFullName(fqn: String, node: Node?, message: String? = null) {
     assertNotNull(node)
-    asserter.assertEquals(message, fqn, node.name.toString())
+    assertEquals(fqn, node.name.toString(), message)
 }
 
 fun assertLocalName(localName: String, node: Node?, message: String? = null) {
     assertNotNull(node)
-    asserter.assertEquals(message, localName, node.name.localName)
+    assertEquals(localName, node.name.localName, message)
+}
+
+/**
+ * Asserts that a) the expression in [expr] is a [Literal] and b) that it's value is equal to
+ * [expected].
+ */
+fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: String? = null) {
+    assertEquals(expected, assertIs<Literal<T>>(expr).value, message)
 }

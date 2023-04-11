@@ -637,19 +637,19 @@ class ScopeManager : ScopeProvider {
         call: CallExpression,
         scope: Scope? = currentScope
     ): List<FunctionDeclaration> {
-        val s = extractScope(call.name, scope)
+        val s = extractScope(call, scope)
 
         return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
     }
 
-    fun extractScope(name: Name, scope: Scope? = currentScope): Scope? {
+    fun extractScope(node: Node, scope: Scope? = currentScope): Scope? {
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
-        if (name.parent != null) {
+        if (node.name.parent != null) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = name.parent
+            val scopeName = node.name.parent
 
             // TODO: proper scope selection
 
@@ -657,12 +657,12 @@ class ScopeManager : ScopeProvider {
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
-                    LOGGER.error(
-                        "Could not find the scope {} needed to resolve the call {}. Falling back to the default (current) scope",
-                        scopeName,
-                        name
+                    Util.errorWithFileLocation(
+                        node,
+                        LOGGER,
+                        "Could not find the scope $scopeName needed to resolve the call ${node.name}. Falling back to the default (current) scope"
                     )
-                    scope
+                    s
                 } else {
                     scopes[0]
                 }

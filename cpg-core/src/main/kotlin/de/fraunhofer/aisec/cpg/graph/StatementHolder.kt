@@ -66,6 +66,18 @@ interface StatementHolder : Holder<Statement> {
         statementEdges.add(propertyEdge)
     }
 
+    /** Inserts the statement [s] before the statement specified in [before]. */
+    fun insertStatementBefore(s: Statement, before: Statement) {
+        val statements = this.statements
+        val idx = statements.indexOf(before)
+        if (idx != -1) {
+            val before = statements.subList(0, idx)
+            val after = statements.subList(idx, statements.size)
+
+            this.statements = listOf(*before.toTypedArray(), s, *after.toTypedArray())
+        }
+    }
+
     override operator fun plusAssign(node: Statement) {
         addStatement(node)
     }
