@@ -5,3 +5,4 @@ enableGoFrontend=true
 enablePythonFrontend=true
 enableLLVMFrontend=true
 enableTypeScriptFrontend=true
+enablePythonQiskitFrontend=true

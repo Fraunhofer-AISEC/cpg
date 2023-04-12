@@ -79,8 +79,14 @@ val enablePythonFrontend: Boolean by extra {
 }
 project.logger.lifecycle("Python frontend is ${if (enablePythonFrontend) "enabled" else "disabled"}")
 
-val enableLLVMFrontend: Boolean by extra {
-    val enableLLVMFrontend: String? by project
+val enablePythonQiskitFrontend by extra {
+    val enablePythonQiskitFrontend: String by project
+    enablePythonQiskitFrontend.toBoolean()
+}
+project.logger.lifecycle("Python Qiskit is ${if (enablePythonQiskitFrontend) "enabled" else "disabled"}")
+
+val enableLLVMFrontend by extra {
+    val enableLLVMFrontend: String by project
     enableLLVMFrontend.toBoolean()
 }
 project.logger.lifecycle("LLVM frontend is ${if (enableLLVMFrontend) "enabled" else "disabled"}")

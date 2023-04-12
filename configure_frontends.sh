@@ -54,3 +54,5 @@ answerLLVM=$(ask "Do you want to enable the LLVM frontend? (currently $(getPrope
 setProperty "enableLLVMFrontend" $answerLLVM
 answerTypescript=$(ask "Do you want to enable the TypeScript frontend? (currently $(getProperty "enableTypeScriptFrontend"))")
 setProperty "enableTypeScriptFrontend" $answerTypescript
+answerPythonQiskit=$(ask "Do you want to enable the Python Qiskit frontend? (currently $(getProperty "enablePythonQiskitFrontend"))")
+setProperty "enablePythonQiskitFrontend" $answerPythonQiskit
