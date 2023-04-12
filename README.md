@@ -15,6 +15,7 @@ This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ 
 
 In order to improve some formal aspects of our library, we created several specifications of our core concepts. Currently, the following specifications exist:
 * [Dataflow Graph](./cpg-core/specifications/dfg.md)
+* [Evaluation Order Graph](./cpg-core/specifications/eog.md)
 * [Language and Language Frontend](./cpg-core/specifications/language.md)
 
 We aim to provide more specifications over time and also include them in a new generated documentation site.
