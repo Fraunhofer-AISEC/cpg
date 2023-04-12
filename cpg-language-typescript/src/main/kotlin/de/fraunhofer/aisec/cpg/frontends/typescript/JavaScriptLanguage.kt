@@ -44,6 +44,29 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
     override val disjunctiveOperators = listOf("||", "||=")
 
     /**
+     * All operators which perform and assignment and an operation using lhs and rhs. See
+     * https://tc39.es/ecma262/#sec-assignment-operators
+     */
+    override val compoundAssignmentOperators =
+        setOf(
+            "+=",
+            "-=",
+            "*=",
+            "**=",
+            "/=",
+            "%=",
+            "<<=",
+            ">>=",
+            ">>>=",
+            "&=",
+            "&&=",
+            "|=",
+            "||=",
+            "^=",
+            "??="
+        )
+
+    /**
      * See
      * [Documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_values).
      */

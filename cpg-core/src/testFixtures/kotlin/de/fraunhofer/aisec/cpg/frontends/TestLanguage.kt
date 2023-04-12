@@ -47,6 +47,9 @@ class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLanguageFro
     override val fileExtensions: List<String> = listOf()
     override val namespaceDelimiter: String
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
+    override val compoundAssignmentOperators =
+        setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "|=", "^=")
+
     override val builtInTypes: Map<String, Type> =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),

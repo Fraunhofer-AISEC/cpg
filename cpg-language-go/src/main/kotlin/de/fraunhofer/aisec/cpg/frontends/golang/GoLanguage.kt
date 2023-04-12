@@ -45,6 +45,13 @@ class GoLanguage :
     override val startCharacter = '['
     override val endCharacter = ']'
 
+    /**
+     * All operators which perform and assignment and an operation using lhs and rhs. See
+     * https://go.dev/ref/spec#Operators_and_punctuation
+     */
+    override val compoundAssignmentOperators =
+        setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&^=", "&=", "|=", "^=")
+
     /** See [Documentation](https://pkg.go.dev/builtin). */
     @Transient
     override val builtInTypes =
