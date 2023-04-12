@@ -96,3 +96,9 @@ val enableTypeScriptFrontend: Boolean by extra {
     enableTypeScriptFrontend.toBoolean()
 }
 project.logger.lifecycle("TypeScript frontend is ${if (enableTypeScriptFrontend) "enabled" else "disabled"}")
+
+val enableOpenQasmFrontend by extra {
+    val enableOpenQasmFrontend: String by project
+    enableOpenQasmFrontend.toBoolean()
+}
+project.logger.lifecycle("OpenQASM frontend is ${if (enableOpenQasmFrontend) "enabled" else "disabled"}")

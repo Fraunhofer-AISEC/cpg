@@ -9,6 +9,8 @@ val enablePythonFrontend: Boolean by rootProject.extra
 val enablePythonQiskitFrontend: Boolean by rootProject.extra
 val enableLLVMFrontend: Boolean by rootProject.extra
 val enableTypeScriptFrontend: Boolean by rootProject.extra
+val enableOpenQasmFrontend: Boolean by rootProject.extra
+
 
 dependencies {
     if (enableJavaFrontend) api(project(":cpg-language-java"))
@@ -17,4 +19,6 @@ dependencies {
     if (enablePythonQiskitFrontend) api(project(":cpg-language-python-qiskit"))
     if (enableLLVMFrontend) api(project(":cpg-language-llvm"))
     if (enableTypeScriptFrontend) api(project(":cpg-language-typescript"))
+    if (enableOpenQasmFrontend) api(project(":cpg-language-openqasm"))
+
 }

@@ -44,6 +44,10 @@ val enableTypeScriptFrontend: Boolean by extra {
     val enableTypeScriptFrontend: String? by settings
     enableTypeScriptFrontend.toBoolean()
 }
+val enableOpenQasmFrontend by extra {
+    val enableOpenQasmFrontend: String by settings
+    enableOpenQasmFrontend.toBoolean()
+}
 
 if (enableJavaFrontend) include(":cpg-language-java")
 if (enableGoFrontend) include(":cpg-language-go")
@@ -51,3 +55,4 @@ if (enableLLVMFrontend) include(":cpg-language-llvm")
 if (enablePythonFrontend) include(":cpg-language-python")
 if (enablePythonQiskitFrontend) include(":cpg-language-python-qiskit")
 if (enableTypeScriptFrontend) include(":cpg-language-typescript")
+if (enableOpenQasmFrontend) include(":cpg-language-openqasm")

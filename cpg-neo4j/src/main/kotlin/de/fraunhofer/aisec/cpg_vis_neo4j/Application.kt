@@ -319,6 +319,7 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.openqasm.OpenQasmLanguage")
                 .loadIncludes(loadIncludes)
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)

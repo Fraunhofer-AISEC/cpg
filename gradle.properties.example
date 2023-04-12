@@ -3,6 +3,7 @@ org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dkotlin.daemon.jvm.opti
 enableJavaFrontend=true
 enableGoFrontend=true
 enablePythonFrontend=true
+enableOpenQasmFrontend=true
 enableLLVMFrontend=true
 enableTypeScriptFrontend=true
 enablePythonQiskitFrontend=true

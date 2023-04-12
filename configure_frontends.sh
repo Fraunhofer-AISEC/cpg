@@ -56,3 +56,5 @@ answerTypescript=$(ask "Do you want to enable the TypeScript frontend? (currentl
 setProperty "enableTypeScriptFrontend" $answerTypescript
 answerPythonQiskit=$(ask "Do you want to enable the Python Qiskit frontend? (currently $(getProperty "enablePythonQiskitFrontend"))")
 setProperty "enablePythonQiskitFrontend" $answerPythonQiskit
+answerOpenQasm=$(ask "Do you want to enable the OpenQASM frontend? (currently $(getProperty "enableOpenQasmFrontend"))")
+setProperty "enableOpenQasmFrontend" $answerOpenQasm
