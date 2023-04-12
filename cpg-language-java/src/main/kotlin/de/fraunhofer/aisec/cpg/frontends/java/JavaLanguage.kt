@@ -57,6 +57,11 @@ open class JavaLanguage :
     override val unknownTypeString = listOf("var")
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
+
+    /**
+     * All operators which perform and assignment and an operation using lhs and rhs. See
+     * https://docs.oracle.com/javase/tutorial/java/nutsandbolts/operators.html
+     */
     override val compoundAssignmentOperators =
         setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "&=", "|=", "^=")
 

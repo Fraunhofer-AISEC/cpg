@@ -75,6 +75,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
     open val arithmeticOperations: Set<String>
         get() = setOf("+", "-", "*", "/", "%", "<<", ">>")
 
+    /** All operators which perform and assignment and an operation using lhs and rhs. */
     abstract val compoundAssignmentOperators: Set<String>
 
     /** Creates a new [LanguageFrontend] object to parse the language. */

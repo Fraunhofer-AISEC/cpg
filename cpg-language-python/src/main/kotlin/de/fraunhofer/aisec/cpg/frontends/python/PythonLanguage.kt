@@ -42,8 +42,13 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
+
+    /**
+     * All operators which perform and assignment and an operation using lhs and rhs. See
+     * https://docs.python.org/3/library/operator.html#in-place-operators
+     */
     override val compoundAssignmentOperators =
-        setOf("+=", "-=", "*=", "**=", "/=", "//=", "%=", "<<=", ">>=", "&=", "|=", "^=")
+        setOf("+=", "-=", "*=", "**=", "/=", "//=", "%=", "<<=", ">>=", "&=", "|=", "^=", "@=")
 
     /** See [Documentation](https://docs.python.org/3/library/stdtypes.html#). */
     @Transient
