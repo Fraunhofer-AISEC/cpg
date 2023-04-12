@@ -23,17 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
-class QuantumMeasure(cpgNode: Node?) : QuantumNode(cpgNode) {
+import de.fraunhofer.aisec.cpg.graph.Node
+
+class QuantumBit(cpgNode: Node?) : QuantumNode(cpgNode) {
     var quantumCircuit: QuantumCircuit? = null
-    var measurements: ArrayList<QuantumMeasurement>? = null
-
-    fun addMeasurement(qBit: QuantumBit?, cBit: ClassicBit?) {
-        if (measurements == null || qBit == null || cBit == null) {
-            TODO()
-        } else {
-            measurements!!.add(QuantumMeasurement(qBit, cBit))
-        }
-    }
 }

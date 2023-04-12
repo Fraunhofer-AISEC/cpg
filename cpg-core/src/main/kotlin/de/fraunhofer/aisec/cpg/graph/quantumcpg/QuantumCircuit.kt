@@ -23,12 +23,19 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
-import org.neo4j.ogm.annotation.EndNode
-import org.neo4j.ogm.annotation.RelationshipEntity
-import org.neo4j.ogm.annotation.StartNode
+import de.fraunhofer.aisec.cpg.graph.Node
 
-@RelationshipEntity
-class QuantumMeasurement(@StartNode var qBit: QuantumBit, @EndNode var cBit: ClassicBit) :
-    QuantumNode(cpgNode = null) {}
+class QuantumCircuit(cpgNode: Node?) : QuantumNode(cpgNode) {
+    var quantumBits: Array<QuantumBit>? = null
+    var classicBits: Array<ClassicBit>? = null
+
+    fun getQbitByIdx(i: Int): QuantumBit? {
+        return quantumBits?.get(i)
+    }
+
+    fun getCbitByIdx(i: Int): ClassicBit? {
+        return classicBits?.get(i)
+    }
+}

@@ -23,8 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
-class ClassicBit(cpgNode: Node?) : QuantumNode(cpgNode) {
-    var quantumCircuit: QuantumCircuit? = null
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
+
+class QuantumGateH(cpgNode: Node?) : QuantumGate(cpgNode) {
+    var quantumBit0: QuantumBit? = null
+    init {
+        name = Name("H")
+    }
 }

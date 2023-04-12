@@ -23,8 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import org.slf4j.LoggerFactory
 
 /** Builder for construction code property graph nodes. */

@@ -23,8 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
-open class QuantumGate(cpgNode: Node?) : QuantumNode(cpgNode) {
-    var quantumCircuit: QuantumCircuit? = null
-}
+import org.neo4j.ogm.annotation.EndNode
+import org.neo4j.ogm.annotation.RelationshipEntity
+import org.neo4j.ogm.annotation.StartNode
+
+@RelationshipEntity
+class QuantumMeasurement(@StartNode var qBit: QuantumBit, @EndNode var cBit: ClassicBit) :
+    QuantumNode(cpgNode = null) {}

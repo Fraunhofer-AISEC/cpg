@@ -51,4 +51,6 @@ class OpenQasmLanguage : Language<OpenQasmLanguageFrontend>(), HasShortCircuitOp
 
     /** TODO */
     @Transient override val builtInTypes = emptyMap<String, Type>()
+    override val compoundAssignmentOperators: Set<String>
+        get() = emptySet() // TODO
 }
