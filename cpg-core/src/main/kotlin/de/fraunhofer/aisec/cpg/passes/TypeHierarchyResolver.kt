@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 
 /**
- * Transitively [RecordDeclaration] nodes with their supertypes' records.
+ * Transitively connect [RecordDeclaration] nodes with their supertypes' records.
  *
  * Supertypes are all interfaces a class implements and the superclass it inherits from (including
  * all of their respective supertypes). The JavaParser provides us with initial info about direct

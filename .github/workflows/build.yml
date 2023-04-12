@@ -111,7 +111,7 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PenableJavaFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar sonar \
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PenableJavaFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar testCodeCoverageReport sonar \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
@@ -124,12 +124,12 @@ jobs:
           VERSION: ${{ env.version }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Archive test reports
+      - name: Archive test and coverage reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
-          name: test
-          path: "**/build/reports/tests"
+          name: reports
+          path: "**/build/reports"
       - name: Publish
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         run: |
