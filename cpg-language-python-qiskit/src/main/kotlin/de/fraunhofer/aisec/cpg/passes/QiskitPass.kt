@@ -37,9 +37,12 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 
 @RequiredFrontend(PythonLanguageFrontend::class)
+@DependsOn(VariableUsageResolver::class)
+@DependsOn(CallResolver::class)
 class QiskitPass : Pass() {
     private val quantumCircuitsMap = HashMap<Node, QuantumCircuit>()
 
