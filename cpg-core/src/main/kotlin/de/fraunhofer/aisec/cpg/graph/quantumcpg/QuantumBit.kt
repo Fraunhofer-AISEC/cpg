@@ -30,6 +30,4 @@ import de.fraunhofer.aisec.cpg.graph.Node
 class QuantumBit(cpgNode: Node?, val quantumCircuit: QuantumCircuit) : QuantumNode(cpgNode) {
     val references: MutableSet<QuantumBitReference> = HashSet()
     val relevantForGates: MutableSet<QuantumGate> = HashSet()
-    var prevDFGQuantum: QuantumBitReference? = null
-    var nextDFGQuantum: QuantumBitReference? = null
 }

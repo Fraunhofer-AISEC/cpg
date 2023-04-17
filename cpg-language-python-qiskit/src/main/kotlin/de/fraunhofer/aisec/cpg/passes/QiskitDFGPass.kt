@@ -45,8 +45,7 @@ class QiskitDFGPass : Pass() {
             for (gate in circuit.gates) {
                 when (gate) {
                     is QuantumGateCX -> {
-                        gate.quBit0.nextDFGQuantum = gate.quBit1
-                        gate.quBit1.prevDFGQuantum = gate.quBit0
+                        gate.quBit0.addNextDFG(gate.quBit1)
                     }
                     is QuantumGateH -> {
                         // nothing to do
@@ -64,17 +63,14 @@ class QiskitDFGPass : Pass() {
                 // add DFG from declaration to first use in gate
                 when (currentGate) {
                     is QuantumGateH -> {
-                        qubit.nextDFGQuantum = currentGate.quantumBit0
-                        // currentGate.quantumBit0.prevDFGQuantum = qubit
+                        qubit.addNextDFG(currentGate.quantumBit0)
                     }
                     is QuantumGateCX -> {
                         if (currentGate.quBit0.refersTo == qubit) {
-                            qubit.nextDFGQuantum = currentGate.quBit0
-                            // currentGate.quBit0.prevDFGQuantum = qubit
+                            qubit.addNextDFG(currentGate.quBit0)
                         }
                         if (currentGate.quBit1.refersTo == qubit) {
-                            qubit.nextDFGQuantum = currentGate.quBit1
-                            // currentGate.quBit1.prevDFGQuantum = qubit
+                            qubit.addNextDFG(currentGate.quBit1)
                         }
                     }
                     else -> TODO()
@@ -86,17 +82,14 @@ class QiskitDFGPass : Pass() {
                         is QuantumGateH -> {
                             when (nextGate) {
                                 is QuantumGateH -> {
-                                    currentGate.quantumBit0.nextDFGQuantum = nextGate.quantumBit0
-                                    nextGate.quantumBit0.prevDFGQuantum = currentGate.quantumBit0
+                                    currentGate.quantumBit0.addNextDFG(nextGate.quantumBit0)
                                 }
                                 is QuantumGateCX -> {
                                     if (nextGate.quBit0.refersTo == qubit) {
-                                        currentGate.quantumBit0.nextDFGQuantum = nextGate.quBit0
-                                        nextGate.quBit0.prevDFGQuantum = currentGate.quantumBit0
+                                        currentGate.quantumBit0.addNextDFG(nextGate.quBit0)
                                     }
                                     if (nextGate.quBit1.refersTo == qubit) {
-                                        currentGate.quantumBit0.nextDFGQuantum = nextGate.quBit1
-                                        nextGate.quBit1.prevDFGQuantum = currentGate.quantumBit0
+                                        currentGate.quantumBit0.addNextDFG(nextGate.quBit1)
                                     }
                                 }
                                 else -> TODO()
@@ -106,8 +99,7 @@ class QiskitDFGPass : Pass() {
                             if (currentGate.quBit0.refersTo == qubit) {
                                 when (nextGate) {
                                     is QuantumGateH -> {
-                                        currentGate.quBit0.nextDFGQuantum = nextGate.quantumBit0
-                                        nextGate.quantumBit0.prevDFGQuantum = currentGate.quBit0
+                                        currentGate.quBit0.addNextDFG(nextGate.quantumBit0)
                                     }
                                     is QuantumGateCX -> {
                                         TODO()
@@ -118,8 +110,7 @@ class QiskitDFGPass : Pass() {
                             if (currentGate.quBit1.refersTo == qubit) {
                                 when (nextGate) {
                                     is QuantumGateH -> {
-                                        currentGate.quBit1.nextDFGQuantum = nextGate.quantumBit0
-                                        nextGate.quantumBit0.prevDFGQuantum = currentGate.quBit1
+                                        currentGate.quBit1.addNextDFG(nextGate.quantumBit0)
                                     }
                                     is QuantumGateCX -> {
                                         TODO()

@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 
 class QuantumBitReference(cpgNode: Node?, val refersTo: QuantumBit) : QuantumNode(cpgNode) {
     var quantumCircuit: QuantumCircuit? = null
-    var prevDFGQuantum: QuantumBitReference? = null
-    var nextDFGQuantum: QuantumBitReference? = null
+
     init {
         name = refersTo.name
     }
