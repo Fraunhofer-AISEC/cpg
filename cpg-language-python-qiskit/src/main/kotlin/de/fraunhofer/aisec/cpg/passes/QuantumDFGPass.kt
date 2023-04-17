@@ -31,9 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 
-@RequiredFrontend(PythonLanguageFrontend::class)
-@DependsOn(QiskitEOGPass::class)
-class QiskitDFGPass : Pass() {
+@DependsOn(QuantumEOGPass::class)
+class QuantumDFGPass : Pass() {
 
     override fun accept(p0: TranslationResult) {
 

@@ -29,13 +29,13 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.QiskitNodeBuilder.newQuantumBitRef
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.QiskitNodeBuilder.newQuantumCircuit
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.QiskitNodeBuilder.newQuantumGateCX
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.QiskitNodeBuilder.newQuantumGateH
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.QiskitNodeBuilder.newQuantumMeasure
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumBitRef
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumCircuit
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateCX
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateH
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumMeasure
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -69,7 +69,7 @@ class QiskitPass : Pass() {
                     circuit.initializer != null &&
                     circuit.initializer is CallExpression &&
                     (circuit.initializer as CallExpression).invokes.isNotEmpty() &&
-                    (circuit.initializer as CallExpression).invokes[0]?.name?.localName ==
+                    (circuit.initializer as CallExpression).invokes[0].name.localName ==
                         "QuantumCircuit" &&
                     (circuit.initializer as CallExpression).arguments.size == 2
             ) {
@@ -121,7 +121,7 @@ class QiskitPass : Pass() {
                     }
                     val quBitRef0 = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit0)
 
-                    val quBit1 = currentCircuit?.quantumBits?.get(idx1)
+                    val quBit1 = currentCircuit.quantumBits?.get(idx1)
                     if (quBit1 == null) {
                         TODO()
                     }
@@ -147,12 +147,12 @@ class QiskitPass : Pass() {
                             } else {
                                 val newMeasureNode = newQuantumMeasure(expr, currentCircuit)
                                 for (i in arg0.initializers.indices) {
-                                    val qbitIdx =
+                                    val qubitIdx =
                                         getIntFromInitializer(arg0.initializers[i] as Literal<*>)
                                     val cbitIdx =
                                         getIntFromInitializer(arg1.initializers[i] as Literal<*>)
                                     newMeasureNode.addMeasurement(
-                                        qbitIdx?.let { currentCircuit?.getQbitByIdx(it) },
+                                        qubitIdx?.let { currentCircuit?.getQubitByIdx(it) },
                                         cbitIdx?.let { currentCircuit?.getCbitByIdx(it) }
                                     )
                                 }

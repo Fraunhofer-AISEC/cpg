@@ -32,7 +32,7 @@ class QuantumCircuit(cpgNode: Node?) : QuantumNode(cpgNode) {
     var classicBits: Array<ClassicBit>? = null
     val gates: MutableSet<QuantumGate> = HashSet()
 
-    fun getQbitByIdx(i: Int): QuantumBit? {
+    fun getQubitByIdx(i: Int): QuantumBit? {
         return quantumBits?.get(i)
     }
 

@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.passes.QiskitEOGPass
 import de.fraunhofer.aisec.cpg.passes.QiskitPass
+import de.fraunhofer.aisec.cpg.passes.QuantumEOGPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -51,7 +51,7 @@ class PythonQiskitTestPass : BaseTest() {
                 true
             ) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass(QiskitEOGPass())
+                it.registerPass(QuantumEOGPass())
                 it.registerPass(QiskitPass())
             }
 

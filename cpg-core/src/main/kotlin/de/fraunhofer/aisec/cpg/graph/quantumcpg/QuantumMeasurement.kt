@@ -25,10 +25,5 @@
  */
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
-import org.neo4j.ogm.annotation.EndNode
-import org.neo4j.ogm.annotation.RelationshipEntity
-import org.neo4j.ogm.annotation.StartNode
-
-@RelationshipEntity
-class QuantumMeasurement(@StartNode var qBit: QuantumBit, @EndNode var cBit: ClassicBit) :
+class QuantumMeasurement(var quBit: QuantumBit, var cBit: ClassicBit) :
     QuantumNode(cpgNode = null) {}

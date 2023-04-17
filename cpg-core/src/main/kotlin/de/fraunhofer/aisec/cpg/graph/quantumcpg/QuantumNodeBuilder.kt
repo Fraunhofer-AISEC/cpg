@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import org.slf4j.LoggerFactory
 
 /** Builder for construction code property graph nodes. */
-object QiskitNodeBuilder {
+object QuantumNodeBuilder {
     private val LOGGER = LoggerFactory.getLogger(NodeBuilder::class.java)
 
     @JvmStatic
@@ -43,8 +43,8 @@ object QiskitNodeBuilder {
     ): QuantumCircuit {
         val node = QuantumCircuit(cpgNode)
         node.quantumBits = Array(quantumBits) { newQuantumBit(cpgNode, node) }
-        for (qbitIdx in node.quantumBits!!.indices) {
-            node.quantumBits!![qbitIdx].name = Name("QBit $qbitIdx")
+        for (qubitIdx in node.quantumBits!!.indices) {
+            node.quantumBits!![qubitIdx].name = Name("Qubit $qubitIdx")
         }
 
         node.classicBits = Array(classicBits) { newClassicBit(cpgNode, node) }
@@ -67,11 +67,15 @@ object QiskitNodeBuilder {
     @JvmOverloads
     fun newQuantumBitRef(
         cpgNode: Node? = null,
-        quantumCircuit: QuantumCircuit? = null,
-        quBit: QuantumBit
+        quantumCircuit: QuantumCircuit,
+        quBit: QuantumBit,
     ): QuantumBitReference {
-        val node = QuantumBitReference(cpgNode, quBit)
-        node.quantumCircuit = quantumCircuit
+        val node =
+            QuantumBitReference(
+                cpgNode,
+                quantumCircuit,
+                quBit,
+            )
         NodeBuilder.log(node)
         quBit.references.add(node)
         return node

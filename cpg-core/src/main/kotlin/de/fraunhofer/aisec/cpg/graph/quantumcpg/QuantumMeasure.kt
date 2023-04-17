@@ -31,11 +31,11 @@ class QuantumMeasure(cpgNode: Node?) : QuantumNode(cpgNode) {
     var quantumCircuit: QuantumCircuit? = null
     var measurements: ArrayList<QuantumMeasurement>? = null
 
-    fun addMeasurement(qBit: QuantumBit?, cBit: ClassicBit?) {
-        if (measurements == null || qBit == null || cBit == null) {
+    fun addMeasurement(quBit: QuantumBit?, cBit: ClassicBit?) {
+        if (measurements == null || quBit == null || cBit == null) {
             TODO()
         } else {
-            measurements!!.add(QuantumMeasurement(qBit, cBit))
+            measurements!!.add(QuantumMeasurement(quBit, cBit))
         }
     }
 }

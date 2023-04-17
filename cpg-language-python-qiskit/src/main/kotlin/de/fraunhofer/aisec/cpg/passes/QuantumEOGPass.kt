@@ -36,10 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 
-@RequiredFrontend(PythonLanguageFrontend::class)
-@DependsOn(QiskitPass::class)
+// @DependsOn(QiskitPass::class) or @DependsOn(OpenQASMPass::class)
 @DependsOn(EvaluationOrderGraphPass::class)
-class QiskitEOGPass : Pass() {
+class QuantumEOGPass : Pass() {
 
     override fun accept(p0: TranslationResult) {
 
