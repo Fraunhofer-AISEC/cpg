@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 class QuantumCircuit(cpgNode: Node?) : QuantumNode(cpgNode) {
     var quantumBits: Array<QuantumBit>? = null
     var classicBits: Array<ClassicBit>? = null
+    val gates: MutableSet<QuantumGate> = HashSet()
 
     fun getQbitByIdx(i: Int): QuantumBit? {
         return quantumBits?.get(i)

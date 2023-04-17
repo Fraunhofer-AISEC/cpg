@@ -57,18 +57,30 @@ object QiskitNodeBuilder {
 
     @JvmStatic
     @JvmOverloads
-    fun newQuantumBit(cpgNode: Node? = null, quantumCircuit: QuantumCircuit? = null): QuantumBit {
-        val node = QuantumBit(cpgNode)
-        node.quantumCircuit = quantumCircuit
+    fun newQuantumBit(cpgNode: Node? = null, quantumCircuit: QuantumCircuit): QuantumBit {
+        val node = QuantumBit(cpgNode, quantumCircuit)
         NodeBuilder.log(node)
         return node
     }
 
     @JvmStatic
     @JvmOverloads
-    fun newClassicBit(cpgNode: Node? = null, quantumCircuit: QuantumCircuit? = null): ClassicBit {
-        val node = ClassicBit(cpgNode)
+    fun newQuantumBitRef(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit? = null,
+        quBit: QuantumBit
+    ): QuantumBitReference {
+        val node = QuantumBitReference(cpgNode, quBit)
         node.quantumCircuit = quantumCircuit
+        NodeBuilder.log(node)
+        quBit.references.add(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun newClassicBit(cpgNode: Node? = null, quantumCircuit: QuantumCircuit): ClassicBit {
+        val node = ClassicBit(cpgNode, quantumCircuit)
         NodeBuilder.log(node)
         return node
     }
@@ -77,12 +89,11 @@ object QiskitNodeBuilder {
     @JvmOverloads
     fun newQuantumGateH(
         cpgNode: Node? = null,
-        quantumCircuit: QuantumCircuit? = null,
-        quantumBit0: QuantumBit? = null
+        quantumCircuit: QuantumCircuit,
+        quantumBit0: QuantumBitReference
     ): QuantumGateH {
-        val node = QuantumGateH(cpgNode)
-        node.quantumCircuit = quantumCircuit
-        node.quantumBit0 = quantumBit0
+        val node = QuantumGateH(cpgNode, quantumCircuit, quantumBit0)
+        quantumBit0.refersTo.relevantForGates.add(node)
         NodeBuilder.log(node)
         return node
     }
@@ -91,14 +102,13 @@ object QiskitNodeBuilder {
     @JvmOverloads
     fun newQuantumGateCX(
         cpgNode: Node? = null,
-        quantumCircuit: QuantumCircuit? = null,
-        quantumBit0: QuantumBit? = null,
-        quantumBit1: QuantumBit? = null
+        quantumCircuit: QuantumCircuit,
+        quantumBit0: QuantumBitReference,
+        quantumBit1: QuantumBitReference
     ): QuantumGateCX {
-        val node = QuantumGateCX(cpgNode)
-        node.quantumCircuit = quantumCircuit
-        node.quantumBit0 = quantumBit0
-        node.quantumBit1 = quantumBit1
+        val node = QuantumGateCX(cpgNode, quantumCircuit, quantumBit0, quantumBit1)
+        quantumBit0.refersTo.relevantForGates.add(node)
+        quantumBit1.refersTo.relevantForGates.add(node)
         NodeBuilder.log(node)
         return node
     }

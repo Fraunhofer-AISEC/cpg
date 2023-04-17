@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.QiskitDFGPass
+import de.fraunhofer.aisec.cpg.passes.QiskitEOGPass
 import de.fraunhofer.aisec.cpg.passes.QiskitPass
 import java.io.File
 import java.net.ConnectException
@@ -324,6 +326,8 @@ class Application : Callable<Int> {
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
+                .registerPass(QiskitEOGPass())
+                .registerPass(QiskitDFGPass())
                 .registerPass(QiskitPass())
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {

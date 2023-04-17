@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QiskitNodeBuilder.newQuantumBitRef
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QiskitNodeBuilder.newQuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QiskitNodeBuilder.newQuantumGateCX
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QiskitNodeBuilder.newQuantumGateH
@@ -104,19 +105,29 @@ class QiskitPass : Pass() {
                 "h" -> {
 
                     val idx = getArgAsInt(expr as CallExpression, 0)
-                    newGate =
-                        newQuantumGateH(expr, currentCircuit, currentCircuit?.quantumBits?.get(idx))
+                    val quBit = currentCircuit?.quantumBits?.get(idx)
+                    if (quBit == null) {
+                        TODO()
+                    }
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate = newQuantumGateH(expr, currentCircuit, quBitRef)
                 }
                 "cx" -> {
                     val idx0 = getArgAsInt(expr as MemberCallExpression, 0)
                     val idx1 = getArgAsInt(expr, 1)
-                    newGate =
-                        newQuantumGateCX(
-                            expr,
-                            currentCircuit,
-                            currentCircuit?.quantumBits?.get(idx0),
-                            currentCircuit?.quantumBits?.get(idx1)
-                        )
+                    val quBit0 = currentCircuit?.quantumBits?.get(idx0)
+                    if (quBit0 == null) {
+                        TODO()
+                    }
+                    val quBitRef0 = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit0)
+
+                    val quBit1 = currentCircuit?.quantumBits?.get(idx1)
+                    if (quBit1 == null) {
+                        TODO()
+                    }
+                    val quBitRef1 = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit1)
+
+                    newGate = newQuantumGateCX(expr, currentCircuit, quBitRef0, quBitRef1)
                 }
                 "measure" -> {
                     val args = (expr as? MemberCallExpression)?.arguments
@@ -158,6 +169,7 @@ class QiskitPass : Pass() {
 
             // save the gate to the graph
             if (newGate != null) {
+                currentCircuit?.gates?.add(newGate)
                 p0.additionalNodes.add(newGate)
             }
         }

@@ -28,9 +28,14 @@ package de.fraunhofer.aisec.cpg.graph.quantumcpg
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 
-class QuantumGateCX(cpgNode: Node?) : QuantumGate(cpgNode) {
-    var quantumBit0: QuantumBit? = null
-    var quantumBit1: QuantumBit? = null
+class QuantumGateCX(
+    cpgNode: Node?,
+    quantumCircuit: QuantumCircuit,
+    val quBit0: QuantumBitReference,
+    val quBit1: QuantumBitReference,
+) : QuantumGate(cpgNode, quantumCircuit) {
+    override val fidelity: Float
+        get() = TODO("Not yet implemented")
     init {
         name = Name("CX")
     }
