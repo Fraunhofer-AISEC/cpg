@@ -27,14 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
-open class QuantumNode(cpgNode: Node?) : Node() {
-    var cpgNode: Node? = null
-    init {
-        if (cpgNode != null) {
-            this.cpgNode = cpgNode
-            this.location = cpgNode.location
-            this.code = cpgNode.code
-            this.name = cpgNode.name
-        }
-    }
+interface QuantumNode {
+    var cpgNode: Node?
 }

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNode
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.QiskitPass
@@ -418,6 +419,11 @@ class Application : Callable<Int> {
 class AstChildrenEventListener : EventListenerAdapter() {
     override fun onPreSave(event: Event?) {
         val node = event?.`object` as? Node ?: return
+
+        if (node is QuantumNode) {
+            node.labels += "QuantumNode"
+        }
+
         node.astChildren = SubgraphWalker.getAstChildren(node)
     }
 }
