@@ -26,10 +26,8 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 
 @DependsOn(QuantumEOGPass::class)
 class QuantumDFGPass : Pass() {

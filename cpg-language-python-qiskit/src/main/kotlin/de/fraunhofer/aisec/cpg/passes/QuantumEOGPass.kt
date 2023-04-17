@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
@@ -34,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 
 // @DependsOn(QiskitPass::class) or @DependsOn(OpenQASMPass::class)
 @DependsOn(EvaluationOrderGraphPass::class)
