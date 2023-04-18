@@ -23,10 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes
+package de.fraunhofer.aisec.cpg.passes.quantumcpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.*
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 @DependsOn(QuantumEOGPass::class)
@@ -52,10 +53,20 @@ class QuantumDFGPass : Pass() {
             }
 
             // connect gates with each other
-            val firstQuantumGate = circuit.gates.first { it.prevEOGQuantumGate == null }
+            val firstQuantumGate = circuit.gates.first { it.prevEOG.isEmpty() }
             for (qubit in circuit.quantumBits!!) {
                 var currentGate = advanceGateUntilRelevant(qubit, firstQuantumGate)
-                var nextGate = advanceGateUntilRelevant(qubit, currentGate?.nextEOGQuantumGate)
+
+                var nextGate =
+                    when (currentGate?.nextEOG?.size) {
+                        0 -> null
+                        1 ->
+                            advanceGateUntilRelevant(
+                                qubit,
+                                currentGate.nextEOG.first() as? QuantumGate
+                            )
+                        else -> TODO()
+                    }
 
                 // add DFG from declaration to first use in gate
                 when (currentGate) {
@@ -121,7 +132,17 @@ class QuantumDFGPass : Pass() {
 
                     // advance one step
                     currentGate = nextGate
-                    nextGate = advanceGateUntilRelevant(qubit, currentGate.nextEOGQuantumGate)
+                    if (currentGate.nextEOG.size > 1) {
+                        TODO()
+                    } else if (currentGate.nextEOG.size == 1) {
+                        nextGate =
+                            advanceGateUntilRelevant(
+                                qubit,
+                                currentGate.nextEOG.first() as? QuantumGate
+                            )
+                    } else {
+                        nextGate = null
+                    }
                 }
             }
         }
@@ -146,7 +167,10 @@ class QuantumDFGPass : Pass() {
                 }
                 else -> TODO()
             }
-            currentGate = currentGate.nextEOGQuantumGate
+            if (currentGate.nextEOG.size != 1) {
+                TODO()
+            }
+            currentGate = currentGate.nextEOG.first() as? QuantumGate
         }
         return null
     }

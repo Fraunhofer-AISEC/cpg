@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNode
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.QiskitPass
-import de.fraunhofer.aisec.cpg.passes.QuantumDFGPass
-import de.fraunhofer.aisec.cpg.passes.QuantumEOGPass
+import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
+import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths

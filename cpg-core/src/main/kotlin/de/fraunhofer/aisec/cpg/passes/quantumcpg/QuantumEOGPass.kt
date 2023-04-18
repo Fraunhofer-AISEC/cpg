@@ -23,15 +23,19 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes
+package de.fraunhofer.aisec.cpg.passes.quantumcpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 // @DependsOn(QiskitPass::class) or @DependsOn(OpenQASMPass::class)
@@ -63,8 +67,7 @@ class QuantumEOGPass : Pass() {
                     if (quantumCPGNode != null) {
                         if (lastQuantumGateSeen != null) {
                             // add Q-EOG edges to the quantum graph
-                            lastQuantumGateSeen.nextEOGQuantumGate = quantumCPGNode
-                            quantumCPGNode.prevEOGQuantumGate = lastQuantumGateSeen
+                            addEOGEdge(lastQuantumGateSeen, quantumCPGNode)
                         }
                         lastQuantumGateSeen = quantumCPGNode
                     }
@@ -72,6 +75,26 @@ class QuantumEOGPass : Pass() {
                 currentNode = currentNode.nextEOG.firstOrNull()
             }
         }
+    }
+
+    /* TODO: copy & paste from EOG pass */
+    /**
+     * Builds an EOG edge from prev to next. 'eogDirection' defines how the node instances save the
+     * references constituting the edge. 'FORWARD': only the nodes nextEOG member contains
+     * references, an points to the next nodes. 'BACKWARD': only the nodes prevEOG member contains
+     * references and points to the previous nodes. 'BIDIRECTIONAL': nextEOG and prevEOG contain
+     * references and point to the previous and the next nodes.
+     *
+     * @param prev the previous node
+     * @param next the next node
+     */
+    private fun addEOGEdge(prev: Node, next: Node) {
+        val propertyEdge = PropertyEdge(prev, next)
+        // propertyEdge.addProperties(nextEdgeProperties)
+        propertyEdge.addProperty(Properties.INDEX, prev.nextEOG.size)
+        propertyEdge.addProperty(Properties.UNREACHABLE, false)
+        prev.addNextEOG(propertyEdge)
+        next.addPrevEOG(propertyEdge)
     }
 
     override fun cleanup() {
