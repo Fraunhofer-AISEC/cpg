@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 
-class QuantumBit(cpgNode: Node?, val quantumCircuit: QuantumCircuit) : QuantumNode(cpgNode) {
+class QuantumBit(override var cpgNode: Node?, val quantumCircuit: QuantumCircuit) :
+    Declaration(), QuantumNode {
     val references: MutableSet<QuantumBitReference> = HashSet()
     val relevantForGates: MutableSet<QuantumGate> = HashSet()
 }

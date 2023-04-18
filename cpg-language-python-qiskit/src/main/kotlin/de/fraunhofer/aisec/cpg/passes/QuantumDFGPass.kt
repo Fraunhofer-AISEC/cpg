@@ -63,10 +63,10 @@ class QuantumDFGPass : Pass() {
                         qubit.addNextDFG(currentGate.quantumBit0)
                     }
                     is QuantumGateCX -> {
-                        if (currentGate.quBit0.refersTo == qubit) {
+                        if (currentGate.quBit0.refersToQubit == qubit) {
                             qubit.addNextDFG(currentGate.quBit0)
                         }
-                        if (currentGate.quBit1.refersTo == qubit) {
+                        if (currentGate.quBit1.refersToQubit == qubit) {
                             qubit.addNextDFG(currentGate.quBit1)
                         }
                     }
@@ -82,10 +82,10 @@ class QuantumDFGPass : Pass() {
                                     currentGate.quantumBit0.addNextDFG(nextGate.quantumBit0)
                                 }
                                 is QuantumGateCX -> {
-                                    if (nextGate.quBit0.refersTo == qubit) {
+                                    if (nextGate.quBit0.refersToQubit == qubit) {
                                         currentGate.quantumBit0.addNextDFG(nextGate.quBit0)
                                     }
-                                    if (nextGate.quBit1.refersTo == qubit) {
+                                    if (nextGate.quBit1.refersToQubit == qubit) {
                                         currentGate.quantumBit0.addNextDFG(nextGate.quBit1)
                                     }
                                 }
@@ -93,7 +93,7 @@ class QuantumDFGPass : Pass() {
                             }
                         }
                         is QuantumGateCX -> {
-                            if (currentGate.quBit0.refersTo == qubit) {
+                            if (currentGate.quBit0.refersToQubit == qubit) {
                                 when (nextGate) {
                                     is QuantumGateH -> {
                                         currentGate.quBit0.addNextDFG(nextGate.quantumBit0)
@@ -104,7 +104,7 @@ class QuantumDFGPass : Pass() {
                                     else -> TODO()
                                 }
                             }
-                            if (currentGate.quBit1.refersTo == qubit) {
+                            if (currentGate.quBit1.refersToQubit == qubit) {
                                 when (nextGate) {
                                     is QuantumGateH -> {
                                         currentGate.quBit1.addNextDFG(nextGate.quantumBit0)
@@ -132,13 +132,14 @@ class QuantumDFGPass : Pass() {
         while (currentGate != null) {
             when (currentGate) {
                 is QuantumGateH -> {
-                    if (currentGate.quantumBit0.refersTo == qubit) {
+                    if (currentGate.quantumBit0.refersToQubit == qubit) {
                         return currentGate
                     }
                 }
                 is QuantumGateCX -> {
                     if (
-                        currentGate.quBit0.refersTo == qubit || currentGate.quBit1.refersTo == qubit
+                        currentGate.quBit0.refersToQubit == qubit ||
+                            currentGate.quBit1.refersToQubit == qubit
                     ) {
                         return currentGate
                     }

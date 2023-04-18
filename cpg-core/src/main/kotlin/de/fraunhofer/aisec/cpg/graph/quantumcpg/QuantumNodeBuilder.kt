@@ -97,7 +97,7 @@ object QuantumNodeBuilder {
         quantumBit0: QuantumBitReference
     ): QuantumGateH {
         val node = QuantumGateH(cpgNode, quantumCircuit, quantumBit0)
-        quantumBit0.refersTo.relevantForGates.add(node)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
         NodeBuilder.log(node)
         return node
     }
@@ -111,8 +111,8 @@ object QuantumNodeBuilder {
         quantumBit1: QuantumBitReference
     ): QuantumGateCX {
         val node = QuantumGateCX(cpgNode, quantumCircuit, quantumBit0, quantumBit1)
-        quantumBit0.refersTo.relevantForGates.add(node)
-        quantumBit1.refersTo.relevantForGates.add(node)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumBit1.refersToQubit.relevantForGates.add(node)
         NodeBuilder.log(node)
         return node
     }

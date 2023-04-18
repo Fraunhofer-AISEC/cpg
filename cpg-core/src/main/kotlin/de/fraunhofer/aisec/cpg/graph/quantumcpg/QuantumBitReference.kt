@@ -26,13 +26,14 @@
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 
 class QuantumBitReference(
-    cpgNode: Node?,
+    override var cpgNode: Node?,
     val quantumCircuit: QuantumCircuit,
-    val refersTo: QuantumBit,
-) : QuantumNode(cpgNode) {
+    val refersToQubit: QuantumBit,
+) : DeclaredReferenceExpression(), QuantumNode {
     init {
-        name = refersTo.name
+        name = refersToQubit.name
     }
 }

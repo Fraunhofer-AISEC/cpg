@@ -54,6 +54,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
+import org.neo4j.ogm.annotation.Labels
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
@@ -72,6 +73,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * where nodes are created artificially, it may be null.
      */
     var code: String? = null
+
+    @Labels val labels = mutableListOf<String>()
 
     /**
      * The language of this node. This property is set in [Node.applyMetadata] by a

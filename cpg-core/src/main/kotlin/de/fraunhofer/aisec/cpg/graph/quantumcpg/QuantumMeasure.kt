@@ -26,8 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 
-class QuantumMeasure(cpgNode: Node?) : QuantumNode(cpgNode) {
+class QuantumMeasure(override var cpgNode: Node?) : Statement(), QuantumNode {
     var quantumCircuit: QuantumCircuit? = null
     var measurements: ArrayList<QuantumMeasurement>? = null
 
@@ -35,7 +36,7 @@ class QuantumMeasure(cpgNode: Node?) : QuantumNode(cpgNode) {
         if (measurements == null || quBit == null || cBit == null) {
             TODO()
         } else {
-            measurements!!.add(QuantumMeasurement(quBit, cBit))
+            measurements!!.add(QuantumMeasurement(cpgNode, quBit, cBit))
         }
     }
 }

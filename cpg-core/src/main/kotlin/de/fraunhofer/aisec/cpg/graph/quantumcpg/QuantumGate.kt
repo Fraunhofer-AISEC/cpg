@@ -26,9 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
-abstract class QuantumGate(cpgNode: Node?, val quantumCircuit: QuantumCircuit) :
-    QuantumNode(cpgNode) {
+abstract class QuantumGate(override var cpgNode: Node?, val quantumCircuit: QuantumCircuit) :
+    CallExpression(), QuantumNode {
     var prevEOGQuantumGate: QuantumGate? = null
     var nextEOGQuantumGate: QuantumGate? = null
     abstract val fidelity: Float

@@ -25,5 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
-class QuantumMeasurement(var quBit: QuantumBit, var cBit: ClassicBit) :
-    QuantumNode(cpgNode = null) {}
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+
+class QuantumMeasurement(override var cpgNode: Node?, var quBit: QuantumBit, var cBit: ClassicBit) :
+    CallExpression(), QuantumNode {}

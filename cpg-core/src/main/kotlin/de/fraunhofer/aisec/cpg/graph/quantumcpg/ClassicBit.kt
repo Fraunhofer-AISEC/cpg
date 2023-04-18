@@ -26,5 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 
-class ClassicBit(cpgNode: Node?, val circuit: QuantumCircuit) : QuantumNode(cpgNode)
+class ClassicBit(override var cpgNode: Node?, val circuit: QuantumCircuit) :
+    Declaration(), QuantumNode {
+    var quantumCircuit: QuantumCircuit? = null
+}
