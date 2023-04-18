@@ -28,5 +28,5 @@ package de.fraunhofer.aisec.cpg.graph.quantumcpg
 import de.fraunhofer.aisec.cpg.graph.Node
 
 interface QuantumNode {
-    var cpgNode: Node?
+    val cpgNode: Node?
 }

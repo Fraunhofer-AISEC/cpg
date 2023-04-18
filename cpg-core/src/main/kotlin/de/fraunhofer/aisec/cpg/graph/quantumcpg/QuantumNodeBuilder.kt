@@ -83,6 +83,24 @@ object QuantumNodeBuilder {
 
     @JvmStatic
     @JvmOverloads
+    fun newClassicBitRef(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        classicBit: ClassicBit,
+    ): ClassicBitReference {
+        val node =
+            ClassicBitReference(
+                cpgNode,
+                quantumCircuit,
+                classicBit,
+            )
+        NodeBuilder.log(node)
+        classicBit.references.add(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
     fun newClassicBit(cpgNode: Node? = null, quantumCircuit: QuantumCircuit): ClassicBit {
         val node = ClassicBit(cpgNode, quantumCircuit)
         NodeBuilder.log(node)
@@ -119,13 +137,8 @@ object QuantumNodeBuilder {
 
     @JvmStatic
     @JvmOverloads
-    fun newQuantumMeasure(
-        cpgNode: Node? = null,
-        quantumCircuit: QuantumCircuit? = null
-    ): QuantumMeasure {
-        val node = QuantumMeasure(cpgNode)
-        node.quantumCircuit = quantumCircuit
-        node.measurements = ArrayList()
+    fun newQuantumMeasure(cpgNode: Node? = null, quantumCircuit: QuantumCircuit): QuantumMeasure {
+        val node = QuantumMeasure(cpgNode, quantumCircuit)
         NodeBuilder.log(node)
         return node
     }

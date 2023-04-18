@@ -26,17 +26,26 @@
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicBitRef
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumBitRef
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 
-class QuantumMeasure(override var cpgNode: Node?) : Statement(), QuantumNode {
-    var quantumCircuit: QuantumCircuit? = null
-    var measurements: ArrayList<QuantumMeasurement>? = null
+class QuantumMeasure(override val cpgNode: Node?, val quantumCircuit: QuantumCircuit) :
+    CompoundStatement(), QuantumOperation, QuantumNode {
+
+    val measurements: MutableList<QuantumMeasurement> = ArrayList()
 
     fun addMeasurement(quBit: QuantumBit?, cBit: ClassicBit?) {
-        if (measurements == null || quBit == null || cBit == null) {
+        if (quBit == null || cBit == null) {
             TODO()
         } else {
-            measurements!!.add(QuantumMeasurement(cpgNode, quBit, cBit))
+            measurements.add(
+                QuantumMeasurement(
+                    cpgNode,
+                    newQuantumBitRef(cpgNode, quantumCircuit, quBit),
+                    newClassicBitRef(cpgNode, quantumCircuit, cBit)
+                )
+            )
         }
     }
 }

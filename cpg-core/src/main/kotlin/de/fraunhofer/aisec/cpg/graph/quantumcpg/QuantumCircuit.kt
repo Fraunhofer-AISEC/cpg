@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.quantumcpg
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 
-class QuantumCircuit(override var cpgNode: Node?) : CompoundStatement(), QuantumNode {
+class QuantumCircuit(override val cpgNode: Node?) : CompoundStatement(), QuantumNode {
     var quantumBits: Array<QuantumBit>? = null
     var classicBits: Array<ClassicBit>? = null
     val gates: MutableSet<QuantumGate> = HashSet()

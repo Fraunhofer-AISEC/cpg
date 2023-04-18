@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.quantumcpg
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 
-class ClassicBit(override var cpgNode: Node?, val circuit: QuantumCircuit) :
+class ClassicBit(override val cpgNode: Node?, val quantumCircuit: QuantumCircuit) :
     Declaration(), QuantumNode {
-    var quantumCircuit: QuantumCircuit? = null
+    val references: MutableSet<ClassicBitReference> = HashSet()
 }

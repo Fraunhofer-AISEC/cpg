@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumMeasure
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -57,21 +58,40 @@ class QuantumEOGPass : Pass() {
             }
             val declStmt = nextEOGs.first()
             var currentNode: Node? = declStmt
-            var lastQuantumGateSeen: QuantumGate? = null
+            var lastQuantumGateSeen: Node? = null
             while (currentNode != null) {
                 if (currentNode is MemberCallExpression) {
                     val quantumCPGNode =
                         p0.additionalNodes.firstOrNull {
                             (it as? QuantumGate)?.cpgNode == currentNode
                         } as? QuantumGate
-                    if (quantumCPGNode != null) {
-                        if (lastQuantumGateSeen != null) {
-                            // add Q-EOG edges to the quantum graph
-                            addEOGEdge(lastQuantumGateSeen, quantumCPGNode)
+                            ?: p0.additionalNodes.firstOrNull {
+                                (it as? QuantumMeasure)?.cpgNode == currentNode
+                            } as? QuantumMeasure
+                                ?: null
+
+                    when (quantumCPGNode) {
+                        is QuantumGate -> {
+                            if (lastQuantumGateSeen != null) {
+                                // add Q-EOG edges to the quantum graph
+                                addEOGEdge(lastQuantumGateSeen, quantumCPGNode)
+                            }
+                            lastQuantumGateSeen = quantumCPGNode
                         }
-                        lastQuantumGateSeen = quantumCPGNode
+                        is QuantumMeasure -> {
+                            var lastSeen = lastQuantumGateSeen ?: TODO()
+                            for (m in quantumCPGNode.measurements) {
+
+                                addEOGEdge(lastSeen, m.quBit)
+                                addEOGEdge(m.quBit, m.cBit)
+                                lastSeen = m.cBit
+                            }
+                            lastQuantumGateSeen = lastSeen
+                        }
+                        else -> {}
                     }
-                } else {}
+                }
+
                 currentNode = currentNode.nextEOG.firstOrNull()
             }
         }

@@ -96,16 +96,17 @@ class QiskitPass : Pass() {
             }
 
         for (expr in allQuantumExpressions) {
-            val currentCircuit =
+            val currentCircuit: QuantumCircuit =
                 quantumCircuitsMap[
                     ((expr as? MemberCallExpression)?.base as? DeclaredReferenceExpression)
                         ?.refersTo as? Node]
+                    ?: TODO()
             var newGate: QuantumGate? = null
             when (expr.name.localName) {
                 "h" -> {
 
                     val idx = getArgAsInt(expr as CallExpression, 0)
-                    val quBit = currentCircuit?.quantumBits?.get(idx)
+                    val quBit = currentCircuit.quantumBits?.get(idx)
                     if (quBit == null) {
                         TODO()
                     }
@@ -115,7 +116,7 @@ class QiskitPass : Pass() {
                 "cx" -> {
                     val idx0 = getArgAsInt(expr as MemberCallExpression, 0)
                     val idx1 = getArgAsInt(expr, 1)
-                    val quBit0 = currentCircuit?.quantumBits?.get(idx0)
+                    val quBit0 = currentCircuit.quantumBits?.get(idx0)
                     if (quBit0 == null) {
                         TODO()
                     }
@@ -135,10 +136,7 @@ class QiskitPass : Pass() {
                         val arg0 = args[0]
                         val arg1 = args[1]
                         if (
-                            arg0 != null &&
-                                arg0 is InitializerListExpression &&
-                                arg1 != null &&
-                                arg1 is InitializerListExpression
+                            arg0 is InitializerListExpression && arg1 is InitializerListExpression
                         ) {
                             // e.g. measure([0, 1], [0, 1])
 
@@ -152,8 +150,8 @@ class QiskitPass : Pass() {
                                     val cbitIdx =
                                         getIntFromInitializer(arg1.initializers[i] as Literal<*>)
                                     newMeasureNode.addMeasurement(
-                                        qubitIdx?.let { currentCircuit?.getQubitByIdx(it) },
-                                        cbitIdx?.let { currentCircuit?.getCbitByIdx(it) }
+                                        qubitIdx?.let { currentCircuit.getQubitByIdx(it) },
+                                        cbitIdx?.let { currentCircuit.getCbitByIdx(it) }
                                     )
                                 }
                                 p0.additionalNodes.add(newMeasureNode)
@@ -169,7 +167,7 @@ class QiskitPass : Pass() {
 
             // save the gate to the graph
             if (newGate != null) {
-                currentCircuit?.gates?.add(newGate)
+                currentCircuit.gates.add(newGate)
                 p0.additionalNodes.add(newGate)
             }
         }

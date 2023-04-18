@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
 class QuantumGateCX(
     cpgNode: Node?,
@@ -36,7 +36,9 @@ class QuantumGateCX(
 ) : QuantumGate(cpgNode, quantumCircuit) {
     override val fidelity: Float
         get() = TODO("Not yet implemented")
+
     init {
-        name = Name("CX")
+        // TODO does not do the job
+        (cpgNode as? CallExpression)?.let { this.callee = it.callee }
     }
 }

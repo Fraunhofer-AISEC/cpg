@@ -26,19 +26,14 @@
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 
-class QuantumGateH(
-    cpgNode: Node?,
-    quantumCircuit: QuantumCircuit,
-    val quantumBit0: QuantumBitReference,
-) : QuantumGate(cpgNode, quantumCircuit) {
-
+class ClassicBitReference(
+    override val cpgNode: Node?,
+    val quantumCircuit: QuantumCircuit,
+    val refersToClassicBit: ClassicBit,
+) : DeclaredReferenceExpression(), QuantumNode {
     init {
-        // TODO does not do the job
-        (cpgNode as? CallExpression)?.let { this.callee = it.callee }
+        name = refersToClassicBit.name
     }
-
-    override val fidelity: Float
-        get() = TODO("Not yet implemented")
 }

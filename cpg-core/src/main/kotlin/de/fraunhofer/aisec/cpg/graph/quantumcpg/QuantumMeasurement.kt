@@ -28,5 +28,9 @@ package de.fraunhofer.aisec.cpg.graph.quantumcpg
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
-class QuantumMeasurement(override var cpgNode: Node?, var quBit: QuantumBit, var cBit: ClassicBit) :
-    CallExpression(), QuantumNode {}
+/** A single measurement from one qubit to a classical bit. */
+class QuantumMeasurement(
+    override val cpgNode: Node?,
+    val quBit: QuantumBitReference,
+    val cBit: ClassicBitReference
+) : CallExpression(), QuantumOperation, QuantumNode {}

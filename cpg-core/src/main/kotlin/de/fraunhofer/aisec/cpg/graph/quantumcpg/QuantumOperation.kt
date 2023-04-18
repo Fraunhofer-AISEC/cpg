@@ -25,20 +25,5 @@
  */
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-
-class QuantumGateH(
-    cpgNode: Node?,
-    quantumCircuit: QuantumCircuit,
-    val quantumBit0: QuantumBitReference,
-) : QuantumGate(cpgNode, quantumCircuit) {
-
-    init {
-        // TODO does not do the job
-        (cpgNode as? CallExpression)?.let { this.callee = it.callee }
-    }
-
-    override val fidelity: Float
-        get() = TODO("Not yet implemented")
-}
+/** This collects "operations" in the quantum world. See gates and measurements. */
+interface QuantumOperation
