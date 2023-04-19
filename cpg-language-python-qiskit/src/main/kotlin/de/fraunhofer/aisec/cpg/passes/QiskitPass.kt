@@ -155,6 +155,7 @@ class QiskitPass : Pass() {
                                     )
                                 }
                                 p0.additionalNodes.add(newMeasureNode)
+                                p0.additionalNodes.add(newMeasureNode)
                             }
                         } else TODO()
                     } else {
@@ -167,7 +168,7 @@ class QiskitPass : Pass() {
 
             // save the gate to the graph
             if (newGate != null) {
-                currentCircuit.gates.add(newGate)
+                currentCircuit.operations.add(newGate)
                 p0.additionalNodes.add(newGate)
             }
         }

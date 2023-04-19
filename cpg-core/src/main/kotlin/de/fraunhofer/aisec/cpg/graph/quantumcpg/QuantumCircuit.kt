@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 class QuantumCircuit(override val cpgNode: Node?) : CompoundStatement(), QuantumNode {
     var quantumBits: Array<QuantumBit>? = null
     var classicBits: Array<ClassicBit>? = null
-    val gates: MutableSet<QuantumGate> = HashSet()
+    val operations: MutableSet<QuantumOperation> = HashSet()
 
     fun getQubitByIdx(i: Int): QuantumBit? {
         return quantumBits?.get(i)
