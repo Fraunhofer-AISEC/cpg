@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNode
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.DFGConnectionPass
 import de.fraunhofer.aisec.cpg.passes.QiskitPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
@@ -330,6 +331,7 @@ class Application : Callable<Int> {
                 .registerPass(QuantumEOGPass())
                 .registerPass(QuantumDFGPass())
                 .registerPass(QiskitPass())
+                .registerPass(DFGConnectionPass())
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()
