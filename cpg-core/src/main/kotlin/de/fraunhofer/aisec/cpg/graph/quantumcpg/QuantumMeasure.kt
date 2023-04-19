@@ -30,9 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicBit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumBitRef
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 
-/**
- * A "measure" instruction, consisting of 0..n [QuantumMeasurement]s
- */
+/** A "measure" instruction, consisting of 0..n [QuantumMeasurement]s */
 class QuantumMeasure(override val cpgNode: Node?, val quantumCircuit: QuantumCircuit) :
     CompoundStatement(), QuantumOperation, QuantumNode {
 
