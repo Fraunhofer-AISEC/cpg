@@ -80,6 +80,8 @@ class QuantumEOGPass : Pass() {
                         }
                         is QuantumMeasure -> {
                             if (lastQuantumGateSeen != null) {
+                                addEOGEdge(lastQuantumGateSeen, quantumCPGNode)
+                                lastQuantumGateSeen = quantumCPGNode
                                 for (m in quantumCPGNode.measurements) {
                                     addEOGEdge(lastQuantumGateSeen!!, m)
                                     lastQuantumGateSeen = m

@@ -27,18 +27,16 @@ package de.fraunhofer.aisec.cpg.graph.types.quantumcpg
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
-/** Instances of this class represent classic bit types. */
-class ClassicBitType(
-    typeName: CharSequence = "ClassicBit",
-    bitWidth: Int? = 1,
+/** Instances of this class represent quantum bit types. */
+class QuantumBitType(
+    typeName: CharSequence = "QuantumBit",
     language: Language<out LanguageFrontend>? = null,
-    modifier: Modifier = Modifier.NOT_APPLICABLE
-) : NumericType(typeName, bitWidth, language, modifier) {
+) : ObjectType() {
 
     override fun duplicate(): Type {
-        return ClassicBitType(this.name, bitWidth, language, modifier)
+        return QuantumBitType(this.name, language)
     }
 }

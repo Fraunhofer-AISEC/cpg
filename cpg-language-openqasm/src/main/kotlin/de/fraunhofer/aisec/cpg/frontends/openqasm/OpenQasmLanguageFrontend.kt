@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.ClassicBitType
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
@@ -116,8 +117,35 @@ class OpenQasmLanguageFrontend(
             is ResetStatementNode -> newEmptyStatement() // TODO
             is ForStatementNode -> handleForStatement(stmt)
             is MeasureArrowAssignmentStatementNode -> handleMeasure(stmt)
+            is OldStyleDeclarationStatementNode -> handleOldStylDeclStmt(stmt)
             else -> TODO()
         }
+    }
+
+    private fun handleOldStylDeclStmt(stmt: OldStyleDeclarationStatementNode): Statement {
+        val name = stmt.idNode.payload
+        val cnt: Number =
+            (stmt.designator?.payload as? DecimalIntegerLiteralExpressionNode)?.payload ?: TODO()
+        val collector = newCompoundStatement()
+        val tpe =
+            when (stmt.type) {
+                "QREG" -> TODO()
+                "CREG" -> ClassicBitType()
+                else -> TODO()
+            }
+        for (i in 0 until cnt as Int) {
+            val v =
+                newVariableDeclaration(
+                    "$name[$i]",
+                    type = tpe,
+                    code = getCodeFromRawNode(stmt),
+                    rawNode = stmt
+                )
+            scopeManager.addDeclaration(v)
+            collector.addDeclaration(v)
+            // TODO type
+        }
+        return collector
     }
 
     private fun handleMeasure(stmt: MeasureArrowAssignmentStatementNode): Statement {

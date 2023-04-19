@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.openqasm.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.openqasm.OpenQasmLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -46,7 +47,8 @@ class OpenQASMPass : Pass() {
     override fun accept(p0: TranslationResult) {
 
         val flatAST = SubgraphWalker.flattenAST(p0)
-        TODO()
+
+        var quBits = flatAST.filter { it is VariableDeclaration && it.type == TODO() }
     }
 
     private fun getArgAsInt(call: CallExpression, idx: Int): Int {
