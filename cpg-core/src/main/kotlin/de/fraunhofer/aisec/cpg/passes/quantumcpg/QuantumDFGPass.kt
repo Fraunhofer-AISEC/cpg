@@ -72,6 +72,9 @@ class QuantumDFGPass : Pass() {
                             qubit.addNextDFG(currentOperation.quBit1)
                         }
                     }
+                    is QuantumMeasurement -> {
+                        qubit.addNextDFG(currentOperation.quBit)
+                    }
                     else -> TODO()
                 }
 

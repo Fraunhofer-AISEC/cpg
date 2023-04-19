@@ -89,7 +89,12 @@ def handle_expression_impl(self, expr):
             return binop
     elif isinstance(expr, ast.UnaryOp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = ExpressionBuilderKt.newUnaryOperator(self.frontend, self.handle_operator_code(expr.op), False, True, self.get_src_code(expr))
+        r = ExpressionBuilderKt.newUnaryOperator(
+                self.frontend,
+                self.handle_operator_code(expr.op),
+                False,
+                True,
+                self.get_src_code(expr))
         return r
     elif isinstance(expr, ast.Lambda):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")

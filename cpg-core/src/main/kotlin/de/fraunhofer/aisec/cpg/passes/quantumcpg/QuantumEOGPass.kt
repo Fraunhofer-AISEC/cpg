@@ -38,11 +38,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import kotlin.reflect.jvm.internal.impl.util.MemberKindCheck.Member
+import java.util.HashSet
 
 // @DependsOn(QiskitPass::class) or @DependsOn(OpenQASMPass::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 class QuantumEOGPass : Pass() {
+    private val nodeTracker = HashSet<Node>()
 
     override fun accept(p0: TranslationResult) {
 
@@ -54,48 +55,64 @@ class QuantumEOGPass : Pass() {
                 TODO()
             }
             val nextEOGs = circuitCPG.nextEOG.filterIsInstance<DeclarationStatement>()
-            if (nextEOGs.size != 1) {
-                TODO()
-            }
-            val declStmt = nextEOGs.first()
-            var currentNode: Node? = declStmt
-            var lastQuantumGateSeen: Node? = null
-            while (currentNode != null) {
-                if (currentNode is MemberCallExpression) {
-                    val quantumCPGNode =
-                        p0.additionalNodes.firstOrNull {
-                            (it as? QuantumGate)?.cpgNode == currentNode
-                        } as? QuantumGate
-                            ?: p0.additionalNodes.firstOrNull {
-                                (it as? QuantumMeasure)?.cpgNode == currentNode
-                            } as? QuantumMeasure
-                                ?: null
 
-                    when (quantumCPGNode) {
-                        is QuantumGate -> {
-                            if (lastQuantumGateSeen != null) {
-                                // add Q-EOG edges to the quantum graph
-                                addEOGEdge(lastQuantumGateSeen, quantumCPGNode)
-                            }
-                            lastQuantumGateSeen = quantumCPGNode
+            for (next in nextEOGs) {
+                if (next in nodeTracker) {
+                    continue
+                }
+                handleNode(p0, next, null)
+                nodeTracker.add(next)
+            }
+        }
+    }
+
+    private fun handleNode(p0: TranslationResult, node: Node, last: Node?) {
+        if (node in nodeTracker) {
+            return
+        }
+        nodeTracker.add(node)
+        var lastQuantumGateSeen: Node? = last
+
+        if (node is MemberCallExpression) {
+            val quantumCPGNode =
+                p0.additionalNodes.firstOrNull { (it as? QuantumGate)?.cpgNode == node }
+                    as? QuantumGate
+                    ?: p0.additionalNodes.firstOrNull { (it as? QuantumMeasure)?.cpgNode == node }
+                        as? QuantumMeasure
+                        ?: null
+
+            when (quantumCPGNode) {
+                is QuantumGate -> {
+                    if (lastQuantumGateSeen != null) {
+                        // add Q-EOG edges to the quantum graph
+                        addEOGEdge(lastQuantumGateSeen, quantumCPGNode)
+                    }
+                    lastQuantumGateSeen = quantumCPGNode
+                }
+                is QuantumMeasure -> {
+                    if (lastQuantumGateSeen != null) {
+                        addEOGEdge(lastQuantumGateSeen, quantumCPGNode)
+                        lastQuantumGateSeen = quantumCPGNode
+                        for (m in quantumCPGNode.measurements) {
+                            addEOGEdge(lastQuantumGateSeen!!, m)
+                            lastQuantumGateSeen = m
                         }
-                        is QuantumMeasure -> {
-                            if (lastQuantumGateSeen != null) {
-                                addEOGEdge(lastQuantumGateSeen, quantumCPGNode)
-                                lastQuantumGateSeen = quantumCPGNode
-                                for (m in quantumCPGNode.measurements) {
-                                    addEOGEdge(lastQuantumGateSeen!!, m)
-                                    lastQuantumGateSeen = m
-                                }
-                            } else {
-                                TODO()
-                            }
-                        }
-                        else -> {}
+                    } else {
+                        TODO()
                     }
                 }
+                else -> {}
+            }
+        }
 
-                currentNode = currentNode.nextEOG.firstOrNull()
+        when (node.nextEOG.size) {
+            0 -> {
+                // finished :)
+            }
+            else -> {
+                for (next in node.nextEOG) {
+                    handleNode(p0, next, lastQuantumGateSeen)
+                }
             }
         }
     }
