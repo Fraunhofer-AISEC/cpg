@@ -163,6 +163,10 @@ class QuantumDFGPass : Pass() {
             is QuantumMeasurement -> {
                 op.quBit.refersToQubit == qubit
             }
+            is QuantumMeasure -> {
+                // we only care about the measurements and not the enclosing "measure"
+                false
+            }
             else -> TODO()
         }
     }
