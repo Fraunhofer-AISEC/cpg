@@ -165,18 +165,18 @@ class QuantumDFGPass : Pass() {
     /** Add DFG edges within a QuantumOperation */
     private fun connectDFGWithinOp(circuit: QuantumCircuit) {
         // connect qubits input/output for gates
-        for (gate in circuit.operations) {
-            when (gate) {
+        for (op in circuit.operations) {
+            when (op) {
                 is QuantumGateCX -> {
                     // data flow from control bit to other bit
-                    gate.quBit0.addNextDFG(gate.quBit1)
+                    op.quBit0.addNextDFG(op.quBit1)
                 }
                 is QuantumGateH -> {
                     // nothing to do
                 }
                 is QuantumMeasure -> {
                     // data flow from qubit to classic bit
-                    for (m in gate.measurements) {
+                    for (m in op.measurements) {
                         m.quBit.addNextDFG(m.cBit)
                     }
                 }

@@ -139,6 +139,7 @@ object QuantumNodeBuilder {
     @JvmOverloads
     fun newQuantumMeasure(cpgNode: Node? = null, quantumCircuit: QuantumCircuit): QuantumMeasure {
         val node = QuantumMeasure(cpgNode, quantumCircuit)
+        quantumCircuit.operations.add(node)
         NodeBuilder.log(node)
         return node
     }
