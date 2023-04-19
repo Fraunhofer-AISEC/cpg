@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import kotlin.reflect.jvm.internal.impl.util.MemberKindCheck.Member
 
 // @DependsOn(QiskitPass::class) or @DependsOn(OpenQASMPass::class)
 @DependsOn(EvaluationOrderGraphPass::class)

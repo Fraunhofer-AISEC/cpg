@@ -45,7 +45,7 @@ class DFGConnectionPass : Pass() {
         val transpileCalls = t.calls("transpile")
         for (call in transpileCalls) {
             val circuit = call.arguments.first() as DeclaredReferenceExpression
-            val measure =
+            val measures =
                 (t.additionalNodes.firstOrNull {
                         it is QuantumCircuit && it.cpgNode == circuit.refersTo
                     } as QuantumCircuit?)
@@ -57,18 +57,18 @@ class DFGConnectionPass : Pass() {
                         (it as? CallExpression)?.name?.localName == "run"
                     }
                     .fulfilled
-                    .map { it.last() }
-            jobs.forEach {
+                    .map(List<Node>::last)
+            jobs.forEach { job ->
                 val results =
-                    it.followNextDFGEdgesUntilHit {
-                            (it as? CallExpression)?.name?.localName == "result"
+                    job.followNextDFGEdgesUntilHit { next ->
+                            (next as? CallExpression)?.name?.localName == "result"
                         }
                         .fulfilled
-                        .map { it.last() }
+                        .map(List<Node>::last)
 
-                measure?.forEach { measure ->
+                measures?.forEach { measure ->
                     results.forEach { result ->
-                        measure.measurements.forEach { it.cBit.addNextDFG(result) }
+                        measure.measurements.forEach { m -> m.cBit.addNextDFG(result) }
                     }
                 }
             }

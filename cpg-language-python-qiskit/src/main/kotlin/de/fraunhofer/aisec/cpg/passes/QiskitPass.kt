@@ -163,6 +163,9 @@ class QiskitPass : Pass() {
                     }
                 }
                 "draw" -> {}
+                "initialize" -> {
+                    // TODO
+                }
                 else -> TODO("not implemented")
             }
 
