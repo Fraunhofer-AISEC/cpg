@@ -222,6 +222,7 @@ def handle_expression_impl(self, expr):
         # - constructor call
         #
         # We parse node.func regularly using a visitor and decide what it is
+
         ref = self.handle_expression(expr.func)
         self.log_with_loc("Parsed ref as %s" % ref)
 
@@ -243,15 +244,9 @@ def handle_expression_impl(self, expr):
                 tpe = record.toType()
                 call.setType(tpe)
             else:
-                # TODO int, float, ...
-                if refname == "str" and len(expr.args) == 1:
-                    cast = ExpressionBuilderKt.newCastExpression(
-                        self.frontend, self.get_src_code(expr))
-                    cast.setCastType(
-                        NodeBuilderKt.parseType(self.frontend, "str"))
-                    cast.setExpression(
-                        self.handle_expression(expr.args[0]))
-                    return cast
+                if str(refname) in ["str", "int", "float"] and len(expr.args) == 1:
+                    return handle_cast(self, expr, refname)
+
                 else:
                     call = ExpressionBuilderKt.newCallExpression(
                         self.frontend,
@@ -389,3 +384,12 @@ def handle_expression_impl(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
+
+def handle_cast(self, expr, refname):
+    cast = ExpressionBuilderKt.newCastExpression(
+        self.frontend, self.get_src_code(expr))
+    cast.setCastType(
+        NodeBuilderKt.parseType(self.frontend, str(refname)))
+    cast.setExpression(
+        self.handle_expression(expr.args[0]))
+    return cast
