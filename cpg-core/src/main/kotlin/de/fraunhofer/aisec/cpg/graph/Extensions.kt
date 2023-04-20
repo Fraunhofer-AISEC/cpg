@@ -313,9 +313,15 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
     // The list of paths where we're not done yet.
     val worklist = mutableListOf<List<Node>>()
     worklist.add(listOf(this)) // We start only with the "from" node (=this)
+    val alreadySeen = mutableListOf<Node>()
 
     while (worklist.isNotEmpty()) {
         val currentPath = worklist.removeFirst()
+        if (currentPath.last() in alreadySeen) {
+            failedPaths.add(currentPath)
+            continue // Don't add this path anymore. We have already seen it.
+        }
+        alreadySeen.add(currentPath.last())
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
         if (

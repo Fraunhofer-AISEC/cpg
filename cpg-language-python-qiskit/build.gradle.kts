@@ -29,4 +29,5 @@ plugins {
 
 dependencies {
     api(project(":cpg-language-python"))
+    implementation(project(mapOf("path" to ":cpg-analysis")))
 }
