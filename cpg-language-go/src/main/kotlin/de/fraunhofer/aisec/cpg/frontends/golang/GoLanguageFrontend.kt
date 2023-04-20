@@ -39,8 +39,21 @@ import java.io.FileOutputStream
 
 @SupportsParallelParsing(false)
 @RegisterExtraPass(GoExtraPass::class)
+<<<<<<< HEAD
+@ReplacePass(
+    EvaluationOrderGraphPass::class,
+    lang = GoLanguage::class,
+    with = GoEvaluationOrderGraphPass::class
+)
 class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend(language, ctx) {
+=======
+class GoLanguageFrontend(
+    language: Language<GoLanguageFrontend>,
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager,
+) : LanguageFrontend(language, config, scopeManager) {
+>>>>>>> 8dc857ab7 (Cleanup calls)
     companion object {
 
         init {

@@ -35,7 +35,7 @@ import java.util.stream.Collectors
  * ([arrayExpression]) and `index` ([subscriptExpression]) are of type [Expression]. CPP can
  * overload operators thus changing semantics of array access.
  */
-class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase {
+class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase, ArgumentHolder {
     /**
      * The array on which the access is happening. This is most likely a
      * [DeclaredReferenceExpression].
@@ -98,6 +98,19 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
                 .collect(Collectors.toList())
         )
         setPossibleSubTypes(subTypes, root)
+    }
+
+    override fun addArgument(expression: Expression) {
+        this.subscriptExpression = expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (this.subscriptExpression == old) {
+            this.subscriptExpression = new
+            return true
+        }
+
+        return false
     }
 
     override fun equals(other: Any?): Boolean {

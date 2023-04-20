@@ -502,10 +502,10 @@ private constructor(
                 val replacedPasses = frontend.findAnnotations<ReplacePass>()
                 if (replacedPasses.isNotEmpty()) {
                     for (p in replacedPasses) {
-                        replacePass(p.old, p.lang, p.with)
+                        replacePass(p.value, p.lang, p.with)
                         log.info(
                             "Registered an extra (frontend dependent) default dependency, which replaced an existing pass: {}",
-                            p.old
+                            p.value
                         )
                     }
                 }

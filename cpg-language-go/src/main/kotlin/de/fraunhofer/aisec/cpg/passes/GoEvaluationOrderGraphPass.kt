@@ -23,25 +23,25 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
+package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.Pass
-import kotlin.reflect.KClass
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
-/**
- * This annotation can be used to replace a certain [Pass] (identified by [old]) for a specific
- * [Language] (identified by [lang]) with another [Pass] (identified by [with]).
- *
- * The primary use-case for this annotation is to allow language frontends to override specific
- * passes, such as the [EvaluationOrderGraphPass] in order to optimize language specific graphs.
- */
-@Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.CLASS)
-@Repeatable
-annotation class ReplacePass(
-    val value: KClass<out Pass<*>>,
-    val lang: KClass<out Language<*>>,
-    val with: KClass<out Pass<*>>
-)
+class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraphPass(ctx) {
+
+    private var deferredCalls = mutableMapOf<FunctionDeclaration?, MutableList<CallExpression>>()
+
+    
+    override fun handleFunctionDeclaration(node: FunctionDeclaration) {
+        super.handleFunctionDeclaration(node)
+
+        // Before we exit, we need to call our deferred calls
+        val calls = deferredCalls[scopeManager.currentFunction]
+        calls?.forEach { pushToEOG(it) }
+
+        // Clear them afterwards
+        calls?.clear()
+    }
+}

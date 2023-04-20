@@ -31,7 +31,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 import org.slf4j.LoggerFactory
 
-class CastExpression : Expression(), HasType.TypeListener {
+class CastExpression : Expression(), HasType.TypeListener, ArgumentHolder {
     @AST var expression: Expression = ProblemExpression("could not parse inner expression")
 
     var castType: Type = newUnknownType()
@@ -80,6 +80,19 @@ class CastExpression : Expression(), HasType.TypeListener {
         if (localName != null) {
             name = Name(localName, null, language)
         }
+    }
+
+    override fun addArgument(expression: Expression) {
+        this.expression = expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (this.expression == old) {
+            this.expression = new
+            return true
+        }
+
+        return false
     }
 
     override fun equals(other: Any?): Boolean {

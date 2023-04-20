@@ -37,7 +37,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** A list of initializer expressions. */
-class InitializerListExpression : Expression(), HasType.TypeListener {
+class InitializerListExpression : Expression(), HasType.TypeListener, ArgumentHolder {
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
     @AST
@@ -102,6 +102,20 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
             .appendSuper(super.toString())
             .append("initializers", initializers)
             .toString()
+    }
+
+    override fun addArgument(expression: Expression) {
+        this.initializers += expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (this.initializers.contains(old)) {
+            this.initializers -= old
+            this.initializers += new
+            return true
+        }
+
+        return false
     }
 
     override fun equals(other: Any?): Boolean {

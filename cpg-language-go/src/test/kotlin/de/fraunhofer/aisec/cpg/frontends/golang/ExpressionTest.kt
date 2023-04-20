@@ -136,4 +136,27 @@ class ExpressionTest {
         assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)
     }
+
+    @Test
+    fun testDeferStatement() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("defer.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val p = tu.namespaces["p"]
+        assertNotNull(p)
+
+        val main = p.functions["main"]
+        assertNotNull(main)
+
+        val op = main.allChildren<UnaryOperator> { it.name.localName == "defer" }
+        assertTrue(op.isNotEmpty())
+    }
 }

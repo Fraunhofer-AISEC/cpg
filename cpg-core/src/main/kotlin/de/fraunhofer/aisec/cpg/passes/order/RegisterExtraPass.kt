@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.passes.order
 import de.fraunhofer.aisec.cpg.passes.Pass
 import kotlin.reflect.KClass
 
-/** Register a new pass required by a fronted. */
+/** Register a new pass required by a frontend. */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable

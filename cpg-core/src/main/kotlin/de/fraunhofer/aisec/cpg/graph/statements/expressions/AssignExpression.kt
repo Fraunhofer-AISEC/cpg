@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory
  * [usedAsExpression]. When this property is set to true (it defaults to false), we model a dataflow
  * from the (first) rhs to the [AssignExpression] itself.
  */
-class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
+class AssignExpression : Expression(), AssignmentHolder, ArgumentHolder, HasType.TypeListener {
 
     var operatorCode: String = "="
 
@@ -195,6 +195,20 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
                 listOfNotNull(lhs.getOrNull(idx))
             }
         }
+    }
+
+    override fun addArgument(expression: Expression) {
+        rhs += expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (rhs.contains(old)) {
+            rhs -= old
+            rhs += new
+            return true
+        }
+
+        return false
     }
 
     override val assignments: List<Assignment>

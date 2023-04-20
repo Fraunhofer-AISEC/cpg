@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import java.util.*
 
 /**
@@ -35,7 +36,7 @@ import java.util.*
  * Most often used in combination with an [InitializerListExpression] to represent the creation of
  * an array.
  */
-class KeyValueExpression : Expression() {
+class KeyValueExpression : Expression(), ArgumentHolder {
 
     /**
      * The key of this pair. It is usually a literal, but some languages even allow references to
@@ -45,6 +46,19 @@ class KeyValueExpression : Expression() {
 
     /** The value of this pair. It can be any expression */
     @AST var value: Expression? = null
+
+    override fun addArgument(expression: Expression) {
+        this.value = expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (this.value == old) {
+            this.value = new
+            return true
+        }
+
+        return false
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

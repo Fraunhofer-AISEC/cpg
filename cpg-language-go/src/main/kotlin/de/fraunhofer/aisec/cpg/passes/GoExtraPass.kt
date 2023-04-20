@@ -199,6 +199,12 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
      */
     // TODO: Somehow, this gets called twice?!
     private fun handleInclude(include: IncludeDeclaration) {
+        // If the namespace is included as _, we can ignore it, as its only included as a runtime
+        // dependency
+        if (include.name.localName == "_") {
+            return
+        }
+
         // Try to see if we already know about this namespace somehow
         val namespace =
             scopeManager.resolve<NamespaceDeclaration>(scopeManager.globalScope, true) {
@@ -218,6 +224,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     /**
      * This function gets called for every [CallExpression] and checks, whether this is actually a
      * "calling" a type and is thus a [CastExpression] rather than a [CallExpression].
+     *
+     * This also "fixes" the EOG of defer call expressions.
      */
     private fun handleCall(call: CallExpression, parent: Node?) {
         // We need to check, whether the "callee" refers to a type and if yes, convert it into a
@@ -259,7 +267,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
 
         if (parent !is ArgumentHolder) {
             log.error(
-                "Parent AST node of call expression is not an argument holder. Cannot convert to cast expression. Further analysis might not be entirely accurate."
+                "Parent AST node of call expression is not an argument holder. " +
+                    "Cannot convert to cast expression. Further analysis might not be entirely accurate."
             )
             return
         }
@@ -267,7 +276,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         val success = parent.replaceArgument(call, cast)
         if (!success) {
             log.error(
-                "Replacing call expression with cast expression was not successful. Further analysis might not be entirely accurate."
+                "Replacing call expression with cast expression was not successful. " +
+                    "Further analysis might not be entirely accurate."
             )
         } else {
             call.disconnectFromGraph()
