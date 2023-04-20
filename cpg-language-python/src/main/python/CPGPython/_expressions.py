@@ -95,6 +95,7 @@ def handle_expression_impl(self, expr):
                 False,
                 True,
                 self.get_src_code(expr))
+        r.setInput(self.handle_expression(expr.operand))
         return r
     elif isinstance(expr, ast.Lambda):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
