@@ -168,9 +168,11 @@ class Application : Callable<Int> {
     @CommandLine.Option(
         names = ["--custom-pass-list"],
         description =
-          ["Add custom list of passes (includes --no-default-passes) which is" +
-           " passed as a comma-separated list" + 
-           " (e.g. --custom-pass-list=DFGPass,CallResolver)"]
+            [
+                "Add custom list of passes (includes --no-default-passes) which is" +
+                    " passed as a comma-separated list" +
+                    " (e.g. --custom-pass-list=DFGPass,CallResolver)"
+            ]
     )
     private var customPasses: String = "DEFAULT"
 
