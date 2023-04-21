@@ -167,9 +167,12 @@ class Application : Callable<Int> {
 
     @CommandLine.Option(
         names = ["--custom-pass-list"],
-        description = ["Add custom list of passes (includes --no-default-passes)"]
+        description =
+          ["Add custom list of passes (includes --no-default-passes) which is" +
+           " passed as a comma-separated list" + 
+           " (e.g. --custom-pass-list=DFGPass,CallResolver)"]
     )
-    private var customPasses: String = "ALL"
+    private var customPasses: String = "DEFAULT"
 
     @CommandLine.Option(
         names = ["--no-neo4j"],
@@ -346,9 +349,9 @@ class Application : Callable<Int> {
             translationConfiguration.sourceLocations(filePaths)
         }
 
-        if (!noDefaultPasses && customPasses == "ALL") {
+        if (!noDefaultPasses && customPasses == "DEFAULT") {
             translationConfiguration.defaultPasses()
-        } else if (!noDefaultPasses && customPasses != "ALL") {
+        } else if (!noDefaultPasses && customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")
             for (pass in pieces) {
                 translationConfiguration.registerPass(pass)
@@ -398,7 +401,7 @@ class Application : Callable<Int> {
         if (listPasses) {
             val translationConfiguration = TranslationConfiguration.builder()
             log.info("List of passes:")
-            translationConfiguration.getPassList().iterator().forEach { log.info("- " + it) }
+            translationConfiguration.passList.iterator().forEach { log.info("- " + it) }
             log.info("--")
             log.info("End of list. Stopping.")
             return EXIT_SUCCESS

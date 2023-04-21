@@ -228,7 +228,7 @@ private constructor(
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
-        private var passList =
+        private var passClassList =
             listOf(
                 TypeHierarchyResolver::class,
                 ImportResolver::class,
@@ -241,6 +241,7 @@ private constructor(
                 FunctionPointerCallResolver::class,
                 FilenameMapper::class
             )
+        private var passClassMap = passClassList.map { Pair(it.simpleName, it) }.toMap()
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
             return this
@@ -386,18 +387,16 @@ private constructor(
         }
 
         /** Produces the [Pass] with the given name. */
-        fun producePass(passName: String): Pass {
-            val list = passList.map { Pair(it.simpleName, it) }.toMap()
-            if (!list.contains(passName)) {
+        private fun producePass(passName: String): Pass {
+            if (passName !in passClassMap) {
                 throw ConfigurationException("Asked to produce unknown pass")
             }
-            return list[passName]!!.createInstance()
+            return passClassMap[passName]!!.createInstance()
         }
 
-        /** Returns the list of available passes that can be registered. */
-        fun getPassList(): List<String> {
-            return passList.map { it.simpleName!! }
-        }
+        /** The list of available passes that can be registered. */
+        var passList: List<String>
+          get() = passClassList.map { it.simpleName!! }
 
         /** Takes a string, produces and registers the corresponding additional [Pass]. */
         fun registerPass(passName: String): Builder {
