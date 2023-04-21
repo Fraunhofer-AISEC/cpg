@@ -395,7 +395,7 @@ private constructor(
         }
 
         /** The list of available passes that can be registered. */
-        var passList: List<String>
+        val passList: List<String>
           get() = passClassList.map { it.simpleName!! }
 
         /** Takes a string, produces and registers the corresponding additional [Pass]. */
