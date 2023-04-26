@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.QiskitPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -50,6 +51,24 @@ class PythonQiskitTestPass : BaseTest() {
                 topLevel,
                 true
             ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass(QuantumEOGPass())
+                it.registerPass(QiskitPass())
+            }
+
+        assertNotNull(tu)
+    }
+
+    @Test
+    fun testIf() {
+        val topLevel = Path.of("src", "test", "resources", "python", "qiskit")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("if.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerPass(EdgeCachePass())
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass(QuantumEOGPass())
                 it.registerPass(QiskitPass())

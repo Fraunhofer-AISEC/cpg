@@ -131,6 +131,19 @@ object QuantumNodeBuilder {
 
     @JvmStatic
     @JvmOverloads
+    fun newQuantumGateX(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        quantumBit0: QuantumBitReference
+    ): QuantumGateX {
+        val node = QuantumGateX(cpgNode, quantumCircuit, quantumBit0)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
     fun newQuantumGateCX(
         cpgNode: Node? = null,
         quantumCircuit: QuantumCircuit,

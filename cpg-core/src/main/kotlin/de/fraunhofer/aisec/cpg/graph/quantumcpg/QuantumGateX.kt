@@ -31,5 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.Node
  * The X (or Pauli) gate. This is equivalent to a bit flip in the classical world. It maps |0> to
  * |1> and |1> to |0>.
  */
-class QuantumGateX(cpgNode: Node?, override val fidelity: Float, quantumCircuit: QuantumCircuit) :
-    QuantumGate(cpgNode, quantumCircuit) {}
+class QuantumGateX(
+    cpgNode: Node?,
+    quantumCircuit: QuantumCircuit,
+    val quantumBit0: QuantumBitReference,
+) : QuantumGate(cpgNode, quantumCircuit) {
+
+    override val fidelity: Float = 0.0f
+}

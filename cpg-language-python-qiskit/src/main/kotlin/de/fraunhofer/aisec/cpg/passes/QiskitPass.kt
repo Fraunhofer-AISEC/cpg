@@ -29,12 +29,15 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicIf
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumBitRef
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateCX
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateH
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateX
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumMeasure
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -102,30 +105,28 @@ class QiskitPass : Pass() {
                         ?.refersTo as? Node]
                     ?: TODO()
             var newGate: QuantumGate? = null
+
             when (expr.name.localName) {
                 "h" -> {
-
                     val idx = getArgAsInt(expr as CallExpression, 0)
-                    val quBit = currentCircuit.quantumBits?.get(idx)
-                    if (quBit == null) {
-                        TODO()
-                    }
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
                     val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
                     newGate = newQuantumGateH(expr, currentCircuit, quBitRef)
+                }
+                "x" -> {
+                    val idx = getArgAsInt(expr as MemberCallExpression, 0)
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate = newQuantumGateX(expr, currentCircuit, quBitRef)
                 }
                 "cx" -> {
                     val idx0 = getArgAsInt(expr as MemberCallExpression, 0)
                     val idx1 = getArgAsInt(expr, 1)
-                    val quBit0 = currentCircuit.quantumBits?.get(idx0)
-                    if (quBit0 == null) {
-                        TODO()
-                    }
+                    val quBit0 = currentCircuit.quantumBits?.get(idx0) ?: continue
                     val quBitRef0 = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit0)
 
-                    val quBit1 = currentCircuit.quantumBits?.get(idx1)
-                    if (quBit1 == null) {
-                        TODO()
-                    }
+                    val quBit1 = currentCircuit.quantumBits?.get(idx1) ?: continue
                     val quBitRef1 = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit1)
 
                     newGate = newQuantumGateCX(expr, currentCircuit, quBitRef0, quBitRef1)
@@ -166,13 +167,30 @@ class QiskitPass : Pass() {
                 "initialize" -> {
                     // TODO
                 }
-                else -> TODO("not implemented")
+                else -> TODO("not implemented: ${expr.name.localName}")
             }
 
             // save the gate to the graph
             if (newGate != null) {
-                currentCircuit.operations.add(newGate)
-                p0.additionalNodes.add(newGate)
+                // before we save it, we need to check, whether that this gate is not "wrapped in an
+                // ClassicalIf. For now this is a quite simple heuristic. We just check whether the
+                // next EOG is a member call to c_if.
+                val next = expr.nextEOG.firstOrNull()
+                if (next?.name?.localName == "c_if" && next is MemberExpression) {
+                    val call = next.astParent as? CallExpression ?: continue
+                    val cIf = newClassicIf(call, newGate.quantumCircuit)
+                    val binOp = next.newBinaryOperator("==")
+                    val idx = getArgAsInt(call, 0)
+                    val quBit = currentCircuit.classicBits?.get(idx) ?: continue
+                    val quBitRef = newQuantumBitRef(call.arguments.first(), currentCircuit, quBit)
+                    binOp.lhs = quBitRef
+                    binOp.rhs = call.arguments[1]
+                    cIf.condition = binOp
+                    cIf.thenStatement = newGate
+                } else {
+                    currentCircuit.operations.add(newGate)
+                    p0.additionalNodes.add(newGate)
+                }
             }
         }
 
