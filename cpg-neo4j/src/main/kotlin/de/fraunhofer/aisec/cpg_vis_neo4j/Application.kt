@@ -101,6 +101,12 @@ class Application : Callable<Int> {
             description = ["The path to an optional a JSON compilation database"]
         )
         var jsonCompilationDatabase: File? = null
+
+        @CommandLine.Option(
+            names = ["--list-passes"],
+            description = ["Prints the list available passes"]
+        )
+        var listPasses: Boolean = false
     }
 
     @CommandLine.Option(
@@ -208,12 +214,6 @@ class Application : Callable<Int> {
         description = ["Save benchmark results to json file"]
     )
     private var benchmarkJson: File? = null
-
-    @CommandLine.Option(
-        names = ["--list-passes"],
-        description = ["Prints the list available passes"]
-    )
-    private var listPasses: Boolean = false
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -400,7 +400,7 @@ class Application : Callable<Int> {
      */
     @Throws(Exception::class, ConnectException::class, IllegalArgumentException::class)
     override fun call(): Int {
-        if (listPasses) {
+        if (mutuallyExclusiveParameters.listPasses) {
             val translationConfiguration = TranslationConfiguration.builder()
             log.info("List of passes:")
             translationConfiguration.passList.iterator().forEach { log.info("- " + it) }
