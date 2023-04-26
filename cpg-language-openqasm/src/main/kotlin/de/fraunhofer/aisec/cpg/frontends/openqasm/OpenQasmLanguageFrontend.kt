@@ -42,12 +42,16 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.ClassicBitType
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.QuantumBitType
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
+import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 @RegisterExtraPass(OpenQASMPass::class)
+@RegisterExtraPass(QuantumEOGPass::class)
+@RegisterExtraPass(QuantumDFGPass::class)
 class OpenQasmLanguageFrontend(
     language: Language<OpenQasmLanguageFrontend>,
     config: TranslationConfiguration,
@@ -85,7 +89,8 @@ class OpenQasmLanguageFrontend(
         lexer.run()
         val parser = OpenQASMParser(lexer.tokens)
         val ast = parser.parse()
-        return toCpg(ast)
+        val cpg = toCpg(ast)
+        return cpg
     }
 
     private fun toCpg(ast: ProgramNode): TranslationUnitDeclaration {
@@ -211,17 +216,19 @@ class OpenQasmLanguageFrontend(
             TODO()
         }
 
-        for (i in 0 until (lhsEndIdx.toInt() - lhsStartIdx.toInt())) {
+        for (i in 0..(lhsEndIdx.toInt() - lhsStartIdx.toInt())) {
             val lhsIdx = lhsStartIdx.toInt() + i
             val lhsIdxName = "$lhsName[$lhsIdx]"
             val rhsIdx = rhsStartIdx.toInt() + i
             val rhsIdxName = "$rhsName[$rhsIdx]"
 
-            val m =
-                newAssignExpression(
-                    lhs = listOf(newDeclaredReferenceExpression(lhsIdxName)),
-                    rhs = listOf(newDeclaredReferenceExpression(rhsIdxName))
-                )
+            val m = newCallExpression(newDeclaredReferenceExpression("measure"))
+            m.addArgument(newDeclaredReferenceExpression(lhsIdxName))
+            m.addArgument(newDeclaredReferenceExpression(rhsIdxName))
+            /* newAssignExpression(
+                lhs = listOf(newDeclaredReferenceExpression(lhsIdxName)),
+                rhs = listOf(newDeclaredReferenceExpression(rhsIdxName))
+            )*/
             ret.addStatement(m)
         }
 
@@ -303,14 +310,25 @@ class OpenQasmLanguageFrontend(
 
     private fun handleCallArg(p: GateOperandNode): Expression {
         return when (p.payload) {
-            is IndexedIdentifierNode ->
-                newDeclaredReferenceExpression(
-                    p.payload.identifier.payload,
-                    code = getCodeFromRawNode(p),
-                    rawNode = p
-                )
+            is IndexedIdentifierNode -> handleIndexedIdentifier(p.payload)
             else -> TODO()
         }
+    }
+
+    private fun handleIndexedIdentifier(IndexedIdentifier: IndexedIdentifierNode): Expression {
+        var name = IndexedIdentifier.identifier.payload
+        name += "["
+        name +=
+            ((IndexedIdentifier.indexOperators.first() as IndexOperatorNode)?.exprs?.first()
+                    as? DecimalIntegerLiteralExpressionNode)
+                ?.payload
+                ?: TODO()
+        name += "]"
+        return newDeclaredReferenceExpression(
+            name,
+            code = getCodeFromRawNode(IndexedIdentifier),
+            rawNode = IndexedIdentifier
+        )
     }
 
     private fun handleGateStatement(stmt: GateStatementNode): Statement {

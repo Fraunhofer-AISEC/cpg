@@ -90,11 +90,11 @@ def handle_expression_impl(self, expr):
     elif isinstance(expr, ast.UnaryOp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = ExpressionBuilderKt.newUnaryOperator(
-                self.frontend,
-                self.handle_operator_code(expr.op),
-                False,
-                True,
-                self.get_src_code(expr))
+            self.frontend,
+            self.handle_operator_code(expr.op),
+            False,
+            True,
+            self.get_src_code(expr))
         r.setInput(self.handle_expression(expr.operand))
         return r
     elif isinstance(expr, ast.Lambda):
@@ -244,7 +244,9 @@ def handle_expression_impl(self, expr):
                 tpe = record.toType()
                 call.setType(tpe)
             else:
-                if str(refname) in ["str", "int", "float"] and len(expr.args) == 1:
+                if str(refname) in [
+                        "str", "int", "float"] and len(
+                        expr.args) == 1:
                     return handle_cast(self, expr, refname)
 
                 else:
@@ -384,6 +386,7 @@ def handle_expression_impl(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
+
 
 def handle_cast(self, expr, refname):
     cast = ExpressionBuilderKt.newCastExpression(

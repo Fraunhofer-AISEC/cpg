@@ -43,11 +43,16 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumMea
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
+import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
 
 @RequiredFrontend(PythonLanguageFrontend::class)
 @DependsOn(VariableUsageResolver::class)
 @DependsOn(CallResolver::class)
+@ExecuteBefore(QuantumEOGPass::class)
+@ExecuteBefore(QuantumDFGPass::class)
 class QiskitPass : Pass() {
     private val quantumCircuitsMap = HashMap<Node, QuantumCircuit>()
 
