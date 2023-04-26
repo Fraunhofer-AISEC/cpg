@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.passes.quantumcpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
@@ -50,10 +49,8 @@ class QuantumEOGPass : Pass() {
         val allQuantumCircuits = p0.additionalNodes.filterIsInstance<QuantumCircuit>()
 
         for (circuit in allQuantumCircuits) {
-            val circuitCPG = (circuit as? QuantumCircuit)?.cpgNode
-            if (circuitCPG !is VariableDeclaration) {
-                TODO()
-            }
+            val circuitCPG = (circuit as? QuantumCircuit)?.cpgNode ?: TODO()
+
             val nextEOGs = circuitCPG.nextEOG.filterIsInstance<DeclarationStatement>()
 
             for (next in nextEOGs) {
