@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes.quantumcpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.*
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
@@ -89,6 +90,43 @@ class QuantumDFGPass : Pass() {
                                         nextOperation.quantumBit0
                                     )
                                 }
+                                is QuantumGateX -> {
+                                    currentOperation.quantumBit0.addNextDFG(
+                                        nextOperation.quantumBit0
+                                    )
+                                }
+                                is QuantumGateCX -> {
+                                    if (nextOperation.quBit0.refersToQubit == qubit) {
+                                        currentOperation.quantumBit0.addNextDFG(
+                                            nextOperation.quBit0
+                                        )
+                                    }
+                                    if (nextOperation.quBit1.refersToQubit == qubit) {
+                                        currentOperation.quantumBit0.addNextDFG(
+                                            nextOperation.quBit1
+                                        )
+                                    }
+                                }
+                                is QuantumMeasurement -> {
+                                    currentOperation.quantumBit0.addNextDFG(nextOperation.quBit)
+                                }
+                                else -> {
+                                    TODO()
+                                }
+                            }
+                        }
+                        is QuantumGateX -> {
+                            when (nextOperation) {
+                                is QuantumGateH -> {
+                                    currentOperation.quantumBit0.addNextDFG(
+                                        nextOperation.quantumBit0
+                                    )
+                                }
+                                is QuantumGateX -> {
+                                    currentOperation.quantumBit0.addNextDFG(
+                                        nextOperation.quantumBit0
+                                    )
+                                }
                                 is QuantumGateCX -> {
                                     if (nextOperation.quBit0.refersToQubit == qubit) {
                                         currentOperation.quantumBit0.addNextDFG(
@@ -133,6 +171,11 @@ class QuantumDFGPass : Pass() {
                                             nextOperation.quantumBit0
                                         )
                                     }
+                                    is QuantumGateX -> {
+                                        currentOperation.quBit1.addNextDFG(
+                                            nextOperation.quantumBit0
+                                        )
+                                    }
                                     is QuantumGateCX -> {
                                         TODO()
                                     }
@@ -159,6 +202,9 @@ class QuantumDFGPass : Pass() {
             is QuantumGateH -> {
                 op.quantumBit0.refersToQubit == qubit
             }
+            is QuantumGateX -> {
+                op.quantumBit0.refersToQubit == qubit
+            }
             is QuantumGateCX -> {
 
                 op.quBit0.refersToQubit == qubit || op.quBit1.refersToQubit == qubit
@@ -183,6 +229,9 @@ class QuantumDFGPass : Pass() {
                     // data flow from control bit to other bit
                     op.quBit0.addNextDFG(op.quBit1)
                 }
+                is QuantumGateX -> {
+                    // data flows to itself?
+                }
                 is QuantumGateH -> {
                     // nothing to do
                 }
@@ -192,7 +241,15 @@ class QuantumDFGPass : Pass() {
                         m.quBit.addNextDFG(m.cBit)
                     }
                 }
-                else -> TODO()
+                is ClassicIf -> {
+                    // similar to classic DFG.
+                    Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+                        op,
+                        op.condition,
+                        op.conditionDeclaration
+                    )
+                }
+                else -> TODO("not implemented: $op")
             }
         }
     }
