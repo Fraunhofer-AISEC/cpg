@@ -26,8 +26,11 @@
 package de.fraunhofer.aisec.cpg.passes.quantumcpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.followNextEOG
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.*
-import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
@@ -211,7 +214,6 @@ class QuantumDFGPass : Pass() {
                 op.quantumBit0.refersToQubit == qubit
             }
             is QuantumGateCX -> {
-
                 op.quBit0.refersToQubit == qubit || op.quBit1.refersToQubit == qubit
             }
             is QuantumMeasurement -> {
@@ -220,6 +222,12 @@ class QuantumDFGPass : Pass() {
             is QuantumMeasure -> {
                 // we only care about the measurements and not the enclosing "measure"
                 false
+            }
+            is ClassicIf -> {
+                // Check condition
+                val binOp = op.condition as? BinaryOperator
+                (binOp?.lhs as? DeclaredReferenceExpression)?.refersTo == qubit ||
+                    (binOp?.rhs as? DeclaredReferenceExpression)?.refersTo == qubit
             }
             else -> TODO()
         }
@@ -247,12 +255,12 @@ class QuantumDFGPass : Pass() {
                     }
                 }
                 is ClassicIf -> {
-                    // similar to classic DFG.
-                    Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-                        op,
-                        op.condition,
-                        op.conditionDeclaration
-                    )
+                    // TODO: very hacky, but needed
+                    val binOp = op.condition as? BinaryOperator ?: continue
+                    binOp.addPrevDFG(binOp.rhs)
+                    binOp.addPrevDFG(binOp.lhs)
+
+                    op.addPrevDFG(binOp)
                 }
                 else -> TODO("not implemented: $op")
             }
@@ -280,23 +288,8 @@ class QuantumDFGPass : Pass() {
 
     /** Get the next QuantumOperation according to the EOG */
     private fun nextOpEOG(startOp: QuantumOperation?): QuantumOperation? {
-        if (startOp == null) {
-            return null
-        }
-        val nextEOG =
-            when (startOp) {
-                is QuantumGate -> startOp.nextEOG
-                is QuantumMeasure -> startOp.nextEOG
-                is QuantumMeasurement -> startOp.nextEOG
-                else -> TODO()
-            }
-        if (nextEOG.size == 0) {
-            return null
-        }
-        if (nextEOG.size != 1) {
-            TODO()
-        }
-        return nextEOG.first() as? QuantumOperation
+        val path = (startOp as? Node)?.followNextEOG { it.end is QuantumOperation }
+        return path?.lastOrNull()?.end as? QuantumOperation
     }
 
     override fun cleanup() {

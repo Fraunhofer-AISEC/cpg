@@ -27,10 +27,8 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.followNextEOG
-import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicBitRef
@@ -196,11 +194,18 @@ class QiskitPass : Pass() {
                     val call = path?.lastOrNull()?.end as? CallExpression ?: continue
                     val cIf = newClassicIf(call, newGate.quantumCircuit)
                     val binOp = next.newBinaryOperator("==")
+                    // mark it as part of the quantum graph
+                    binOp.labels = mutableListOf("QuantumNode")
                     val idx = getArgAsInt(call, 0)
                     val cBit = currentCircuit.classicBits?.get(idx) ?: continue
                     val quBitRef = newClassicBitRef(call.arguments.first(), currentCircuit, cBit)
                     binOp.lhs = quBitRef
-                    binOp.rhs = call.arguments[1]
+                    // only works with literals for now
+                    val lit = (call.arguments[1] as Literal<*>).duplicate(true)
+                    lit.disconnectFromGraph()
+                    // mark it as part of the quantum graph
+                    lit.labels = mutableListOf("QuantumNode")
+                    binOp.rhs = lit
                     cIf.condition = binOp
                     cIf.thenStatement = newGate
                     currentCircuit.operations.add(cIf)

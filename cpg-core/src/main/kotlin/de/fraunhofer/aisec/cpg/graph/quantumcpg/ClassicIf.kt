@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 
@@ -35,4 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
  */
 class ClassicIf(override var cpgNode: Node?) : IfStatement(), QuantumOperation, QuantumNode {
     var quantumCircuit: QuantumCircuit? = null
+
+    init {
+        this.name = Name("if")
+    }
 }

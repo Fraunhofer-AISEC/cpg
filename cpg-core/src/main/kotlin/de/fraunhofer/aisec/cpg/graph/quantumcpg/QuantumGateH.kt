@@ -35,7 +35,6 @@ class QuantumGateH(
 ) : QuantumGate(cpgNode, quantumCircuit) {
 
     init {
-        // TODO does not do the job
         (cpgNode as? CallExpression)?.let { this.callee = it.callee }
     }
 
