@@ -590,11 +590,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     }
                     is CPPASTArrayRangeDesignator -> {
                         oneLhs =
-                            newArrayRangeExpression(
+                            newRangeExpression(
                                 handle(des.rangeFloor),
                                 handle(des.rangeCeiling),
                                 des.getRawSignature()
                             )
+                        oneLhs.operatorCode = "..."
                     }
                     else -> {
                         Util.errorWithFileLocation(
@@ -643,11 +644,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     }
                     is CPPASTArrayRangeDesignator -> {
                         oneLhs =
-                            newArrayRangeExpression(
+                            newRangeExpression(
                                 handle(des.rangeFloor),
                                 handle(des.rangeCeiling),
                                 des.getRawSignature()
                             )
+                        oneLhs.operatorCode = "..."
                     }
                     else -> {
                         Util.errorWithFileLocation(

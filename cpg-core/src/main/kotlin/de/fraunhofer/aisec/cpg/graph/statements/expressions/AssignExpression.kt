@@ -96,8 +96,8 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
      */
     val isCompoundAssignment: Boolean
         get() {
-            return arrayOf("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=")
-                .contains(operatorCode) && isSingleValue
+            return operatorCode in (language?.compoundAssignmentOperators ?: setOf()) &&
+                isSingleValue
         }
 
     /**

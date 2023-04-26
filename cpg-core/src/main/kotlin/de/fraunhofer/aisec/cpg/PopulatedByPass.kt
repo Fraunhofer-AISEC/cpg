@@ -32,4 +32,4 @@ import kotlin.reflect.KClass
  * This annotation denotes that, this property is populates by a pass. Optionally, also specifying
  * which Pass class is responsible.
  */
-annotation class PopulatedByPass(val value: KClass<out Pass>)
+annotation class PopulatedByPass(vararg val value: KClass<out Pass>)
