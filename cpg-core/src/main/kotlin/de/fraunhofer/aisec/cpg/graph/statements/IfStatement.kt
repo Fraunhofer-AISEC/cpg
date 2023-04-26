@@ -33,7 +33,7 @@ import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-class IfStatement : Statement(), ArgumentHolder {
+open class IfStatement : Statement(), ArgumentHolder {
     /** C++ initializer statement. */
     @AST var initializerStatement: Statement? = null
 

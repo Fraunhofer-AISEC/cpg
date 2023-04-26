@@ -41,7 +41,6 @@ class OpenQASMFrontendTest : BaseTest() {
 
     @Test
     fun testAdder() {
-
         val topLevel = Path.of("src", "test", "resources", "openqasm")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -63,5 +62,19 @@ class OpenQASMFrontendTest : BaseTest() {
         val parser = OpenQASMParser(lexer.tokens)
         val ast = parser.parse()
         assertNotNull(ast)
+    }
+
+    @Test
+    fun testIf() {
+        val topLevel = Path.of("src", "test", "resources", "openqasm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("if.qasm").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<OpenQasmLanguage>()
+            }
+        assertNotNull(tu)
     }
 }

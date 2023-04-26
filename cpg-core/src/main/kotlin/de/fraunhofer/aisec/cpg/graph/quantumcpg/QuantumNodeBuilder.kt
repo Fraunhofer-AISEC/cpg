@@ -109,6 +109,15 @@ object QuantumNodeBuilder {
 
     @JvmStatic
     @JvmOverloads
+    fun newClassicIf(cpgNode: Node? = null, quantumCircuit: QuantumCircuit? = null): ClassicIf {
+        val node = ClassicIf(cpgNode)
+        node.quantumCircuit = quantumCircuit
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
     fun newQuantumGateH(
         cpgNode: Node? = null,
         quantumCircuit: QuantumCircuit,

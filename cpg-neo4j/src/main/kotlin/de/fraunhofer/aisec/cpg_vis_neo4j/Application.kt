@@ -431,6 +431,7 @@ class AstChildrenEventListener : EventListenerAdapter() {
         }
 
         node.astChildren = SubgraphWalker.getAstChildren(node)
+        node.name = node.name
     }
 }
 

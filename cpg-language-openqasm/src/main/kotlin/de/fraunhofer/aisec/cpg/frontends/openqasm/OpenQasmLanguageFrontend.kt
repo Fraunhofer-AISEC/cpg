@@ -35,10 +35,12 @@ import de.fraunhofer.aisec.cpg.frontends.openqasm.passes.OpenQASMPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicIf
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.ClassicBitType
+import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.QuantumBitType
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
@@ -116,6 +118,7 @@ class OpenQasmLanguageFrontend(
             is ClassicalDeclarationStatementNode -> handleClassicalBitDecl(stmt)
             is ResetStatementNode -> newEmptyStatement() // TODO
             is ForStatementNode -> handleForStatement(stmt)
+            is IfStatementNode -> handleIfStatement(stmt)
             is MeasureArrowAssignmentStatementNode -> handleMeasure(stmt)
             is OldStyleDeclarationStatementNode -> handleOldStylDeclStmt(stmt)
             else -> TODO()
@@ -129,7 +132,7 @@ class OpenQasmLanguageFrontend(
         val collector = newCompoundStatement()
         val tpe =
             when (stmt.type) {
-                "QREG" -> TODO()
+                "QREG" -> QuantumBitType()
                 "CREG" -> ClassicBitType()
                 else -> TODO()
             }
@@ -229,6 +232,12 @@ class OpenQasmLanguageFrontend(
         val f = newForStatement(code = getCodeFromRawNode(stmt), rawNode = stmt)
         // TODO
         return f
+    }
+
+    private fun handleIfStatement(stmt: IfStatementNode): Statement {
+        val node = newClassicIf()
+
+        return node
     }
 
     private fun handleClassicalBitDecl(stmt: ClassicalDeclarationStatementNode): Statement {

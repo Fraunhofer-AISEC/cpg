@@ -928,7 +928,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
                     }
                 }
             }
-            else -> TODO()
+            else -> TODO("token not implemented: $currentToken")
         }
     }
 
