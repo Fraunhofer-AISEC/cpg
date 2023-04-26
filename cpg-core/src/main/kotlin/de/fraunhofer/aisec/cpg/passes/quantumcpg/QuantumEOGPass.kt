@@ -64,7 +64,9 @@ class QuantumEOGPass : EvaluationOrderGraphPass() {
             createEOG(measurement)
         }
 
-        pushToEOG(node)
+        // No edge from the [QuantumMeasure] container to the [QuantumMeasurements] as this is only
+        // a wrapper which is not executed.
+        // pushToEOG(node)
     }
 
     override fun accept(result: TranslationResult) {
