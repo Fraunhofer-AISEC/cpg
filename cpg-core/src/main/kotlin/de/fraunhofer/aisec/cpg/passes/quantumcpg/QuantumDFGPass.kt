@@ -65,6 +65,9 @@ class QuantumDFGPass : Pass() {
                     is QuantumGateH -> {
                         qubit.addNextDFG(currentOperation.quantumBit0)
                     }
+                    is QuantumGateX -> {
+                        qubit.addNextDFG(currentOperation.quantumBit0)
+                    }
                     is QuantumGateCX -> {
                         if (currentOperation.quBit0.refersToQubit == qubit) {
                             qubit.addNextDFG(currentOperation.quBit0)
@@ -76,7 +79,9 @@ class QuantumDFGPass : Pass() {
                     is QuantumMeasurement -> {
                         qubit.addNextDFG(currentOperation.quBit)
                     }
-                    else -> TODO()
+                    is ClassicIf -> {
+                        // TODO?
+                    }
                 }
 
                 // connect with following gates

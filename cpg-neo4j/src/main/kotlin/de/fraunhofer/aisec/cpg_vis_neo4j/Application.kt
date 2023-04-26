@@ -331,9 +331,9 @@ class Application : Callable<Int> {
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
                 .registerPass(EdgeCachePass())
+                .registerPass(QiskitPass())
                 .registerPass(QuantumEOGPass())
                 .registerPass(QuantumDFGPass())
-                .registerPass(QiskitPass())
                 .registerPass(DFGConnectionPass())
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {

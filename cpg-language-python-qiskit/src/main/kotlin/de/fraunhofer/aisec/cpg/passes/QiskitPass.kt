@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.followNextEOG
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
@@ -51,6 +52,8 @@ import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
 @RequiredFrontend(PythonLanguageFrontend::class)
 @DependsOn(VariableUsageResolver::class)
 @DependsOn(CallResolver::class)
+@DependsOn(EvaluationOrderGraphPass::class)
+@DependsOn(EdgeCachePass::class)
 @ExecuteBefore(QuantumEOGPass::class)
 @ExecuteBefore(QuantumDFGPass::class)
 class QiskitPass : Pass() {
@@ -178,12 +181,19 @@ class QiskitPass : Pass() {
 
             // save the gate to the graph
             if (newGate != null) {
-                // before we save it, we need to check, whether that this gate is not "wrapped in an
+                // before we save it, we need to check, whether that this gate is "wrapped" in an
                 // ClassicalIf. For now this is a quite simple heuristic. We just check whether the
                 // next EOG is a member call to c_if.
                 val next = expr.nextEOG.firstOrNull()
                 if (next?.name?.localName == "c_if" && next is MemberExpression) {
-                    val call = next.astParent as? CallExpression ?: continue
+                    // For some reason astParent doesn't work properly, so we need to follow the EOG
+                    // until we hit the call expression of this member expression
+                    val path =
+                        next.followNextEOG {
+                            it.end is MemberCallExpression &&
+                                (it.end as MemberCallExpression).callee == next
+                        }
+                    val call = path?.lastOrNull()?.end as? CallExpression ?: continue
                     val cIf = newClassicIf(call, newGate.quantumCircuit)
                     val binOp = next.newBinaryOperator("==")
                     val idx = getArgAsInt(call, 0)

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
@@ -39,6 +40,8 @@ enum class EdgeType {
 
 class Edge(val source: Node, val target: Node, val type: EdgeType)
 
+@DependsOn(ControlFlowSensitiveDFGPass::class)
+@DependsOn(EvaluationOrderGraphPass::class)
 /** The edges cache. */
 object Edges {
     private val fromMap: MutableMap<Node, MutableList<Edge>> = HashMap()
