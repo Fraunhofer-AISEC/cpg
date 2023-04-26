@@ -120,8 +120,11 @@ class DFGConnectionPass : Pass() {
                             ?.toInt()
                     bitIndex?.let {
                         thisQuantumCircuit?.classicBits?.let {
+                            // Fix index if negative or so
                             var index = bitIndex % it.size
                             if (index < 0) index += it.size
+                            // The order (for Qiskit) is inverted
+                            index = it.size - 1 - index
                             measures?.forEach {
                                 val measuredCBit =
                                     it.measurements
