@@ -27,111 +27,59 @@ package de.fraunhofer.aisec.cpg.passes.quantumcpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumMeasure
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import java.util.HashSet
 
 // @DependsOn(QiskitPass::class) or @DependsOn(OpenQASMPass::class)
 @DependsOn(EvaluationOrderGraphPass::class)
-class QuantumEOGPass : Pass() {
+class QuantumEOGPass : EvaluationOrderGraphPass() {
     private val nodeTracker = HashSet<Node>()
 
-    override fun accept(p0: TranslationResult) {
+    init {
+        map[QuantumMeasure::class.java] = { handleQuantumMeasure(it as QuantumMeasure) }
+        map[QuantumGate::class.java] = { handleQuantumGate(it as QuantumGate) }
+        map[QuantumCircuit::class.java] = { handleQuantumCircuit(it as QuantumCircuit) }
+    }
 
-        val allQuantumCircuits = p0.additionalNodes.filterIsInstance<QuantumCircuit>()
+    private fun handleQuantumCircuit(node: QuantumCircuit) {
+        // Analyze the contained operations. Since we analyzed the operations in the statement order
+        // of the original source and we do not allow branching conditions of the underlying source
+        // code, we can just iterate over the operations.
+        for (child in node.operations) {
+            createEOG(child as Node)
+        }
 
-        for (circuit in allQuantumCircuits) {
-            val circuitCPG = (circuit as? QuantumCircuit)?.cpgNode ?: TODO()
+        // pushToEOG(node)
+    }
 
-            val nextEOGs = circuitCPG.nextEOG.filterIsInstance<DeclarationStatement>()
+    private fun handleQuantumGate(node: QuantumGate) {
+        pushToEOG(node)
+    }
 
-            for (next in nextEOGs) {
-                if (next in nodeTracker) {
-                    continue
-                }
-                handleNode(p0, next, null)
-                nodeTracker.add(next)
-            }
+    private fun handleQuantumMeasure(node: QuantumMeasure) {
+        for (measurement in node.measurements) {
+            createEOG(measurement)
+        }
+
+        pushToEOG(node)
+    }
+
+    override fun accept(result: TranslationResult) {
+        scopeManager = result.scopeManager
+
+        // We only want to start at the circuit(s)
+        val circuits = result.additionalNodes.filterIsInstance<QuantumCircuit>()
+
+        for (circuit in circuits) {
+            createEOG(circuit)
         }
     }
 
-    private fun handleNode(p0: TranslationResult, node: Node, last: Node?) {
-        if (node in nodeTracker) {
-            return
-        }
-        nodeTracker.add(node)
-        var lastQuantumGateSeen: Node? = last
-
-        if (node is MemberCallExpression) {
-            val quantumCPGNode =
-                p0.additionalNodes.firstOrNull { (it as? QuantumGate)?.cpgNode == node }
-                    as? QuantumGate
-                    ?: p0.additionalNodes.firstOrNull { (it as? QuantumMeasure)?.cpgNode == node }
-                        as? QuantumMeasure
-                        ?: null
-
-            when (quantumCPGNode) {
-                is QuantumGate -> {
-                    if (lastQuantumGateSeen != null) {
-                        // add Q-EOG edges to the quantum graph
-                        addEOGEdge(lastQuantumGateSeen, quantumCPGNode)
-                    }
-                    lastQuantumGateSeen = quantumCPGNode
-                }
-                is QuantumMeasure -> {
-                    if (lastQuantumGateSeen != null) {
-                        addEOGEdge(lastQuantumGateSeen, quantumCPGNode)
-                        lastQuantumGateSeen = quantumCPGNode
-                        for (m in quantumCPGNode.measurements) {
-                            addEOGEdge(lastQuantumGateSeen!!, m)
-                            lastQuantumGateSeen = m
-                        }
-                    } else {
-                        TODO()
-                    }
-                }
-                else -> {}
-            }
-        }
-
-        when (node.nextEOG.size) {
-            0 -> {
-                // finished :)
-            }
-            else -> {
-                for (next in node.nextEOG) {
-                    handleNode(p0, next, lastQuantumGateSeen)
-                }
-            }
-        }
-    }
-
-    /* TODO: copy & paste from EOG pass */
-    /**
-     * Builds an EOG edge from prev to next. 'eogDirection' defines how the node instances save the
-     * references constituting the edge. 'FORWARD': only the nodes nextEOG member contains
-     * references, an points to the next nodes. 'BACKWARD': only the nodes prevEOG member contains
-     * references and points to the previous nodes. 'BIDIRECTIONAL': nextEOG and prevEOG contain
-     * references and point to the previous and the next nodes.
-     *
-     * @param prev the previous node
-     * @param next the next node
-     */
-    private fun addEOGEdge(prev: Node, next: Node) {
-        val propertyEdge = PropertyEdge(prev, next)
-        // propertyEdge.addProperties(nextEdgeProperties)
-        propertyEdge.addProperty(Properties.INDEX, prev.nextEOG.size)
-        propertyEdge.addProperty(Properties.UNREACHABLE, false)
-        prev.addNextEOG(propertyEdge)
-        next.addPrevEOG(propertyEdge)
+    override fun handleUnknown(node: Node) {
+        println(node)
     }
 
     override fun cleanup() {

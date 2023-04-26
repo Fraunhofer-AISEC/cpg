@@ -30,8 +30,11 @@ import de.fraunhofer.aisec.cpg.frontends.openqasm.OpenQasmLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.*
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumBit
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumCircuit
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumOperation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.ClassicBitType
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.QuantumBitType

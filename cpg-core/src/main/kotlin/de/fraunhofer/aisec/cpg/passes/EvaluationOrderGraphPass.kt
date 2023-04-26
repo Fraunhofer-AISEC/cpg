@@ -72,8 +72,8 @@ import org.slf4j.LoggerFactory
 @DependsOn(CallResolver::class)
 open class EvaluationOrderGraphPass : Pass() {
     protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
-    private var currentPredecessors = mutableListOf<Node>()
-    private val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
+    protected var currentPredecessors = mutableListOf<Node>()
+    protected val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
 
     /**
      * Allows to register EOG creation logic when a currently visited node can depend on future
@@ -364,7 +364,7 @@ open class EvaluationOrderGraphPass : Pass() {
      * Tries to create the necessary EOG edges for the [node] (if it is non-null) by looking up the
      * appropriate handler function of the node's class in [map] and calling it.
      */
-    private fun createEOG(node: Node?) {
+    protected fun createEOG(node: Node?) {
         if (node == null) {
             // nothing to do
             return
@@ -381,8 +381,12 @@ open class EvaluationOrderGraphPass : Pass() {
         if (callable != null) {
             callable(node)
         } else {
-            LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
+            handleUnknown(node)
         }
+    }
+
+    protected open fun handleUnknown(node: Node) {
+        LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
     }
 
     protected fun handleDefault(node: Node) {
@@ -514,7 +518,7 @@ open class EvaluationOrderGraphPass : Pass() {
         pushToEOG(node)
     }
 
-    protected fun handleCompoundStatement(node: CompoundStatement) {
+    protected open fun handleCompoundStatement(node: CompoundStatement) {
         // not all language handle compound statements as scoping blocks, so we need to avoid
         // creating new scopes here
         scopeManager.enterScopeIfExists(node)
@@ -772,7 +776,7 @@ open class EvaluationOrderGraphPass : Pass() {
      * @param prev the previous node
      * @param next the next node
      */
-    private fun addEOGEdge(prev: Node, next: Node) {
+    protected fun addEOGEdge(prev: Node, next: Node) {
         val propertyEdge = PropertyEdge(prev, next)
         propertyEdge.addProperties(nextEdgeProperties)
         propertyEdge.addProperty(Properties.INDEX, prev.nextEOG.size)

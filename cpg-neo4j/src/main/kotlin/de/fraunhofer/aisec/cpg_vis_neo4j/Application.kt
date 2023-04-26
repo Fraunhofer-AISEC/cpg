@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNode
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.DFGConnectionPass
@@ -433,7 +434,14 @@ class AstChildrenEventListener : EventListenerAdapter() {
         }
 
         node.astChildren = SubgraphWalker.getAstChildren(node)
-        node.name = node.name
+
+        // Special hack for call expressions, since Neo4J cannot handle the overridden name field
+        if (node is CallExpression) {
+            val field = Node::class.java.declaredFields.first { it.name == "name" }
+            field.isAccessible = true
+            field.set(node, node.name)
+            println(node)
+        }
     }
 }
 
