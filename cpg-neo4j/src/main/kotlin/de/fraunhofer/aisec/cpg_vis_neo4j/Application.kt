@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNode
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.DFGConnectionPass
+import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.QiskitPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
@@ -328,6 +329,7 @@ class Application : Callable<Int> {
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
+                .registerPass(EdgeCachePass())
                 .registerPass(QuantumEOGPass())
                 .registerPass(QuantumDFGPass())
                 .registerPass(QiskitPass())

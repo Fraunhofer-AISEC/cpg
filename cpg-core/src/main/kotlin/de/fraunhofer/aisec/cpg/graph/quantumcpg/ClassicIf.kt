@@ -33,6 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
  * and quantum world. It is evaluated in the classical world but its execution are gates which are
  * added to the circuit in the quantum world.
  */
-class ClassicIf(override var cpgNode: Node?) : IfStatement(), QuantumNode {
+class ClassicIf(override var cpgNode: Node?) : IfStatement(), QuantumOperation, QuantumNode {
     var quantumCircuit: QuantumCircuit? = null
 }

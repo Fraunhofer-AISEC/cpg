@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicBitRef
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicIf
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumBitRef
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumCircuit
@@ -181,12 +182,15 @@ class QiskitPass : Pass() {
                     val cIf = newClassicIf(call, newGate.quantumCircuit)
                     val binOp = next.newBinaryOperator("==")
                     val idx = getArgAsInt(call, 0)
-                    val quBit = currentCircuit.classicBits?.get(idx) ?: continue
-                    val quBitRef = newQuantumBitRef(call.arguments.first(), currentCircuit, quBit)
+                    val cBit = currentCircuit.classicBits?.get(idx) ?: continue
+                    val quBitRef = newClassicBitRef(call.arguments.first(), currentCircuit, cBit)
                     binOp.lhs = quBitRef
                     binOp.rhs = call.arguments[1]
                     cIf.condition = binOp
                     cIf.thenStatement = newGate
+                    currentCircuit.operations.add(cIf)
+                    p0.additionalNodes.add(cIf)
+                    p0.additionalNodes.add(newGate) // not sure if we want it this way
                 } else {
                     currentCircuit.operations.add(newGate)
                     p0.additionalNodes.add(newGate)
