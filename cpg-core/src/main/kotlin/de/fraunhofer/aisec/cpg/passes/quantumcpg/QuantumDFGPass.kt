@@ -119,9 +119,6 @@ class QuantumDFGPass : Pass() {
         qubit: QuantumBitReference,
         nextOperation: QuantumOperation?
     ) {
-        if (nextOperation == null) {
-            return
-        }
         when (nextOperation) {
             is QuantumGateH -> {
                 qubit.addNextDFG(nextOperation.quantumBit0)
@@ -140,9 +137,10 @@ class QuantumDFGPass : Pass() {
             is QuantumMeasure -> {
                 qubit.addNextDFG(nextOperation.quBit)
             }
-            else -> {
-                TODO()
+            null -> {
+                return
             }
+            else -> TODO("connectQubitWithNextOperation not implemented: $nextOperation")
         }
     }
 
