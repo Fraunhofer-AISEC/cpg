@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.ClassicBitAccess
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumMeasure
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -132,12 +131,7 @@ class DFGConnectionPass : Pass() {
                                             thisQuantumCircuit.getCbitByIdx(index)
                                     }
                                     ?.cBit
-                            // measuredCBit?.let { it1 -> bitAccess.addPrevDFG(it1) }
-                            measuredCBit?.let { it1 ->
-                                val access = ClassicBitAccess(bitAccess, thisQuantumCircuit, it1)
-                                access.addPrevDFG(it1)
-                                t.additionalNodes.add(access)
-                            }
+                            measuredCBit?.let { it1 -> bitAccess.addPrevDFG(it1) }
                         }
                     }
                 }
