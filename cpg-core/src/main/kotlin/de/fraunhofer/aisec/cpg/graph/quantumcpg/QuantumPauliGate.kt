@@ -26,21 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
-/**
- * The Pauli-X gate. This is equivalent to a bit flip in the classical world. It maps |0> to |1> and
- * |1> to |0>.
- */
-class QuantumGateX(
+abstract class QuantumPauliGate(
     cpgNode: Node?,
     quantumCircuit: QuantumCircuit,
-    quantumBit0: QuantumBitReference,
-) : QuantumPauliGate(cpgNode, quantumCircuit, quantumBit0) {
-
-    init {
-        (cpgNode as? CallExpression)?.let { this.callee = it.callee }
-    }
-
-    override val fidelity: Float = 0.0f
-}
+    val quantumBit0: QuantumBitReference
+) : QuantumGate(cpgNode, quantumCircuit) {}

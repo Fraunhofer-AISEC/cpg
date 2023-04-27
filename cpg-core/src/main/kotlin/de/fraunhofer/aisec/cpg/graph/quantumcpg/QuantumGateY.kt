@@ -28,11 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.quantumcpg
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
-/**
- * The Pauli-X gate. This is equivalent to a bit flip in the classical world. It maps |0> to |1> and
- * |1> to |0>.
- */
-class QuantumGateX(
+/** The Pauli-Y gate. It maps |0> to i|1> and |1> to -i|0>. */
+class QuantumGateY(
     cpgNode: Node?,
     quantumCircuit: QuantumCircuit,
     quantumBit0: QuantumBitReference,

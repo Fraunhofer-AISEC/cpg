@@ -91,7 +91,7 @@ class QuantumDFGPass : Pass() {
             is QuantumGateH -> {
                 connectQubitWithNextOperation(currentOperation.quantumBit0, nextOperation)
             }
-            is QuantumGateX -> {
+            is QuantumPauliGate -> {
                 connectQubitWithNextOperation(currentOperation.quantumBit0, nextOperation)
             }
             is QuantumGateCX -> {
@@ -131,7 +131,7 @@ class QuantumDFGPass : Pass() {
                     qubit.addNextDFG(nextOperation.quBit1)
                 }
             }
-            is QuantumGateX -> {
+            is QuantumPauliGate -> {
                 qubit.addNextDFG(nextOperation.quantumBit0)
             }
             is QuantumMeasure -> {
@@ -149,7 +149,7 @@ class QuantumDFGPass : Pass() {
             is QuantumGateH -> {
                 qubit.addNextDFG(firstOp.quantumBit0)
             }
-            is QuantumGateX -> {
+            is QuantumPauliGate -> {
                 qubit.addNextDFG(firstOp.quantumBit0)
             }
             is QuantumGateCX -> {
@@ -177,7 +177,7 @@ class QuantumDFGPass : Pass() {
             is QuantumGateH -> {
                 op.quantumBit0.refersToQubit == qubit
             }
-            is QuantumGateX -> {
+            is QuantumPauliGate -> {
                 op.quantumBit0.refersToQubit == qubit
             }
             is QuantumGateCX -> {
@@ -205,8 +205,8 @@ class QuantumDFGPass : Pass() {
                     // data flow from control bit to other bit
                     op.quBit0.addNextDFG(op.quBit1)
                 }
-                is QuantumGateX -> {
-                    // data flows to itself?
+                is QuantumPauliGate -> {
+                    // nothing to do
                 }
                 is QuantumGateH -> {
                     // nothing to do

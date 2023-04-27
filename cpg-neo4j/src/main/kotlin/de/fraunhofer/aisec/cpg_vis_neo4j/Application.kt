@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNode
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumPauliGate
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -435,6 +436,9 @@ class AstChildrenEventListener : EventListenerAdapter() {
         }
         if (node is QuantumGate) {
             node.labels += "QuantumGate"
+        }
+        if (node is QuantumPauliGate) {
+            node.labels += "QuantumPauliGate"
         }
 
         node.astChildren = SubgraphWalker.getAstChildren(node)

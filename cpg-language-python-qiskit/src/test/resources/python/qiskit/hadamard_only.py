@@ -32,4 +32,4 @@ counts = result.get_counts(compiled_circuit)
 print("\nTotal count for 0 and 1 are:",counts)
 
 # Draw the circuit
-circuit.draw()
+print(circuit.draw(output='latex_source'))
