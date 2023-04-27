@@ -176,6 +176,7 @@ class QiskitPass : Pass() {
                                         )
                                     p0.additionalNodes.add(newMeasureNode)
                                     p0.additionalNodes.add(newMeasureNode)
+                                    currentCircuit.statements += newMeasureNode
                                 }
                             }
                         } else TODO()
@@ -223,7 +224,9 @@ class QiskitPass : Pass() {
                     cIf.thenStatement = newGate
                     p0.additionalNodes.add(cIf)
                     p0.additionalNodes.add(newGate) // not sure if we want it this way
+                    currentCircuit.statements += cIf
                 } else {
+                    currentCircuit.statements += newGate
                     p0.additionalNodes.add(newGate)
                 }
             }

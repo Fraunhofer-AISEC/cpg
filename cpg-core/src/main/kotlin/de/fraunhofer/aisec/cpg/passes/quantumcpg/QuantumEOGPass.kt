@@ -45,10 +45,10 @@ class QuantumEOGPass : EvaluationOrderGraphPass() {
     }
 
     private fun handleQuantumCircuit(node: QuantumCircuit) {
-        // Analyze the contained operations. Since we analyzed the operations in the statement order
+        // Analyze the contained statements. Since we analyzed the operations in the statement order
         // of the original source and we do not allow branching conditions of the underlying source
         // code, we can just iterate over the operations.
-        for (child in node.operations) {
+        for (child in node.statements) {
             createEOG(child as Node)
         }
 

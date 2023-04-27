@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNode
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
@@ -431,6 +432,9 @@ class AstChildrenEventListener : EventListenerAdapter() {
 
         if (node is QuantumNode) {
             node.labels += "QuantumNode"
+        }
+        if (node is QuantumGate) {
+            node.labels += "QuantumGate"
         }
 
         node.astChildren = SubgraphWalker.getAstChildren(node)

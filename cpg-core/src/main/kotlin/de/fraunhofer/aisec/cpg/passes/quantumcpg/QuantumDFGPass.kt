@@ -40,6 +40,7 @@ class QuantumDFGPass : Pass() {
     val worklist: MutableList<QuantumOperation> = mutableListOf()
 
     override fun accept(p0: TranslationResult) {
+        return
         val allQuantumCircuits = p0.additionalNodes.filterIsInstance<QuantumCircuit>()
 
         for (circuit in allQuantumCircuits) {
@@ -91,6 +92,9 @@ class QuantumDFGPass : Pass() {
             is QuantumGateH -> {
                 connectQubitWithNextOperation(currentOperation.quantumBit0, nextOperation)
             }
+            is QuantumGateX -> {
+                connectQubitWithNextOperation(currentOperation.quantumBit0, nextOperation)
+            }
             is QuantumGateCX -> {
                 if (currentOperation.quBit0.refersToQubit == qubit) {
                     connectQubitWithNextOperation(currentOperation.quBit0, nextOperation)
@@ -102,7 +106,10 @@ class QuantumDFGPass : Pass() {
             is QuantumMeasure -> {
                 currentOperation.quBit.addNextDFG(currentOperation.cBit)
             }
-            else -> TODO()
+            is ClassicIf -> {
+                println("hello")
+            }
+            else -> TODO("not implemented: $currentOperation")
         }
     }
 
