@@ -44,7 +44,7 @@ class QuantumDFGPass : Pass() {
 
         for (circuit in allQuantumCircuits) {
 
-            connectDFGWithinOp(circuit)
+            connectDFGWithinOps(circuit)
 
             // connect gates with each other
             val firstQuantumGate: QuantumOperation =
@@ -71,121 +71,65 @@ class QuantumDFGPass : Pass() {
                     val currentOperation = worklist.removeFirst()
                     var nextOperation = advanceGateUntilRelevant(qubit, currentOperation)
                     if (nextOperation != null) {
-                        when (currentOperation) {
-                            is QuantumGateH -> {
-                                when (nextOperation) {
-                                    is QuantumGateH -> {
-                                        currentOperation.quantumBit0.addNextDFG(
-                                            nextOperation.quantumBit0
-                                        )
-                                    }
-                                    is QuantumGateX -> {
-                                        currentOperation.quantumBit0.addNextDFG(
-                                            nextOperation.quantumBit0
-                                        )
-                                    }
-                                    is QuantumGateCX -> {
-                                        if (nextOperation.quBit0.refersToQubit == qubit) {
-                                            currentOperation.quantumBit0.addNextDFG(
-                                                nextOperation.quBit0
-                                            )
-                                        }
-                                        if (nextOperation.quBit1.refersToQubit == qubit) {
-                                            currentOperation.quantumBit0.addNextDFG(
-                                                nextOperation.quBit1
-                                            )
-                                        }
-                                    }
-                                    is QuantumMeasurement -> {
-                                        currentOperation.quantumBit0.addNextDFG(nextOperation.quBit)
-                                    }
-                                    else -> {
-                                        TODO()
-                                    }
-                                }
-                            }
-                            is QuantumGateX -> {
-                                when (nextOperation) {
-                                    is QuantumGateH -> {
-                                        currentOperation.quantumBit0.addNextDFG(
-                                            nextOperation.quantumBit0
-                                        )
-                                    }
-                                    is QuantumGateX -> {
-                                        currentOperation.quantumBit0.addNextDFG(
-                                            nextOperation.quantumBit0
-                                        )
-                                    }
-                                    is QuantumGateCX -> {
-                                        if (nextOperation.quBit0.refersToQubit == qubit) {
-                                            currentOperation.quantumBit0.addNextDFG(
-                                                nextOperation.quBit0
-                                            )
-                                        }
-                                        if (nextOperation.quBit1.refersToQubit == qubit) {
-                                            currentOperation.quantumBit0.addNextDFG(
-                                                nextOperation.quBit1
-                                            )
-                                        }
-                                    }
-                                    is QuantumMeasurement -> {
-                                        currentOperation.quantumBit0.addNextDFG(nextOperation.quBit)
-                                    }
-                                    else -> {
-                                        TODO()
-                                    }
-                                }
-                            }
-                            is QuantumGateCX -> {
-                                if (currentOperation.quBit0.refersToQubit == qubit) {
-                                    when (nextOperation) {
-                                        is QuantumGateH -> {
-                                            currentOperation.quBit0.addNextDFG(
-                                                nextOperation.quantumBit0
-                                            )
-                                        }
-                                        is QuantumGateCX -> {
-                                            TODO()
-                                        }
-                                        is QuantumMeasurement -> {
-                                            currentOperation.quBit0.addNextDFG(nextOperation.quBit)
-                                        }
-                                        else -> TODO()
-                                    }
-                                }
-                                if (currentOperation.quBit1.refersToQubit == qubit) {
-                                    when (nextOperation) {
-                                        is QuantumGateH -> {
-                                            currentOperation.quBit1.addNextDFG(
-                                                nextOperation.quantumBit0
-                                            )
-                                        }
-                                        is QuantumGateX -> {
-                                            currentOperation.quBit1.addNextDFG(
-                                                nextOperation.quantumBit0
-                                            )
-                                        }
-                                        is QuantumGateCX -> {
-                                            TODO()
-                                        }
-                                        is QuantumMeasurement -> {
-                                            currentOperation.quBit1.addNextDFG(nextOperation.quBit)
-                                        }
-                                        else -> TODO()
-                                    }
-                                }
-                            }
-                            is QuantumMeasurement -> {
-                                // TODO add edges back to the original CPG here
-                            }
-                            else -> TODO()
-                        }
-
+                        connectGatesQubit(currentOperation, nextOperation, qubit)
                         // advance one step
                         worklist.add(nextOperation)
                     }
                 }
             }
+        }
+    }
+
+    /*
+    Connect the [currentOperation] with the [nextOperation] for the provided [qubit]
+     */
+    private fun connectGatesQubit(
+        currentOperation: QuantumOperation,
+        nextOperation: QuantumOperation,
+        qubit: QuantumBit
+    ) {
+        when (currentOperation) {
+            is QuantumGateH -> {
+                connectQubitWithNextOperation(currentOperation.quantumBit0, nextOperation)
+            }
+            is QuantumGateCX -> {
+                if (currentOperation.quBit0.refersToQubit == qubit) {
+                    connectQubitWithNextOperation(currentOperation.quBit0, nextOperation)
+                }
+                if (currentOperation.quBit1.refersToQubit == qubit) {
+                    connectQubitWithNextOperation(currentOperation.quBit1, nextOperation)
+                }
+            }
+            is QuantumMeasurement -> {
+                currentOperation.addNextDFG(currentOperation.cBit)
+            }
+            else -> TODO()
+        }
+    }
+
+    private fun connectQubitWithNextOperation(
+        qubit: QuantumBitReference,
+        nextOperation: QuantumOperation
+    ) {
+        when (nextOperation) {
+            is QuantumGateH -> {
+                qubit.addNextDFG(nextOperation.quantumBit0)
+            }
+            is QuantumGateCX -> {
+                if (nextOperation.quBit0.refersToQubit == qubit.refersToQubit) {
+                    qubit.addNextDFG(nextOperation.quBit0)
+                }
+                if (nextOperation.quBit1.refersToQubit == qubit.refersToQubit) {
+                    qubit.addNextDFG(nextOperation.quBit1)
+                }
+            }
+            is QuantumGateX -> {
+                qubit.addNextDFG(nextOperation.quantumBit0)
+            }
+            is QuantumMeasurement -> {
+                // TODO will be removed
+            }
+            else -> TODO()
         }
     }
 
@@ -243,7 +187,7 @@ class QuantumDFGPass : Pass() {
     }
 
     /** Add DFG edges within a QuantumOperation */
-    private fun connectDFGWithinOp(circuit: QuantumCircuit) {
+    private fun connectDFGWithinOps(circuit: QuantumCircuit) {
         // connect qubits input/output for gates
         for (op in circuit.operations) {
             when (op) {
@@ -299,9 +243,10 @@ class QuantumDFGPass : Pass() {
     private fun nextOpEOG(startOp: QuantumOperation?): QuantumOperation? {
         val path = (startOp as? Node)?.followNextEOG { it.end is QuantumOperation }
         val result = path?.lastOrNull()?.end as? QuantumOperation
-        return when (path == result) {
-            true -> result
-            else -> null
+        return if (startOp != result) {
+            result
+        } else {
+            null
         }
     }
 
