@@ -112,6 +112,7 @@ object QuantumNodeBuilder {
     fun newClassicIf(cpgNode: Node? = null, quantumCircuit: QuantumCircuit? = null): ClassicIf {
         val node = ClassicIf(cpgNode)
         node.quantumCircuit = quantumCircuit
+        quantumCircuit?.operations?.add(node)
         NodeBuilder.log(node)
         return node
     }
@@ -125,6 +126,7 @@ object QuantumNodeBuilder {
     ): QuantumGateH {
         val node = QuantumGateH(cpgNode, quantumCircuit, quantumBit0)
         quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
         NodeBuilder.log(node)
         return node
     }
@@ -138,6 +140,7 @@ object QuantumNodeBuilder {
     ): QuantumGateX {
         val node = QuantumGateX(cpgNode, quantumCircuit, quantumBit0)
         quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
         NodeBuilder.log(node)
         return node
     }
@@ -153,14 +156,21 @@ object QuantumNodeBuilder {
         val node = QuantumGateCX(cpgNode, quantumCircuit, quantumBit0, quantumBit1)
         quantumBit0.refersToQubit.relevantForGates.add(node)
         quantumBit1.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
         NodeBuilder.log(node)
         return node
     }
 
     @JvmStatic
     @JvmOverloads
-    fun newQuantumMeasure(cpgNode: Node? = null, quantumCircuit: QuantumCircuit): QuantumMeasure {
-        val node = QuantumMeasure(cpgNode, quantumCircuit)
+    fun newQuantumMeasurement(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        qubit: QuantumBitReference,
+        classicBit: ClassicBitReference
+    ): QuantumMeasure {
+        val node = QuantumMeasure(cpgNode, quantumCircuit, qubit, classicBit)
+        qubit.refersToQubit.relevantForGates.add(node)
         quantumCircuit.operations.add(node)
         NodeBuilder.log(node)
         return node

@@ -33,6 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumBit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicBitRef
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumBitRef
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumOperation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -124,15 +126,19 @@ class OpenQASMPass : Pass() {
                     if (classicBitList?.size != 1) TODO()
                     val classicBit = classicBitList.first()
 
-                    newOperation = QuantumNodeBuilder.newQuantumMeasure(expr, quantumCircuit)
-                    newOperation.addMeasurement(qubit, classicBit)
+                    newOperation =
+                        QuantumNodeBuilder.newQuantumMeasurement(
+                            expr,
+                            quantumCircuit,
+                            newQuantumBitRef(expr, quantumCircuit, qubit),
+                            newClassicBitRef(expr, quantumCircuit, classicBit)
+                        )
                 }
                 else -> TODO("not implemented")
             }
 
             // save the gate to the graph
             if (newOperation != null) {
-                quantumCircuit.operations.add(newOperation)
                 p0.additionalNodes.add(newOperation as? Node ?: TODO())
             }
         }

@@ -47,6 +47,7 @@ class DFGConnectionPass : Pass() {
     }
 
     override fun accept(t: TranslationResult) {
+
         val flatTr = SubgraphWalker.flattenAST(t)
         val transpileCalls = t.calls("transpile")
         for (call in transpileCalls) {
@@ -84,9 +85,7 @@ class DFGConnectionPass : Pass() {
                 // Add DFG for the call to result(): All classical bits which are measured flow to
                 // the return value
                 measures?.forEach { measure ->
-                    results.forEach { result ->
-                        measure.measurements.forEach { m -> m.cBit.addNextDFG(result) }
-                    }
+                    results.forEach { result -> measure.cBit.addNextDFG(result) }
                 }
 
                 // Add DFG for access to the resulting array (single index or whole region)
@@ -125,16 +124,14 @@ class DFGConnectionPass : Pass() {
                             if (index < 0) index += it.size
                             // The order (for Qiskit) is inverted
                             index = it.size - 1 - index
-                            measures?.forEach {
-                                val measuredCBit =
-                                    it.measurements
-                                        .lastOrNull {
-                                            it.cBit.refersToClassicBit ==
-                                                thisQuantumCircuit.getCbitByIdx(index)
-                                        }
-                                        ?.cBit
-                                measuredCBit?.let { it1 -> bitAccess.addPrevDFG(it1) }
-                            }
+                            val measuredCBit =
+                                measures
+                                    ?.lastOrNull {
+                                        it.cBit.refersToClassicBit ==
+                                            thisQuantumCircuit.getCbitByIdx(index)
+                                    }
+                                    ?.cBit
+                            measuredCBit?.let { it1 -> bitAccess.addPrevDFG(it1) }
                         }
                     }
                 }

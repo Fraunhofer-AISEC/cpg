@@ -70,11 +70,9 @@ class QuantumDFGPass : Pass() {
                 while (worklist.isNotEmpty()) {
                     val currentOperation = worklist.removeFirst()
                     var nextOperation = advanceGateUntilRelevant(qubit, currentOperation)
-                    if (nextOperation != null) {
-                        connectGatesQubit(currentOperation, nextOperation, qubit)
-                        // advance one step
-                        worklist.add(nextOperation)
-                    }
+                    connectGatesQubit(currentOperation, nextOperation, qubit)
+                    // advance one step
+                    nextOperation?.let { worklist.add(it) }
                 }
             }
         }
@@ -85,7 +83,7 @@ class QuantumDFGPass : Pass() {
      */
     private fun connectGatesQubit(
         currentOperation: QuantumOperation,
-        nextOperation: QuantumOperation,
+        nextOperation: QuantumOperation?,
         qubit: QuantumBit
     ) {
         when (currentOperation) {
@@ -100,8 +98,8 @@ class QuantumDFGPass : Pass() {
                     connectQubitWithNextOperation(currentOperation.quBit1, nextOperation)
                 }
             }
-            is QuantumMeasurement -> {
-                currentOperation.addNextDFG(currentOperation.cBit)
+            is QuantumMeasure -> {
+                currentOperation.quBit.addNextDFG(currentOperation.cBit)
             }
             else -> TODO()
         }
@@ -109,7 +107,7 @@ class QuantumDFGPass : Pass() {
 
     private fun connectQubitWithNextOperation(
         qubit: QuantumBitReference,
-        nextOperation: QuantumOperation
+        nextOperation: QuantumOperation?
     ) {
         when (nextOperation) {
             is QuantumGateH -> {
@@ -126,8 +124,8 @@ class QuantumDFGPass : Pass() {
             is QuantumGateX -> {
                 qubit.addNextDFG(nextOperation.quantumBit0)
             }
-            is QuantumMeasurement -> {
-                // TODO will be removed
+            is QuantumMeasure -> {
+                qubit.addNextDFG(nextOperation.quBit)
             }
             else -> TODO()
         }
@@ -149,7 +147,7 @@ class QuantumDFGPass : Pass() {
                     qubit.addNextDFG(firstOp.quBit1)
                 }
             }
-            is QuantumMeasurement -> {
+            is QuantumMeasure -> {
                 qubit.addNextDFG(firstOp.quBit)
             }
             is ClassicIf -> {
@@ -169,12 +167,8 @@ class QuantumDFGPass : Pass() {
             is QuantumGateCX -> {
                 op.quBit0.refersToQubit == qubit || op.quBit1.refersToQubit == qubit
             }
-            is QuantumMeasurement -> {
-                op.quBit.refersToQubit == qubit
-            }
             is QuantumMeasure -> {
-                // we only care about the measurements and not the enclosing "measure"
-                false
+                op.quBit.refersToQubit == qubit
             }
             is ClassicIf -> {
                 // Check condition
@@ -203,9 +197,7 @@ class QuantumDFGPass : Pass() {
                 }
                 is QuantumMeasure -> {
                     // data flow from qubit to classic bit
-                    for (m in op.measurements) {
-                        m.quBit.addNextDFG(m.cBit)
-                    }
+                    op.quBit.addNextDFG(op.cBit)
                 }
                 is ClassicIf -> {
                     // TODO: very hacky, but needed

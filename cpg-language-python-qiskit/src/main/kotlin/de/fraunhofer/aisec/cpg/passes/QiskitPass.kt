@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumCir
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateCX
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateH
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateX
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumMeasure
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumMeasurement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -151,19 +151,32 @@ class QiskitPass : Pass() {
                             if (arg0.initializers.size != arg1.initializers.size) {
                                 TODO()
                             } else {
-                                val newMeasureNode = newQuantumMeasure(expr, currentCircuit)
+
                                 for (i in arg0.initializers.indices) {
                                     val qubitIdx =
                                         getIntFromInitializer(arg0.initializers[i] as Literal<*>)
                                     val cbitIdx =
                                         getIntFromInitializer(arg1.initializers[i] as Literal<*>)
-                                    newMeasureNode.addMeasurement(
-                                        qubitIdx?.let { currentCircuit.getQubitByIdx(it) },
-                                        cbitIdx?.let { currentCircuit.getCbitByIdx(it) }
-                                    )
+                                    val newMeasureNode =
+                                        newQuantumMeasurement(
+                                            expr,
+                                            currentCircuit,
+                                            newQuantumBitRef(
+                                                expr,
+                                                currentCircuit,
+                                                qubitIdx?.let { currentCircuit.getQubitByIdx(it) }
+                                                    ?: TODO()
+                                            ),
+                                            newClassicBitRef(
+                                                expr,
+                                                currentCircuit,
+                                                cbitIdx?.let { currentCircuit.getCbitByIdx(it) }
+                                                    ?: TODO()
+                                            ),
+                                        )
+                                    p0.additionalNodes.add(newMeasureNode)
+                                    p0.additionalNodes.add(newMeasureNode)
                                 }
-                                p0.additionalNodes.add(newMeasureNode)
-                                p0.additionalNodes.add(newMeasureNode)
                             }
                         } else TODO()
                     } else {
@@ -208,11 +221,9 @@ class QiskitPass : Pass() {
                     binOp.rhs = lit
                     cIf.condition = binOp
                     cIf.thenStatement = newGate
-                    currentCircuit.operations.add(cIf)
                     p0.additionalNodes.add(cIf)
                     p0.additionalNodes.add(newGate) // not sure if we want it this way
                 } else {
-                    currentCircuit.operations.add(newGate)
                     p0.additionalNodes.add(newGate)
                 }
             }

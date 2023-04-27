@@ -31,5 +31,5 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 class QuantumBit(override val cpgNode: Node?, val quantumCircuit: QuantumCircuit) :
     Declaration(), QuantumNode {
     val references: MutableSet<QuantumBitReference> = HashSet()
-    val relevantForGates: MutableSet<QuantumGate> = HashSet()
+    val relevantForGates: MutableSet<QuantumOperation> = HashSet()
 }
