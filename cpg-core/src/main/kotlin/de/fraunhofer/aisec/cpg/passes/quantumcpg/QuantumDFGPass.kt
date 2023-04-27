@@ -69,8 +69,9 @@ class QuantumDFGPass : Pass() {
 
                 while (worklist.isNotEmpty()) {
                     val currentOperation = worklist.removeFirst()
-                    var nextOperation = advanceGateUntilRelevant(qubit, currentOperation)
-                    connectGatesQubit(currentOperation, nextOperation, qubit)
+                    val nextOperation = advanceGateUntilRelevant(qubit, currentOperation)
+                    connectOperationsForQubit(currentOperation, nextOperation, qubit)
+
                     // advance one step
                     nextOperation?.let { worklist.add(it) }
                 }
@@ -79,9 +80,9 @@ class QuantumDFGPass : Pass() {
     }
 
     /*
-    Connect the [currentOperation] with the [nextOperation] for the provided [qubit]
+    Connect the [currentOperation] with the [nextOperation] with respect to the provided [qubit]
      */
-    private fun connectGatesQubit(
+    private fun connectOperationsForQubit(
         currentOperation: QuantumOperation,
         nextOperation: QuantumOperation?,
         qubit: QuantumBit
@@ -105,6 +106,9 @@ class QuantumDFGPass : Pass() {
         }
     }
 
+    /*
+    Connect an (incoming) [QuantumBitReference] with a [QuantumOperation].
+     */
     private fun connectQubitWithNextOperation(
         qubit: QuantumBitReference,
         nextOperation: QuantumOperation?
@@ -156,6 +160,9 @@ class QuantumDFGPass : Pass() {
         }
     }
 
+    /*
+    Checks whether a provided [QuantumOperation] is relevant for a given [QunatumBit] (i.e. the qubit is used in the operation).
+     */
     private fun operationIsRelevantForQubit(op: QuantumOperation, qubit: QuantumBit): Boolean {
         return when (op) {
             is QuantumGateH -> {
@@ -180,7 +187,7 @@ class QuantumDFGPass : Pass() {
         }
     }
 
-    /** Add DFG edges within a QuantumOperation */
+    /** Add DFG edges within all [QuantumOperation]s */
     private fun connectDFGWithinOps(circuit: QuantumCircuit) {
         // connect qubits input/output for gates
         for (op in circuit.operations) {

@@ -81,12 +81,7 @@ class OpenQASMPass : Pass() {
                 "h" -> {
                     val quBit = getArgAsQubit(quantumCircuit, expr.arguments[0])
 
-                    val quBitRef =
-                        QuantumNodeBuilder.newQuantumBitRef(
-                            expr.arguments.first(),
-                            quantumCircuit,
-                            quBit
-                        )
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
                     newOperation =
                         QuantumNodeBuilder.newQuantumGateH(expr, quantumCircuit, quBitRef)
                 }
@@ -94,19 +89,9 @@ class OpenQASMPass : Pass() {
                     val quBit0 = getArgAsQubit(quantumCircuit, expr.arguments[0])
                     val quBit1 = getArgAsQubit(quantumCircuit, expr.arguments[1])
 
-                    val quBitRef0 =
-                        QuantumNodeBuilder.newQuantumBitRef(
-                            expr.arguments.first(),
-                            quantumCircuit,
-                            quBit0
-                        )
+                    val quBitRef0 = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit0)
 
-                    val quBitRef1 =
-                        QuantumNodeBuilder.newQuantumBitRef(
-                            expr.arguments.first(),
-                            quantumCircuit,
-                            quBit1
-                        )
+                    val quBitRef1 = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit1)
 
                     newOperation =
                         QuantumNodeBuilder.newQuantumGateCX(
@@ -148,14 +133,9 @@ class OpenQASMPass : Pass() {
         // TODO not really correct.... Find a solution for the naming problem...
         if (ref !is DeclaredReferenceExpression) TODO()
         val name = "Qubit " + ref.name[2]
-        val qubit = circuit.quantumBits?.filter { it.name.equals(Name(name)) }
+        val qubit = circuit.quantumBits?.filter { it.name == Name(name) }
         if (qubit?.size != 1) TODO()
         return qubit.first()
-    }
-
-    private fun getIntFromInitializer(a: Literal<*>): Int? {
-
-        return (a.value as? Number)?.toInt()
     }
 
     override fun cleanup() {
