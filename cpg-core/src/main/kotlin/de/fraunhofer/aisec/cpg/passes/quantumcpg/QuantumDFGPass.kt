@@ -40,7 +40,6 @@ class QuantumDFGPass : Pass() {
     val worklist: MutableList<QuantumOperation> = mutableListOf()
 
     override fun accept(p0: TranslationResult) {
-        return
         val allQuantumCircuits = p0.additionalNodes.filterIsInstance<QuantumCircuit>()
 
         for (circuit in allQuantumCircuits) {
