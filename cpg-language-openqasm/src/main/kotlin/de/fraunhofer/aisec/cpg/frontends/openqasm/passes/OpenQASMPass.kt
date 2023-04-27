@@ -119,12 +119,13 @@ class OpenQASMPass : Pass() {
                     val qubit = getArgAsQubit(quantumCircuit, expr.arguments[0])
                     if (expr.arguments[1] !is DeclaredReferenceExpression) TODO()
                     val name = "Bit " + expr.arguments[1].name[2]
-                    val cbits = quantumCircuit.classicBits?.filter { it.name.equals(Name(name)) }
-                    if (cbits?.size != 1) TODO()
-                    val cBit = cbits.first()
+                    val classicBitList =
+                        quantumCircuit.classicBits?.filter { it.name == Name(name) }
+                    if (classicBitList?.size != 1) TODO()
+                    val classicBit = classicBitList.first()
 
                     newOperation = QuantumNodeBuilder.newQuantumMeasure(expr, quantumCircuit)
-                    newOperation.addMeasurement(qubit, cBit)
+                    newOperation.addMeasurement(qubit, classicBit)
                 }
                 else -> TODO("not implemented")
             }
