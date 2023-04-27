@@ -175,7 +175,6 @@ class QiskitPass : Pass() {
                                             ),
                                         )
                                     p0.additionalNodes.add(newMeasureNode)
-                                    p0.additionalNodes.add(newMeasureNode)
                                     currentCircuit.statements += newMeasureNode
                                 }
                             }

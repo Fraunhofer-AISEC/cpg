@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicBit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumBitRef
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumOperation
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.ClassicBitType
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.QuantumBitType
@@ -66,7 +67,7 @@ class OpenQASMPass : Pass() {
         val cBits =
             flatAST.filterIsInstance<VariableDeclaration>().filter { it.type is ClassicBitType }
 
-        val quantumCircuit =
+        val quantumCircuit: QuantumCircuit =
             newQuantumCircuit(
                 flatAST[2] as? TranslationUnitDeclaration ?: TODO(),
                 quBits.size,
@@ -124,6 +125,7 @@ class OpenQASMPass : Pass() {
 
             // save the gate to the graph
             if (newOperation != null) {
+                (newOperation as? Statement)?.let { quantumCircuit.statements += it }
                 p0.additionalNodes.add(newOperation as? Node ?: TODO())
             }
         }

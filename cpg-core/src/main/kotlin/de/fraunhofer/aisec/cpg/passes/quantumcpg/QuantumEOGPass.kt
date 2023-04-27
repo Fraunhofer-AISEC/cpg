@@ -64,6 +64,7 @@ class QuantumEOGPass : EvaluationOrderGraphPass() {
     }
 
     override fun accept(result: TranslationResult) {
+
         scopeManager = result.scopeManager
 
         // We only want to start at the circuit(s)
