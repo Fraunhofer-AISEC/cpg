@@ -224,9 +224,6 @@ class QuantumDFGPass : Pass() {
                 is QuantumPauliGate -> {
                     // nothing to do
                 }
-                is QuantumGateX -> {
-                    // nothing to do
-                }
                 is QuantumGateH -> {
                     // nothing to do
                 }
@@ -276,12 +273,8 @@ class QuantumDFGPass : Pass() {
         (startOp as? Node)?.nextEOG?.forEach { workinglist.add(it) }
 
         while (workinglist.isNotEmpty()) {
-            val currentOperation = workinglist.removeFirst()
-            when (currentOperation) {
+            when (val currentOperation = workinglist.removeFirst()) {
                 is QuantumOperation -> {
-                    result.add(currentOperation)
-                }
-                is ClassicIf -> {
                     result.add(currentOperation)
                 }
                 else -> {
