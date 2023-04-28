@@ -27,10 +27,8 @@ package de.fraunhofer.aisec.cpg.passes.quantumcpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.followNextEOG
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
@@ -61,7 +59,7 @@ class QuantumDFGPass : Pass() {
                 if (operationIsRelevantForQubit(firstQuantumGate, qubit)) {
                     worklist.add(firstQuantumGate as? QuantumOperation ?: TODO())
                 } else {
-                    advanceGateUntilRelevant(qubit, firstQuantumGate)?.let { worklist.add(it) }
+                    advanceGateUntilRelevant(qubit, firstQuantumGate).forEach { worklist.add(it) }
                 }
 
                 // add DFG from declaration to first use in gate
@@ -73,7 +71,7 @@ class QuantumDFGPass : Pass() {
                     connectOperationsForQubit(currentOperation, nextOperation, qubit)
 
                     // advance one step
-                    nextOperation?.let { worklist.add(it) }
+                    nextOperation.forEach { worklist.add(it) }
                 }
             }
         }
@@ -84,7 +82,7 @@ class QuantumDFGPass : Pass() {
      */
     private fun connectOperationsForQubit(
         currentOperation: QuantumOperation,
-        nextOperation: QuantumOperation?,
+        nextOperation: List<QuantumOperation>,
         qubit: QuantumBit
     ) {
         when (currentOperation) {
@@ -106,7 +104,15 @@ class QuantumDFGPass : Pass() {
                 currentOperation.quBit.addNextDFG(currentOperation.cBit)
             }
             is ClassicIf -> {
-                println("hello")
+                val thenStmt = currentOperation.thenStatement
+                if (thenStmt != null) {
+                    when (thenStmt) {
+                        is QuantumGateX -> {
+                            currentOperation.addNextDFG(thenStmt.quantumBit0)
+                        }
+                        else -> TODO()
+                    }
+                }
             }
             else -> TODO("not implemented: $currentOperation")
         }
@@ -117,30 +123,40 @@ class QuantumDFGPass : Pass() {
      */
     private fun connectQubitWithNextOperation(
         qubit: QuantumBitReference,
-        nextOperation: QuantumOperation?
+        nextOperation: List<QuantumOperation>
     ) {
-        when (nextOperation) {
-            is QuantumGateH -> {
-                qubit.addNextDFG(nextOperation.quantumBit0)
-            }
-            is QuantumGateCX -> {
-                if (nextOperation.quBit0.refersToQubit == qubit.refersToQubit) {
-                    qubit.addNextDFG(nextOperation.quBit0)
+        for (nextOp in nextOperation) {
+            when (nextOp) {
+                is QuantumGateH -> {
+                    qubit.addNextDFG(nextOp.quantumBit0)
                 }
-                if (nextOperation.quBit1.refersToQubit == qubit.refersToQubit) {
-                    qubit.addNextDFG(nextOperation.quBit1)
+                is QuantumGateCX -> {
+                    if (nextOp.quBit0.refersToQubit == qubit.refersToQubit) {
+                        qubit.addNextDFG(nextOp.quBit0)
+                    }
+                    if (nextOp.quBit1.refersToQubit == qubit.refersToQubit) {
+                        qubit.addNextDFG(nextOp.quBit1)
+                    }
+                }
+                is QuantumGateX -> {
+                    qubit.addNextDFG(nextOp.quantumBit0)
+                }
+                is QuantumMeasure -> {
+                    qubit.addNextDFG(nextOp.quBit)
+                }
+                is ClassicIf -> {
+                    connectQubitWithNextOperation(
+                        qubit,
+                        listOf(nextOp.thenStatement as? QuantumOperation ?: TODO())
+                    )
+                }
+                is QuantumPauliGate -> {
+                    qubit.addNextDFG(nextOp.quantumBit0)
+                }
+                else -> {
+                    TODO("connectQubitWithNextOperation not implemented: $nextOperation")
                 }
             }
-            is QuantumPauliGate -> {
-                qubit.addNextDFG(nextOperation.quantumBit0)
-            }
-            is QuantumMeasure -> {
-                qubit.addNextDFG(nextOperation.quBit)
-            }
-            null -> {
-                return
-            }
-            else -> TODO("connectQubitWithNextOperation not implemented: $nextOperation")
         }
     }
 
@@ -188,9 +204,9 @@ class QuantumDFGPass : Pass() {
             }
             is ClassicIf -> {
                 // Check condition
-                val binOp = op.condition as? BinaryOperator
-                (binOp?.lhs as? DeclaredReferenceExpression)?.refersTo == qubit ||
-                    (binOp?.rhs as? DeclaredReferenceExpression)?.refersTo == qubit
+                val thenStmt = op.thenStatement as? QuantumOperation ?: TODO()
+                // TODO LHS RHS are classic bit refs (not qubit)
+                operationIsRelevantForQubit(thenStmt, qubit)
             }
             else -> TODO()
         }
@@ -206,6 +222,9 @@ class QuantumDFGPass : Pass() {
                     op.quBit0.addNextDFG(op.quBit1)
                 }
                 is QuantumPauliGate -> {
+                    // nothing to do
+                }
+                is QuantumGateX -> {
                     // nothing to do
                 }
                 is QuantumGateH -> {
@@ -235,27 +254,42 @@ class QuantumDFGPass : Pass() {
     private fun advanceGateUntilRelevant(
         qubit: QuantumBit,
         startNode: QuantumOperation?
-    ): QuantumOperation? {
-        var currentNode: QuantumOperation? = nextOpEOG(startNode)
-        while (currentNode != null) {
-            if (operationIsRelevantForQubit(currentNode, qubit)) {
-                return currentNode
+    ): List<QuantumOperation> {
+        val candidates = nextOpEOG(startNode)
+        val result: MutableList<QuantumOperation> = mutableListOf()
+        for (nextNode in candidates) {
+            if (operationIsRelevantForQubit(nextNode, qubit)) {
+                result += nextNode
             } else {
-                currentNode = nextOpEOG(currentNode)
+                result += advanceGateUntilRelevant(qubit, nextNode)
             }
         }
-        return null
+        return result
     }
 
     /** Get the next QuantumOperation according to the EOG */
-    private fun nextOpEOG(startOp: QuantumOperation?): QuantumOperation? {
-        val path = (startOp as? Node)?.followNextEOG { it.end is QuantumOperation }
-        val result = path?.lastOrNull()?.end as? QuantumOperation
-        return if (startOp != result) {
-            result
-        } else {
-            null
+    private fun nextOpEOG(startOp: QuantumOperation?): List<QuantumOperation> {
+        if (startOp == null) return emptyList()
+        val result: MutableList<QuantumOperation> = mutableListOf()
+        val workinglist: MutableList<Node> = mutableListOf()
+
+        (startOp as? Node)?.nextEOG?.forEach { workinglist.add(it) }
+
+        while (workinglist.isNotEmpty()) {
+            val currentOperation = workinglist.removeFirst()
+            when (currentOperation) {
+                is QuantumOperation -> {
+                    result.add(currentOperation)
+                }
+                is ClassicIf -> {
+                    result.add(currentOperation)
+                }
+                else -> {
+                    (currentOperation as? Node)?.nextEOG?.forEach { workinglist.add(it) }
+                }
+            }
         }
+        return result
     }
 
     override fun cleanup() {
