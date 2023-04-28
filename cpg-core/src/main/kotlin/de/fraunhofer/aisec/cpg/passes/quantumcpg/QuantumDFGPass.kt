@@ -107,7 +107,7 @@ class QuantumDFGPass : Pass() {
                 val thenStmt = currentOperation.thenStatement
                 if (thenStmt != null) {
                     when (thenStmt) {
-                        is QuantumGateX -> {
+                        is QuantumPauliGate -> {
                             currentOperation.addNextDFG(thenStmt.quantumBit0)
                         }
                         else -> TODO()
@@ -138,7 +138,7 @@ class QuantumDFGPass : Pass() {
                         qubit.addNextDFG(nextOp.quBit1)
                     }
                 }
-                is QuantumGateX -> {
+                is QuantumPauliGate -> {
                     qubit.addNextDFG(nextOp.quantumBit0)
                 }
                 is QuantumMeasure -> {
@@ -149,9 +149,6 @@ class QuantumDFGPass : Pass() {
                         qubit,
                         listOf(nextOp.thenStatement as? QuantumOperation ?: TODO())
                     )
-                }
-                is QuantumPauliGate -> {
-                    qubit.addNextDFG(nextOp.quantumBit0)
                 }
                 else -> {
                     TODO("connectQubitWithNextOperation not implemented: $nextOperation")
