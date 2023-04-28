@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * UnknownType describe the case in which it is not possible for the CPG to determine which Type is
@@ -82,11 +83,14 @@ class UnknownType : Type {
 
     companion object {
         /** A map of [UnknownType] and their respective [Language]. */
-        private val unknownTypes = mutableMapOf<Language<*>?, UnknownType>()
+        private val unknownTypes = ConcurrentHashMap<Language<*>?, UnknownType>()
+        private val unknownTypeNull = UnknownType()
 
         /** Use this function to obtain an [UnknownType] for the particular [language]. */
         @JvmStatic
         fun getUnknownType(language: Language<out LanguageFrontend>?): UnknownType {
+            if (language == null) return unknownTypeNull
+
             return unknownTypes.computeIfAbsent(language) {
                 val unknownType = UnknownType()
                 unknownType.language = language
