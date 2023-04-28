@@ -101,7 +101,10 @@ class QuantumDFGPass : Pass() {
                 }
             }
             is QuantumMeasure -> {
-                currentOperation.quBit.addNextDFG(currentOperation.cBit)
+                currentOperation.cBit.refersToClassicBit.references.forEach {
+                    // Really ugly hack to account for having multiple refs to the bit
+                    currentOperation.quBit.addNextDFG(it)
+                }
             }
             is ClassicIf -> {
                 val thenStmt = currentOperation.thenStatement

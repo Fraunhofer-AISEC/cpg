@@ -124,14 +124,13 @@ class DFGConnectionPass : Pass() {
                             if (index < 0) index += it.size
                             // The order (for Qiskit) is inverted
                             index = it.size - 1 - index
-                            val measuredCBit =
-                                measures
-                                    ?.lastOrNull {
-                                        it.cBit.refersToClassicBit ==
-                                            thisQuantumCircuit.getCbitByIdx(index)
-                                    }
-                                    ?.cBit
-                            measuredCBit?.let { it1 -> bitAccess.addPrevDFG(it1) }
+                            measures
+                                ?.filter { m ->
+                                    m.cBit.refersToClassicBit ==
+                                        thisQuantumCircuit.getCbitByIdx(index)
+                                }
+                                ?.flatMap { m -> m.cBit.refersToClassicBit.references }
+                                ?.forEach { cBit -> bitAccess.addPrevDFG(cBit) }
                         }
                     }
                 }
