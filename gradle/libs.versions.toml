@@ -53,4 +53,4 @@ kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}
 dokka = { id = "org.jetbrains.dokka", version.ref = "kotlin" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
-node = { id = "com.github.node-gradle.node", version = "3.6.0"}
+node = { id = "com.github.node-gradle.node", version = "4.0.0"}
