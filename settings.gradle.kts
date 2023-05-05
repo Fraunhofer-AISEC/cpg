@@ -3,7 +3,7 @@ rootProject.name = "cpg"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 plugins {
-    id("com.gradle.enterprise") version("3.11.3")
+    id("com.gradle.enterprise") version("3.13.1")
 }
 
 gradleEnterprise {
