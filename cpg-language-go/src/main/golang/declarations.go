@@ -84,6 +84,12 @@ func (f *FunctionDeclaration) SetBody(s *Statement) (err error) {
 	return
 }
 
+func (n *NamespaceDeclaration) SetPath(path string) (err error) {
+	err = (*jnigi.ObjectRef)(n).CallMethod(env, "setPath", nil, NewString(path))
+
+	return
+}
+
 func (m *MethodDeclaration) SetType(t *Type) {
 	(*HasType)(m).SetType(t)
 }
@@ -106,6 +112,12 @@ func (m *MethodDeclaration) GetReceiver() *VariableDeclaration {
 
 func (p *ParamVariableDeclaration) SetType(t *Type) {
 	(*HasType)(p).SetType(t)
+}
+
+func (p *ParamVariableDeclaration) SetVariadic(b bool) (err error) {
+	err = (*jnigi.ObjectRef)(p).CallMethod(env, "setVariadic", nil, b)
+
+	return
 }
 
 func (f *FieldDeclaration) SetType(t *Type) {

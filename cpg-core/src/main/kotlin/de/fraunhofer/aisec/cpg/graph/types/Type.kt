@@ -25,12 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
+import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -42,6 +44,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 abstract class Type : Node {
     /** All direct supertypes of this type. */
+    @PopulatedByPass(TypeHierarchyResolver::class)
     @Relationship(value = "SUPER_TYPE", direction = Relationship.Direction.OUTGOING)
     var superTypes = mutableSetOf<Type>()
         protected set

@@ -362,16 +362,7 @@ class DFGPass : Pass() {
                     node.rhs.addNextDFG(node)
                 }
             }
-            "*=",
-            "/=",
-            "%=",
-            "+=",
-            "-=",
-            "<<=",
-            ">>=",
-            "&=",
-            "^=",
-            "|=" -> {
+            in node.language?.compoundAssignmentOperators ?: setOf() -> {
                 node.lhs.let {
                     node.addPrevDFG(it)
                     node.addNextDFG(it)

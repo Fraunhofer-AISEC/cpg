@@ -38,6 +38,7 @@ type SwitchStatement Statement
 type CaseStatement Statement
 type DefaultStatement Statement
 type ForStatement Statement
+type ForEachStatement Statement
 
 const StatementsPackage = GraphPackage + "/statements"
 const StatementClass = StatementsPackage + "/Statement"
@@ -49,6 +50,10 @@ func (f *CompoundStatement) AddStatement(s *Statement) {
 
 func (f *DeclarationStatement) SetSingleDeclaration(d *Declaration) {
 	(*jnigi.ObjectRef)(f).CallMethod(env, "setSingleDeclaration", nil, (*jnigi.ObjectRef)(d).Cast(DeclarationClass))
+}
+
+func (f *DeclarationStatement) AddToPropertyEdgeDeclaration(d *Declaration) {
+	(*jnigi.ObjectRef)(f).CallMethod(env, "addToPropertyEdgeDeclaration", nil, (*jnigi.ObjectRef)(d).Cast(DeclarationClass))
 }
 
 func (m *IfStatement) SetThenStatement(s *Statement) {
@@ -89,6 +94,18 @@ func (fw *ForStatement) SetCondition(e *Expression) {
 
 func (fw *ForStatement) SetStatement(s *Statement) {
 	(*jnigi.ObjectRef)(fw).SetField(env, "statement", (*jnigi.ObjectRef)(s).Cast(StatementClass))
+}
+
+func (fw *ForEachStatement) SetStatement(s *Statement) {
+	(*jnigi.ObjectRef)(fw).SetField(env, "statement", (*jnigi.ObjectRef)(s).Cast(StatementClass))
+}
+
+func (fw *ForEachStatement) SetIterable(s *Statement) {
+	(*jnigi.ObjectRef)(fw).CallMethod(env, "setIterable", nil, (*jnigi.ObjectRef)(s).Cast(StatementClass))
+}
+
+func (fw *ForEachStatement) SetVariable(s *Statement) {
+	(*jnigi.ObjectRef)(fw).SetField(env, "variable", (*jnigi.ObjectRef)(s).Cast(StatementClass))
 }
 
 func (fw *ForStatement) SetIterationStatement(s *Statement) {

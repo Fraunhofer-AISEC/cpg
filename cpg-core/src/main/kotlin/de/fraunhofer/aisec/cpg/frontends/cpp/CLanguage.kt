@@ -60,6 +60,13 @@ open class CLanguage :
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
 
+    /**
+     * All operators which perform and assignment and an operation using lhs and rhs. See
+     * https://en.cppreference.com/w/c/language/operator_assignment
+     */
+    override val compoundAssignmentOperators =
+        setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "|=", "^=")
+
     @Transient
     @JsonIgnore
     override val builtInTypes: Map<String, Type> =

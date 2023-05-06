@@ -59,6 +59,13 @@ open class JavaLanguage :
     override val disjunctiveOperators = listOf("||")
 
     /**
+     * All operators which perform and assignment and an operation using lhs and rhs. See
+     * https://docs.oracle.com/javase/tutorial/java/nutsandbolts/operators.html
+     */
+    override val compoundAssignmentOperators =
+        setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "&=", "|=", "^=")
+
+    /**
      * See
      * [Java Language Specification](https://docs.oracle.com/javase/specs/jls/se19/html/jls-4.html).
      */

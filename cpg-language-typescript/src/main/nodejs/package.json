@@ -6,12 +6,12 @@
     "start": "node src/parser.js"
   },
   "dependencies": {
-    "@types/node": "18.15.3",
+    "@types/node": "18.16.5",
     "typescript": "5.0.2"
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "webpack": "5.76.0",
+    "webpack": "5.82.0",
     "webpack-cli": "5.0.0"
   }
 }

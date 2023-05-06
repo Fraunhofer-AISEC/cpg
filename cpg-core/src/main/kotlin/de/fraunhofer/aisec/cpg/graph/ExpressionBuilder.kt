@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
@@ -412,6 +413,29 @@ fun MetadataProvider.newArraySubscriptionExpression(
 }
 
 /**
+ * Creates a new [RangeExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newRangeExpression(
+    floor: Expression? = null,
+    ceiling: Expression? = null,
+    code: String? = null,
+    rawNode: Any? = null
+): RangeExpression {
+    val node = RangeExpression()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    node.floor = floor
+    node.ceiling = ceiling
+
+    log(node)
+    return node
+}
+
+/**
  * Creates a new [ArrayCreationExpression]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
@@ -446,29 +470,6 @@ fun MetadataProvider.newDeclaredReferenceExpression(
     node.applyMetadata(this, name, rawNode, code, true)
 
     node.type = type
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [ArrayRangeExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newArrayRangeExpression(
-    floor: Expression?,
-    ceil: Expression?,
-    code: String? = null,
-    rawNode: Any? = null
-): ArrayRangeExpression {
-    val node = ArrayRangeExpression()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
-
-    node.floor = floor
-    node.ceiling = ceil
 
     log(node)
     return node

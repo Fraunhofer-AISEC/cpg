@@ -54,6 +54,10 @@ func (frontend *GoLanguageFrontend) NewForStatement(fset *token.FileSet, astNode
 	return (*cpg.ForStatement)(frontend.NewStatement("ForStatement", fset, astNode))
 }
 
+func (frontend *GoLanguageFrontend) NewForEachStatement(fset *token.FileSet, astNode ast.Node) *cpg.ForEachStatement {
+	return (*cpg.ForEachStatement)(frontend.NewStatement("ForEachStatement", fset, astNode))
+}
+
 func (frontend *GoLanguageFrontend) NewSwitchStatement(fset *token.FileSet, astNode ast.Node) *cpg.SwitchStatement {
 	return (*cpg.SwitchStatement)(frontend.NewStatement("SwitchStatement", fset, astNode))
 }
