@@ -26,9 +26,8 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
+import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.fields
 import de.fraunhofer.aisec.cpg.graph.methods
@@ -36,19 +35,17 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.variables
-import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 
 internal class VariableResolverTest : BaseTest() {
-    private val topLevel = Path.of("src", "test", "resources", "variables")
 
     @Test
     @Throws(Exception::class)
     fun testFields() {
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = GraphExamples.getVariables()
         val methods = result.methods
         val fields = result.fields
         val field = findByUniqueName(fields, "field")
@@ -67,7 +64,7 @@ internal class VariableResolverTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testLocalVars() {
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = GraphExamples.getVariables()
         val methods = result.methods
         val fields = result.fields
         val field = findByUniqueName(fields, "field")

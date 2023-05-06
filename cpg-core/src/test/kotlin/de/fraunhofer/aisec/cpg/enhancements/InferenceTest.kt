@@ -25,13 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements
 
-import de.fraunhofer.aisec.cpg.InferenceConfiguration
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.get
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -40,13 +38,12 @@ class InferenceTest {
 
     @Test
     fun testRecordInference() {
-        val file = File("src/test/resources/inference/record.cpp")
         val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.inferenceConfiguration(
-                    InferenceConfiguration.builder().inferRecords(true).build()
-                )
-            }
+            GraphExamples.getInferenceRecord()
+                .components
+                .firstOrNull()
+                ?.translationUnits
+                ?.firstOrNull()
 
         assertNotNull(tu)
 
@@ -69,13 +66,12 @@ class InferenceTest {
 
     @Test
     fun testRecordInferencePointer() {
-        val file = File("src/test/resources/inference/record_ptr.cpp")
         val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.inferenceConfiguration(
-                    InferenceConfiguration.builder().inferRecords(true).build()
-                )
-            }
+            GraphExamples.getInferenceRecordPtr()
+                .components
+                .firstOrNull()
+                ?.translationUnits
+                ?.firstOrNull()
 
         assertNotNull(tu)
 
