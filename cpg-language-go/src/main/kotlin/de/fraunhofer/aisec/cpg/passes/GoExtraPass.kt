@@ -112,8 +112,8 @@ class GoExtraPass : Pass(), ScopeProvider {
     override val scope: Scope?
         get() = scopeManager.currentScope
 
-    override fun accept(t: TranslationResult) {
-        scopeManager = t.scopeManager
+    override fun accept(component: Component, result: TranslationResult) {
+        scopeManager = result.scopeManager
 
         val walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { _, parent, node ->
@@ -125,7 +125,7 @@ class GoExtraPass : Pass(), ScopeProvider {
             }
         }
 
-        for (tu in t.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }

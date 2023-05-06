@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -147,16 +148,16 @@ open class TypeResolver : Pass() {
      * Pass on the TypeSystem: Sets RecordDeclaration Relationship from ObjectType to
      * RecordDeclaration
      *
-     * @param translationResult
+     * @param result
      */
-    override fun accept(translationResult: TranslationResult) {
+    override fun accept(component: Component, result: TranslationResult) {
         removeDuplicateTypes()
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit(::ensureUniqueType)
         walker.registerOnNodeVisit(::handle)
         walker.registerOnNodeVisit(::ensureUniqueSecondaryTypeEdge)
 
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }

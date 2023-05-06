@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
@@ -58,8 +59,8 @@ open class TypeHierarchyResolver : Pass() {
     protected val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enums = mutableListOf<EnumDeclaration>()
 
-    override fun accept(translationResult: TranslationResult) {
-        for (tu in translationResult.translationUnits) {
+    override fun accept(component: Component, result: TranslationResult) {
+        for (tu in component.translationUnits) {
             findRecordsAndEnums(tu)
         }
         for (recordDecl in recordMap.values) {
@@ -75,7 +76,7 @@ open class TypeHierarchyResolver : Pass() {
             enumDecl.superTypeDeclarations = allSupertypes
         }
 
-        translationResult.translationUnits.forEach { SubgraphWalker.refreshType(it) }
+        result.translationUnits.forEach { SubgraphWalker.refreshType(it) }
     }
 
     protected fun findRecordsAndEnums(node: Node) {

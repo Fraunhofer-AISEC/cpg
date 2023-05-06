@@ -80,6 +80,7 @@ class TranslationResult(
      *
      * @return the list of all translation units.
      */
+    @Deprecated(message = "translation units of individual components should be accessed instead")
     val translationUnits: List<TranslationUnitDeclaration>
         get() {
             if (components.size == 1) {

@@ -76,9 +76,9 @@ open class CallResolver : SymbolResolverPass() {
         containingType.clear()
     }
 
-    override fun accept(translationResult: TranslationResult) {
-        scopeManager = translationResult.scopeManager
-        config = translationResult.config
+    override fun accept(component: Component, result: TranslationResult) {
+        scopeManager = result.scopeManager
+        config = result.config
 
         walker = ScopedWalker(scopeManager)
         walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }
@@ -88,17 +88,17 @@ open class CallResolver : SymbolResolverPass() {
             registerMethods(currentClass, currentNode)
         }
 
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
         walker.clearCallbacks()
         walker.registerHandler { node, _ -> fixInitializers(node) }
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
         walker.clearCallbacks()
         walker.registerHandler { node, _ -> handleNode(node) }
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }

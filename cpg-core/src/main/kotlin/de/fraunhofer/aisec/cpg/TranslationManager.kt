@@ -95,9 +95,14 @@ private constructor(
                 for (pass in config.registeredPasses) {
                     bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
                     if (pass.runsWithCurrentFrontend(executedFrontends)) {
-                        executedPasses.add(pass)
-                        pass.accept(result)
+                        // Apply pass for each component.
+                        // TODO(oxisto): select pass based on language of component
+                        for (component in result.components) {
+                            pass.accept(component, result)
+                        }
                     }
+
+                    executedPasses.add(pass)
                     bench.addMeasurement()
                     if (result.isCancelled) {
                         log.warn("Analysis interrupted, stopping Pass evaluation")

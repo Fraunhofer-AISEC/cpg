@@ -60,12 +60,12 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 open class VariableUsageResolver : SymbolResolverPass() {
 
-    override fun accept(result: TranslationResult) {
+    override fun accept(component: Component, result: TranslationResult) {
         scopeManager = result.scopeManager
         config = result.config
 
         walker = ScopedWalker(scopeManager)
-        for (tu in result.translationUnits) {
+        for (tu in component.translationUnits) {
             currentTU = tu
             walker.clearCallbacks()
             walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }

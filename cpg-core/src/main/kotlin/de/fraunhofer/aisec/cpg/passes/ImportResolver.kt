@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
@@ -47,8 +48,8 @@ open class ImportResolver : Pass() {
         importables.clear()
     }
 
-    override fun accept(result: TranslationResult) {
-        for (tu in result.translationUnits) {
+    override fun accept(component: Component, result: TranslationResult) {
+        for (tu in component.translationUnits) {
             findImportables(tu)
         }
         for (recordDecl in records) {

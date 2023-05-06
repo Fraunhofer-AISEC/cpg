@@ -53,10 +53,10 @@ open class ControlFlowSensitiveDFGPass : Pass() {
         // Nothing to do
     }
 
-    override fun accept(translationResult: TranslationResult) {
+    override fun accept(component: Component, result: TranslationResult) {
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit(::handle)
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }

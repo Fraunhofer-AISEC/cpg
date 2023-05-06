@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.newDeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
@@ -42,8 +43,8 @@ import java.util.*
 @ExecuteFirst
 @RequiredFrontend(LLVMIRLanguageFrontend::class)
 class CompressLLVMPass : Pass() {
-    override fun accept(t: TranslationResult) {
-        val flatAST = SubgraphWalker.flattenAST(t)
+    override fun accept(component: Component, result: TranslationResult) {
+        val flatAST = SubgraphWalker.flattenAST(component)
         // Get all goto statements
         val allGotos = flatAST.filterIsInstance<GotoStatement>()
         // Get all LabelStatements which are only referenced from a single GotoStatement

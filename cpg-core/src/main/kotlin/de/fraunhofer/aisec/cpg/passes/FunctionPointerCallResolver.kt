@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -59,16 +60,17 @@ class FunctionPointerCallResolver : Pass() {
     private lateinit var walker: ScopedWalker
     private var inferDfgForUnresolvedCalls = false
 
-    override fun accept(t: TranslationResult) {
-        scopeManager = t.scopeManager
-        inferDfgForUnresolvedCalls = t.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
-        walker = ScopedWalker(t.scopeManager)
+    override fun accept(component: Component, result: TranslationResult) {
+        scopeManager = result.scopeManager
+        inferDfgForUnresolvedCalls =
+            result.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
+        walker = ScopedWalker(result.scopeManager)
         walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
             walker.collectDeclarations(currNode)
         }
         walker.registerHandler { node, _ -> resolve(node) }
 
-        for (tu in t.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }

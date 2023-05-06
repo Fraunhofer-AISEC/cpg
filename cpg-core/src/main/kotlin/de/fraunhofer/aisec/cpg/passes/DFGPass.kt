@@ -26,15 +26,12 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -43,14 +40,14 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 @DependsOn(VariableUsageResolver::class)
 @DependsOn(CallResolver::class)
 class DFGPass : Pass() {
-    override fun accept(tr: TranslationResult) {
+    override fun accept(component: Component, result: TranslationResult) {
         val inferDfgForUnresolvedCalls =
-            tr.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
+            result.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit2 { node, parent ->
             handle(node, parent, inferDfgForUnresolvedCalls)
         }
-        for (tu in tr.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }

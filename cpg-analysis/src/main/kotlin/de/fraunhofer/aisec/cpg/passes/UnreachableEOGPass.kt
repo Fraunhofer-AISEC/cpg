@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -41,8 +42,8 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  */
 @DependsOn(ControlFlowSensitiveDFGPass::class)
 class UnreachableEOGPass : Pass() {
-    override fun accept(t: TranslationResult) {
-        for (tu in t.translationUnits) {
+    override fun accept(component: Component, result: TranslationResult) {
+        for (tu in component.translationUnits) {
             tu.accept(
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node>() {

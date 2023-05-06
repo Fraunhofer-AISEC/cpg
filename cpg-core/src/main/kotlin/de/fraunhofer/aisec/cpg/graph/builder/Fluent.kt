@@ -46,7 +46,7 @@ fun LanguageFrontend.translationResult(
     node.addComponent(component)
     init(node)
 
-    config.registeredPasses.forEach { it.accept(node) }
+    config.registeredPasses.forEach { it.accept(component, node) }
 
     return node
 }

@@ -29,17 +29,18 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.passes.order.*
-import java.util.function.Consumer
+import java.util.function.BiConsumer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
  * Represents an abstract class that enhances the graph before it is persisted.
  *
- * Passes are expected to mutate the [TranslationResult].
+ * Passes are expected to mutate the [Component].
  */
-abstract class Pass protected constructor() : Consumer<TranslationResult> {
+abstract class Pass protected constructor() : BiConsumer<Component, TranslationResult> {
     var name: String
         protected set
 
