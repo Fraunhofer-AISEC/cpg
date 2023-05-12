@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.Transient
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
  * right hand expression (rhs) and an operatorCode.
  */
-class BinaryOperator :
+open class BinaryOperator :
     Expression(), HasType.TypeListener, AssignmentHolder, HasBase, ArgumentHolder {
     /** The left-hand expression. */
     @AST

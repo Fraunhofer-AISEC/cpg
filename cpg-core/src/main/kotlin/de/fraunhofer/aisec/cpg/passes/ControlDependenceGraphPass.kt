@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,27 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements
+package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.BranchingNode
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import java.util.Objects
+import de.fraunhofer.aisec.cpg.TranslationResult
 
-class CatchClause : Statement(), BranchingNode {
-    @AST var parameter: VariableDeclaration? = null
-
-    @AST var body: CompoundStatement? = null
-
-    override val branchingDecision: Node?
-        get() = parameter
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is CatchClause) return false
-        return super.equals(other) && parameter == other.parameter && body == other.body
+class ControlDependenceGraphPass : Pass() {
+    override fun cleanup() {
+        TODO("Not yet implemented")
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), parameter, body)
+    override fun accept(t: TranslationResult) {
+        TODO("Not yet implemented")
+    }
 }

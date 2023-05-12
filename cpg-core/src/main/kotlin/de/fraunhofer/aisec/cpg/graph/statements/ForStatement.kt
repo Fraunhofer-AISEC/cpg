@@ -25,16 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.SplitsControlFlow
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import java.util.*
 
-class ForStatement : Statement(), SplitsControlFlow {
+class ForStatement : Statement(), BranchingNode {
     @AST var statement: Statement? = null
 
     @AST var initializerStatement: Statement? = null
@@ -45,11 +43,8 @@ class ForStatement : Statement(), SplitsControlFlow {
 
     @AST var iterationStatement: Statement? = null
 
-    override val splittingNode: Node?
+    override val branchingDecision: Node?
         get() = condition ?: conditionDeclaration
-
-    @PopulatedByPass(EvaluationOrderGraphPass::class)
-    override val dominatedNodes = mutableListOf<Node>()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

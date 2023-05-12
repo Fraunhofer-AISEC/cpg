@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -36,12 +37,16 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -103,13 +108,37 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
 
     /** Incoming control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
     var prevEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
 
     /** outgoing control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
     var nextEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
+
+    /**
+     * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
+     * Graph (CDG).
+     */
+    @PopulatedByPass(ControlDependenceGraphPass::class)
+    @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
+    var nextCDGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+        protected set
+
+    var nextCDG by PropertyEdgeDelegate(Node::nextCDGEdges, true)
+
+    /**
+     * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
+     * Dependence Graph (CDG).
+     */
+    @PopulatedByPass(ControlDependenceGraphPass::class)
+    @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
+    var prevCDGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+        protected set
+
+    var prevDG by PropertyEdgeDelegate(Node::prevCDGEdges, true)
 
     /**
      * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
@@ -147,10 +176,13 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
             this.nextEOGEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
         }
 
+    @PopulatedByPass(DFGPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     var prevDFG: MutableSet<Node> = HashSet()
 
-    @Relationship(value = "DFG") var nextDFG: MutableSet<Node> = HashSet()
+    @PopulatedByPass(DFGPass::class)
+    @Relationship(value = "DFG")
+    var nextDFG: MutableSet<Node> = HashSet()
 
     var typedefs: MutableSet<TypedefDeclaration> = HashSet()
 

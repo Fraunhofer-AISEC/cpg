@@ -23,16 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-/** A node triggering a conditional execution of other code. */
-interface SplitsControlFlow {
-    /** The node which affects the next EOG edge. Typically, this is a condition or similar. */
-    val splittingNode: Node?
+import de.fraunhofer.aisec.cpg.graph.BranchingNode
+import de.fraunhofer.aisec.cpg.graph.Node
 
-    /**
-     * The nodes which can be conditionally visited depending on [splittingNode]. It does only
-     * contain the "next hop", not the child nodes of the subtree.
-     */
-    val dominatedNodes: MutableList<Node>
+class ShortCircuitOperator : BinaryOperator(), BranchingNode {
+    override val branchingDecision: Node
+        get() = lhs
 }

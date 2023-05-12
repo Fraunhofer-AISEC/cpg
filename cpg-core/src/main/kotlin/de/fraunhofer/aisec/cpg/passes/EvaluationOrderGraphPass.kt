@@ -892,7 +892,6 @@ open class EvaluationOrderGraphPass : Pass() {
         } else {
             openBranchNodes.addAll(openConditionEOGs)
         }
-        node.dominatedNodes.addAll(node.nextEOG)
         scopeManager.leaveScope(node)
         setCurrentEOGs(openBranchNodes)
     }

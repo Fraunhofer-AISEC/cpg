@@ -25,16 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.SplitsControlFlow
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import java.util.Objects
 
-class ForEachStatement : Statement(), SplitsControlFlow {
+class ForEachStatement : Statement(), BranchingNode {
     /**
      * This field contains the iteration variable of the loop. It can be either a new variable
      * declaration or a reference to an existing variable.
@@ -54,11 +52,8 @@ class ForEachStatement : Statement(), SplitsControlFlow {
     /** This field contains the body of the loop. */
     @AST var statement: Statement? = null
 
-    override val splittingNode: Node?
+    override val branchingDecision: Node?
         get() = iterable
-
-    @PopulatedByPass(EvaluationOrderGraphPass::class)
-    override val dominatedNodes = mutableListOf<Node>()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

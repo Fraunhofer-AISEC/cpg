@@ -25,10 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import java.util.ArrayList
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -37,7 +35,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represents an expression containing a ternary operator: `var x = condition ? valueIfTrue :
  * valueIfFalse`;
  */
-class ConditionalExpression : Expression(), HasType.TypeListener, SplitsControlFlow {
+class ConditionalExpression : Expression(), HasType.TypeListener, BranchingNode {
     @AST var condition: Expression = ProblemExpression("could not parse condition expression")
 
     @AST
@@ -95,10 +93,8 @@ class ConditionalExpression : Expression(), HasType.TypeListener, SplitsControlF
             .build()
     }
 
-    override val splittingNode: Node
+    override val branchingDecision: Node
         get() = condition
-    @PopulatedByPass(EvaluationOrderGraphPass::class)
-    override val dominatedNodes: MutableList<Node> = mutableListOf()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
