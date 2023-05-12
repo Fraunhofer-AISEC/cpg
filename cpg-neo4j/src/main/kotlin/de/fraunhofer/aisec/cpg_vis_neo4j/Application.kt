@@ -184,6 +184,12 @@ class Application : Callable<Int> {
     private var inferNodes: Boolean = false
 
     @CommandLine.Option(
+        names = ["--schema"],
+        description = ["Print the CPGs nodes and edges that they can have."]
+    )
+    private var schema: Boolean = false
+
+    @CommandLine.Option(
         names = ["--top-level"],
         description =
             [
@@ -364,6 +370,12 @@ class Application : Callable<Int> {
         return translationConfiguration.build()
     }
 
+    private fun printSchema(filenames: Collection<String>) {
+        val schema = Schema()
+        schema.extractSchema()
+        filenames.forEach { schema.printToFile(it) }
+    }
+
     /**
      * The entrypoint of the cpg-vis-neo4j.
      *
@@ -376,6 +388,11 @@ class Application : Callable<Int> {
      */
     @Throws(Exception::class, ConnectException::class, IllegalArgumentException::class)
     override fun call(): Int {
+
+        if (schema) {
+            printSchema(mutuallyExclusiveParameters.files)
+            return EXIT_SUCCESS
+        }
         val translationConfiguration = setupTranslationConfiguration()
 
         val startTime = System.currentTimeMillis()
