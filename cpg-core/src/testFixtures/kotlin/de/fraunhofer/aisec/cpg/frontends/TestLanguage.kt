@@ -43,10 +43,13 @@ import kotlin.reflect.KClass
  * This is a test language that can be used for unit test, where we need a language but do not have
  * a specific one.
  */
-class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLanguageFrontend>() {
+open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLanguageFrontend>() {
     override val fileExtensions: List<String> = listOf()
     override val namespaceDelimiter: String
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
+    override val compoundAssignmentOperators =
+        setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "|=", "^=")
+
     override val builtInTypes: Map<String, Type> =
         mapOf(
             "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
@@ -70,14 +73,18 @@ class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLanguageFro
     }
 }
 
+class StructTestLanguage(namespaceDelimiter: String = "::") :
+    TestLanguage(namespaceDelimiter), HasStructs, HasClasses, HasDefaultArguments
+
 class TestLanguageFrontend(
     scopeManager: ScopeManager = ScopeManager(),
-    namespaceDelimiter: String = "::"
+    namespaceDelimiter: String = "::",
+    language: Language<out LanguageFrontend> = TestLanguage(namespaceDelimiter)
 ) :
     LanguageFrontend(
-        TestLanguage(namespaceDelimiter),
+        language,
         TranslationConfiguration.builder().build(),
-        ScopeManager(),
+        scopeManager,
     ) {
     override fun parse(file: File): TranslationUnitDeclaration {
         TODO("Not yet implemented")

@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Transient
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
@@ -61,7 +60,10 @@ open class BinaryOperator :
     override var operatorCode: String? = null
         set(value) {
             field = value
-            if (compoundOperators.contains(operatorCode) || operatorCode == "=") {
+            if (
+                (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) ||
+                    (operatorCode == "=")
+            ) {
                 NodeBuilder.LOGGER.warn(
                     "Creating a BinaryOperator with an assignment operator code is deprecated. The class AssignExpression should be used instead."
                 )
@@ -84,7 +86,7 @@ open class BinaryOperator :
                 registerTypeListener(lhs as HasType.TypeListener)
                 registerTypeListener(this.lhs as HasType.TypeListener)
             }
-        } else if (compoundOperators.contains(operatorCode)) {
+        } else if (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) {
             if (lhs is DeclaredReferenceExpression) {
                 // declared reference expr is the left-hand side of an assignment -> writing to the
                 // var
@@ -243,10 +245,4 @@ open class BinaryOperator :
                 null
             }
         }
-
-    companion object {
-        /** Required for compound BinaryOperators. This should not be stored in the graph */
-        @Transient
-        val compoundOperators = listOf("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=")
-    }
 }

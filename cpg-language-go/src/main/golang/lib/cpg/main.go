@@ -58,6 +58,7 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 		nil,
 		nil,
 		ast.CommentMap{},
+		"",
 		nil,
 	}
 
@@ -85,6 +86,8 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	goFrontend.TopLevel = string(topLevel)
 
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, string(path), string(src), parser.ParseComments)

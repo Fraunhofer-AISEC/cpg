@@ -65,10 +65,11 @@ fun MetadataProvider.newTranslationUnitDeclaration(
 fun MetadataProvider.newFunctionDeclaration(
     name: CharSequence?,
     code: String? = null,
-    rawNode: Any? = null
+    rawNode: Any? = null,
+    localNameOnly: Boolean = false
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, localNameOnly)
 
     log(node)
     return node

@@ -32,11 +32,14 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.passes.GoExtraPass
+import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.io.FileOutputStream
 
 @SupportsParallelParsing(false)
+@RegisterExtraPass(GoExtraPass::class)
 class GoLanguageFrontend(
     language: Language<GoLanguageFrontend>,
     config: TranslationConfiguration,
@@ -84,7 +87,7 @@ class GoLanguageFrontend(
     override fun parse(file: File): TranslationUnitDeclaration {
         return parseInternal(
             file.readText(Charsets.UTF_8),
-            file.path,
+            file.absolutePath,
             config.topLevel?.absolutePath ?: file.parent
         )
     }

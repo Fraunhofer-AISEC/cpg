@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.TypeManager
@@ -32,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
 import kotlin.collections.ArrayList
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -44,6 +46,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
     /** The [Declaration]s this expression might refer to. */
+    @PopulatedByPass(VariableUsageResolver::class)
     @Relationship(value = "REFERS_TO")
     var refersTo: Declaration? = null
         set(value) {

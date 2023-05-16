@@ -37,6 +37,7 @@ import (
 var env *jnigi.Env
 
 type Type struct{ *jnigi.ObjectRef }
+type ObjectType Type
 
 const TypesPackage = GraphPackage + "/types"
 const TypeClass = TypesPackage + "/Type"
@@ -62,10 +63,6 @@ func (*Type) GetClassName() string {
 
 func (*Type) IsArray() bool {
 	return false
-}
-
-type ObjectType struct {
-	Type
 }
 
 func (*ObjectType) GetClassName() string {

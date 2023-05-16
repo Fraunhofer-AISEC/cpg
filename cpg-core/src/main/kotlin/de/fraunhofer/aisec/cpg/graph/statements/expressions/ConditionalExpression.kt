@@ -35,7 +35,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represents an expression containing a ternary operator: `var x = condition ? valueIfTrue :
  * valueIfFalse`;
  */
-class ConditionalExpression : Expression(), HasType.TypeListener, BranchingNode {
+class ConditionalExpression : Expression(), HasType.TypeListener, ArgumentHolder, BranchingNode {
     @AST var condition: Expression = ProblemExpression("could not parse condition expression")
 
     @AST
@@ -95,6 +95,15 @@ class ConditionalExpression : Expression(), HasType.TypeListener, BranchingNode 
 
     override val branchingDecision: Node
         get() = condition
+
+    override fun addArgument(expression: Expression) {
+        // Do nothing
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        // Do nothing
+        return false
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

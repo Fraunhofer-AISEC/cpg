@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.TypeManager
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
@@ -59,14 +58,6 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
 
     /** Virtual property to access [initializerEdges] without property edges. */
     var initializers by PropertyEdgeDelegate(InitializerListExpression::initializerEdges)
-
-    fun addInitializer(initializer: Expression) {
-        val edge = PropertyEdge(this, initializer)
-        edge.addProperty(Properties.INDEX, initializerEdges.size)
-        initializer.registerTypeListener(this)
-        addPrevDFG(initializer)
-        initializerEdges.add(edge)
-    }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
@@ -128,5 +119,10 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
             propertyEqualsList(initializerEdges, other.initializerEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), initializers)
+    override fun hashCode(): Int {
+        // Including initializerEdges directly is a HUGE performance loss in the calculation of each
+        // hash code. Therefore, we only include the array's size, which should hopefully be sort of
+        // unique to avoid too many hash collisions.
+        return Objects.hash(super.hashCode(), initializerEdges.size)
+    }
 }

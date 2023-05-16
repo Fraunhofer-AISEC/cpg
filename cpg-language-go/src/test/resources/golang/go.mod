@@ -1,1 +1,1 @@
-module p
+module mymodule

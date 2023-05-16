@@ -111,9 +111,7 @@ open class EvaluationOrderGraphPass : Pass() {
         map[ArrayCreationExpression::class.java] = {
             handleArrayCreationExpression(it as ArrayCreationExpression)
         }
-        map[ArrayRangeExpression::class.java] = {
-            handleArrayRangeExpression(it as ArrayRangeExpression)
-        }
+        map[RangeExpression::class.java] = { handleRangeExpression(it as RangeExpression) }
         map[DeclarationStatement::class.java] = {
             handleDeclarationStatement(it as DeclarationStatement)
         }
@@ -427,10 +425,10 @@ open class EvaluationOrderGraphPass : Pass() {
         pushToEOG(node)
     }
 
-    protected fun handleArrayRangeExpression(node: ArrayRangeExpression) {
+    protected fun handleRangeExpression(node: RangeExpression) {
         createEOG(node.floor)
         createEOG(node.ceiling)
-        createEOG(node.step)
+        createEOG(node.third)
         pushToEOG(node)
     }
 

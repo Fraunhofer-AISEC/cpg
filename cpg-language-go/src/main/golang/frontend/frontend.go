@@ -45,6 +45,7 @@ type GoLanguageFrontend struct {
 	File       *ast.File
 	Module     *modfile.File
 	CommentMap ast.CommentMap
+	TopLevel   string
 
 	CurrentTU *cpg.TranslationUnitDeclaration
 }
@@ -101,6 +102,18 @@ func (g *GoLanguageFrontend) LogDebug(format string, args ...interface{}) (err e
 	return
 }
 
+func (g *GoLanguageFrontend) LogTrace(format string, args ...interface{}) (err error) {
+	var logger *jnigi.ObjectRef
+
+	if logger, err = g.getLog(); err != nil {
+		return
+	}
+
+	err = logger.CallMethod(env, "trace", nil, cpg.NewString(fmt.Sprintf(format, args...)))
+
+	return
+}
+
 func (g *GoLanguageFrontend) LogError(format string, args ...interface{}) (err error) {
 	var logger *jnigi.ObjectRef
 
@@ -121,10 +134,14 @@ func (g *GoLanguageFrontend) GetLanguage() (l *cpg.Language, err error) {
 }
 
 func updateCode(fset *token.FileSet, node *cpg.Node, astNode ast.Node) {
+	node.SetCode(code(fset, astNode))
+}
+
+func code(fset *token.FileSet, astNode ast.Node) string {
 	var codeBuf bytes.Buffer
 	_ = printer.Fprint(&codeBuf, fset, astNode)
 
-	node.SetCode(codeBuf.String())
+	return codeBuf.String()
 }
 
 func updateLocation(fset *token.FileSet, node *cpg.Node, astNode ast.Node) {

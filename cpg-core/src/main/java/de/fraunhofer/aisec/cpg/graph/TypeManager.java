@@ -31,10 +31,7 @@ import de.fraunhofer.aisec.cpg.ScopeManager;
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope;
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope;
@@ -113,6 +110,7 @@ public class TypeManager {
         }
       }
     }
+
     return null;
   }
 
