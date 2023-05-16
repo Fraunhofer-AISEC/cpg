@@ -250,6 +250,11 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         prev.nextDFG.add(this)
     }
 
+    fun addPrevCDG(prev: Node) {
+        prevCDGEdges.add(PropertyEdge(prev, this))
+        prev.nextCDGEdges.add(PropertyEdge(prev, this))
+    }
+
     fun addAllPrevDFG(prev: Collection<Node>) {
         prevDFG.addAll(prev)
         prev.forEach { it.nextDFG.add(this) }

@@ -107,7 +107,7 @@ class ControlFlowSensitiveDFGPass : Pass() {
         fun transfer(
             currentNode: Node,
             state: State<Node, Set<Node>>,
-            worklist: Worklist<Node, Set<Node>>
+            worklist: Worklist<Node, Node, Set<Node>>
         ): Pair<State<Node, Set<Node>>, Boolean> {
             // We will set this if we write to a variable
             val writtenDecl: Declaration?

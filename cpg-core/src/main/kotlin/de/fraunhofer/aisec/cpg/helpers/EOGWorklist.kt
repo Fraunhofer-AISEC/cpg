@@ -62,9 +62,9 @@ class PowersetLattice(override val elements: Set<Node>) : Lattice<Set<Node>>(ele
 }
 
 /**
- * Stores the current state. I.e., it maps a [V] [Node] to a [Lattice]. It provides some useful
- * functions e.g. to check if the mapping has to be updated (e.g. because there are new nodes or
- * because a new lattice is bigger than the old one).
+ * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [PropertyEdge]) to a [Lattice]. It
+ * provides some useful functions e.g. to check if the mapping has to be updated (e.g. because there
+ * are new nodes or because a new lattice is bigger than the old one).
  */
 open class State<K, V> : IdentityHashMap<K, Lattice<V>>() {
 
@@ -132,15 +132,15 @@ open class State<K, V> : IdentityHashMap<K, Lattice<V>>() {
  * A worklist. Essentially, it stores mappings of nodes to the states which are available there and
  * determines which nodes have to be analyzed.
  */
-class Worklist<K : Any, V>() {
+class Worklist<K : Any, N : Any, V>() {
     /** A mapping of nodes to the state which is currently available there. */
-    var globalState: MutableMap<K, State<K, V>> = mutableMapOf()
+    var globalState: MutableMap<K, State<N, V>> = mutableMapOf()
         private set
 
     /** A list of all nodes which have already been visited. */
     private val alreadySeen = mutableListOf<K>()
 
-    constructor(globalState: MutableMap<K, State<K, V>> = mutableMapOf()) : this() {
+    constructor(globalState: MutableMap<K, State<N, V>> = mutableMapOf()) : this() {
         this.globalState = globalState
     }
 
@@ -148,13 +148,13 @@ class Worklist<K : Any, V>() {
      * The actual worklist, i.e., elements which still have to be analyzed and the state which
      * should be considered there.
      */
-    private val nodeOrder: MutableList<Pair<K, State<K, V>>> = mutableListOf()
+    private val nodeOrder: MutableList<Pair<K, State<N, V>>> = mutableListOf()
 
     /**
      * Adds [newNode] and the [state] to the [globalState] (i.e., computes the [State.lub] of the
      * current state there and [state]). Returns true if there was an update.
      */
-    fun update(newNode: K, state: State<K, V>): Boolean {
+    fun update(newNode: K, state: State<N, V>): Boolean {
         val (newGlobalState, update) = globalState[newNode]?.lub(state) ?: Pair(state, true)
         if (update) {
             globalState[newNode] = newGlobalState
@@ -167,7 +167,7 @@ class Worklist<K : Any, V>() {
      * the node. Returns `true` if there was a change which means that the node has to be analyzed.
      * If it returns `false`, the [newNode] wasn't added to the worklist as the state didn't change.
      */
-    fun push(newNode: K, state: State<K, V>): Boolean {
+    fun push(newNode: K, state: State<N, V>): Boolean {
         val currentEntry = nodeOrder.find { it.first == newNode }
         val update: Boolean
         val newEntry =
@@ -192,7 +192,7 @@ class Worklist<K : Any, V>() {
     fun isEmpty() = nodeOrder.isEmpty()
 
     /** Removes a [Node] from the worklist and returns the [Node] together with its [State] */
-    fun pop(): Pair<K, State<K, V>> {
+    fun pop(): Pair<K, State<N, V>> {
         val node = nodeOrder.removeFirst()
         alreadySeen.add(node.first)
         return node
@@ -202,7 +202,7 @@ class Worklist<K : Any, V>() {
     fun hasAlreadySeen(currentNode: K) = currentNode in alreadySeen
 
     /** Computes the meet over paths for all the states in [globalState]. */
-    fun mop(): State<K, V> {
+    fun mop(): State<N, V> {
         val firstKey = globalState.keys.firstOrNull()
         val state = globalState[firstKey]
         for ((_, v) in globalState) {
@@ -231,7 +231,7 @@ class EOGWorklist {
     inline fun <reified K : Node, V> iterateEOG(
         startNode: K,
         startState: State<K, V>,
-        transformation: (K, State<K, V>, Worklist<K, V>) -> Pair<State<K, V>, Boolean>
+        transformation: (K, State<K, V>, Worklist<K, K, V>) -> Pair<State<K, V>, Boolean>
     ): State<K, V> {
         val worklist = Worklist(mutableMapOf(Pair(startNode, startState)))
         worklist.push(startNode, startState)
@@ -251,9 +251,35 @@ class EOGWorklist {
         startEdges: List<K>,
         startState: State<K, V>,
         transformation:
-            (PropertyEdge<Node>, State<K, V>, Worklist<K, V>) -> Pair<State<K, V>, Boolean>
+            (PropertyEdge<Node>, State<K, V>, Worklist<K, K, V>) -> Pair<State<K, V>, Boolean>
     ): State<K, V> {
         val globalState = mutableMapOf<K, State<K, V>>()
+        for (startEdge in startEdges) {
+            globalState[startEdge] = startState
+        }
+        val worklist = Worklist(globalState)
+        startEdges.forEach { worklist.push(it, startState) }
+
+        while (worklist.isNotEmpty()) {
+            val (nextEdge, state) = worklist.pop()
+
+            val (newState, expectedUpdate) = transformation(nextEdge, state.duplicate(), worklist)
+            if (worklist.update(nextEdge, newState) || !expectedUpdate) {
+                nextEdge.end.nextEOGEdges.forEach {
+                    if (it is K) worklist.push(it, newState.duplicate())
+                }
+            }
+        }
+        return worklist.mop()
+    }
+
+    inline fun <reified K : PropertyEdge<Node>, N : Node, V> iterateEOGEN(
+        startEdges: List<K>,
+        startState: State<N, V>,
+        transformation:
+            (PropertyEdge<Node>, State<N, V>, Worklist<K, N, V>) -> Pair<State<N, V>, Boolean>
+    ): State<N, V> {
+        val globalState = mutableMapOf<K, State<N, V>>()
         for (startEdge in startEdges) {
             globalState[startEdge] = startState
         }

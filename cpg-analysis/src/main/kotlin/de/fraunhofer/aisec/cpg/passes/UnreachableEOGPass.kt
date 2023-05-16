@@ -80,7 +80,7 @@ class UnreachableEOGPass : Pass() {
         fun transfer(
             currentEdge: PropertyEdge<Node>,
             currentState: State<PropertyEdge<Node>, Reachability>,
-            currentWorklist: Worklist<PropertyEdge<Node>, Reachability>
+            currentWorklist: Worklist<PropertyEdge<Node>, PropertyEdge<Node>, Reachability>
         ): Pair<State<PropertyEdge<Node>, Reachability>, Boolean> {
             val currentNode = currentEdge.end
             if (currentNode is IfStatement) {
