@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -319,7 +318,6 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
-                .registerPass(ControlDependenceGraphPass())
                 .loadIncludes(loadIncludes)
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)

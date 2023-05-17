@@ -101,7 +101,8 @@ class ControlFlowSensitiveDFGPass : Pass() {
                 node is ForEachStatement ||
                 node is DoStatement ||
                 node is GotoStatement ||
-                node is ContinueStatement
+                node is ContinueStatement ||
+                (node is Literal<*> && node in node.nextEOG)
 
         @JvmStatic
         fun transfer(
