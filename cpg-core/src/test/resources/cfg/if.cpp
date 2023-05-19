@@ -11,4 +11,5 @@ int main(void){
 		else
 			i = 1;
 		printf("\n");
+		return i;
 }

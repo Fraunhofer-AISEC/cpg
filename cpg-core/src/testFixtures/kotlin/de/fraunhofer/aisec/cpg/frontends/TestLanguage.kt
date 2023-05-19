@@ -30,10 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
-import de.fraunhofer.aisec.cpg.graph.types.IntegerType
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.util.function.Supplier
@@ -60,6 +57,7 @@ open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLangua
             "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
             "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
             "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
+            "string" to StringType("string", this),
         )
     init {
         this.namespaceDelimiter = namespaceDelimiter
