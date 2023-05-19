@@ -62,13 +62,31 @@ class ControlDependenceGraphPass : Pass() {
         val finalState =
             EOGWorklist().iterateEOGEN(functionDecl.nextEOGEdges, startState, ::handleEdge)
 
-        // Collect the different branches for each branching node
+        // For a branching node, we identify which path(s) have to be found to be in a "merging
+        // point". There are two options: 1) There's a path which is executed independent of the
+        // branch (e.g. this is the case for an-if statement without an else-branch). 2) this node
+        // can be reached from all conditional branches
         val branchingNodeConditionals =
             mapOf(
                 Pair(functionDecl, setOf(functionDecl)),
                 *functionDecl
                     .allChildren<BranchingNode>()
-                    .map { Pair(it as Node, (it as Node).nextEOGEdges.map { it.end }) }
+                    .map {
+                        Pair(
+                            it as Node,
+                            if (
+                                (it as? Node)?.nextEOGEdges?.any { !it.isConditionalBranch() } ==
+                                    true
+                            ) {
+                                (it as? Node)
+                                    ?.nextEOGEdges
+                                    ?.filter { !it.isConditionalBranch() }
+                                    ?.map { it.end }
+                            } else {
+                                (it as Node).nextEOGEdges.map { it.end }
+                            }
+                        )
+                    }
                     .toTypedArray()
             )
 

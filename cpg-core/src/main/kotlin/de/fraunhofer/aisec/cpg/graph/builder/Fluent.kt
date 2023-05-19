@@ -461,6 +461,23 @@ fun LanguageFrontend.ifStmt(init: IfStatement.() -> Unit): IfStatement {
 }
 
 /**
+ * Creates a new [ForEachStatement] in the Fluent Node DSL and adds it to the
+ * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(StatementHolder)
+
+fun LanguageFrontend.forEachStmt(init: ForEachStatement.() -> Unit): ForEachStatement {
+    val node = newForEachStatement()
+
+    init(node)
+
+    (this@StatementHolder) += node
+
+    return node
+}
+
+/**
  * Creates a new [SwitchStatement] in the Fluent Node DSL and adds it to the
  * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
  * used to create further sub-nodes as well as configuring the created node itself.
@@ -567,6 +584,20 @@ fun LanguageFrontend.elseIf(init: IfStatement.() -> Unit): IfStatement {
  * used to create further sub-nodes as well as configuring the created node itself.
  */
 context(WhileStatement)
+
+fun LanguageFrontend.loopBody(init: CompoundStatement.() -> Unit): CompoundStatement {
+    val node = newCompoundStatement()
+    init(node)
+    statement = node
+
+    return node
+}
+/**
+ * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
+ * [WhileStatement.statement] of the nearest enclosing [WhileStatement]. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(ForEachStatement)
 
 fun LanguageFrontend.loopBody(init: CompoundStatement.() -> Unit): CompoundStatement {
     val node = newCompoundStatement()

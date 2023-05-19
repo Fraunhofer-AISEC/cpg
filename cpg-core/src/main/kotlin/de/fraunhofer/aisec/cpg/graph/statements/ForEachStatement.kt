@@ -25,14 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.BranchingNode
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import java.util.Objects
 
-class ForEachStatement : Statement(), BranchingNode {
+class ForEachStatement : Statement(), BranchingNode, StatementHolder {
     /**
      * This field contains the iteration variable of the loop. It can be either a new variable
      * declaration or a reference to an existing variable.
@@ -54,6 +52,33 @@ class ForEachStatement : Statement(), BranchingNode {
 
     override val branchingDecision: Node?
         get() = iterable
+
+    override var statementEdges: MutableList<PropertyEdge<Statement>>
+        get() {
+            val statements = mutableListOf<PropertyEdge<Statement>>()
+            variable?.let { statements.add(PropertyEdge(this, it)) }
+            iterable?.let { statements.add(PropertyEdge(this, it)) }
+            statement?.let { statements.add(PropertyEdge(this, it)) }
+            return statements
+        }
+        set(value) {}
+
+    override fun addStatement(s: Statement) {
+        if (variable == null) {
+            variable = s
+        } else if (iterable == null) {
+            iterable = s
+        } else if (statement == null) {
+            statement = s
+        } else if (statement !is CompoundStatement) {
+            val newStmt = newCompoundStatement()
+            statement?.let { newStmt.addStatement(it) }
+            newStmt.addStatement(s)
+            statement = newStmt
+        } else {
+            (statement as? CompoundStatement)?.addStatement(s)
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

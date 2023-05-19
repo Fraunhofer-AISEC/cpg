@@ -82,19 +82,56 @@ class ControlDependenceGraphPassTest {
         assertTrue(main in print2.prevCDG)
     }
 
+    @Test
+    fun testForEachLoop() {
+        val result = getForEachTest()
+        assertNotNull(result)
+        val main = result.functions["main"]
+        assertNotNull(main)
+        val forEachStmt = (main.body as CompoundStatement).statements[1]
+        assertNotNull(forEachStmt)
+        assertEquals(2, forEachStmt.prevCDG.size)
+        assertTrue(main in forEachStmt.prevCDG)
+        assertTrue(
+            forEachStmt in forEachStmt.prevCDG
+        ) // TODO: Is this really correct or should it be filtered out in the pass?
+
+        val printInLoop =
+            result.calls("printf").first {
+                "loop: \${}\n" == (it.arguments.firstOrNull() as? Literal<*>)?.value
+            }
+        assertNotNull(printInLoop)
+        assertEquals(1, printInLoop.prevCDG.size)
+        assertTrue(forEachStmt in printInLoop.prevCDG)
+
+        val printAfterLoop =
+            result.calls("printf").first {
+                "1\n" == (it.arguments.firstOrNull() as? Literal<*>)?.value
+            }
+        assertNotNull(printAfterLoop)
+        assertEquals(2, printAfterLoop.prevCDG.size)
+        assertTrue(main in printAfterLoop.prevCDG)
+        assertTrue(
+            forEachStmt in printAfterLoop.prevCDG
+        ) // TODO: Is this really correct or should it be filtered out in the pass?
+    }
+
     companion object {
         fun getIfTest() =
             TestLanguageFrontend(ScopeManager(), ".").build {
                 translationResult(
                     TranslationConfiguration.builder()
-                        .defaultPasses()
                         .registerLanguage(TestLanguage("::"))
+                        .registerPass(TypeHierarchyResolver())
+                        .registerPass(VariableUsageResolver())
+                        .registerPass(CallResolver())
+                        .registerPass(EvaluationOrderGraphPass())
                         .registerPass(ControlDependenceGraphPass())
                         .build()
                 ) {
                     translationUnit("if.cpp") {
                         // The main method
-                        function("main") {
+                        function("main", t("int")) {
                             body {
                                 declare { variable("i", t("int")) { literal(0, t("int")) } }
                                 ifStmt {
@@ -111,6 +148,42 @@ class ControlDependenceGraphPassTest {
                                     elseStmt { ref("i") assign literal(3, t("int")) }
                                 }
                                 call("printf") { addArgument(literal("2\n", t("string"))) }
+                                returnStmt { ref("i") }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getForEachTest() =
+            TestLanguageFrontend(ScopeManager(), ".").build {
+                translationResult(
+                    TranslationConfiguration.builder()
+                        .registerLanguage(TestLanguage("::"))
+                        .registerPass(TypeHierarchyResolver())
+                        .registerPass(VariableUsageResolver())
+                        .registerPass(CallResolver())
+                        .registerPass(EvaluationOrderGraphPass())
+                        .registerPass(ControlDependenceGraphPass())
+                        .build()
+                ) {
+                    translationUnit("forEach.cpp") {
+                        // The main method
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                forEachStmt {
+                                    declare { variable("loopVar", t("string")) }
+                                    call("magicFunction")
+                                    loopBody {
+                                        call("printf") {
+                                            addArgument(literal("loop: \${}\n", t("string")))
+                                            addArgument(ref("loopVar"))
+                                        }
+                                    }
+                                }
+                                call("printf") { addArgument(literal("1\n", t("string"))) }
+
                                 returnStmt { ref("i") }
                             }
                         }
