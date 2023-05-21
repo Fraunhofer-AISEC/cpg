@@ -228,20 +228,6 @@ private constructor(
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
-        private var passClassList =
-            listOf(
-                TypeHierarchyResolver::class,
-                ImportResolver::class,
-                VariableUsageResolver::class,
-                CallResolver::class,
-                DFGPass::class,
-                EvaluationOrderGraphPass::class,
-                TypeResolver::class,
-                ControlFlowSensitiveDFGPass::class,
-                FunctionPointerCallResolver::class,
-                FilenameMapper::class
-            )
-        private var passClassMap = passClassList.map { Pair(it.simpleName, it) }.toMap()
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
             return this
@@ -383,24 +369,6 @@ private constructor(
         /** Register an additional [Pass]. */
         fun registerPass(pass: Pass): Builder {
             passes.add(pass)
-            return this
-        }
-
-        /** Produces the [Pass] with the given name. */
-        private fun producePass(passName: String): Pass {
-            if (passName !in passClassMap) {
-                throw ConfigurationException("Asked to produce unknown pass")
-            }
-            return passClassMap[passName]!!.createInstance()
-        }
-
-        /** The list of available passes that can be registered. */
-        val passList: List<String>
-            get() = passClassList.map { it.simpleName!! }
-
-        /** Takes a string, produces and registers the corresponding additional [Pass]. */
-        fun registerPass(passName: String): Builder {
-            registerPass(producePass(passName))
             return this
         }
 

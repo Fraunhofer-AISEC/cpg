@@ -30,10 +30,14 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
+import java.lang.Class
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
+import kotlin.reflect.full.createInstance
 import kotlin.system.exitProcess
 import org.neo4j.driver.exceptions.AuthenticationException
 import org.neo4j.ogm.config.Configuration
@@ -176,7 +180,8 @@ class Application : Callable<Int> {
         description =
             [
                 "Add custom list of passes (includes --no-default-passes) which is" +
-                    " passed as a comma-separated list" +
+                    " passed as a comma-separated list; give either pass name if pass is in list," +
+                    " or its FQDN" +
                     " (e.g. --custom-pass-list=DFGPass,CallResolver)"
             ]
     )
@@ -214,6 +219,24 @@ class Application : Callable<Int> {
         description = ["Save benchmark results to json file"]
     )
     private var benchmarkJson: File? = null
+
+    private var passClassList =
+        listOf(
+            TypeHierarchyResolver::class,
+            ImportResolver::class,
+            VariableUsageResolver::class,
+            CallResolver::class,
+            DFGPass::class,
+            EvaluationOrderGraphPass::class,
+            TypeResolver::class,
+            ControlFlowSensitiveDFGPass::class,
+            FunctionPointerCallResolver::class,
+            FilenameMapper::class
+        )
+    private var passClassMap = passClassList.map { Pair(it.simpleName, it) }.toMap()
+    /** The list of available passes that can be registered. */
+    private val passList: List<String>
+        get() = passClassList.map { it.simpleName!! }
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -356,7 +379,16 @@ class Application : Callable<Int> {
         } else if (!noDefaultPasses && customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")
             for (pass in pieces) {
-                translationConfiguration.registerPass(pass)
+                if (pass.contains(".")) {
+                    translationConfiguration.registerPass(
+                        Class.forName(pass).kotlin.createInstance() as Pass
+                    )
+                } else {
+                    if (pass !in passClassMap) {
+                        throw ConfigurationException("Asked to produce unknown pass")
+                    }
+                    translationConfiguration.registerPass(passClassMap[pass]!!.createInstance())
+                }
             }
         }
 
@@ -401,9 +433,8 @@ class Application : Callable<Int> {
     @Throws(Exception::class, ConnectException::class, IllegalArgumentException::class)
     override fun call(): Int {
         if (mutuallyExclusiveParameters.listPasses) {
-            val translationConfiguration = TranslationConfiguration.builder()
             log.info("List of passes:")
-            translationConfiguration.passList.iterator().forEach { log.info("- " + it) }
+            passList.iterator().forEach { log.info("- " + it) }
             log.info("--")
             log.info("End of list. Stopping.")
             return EXIT_SUCCESS
