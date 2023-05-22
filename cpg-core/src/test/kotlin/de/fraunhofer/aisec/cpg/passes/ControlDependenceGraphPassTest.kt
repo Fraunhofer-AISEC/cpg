@@ -122,10 +122,7 @@ class ControlDependenceGraphPassTest {
                 translationResult(
                     TranslationConfiguration.builder()
                         .registerLanguage(TestLanguage("::"))
-                        .registerPass(TypeHierarchyResolver())
-                        .registerPass(VariableUsageResolver())
-                        .registerPass(CallResolver())
-                        .registerPass(EvaluationOrderGraphPass())
+                        .defaultPasses()
                         .registerPass(ControlDependenceGraphPass())
                         .build()
                 ) {
@@ -160,10 +157,7 @@ class ControlDependenceGraphPassTest {
                 translationResult(
                     TranslationConfiguration.builder()
                         .registerLanguage(TestLanguage("::"))
-                        .registerPass(TypeHierarchyResolver())
-                        .registerPass(VariableUsageResolver())
-                        .registerPass(CallResolver())
-                        .registerPass(EvaluationOrderGraphPass())
+                        .defaultPasses()
                         .registerPass(ControlDependenceGraphPass())
                         .build()
                 ) {

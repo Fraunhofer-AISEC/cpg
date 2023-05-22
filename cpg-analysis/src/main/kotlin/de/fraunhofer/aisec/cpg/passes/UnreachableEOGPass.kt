@@ -174,10 +174,11 @@ class UnreachableEOGPass : Pass() {
 
 /** Implements the [Lattice] over reachability properties: TOP | REACHABLE | UNREACHABLE | BOTTOM */
 class ReachabilityLattice(override val elements: Reachability) : Lattice<Reachability>(elements) {
-    override fun lub(other: Lattice<Reachability>) =
-        ReachabilityLattice(maxOf(this.elements, other.elements))
+    override fun lub(other: Lattice<Reachability>?) =
+        ReachabilityLattice(maxOf(this.elements, other?.elements ?: Reachability.BOTTOM))
     override fun duplicate() = ReachabilityLattice(this.elements)
-    override fun compareTo(other: Lattice<Reachability>) = this.elements.compareTo(other.elements)
+    override fun compareTo(other: Lattice<Reachability>?) =
+        this.elements.compareTo(other?.elements ?: Reachability.BOTTOM)
 }
 
 enum class Reachability {

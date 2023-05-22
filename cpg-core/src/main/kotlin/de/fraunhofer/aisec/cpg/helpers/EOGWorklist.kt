@@ -34,12 +34,12 @@ import java.util.IdentityHashMap
  * [T]. Implementations of this class have to implement the comparator, the least upper bound of two
  * lattices.
  */
-abstract class Lattice<T>(open val elements: T) : Comparable<Lattice<T>> {
+abstract class Lattice<T>(open val elements: T) : Comparable<Lattice<T>?> {
     /**
      * Computes the least upper bound of this lattice and [other]. It returns a new object and does
      * not modify either of the objects.
      */
-    abstract fun lub(other: Lattice<T>): Lattice<T>
+    abstract fun lub(other: Lattice<T>?): Lattice<T>
 
     /** Duplicates the object, i.e., makes a deep copy. */
     abstract fun duplicate(): Lattice<T>
@@ -49,12 +49,12 @@ abstract class Lattice<T>(open val elements: T) : Comparable<Lattice<T>> {
  * Implements the [Lattice] over a set of nodes. The lattice itself is constructed by the powerset.
  */
 class PowersetLattice(override val elements: Set<Node>) : Lattice<Set<Node>>(elements) {
-    override fun lub(other: Lattice<Set<Node>>) =
-        PowersetLattice(other.elements.union(this.elements))
+    override fun lub(other: Lattice<Set<Node>>?) =
+        PowersetLattice((other?.elements ?: setOf()).union(this.elements))
     override fun duplicate() = PowersetLattice(this.elements.toSet())
-    override fun compareTo(other: Lattice<Set<Node>>): Int {
-        return if (this.elements.containsAll(other.elements)) {
-            if (this.elements.size > other.elements.size) 1 else 0
+    override fun compareTo(other: Lattice<Set<Node>>?): Int {
+        return if (this.elements.containsAll(other?.elements ?: setOf())) {
+            if (this.elements.size > (other?.elements?.size ?: 0)) 1 else 0
         } else {
             -1
         }
@@ -91,7 +91,7 @@ open class State<K, V> : IdentityHashMap<K, Lattice<V>>() {
     open fun needsUpdate(other: State<K, V>): Boolean {
         var update = false
         for ((node, newLattice) in other) {
-            update = update || node !in this || newLattice > this[node]!!
+            update = update || node !in this || newLattice > this[node]
         }
         return update
     }
@@ -114,13 +114,13 @@ open class State<K, V> : IdentityHashMap<K, Lattice<V>>() {
         if (newLattice == null) {
             return false
         }
-        if (newNode in this && this[newNode]!! >= newLattice) {
+        if (newNode in this && newLattice <= this[newNode]) {
             // newLattice is "smaller" than the currently stored one. We don't add it anything.
             return false
         } else if (newNode in this) {
             // newLattice is "bigger" than the currently stored one. We update it to the least
             // upper bound
-            this[newNode] = this[newNode]!!.lub(newLattice)
+            this[newNode] = newLattice.lub(this[newNode])
         } else {
             this[newNode] = newLattice.duplicate()
         }

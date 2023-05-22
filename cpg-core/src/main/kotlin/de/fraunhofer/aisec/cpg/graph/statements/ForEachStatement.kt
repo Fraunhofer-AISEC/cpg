@@ -61,7 +61,9 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
             statement?.let { statements.add(PropertyEdge(this, it)) }
             return statements
         }
-        set(value) {}
+        set(value) {
+            // Nothing to do here
+        }
 
     override fun addStatement(s: Statement) {
         if (variable == null) {

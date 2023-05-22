@@ -62,33 +62,7 @@ class ControlDependenceGraphPass : Pass() {
         val finalState =
             EOGWorklist().iterateEOGEN(functionDecl.nextEOGEdges, startState, ::handleEdge)
 
-        // For a branching node, we identify which path(s) have to be found to be in a "merging
-        // point". There are two options: 1) There's a path which is executed independent of the
-        // branch (e.g. this is the case for an-if statement without an else-branch). 2) this node
-        // can be reached from all conditional branches
-        val branchingNodeConditionals =
-            mapOf(
-                Pair(functionDecl, setOf(functionDecl)),
-                *functionDecl
-                    .allChildren<BranchingNode>()
-                    .map {
-                        Pair(
-                            it as Node,
-                            if (
-                                (it as? Node)?.nextEOGEdges?.any { !it.isConditionalBranch() } ==
-                                    true
-                            ) {
-                                (it as? Node)
-                                    ?.nextEOGEdges
-                                    ?.filter { !it.isConditionalBranch() }
-                                    ?.map { it.end }
-                            } else {
-                                (it as Node).nextEOGEdges.map { it.end }
-                            }
-                        )
-                    }
-                    .toTypedArray()
-            )
+        val branchingNodeConditionals = getBranchingNodeConditions(functionDecl)
 
         // Collect the information, identify merge points, etc. This is not really efficient yet :(
         for ((node, dominatorPaths) in finalState) {
@@ -99,7 +73,6 @@ class ControlDependenceGraphPass : Pass() {
             val finalDominators = mutableListOf<Pair<Node, MutableSet<Node>>>()
             while (dominatorsList.isNotEmpty()) {
                 val (k, v) = dominatorsList.removeFirst()
-                var update = false
                 if (k != functionDecl && v.containsAll(branchingNodeConditionals[k] ?: setOf())) {
                     // We are reachable from all the branches of branch. Add this parent to the
                     // worklist or update an existing entry. Also consider already existing entries
@@ -108,17 +81,17 @@ class ControlDependenceGraphPass : Pass() {
                     newDominatorMap?.forEach { (newK, newV) ->
                         if (dominatorsList.any { it.first == newK }) {
                             // Entry exists => update it
-                            update = dominatorsList.first { it.first == newK }.second.addAll(newV)
+                            dominatorsList.first { it.first == newK }.second.addAll(newV)
                         } else if (finalDominators.any { it.first == newK }) {
                             // Entry in final dominators => Delete it and add it to the worklist
                             // (but only if something changed)
                             val entry = finalDominators.first { it.first == newK }
                             finalDominators.remove(entry)
-                            update = entry.second.addAll(newV)
+                            val update = entry.second.addAll(newV)
                             if (update) dominatorsList.add(entry) else finalDominators.add(entry)
                         } else {
                             // We don't have an entry yet => add a new one
-                            update = dominatorsList.add(Pair(newK, newV.toMutableSet()))
+                            dominatorsList.add(Pair(newK, newV.toMutableSet()))
                         }
                     }
                 } else {
@@ -132,6 +105,46 @@ class ControlDependenceGraphPass : Pass() {
             finalDominators.forEach { (k, _) -> node.addPrevCDG(k) }
         }
     }
+
+    /*
+     * For a branching node, we identify which path(s) have to be found to be in a "merging point".
+     * There are two options:
+     *   1) There's a path which is executed independent of the branch (e.g. this is the case for an if-statement without an else-branch).
+     *   2) A node can be reached from all conditional branches.
+     *
+     * This method collects the merging points. It also includes the function declaration itself.
+     */
+    private fun getBranchingNodeConditions(functionDecl: FunctionDeclaration) =
+        mapOf(
+            // For the function declaration, there's only the path through the function declaration
+            // itself.
+            Pair(functionDecl, setOf(functionDecl)),
+            *functionDecl
+                .allChildren<BranchingNode>()
+                .map { branchingNode ->
+                    val mergingPoints =
+                        if (
+                            (branchingNode as? Node)?.nextEOGEdges?.any {
+                                !it.isConditionalBranch()
+                            } == true
+                        ) {
+                            // There's an unconditional path (case 1), so when reaching this branch,
+                            // we're done. Collect all (=1) unconditional branches.
+                            (branchingNode as? Node)
+                                ?.nextEOGEdges
+                                ?.filter { !it.isConditionalBranch() }
+                                ?.map { it.end }
+                                ?.toSet()
+                        } else {
+                            // All branches are executed based on some condition (case 2), so we
+                            // collect all these branches.
+                            (branchingNode as Node).nextEOGEdges.map { it.end }.toSet()
+                        }
+                    // Map this branching node to its merging points
+                    Pair(branchingNode as Node, mergingPoints)
+                }
+                .toTypedArray()
+        )
 
     companion object {
         @JvmStatic
@@ -193,22 +206,25 @@ private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
  */
 class PrevEOGLattice(override val elements: Map<Node, Set<Node>>) :
     Lattice<Map<Node, Set<Node>>>(elements) {
-    override fun lub(other: Lattice<Map<Node, Set<Node>>>): Lattice<Map<Node, Set<Node>>> {
-        val newMap = other.elements.mapValues { (_, v) -> v.toMutableSet() }.toMutableMap()
+    override fun lub(other: Lattice<Map<Node, Set<Node>>>?): Lattice<Map<Node, Set<Node>>> {
+        val newMap =
+            (other?.elements ?: mapOf()).mapValues { (_, v) -> v.toMutableSet() }.toMutableMap()
         for ((key, value) in this.elements) {
             newMap.computeIfAbsent(key, ::mutableSetOf).addAll(value)
         }
         return PrevEOGLattice(newMap)
     }
     override fun duplicate() = PrevEOGLattice(this.elements.toMap())
-    override fun compareTo(other: Lattice<Map<Node, Set<Node>>>): Int {
+    override fun compareTo(other: Lattice<Map<Node, Set<Node>>>?): Int {
         return if (
-            this.elements.keys.containsAll(other.elements.keys) &&
-                this.elements.all { (k, v) -> v.containsAll(other.elements[k] ?: setOf()) }
+            this.elements.keys.containsAll(other?.elements?.keys ?: setOf()) &&
+                this.elements.all { (k, v) -> v.containsAll(other?.elements?.get(k) ?: setOf()) }
         ) {
             if (
-                this.elements.keys.size > other.elements.keys.size ||
-                    this.elements.any { (k, v) -> v.size > (other.elements[k] ?: setOf()).size }
+                this.elements.keys.size > (other?.elements?.keys?.size ?: 0) ||
+                    this.elements.any { (k, v) ->
+                        v.size > (other?.elements?.get(k) ?: setOf()).size
+                    }
             )
                 1
             else 0
