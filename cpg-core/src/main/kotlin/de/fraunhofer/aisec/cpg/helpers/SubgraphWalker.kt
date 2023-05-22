@@ -224,7 +224,7 @@ object SubgraphWalker {
 
     /**
      * Function returns two lists in a list. The first list contains all eog nodes with no
-     * predecesor in the subgraph with root 'n'. The second list contains eog edges that have no
+     * predecessor in the subgraph with root 'n'. The second list contains eog edges that have no
      * successor in the subgraph with root 'n'. The first List marks the entry and the second marks
      * the exit nodes of the cfg in this subgraph.
      *
@@ -241,15 +241,11 @@ object SubgraphWalker {
         // Nodes that are incoming edges, no other node
         border.entries =
             eogNodes
-                .filter { node: Node ->
-                    node.prevEOG.any { prev -> prev !in eogNodes }
-                }
+                .filter { node: Node -> node.prevEOG.any { prev -> prev !in eogNodes } }
                 .toMutableList()
         border.exits =
             eogNodes
-                .filter { node: Node ->
-                    node.nextEOG.any { next -> next !in eogNodes}
-                }
+                .filter { node: Node -> node.nextEOG.any { next -> next !in eogNodes } }
                 .toMutableList()
         return border
     }
@@ -464,10 +460,10 @@ object SubgraphWalker {
                 if (
                     node is RecordDeclaration ||
                         node is CompoundStatement ||
-                        node is FunctionDeclaration // can also be a translation unit for global (c)
-                        // functions
-                        ||
-                        node is TranslationUnitDeclaration
+                        node is FunctionDeclaration ||
+                        node is
+                            TranslationUnitDeclaration // can also be a translation unit for global
+                // (C) functions
                 ) {
                     parentBlock = node
                     break
