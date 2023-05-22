@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
@@ -68,7 +69,17 @@ fun MetadataProvider.newBinaryOperator(
     code: String? = null,
     rawNode: Any? = null
 ): BinaryOperator {
-    val node = BinaryOperator()
+    val node =
+        if (
+            this is LanguageProvider &&
+                (this.language as? HasShortCircuitOperators)
+                    ?.operatorCodes
+                    ?.contains(operatorCode) == true
+        ) {
+            ShortCircuitOperator()
+        } else {
+            BinaryOperator()
+        }
     node.applyMetadata(this, operatorCode, rawNode, code, true)
 
     node.operatorCode = operatorCode

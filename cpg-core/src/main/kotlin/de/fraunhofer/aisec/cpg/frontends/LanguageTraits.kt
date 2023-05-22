@@ -206,4 +206,7 @@ interface HasShortCircuitOperators : LanguageTrait {
     val conjunctiveOperators: List<String>
     // '||', 'or', 'v'
     val disjunctiveOperators: List<String>
+
+    val operatorCodes: Set<String>
+        get() = conjunctiveOperators.union(disjunctiveOperators)
 }
