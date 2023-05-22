@@ -225,7 +225,7 @@ object SubgraphWalker {
 
     /**
      * Function returns two lists in a list. The first list contains all eog nodes with no
-     * predecesor in the subgraph with root 'n'. The second list contains eog edges that have no
+     * predecessor in the subgraph with root 'n'. The second list contains eog edges that have no
      * successor in the subgraph with root 'n'. The first List marks the entry and the second marks
      * the exit nodes of the cfg in this subgraph.
      *
@@ -236,19 +236,18 @@ object SubgraphWalker {
         val border = Border()
         val flattedASTTree = flattenAST(n)
         val eogNodes =
-            flattedASTTree
-                .stream()
-                .filter { node: Node -> node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty() }
-                .collect(Collectors.toList())
+            flattedASTTree.filter { node: Node ->
+                node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty()
+            }
         // Nodes that are incoming edges, no other node
         border.entries =
-            eogNodes.filter { node: Node ->
-                node.prevEOG.any { prev: Node -> !eogNodes.contains(prev) }
-            }
+            eogNodes
+                .filter { node: Node -> node.prevEOG.any { prev -> prev !in eogNodes } }
+                .toMutableList()
         border.exits =
-            eogNodes.filter { node: Node ->
-                node.nextEOG.any { next: Node -> !eogNodes.contains(next) }
-            }
+            eogNodes
+                .filter { node: Node -> node.nextEOG.any { next -> next !in eogNodes } }
+                .toMutableList()
         return border
     }
 
@@ -272,8 +271,8 @@ object SubgraphWalker {
      * EOG subgraph, EOG entries and exits in a CFG subgraph.
      */
     class Border {
-        var entries: List<Node> = ArrayList()
-        var exits: List<Node> = ArrayList()
+        var entries = mutableListOf<Node>()
+        var exits = mutableListOf<Node>()
     }
 
     class IterativeGraphWalker {
@@ -381,10 +380,10 @@ object SubgraphWalker {
      * Handles declaration scope monitoring for iterative traversals. If this is not required, use
      * [IterativeGraphWalker] for less overhead.
      *
-     * Declaration scopes are similar to [de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager]
-     * scopes: [ValueDeclaration]s located inside a scope (i.e. are children of the scope root) are
-     * visible to any children of the scope root. Scopes can be layered, where declarations from
-     * parent scopes are visible to the children but not the other way around.
+     * Declaration scopes are similar to [de.fraunhofer.aisec.cpg.ScopeManager] scopes:
+     * [ValueDeclaration]s located inside a scope (i.e. are children of the scope root) are visible
+     * to any children of the scope root. Scopes can be layered, where declarations from parent
+     * scopes are visible to the children but not the other way around.
      */
     class ScopedWalker {
         // declarationScope -> (parentScope, declarations)
@@ -465,10 +464,10 @@ object SubgraphWalker {
                 if (
                     node is RecordDeclaration ||
                         node is CompoundStatement ||
-                        node is FunctionDeclaration // can also be a translationunit for global (c)
-                        // functions
-                        ||
-                        node is TranslationUnitDeclaration
+                        node is FunctionDeclaration ||
+                        node is
+                            TranslationUnitDeclaration // can also be a translation unit for global
+                // (C) functions
                 ) {
                     parentBlock = node
                     break
