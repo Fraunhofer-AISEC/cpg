@@ -114,7 +114,7 @@ open class State<K, V> : IdentityHashMap<K, Lattice<V>>() {
         if (newLattice == null) {
             return false
         }
-        if (newNode in this && newLattice <= this[newNode]) {
+        if (newNode in this && this[newNode]?.let { it >= newLattice } == true) {
             // newLattice is "smaller" than the currently stored one. We don't add it anything.
             return false
         } else if (newNode in this) {
