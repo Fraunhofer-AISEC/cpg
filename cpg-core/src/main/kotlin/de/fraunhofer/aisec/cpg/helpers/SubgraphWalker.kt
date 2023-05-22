@@ -242,13 +242,13 @@ object SubgraphWalker {
         border.entries =
             eogNodes
                 .filter { node: Node ->
-                    node.prevEOG.any { prev: Node -> !eogNodes.contains(prev) }
+                    node.prevEOG.any { prev -> prev !in eogNodes }
                 }
                 .toMutableList()
         border.exits =
             eogNodes
                 .filter { node: Node ->
-                    node.nextEOG.any { next: Node -> !eogNodes.contains(next) }
+                    node.nextEOG.any { next -> next !in eogNodes}
                 }
                 .toMutableList()
         return border
