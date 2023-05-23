@@ -37,52 +37,56 @@ import org.neo4j.ogm.metadata.MetaData
 
 class Schema {
 
-    val lightGreen = "#aaffbb"
-    val lightBlue = "#aabbff"
-    val lightGray = "#dddddd"
+    private val styling =
+        "<style>" +
+            ".superclassLabel{background:#dddddd;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}" +
+            ".classLabel{background:#aabbff;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}" +
+            ".child{background:#dddddd;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}" +
+            ".relationship{background:#aaffbb;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}" +
+            ".inherited-relationship{background:#dddddd;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}" +
+            "</style>\n"
 
-    val header =
-        "# CPG Schema\n" +
+    private val header =
+        styling +
+            "\n" +
+            "# CPG Schema\n" +
             "This file shows all node labels and relationships between them that are persisted from the in memory CPG to the Neo4j database. " +
             "The specification is generated automatically and always up to date."
 
     // Contains the class hierarchy with the root Node.
-    val hierarchy: MutableMap<ClassInfo, Pair<ClassInfo?, List<ClassInfo>>> = mutableMapOf()
+    private val hierarchy: MutableMap<ClassInfo, Pair<ClassInfo?, List<ClassInfo>>> = mutableMapOf()
 
     /**
      * Set of fields that are translated into a relationship. The pair saves the field name, and the
      * relationship name. Saves MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
      */
-    val relCanHave: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
+    private val relCanHave: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
 
     /**
      * Relationships newly defined in this specific entity. Saves
      * MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
      */
-    val inherentFields: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
+    private val inherentFields: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
 
     /**
      * Relationships inherited from a parent in the inheritance hierarchy. A node with this label
      * can have this relationship if it is non-nullable. Saves
      * MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
      */
-    val inheritedFields: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
+    private val inheritedFields: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
     /**
      * Relationships defined by children in the inheritance hierarchy. A node with this label can
      * have this relationship also has the label of the defining child entity. Saves
      * MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
      */
-    val childrenFields: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
+    private val childrenFields: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
 
-    val relationshipFields: MutableMap<Pair<ClassInfo, String>, FieldInfo> = mutableMapOf()
+    private val relationshipFields: MutableMap<Pair<ClassInfo, String>, FieldInfo> = mutableMapOf()
 
     fun extractSchema() {
-        val meta: MetaData = MetaData(Node.javaClass.packageName)
+        val meta = MetaData(Node.javaClass.packageName)
         val nodeClassInfo =
-            meta
-                .persistentEntities()
-                .filter { it.underlyingClass == Node::class.java }
-                .firstOrNull()!!
+            meta.persistentEntities().first { it.underlyingClass == Node::class.java }
         val entities =
             meta.persistentEntities().filter {
                 Node::class.java.isAssignableFrom(it.underlyingClass) && !it.isRelationshipEntity
@@ -108,10 +112,8 @@ class Schema {
 
         entities.forEach {
             val key = meta.schema.findNode(it.neo4jName())
-            relCanHave.put(
-                it.neo4jName() ?: it.underlyingClass.simpleName,
-                key.relationships().entries.map { Pair(it.key, it.value.type()) }.toSet(),
-            )
+            relCanHave[it.neo4jName() ?: it.underlyingClass.simpleName] =
+                key.relationships().entries.map { Pair(it.key, it.value.type()) }.toSet()
         }
 
         // Complements the hierarchy and relationship information for abstract classes
@@ -128,14 +130,12 @@ class Schema {
             fields.forEach { relationshipFields.put(Pair(entity, it.name), it) }
             val name = it.neo4jName() ?: it.underlyingClass.simpleName
             relCanHave[name]?.let {
-                inherentFields.put(
-                    name,
+                inherentFields[name] =
                     it.filter {
                             val rel = it.first
                             fields.any { it.name.equals(rel) }
                         }
                         .toSet()
-                )
             }
         }
 
@@ -207,13 +207,13 @@ class Schema {
         }
     }
 
-    fun printEntities(classInfo: ClassInfo, out: PrintWriter) {
+    private fun printEntities(classInfo: ClassInfo, out: PrintWriter) {
         // TODO print a section for every entity. List of relationships not inherent. List of rel
         // inherent with result node. try to get links into relationship and target.
         // TODO subsection with inherent relationships.
         val entityLabel = toLabel(classInfo)
 
-        out.println("# $entityLabel<a id=\"e${entityLabel}\"></a>")
+        out.println("## $entityLabel<a id=\"${toAnchorLink("e${entityLabel}")}\"></a>")
 
         // Todo print entity description
         if (hierarchy[classInfo]?.first != null) {
@@ -223,23 +223,29 @@ class Schema {
             hierarchy[classInfo]?.first?.let {
                 getHierarchy(it).forEach {
                     out.print(
-                        "${getBoxWithColor(lightGray,"[${toLabel(it)}](#${toAnchorLink("e"+toLabel(it))})")}\t"
+                        getBoxWithClass(
+                            "superclassLabel",
+                            "[${toLabel(it)}](#${toAnchorLink("e"+toLabel(it))})"
+                        )
                     )
                 }
             }
             out.print(
-                "${getBoxWithColor(lightBlue,"[${entityLabel}](#${toAnchorLink("e"+entityLabel)})")}\t"
+                getBoxWithClass("classLabel", "[${entityLabel}](#${toAnchorLink("e$entityLabel")})")
             )
             out.println()
         }
-        if (hierarchy[classInfo]?.second?.isNotEmpty() ?: false) {
-            out.println("## Children")
+        if (hierarchy[classInfo]?.second?.isNotEmpty() == true) {
+            out.println("### Children")
 
             hierarchy[classInfo]?.second?.let {
                 if (it.isNotEmpty()) {
                     it.forEach {
                         out.print(
-                            "${getBoxWithColor(lightGray,"[${toLabel(it)}](#${toAnchorLink("e"+toLabel(it))})")}\t"
+                            getBoxWithClass(
+                                "child",
+                                "[${toLabel(it)}](#${toAnchorLink("e"+toLabel(it))})"
+                            )
                         )
                         // out.println("click ${toLabel(it)} href
                         // \"#${toAnchorLink(toLabel(it))}\"")
@@ -250,11 +256,14 @@ class Schema {
         }
 
         if (inherentFields.isNotEmpty() && inheritedFields.isNotEmpty()) {
-            out.println("## Relationships")
+            out.println("### Relationships")
 
             noLabelDups(inherentFields[entityLabel])?.forEach {
                 out.println(
-                    "${getBoxWithColor(lightGreen,"[${it.second}](#${ toLabel(classInfo) + it.second})")}\t"
+                    getBoxWithClass(
+                        "relationship",
+                        "[${it.second}](#${ toLabel(classInfo) + it.second})"
+                    )
                 )
             }
             noLabelDups(inheritedFields[entityLabel])?.forEach {
@@ -270,7 +279,10 @@ class Schema {
                     hierarchy[current]?.first?.let { current = it }
                 }
                 out.println(
-                    "${getBoxWithColor(lightGray,"[${it.second}](#${toConcatName(toLabel(baseClass)+it.second)})")}\t"
+                    getBoxWithClass(
+                        "inherited-relationship",
+                        "[${it.second}](#${toConcatName(toLabel(baseClass)+it.second)})"
+                    )
                 )
             }
 
@@ -282,7 +294,7 @@ class Schema {
         hierarchy[classInfo]?.second?.forEach { printEntities(it, out) }
     }
 
-    fun noLabelDups(list: Set<Pair<String, String>>?): Set<Pair<String, String>>? {
+    private fun noLabelDups(list: Set<Pair<String, String>>?): Set<Pair<String, String>>? {
         if (list == null) return null
         return list
             .map { it.second }
@@ -294,22 +306,22 @@ class Schema {
             .toSet()
     }
 
-    fun toLabel(classInfo: ClassInfo?): String {
+    private fun toLabel(classInfo: ClassInfo?): String {
         if (classInfo == null) {
             return "Node"
         }
         return classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName
     }
 
-    fun toAnchorLink(entityName: String): String {
+    private fun toAnchorLink(entityName: String): String {
         return toConcatName(entityName).lowercase(Locale.getDefault())
     }
 
-    fun toConcatName(entityName: String): String {
+    private fun toConcatName(entityName: String): String {
         return entityName.replace(" ", "-")
     }
 
-    fun openMermaid(out: PrintWriter) {
+    private fun openMermaid(out: PrintWriter) {
         out.println(
             "```mermaid\n" +
                 "flowchart LR\n" +
@@ -317,18 +329,18 @@ class Schema {
                 "  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;"
         )
     }
-    fun closeMermaid(out: PrintWriter) {
+    private fun closeMermaid(out: PrintWriter) {
         out.println("```")
     }
 
-    fun getHierarchy(classInfo: ClassInfo): MutableList<ClassInfo> {
+    private fun getHierarchy(classInfo: ClassInfo): MutableList<ClassInfo> {
         val inheritance: MutableList<ClassInfo> = mutableListOf()
         hierarchy[classInfo]?.first?.let { inheritance.addAll(getHierarchy(it)) }
         inheritance.add(classInfo)
         return inheritance
     }
 
-    fun getTargetInfo(fInfo: FieldInfo): Pair<Boolean, ClassInfo?> {
+    private fun getTargetInfo(fInfo: FieldInfo): Pair<Boolean, ClassInfo?> {
         val type = fInfo.field.genericType
         relationshipFields
             .map { it.value.field.genericType }
@@ -342,26 +354,25 @@ class Schema {
             targetClassInfo =
                 hierarchy
                     .map { it.key }
-                    .filter {
+                    .firstOrNull {
                         baseClass.typeName.split(" ").contains(it.underlyingClass.canonicalName)
                     }
-                    .firstOrNull()
         }
 
         return Pair(multiplicity, targetClassInfo)
     }
 
-    fun getNestedBaseType(type: Type): Type? {
+    private fun getNestedBaseType(type: Type): Type? {
         if (type is ParameterizedType) {
             return type.actualTypeArguments.map { getNestedBaseType(it) }.firstOrNull()
         }
         return type
     }
 
-    fun getNestedMultiplicity(type: Type): Boolean {
+    private fun getNestedMultiplicity(type: Type): Boolean {
         if (type is ParameterizedType) {
             if (
-                type.rawType.typeName.substringBeforeLast(".").equals("java.util")
+                type.rawType.typeName.substringBeforeLast(".") == "java.util"
             ) { // listOf(List::class).contains(type.rawType)
                 return true
             } else {
@@ -371,18 +382,11 @@ class Schema {
         return false
     }
 
-    fun getBoxWithColor(color: String, text: String): String {
-        return "<span style=\"background:${color};\n" +
-            "    border-radius:5%;\n" +
-            "    line-height: 26px;\n" +
-            "    display: inline-block;\n" +
-            "    text-align: center;\n" +
-            "    margin-bottom: 10px;\n" +
-            "    padding-left: 10px;\n" +
-            "    padding-right: 10px;\">${text}</span>"
+    private fun getBoxWithClass(cssClass: String, text: String): String {
+        return "<span class=\"${cssClass}\">${text}</span>\n"
     }
 
-    fun printRelationships(
+    private fun printRelationships(
         classInfo: ClassInfo,
         relationshipLabel: Pair<String, String>,
         out: PrintWriter
@@ -391,7 +395,7 @@ class Schema {
         val targetInfo = getTargetInfo(fieldInfo)
         val multiplicity = if (targetInfo.first) "*" else "¹"
         out.println(
-            "### ${relationshipLabel.second}<a id=\"${toLabel(classInfo)+relationshipLabel.second}\"></a>"
+            "#### ${relationshipLabel.second}<a id=\"${toLabel(classInfo)+relationshipLabel.second}\"></a>"
         )
         openMermaid(out)
         out.println(
