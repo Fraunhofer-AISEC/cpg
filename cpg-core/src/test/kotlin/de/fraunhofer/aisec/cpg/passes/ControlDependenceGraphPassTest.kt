@@ -90,11 +90,8 @@ class ControlDependenceGraphPassTest {
         assertNotNull(main)
         val forEachStmt = (main.body as CompoundStatement).statements[1]
         assertNotNull(forEachStmt)
-        assertEquals(2, forEachStmt.prevCDG.size)
+        assertEquals(1, forEachStmt.prevCDG.size)
         assertTrue(main in forEachStmt.prevCDG)
-        assertTrue(
-            forEachStmt in forEachStmt.prevCDG
-        ) // TODO: Is this really correct or should it be filtered out in the pass?
 
         val printInLoop =
             result.calls("printf").first {

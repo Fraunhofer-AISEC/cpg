@@ -102,7 +102,7 @@ class ControlDependenceGraphPass : Pass() {
             }
             // We have all the dominators of this node and potentially traversed the graph
             // "upwards". Add the CDG edges
-            finalDominators.forEach { (k, _) -> node.addPrevCDG(k) }
+            finalDominators.filter { (k, _) -> k != node }.forEach { (k, _) -> node.addPrevCDG(k) }
         }
     }
 
