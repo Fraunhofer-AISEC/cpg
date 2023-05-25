@@ -514,7 +514,7 @@ open class DFAOrderEvaluator(
             baseToFSM.entries
                 .groupBy { e -> e.key.split("|")[1] }
                 .map { x ->
-                    "${x.key}(${x.value.map { y -> y.value.currentState!! }.toSet().joinToString(",")})"
+                    "${x.key}(${x.value.mapNotNull { y -> y.value.currentState }.toSet().joinToString(",")})"
                 }
                 .sorted()
                 .joinToString(",")

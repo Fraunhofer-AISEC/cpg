@@ -339,7 +339,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                                 (loopOp.input as? DeclaredReferenceExpression)?.refersTo ==
                                     expr.refersTo
                             ) {
-                                loopVar!!
+                                loopVar
                             } else {
                                 loopOp.input
                             },
@@ -367,7 +367,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         return result
     }
 
-    private fun computeUnaryOpEffect(input: Any, expr: UnaryOperator): Any? {
+    private fun computeUnaryOpEffect(input: Any?, expr: UnaryOperator): Any? {
         return when (expr.operatorCode) {
             "-" -> {
                 when (input) {
