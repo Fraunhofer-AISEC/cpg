@@ -158,8 +158,8 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
             scopeManager.enterScope(function)
 
             for (i in signature.indices) {
-                val targetType = signature[i]
-                val paramName = generateParamName(i, targetType!!)
+                val targetType = signature[i] ?: UnknownType.getUnknownType(function.language)
+                val paramName = generateParamName(i, targetType)
                 val param = newParamVariableDeclaration(paramName, targetType, false, "")
                 param.argumentIndex = i
 

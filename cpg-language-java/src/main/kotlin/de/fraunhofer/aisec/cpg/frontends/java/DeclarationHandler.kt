@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
-import com.github.javaparser.ast.Modifier
 import com.github.javaparser.ast.body.*
 import com.github.javaparser.ast.body.ConstructorDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
@@ -33,9 +32,7 @@ import com.github.javaparser.ast.expr.Expression
 import com.github.javaparser.ast.stmt.BlockStmt
 import com.github.javaparser.ast.stmt.ReturnStmt
 import com.github.javaparser.ast.stmt.Statement
-import com.github.javaparser.ast.type.ClassOrInterfaceType
 import com.github.javaparser.ast.type.ReferenceType
-import com.github.javaparser.ast.type.TypeParameter
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
@@ -49,6 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
 import java.util.stream.Collectors
 import kotlin.collections.set
@@ -197,21 +195,15 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val recordDeclaration = this.newRecordDeclaration(fqn, "class", null, classInterDecl)
         recordDeclaration.superClasses =
             classInterDecl.extendedTypes
-                .stream()
-                .map { type: ClassOrInterfaceType? -> frontend.getTypeAsGoodAsPossible(type!!) }
-                .collect(Collectors.toList())
+                .map { type -> frontend.getTypeAsGoodAsPossible(type) }
+                .toMutableList()
         recordDeclaration.implementedInterfaces =
-            classInterDecl.implementedTypes
-                .stream()
-                .map { type: ClassOrInterfaceType? -> frontend.getTypeAsGoodAsPossible(type!!) }
-                .collect(Collectors.toList())
+            classInterDecl.implementedTypes.map { type -> frontend.getTypeAsGoodAsPossible(type) }
+
         TypeManager.getInstance()
             .addTypeParameter(
                 recordDeclaration,
-                classInterDecl.typeParameters
-                    .stream()
-                    .map { t: TypeParameter -> ParameterizedType(t.nameAsString, language) }
-                    .collect(Collectors.toList())
+                classInterDecl.typeParameters.map { ParameterizedType(it.nameAsString, language) }
             )
 
         // TODO: I cannot replicate the old partionedBy logic
@@ -299,16 +291,17 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             // need this
             // to generate the field.
             val scope = frontend.scopeManager.currentScope as RecordScope?
-            if (scope!!.name != null) {
-                val fieldType = this.parseType(scope.name!!)
+            if (scope?.name != null) {
+                val fieldType =
+                    scope.name?.let { this.parseType(it) } ?: UnknownType.getUnknownType(language)
 
                 // Enter the scope of the inner class because the new field belongs there.
                 frontend.scopeManager.enterScope(recordDeclaration)
                 val field =
                     this.newFieldDeclaration(
-                        "this$" + scope.name!!.localName,
+                        "this$" + scope.name?.localName,
                         fieldType,
-                        listOf<String>(),
+                        listOf(),
                         null,
                         null,
                         null
@@ -327,11 +320,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         // TODO: can  field have more than one variable?
         val variable = fieldDecl.getVariable(0)
-        val modifiers =
-            fieldDecl.modifiers
-                .stream()
-                .map { modifier: Modifier -> modifier.keyword.asString() }
-                .collect(Collectors.toList())
+        val modifiers = fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }
         val joinedModifiers = java.lang.String.join(" ", modifiers) + " "
         val location = frontend.getLocationFromRawNode(fieldDecl)
         val initializer =

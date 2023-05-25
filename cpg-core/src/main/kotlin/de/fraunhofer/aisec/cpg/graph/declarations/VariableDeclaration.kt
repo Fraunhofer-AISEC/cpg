@@ -72,7 +72,7 @@ class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitial
             // since the type is tied to the declaration, but it is convenient to have the type
             // information in the initializer, i.e. in a ConstructExpression.
             if (value is HasType.TypeListener) {
-                registerTypeListener((value as HasType.TypeListener?)!!)
+                registerTypeListener(value as HasType.TypeListener)
             }
         }
 

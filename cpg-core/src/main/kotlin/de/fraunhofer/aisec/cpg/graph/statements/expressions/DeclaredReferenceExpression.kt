@@ -58,7 +58,7 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
                     current.unregisterTypeListener(this)
                 }
                 if (current is HasType.TypeListener) {
-                    unregisterTypeListener((current as HasType.TypeListener?)!!)
+                    unregisterTypeListener(current as HasType.TypeListener)
                 }
             }
 
@@ -94,10 +94,9 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
      *   </T>
      */
     fun <T : VariableDeclaration?> getRefersToAs(clazz: Class<T>): T? {
-        if (refersTo == null) {
-            return null
-        }
-        return if (clazz.isAssignableFrom(refersTo!!.javaClass)) clazz.cast(refersTo) else null
+        return if (refersTo?.javaClass?.let { clazz.isAssignableFrom(it) } == true)
+            clazz.cast(refersTo)
+        else null
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
