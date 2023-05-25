@@ -58,7 +58,7 @@ class PointerType : Type, SecondOrderType {
         this.elementType = elementType
     }
 
-    constructor(type: Type?, elementType: Type, pointerOrigin: PointerOrigin?) : super(type!!) {
+    constructor(type: Type?, elementType: Type, pointerOrigin: PointerOrigin?) : super(type) {
         language = elementType.language
         if (pointerOrigin == PointerOrigin.ARRAY) {
             name = elementType.name.append("[]")
