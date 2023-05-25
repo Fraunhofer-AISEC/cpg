@@ -42,7 +42,7 @@ import java.util.*
 
 @ExecuteFirst
 @RequiredFrontend(LLVMIRLanguageFrontend::class)
-class CompressLLVMPass : Pass() {
+class CompressLLVMPass : ComponentPass() {
     override fun accept(component: Component, result: TranslationResult) {
         val flatAST = SubgraphWalker.flattenAST(component)
         // Get all goto statements
@@ -85,8 +85,7 @@ class CompressLLVMPass : Pass() {
                         (node.thenStatement as GotoStatement).targetLabel?.subStatement
                 }
                 // Replace the else-statement with the basic block it jumps to iff we found that
-                // its
-                // goto statement is the only one jumping to the target
+                // its goto statement is the only one jumping to the target
                 if (
                     node.elseStatement in gotosToReplace &&
                         node !in

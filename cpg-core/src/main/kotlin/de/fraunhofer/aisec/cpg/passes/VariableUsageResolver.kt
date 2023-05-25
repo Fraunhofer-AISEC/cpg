@@ -76,14 +76,14 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         collectSupertypes()
 
-        for (tu in result.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.clearCallbacks()
             walker.registerHandler { curClass, parent, node ->
                 resolveFieldUsages(curClass, parent, node)
             }
             walker.iterate(tu)
         }
-        for (tu in result.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.clearCallbacks()
             walker.registerHandler(::resolveLocalVarUsage)
             walker.iterate(tu)

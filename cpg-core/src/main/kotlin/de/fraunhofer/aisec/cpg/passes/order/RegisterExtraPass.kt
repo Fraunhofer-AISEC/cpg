@@ -32,4 +32,4 @@ import kotlin.reflect.KClass
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class RegisterExtraPass(val value: KClass<out Pass>)
+annotation class RegisterExtraPass(val value: KClass<out Pass<*>>)

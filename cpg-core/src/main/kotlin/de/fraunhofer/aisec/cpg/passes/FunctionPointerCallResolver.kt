@@ -56,7 +56,7 @@ import java.util.function.Consumer
 @DependsOn(CallResolver::class)
 @DependsOn(DFGPass::class)
 @RequiredFrontend(CXXLanguageFrontend::class)
-class FunctionPointerCallResolver : Pass() {
+class FunctionPointerCallResolver : ComponentPass() {
     private lateinit var walker: ScopedWalker
     private var inferDfgForUnresolvedCalls = false
 

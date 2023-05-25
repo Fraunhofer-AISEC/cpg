@@ -107,7 +107,7 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 @ExecuteBefore(VariableUsageResolver::class)
 @ExecuteBefore(CallResolver::class)
 @ExecuteBefore(DFGPass::class)
-class GoExtraPass : Pass(), ScopeProvider {
+class GoExtraPass : ComponentPass(), ScopeProvider {
 
     override val scope: Scope?
         get() = scopeManager.currentScope

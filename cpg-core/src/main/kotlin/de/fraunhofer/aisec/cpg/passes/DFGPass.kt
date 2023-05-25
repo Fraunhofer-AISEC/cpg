@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(VariableUsageResolver::class)
 @DependsOn(CallResolver::class)
-class DFGPass : Pass() {
+class DFGPass : ComponentPass() {
     override fun accept(component: Component, result: TranslationResult) {
         val inferDfgForUnresolvedCalls =
             result.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedSymbols

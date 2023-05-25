@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
@@ -82,7 +82,7 @@ private constructor(
                     false,
                     result
                 )
-            val executedPasses = mutableSetOf<Pass>()
+            val executedPasses = mutableSetOf<Pass<*>>()
             var executedFrontends = setOf<LanguageFrontend>()
 
             try {
@@ -95,11 +95,7 @@ private constructor(
                 for (pass in config.registeredPasses) {
                     bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
                     if (pass.runsWithCurrentFrontend(executedFrontends)) {
-                        // Apply pass for each component.
-                        // TODO(oxisto): select pass based on language of component
-                        for (component in result.components) {
-                            pass.accept(component, result)
-                        }
+                        executePassSequential(pass, result)
                     }
 
                     executedPasses.add(pass)
@@ -127,7 +123,7 @@ private constructor(
         }
     }
 
-    val passes: List<Pass>
+    val passes: List<Pass<*>>
         get() = config.registeredPasses
 
     fun isCancelled(): Boolean {

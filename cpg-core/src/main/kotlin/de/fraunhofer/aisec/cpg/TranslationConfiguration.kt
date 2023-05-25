@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
 import java.nio.file.Path
 import java.util.*
+import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
@@ -93,7 +94,8 @@ private constructor(
      * always take priority over those in the whitelist.
      */
     val includeBlocklist: List<Path>,
-    passes: List<Pass>,
+    passes: List<Pass<*>>,
+    val replacedPasses: Map<KClass<out Pass<*>>, Pair<KClass<out Language<*>>, Pass<*>>>,
     languages: List<Language<out LanguageFrontend>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
@@ -167,7 +169,7 @@ private constructor(
         generator = ObjectIdGenerators.PropertyGenerator::class,
         property = "name"
     )
-    val registeredPasses: List<Pass>
+    val registeredPasses: List<Pass<*>>
 
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
@@ -217,7 +219,9 @@ private constructor(
         private val includePaths = mutableListOf<Path>()
         private val includeWhitelist = mutableListOf<Path>()
         private val includeBlocklist = mutableListOf<Path>()
-        private val passes = mutableListOf<Pass>()
+        private val passes = mutableListOf<Pass<*>>()
+        private val replacedPasses =
+            mutableMapOf<KClass<out Pass<*>>, Pair<KClass<out Language<*>>, Pass<*>>>()
         private var codeInNodes = true
         private var processAnnotations = false
         private var disableCleanup = false
@@ -368,8 +372,17 @@ private constructor(
         }
 
         /** Register an additional [Pass]. */
-        fun registerPass(pass: Pass): Builder {
+        fun registerPass(pass: Pass<*>): Builder {
             passes.add(pass)
+            return this
+        }
+
+        fun replacePass(
+            passType: KClass<out Pass<*>>,
+            forLanguage: KClass<out Language<*>>,
+            with: Pass<*>
+        ): Builder {
+            replacedPasses[passType] = Pair(forLanguage, with)
             return this
         }
 
@@ -462,6 +475,29 @@ private constructor(
 
                             log.info(
                                 "Registered an extra (frontend dependent) default dependency: {}",
+                                p.value
+                            )
+                        } else {
+                            throw ConfigurationException(
+                                "Failed to load frontend because we could not register required pass dependency: ${frontend.simpleName}"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        private fun registerReplacedPasses() {
+            for (frontend in languages.map(Language<out LanguageFrontend>::frontend)) {
+                val replacedPasses = frontend.findAnnotations<ReplacePass>()
+                if (replacedPasses.isNotEmpty()) {
+                    for (p in replacedPasses) {
+                        val pass = p.with.primaryConstructor?.call()
+                        if (pass != null) {
+                            replacePass(p.value, p.lang, pass)
+
+                            log.info(
+                                "Registered an extra (frontend dependent) default dependency, which replaced an existing pass: {}",
                                 p.value
                             )
                         } else {
@@ -567,6 +603,7 @@ private constructor(
                 )
             }
             registerExtraFrontendPasses()
+            registerReplacedPasses()
             return TranslationConfiguration(
                 symbols,
                 softwareComponents,
@@ -578,6 +615,7 @@ private constructor(
                 includeWhitelist,
                 includeBlocklist,
                 orderPasses(),
+                replacedPasses,
                 languages,
                 codeInNodes,
                 processAnnotations,
@@ -619,7 +657,7 @@ private constructor(
                     }
                 }
                 if (!passFound) {
-                    val deps: MutableSet<Class<out Pass>> = HashSet()
+                    val deps: MutableSet<Class<out Pass<*>>> = HashSet()
                     deps.addAll(p.hardDependencies)
                     deps.addAll(p.softDependencies)
                     workingList.addToWorkingList(PassWithDependencies(p, deps))
@@ -653,9 +691,9 @@ private constructor(
          * @return a sorted list of passes
          */
         @Throws(ConfigurationException::class)
-        private fun orderPasses(): List<Pass> {
+        private fun orderPasses(): List<Pass<*>> {
             log.info("Passes before enforcing order: {}", passes)
-            val result = mutableListOf<Pass>()
+            val result = mutableListOf<Pass<*>>()
 
             // Create a local copy of all passes and their "current" dependencies without possible
             // duplicates

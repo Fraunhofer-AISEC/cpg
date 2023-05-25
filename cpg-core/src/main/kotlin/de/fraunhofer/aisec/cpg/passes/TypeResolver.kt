@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 @DependsOn(CallResolver::class)
-open class TypeResolver : Pass() {
+open class TypeResolver : ComponentPass() {
     protected val firstOrderTypes = mutableSetOf<Type>()
     protected val typeState = mutableMapOf<Type, MutableList<Type>>()
 

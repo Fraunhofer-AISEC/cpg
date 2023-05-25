@@ -61,7 +61,7 @@ class PassWithDepsContainer {
      * Iterate through all elements and remove the provided dependency [cls] from all passes in the
      * working list.
      */
-    private fun removeDependencyByClass(cls: Class<out Pass>) {
+    private fun removeDependencyByClass(cls: Class<out Pass<*>>) {
         for ((_, value) in workingList) {
             value.remove(cls)
         }
@@ -79,7 +79,7 @@ class PassWithDepsContainer {
         return workingList.filter { it.pass.isLastPass }
     }
 
-    private fun dependencyPresent(dep: Class<out Pass>): Boolean {
+    private fun dependencyPresent(dep: Class<out Pass<*>>): Boolean {
         var result = false
         for (currentElement in workingList) {
             if (dep == currentElement.pass.javaClass) {
@@ -91,7 +91,7 @@ class PassWithDepsContainer {
         return result
     }
 
-    private fun createNewPassWithDependency(cls: Class<out Pass>): PassWithDependencies {
+    private fun createNewPassWithDependency(cls: Class<out Pass<*>>): PassWithDependencies {
         val newPass =
             try {
                 cls.getConstructor().newInstance()
@@ -105,7 +105,7 @@ class PassWithDepsContainer {
                 throw ConfigurationException(e)
             }
 
-        val deps: MutableSet<Class<out Pass>> = HashSet()
+        val deps: MutableSet<Class<out Pass<*>>> = HashSet()
         deps.addAll(newPass.hardDependencies)
         deps.addAll(newPass.softDependencies)
         return PassWithDependencies(newPass, deps)
@@ -131,7 +131,7 @@ class PassWithDepsContainer {
         }
 
         // add required dependencies to the working list
-        val missingPasses: MutableList<Class<out Pass>> = ArrayList()
+        val missingPasses: MutableList<Class<out Pass<*>>> = ArrayList()
 
         // initially populate the missing dependencies list given the current passes
         for (currentElement in workingList) {
@@ -149,8 +149,8 @@ class PassWithDepsContainer {
      *
      * @return The first pass that has no active dependencies on success. null otherwise.
      */
-    fun getAndRemoveFirstPassWithoutDependencies(): Pass? {
-        var result: Pass? = null
+    fun getAndRemoveFirstPassWithoutDependencies(): Pass<*>? {
+        var result: Pass<*>? = null
 
         for (currentElement in workingList) {
             if (workingList.size > 1 && currentElement.pass.isLastPass) {
@@ -177,7 +177,7 @@ class PassWithDepsContainer {
      *
      * @return The first pass if present. Otherwise, null.
      */
-    fun getAndRemoveFirstPass(): Pass? {
+    fun getAndRemoveFirstPass(): Pass<*>? {
         val firstPasses = getFirstPasses()
         if (firstPasses.size > 1) {
             throw ConfigurationException(

@@ -82,7 +82,7 @@ object Edges {
  *
  * The cache itself is stored in the [Edges] object.
  */
-class EdgeCachePass : Pass() {
+class EdgeCachePass : ComponentPass() {
     override fun accept(component: Component, result: TranslationResult) {
         Edges.clear()
 

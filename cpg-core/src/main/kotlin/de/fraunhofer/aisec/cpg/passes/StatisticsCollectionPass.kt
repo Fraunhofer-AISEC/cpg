@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -37,10 +36,10 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
  * A [Pass] collecting statistics for the graph. Currently, it collects the number of nodes and the
  * number of problem nodes (i.e., nodes where the translation failed for some reason).
  */
-class StatisticsCollectionPass : Pass() {
+class StatisticsCollectionPass : TranslationResultPass() {
 
     /** Iterates the nodes of the [result] to collect statistics. */
-    override fun accept(component: Component, result: TranslationResult) {
+    override fun accept(r: TranslationResult, result: TranslationResult) {
         var problemNodes = 0
         var nodes = 0
         val walker = ScopedWalker(result.scopeManager)
@@ -51,7 +50,7 @@ class StatisticsCollectionPass : Pass() {
             }
         }
 
-        for (tu in component.translationUnits) {
+        for (tu in result.translationUnits) {
             walker.iterate(tu)
         }
 

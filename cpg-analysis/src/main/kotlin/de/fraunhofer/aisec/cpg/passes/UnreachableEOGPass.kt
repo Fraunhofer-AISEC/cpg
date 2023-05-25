@@ -41,7 +41,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * by setting the [Properties.UNREACHABLE] property of an eog-edge to true.
  */
 @DependsOn(ControlFlowSensitiveDFGPass::class)
-class UnreachableEOGPass : Pass() {
+class UnreachableEOGPass : ComponentPass() {
     override fun accept(component: Component, result: TranslationResult) {
         for (tu in component.translationUnits) {
             tu.accept(

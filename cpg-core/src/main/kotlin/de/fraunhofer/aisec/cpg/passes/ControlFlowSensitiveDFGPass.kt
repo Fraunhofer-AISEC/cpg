@@ -48,7 +48,7 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
-open class ControlFlowSensitiveDFGPass : Pass() {
+open class ControlFlowSensitiveDFGPass : ComponentPass() {
     override fun cleanup() {
         // Nothing to do
     }

@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @ExecuteBefore(ImportResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)
-class JavaExternalTypeHierarchyResolver : Pass() {
+class JavaExternalTypeHierarchyResolver : ComponentPass() {
     override fun accept(component: Component, result: TranslationResult) {
         val resolver = CombinedTypeSolver()
 

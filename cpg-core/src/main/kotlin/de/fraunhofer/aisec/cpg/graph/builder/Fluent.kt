@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.executePassSequential
 
 fun LanguageFrontend.translationResult(
     config: TranslationConfiguration,
@@ -46,7 +47,7 @@ fun LanguageFrontend.translationResult(
     node.addComponent(component)
     init(node)
 
-    config.registeredPasses.forEach { it.accept(component, node) }
+    config.registeredPasses.forEach { executePassSequential(it, node) }
 
     return node
 }

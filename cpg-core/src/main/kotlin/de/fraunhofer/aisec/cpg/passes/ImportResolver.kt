@@ -39,7 +39,7 @@ import java.util.*
 import java.util.regex.Pattern
 
 @DependsOn(TypeHierarchyResolver::class)
-open class ImportResolver : Pass() {
+open class ImportResolver : ComponentPass() {
     protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
 

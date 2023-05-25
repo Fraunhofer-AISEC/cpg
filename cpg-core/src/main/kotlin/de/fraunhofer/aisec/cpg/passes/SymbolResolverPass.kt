@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 
-abstract class SymbolResolverPass : Pass() {
+abstract class SymbolResolverPass : ComponentPass() {
     protected lateinit var walker: SubgraphWalker.ScopedWalker
     lateinit var currentTU: TranslationUnitDeclaration
 

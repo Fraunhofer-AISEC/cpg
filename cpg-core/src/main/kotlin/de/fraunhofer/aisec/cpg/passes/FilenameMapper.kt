@@ -26,20 +26,18 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteLast
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 @ExecuteLast
-class FilenameMapper : Pass() {
-    override fun accept(component: Component, result: TranslationResult) {
-        for (tu in component.translationUnits) {
-            val file = tu.name.toString()
-            tu.file = file
-            handle(tu, file)
-        }
+class FilenameMapper : TranslationUnitPass() {
+    override fun accept(tu: TranslationUnitDeclaration, result: TranslationResult) {
+        val file = tu.name.toString()
+        tu.file = file
+        handle(tu, file)
     }
 
     private fun handle(node: Node, file: String) {

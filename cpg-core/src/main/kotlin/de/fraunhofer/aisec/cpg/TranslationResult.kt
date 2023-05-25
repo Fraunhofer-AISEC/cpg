@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
+import de.fraunhofer.aisec.cpg.passes.PassTarget
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
@@ -47,7 +48,7 @@ class TranslationResult(
      * and then finally merged into this one.
      */
     val scopeManager: ScopeManager
-) : Node(), StatisticsHolder {
+) : Node(), StatisticsHolder, PassTarget {
 
     /**
      * Entry points to the CPG: "SoftwareComponent" refer to programs, application, other "bundles"

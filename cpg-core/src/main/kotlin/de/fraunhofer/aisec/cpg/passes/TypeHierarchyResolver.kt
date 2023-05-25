@@ -55,7 +55,7 @@ import java.util.*
  * at places where it is crucial to have parsed all [RecordDeclaration]s. Otherwise, type
  * information in the graph might not be fully correct
  */
-open class TypeHierarchyResolver : Pass() {
+open class TypeHierarchyResolver : ComponentPass() {
     protected val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enums = mutableListOf<EnumDeclaration>()
 
