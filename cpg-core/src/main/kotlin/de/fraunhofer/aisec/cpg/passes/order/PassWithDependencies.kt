@@ -26,9 +26,27 @@
 package de.fraunhofer.aisec.cpg.passes.order
 
 import de.fraunhofer.aisec.cpg.passes.Pass
+import kotlin.reflect.KClass
+import kotlin.reflect.full.hasAnnotation
 
 /** A simple helper class to match a pass with dependencies. */
 data class PassWithDependencies(
-    val pass: Pass<*>,
-    val dependencies: MutableSet<Class<out Pass<*>>>
-)
+    val pass: KClass<out Pass<*>>,
+    val softDependencies: MutableSet<KClass<out Pass<*>>>,
+    val hardDependencies: MutableSet<KClass<out Pass<*>>>
+) {
+    val dependencies: Set<KClass<out Pass<*>>>
+        get() {
+            return softDependencies + hardDependencies
+        }
+
+    val isFirstPass: Boolean
+        get() {
+            return pass.hasAnnotation<ExecuteFirst>()
+        }
+
+    val isLastPass: Boolean
+        get() {
+            return pass.hasAnnotation<ExecuteLast>()
+        }
+}

@@ -82,7 +82,6 @@ private constructor(
                     false,
                     result
                 )
-            val executedPasses = mutableSetOf<Pass<*>>()
             var executedFrontends = setOf<LanguageFrontend>()
 
             try {
@@ -93,12 +92,9 @@ private constructor(
 
                 // Apply passes
                 for (pass in config.registeredPasses) {
-                    bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                    if (pass.runsWithCurrentFrontend(executedFrontends)) {
-                        executePassSequential(pass, result)
-                    }
+                    bench = Benchmark(pass.java, "Executing Pass", false, result)
+                    executePassSequential(pass, result, executedFrontends)
 
-                    executedPasses.add(pass)
                     bench.addMeasurement()
                     if (result.isCancelled) {
                         log.warn("Analysis interrupted, stopping Pass evaluation")
@@ -109,10 +105,6 @@ private constructor(
             } finally {
                 outerBench.addMeasurement()
                 if (!config.disableCleanup) {
-                    log.debug("Cleaning up {} Passes", executedPasses.size)
-
-                    executedPasses.forEach { it.cleanup() }
-
                     log.debug("Cleaning up {} Frontends", executedFrontends.size)
 
                     executedFrontends.forEach { it.cleanup() }
@@ -122,9 +114,6 @@ private constructor(
             result
         }
     }
-
-    val passes: List<Pass<*>>
-        get() = config.registeredPasses
 
     fun isCancelled(): Boolean {
         return isCancelled.get()

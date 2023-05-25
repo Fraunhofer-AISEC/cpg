@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
@@ -37,7 +38,8 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 @DependsOn(CallResolver::class)
-open class TypeResolver : ComponentPass() {
+open class TypeResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
     protected val firstOrderTypes = mutableSetOf<Type>()
     protected val typeState = mutableMapOf<Type, MutableList<Type>>()
 
@@ -150,7 +152,7 @@ open class TypeResolver : ComponentPass() {
      *
      * @param result
      */
-    override fun accept(component: Component, result: TranslationResult) {
+    override fun accept(component: Component) {
         removeDuplicateTypes()
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit(::ensureUniqueType)

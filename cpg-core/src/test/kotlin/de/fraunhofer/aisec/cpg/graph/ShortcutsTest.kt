@@ -227,7 +227,7 @@ class ShortcutsTest {
             GraphExamples.getShortcutClass(
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerPass(EdgeCachePass())
+                    .registerPass<EdgeCachePass>()
                     .registerLanguage(TestLanguage("."))
                     .build()
             )

@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -42,8 +43,9 @@ import java.util.*
 
 @ExecuteFirst
 @RequiredFrontend(LLVMIRLanguageFrontend::class)
-class CompressLLVMPass : ComponentPass() {
-    override fun accept(component: Component, result: TranslationResult) {
+class CompressLLVMPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
+    override fun accept(component: Component) {
         val flatAST = SubgraphWalker.flattenAST(component)
         // Get all goto statements
         val allGotos = flatAST.filterIsInstance<GotoStatement>()

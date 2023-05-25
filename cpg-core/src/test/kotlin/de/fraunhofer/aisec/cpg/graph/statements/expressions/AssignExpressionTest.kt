@@ -109,7 +109,7 @@ class AssignExpressionTest {
             assertLocalName("error", refErr.type)
 
             // Invoke the DFG pass
-            DFGPass().accept(result.components.first(), result)
+            DFGPass(result.config, result.scopeManager).accept(result.components.first())
 
             assertTrue(refA.prevDFG.contains(call))
             assertTrue(refErr.prevDFG.contains(call))

@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -70,7 +71,8 @@ import org.slf4j.LoggerFactory
  */
 @Suppress("MemberVisibilityCanBePrivate")
 @DependsOn(CallResolver::class)
-open class EvaluationOrderGraphPass : TranslationUnitPass() {
+open class EvaluationOrderGraphPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    TranslationUnitPass(config, scopeManager) {
     protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
     private var currentPredecessors = mutableListOf<Node>()
     private val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
@@ -170,8 +172,7 @@ open class EvaluationOrderGraphPass : TranslationUnitPass() {
         currentPredecessors.clear()
     }
 
-    override fun accept(tu: TranslationUnitDeclaration, result: TranslationResult) {
-        scopeManager = result.scopeManager
+    override fun accept(tu: TranslationUnitDeclaration) {
         createEOG(tu)
         removeUnreachableEOGEdges(tu)
         // checkEOGInvariant(tu); To insert when trying to check if the invariant holds

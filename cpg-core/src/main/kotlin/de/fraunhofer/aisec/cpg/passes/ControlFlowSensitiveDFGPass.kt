@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
@@ -48,12 +49,15 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
-open class ControlFlowSensitiveDFGPass : ComponentPass() {
+open class ControlFlowSensitiveDFGPass(
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager
+) : ComponentPass(config, scopeManager) {
     override fun cleanup() {
         // Nothing to do
     }
 
-    override fun accept(component: Component, result: TranslationResult) {
+    override fun accept(component: Component) {
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit(::handle)
         for (tu in component.translationUnits) {

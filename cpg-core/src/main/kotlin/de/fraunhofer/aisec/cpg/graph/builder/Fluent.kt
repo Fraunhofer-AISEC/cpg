@@ -47,7 +47,7 @@ fun LanguageFrontend.translationResult(
     node.addComponent(component)
     init(node)
 
-    config.registeredPasses.forEach { executePassSequential(it, node) }
+    config.registeredPasses.forEach { executePassSequential(it, node, listOf()) }
 
     return node
 }

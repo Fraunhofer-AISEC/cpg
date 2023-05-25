@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -82,8 +83,9 @@ object Edges {
  *
  * The cache itself is stored in the [Edges] object.
  */
-class EdgeCachePass : ComponentPass() {
-    override fun accept(component: Component, result: TranslationResult) {
+class EdgeCachePass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
+    override fun accept(component: Component) {
         Edges.clear()
 
         for (tu in component.translationUnits) {

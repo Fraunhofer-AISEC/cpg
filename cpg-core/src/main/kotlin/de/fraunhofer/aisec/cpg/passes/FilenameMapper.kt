@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteLast
@@ -33,8 +34,9 @@ import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 @ExecuteLast
-class FilenameMapper : TranslationUnitPass() {
-    override fun accept(tu: TranslationUnitDeclaration, result: TranslationResult) {
+class FilenameMapper(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    TranslationUnitPass(config, scopeManager) {
+    override fun accept(tu: TranslationUnitDeclaration) {
         val file = tu.name.toString()
         tu.file = file
         handle(tu, file)

@@ -37,7 +37,7 @@ import java.lang.Class
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
-import kotlin.reflect.full.createInstance
+import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 import org.neo4j.driver.exceptions.AuthenticationException
 import org.neo4j.ogm.config.Configuration
@@ -382,15 +382,13 @@ class Application : Callable<Int> {
             for (pass in pieces) {
                 if (pass.contains(".")) {
                     translationConfiguration.registerPass(
-                        Class.forName(pass).kotlin.createInstance() as Pass
+                        Class.forName(pass).kotlin as KClass<out Pass<*>>
                     )
                 } else {
                     if (pass !in passClassMap) {
                         throw ConfigurationException("Asked to produce unknown pass")
                     }
-                    passClassMap[pass]?.let {
-                        translationConfiguration.registerPass(it.createInstance())
-                    }
+                    passClassMap[pass]?.let { translationConfiguration.registerPass(it) }
                 }
             }
         }

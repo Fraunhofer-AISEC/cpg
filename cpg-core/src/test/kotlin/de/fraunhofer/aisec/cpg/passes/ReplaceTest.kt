@@ -32,10 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
 import kotlin.reflect.KClass
-import kotlin.test.Test
-import kotlin.test.assertContains
-import kotlin.test.assertIs
-import kotlin.test.assertNotNull
+import kotlin.test.*
 
 class ReplaceTest {
 
@@ -54,7 +51,8 @@ class ReplaceTest {
         }
     }
 
-    class ReplacedPass : EvaluationOrderGraphPass()
+    class ReplacedPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+        EvaluationOrderGraphPass(config, scopeManager)
 
     @Test
     fun testReplaceAnnotation() {
@@ -66,15 +64,16 @@ class ReplaceTest {
         val pair = config.replacedPasses[EvaluationOrderGraphPass::class]
         assertNotNull(pair)
 
-        val pass = checkForReplacement(EvaluationOrderGraphPass(), ReplaceTestLanguage(), config)
-        assertIs<ReplacedPass>(pass)
+        val cls =
+            checkForReplacement(EvaluationOrderGraphPass::class, ReplaceTestLanguage(), config)
+        assertEquals(ReplacedPass::class, cls)
     }
 
     @Test
     fun testReplaceFunction() {
         val config =
             TranslationConfiguration.builder()
-                .replacePass<EvaluationOrderGraphPass, StructTestLanguage>(ReplacedPass())
+                .replacePass<EvaluationOrderGraphPass, StructTestLanguage, ReplacedPass>()
                 .build()
 
         assertContains(config.replacedPasses.keys, EvaluationOrderGraphPass::class)
@@ -82,10 +81,10 @@ class ReplaceTest {
         val pair = config.replacedPasses[EvaluationOrderGraphPass::class]
         assertNotNull(pair)
 
-        var pass = checkForReplacement(EvaluationOrderGraphPass(), TestLanguage(), config)
-        assertIs<EvaluationOrderGraphPass>(pass)
+        var cls = checkForReplacement(EvaluationOrderGraphPass::class, TestLanguage(), config)
+        assertEquals(EvaluationOrderGraphPass::class, cls)
 
-        pass = checkForReplacement(EvaluationOrderGraphPass(), StructTestLanguage(), config)
-        assertIs<ReplacedPass>(pass)
+        cls = checkForReplacement(EvaluationOrderGraphPass::class, StructTestLanguage(), config)
+        assertEquals(ReplacedPass::class, cls)
     }
 }

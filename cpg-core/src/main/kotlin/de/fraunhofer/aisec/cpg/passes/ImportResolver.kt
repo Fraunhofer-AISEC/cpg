@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -39,7 +40,8 @@ import java.util.*
 import java.util.regex.Pattern
 
 @DependsOn(TypeHierarchyResolver::class)
-open class ImportResolver : ComponentPass() {
+open class ImportResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
     protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
 
@@ -48,7 +50,7 @@ open class ImportResolver : ComponentPass() {
         importables.clear()
     }
 
-    override fun accept(component: Component, result: TranslationResult) {
+    override fun accept(component: Component) {
         for (tu in component.translationUnits) {
             findImportables(tu)
         }

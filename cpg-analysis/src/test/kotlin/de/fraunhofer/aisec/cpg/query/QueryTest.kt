@@ -552,7 +552,7 @@ class QueryTest {
                 .sourceLocations(File("src/test/resources/query/array2.cpp"))
                 .defaultPasses()
                 .defaultLanguages()
-                .registerPass(EdgeCachePass())
+                .registerPass<EdgeCachePass>()
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -585,7 +585,7 @@ class QueryTest {
                 .sourceLocations(File("src/test/resources/query/array3.cpp"))
                 .defaultPasses()
                 .defaultLanguages()
-                .registerPass(EdgeCachePass())
+                .registerPass<EdgeCachePass>()
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -636,7 +636,7 @@ class QueryTest {
                 .sourceLocations(File("src/test/resources/query/array_correct.cpp"))
                 .defaultPasses()
                 .defaultLanguages()
-                .registerPass(EdgeCachePass())
+                .registerPass<EdgeCachePass>()
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -817,7 +817,7 @@ class QueryTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(EdgeCachePass())
+                .registerPass<EdgeCachePass>()
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -871,7 +871,7 @@ class QueryTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(EdgeCachePass())
+                .registerPass<EdgeCachePass>()
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -925,7 +925,7 @@ class QueryTest {
                 .defaultPasses()
                 .defaultLanguages()
                 .registerLanguage(JavaLanguage())
-                .registerPass(EdgeCachePass())
+                .registerPass<EdgeCachePass>()
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()

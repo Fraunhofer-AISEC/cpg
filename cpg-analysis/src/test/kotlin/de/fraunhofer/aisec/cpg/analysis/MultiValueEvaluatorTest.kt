@@ -195,7 +195,7 @@ class MultiValueEvaluatorTest {
                 topLevel,
                 true
             ) {
-                it.registerPass(EdgeCachePass())
+                it.registerPass<EdgeCachePass>()
             }
 
         assertNotNull(tu)
