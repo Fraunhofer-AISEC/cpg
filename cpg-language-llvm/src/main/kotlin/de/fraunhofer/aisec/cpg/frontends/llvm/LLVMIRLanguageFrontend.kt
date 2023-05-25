@@ -193,11 +193,7 @@ class LLVMIRLanguageFrontend(
             if (result != null) return result
         }
         if (typeRef in alreadyVisited) {
-            val result = alreadyVisited[typeRef]
-            if (result != null) return result
-        } else if (typeRef in alreadyVisited) {
-            // Recursive call but we can't resolve it.
-            return newUnknownType()
+            return alreadyVisited[typeRef] ?: newUnknownType()
         }
         alreadyVisited[typeRef] = null
         val res: Type =
