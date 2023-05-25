@@ -30,10 +30,14 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
+import java.lang.Class
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
+import kotlin.reflect.full.createInstance
 import kotlin.system.exitProcess
 import org.neo4j.driver.exceptions.AuthenticationException
 import org.neo4j.ogm.config.Configuration
@@ -101,6 +105,12 @@ class Application : Callable<Int> {
             description = ["The path to an optional a JSON compilation database"]
         )
         var jsonCompilationDatabase: File? = null
+
+        @CommandLine.Option(
+            names = ["--list-passes"],
+            description = ["Prints the list available passes"]
+        )
+        var listPasses: Boolean = false
     }
 
     @CommandLine.Option(
@@ -166,6 +176,18 @@ class Application : Callable<Int> {
     private var noDefaultPasses: Boolean = false
 
     @CommandLine.Option(
+        names = ["--custom-pass-list"],
+        description =
+            [
+                "Add custom list of passes (includes --no-default-passes) which is" +
+                    " passed as a comma-separated list; give either pass name if pass is in list," +
+                    " or its FQDN" +
+                    " (e.g. --custom-pass-list=DFGPass,CallResolver)"
+            ]
+    )
+    private var customPasses: String = "DEFAULT"
+
+    @CommandLine.Option(
         names = ["--no-neo4j"],
         description = ["Do not push cpg into neo4j [used for debugging]"]
     )
@@ -197,6 +219,24 @@ class Application : Callable<Int> {
         description = ["Save benchmark results to json file"]
     )
     private var benchmarkJson: File? = null
+
+    private var passClassList =
+        listOf(
+            TypeHierarchyResolver::class,
+            ImportResolver::class,
+            VariableUsageResolver::class,
+            CallResolver::class,
+            DFGPass::class,
+            EvaluationOrderGraphPass::class,
+            TypeResolver::class,
+            ControlFlowSensitiveDFGPass::class,
+            FunctionPointerCallResolver::class,
+            FilenameMapper::class
+        )
+    private var passClassMap = passClassList.map { Pair(it.simpleName, it) }.toMap()
+    /** The list of available passes that can be registered. */
+    private val passList: List<String>
+        get() = passClassList.map { it.simpleName!! }
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -334,8 +374,22 @@ class Application : Callable<Int> {
             translationConfiguration.sourceLocations(filePaths)
         }
 
-        if (!noDefaultPasses) {
+        if (!noDefaultPasses && customPasses == "DEFAULT") {
             translationConfiguration.defaultPasses()
+        } else if (!noDefaultPasses && customPasses != "DEFAULT") {
+            val pieces = customPasses.split(",")
+            for (pass in pieces) {
+                if (pass.contains(".")) {
+                    translationConfiguration.registerPass(
+                        Class.forName(pass).kotlin.createInstance() as Pass
+                    )
+                } else {
+                    if (pass !in passClassMap) {
+                        throw ConfigurationException("Asked to produce unknown pass")
+                    }
+                    translationConfiguration.registerPass(passClassMap[pass]!!.createInstance())
+                }
+            }
         }
 
         if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
@@ -378,6 +432,14 @@ class Application : Callable<Int> {
      */
     @Throws(Exception::class, ConnectException::class, IllegalArgumentException::class)
     override fun call(): Int {
+        if (mutuallyExclusiveParameters.listPasses) {
+            log.info("List of passes:")
+            passList.iterator().forEach { log.info("- " + it) }
+            log.info("--")
+            log.info("End of list. Stopping.")
+            return EXIT_SUCCESS
+        }
+
         val translationConfiguration = setupTranslationConfiguration()
 
         val startTime = System.currentTimeMillis()
