@@ -193,4 +193,6 @@ sealed class FSM(states: Set<State>) {
 
         return newFSM
     }
+
+    override fun hashCode() = _states.hashCode()
 }

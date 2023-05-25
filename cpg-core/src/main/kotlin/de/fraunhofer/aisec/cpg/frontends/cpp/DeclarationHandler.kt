@@ -749,8 +749,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
 
         // attach to root note
-        for (incl in allIncludes[translationUnit.filePath]!!) {
-            node.addDeclaration(includeMap[incl]!!)
+        for (incl in allIncludes[translationUnit.filePath] ?: listOf()) {
+            includeMap[incl]?.let { node.addDeclaration(it) }
         }
         allIncludes.remove(translationUnit.filePath)
         // attach to remaining nodes

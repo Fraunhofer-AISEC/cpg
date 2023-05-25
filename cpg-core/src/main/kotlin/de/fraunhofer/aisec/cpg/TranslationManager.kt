@@ -150,7 +150,7 @@ private constructor(
             component.name = Name(sc)
             result.addComponent(component)
 
-            var sourceLocations: List<File> = this.config.softwareComponents[sc]!!
+            var sourceLocations: List<File> = this.config.softwareComponents[sc] ?: listOf()
 
             var useParallelFrontends = config.useParallelFrontends
 

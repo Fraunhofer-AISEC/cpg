@@ -359,7 +359,8 @@ open class DFAOrderEvaluator(
                 // The base was the parameter of the function? We have an inter-procedural flow!
                 interproceduralFlows[prefixedBase] = true
             }
-            return Pair(prefixedBase, nodeToRelevantMethod[node]!!)
+            val relevantMethod = nodeToRelevantMethod[node]
+            if (relevantMethod != null) return Pair(prefixedBase, relevantMethod)
         }
 
         if (base == null) {

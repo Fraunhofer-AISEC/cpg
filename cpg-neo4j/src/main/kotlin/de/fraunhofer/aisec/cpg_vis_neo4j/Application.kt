@@ -387,7 +387,9 @@ class Application : Callable<Int> {
                     if (pass !in passClassMap) {
                         throw ConfigurationException("Asked to produce unknown pass")
                     }
-                    translationConfiguration.registerPass(passClassMap[pass]!!.createInstance())
+                    passClassMap[pass]?.let {
+                        translationConfiguration.registerPass(it.createInstance())
+                    }
                 }
             }
         }

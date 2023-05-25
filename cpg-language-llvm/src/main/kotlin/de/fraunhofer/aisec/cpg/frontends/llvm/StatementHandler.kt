@@ -1390,9 +1390,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
         if (labelMap.keys.size == 1) {
             // We only have a single pair, so we insert a declaration in that one BB.
-            val key = labelMap.keys.elementAt(0)
+            val (key, value) = labelMap.entries.elementAt(0)
             val basicBlock = key.subStatement as? CompoundStatement
-            val decl = declarationOrNot(labelMap[key]!!, instr)
+            val decl = declarationOrNot(value, instr)
             flatAST.addAll(SubgraphWalker.flattenAST(decl))
             val mutableStatements = basicBlock?.statements?.toMutableList()
             mutableStatements?.add(basicBlock.statements.size - 1, decl)
@@ -1436,10 +1436,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         mutableFunctionStatements.add(0, declStatement)
         firstBB.statements = mutableFunctionStatements
 
-        for (l in labelMap.keys) {
+        for ((l, r) in labelMap) {
             // Now, we iterate over all the basic blocks and add an assign statement.
             val assignment = newBinaryOperator("=", code)
-            assignment.rhs = labelMap[l]!!
+            assignment.rhs = r
             assignment.lhs = newDeclaredReferenceExpression(varName, type, code)
             (assignment.lhs as DeclaredReferenceExpression).type = type
             (assignment.lhs as DeclaredReferenceExpression).unregisterTypeListener(assignment)
