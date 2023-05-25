@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
@@ -66,6 +67,25 @@ class ReplaceTest {
         assertNotNull(pair)
 
         val pass = checkForReplacement(EvaluationOrderGraphPass(), ReplaceTestLanguage(), config)
+        assertIs<ReplacedPass>(pass)
+    }
+
+    @Test
+    fun testReplaceFunction() {
+        val config =
+            TranslationConfiguration.builder()
+                .replacePass<EvaluationOrderGraphPass, StructTestLanguage>(ReplacedPass())
+                .build()
+
+        assertContains(config.replacedPasses.keys, EvaluationOrderGraphPass::class)
+
+        val pair = config.replacedPasses[EvaluationOrderGraphPass::class]
+        assertNotNull(pair)
+
+        var pass = checkForReplacement(EvaluationOrderGraphPass(), TestLanguage(), config)
+        assertIs<EvaluationOrderGraphPass>(pass)
+
+        pass = checkForReplacement(EvaluationOrderGraphPass(), StructTestLanguage(), config)
         assertIs<ReplacedPass>(pass)
     }
 }

@@ -93,16 +93,16 @@ sealed class Pass<T : PassTarget> : BiConsumer<T, TranslationResult> {
             val dependencies = this.javaClass.getAnnotationsByType(DependsOn::class.java)
             for (d in dependencies) {
                 if (d.softDependency) {
-                    softDependencies.add(d.value.java as Class<out Pass<*>>)
+                    softDependencies.add(d.value.java)
                 } else {
-                    hardDependencies.add(d.value.java as Class<out Pass<*>>)
+                    hardDependencies.add(d.value.java)
                 }
             }
         }
         if (this.javaClass.getAnnotationsByType(ExecuteBefore::class.java).isNotEmpty()) {
             val dependencies = this.javaClass.getAnnotationsByType(ExecuteBefore::class.java)
             for (d in dependencies) {
-                executeBefore.add(d.other.java as Class<out Pass<*>>)
+                executeBefore.add(d.other.java)
             }
         }
     }
@@ -146,6 +146,11 @@ sealed class Pass<T : PassTarget> : BiConsumer<T, TranslationResult> {
     }
 }
 
+/**
+ * Executes the given [pass] sequentially on the nodes of [result]. Depending on the type of pass,
+ * this will either execute the pass directly on the overall result, loop through each component or
+ * through each translation unit.
+ */
 fun executePassSequential(pass: Pass<*>, result: TranslationResult) {
     when (pass) {
         is ComponentPass -> {
@@ -178,14 +183,12 @@ fun checkForReplacement(
     config: TranslationConfiguration
 ): TranslationUnitPass {
     val replacements = config.replacedPasses[pass::class]
-    return if (replacements != null) {
+    if (replacements != null) {
         val langClass = replacements.first
         if (langClass.isInstance(language) && replacements.second is TranslationUnitPass) {
-            replacements.second as TranslationUnitPass
-        } else {
-            pass
+            return replacements.second as TranslationUnitPass
         }
-    } else {
-        pass
     }
+
+    return pass
 }

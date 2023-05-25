@@ -377,6 +377,12 @@ private constructor(
             return this
         }
 
+        inline fun <reified P : Pass<*>, reified L : Language<*>> replacePass(
+            with: Pass<*>
+        ): Builder {
+            return replacePass(P::class, L::class, with)
+        }
+
         fun replacePass(
             passType: KClass<out Pass<*>>,
             forLanguage: KClass<out Language<*>>,
