@@ -35,6 +35,7 @@ import java.lang.reflect.InvocationTargetException
  */
 abstract class IVisitor<V : IVisitable<V>> {
     @JvmField val visited = IdentitySet<V>()
+
     open fun visit(t: V) {
         try {
             val mostSpecificVisit = this.javaClass.getMethod("visit", t::class.java)

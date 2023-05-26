@@ -38,6 +38,7 @@ import java.util.*
  */
 class IncompleteType : Type {
     constructor() : super("void", null)
+
     constructor(type: Type?) : super(type)
 
     /** @return PointerType to a IncompleteType, e.g. void* */

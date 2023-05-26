@@ -37,6 +37,7 @@ interface DeclarationHolder {
      * @param declaration the declaration
      */
     fun addDeclaration(declaration: Declaration)
+
     fun <T : Declaration> addIfNotContains(collection: MutableCollection<T>, declaration: T) {
         if (!collection.contains(declaration)) {
             collection.add(declaration)

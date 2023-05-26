@@ -44,6 +44,7 @@ class NewExpression : Expression(), HasInitializer {
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @AST
     var templateParameters: List<Node>? = null
+
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
