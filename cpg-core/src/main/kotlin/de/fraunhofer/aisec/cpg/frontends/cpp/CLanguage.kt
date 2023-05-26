@@ -26,8 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -113,22 +112,15 @@ open class CLanguage :
                 IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED)
         )
 
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): CXXLanguageFrontend {
-        return CXXLanguageFrontend(this, config, scopeManager)
-    }
-
     override fun refineNormalCallResolution(
         call: CallExpression,
-        scopeManager: ScopeManager,
+        ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration
     ): List<FunctionDeclaration> {
-        val invocationCandidates = scopeManager.resolveFunction(call).toMutableList()
+        val invocationCandidates = ctx.scopeManager.resolveFunction(call).toMutableList()
         if (invocationCandidates.isEmpty()) {
             // Check for implicit casts
-            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, scopeManager))
+            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, ctx))
         }
         return invocationCandidates
     }
@@ -137,7 +129,7 @@ open class CLanguage :
         curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>,
         call: CallExpression,
-        scopeManager: ScopeManager,
+        ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: CallResolver
     ): List<FunctionDeclaration> = emptyList()
@@ -145,7 +137,8 @@ open class CLanguage :
     override fun refineInvocationCandidatesFromRecord(
         recordDeclaration: RecordDeclaration,
         call: CallExpression,
-        namePattern: Pattern
+        namePattern: Pattern,
+        ctx: TranslationContext
     ): List<FunctionDeclaration> = emptyList()
 
     /**
@@ -155,10 +148,12 @@ open class CLanguage :
      */
     protected fun resolveWithImplicitCastFunc(
         call: CallExpression,
-        scopeManager: ScopeManager
+        ctx: TranslationContext,
     ): List<FunctionDeclaration> {
         val initialInvocationCandidates =
-            listOf(*scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray())
-        return resolveWithImplicitCast(call, initialInvocationCandidates)
+            listOf(
+                *ctx.scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray()
+            )
+        return resolveWithImplicitCast(call, initialInvocationCandidates, ctx)
     }
 }

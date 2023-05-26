@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.newCallExpression
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.lang.reflect.ParameterizedType
@@ -51,7 +51,7 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
     protected val configConstructor: Supplier<S>,
     /** Returns the frontend which used this handler. */
     var frontend: L
-) : LanguageProvider, CodeAndLocationProvider, ScopeProvider, NamespaceProvider {
+) : LanguageProvider, CodeAndLocationProvider, ScopeProvider, NamespaceProvider, ContextProvider {
     protected val map = HashMap<Class<out T>, HandlerInterface<S, T>>()
     private val typeOfT: Class<*>?
 
@@ -180,6 +180,9 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
 
     override val namespace: Name?
         get() = frontend.namespace
+
+    override val ctx: TranslationContext
+        get() = frontend.ctx
 
     companion object {
         @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Handler::class.java)

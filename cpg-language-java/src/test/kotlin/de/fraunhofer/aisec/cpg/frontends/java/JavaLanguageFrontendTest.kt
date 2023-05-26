@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
@@ -38,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -144,7 +142,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
         assertLocalName("s", sDecl)
-        assertEquals(createTypeFrom("java.lang.String"), sDecl.type)
+        assertEquals(tu.parseType("java.lang.String"), sDecl.type)
 
         // should contain a single statement
         val sce = forEachStatement.statement as? MemberCallExpression
@@ -191,11 +189,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(scope)
 
         // first exception type was? resolved, so we can expect a FQN
-        assertEquals(createTypeFrom("java.lang.NumberFormatException"), firstCatch.parameter?.type)
+        assertEquals(tu.parseType("java.lang.NumberFormatException"), firstCatch.parameter?.type)
         // second one could not be resolved so we do not have an FQN
-        assertEquals(createTypeFrom("NotResolvableTypeException"), catchClauses[1].parameter?.type)
+        assertEquals(tu.parseType("NotResolvableTypeException"), catchClauses[1].parameter?.type)
         // third type should have been resolved through the import
-        assertEquals(createTypeFrom("some.ImportedException"), (catchClauses[2].parameter)?.type)
+        assertEquals(tu.parseType("some.ImportedException"), (catchClauses[2].parameter)?.type)
 
         // and 1 finally
         val finallyBlock = tryStatement.finallyBlock
@@ -285,14 +283,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testRecordDeclaration() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
-        val declaration =
+        val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
         // TODO: Use GraphExamples here as well.
-        assertNotNull(declaration)
+        assertNotNull(tu)
 
-        val namespaceDeclaration = declaration.getDeclarationAs(0, NamespaceDeclaration::class.java)
+        val namespaceDeclaration = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
 
         val recordDeclaration =
             namespaceDeclaration?.getDeclarationAs(0, RecordDeclaration::class.java)
@@ -305,7 +303,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
         assertLocalName("method", method)
-        assertEquals(createTypeFrom("java.lang.Integer"), method.returnTypes.firstOrNull())
+        assertEquals(tu.parseType("java.lang.Integer"), method.returnTypes.firstOrNull())
 
         val functionType = method.type as? FunctionType
         assertNotNull(functionType)
@@ -427,7 +425,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(a)
 
         // type should be Integer[]
-        assertEquals(createTypeFrom("int[]"), a.type)
+        assertEquals(tu.parseType("int[]"), a.type)
 
         // it has an array creation initializer
         val ace = a.initializer as? ArrayCreationExpression
@@ -635,17 +633,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration?
         assertNotNull(receiver)
         assertLocalName("this", receiver)
-        assertEquals(createTypeFrom("my.Animal"), receiver.type)
+        assertEquals(tu.parseType("my.Animal"), receiver.type)
     }
 
     @Test
     fun testOverrideHandler() {
         /** A simple extension of the [JavaLanguageFrontend] to demonstrate handler overriding. */
-        class MyJavaLanguageFrontend(
-            language: JavaLanguage,
-            config: TranslationConfiguration,
-            scopeManager: ScopeManager,
-        ) : JavaLanguageFrontend(language, config, scopeManager) {
+        class MyJavaLanguageFrontend(language: JavaLanguage, ctx: TranslationContext) :
+            JavaLanguageFrontend(language, ctx) {
             init {
                 this.declarationHandler =
                     object : DeclarationHandler(this@MyJavaLanguageFrontend) {
@@ -673,13 +668,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             override val namespaceDelimiter = "."
             override val superClassKeyword = "super"
             override val frontend = MyJavaLanguageFrontend::class
-
-            override fun newFrontend(
-                config: TranslationConfiguration,
-                scopeManager: ScopeManager,
-            ): MyJavaLanguageFrontend {
-                return MyJavaLanguageFrontend(this, config, scopeManager)
-            }
         }
 
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
@@ -785,8 +773,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(ref)
         assertSame(ref, thisOuterClass)
     }
-
-    private fun createTypeFrom(typename: String) = TypeParser.createFrom(typename, JavaLanguage())
 
     @Test
     fun testForEach() {

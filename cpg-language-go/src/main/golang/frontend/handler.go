@@ -1235,22 +1235,22 @@ func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.Bas
 	case token.STRING:
 		// strip the "
 		value = cpg.NewString(lit.Value[1 : len(lit.Value)-1])
-		t = cpg.TypeParser_createFrom("string", lang)
+		t = cpg.TypeParser_createFrom("string", lang, this.GetCtx())
 	case token.INT:
 		i, _ := strconv.ParseInt(lit.Value, 10, 64)
 		value = cpg.NewInteger(int(i))
-		t = cpg.TypeParser_createFrom("int", lang)
+		t = cpg.TypeParser_createFrom("int", lang, this.GetCtx())
 	case token.FLOAT:
 		// default seems to be float64
 		f, _ := strconv.ParseFloat(lit.Value, 64)
 		value = cpg.NewDouble(f)
-		t = cpg.TypeParser_createFrom("float64", lang)
+		t = cpg.TypeParser_createFrom("float64", lang, this.GetCtx())
 	case token.IMAG:
 		// TODO
 		t = &cpg.UnknownType_getUnknown(lang).Type
 	case token.CHAR:
 		value = cpg.NewString(lit.Value)
-		t = cpg.TypeParser_createFrom("rune", lang)
+		t = cpg.TypeParser_createFrom("rune", lang, this.GetCtx())
 		break
 	}
 
@@ -1384,12 +1384,12 @@ func (this *GoLanguageFrontend) handleType(fset *token.FileSet, typeExpr ast.Exp
 			this.LogTrace("fqn type: %s", name)
 		}
 
-		return cpg.TypeParser_createFrom(name, lang)
+		return cpg.TypeParser_createFrom(name, lang, this.GetCtx())
 	case *ast.SelectorExpr:
 		// small shortcut
 		fqn := fmt.Sprintf("%s.%s", v.X.(*ast.Ident).Name, v.Sel.Name)
 		this.LogTrace("FQN type: %s", fqn)
-		return cpg.TypeParser_createFrom(fqn, lang)
+		return cpg.TypeParser_createFrom(fqn, lang, this.GetCtx())
 	case *ast.StarExpr:
 		t := this.handleType(fset, v.X)
 
@@ -1417,7 +1417,7 @@ func (this *GoLanguageFrontend) handleType(fset *token.FileSet, typeExpr ast.Exp
 	case *ast.MapType:
 		// we cannot properly represent Golangs built-in map types, yet so we have
 		// to make a shortcut here and represent it as a Java-like map<K, V> type.
-		t := cpg.TypeParser_createFrom("map", lang)
+		t := cpg.TypeParser_createFrom("map", lang, this.GetCtx())
 		keyType := this.handleType(fset, v.Key)
 		valueType := this.handleType(fset, v.Value)
 
@@ -1428,7 +1428,7 @@ func (this *GoLanguageFrontend) handleType(fset *token.FileSet, typeExpr ast.Exp
 		return t
 	case *ast.ChanType:
 		// handle them similar to maps
-		t := cpg.TypeParser_createFrom("chan", lang)
+		t := cpg.TypeParser_createFrom("chan", lang, this.GetCtx())
 		chanType := this.handleType(fset, v.Value)
 
 		(*cpg.ObjectType)(t).AddGeneric(chanType)
@@ -1484,7 +1484,7 @@ func (this *GoLanguageFrontend) handleType(fset *token.FileSet, typeExpr ast.Exp
 
 		name += "}"
 
-		return cpg.TypeParser_createFrom(name, lang)
+		return cpg.TypeParser_createFrom(name, lang, this.GetCtx())
 	case *ast.IndexExpr:
 		// This is a type with one type parameter. First we need to parse the "X" expression as a type
 		var t = this.handleType(fset, v.X)

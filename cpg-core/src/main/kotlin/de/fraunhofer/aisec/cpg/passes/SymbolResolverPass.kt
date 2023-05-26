@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -34,8 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 
-abstract class SymbolResolverPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    ComponentPass(config, scopeManager) {
+abstract class SymbolResolverPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected lateinit var walker: SubgraphWalker.ScopedWalker
     lateinit var currentTU: TranslationUnitDeclaration
 
@@ -55,7 +53,7 @@ abstract class SymbolResolverPass(config: TranslationConfiguration, scopeManager
     protected fun findEnums(node: Node?) {
         if (node is EnumDeclaration) {
             // TODO: Use the name instead of the type.
-            val type = TypeParser.createFrom(node.name, node.language)
+            val type = node.parseType(node.name)
             enumMap.putIfAbsent(type, node)
         }
     }

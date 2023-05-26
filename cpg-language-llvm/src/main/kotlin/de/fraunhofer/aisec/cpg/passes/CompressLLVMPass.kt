@@ -25,13 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.newDeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -43,8 +39,7 @@ import java.util.*
 
 @ExecuteFirst
 @RequiredFrontend(LLVMIRLanguageFrontend::class)
-class CompressLLVMPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    ComponentPass(config, scopeManager) {
+class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         val flatAST = SubgraphWalker.flattenAST(component)
         // Get all goto statements

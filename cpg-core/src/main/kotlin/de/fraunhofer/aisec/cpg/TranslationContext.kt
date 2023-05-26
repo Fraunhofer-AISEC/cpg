@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,27 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 
-abstract class BaseTest {
-    protected var log: Logger = LoggerFactory.getLogger(this.javaClass)
-}
+/**
+ * The translation context holds all necessary managers and configurations needed during the
+ * translation process.
+ */
+class TranslationContext(
+    /** The configuration for this translation. */
+    val config: TranslationConfiguration,
+
+    /**
+     * The scope manager which comprises the complete translation result. In case of sequential
+     * parsing, this scope manager is passed to the individual frontends one after another. In case
+     * of sequential parsing, individual scope managers will be passed to each language frontend
+     * (through individual contexts) and then finally merged into a final one.
+     */
+    val scopeManager: ScopeManager,
+
+    /**
+     * The type manager is responsible for managing type information. Currently, we have one
+     * instance of a [TypeManager] for the overall [TranslationResult].
+     */
+    val typeManager: TypeManager
+)

@@ -25,11 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -49,8 +47,11 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         val tu =
             CXXLanguageFrontend(
                     CPPLanguage(),
-                    TranslationConfiguration.builder().defaultPasses().build(),
-                    ScopeManager(),
+                    TranslationContext(
+                        TranslationConfiguration.builder().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
@@ -79,20 +80,17 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
     @Test
     @Throws(TranslationException::class)
     fun testWithSymbols() {
+        val config =
+            TranslationConfiguration.builder()
+                .symbols(mapOf(Pair("HELLO_WORLD", "\"Hello World\""), Pair("INCREASE(X)", "X+1")))
+                .defaultPasses()
+                .build()
+
         // let's try with symbol definitions
         val tu =
             CXXLanguageFrontend(
                     CPPLanguage(),
-                    TranslationConfiguration.builder()
-                        .symbols(
-                            mapOf(
-                                Pair("HELLO_WORLD", "\"Hello World\""),
-                                Pair("INCREASE(X)", "X+1")
-                            )
-                        )
-                        .defaultPasses()
-                        .build(),
-                    ScopeManager(),
+                    TranslationContext(config, ScopeManager(), TypeManager())
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)

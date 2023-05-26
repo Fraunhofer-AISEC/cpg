@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph;
 import static de.fraunhofer.aisec.cpg.graph.DeclarationBuilderKt.newTypedefDeclaration;
 
 import de.fraunhofer.aisec.cpg.ScopeManager;
+import de.fraunhofer.aisec.cpg.TranslationContext;
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
@@ -56,7 +57,7 @@ public class TypeManager {
   // TODO: document/remove this regexp, merge with other pattern
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
-  @NotNull private static TypeManager instance = new TypeManager();
+
   private static boolean typeSystemActive = true;
 
   @NotNull
@@ -90,10 +91,6 @@ public class TypeManager {
   private final Set<Type> firstOrderTypes = Collections.synchronizedSet(new HashSet<>());
   private final Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
 
-  public static void reset() {
-    instance = new TypeManager();
-  }
-
   /**
    * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
    * @param name of the ParameterizedType we want to get
@@ -121,7 +118,6 @@ public class TypeManager {
    * @param typeParameters List containing all ParameterizedTypes used by the recordDeclaration and
    *     will be stored as value in the map
    */
-  @Deprecated
   public void addTypeParameter(
       RecordDeclaration recordDeclaration, List<ParameterizedType> typeParameters) {
     this.recordToTypeParameters.put(recordDeclaration, typeParameters);
@@ -136,7 +132,6 @@ public class TypeManager {
    * @return
    */
   @Nullable
-  @Deprecated
   public ParameterizedType getTypeParameter(TemplateDeclaration templateDeclaration, String name) {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
       for (ParameterizedType parameterizedType :
@@ -259,11 +254,7 @@ public class TypeManager {
         .anyMatch(type -> type.getRoot().getName().toString().equals(name));
   }
 
-  private TypeManager() {}
-
-  public static @NotNull TypeManager getInstance() {
-    return instance;
-  }
+  public TypeManager() {}
 
   public static boolean isTypeSystemActive() {
     return typeSystemActive;
@@ -413,11 +404,13 @@ public class TypeManager {
    * information and their record declarations. We want to get rid of that in the future.
    *
    * @param types the types to compare
-   * @param provider a {@link ScopeProvider}.
+   * @param ctx a {@link TranslationContext}.
    * @return the common type
    */
   @NotNull
-  public Optional<Type> getCommonType(@NotNull Collection<Type> types, ScopeProvider provider) {
+  public Optional<Type> getCommonType(@NotNull Collection<Type> types, TranslationContext ctx) {
+    var provider = ctx.getScopeManager();
+
     // TODO: Documentation needed.
     boolean sameType =
         types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
@@ -513,7 +506,10 @@ public class TypeManager {
     Optional<Ancestor> lca =
         commonAncestors.stream().max(Comparator.comparingInt(Ancestor::getDepth));
     Optional<Type> commonType =
-        lca.map(a -> TypeParser.createFrom(a.getRecord().getName(), a.getRecord().getLanguage()));
+        lca.map(
+            a ->
+                TypeParser.createFrom(
+                    a.getRecord().getName().toString(), a.getRecord().getLanguage(), false, ctx));
 
     Type finalType;
     if (commonType.isPresent()) {
@@ -549,6 +545,7 @@ public class TypeManager {
 
   public boolean isSupertypeOf(Type superType, Type subType, MetadataProvider provider) {
     Language<?> language = null;
+    TranslationContext ctx;
 
     if (superType instanceof UnknownType && subType instanceof UnknownType) return true;
 
@@ -558,6 +555,13 @@ public class TypeManager {
 
     if (provider instanceof LanguageProvider languageProvider) {
       language = languageProvider.getLanguage();
+    }
+
+    if (provider instanceof ContextProvider contextProvider) {
+      ctx = contextProvider.getCtx();
+    } else {
+      log.error("Missing context provider");
+      return false;
     }
 
     // arrays and pointers match in C/C++
@@ -576,8 +580,7 @@ public class TypeManager {
       return false;
     }
 
-    Optional<Type> commonType =
-        getCommonType(new HashSet<>(List.of(superType, subType)), scopeProvider);
+    Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)), ctx);
     if (commonType.isPresent()) {
       return commonType.get().equals(superType);
     } else {
@@ -608,10 +611,11 @@ public class TypeManager {
     this.typeToRecord.clear();
   }
 
-  private Type getTargetType(Type currTarget, String alias) {
+  private Type getTargetType(Type currTarget, String alias, TranslationContext ctx) {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
-      return TypeParser.createFrom(currTarget.getName() + " " + alias, currTarget.getLanguage());
+      return TypeParser.createFrom(
+          currTarget.getName() + " " + alias, currTarget.getLanguage(), false, ctx);
     } else if (alias.endsWith("]")) {
       // array type
       return currTarget.reference(PointerType.PointerOrigin.ARRAY);
@@ -627,20 +631,23 @@ public class TypeManager {
     }
   }
 
-  private Type getAlias(String alias, @NotNull Language<? extends LanguageFrontend> language) {
+  private Type getAlias(
+      String alias,
+      @NotNull Language<? extends LanguageFrontend> language,
+      TranslationContext ctx) {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
       Matcher matcher = funPointerPattern.matcher(alias);
       if (matcher.find()) {
-        return TypeParser.createIgnoringAlias(matcher.group("alias"), language);
+        return TypeParser.createIgnoringAlias(matcher.group("alias"), language, ctx);
       } else {
         log.error("Could not find alias name in function pointer typedef: {}", alias);
-        return TypeParser.createIgnoringAlias(alias, language);
+        return TypeParser.createIgnoringAlias(alias, language, ctx);
       }
     } else {
       alias = alias.split("\\[")[0];
       alias = alias.replace("*", "");
-      return TypeParser.createIgnoringAlias(alias, language);
+      return TypeParser.createIgnoringAlias(alias, language, ctx);
     }
   }
 
@@ -658,9 +665,9 @@ public class TypeManager {
   public Declaration createTypeAlias(
       @NotNull LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
     String cleanedPart = Util.removeRedundantParentheses(aliasString);
-    Type currTarget = getTargetType(target, cleanedPart);
+    Type currTarget = getTargetType(target, cleanedPart, frontend.getCtx());
     Type alias;
-    alias = getAlias(cleanedPart, frontend.getLanguage());
+    alias = getAlias(cleanedPart, frontend.getLanguage(), frontend.getCtx());
 
     if (alias instanceof SecondOrderType) {
       Type chain = alias.duplicate();

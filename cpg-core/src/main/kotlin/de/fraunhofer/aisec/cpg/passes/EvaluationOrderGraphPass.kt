@@ -25,13 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -71,8 +69,7 @@ import org.slf4j.LoggerFactory
  */
 @Suppress("MemberVisibilityCanBePrivate")
 @DependsOn(CallResolver::class)
-open class EvaluationOrderGraphPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    TranslationUnitPass(config, scopeManager) {
+open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
     private var currentPredecessors = mutableListOf<Node>()
     private val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
@@ -580,9 +577,7 @@ open class EvaluationOrderGraphPass(config: TranslationConfiguration, scopeManag
                 val catchParam = catchClause.parameter
                 if (catchParam == null) { // e.g. catch (...)
                     currentPredecessors.addAll(eogEdges)
-                } else if (
-                    TypeManager.getInstance().isSupertypeOf(catchParam.type, throwType, node)
-                ) {
+                } else if (typeManager.isSupertypeOf(catchParam.type, throwType, node)) {
                     currentPredecessors.addAll(eogEdges)
                     toRemove.add(throwType)
                 }

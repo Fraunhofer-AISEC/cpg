@@ -32,10 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.nio.file.Path
 import kotlin.test.Test
@@ -66,11 +66,11 @@ class TypeScriptLanguageFrontendTest {
 
         val someFunction = functions.first()
         assertLocalName("someFunction", someFunction)
-        assertEquals(TypeParser.createFrom("Number", TypeScriptLanguage()), someFunction.type)
+        assertEquals(tu.parseType("Number"), someFunction.type)
 
         val someOtherFunction = functions.last()
         assertLocalName("someOtherFunction", someOtherFunction)
-        assertEquals(TypeParser.createFrom("Number", TypeScriptLanguage()), someOtherFunction.type)
+        assertEquals(tu.parseType("Number"), someOtherFunction.type)
 
         val parameters = someOtherFunction.parameters
         assertNotNull(parameters)
@@ -79,7 +79,7 @@ class TypeScriptLanguageFrontendTest {
 
         val parameter = parameters.first()
         assertLocalName("s", parameter)
-        assertEquals(TypeParser.createFrom("String", TypeScriptLanguage()), parameter.type)
+        assertEquals(tu.parseType("String"), parameter.type)
     }
 
     @Test
@@ -278,7 +278,7 @@ class TypeScriptLanguageFrontendTest {
         val lastName = user.fields.lastOrNull()
         assertNotNull(lastName)
         assertLocalName("lastName", lastName)
-        assertEquals(TypeParser.createFrom("string", TypeScriptLanguage()), lastName.type)
+        assertEquals(tu.parseType("string"), lastName.type)
 
         val usersState =
             tu.getDeclarationsByName("UsersState", RecordDeclaration::class.java).iterator().next()
@@ -291,7 +291,7 @@ class TypeScriptLanguageFrontendTest {
         val users = usersState.fields.firstOrNull()
         assertNotNull(users)
         assertLocalName("users", users)
-        assertEquals(TypeParser.createFrom("User[]", TypeScriptLanguage()), users.type)
+        assertEquals(tu.parseType("User[]"), users.type)
 
         val usersComponent =
             tu.getDeclarationsByName("Users", RecordDeclaration::class.java).iterator().next()

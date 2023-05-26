@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.*
@@ -59,8 +58,7 @@ import org.slf4j.LoggerFactory
  * rather makes their "refersTo" point to the appropriate [ValueDeclaration].
  */
 @DependsOn(TypeHierarchyResolver::class)
-open class VariableUsageResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    SymbolResolverPass(config, scopeManager) {
+open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
 
     override fun accept(component: Component) {
         walker = ScopedWalker(scopeManager)
@@ -144,7 +142,7 @@ open class VariableUsageResolver(config: TranslationConfiguration, scopeManager:
 
         var recordDeclType: Type? = null
         if (currentClass != null) {
-            recordDeclType = TypeParser.createFrom(currentClass.name, currentClass.language)
+            recordDeclType = currentClass.parseType(currentClass.name)
         }
         if (current.type is FunctionPointerType && refersTo == null) {
             refersTo = resolveFunctionPtr(current)
@@ -200,9 +198,9 @@ open class VariableUsageResolver(config: TranslationConfiguration, scopeManager:
 
         return if (language != null && language.namespaceDelimiter.isNotEmpty()) {
             val parentName = (current.name.parent ?: current.name).toString()
-            TypeParser.createFrom(parentName, language)
+            current.parseType(parentName)
         } else {
-            current.language.newUnknownType()
+            current.newUnknownType()
         }
     }
 
@@ -236,7 +234,7 @@ open class VariableUsageResolver(config: TranslationConfiguration, scopeManager:
                             "Could not find referring super type ${superType.typeName} for ${curClass.name} in the record map. Will set the super type to java.lang.Object"
                         )
                         // TODO: Should be more generic!
-                        base.type = TypeParser.createFrom(Any::class.java.name, current.language)
+                        base.type = current.parseType(Any::class.java.name)
                     } else {
                         // We need to connect this super reference to the receiver of this
                         // method
@@ -256,7 +254,7 @@ open class VariableUsageResolver(config: TranslationConfiguration, scopeManager:
                 } else {
                     // no explicit super type -> java.lang.Object
                     // TODO: Should be more generic
-                    val objectType = TypeParser.createFrom(Any::class.java.name, current.language)
+                    val objectType = current.parseType(Any::class.java.name)
                     base.type = objectType
                 }
             } else {
@@ -271,13 +269,13 @@ open class VariableUsageResolver(config: TranslationConfiguration, scopeManager:
                     return
                 }
             } else if (baseTarget is RecordDeclaration) {
-                var baseType = TypeParser.createFrom(baseTarget.name, baseTarget.language)
+                var baseType = baseTarget.parseType(baseTarget.name)
                 if (baseType.name !in recordMap) {
                     val containingT = baseType
                     val fqnResolvedType =
                         recordMap.keys.firstOrNull { it.lastPartsMatch(containingT.name) }
                     if (fqnResolvedType != null) {
-                        baseType = TypeParser.createFrom(fqnResolvedType, baseTarget.language)
+                        baseType = baseTarget.parseType(fqnResolvedType)
                     }
                 }
                 current.refersTo = resolveMember(baseType, current)
@@ -288,7 +286,7 @@ open class VariableUsageResolver(config: TranslationConfiguration, scopeManager:
         if (baseType.name !in recordMap) {
             val fqnResolvedType = recordMap.keys.firstOrNull { it.lastPartsMatch(baseType.name) }
             if (fqnResolvedType != null) {
-                baseType = TypeParser.createFrom(fqnResolvedType, baseType.language)
+                baseType = current.base.parseType(fqnResolvedType)
             }
         }
         current.refersTo = resolveMember(baseType, current)
@@ -361,8 +359,7 @@ open class VariableUsageResolver(config: TranslationConfiguration, scopeManager:
                 } else {
                     "class"
                 }
-            val record =
-                base.startInference(scopeManager).inferRecordDeclaration(base, currentTU, kind)
+            val record = base.startInference(ctx).inferRecordDeclaration(base, currentTU, kind)
             // update the record map
             if (record != null) recordMap[base.name] = record
         }
@@ -421,7 +418,7 @@ open class VariableUsageResolver(config: TranslationConfiguration, scopeManager:
         // If we didn't find anything, we create a new function or method declaration
         return target
             ?: (declarationHolder ?: currentTU)
-                .startInference(scopeManager)
+                .startInference(ctx)
                 .createInferredFunctionDeclaration(
                     name,
                     null,

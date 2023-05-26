@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -54,13 +55,13 @@ abstract class Expression : Statement(), HasType {
     override var type: Type
         get() {
             val result: Type =
-                if (TypeManager.isTypeSystemActive()) {
+                if (isTypeSystemActive) {
                     _type
                 } else {
-                    TypeManager.getInstance()
-                        .typeCache
-                        .computeIfAbsent(this) { mutableListOf() }
-                        .firstOrNull()
+                    ctx?.typeManager
+                        ?.typeCache
+                        ?.computeIfAbsent(this) { mutableListOf() }
+                        ?.firstOrNull()
                         ?: newUnknownType()
                 }
             return result
@@ -74,8 +75,8 @@ abstract class Expression : Statement(), HasType {
 
     override var possibleSubTypes: List<Type>
         get() {
-            return if (!TypeManager.isTypeSystemActive()) {
-                TypeManager.getInstance().typeCache.getOrDefault(this, emptyList())
+            return if (!isTypeSystemActive) {
+                ctx?.typeManager?.typeCache?.getOrDefault(this, emptyList()) ?: listOf()
             } else _possibleSubTypes
         }
         set(value) {
@@ -98,9 +99,9 @@ abstract class Expression : Statement(), HasType {
 
         // TODO Document this method. It is called very often (potentially for each AST node) and
         //  performs less than optimal.
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             this._type = t
-            TypeManager.getInstance().cacheType(this, t)
+            cacheType(t)
             return
         }
 
@@ -112,8 +113,8 @@ abstract class Expression : Statement(), HasType {
         // do.
         if (
             r.contains(this) ||
-                TypeManager.getInstance().isUnknown(t) ||
-                TypeManager.getInstance().stopPropagation(this.type, t) ||
+                t is UnknownType ||
+                stopPropagation(this.type, t) ||
                 (this.type is FunctionPointerType && t !is FunctionPointerType)
         ) {
             return
@@ -135,16 +136,14 @@ abstract class Expression : Statement(), HasType {
         subTypes.add(t)
 
         // Probably tries to get something like the best supertype of all possible subtypes.
-        this._type =
-            TypeManager.getInstance()
-                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(t))
+        this._type = registerType(getCommonType(subTypes).orElse(t))
 
         // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
         //  getting the common type??
         val newSubtypes = mutableListOf<Type>()
         for (s in subTypes) {
-            if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
-                newSubtypes.add(TypeManager.getInstance().registerType(s))
+            if (isSupertypeOf(this.type, s)) {
+                newSubtypes.add(registerType(s))
             }
         }
 
@@ -168,13 +167,9 @@ abstract class Expression : Statement(), HasType {
 
     override fun setPossibleSubTypes(possibleSubTypes: List<Type>, root: MutableList<HasType>) {
         var list = possibleSubTypes
-        list =
-            list
-                .filterNot { type -> TypeManager.getInstance().isUnknown(type) }
-                .distinct()
-                .toMutableList()
-        if (!TypeManager.isTypeSystemActive()) {
-            list.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
+        list = list.filterNot { type -> type is UnknownType }.distinct().toMutableList()
+        if (!isTypeSystemActive) {
+            list.forEach { t -> cacheType(t) }
             return
         }
         if (root.contains(this)) {

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -47,23 +48,27 @@ import org.slf4j.LoggerFactory
  * [github wiki page](https://github.com/Fraunhofer-AISEC/cpg/wiki/Language-Frontends).
  */
 abstract class LanguageFrontend(
+    /** The language this frontend works for. */
     override val language: Language<out LanguageFrontend>,
-    val config: TranslationConfiguration,
-    scopeManager: ScopeManager,
+
+    /**
+     * The translation context, which contains all necessary managers used in this frontend parsing
+     * process. Note, that different contexts could passed to frontends, e.g., in parallel parsing
+     * to supply different managers to different frontends.
+     */
+    final override var ctx: TranslationContext,
 ) :
     ProcessedListener(),
     CodeAndLocationProvider,
     LanguageProvider,
     ScopeProvider,
-    NamespaceProvider {
-    var scopeManager: ScopeManager = scopeManager
-        set(scopeManager) {
-            field = scopeManager
-            field.lang = this
-        }
+    NamespaceProvider,
+    ContextProvider {
+    val scopeManager: ScopeManager = ctx.scopeManager
+    val typeManager: TypeManager = ctx.typeManager
+    val config: TranslationConfiguration = ctx.config
 
     init {
-        // this.scopeManager = scopeManager
         this.scopeManager.lang = this
     }
 

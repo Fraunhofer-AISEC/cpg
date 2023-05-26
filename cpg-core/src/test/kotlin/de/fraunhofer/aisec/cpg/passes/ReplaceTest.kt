@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
@@ -43,16 +43,12 @@ class ReplaceTest {
         override val frontend: KClass<out TestLanguageFrontend>
             get() = ReplaceTestLanguageFrontend::class
 
-        override fun newFrontend(
-            config: TranslationConfiguration,
-            scopeManager: ScopeManager
-        ): TestLanguageFrontend {
+        override fun newFrontend(ctx: TranslationContext): TestLanguageFrontend {
             return ReplaceTestLanguageFrontend()
         }
     }
 
-    class ReplacedPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
-        EvaluationOrderGraphPass(config, scopeManager)
+    class ReplacedPass(ctx: TranslationContext) : EvaluationOrderGraphPass(ctx)
 
     @Test
     fun testReplaceAnnotation() {

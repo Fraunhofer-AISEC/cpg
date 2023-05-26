@@ -45,8 +45,7 @@ import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
@@ -71,11 +70,8 @@ import java.util.function.Consumer
 @RegisterExtraPass(
     JavaExternalTypeHierarchyResolver::class
 ) // this pass is always required for Java
-open class JavaLanguageFrontend(
-    language: Language<JavaLanguageFrontend>,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : LanguageFrontend(language, config, scopeManager) {
+open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: TranslationContext) :
+    LanguageFrontend(language, ctx) {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
@@ -351,8 +347,10 @@ open class JavaLanguageFrontend(
         return try {
             // Resolve type first with ParameterizedType
             var type: de.fraunhofer.aisec.cpg.graph.types.Type? =
-                TypeManager.getInstance()
-                    .getTypeParameter(scopeManager.currentRecord, resolved.returnType.describe())
+                typeManager.getTypeParameter(
+                    scopeManager.currentRecord,
+                    resolved.returnType.describe()
+                )
             if (type == null) {
                 type = parseType(resolved.returnType.describe())
             }

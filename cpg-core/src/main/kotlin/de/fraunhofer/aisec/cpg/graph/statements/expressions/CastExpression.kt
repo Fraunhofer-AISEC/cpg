@@ -46,11 +46,11 @@ class CastExpression : Expression(), HasType.TypeListener {
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val previous = type
-        if (TypeManager.getInstance().isSupertypeOf(castType, src.propagationType, this)) {
+        if (isSupertypeOf(castType, src.propagationType)) {
             setType(src.propagationType, root)
         } else {
             resetTypes(castType)
@@ -61,7 +61,7 @@ class CastExpression : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         setPossibleSubTypes(ArrayList(src.possibleSubTypes), root)

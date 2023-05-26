@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -72,7 +71,7 @@ internal class TypedefTest : BaseTest() {
         assertEquals(NumericType.Modifier.UNSIGNED, returnType.modifier)
         assertEquals(uintfp1.type, uintfp2.type)
 
-        val typedefs = result.scopeManager.currentTypedefs
+        val typedefs = result.finalCtx.scopeManager.currentTypedefs
         val def =
             typedefs.stream().filter { it.alias.name.localName == "test" }.findAny().orElse(null)
         assertNotNull(def)
@@ -83,6 +82,7 @@ internal class TypedefTest : BaseTest() {
     fun testWithModifier() {
         val result = analyze("cpp", topLevel, true)
         val variables = result.variables
+        val typeManager = result.finalCtx.typeManager
 
         // pointer
         val l1ptr = findByUniqueName(variables, "l1ptr")
@@ -98,9 +98,9 @@ internal class TypedefTest : BaseTest() {
         val l2arr = findByUniqueName(variables, "l2arr")
         val l3arr = findByUniqueName(variables, "l3arr")
         val l4arr = findByUniqueName(variables, "l4arr")
-        assertTrue(TypeManager.getInstance().checkArrayAndPointer(l1arr.type, l2arr.type))
-        assertTrue(TypeManager.getInstance().checkArrayAndPointer(l1arr.type, l3arr.type))
-        assertTrue(TypeManager.getInstance().checkArrayAndPointer(l1arr.type, l4arr.type))
+        assertTrue(typeManager.checkArrayAndPointer(l1arr.type, l2arr.type))
+        assertTrue(typeManager.checkArrayAndPointer(l1arr.type, l3arr.type))
+        assertTrue(typeManager.checkArrayAndPointer(l1arr.type, l4arr.type))
     }
 
     @Test

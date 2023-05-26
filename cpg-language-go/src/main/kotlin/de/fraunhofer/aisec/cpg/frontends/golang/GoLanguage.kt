@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasGenerics
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
@@ -110,11 +108,4 @@ class GoLanguage :
             // https://pkg.go.dev/builtin#string
             "string" to StringType("string", this)
         )
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): GoLanguageFrontend {
-        return GoLanguageFrontend(this, config, scopeManager)
-    }
 }

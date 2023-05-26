@@ -26,8 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.ResolveInFrontend
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
@@ -76,11 +75,8 @@ import org.slf4j.LoggerFactory
  * ad [GPPLanguage]). This enables us (to some degree) to deal with the finer difference between C
  * and C++ code.
  */
-class CXXLanguageFrontend(
-    language: Language<CXXLanguageFrontend>,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : LanguageFrontend(language, config, scopeManager) {
+class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
+    LanguageFrontend(language, ctx) {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
@@ -556,7 +552,7 @@ class CXXLanguageFrontend(
                 }
             }
 
-        type = TypeManager.getInstance().registerType(type)
+        type = typeManager.registerType(type)
         type = this.adjustType(declarator, type)
 
         return type
@@ -637,7 +633,7 @@ class CXXLanguageFrontend(
         }
 
         // Make sure, the type manager knows about this type
-        return TypeManager.getInstance().registerType(type)
+        return typeManager.registerType(type)
     }
 
     companion object {
