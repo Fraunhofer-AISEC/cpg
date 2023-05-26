@@ -637,30 +637,32 @@ private constructor(
 
             // Add the "execute before" dependencies.
             for (p in passes) {
-                val executeBefore = mutableListOf<Class<out Pass<*>>>()
+                val executeBefore = mutableListOf<KClass<out Pass<*>>>()
 
+                val depAnn = p.findAnnotations<DependsOn>()
                 // collect all dependencies added by [DependsOn] annotations.
-                if (this.javaClass.getAnnotationsByType(DependsOn::class.java).isNotEmpty()) {
-                    val dependencies = this.javaClass.getAnnotationsByType(DependsOn::class.java)
-                    for (d in dependencies) {
+                for (d in depAnn) {
+                    val deps =
                         if (d.softDependency) {
-                            softDependencies[p]?.add(d.value)
+                            softDependencies.computeIfAbsent(p) { mutableSetOf() }
                         } else {
-                            hardDependencies[p]?.add(d.value)
+                            hardDependencies.computeIfAbsent(p) { mutableSetOf() }
                         }
-                    }
+                    deps += d.value
                 }
 
-                if (this.javaClass.getAnnotationsByType(ExecuteBefore::class.java).isNotEmpty()) {
-                    val dependencies =
-                        this.javaClass.getAnnotationsByType(ExecuteBefore::class.java)
-                    for (d in dependencies) {
-                        executeBefore.add(d.other.java)
-                    }
+                val execBeforeAnn = p.findAnnotations<ExecuteBefore>()
+                for (d in execBeforeAnn) {
+                    executeBefore.add(d.other)
                 }
 
                 for (eb in executeBefore) {
-                    passes.filter { eb.isInstance(it) }.forEach { softDependencies[it]?.add(p) }
+                    passes
+                        .filter { eb == it }
+                        .forEach {
+                            val deps = softDependencies.computeIfAbsent(it) { mutableSetOf() }
+                            deps += p
+                        }
                 }
             }
 
@@ -711,7 +713,7 @@ private constructor(
          */
         @Throws(ConfigurationException::class)
         private fun orderPasses(): List<KClass<out Pass<*>>> {
-            log.info("Passes before enforcing order: {}", passes)
+            log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
             val result = mutableListOf<KClass<out Pass<*>>>()
 
             // Create a local copy of all passes and their "current" dependencies without possible
@@ -749,7 +751,7 @@ private constructor(
                     throw ConfigurationException("Failed to satisfy ordering requirements.")
                 }
             }
-            log.info("Passes after enforcing order: {}", result)
+            log.info("Passes after enforcing order: {}", result.map { it.simpleName })
             return result
         }
     }

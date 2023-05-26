@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import java.util.*
 import kotlin.reflect.KClass
+import kotlin.reflect.full.findAnnotations
 
 /**
  * A simple helper class for keeping track of passes and their (currently not satisfied)
@@ -62,8 +63,9 @@ class PassWithDepsContainer {
      * working list.
      */
     private fun removeDependencyByClass(cls: KClass<out Pass<*>>) {
-        for ((_, value) in workingList) {
-            value.remove(cls)
+        for (pass in workingList) {
+            pass.softDependencies.remove(cls)
+            pass.hardDependencies.remove(cls)
         }
     }
 
@@ -95,14 +97,12 @@ class PassWithDepsContainer {
         val softDependencies = mutableSetOf<KClass<out Pass<*>>>()
         val hardDependencies = mutableSetOf<KClass<out Pass<*>>>()
 
-        if (this.javaClass.getAnnotationsByType(DependsOn::class.java).isNotEmpty()) {
-            val dependencies = this.javaClass.getAnnotationsByType(DependsOn::class.java)
-            for (d in dependencies) {
-                if (d.softDependency) {
-                    softDependencies += d.value
-                } else {
-                    hardDependencies += d.value
-                }
+        val dependencies = cls.findAnnotations<DependsOn>()
+        for (d in dependencies) {
+            if (d.softDependency) {
+                softDependencies += d.value
+            } else {
+                hardDependencies += d.value
             }
         }
 

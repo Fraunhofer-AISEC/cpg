@@ -74,45 +74,43 @@ private constructor(
         val result = TranslationResult(this, ScopeManager())
 
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
-        return CompletableFuture.supplyAsync {
-            val outerBench =
-                Benchmark(
-                    TranslationManager::class.java,
-                    "Translation into full graph",
-                    false,
-                    result
-                )
-            var executedFrontends = setOf<LanguageFrontend>()
+        return CompletableFuture.supplyAsync { analyze2(result) }
+    }
 
-            try {
-                // Parse Java/C/CPP files
-                var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
-                executedFrontends = runFrontends(result, config)
+    fun analyze2(result: TranslationResult): TranslationResult {
+        val outerBench =
+            Benchmark(TranslationManager::class.java, "Translation into full graph", false, result)
+        var executedFrontends = setOf<LanguageFrontend>()
+
+        try {
+            // Parse Java/C/CPP files
+            var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
+            executedFrontends = runFrontends(result, config)
+            bench.addMeasurement()
+
+            // Apply passes
+            for (pass in config.registeredPasses) {
+                bench = Benchmark(pass.java, "Executing Pass", false, result)
+                executePassSequential(pass, result, executedFrontends)
+
                 bench.addMeasurement()
-
-                // Apply passes
-                for (pass in config.registeredPasses) {
-                    bench = Benchmark(pass.java, "Executing Pass", false, result)
-                    executePassSequential(pass, result, executedFrontends)
-
-                    bench.addMeasurement()
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
-                    }
-                }
-            } catch (ex: TranslationException) {
-                throw CompletionException(ex)
-            } finally {
-                outerBench.addMeasurement()
-                if (!config.disableCleanup) {
-                    log.debug("Cleaning up {} Frontends", executedFrontends.size)
-
-                    executedFrontends.forEach { it.cleanup() }
-                    TypeManager.getInstance().cleanup()
+                if (result.isCancelled) {
+                    log.warn("Analysis interrupted, stopping Pass evaluation")
                 }
             }
-            result
+        } catch (ex: TranslationException) {
+            throw CompletionException(ex)
+        } finally {
+            outerBench.addMeasurement()
+            if (!config.disableCleanup) {
+                log.debug("Cleaning up {} Frontends", executedFrontends.size)
+
+                executedFrontends.forEach { it.cleanup() }
+                TypeManager.getInstance().cleanup()
+            }
         }
+
+        return result
     }
 
     fun isCancelled(): Boolean {
