@@ -118,6 +118,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
     fun removeMethod(methodDeclaration: MethodDeclaration?) {
         methodEdges.removeIf { it.end == methodDeclaration }
     }
+
     fun addConstructor(constructorDeclaration: ConstructorDeclaration) {
         addIfNotContains(constructorEdges, constructorDeclaration)
     }
@@ -129,6 +130,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
     fun removeRecord(recordDeclaration: RecordDeclaration) {
         recordEdges.removeIf { it.end == recordDeclaration }
     }
+
     fun removeTemplate(templateDeclaration: TemplateDeclaration?) {
         templateEdges.removeIf { it.end == templateDeclaration }
     }
@@ -143,6 +145,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
             list.addAll(templates)
             return list
         }
+
     val superTypes: List<Type>
         /**
          * Combines both implemented interfaces and extended classes. This is most commonly what you

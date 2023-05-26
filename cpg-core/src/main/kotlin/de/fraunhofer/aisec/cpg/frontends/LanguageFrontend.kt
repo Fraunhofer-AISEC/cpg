@@ -108,6 +108,7 @@ abstract class LanguageFrontend(
      * @return the location </T>
      */
     abstract fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation?
+
     override fun <N, S> setCodeAndLocation(cpgNode: N, astNode: S?) {
         if (cpgNode is Node && astNode != null) {
             if (config.codeInNodes) {

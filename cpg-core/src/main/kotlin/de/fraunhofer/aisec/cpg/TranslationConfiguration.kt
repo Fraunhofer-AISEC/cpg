@@ -228,6 +228,7 @@ private constructor(
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
+
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
             return this
@@ -702,6 +703,7 @@ private constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(TranslationConfiguration::class.java)
+
         fun builder(): Builder {
             return Builder()
         }

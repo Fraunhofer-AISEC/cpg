@@ -61,6 +61,7 @@ open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLangua
             "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
             "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
         )
+
     init {
         this.namespaceDelimiter = namespaceDelimiter
     }

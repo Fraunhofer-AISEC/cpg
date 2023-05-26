@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 class SwitchScope(switchStatement: SwitchStatement) :
     ValueDeclarationScope(switchStatement), Breakable {
     private val breaks = mutableListOf<BreakStatement>()
+
     override fun addBreakStatement(breakStatement: BreakStatement) {
         breaks.add(breakStatement)
     }

@@ -89,6 +89,7 @@ class LoopScope(loopStatement: Statement) :
                     mutableListOf()
                 }
             }
+
     private val breaks = mutableListOf<BreakStatement>()
     private val continues = mutableListOf<ContinueStatement>()
 

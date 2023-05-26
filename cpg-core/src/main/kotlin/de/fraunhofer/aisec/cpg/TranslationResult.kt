@@ -161,6 +161,7 @@ class TranslationResult(
             )
             return result
         }
+
     override val config: TranslationConfiguration
         get() = translationManager.config
 

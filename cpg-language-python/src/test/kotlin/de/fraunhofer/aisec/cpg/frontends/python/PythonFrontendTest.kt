@@ -895,6 +895,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(formatArgT3)
         // TODO check refersTo
     }
+
     @Test
     fun testIssue473() {
         val topLevel = Path.of("src", "test", "resources", "python")

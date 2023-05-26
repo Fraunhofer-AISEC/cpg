@@ -406,6 +406,7 @@ object SubgraphWalker {
          * the root node of the current declaration scope, the currently visited node.
          */
         private val handlers = mutableListOf<TriConsumer<RecordDeclaration?, Node?, Node?>>()
+
         fun clearCallbacks() {
             handlers.clear()
         }
