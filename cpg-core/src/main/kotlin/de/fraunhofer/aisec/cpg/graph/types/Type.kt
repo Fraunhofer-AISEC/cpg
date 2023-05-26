@@ -57,7 +57,7 @@ abstract class Type : Node {
     }
 
     constructor(typeName: String?) {
-        name = language.parseName(typeName!!)
+        name = language.parseName(typeName ?: UNKNOWN_TYPE_STRING)
         typeOrigin = Origin.UNRESOLVED
     }
 

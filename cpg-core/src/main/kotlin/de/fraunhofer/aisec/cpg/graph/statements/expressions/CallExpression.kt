@@ -200,9 +200,9 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
 
     private fun replaceTypeTemplateParameter(oldType: Type?, newType: Type) {
         for (i in templateParameterEdges?.indices ?: listOf()) {
-            val propertyEdge = templateParameterEdges!![i]
-            if (propertyEdge.end == oldType) {
-                propertyEdge.end = newType
+            val propertyEdge = templateParameterEdges?.get(i)
+            if (propertyEdge?.end == oldType) {
+                propertyEdge?.end = newType
             }
         }
     }
@@ -224,7 +224,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             val propertyEdge = PropertyEdge(this, templateParam)
             propertyEdge.addProperty(Properties.INDEX, templateParameters.size)
             propertyEdge.addProperty(Properties.INSTANTIATION, templateInitialization)
-            templateParameterEdges!!.add(propertyEdge)
+            templateParameterEdges?.add(propertyEdge)
             template = true
         }
     }
@@ -237,7 +237,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             templateParameterEdges = mutableListOf()
         }
 
-        for (edge in templateParameterEdges!!) {
+        for (edge in templateParameterEdges ?: listOf()) {
             if (
                 edge.getProperty(Properties.INSTANTIATION) != null &&
                     (edge.getProperty(Properties.INSTANTIATION) ==
@@ -248,9 +248,9 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             }
         }
 
-        for (i in templateParameterEdges!!.size until orderedInitializationSignature.size) {
+        for (i in (templateParameterEdges?.size ?: 0) until orderedInitializationSignature.size) {
             val propertyEdge = PropertyEdge(this, orderedInitializationSignature[i])
-            propertyEdge.addProperty(Properties.INDEX, templateParameterEdges!!.size)
+            propertyEdge.addProperty(Properties.INDEX, templateParameterEdges?.size)
             propertyEdge.addProperty(
                 Properties.INSTANTIATION,
                 initializationType.getOrDefault(
@@ -258,7 +258,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
                     TemplateInitialization.UNKNOWN
                 )
             )
-            templateParameterEdges!!.add(propertyEdge)
+            templateParameterEdges?.add(propertyEdge)
         }
     }
 

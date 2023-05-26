@@ -100,7 +100,7 @@ open class PropertyEdge<T : Node> : Persistable {
     }
 
     fun addProperties(propertyMap: Map<Properties, Any?>?) {
-        properties.putAll(propertyMap!!)
+        propertyMap?.let { properties.putAll(it) }
     }
 
     override fun equals(other: Any?): Boolean {

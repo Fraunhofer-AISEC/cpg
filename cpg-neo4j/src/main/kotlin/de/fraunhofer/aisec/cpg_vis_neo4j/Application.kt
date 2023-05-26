@@ -236,7 +236,7 @@ class Application : Callable<Int> {
     private var passClassMap = passClassList.map { Pair(it.simpleName, it) }.toMap()
     /** The list of available passes that can be registered. */
     private val passList: List<String>
-        get() = passClassList.map { it.simpleName!! }
+        get() = passClassList.mapNotNull { it.simpleName }
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -387,13 +387,15 @@ class Application : Callable<Int> {
                     if (pass !in passClassMap) {
                         throw ConfigurationException("Asked to produce unknown pass")
                     }
-                    translationConfiguration.registerPass(passClassMap[pass]!!.createInstance())
+                    passClassMap[pass]?.let {
+                        translationConfiguration.registerPass(it.createInstance())
+                    }
                 }
             }
         }
 
-        if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
-            val db = fromFile(mutuallyExclusiveParameters.jsonCompilationDatabase!!)
+        mutuallyExclusiveParameters.jsonCompilationDatabase?.let {
+            val db = fromFile(it)
             if (db.isNotEmpty()) {
                 translationConfiguration.useCompilationDatabase(db)
                 translationConfiguration.sourceLocations(db.sourceFiles)

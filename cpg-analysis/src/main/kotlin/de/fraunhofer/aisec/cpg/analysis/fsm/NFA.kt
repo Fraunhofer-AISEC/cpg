@@ -106,7 +106,7 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
                 if (transitionClosure in epsilonClosures) {
                     // if the transitionClosure is already in the DFA, get the DFA state it
                     // corresponds to
-                    nextDfaState = epsilonClosures[transitionClosure]!!
+                    epsilonClosures[transitionClosure]?.let { nextDfaState = it }
                 } else {
                     // else create a new DFA state and add it to the known and to be explored states
                     nextDfaState =

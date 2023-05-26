@@ -323,7 +323,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         var member: FieldDeclaration? = null
         if (containingClass !is UnknownType && containingClass.name in recordMap) {
             member =
-                recordMap[containingClass.name]!!
+                recordMap[containingClass.name]
                     .fields
                     .filter { it.name.lastPartsMatch(reference.name) }
                     .map { it.definition }

@@ -188,14 +188,12 @@ class LLVMIRLanguageFrontend(
         alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
     ): Type {
         val typeStr = LLVMPrintTypeToString(typeRef).string
-        if (typeStr in typeCache && typeCache[typeStr] != null) {
-            return typeCache[typeStr]!!
+        if (typeStr in typeCache) {
+            val result = typeCache[typeStr]
+            if (result != null) return result
         }
-        if (typeRef in alreadyVisited && alreadyVisited[typeRef] != null) {
-            return alreadyVisited[typeRef]!!
-        } else if (typeRef in alreadyVisited) {
-            // Recursive call but we can't resolve it.
-            return newUnknownType()
+        if (typeRef in alreadyVisited) {
+            return alreadyVisited[typeRef] ?: newUnknownType()
         }
         alreadyVisited[typeRef] = null
         val res: Type =

@@ -35,15 +35,11 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.function.Supplier
 import kotlin.collections.set
 import org.slf4j.LoggerFactory
@@ -125,10 +121,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // dimensions are only present if you specify them explicitly, such as new int[1]
         for (lvl in arrayCreationExpr.levels) {
             lvl.dimension.ifPresent {
-                creationExpression.addDimension(
-                    (handle(it)
-                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)!!
-                )
+                (handle(it) as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)
+                    ?.let { creationExpression.addDimension(it) }
             }
         }
         return creationExpression
@@ -154,12 +148,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun handleArrayAccessExpr(expr: Expression): ArraySubscriptionExpression {
         val arrayAccessExpr = expr as ArrayAccessExpr
         val arraySubsExpression = this.newArraySubscriptionExpression(expr.toString())
-        arraySubsExpression.arrayExpression =
-            (handle(arrayAccessExpr.name)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)!!
-        arraySubsExpression.subscriptExpression =
-            (handle(arrayAccessExpr.index)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)!!
+        (handle(arrayAccessExpr.name)
+                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)
+            ?.let { arraySubsExpression.arrayExpression = it }
+
+        (handle(arrayAccessExpr.index)
+                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)
+            ?.let { arraySubsExpression.subscriptExpression = it }
+
         return arraySubsExpression
     }
 
@@ -190,13 +186,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val condition =
             handle(conditionalExpr.condition)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                ?: newProblemExpression("Could not parse condition")
         val thenExpr =
             handle(conditionalExpr.thenExpr)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
         val elseExpr =
             handle(conditionalExpr.elseExpr)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-        return this.newConditionalExpression(condition!!, thenExpr, elseExpr, superType)
+        return this.newConditionalExpression(condition, thenExpr, elseExpr, superType)
     }
 
     private fun handleAssignmentExpression(expr: Expression): BinaryOperator {
@@ -260,7 +257,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         expr: Expression
     ): de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression {
         val fieldAccessExpr = expr.asFieldAccessExpr()
-        var base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+        var base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         // first, resolve the scope. this adds the necessary nodes, such as IDENTIFIER for the
         // scope.
         // it also acts as the first argument of the operator call
@@ -336,7 +333,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 fieldAccessExpr.scope
             )
         } else if (scope.isFieldAccessExpr) {
-            base = handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+            base =
+                handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    ?: newProblemExpression("Could not parse base")
             var tester = base
             while (tester is MemberExpression) {
                 // we need to check if any base is only a static access, otherwise, this is a member
@@ -373,7 +372,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             }
             frontend.setCodeAndLocation(base, fieldAccessExpr.scope)
         } else {
-            base = handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+            base =
+                handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    ?: newProblemExpression("Could not parse base")
         }
         var fieldType: Type?
         try {
@@ -401,7 +402,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val memberExpression =
                 this.newMemberExpression(
                     fieldAccessExpr.name.identifier,
-                    base!!,
+                    base,
                     fieldType,
                     "." // there is only "." in java
                 )
@@ -419,11 +420,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     newUnknownType()
                 }
             val memberExpression =
-                this.newMemberExpression(fieldAccessExpr.name.identifier, base!!, fieldType, ".")
+                this.newMemberExpression(fieldAccessExpr.name.identifier, base, fieldType, ".")
             memberExpression.isStaticAccess = true
             return memberExpression
         }
-        if (base!!.location == null) {
+        if (base.location == null) {
             base.location = frontend.getLocationFromRawNode(fieldAccessExpr)
         }
         return this.newMemberExpression(fieldAccessExpr.name.identifier, base, fieldType, ".")
@@ -728,12 +729,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         if (frontend.getQualifiedNameFromImports(qualifiedName) != null) {
             isStatic = true
         }
-        val base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+        val base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         // the scope could either be a variable or also the class name (static call!)
         // thus, only because the scope is present, this is not automatically a member call
         if (o.isPresent) {
             val scope = o.get()
-            base = handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+            base =
+                handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    ?: newProblemExpression("Could not parse base")
 
             // If the base directly refers to a record, then this is a static call
             if (base is DeclaredReferenceExpression && base.refersTo is RecordDeclaration) {
@@ -751,14 +754,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 // resolved
                 // method
                 val baseType: Type
-                val baseName: Name?
-                baseName =
+                val baseName =
                     if (resolved != null) {
                         this.parseName(resolved.declaringType().qualifiedName)
                     } else {
                         this.parseName(qualifiedName).parent
                     }
-                baseType = this.parseType(baseName!!)
+                baseType = this.parseType(baseName ?: Type.UNKNOWN_TYPE_STRING)
                 base = this.newDeclaredReferenceExpression(baseName, baseType)
             } else {
                 // Since it is possible to omit the "this" keyword, some methods in java do not have
@@ -769,7 +771,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 base = createImplicitThis()
             }
         }
-        val member = this.newMemberExpression(name, base!!, newUnknownType(), ".")
+        val member = this.newMemberExpression(name, base, newUnknownType(), ".")
         frontend.setCodeAndLocation(
             member,
             methodCallExpr.name
@@ -784,8 +786,10 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val argument =
                 handle(arguments[i])
                     as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-            argument!!.argumentIndex = i
-            callExpression.addArgument(argument)
+            argument?.argumentIndex = i
+            callExpression.addArgument(
+                argument ?: newProblemExpression("Could not parse the argument")
+            )
         }
         return callExpression
     }

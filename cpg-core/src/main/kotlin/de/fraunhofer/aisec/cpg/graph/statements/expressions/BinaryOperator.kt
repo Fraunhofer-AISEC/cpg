@@ -130,12 +130,9 @@ class BinaryOperator :
         }
         val previous = type
         if (operatorCode == "=") {
-            if (
-                src == rhs &&
-                    lhs.type is NumericType &&
-                    src.type is NumericType &&
-                    (lhs.type as NumericType).bitWidth!! < (src.type as NumericType).bitWidth!!
-            ) {
+            val srcWidth = (src.type as? NumericType)?.bitWidth
+            val lhsWidth = (lhs.type as? NumericType)?.bitWidth
+            if (src == rhs && lhsWidth != null && srcWidth != null && lhsWidth < srcWidth) {
                 // Do not propagate anything if the new type is too big for the current type.
                 return
             }
