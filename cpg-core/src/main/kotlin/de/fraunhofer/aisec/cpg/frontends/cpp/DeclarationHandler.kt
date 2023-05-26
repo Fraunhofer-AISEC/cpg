@@ -342,8 +342,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                                 templateParameter.declarator.initializer
                             )
                         nonTypeTemplateParamDeclaration.default = defaultExpression
-                        nonTypeTemplateParamDeclaration.addPrevDFG(defaultExpression!!)
-                        defaultExpression.addNextDFG(nonTypeTemplateParamDeclaration)
+                        defaultExpression?.let {
+                            nonTypeTemplateParamDeclaration.addPrevDFG(it)
+                            it.addNextDFG(nonTypeTemplateParamDeclaration)
+                        }
                     }
                     templateDeclaration.addParameter(nonTypeTemplateParamDeclaration)
                     frontend.scopeManager.addDeclaration(nonTypeTemplateParamDeclaration)

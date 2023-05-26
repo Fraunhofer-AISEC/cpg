@@ -253,7 +253,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val statement = newForEachStatement(ctx.rawSignature)
         frontend.scopeManager.enterScope(statement)
         val decl = frontend.declarationHandler.handle(ctx.declaration)
-        val `var` = newDeclarationStatement(decl!!.code)
+        val `var` = newDeclarationStatement(decl?.code)
         `var`.singleDeclaration = decl
         val iterable: Statement? = frontend.expressionHandler.handle(ctx.initializerClause)
         statement.variable = `var`

@@ -262,16 +262,16 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
         val inferred = newFunctionTemplateDeclaration(name, code)
         inferred.isInferred = true
 
-        val inferredRealization: FunctionDeclaration =
+        val inferredRealization =
             if (record != null) {
                 record.addDeclaration(inferred)
                 record.inferMethod(call, scopeManager = scopeManager)
             } else {
-                tu!!.addDeclaration(inferred)
-                tu.inferFunction(call, scopeManager = scopeManager)
+                tu?.addDeclaration(inferred)
+                tu?.inferFunction(call, scopeManager = scopeManager)
             }
 
-        inferred.addRealization(inferredRealization)
+        inferredRealization?.let { inferred.addRealization(it) }
 
         var typeCounter = 0
         var nonTypeCounter = 0

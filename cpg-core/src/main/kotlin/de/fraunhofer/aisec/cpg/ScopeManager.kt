@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.Consumer
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
 
@@ -198,7 +197,7 @@ class ScopeManager : ScopeProvider {
         if (scope is NameScope) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
             // nodes have a FQN as their name.
-            fqnScopeMap[scope.astNode!!.name.toString()] = scope
+            fqnScopeMap[scope.astNode?.name.toString()] = scope
         }
         currentScope?.let {
             it.children.add(scope)
@@ -468,9 +467,9 @@ class ScopeManager : ScopeProvider {
             }
             (scope as Breakable).addBreakStatement(breakStatement)
         } else {
-            val labelStatement = getLabelStatement(breakStatement.label!!)
-            if (labelStatement?.subStatement != null) {
-                val scope = lookupScope(labelStatement.subStatement!!)
+            val labelStatement = getLabelStatement(breakStatement.label)
+            labelStatement?.subStatement?.let {
+                val scope = lookupScope(it)
                 (scope as Breakable?)?.addBreakStatement(breakStatement)
             }
         }
@@ -493,9 +492,9 @@ class ScopeManager : ScopeProvider {
             }
             (scope as Continuable).addContinueStatement(continueStatement)
         } else {
-            val labelStatement = getLabelStatement(continueStatement.label!!)
-            if (labelStatement?.subStatement != null) {
-                val scope = lookupScope(labelStatement.subStatement!!)
+            val labelStatement = getLabelStatement(continueStatement.label)
+            labelStatement?.subStatement?.let {
+                val scope = lookupScope(it)
                 (scope as Continuable?)?.addContinueStatement(continueStatement)
             }
         }
@@ -514,7 +513,8 @@ class ScopeManager : ScopeProvider {
      * This function is internal to the scope manager and primarily used by [addBreakStatement] and
      * [addContinueStatement]. It retrieves the [LabelStatement] associated with the [labelString].
      */
-    private fun getLabelStatement(labelString: String): LabelStatement? {
+    private fun getLabelStatement(labelString: String?): LabelStatement? {
+        if (labelString == null) return null
         var labelStatement: LabelStatement?
         var searchScope = currentScope
         while (searchScope != null) {
@@ -701,9 +701,7 @@ class ScopeManager : ScopeProvider {
     fun resolveFunctionStopScopeTraversalOnDefinition(
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return resolve(currentScope, true) { f: FunctionDeclaration ->
-            f.name.lastPartsMatch(call.name)
-        }
+        return resolve(currentScope, true) { f -> f.name.lastPartsMatch(call.name) }
     }
 
     /**
@@ -774,9 +772,7 @@ class ScopeManager : ScopeProvider {
         call: CallExpression,
         scope: Scope? = currentScope
     ): List<FunctionTemplateDeclaration> {
-        return resolve(scope, true) { c: FunctionTemplateDeclaration ->
-            c.name.lastPartsMatch(call.name)
-        }
+        return resolve(scope, true) { c -> c.name.lastPartsMatch(call.name) }
     }
 
     /**
@@ -804,7 +800,7 @@ class ScopeManager : ScopeProvider {
                 override fun visit(t: Node) {
                     if (t is HasType) {
                         val typeNode = t as HasType
-                        typeCache.getOrDefault(typeNode, emptyList()).forEach { it: Type? ->
+                        typeCache.getOrDefault(typeNode, emptyList()).forEach {
                             (t as HasType).type =
                                 TypeManager.getInstance()
                                     .resolvePossibleTypedef(it, this@ScopeManager)
@@ -819,12 +815,10 @@ class ScopeManager : ScopeProvider {
 
         // For some nodes it may happen that they are not reachable via AST, but we still need to
         // set their type to the requested value
-        typeCache.forEach { (n: HasType, types: List<Type>) ->
-            types.forEach(
-                Consumer { t: Type? ->
-                    n.type = TypeManager.getInstance().resolvePossibleTypedef(t, this)
-                }
-            )
+        typeCache.forEach { (n, types) ->
+            types.forEach { t ->
+                n.type = TypeManager.getInstance().resolvePossibleTypedef(t, this)
+            }
         }
     }
 }

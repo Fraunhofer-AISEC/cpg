@@ -125,9 +125,11 @@ class TypeScriptLanguageFrontend(
         // the parser does not support comments so we
         // use a regex as best effort approach. We may recognize something as a comment, which is
         // acceptable.
-        val matches: Sequence<MatchResult> =
-            Regex("(?:/\\*((?:[^*]|(?:\\*+[^*/]))*)\\*+/)|(?://(.*))").findAll(currentFileContent!!)
-        matches.toList().forEach { result ->
+        val matches: Sequence<MatchResult>? =
+            currentFileContent?.let {
+                Regex("(?:/\\*((?:[^*]|(?:\\*+[^*/]))*)\\*+/)|(?://(.*))").findAll(it)
+            }
+        matches?.toList()?.forEach { result ->
             val groups = result.groups
             groups[0]?.let {
                 val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
@@ -143,7 +145,7 @@ class TypeScriptLanguageFrontend(
 
                 FrontendUtils.matchCommentToNode(
                     comment,
-                    commentRegion ?: translationUnit.location!!.region,
+                    commentRegion ?: translationUnit.location?.region ?: Region(),
                     translationUnit
                 )
             }
@@ -192,15 +194,17 @@ class TypeScriptLanguageFrontend(
         lineNumberReader.skip((end - start).toLong())
         val endLine = lineNumberReader.lineNumber + 1
 
-        val translationUnitSignature = currentFileContent!!
-        val region: Region? =
-            FrontendUtils.parseColumnPositionsFromFile(
-                translationUnitSignature,
-                end - start,
-                start,
-                startLine,
-                endLine
-            )
+        val translationUnitSignature = currentFileContent
+        val region =
+            translationUnitSignature?.let {
+                FrontendUtils.parseColumnPositionsFromFile(
+                    it,
+                    end - start,
+                    start,
+                    startLine,
+                    endLine
+                )
+            }
         return region
     }
 

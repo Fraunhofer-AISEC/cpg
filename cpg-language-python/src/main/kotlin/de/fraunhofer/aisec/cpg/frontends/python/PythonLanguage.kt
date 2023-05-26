@@ -87,13 +87,14 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
     }
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
+        val unknownType = UnknownType.getUnknownType(this)
         if (
             operation.operatorCode == "/" &&
                 operation.lhs.propagationType is NumericType &&
                 operation.rhs.propagationType is NumericType
         ) {
             // In Python, the / operation automatically casts the result to a float
-            return getSimpleTypeOf("float")!!
+            return getSimpleTypeOf("float") ?: unknownType
         } else if (
             operation.operatorCode == "//" &&
                 operation.lhs.propagationType is NumericType &&
@@ -105,9 +106,9 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
             ) {
                 // In Python, the // operation keeps the type as an int if both inputs are integers
                 // or casts it to a float otherwise.
-                return getSimpleTypeOf("int")!!
+                return getSimpleTypeOf("int") ?: unknownType
             } else {
-                return getSimpleTypeOf("float")!!
+                return getSimpleTypeOf("float") ?: unknownType
             }
         }
 

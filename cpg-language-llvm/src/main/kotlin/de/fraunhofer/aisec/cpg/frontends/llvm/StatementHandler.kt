@@ -344,7 +344,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // that we will throw something here but we don't know what. We have to fix
             // that later once we know in which catch-block this statement is executed.
             val throwOperation = newUnaryOperator("throw", false, true, nodeCode)
-            currentIfStatement!!.elseStatement = throwOperation
+            currentIfStatement?.elseStatement = throwOperation
         }
 
         compoundStatement.addStatement(ifStatement)
@@ -1160,7 +1160,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         if (instr.opCode == LLVMInvoke) {
             // For the "invoke" instruction, the call is surrounded by a try statement which also
             // contains a goto statement after the call.
-            val tryStatement = newTryStatement(instrStr!!)
+            val tryStatement = newTryStatement(instrStr)
             frontend.scopeManager.enterScope(tryStatement)
             val tryBlock = newCompoundStatement(instrStr)
             tryBlock.addStatement(declarationOrNot(callExpr, instr))
@@ -1196,7 +1196,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [CompressLLVMPass] will move this instruction to the correct location
      */
     private fun handleLandingpad(instr: LLVMValueRef): Statement {
-        val catchInstr = newCatchClause(frontend.getCodeFromRawNode(instr)!!)
+        val catchInstr = newCatchClause(frontend.getCodeFromRawNode(instr))
         /* Get the number of clauses on the landingpad instruction and iterate through the clauses to get all types for the catch clauses */
         val numClauses = LLVMGetNumClauses(instr)
         var catchType = ""
@@ -1616,7 +1616,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         val declOp = if (unordered) binOpUnordered else binaryOperator
-        val decl = declarationOrNot(declOp!!, instr)
+        val decl =
+            declOp?.let { declarationOrNot(it, instr) }
+                ?: newProblemExpression("Could not parse declaration")
 
         (decl as? DeclarationStatement)?.let {
             // cache binding

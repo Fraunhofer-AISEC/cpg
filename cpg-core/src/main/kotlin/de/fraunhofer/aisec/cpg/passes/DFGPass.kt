@@ -172,13 +172,13 @@ class DFGPass : Pass() {
      * [VariableDeclaration] in the statement is the one we care about.
      */
     private fun handleForEachStatement(node: ForEachStatement) {
-        if (node.iterable != null) {
+        node.iterable?.let { iterable ->
             if (node.variable is DeclarationStatement) {
                 (node.variable as DeclarationStatement).declarations.forEach {
-                    it.addPrevDFG(node.iterable!!)
+                    it.addPrevDFG(iterable)
                 }
             } else {
-                node.variable.variables.lastOrNull()?.addPrevDFG(node.iterable!!)
+                node.variable.variables.lastOrNull()?.addPrevDFG(iterable)
             }
         }
         node.variable?.let { node.addPrevDFG(it) }

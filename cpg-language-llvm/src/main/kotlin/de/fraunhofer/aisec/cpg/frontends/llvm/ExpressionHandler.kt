@@ -66,9 +66,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMConstantTokenNoneValueKind ->
                 newLiteral(null, newUnknownType(), frontend.getCodeFromRawNode(value))
             LLVMUndefValueValueKind ->
-                initializeAsUndef(frontend.typeOf(value), frontend.getCodeFromRawNode(value)!!)
+                initializeAsUndef(frontend.typeOf(value), frontend.getCodeFromRawNode(value))
             LLVMConstantAggregateZeroValueKind ->
-                initializeAsZero(frontend.typeOf(value), frontend.getCodeFromRawNode(value)!!)
+                initializeAsZero(frontend.typeOf(value), frontend.getCodeFromRawNode(value))
             LLVMArgumentValueKind,
             LLVMGlobalVariableValueKind,
             // this is a little tricky. It seems weird, that an instruction value kind turns
@@ -348,7 +348,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      *
      * Returns a [ConstructExpression].
      */
-    private fun initializeAsUndef(type: Type, code: String): Expression {
+    private fun initializeAsUndef(type: Type, code: String?): Expression {
         if (!frontend.isKnownStructTypeName(type.name.toString()) && !type.name.contains("{")) {
             return newLiteral(null, type, code)
         } else {
@@ -373,7 +373,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      *
      * Returns a [ConstructExpression].
      */
-    private fun initializeAsZero(type: Type, code: String): Expression {
+    private fun initializeAsZero(type: Type, code: String?): Expression {
         if (!frontend.isKnownStructTypeName(type.name.toString()) && !type.name.contains("{")) {
             return newLiteral(0, type, code)
         } else {
