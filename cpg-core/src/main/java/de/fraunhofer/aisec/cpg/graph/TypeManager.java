@@ -121,6 +121,7 @@ public class TypeManager {
    * @param typeParameters List containing all ParameterizedTypes used by the recordDeclaration and
    *     will be stored as value in the map
    */
+  @Deprecated
   public void addTypeParameter(
       RecordDeclaration recordDeclaration, List<ParameterizedType> typeParameters) {
     this.recordToTypeParameters.put(recordDeclaration, typeParameters);
@@ -135,6 +136,7 @@ public class TypeManager {
    * @return
    */
   @Nullable
+  @Deprecated
   public ParameterizedType getTypeParameter(TemplateDeclaration templateDeclaration, String name) {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
       for (ParameterizedType parameterizedType :
