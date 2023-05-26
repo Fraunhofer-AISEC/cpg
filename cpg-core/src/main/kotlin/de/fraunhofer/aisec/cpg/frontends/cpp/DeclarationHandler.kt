@@ -312,12 +312,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 val typeParamDeclaration =
                     frontend.declaratorHandler.handle(templateParameter) as TypeParamDeclaration
                 val parameterizedType =
-                    TypeManager.getInstance()
-                        .createOrGetTypeParameter(
-                            templateDeclaration,
-                            templateParameter.name.toString(),
-                            language
-                        )
+                    frontend.typeManager.createOrGetTypeParameter(
+                        templateDeclaration,
+                        templateParameter.name.toString(),
+                        language
+                    )
                 typeParamDeclaration.type = parameterizedType
                 if (templateParameter.defaultType != null) {
                     val defaultType =
@@ -377,8 +376,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         templateDeclaration: TemplateDeclaration,
         innerDeclaration: RecordDeclaration
     ) {
-        val parameterizedTypes =
-            TypeManager.getInstance().getAllParameterizedType(templateDeclaration)
+        val parameterizedTypes = frontend.typeManager.getAllParameterizedType(templateDeclaration)
 
         // Loop through all the methods and adjust their receiver types
         for (method in (innerDeclaration as? RecordDeclaration)?.methods ?: listOf()) {
@@ -543,13 +541,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val (nameDecl: IASTDeclarator, _) = declarator.realName()
 
         val declaration =
-            TypeManager.getInstance()
-                .createTypeAlias(
-                    frontend,
-                    frontend.getCodeFromRawNode(ctx),
-                    type,
-                    nameDecl.name.toString()
-                )
+            frontend.typeManager.createTypeAlias(
+                frontend,
+                frontend.getCodeFromRawNode(ctx),
+                type,
+                nameDecl.name.toString()
+            )
 
         // Add the declaration to the current scope
         frontend.scopeManager.addDeclaration(declaration)

@@ -25,29 +25,29 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.PassTarget
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.function.Consumer
-import java.util.stream.Collectors
 
 /**
- * The global (intermediate) result of the translation. A [ ] will initially populate it and a [ ]
- * can extend it.
+ * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
+ * it and a [Pass] can extend it.
  */
 class TranslationResult(
-    val translationManager: TranslationManager,
+    /** A reference to our [TranslationManager]. */
+    private val translationManager: TranslationManager,
     /**
-     * The scope manager which comprises the complete translation result. In case of sequential
-     * parsing, this scope manager is passed to the individual frontends one after another. In case
-     * of sequential parsing, individual scope managers will be spawned by each language frontend
-     * and then finally merged into this one.
+     * The final [TranslationContext] of this translation result. Currently, for parallel
+     * processing, we are creating one translation context for each parsed file (containing a
+     * dedicated [ScopeManager] each). This property will contain the final, merged context.
      */
-    val scopeManager: ScopeManager
+    var finalCtx: TranslationContext,
 ) : Node(), StatisticsHolder, PassTarget {
 
     /**
@@ -150,22 +150,16 @@ class TranslationResult(
     override val translatedFiles: List<String>
         get() {
             val result: MutableList<String> = ArrayList()
-            components.forEach(
-                Consumer { sc: Component ->
-                    result.addAll(
-                        sc.translationUnits
-                            .stream()
-                            .map(TranslationUnitDeclaration::name)
-                            .map { obj: Name -> obj.toString() }
-                            .collect(Collectors.toList())
-                    )
-                }
-            )
+            components.forEach { sc: Component ->
+                result.addAll(
+                    sc.translationUnits.map(TranslationUnitDeclaration::name).map(Name::toString)
+                )
+            }
             return result
         }
 
     override val config: TranslationConfiguration
-        get() = translationManager.config
+        get() = finalCtx.config
 
     companion object {
         const val SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend"

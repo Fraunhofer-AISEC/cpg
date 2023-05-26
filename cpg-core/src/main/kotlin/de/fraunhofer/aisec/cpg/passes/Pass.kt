@@ -27,15 +27,14 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.LanguageProvider
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.passes.order.*
+import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 import java.util.function.Consumer
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -46,23 +45,20 @@ import org.slf4j.LoggerFactory
  * A [TranslationResultPass] is a pass that operates on a [TranslationResult]. If used with
  * [executePassSequential], one [Pass] object is instantiated for the whole [TranslationResult].
  */
-abstract class TranslationResultPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    Pass<TranslationResult>(config, scopeManager)
+abstract class TranslationResultPass(ctx: TranslationContext) : Pass<TranslationResult>(ctx)
 
 /**
  * A [ComponentPass] is a pass that operates on a [Component]. If used with [executePassSequential],
  * one [Pass] object is instantiated for each [Component] in a [TranslationResult].
  */
-abstract class ComponentPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    Pass<Component>(config, scopeManager)
+abstract class ComponentPass(ctx: TranslationContext) : Pass<Component>(ctx)
 
 /**
  * A [TranslationUnitPass] is a pass that operates on a [TranslationUnitDeclaration]. If used with
  * [executePassSequential], one [Pass] object is instantiated for each [TranslationUnitDeclaration]
  * in a [Component].
  */
-abstract class TranslationUnitPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    Pass<TranslationUnitDeclaration>(config, scopeManager)
+abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUnitDeclaration>(ctx)
 
 /**
  * A pass target is an interface for a [Node] on which a [Pass] can operate, it should only be
@@ -81,12 +77,14 @@ interface PassTarget
  * passes. Instead of directly subclassing this type, one of the types [TranslationResultPass],
  * [ComponentPass] or [TranslationUnitPass] must be used.
  */
-sealed class Pass<T : PassTarget>(
-    val config: TranslationConfiguration,
-    val scopeManager: ScopeManager
-) : Consumer<T> {
+sealed class Pass<T : PassTarget>(final override val ctx: TranslationContext) :
+    Consumer<T>, ContextProvider {
     var name: String
         protected set
+
+    val config: TranslationConfiguration = ctx.config
+    val scopeManager: ScopeManager = ctx.scopeManager
+    val typeManager: TypeManager = ctx.typeManager
 
     init {
         name = this.javaClass.name
@@ -123,6 +121,7 @@ sealed class Pass<T : PassTarget>(
  */
 fun executePassSequential(
     cls: KClass<out Pass<*>>,
+    ctx: TranslationContext,
     result: TranslationResult,
     executedFrontends: Collection<LanguageFrontend>
 ) {
@@ -130,28 +129,16 @@ fun executePassSequential(
     // "prototype" instance of our pass class, so we can deduce certain type information more
     // easily.
     val prototype =
-        cls.primaryConstructor?.call(result.config, result.scopeManager)
+        cls.primaryConstructor?.call(ctx)
             ?: throw TranslationException("Could not create prototype pass")
 
     when (prototype) {
         is TranslationResultPass -> {
-            executePass(
-                (prototype as TranslationResultPass)::class,
-                result,
-                result.config,
-                result.scopeManager,
-                executedFrontends
-            )
+            executePass((prototype as TranslationResultPass)::class, ctx, result, executedFrontends)
         }
         is ComponentPass -> {
             for (component in result.components) {
-                executePass(
-                    (prototype as ComponentPass)::class,
-                    component,
-                    result.config,
-                    result.scopeManager,
-                    executedFrontends
-                )
+                executePass((prototype as ComponentPass)::class, ctx, component, executedFrontends)
             }
         }
         is TranslationUnitPass -> {
@@ -159,9 +146,8 @@ fun executePassSequential(
                 for (tu in component.translationUnits) {
                     executePass(
                         (prototype as TranslationUnitPass)::class,
+                        ctx,
                         tu,
-                        result.config,
-                        result.scopeManager,
                         executedFrontends
                     )
                 }
@@ -172,9 +158,8 @@ fun executePassSequential(
 
 inline fun <reified T : PassTarget> executePass(
     cls: KClass<out Pass<T>>,
+    ctx: TranslationContext,
     target: T,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
     executedFrontends: Collection<LanguageFrontend>
 ): Pass<T>? {
     val language =
@@ -184,9 +169,9 @@ inline fun <reified T : PassTarget> executePass(
             null
         }
 
-    val realClass = checkForReplacement(cls, language, config)
+    val realClass = checkForReplacement(cls, language, ctx.config)
 
-    val pass = realClass.primaryConstructor?.call(config, scopeManager)
+    val pass = realClass.primaryConstructor?.call(ctx)
     if (pass?.runsWithCurrentFrontend(executedFrontends) == true) {
         pass.accept(target)
         pass.cleanup()

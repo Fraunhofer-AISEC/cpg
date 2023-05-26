@@ -25,10 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration
@@ -43,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
@@ -108,8 +104,7 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 @ExecuteBefore(VariableUsageResolver::class)
 @ExecuteBefore(CallResolver::class)
 @ExecuteBefore(DFGPass::class)
-class GoExtraPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    ComponentPass(config, scopeManager), ScopeProvider {
+class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
 
     override val scope: Scope?
         get() = scopeManager.currentScope
@@ -148,7 +143,7 @@ class GoExtraPass(config: TranslationConfiguration, scopeManager: ScopeManager) 
                         // The key is the first variable. It is always an int
                         val keyVariable =
                             variable.declarations.firstOrNull() as? VariableDeclaration
-                        keyVariable?.type = TypeParser.createFrom("int", forEach.language)
+                        keyVariable?.type = forEach.parseType("int")
 
                         // The value is the second one. Its type depends on the array type
                         val valueVariable =
@@ -215,7 +210,7 @@ class GoExtraPass(config: TranslationConfiguration, scopeManager: ScopeManager) 
         if (namespace.isEmpty()) {
             scopeManager.globalScope
                 ?.astNode
-                ?.startInference(scopeManager)
+                ?.startInference(ctx)
                 ?.createInferredNamespaceDeclaration(include.name, include.filename)
         }
     }
@@ -234,7 +229,7 @@ class GoExtraPass(config: TranslationConfiguration, scopeManager: ScopeManager) 
 
             // First, check if this is a built-in type
             if (language.builtInTypes.contains(callee.name.toString())) {
-                replaceCallWithCast(callee.name.toString(), language, parent, call)
+                replaceCallWithCast(callee.name.toString(), parent, call)
             } else {
                 // If not, then this could still refer to an existing type. We need to make sure
                 // that we take the current namespace into account
@@ -245,8 +240,8 @@ class GoExtraPass(config: TranslationConfiguration, scopeManager: ScopeManager) 
                         callee.name
                     }
 
-                if (TypeManager.getInstance().typeExists(fqn.toString())) {
-                    replaceCallWithCast(fqn, language, parent, call)
+                if (typeManager.typeExists(fqn.toString())) {
+                    replaceCallWithCast(fqn, parent, call)
                 }
             }
         }
@@ -254,13 +249,12 @@ class GoExtraPass(config: TranslationConfiguration, scopeManager: ScopeManager) 
 
     private fun replaceCallWithCast(
         typeName: CharSequence,
-        language: Language<out LanguageFrontend>,
         parent: Node,
         call: CallExpression,
     ) {
         val cast = parent.newCastExpression(call.code)
         cast.location = call.location
-        cast.castType = TypeParser.createFrom(typeName, false, language)
+        cast.castType = call.parseType(typeName.toString())
         cast.expression = call.arguments.single()
 
         if (parent !is ArgumentHolder) {

@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -93,7 +93,7 @@ class CPPLanguage :
         curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>,
         call: CallExpression,
-        scopeManager: ScopeManager,
+        ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: CallResolver
     ): List<FunctionDeclaration> {
@@ -107,11 +107,11 @@ class CPPLanguage :
         }
         if (invocationCandidates.isEmpty()) {
             // Check for usage of default args
-            invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, scopeManager))
+            invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, ctx))
         }
         if (invocationCandidates.isEmpty()) {
             val (ok, candidates) =
-                handleTemplateFunctionCalls(curClass, call, false, scopeManager, currentTU)
+                handleTemplateFunctionCalls(curClass, call, false, ctx, currentTU)
             if (ok) {
                 return candidates
             }
@@ -120,7 +120,7 @@ class CPPLanguage :
         }
         if (invocationCandidates.isEmpty()) {
             // Check for usage of implicit cast
-            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, scopeManager))
+            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, ctx))
         }
 
         // Make sure, that our invocation candidates for member call expressions are really METHODS,
@@ -136,7 +136,8 @@ class CPPLanguage :
     override fun refineInvocationCandidatesFromRecord(
         recordDeclaration: RecordDeclaration,
         call: CallExpression,
-        namePattern: Pattern
+        namePattern: Pattern,
+        ctx: TranslationContext
     ): List<FunctionDeclaration> {
         val invocationCandidate =
             mutableListOf<FunctionDeclaration>(
@@ -165,7 +166,8 @@ class CPPLanguage :
                     call,
                     recordDeclaration.methods.filter { m ->
                         namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/
-                    }
+                    },
+                    ctx
                 )
             )
         }
@@ -174,21 +176,20 @@ class CPPLanguage :
 
     override fun refineNormalCallResolution(
         call: CallExpression,
-        scopeManager: ScopeManager,
+        ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration
     ): List<FunctionDeclaration> {
-        val invocationCandidates = scopeManager.resolveFunction(call).toMutableList()
+        val invocationCandidates = ctx.scopeManager.resolveFunction(call).toMutableList()
         if (invocationCandidates.isEmpty()) {
             // Check for usage of default args
-            invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, scopeManager))
+            invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, ctx))
         }
         if (invocationCandidates.isEmpty()) {
             // Check if the call can be resolved to a function template instantiation. If it can be
             // resolver, we resolve the call. Otherwise, there won't be an inferred template, we
             // will do an inferred FunctionDeclaration instead.
             call.templateParameterEdges = mutableListOf()
-            val (ok, candidates) =
-                handleTemplateFunctionCalls(null, call, false, scopeManager, currentTU)
+            val (ok, candidates) = handleTemplateFunctionCalls(null, call, false, ctx, currentTU)
             if (ok) {
                 return candidates
             }
@@ -198,7 +199,7 @@ class CPPLanguage :
         if (invocationCandidates.isEmpty()) {
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
-            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, scopeManager))
+            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, ctx))
         }
 
         return invocationCandidates
@@ -213,10 +214,10 @@ class CPPLanguage :
      */
     private fun resolveWithDefaultArgsFunc(
         call: CallExpression,
-        scopeManager: ScopeManager
+        ctx: TranslationContext
     ): List<FunctionDeclaration> {
         val invocationCandidates =
-            scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).filter {
+            ctx.scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).filter {
                 call.signature.size < it.signatureTypes.size
             }
         return resolveWithDefaultArgs(call, invocationCandidates)
@@ -238,10 +239,11 @@ class CPPLanguage :
         curClass: RecordDeclaration?,
         templateCall: CallExpression,
         applyInference: Boolean,
-        scopeManager: ScopeManager,
+        ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration
     ): Pair<Boolean, List<FunctionDeclaration>> {
-        val instantiationCandidates = scopeManager.resolveFunctionTemplateDeclaration(templateCall)
+        val instantiationCandidates =
+            ctx.scopeManager.resolveFunctionTemplateDeclaration(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
             val initializationType =
                 mutableMapOf<Node?, TemplateDeclaration.TemplateInitialization?>()
@@ -259,7 +261,8 @@ class CPPLanguage :
                         templateCall,
                         initializationType,
                         orderedInitializationSignature,
-                        explicitInstantiation
+                        explicitInstantiation,
+                        ctx
                     )
                 val function = functionTemplateDeclaration.realization[0]
                 if (
@@ -285,7 +288,8 @@ class CPPLanguage :
                             function,
                             initializationSignature,
                             initializationType,
-                            orderedInitializationSignature
+                            orderedInitializationSignature,
+                            ctx
                         )
                     return Pair(true, candidates)
                 }
@@ -297,7 +301,7 @@ class CPPLanguage :
             // If we want to use an inferred functionTemplateDeclaration, this needs to be provided.
             // Otherwise, we could not resolve to a template and no modifications are made
             val functionTemplateDeclaration =
-                holder.startInference(scopeManager).createInferredFunctionTemplate(templateCall)
+                holder.startInference(ctx).createInferredFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
             val edges = templateCall.templateParameterEdges
             // Set instantiation propertyEdges

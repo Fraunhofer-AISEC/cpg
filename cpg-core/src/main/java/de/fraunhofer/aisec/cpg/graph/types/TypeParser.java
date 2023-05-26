@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
 import de.fraunhofer.aisec.cpg.ScopeManager;
+import de.fraunhofer.aisec.cpg.TranslationContext;
 import de.fraunhofer.aisec.cpg.frontends.*;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import java.util.ArrayList;
@@ -282,7 +283,7 @@ public class TypeParser {
   }
 
   private static List<Type> getParameterList(
-      String parameterList, Language<? extends LanguageFrontend> language) {
+      String parameterList, Language<? extends LanguageFrontend> language, TranslationContext ctx) {
     if (parameterList.startsWith("(") && parameterList.endsWith(")")) {
       parameterList = parameterList.trim().substring(1, parameterList.trim().length() - 1);
     }
@@ -291,7 +292,7 @@ public class TypeParser {
     for (String parameter : parametersSplit) {
       // ignore void parameters // TODO: WHY??
       if (parameter.length() > 0 && !parameter.trim().equals("void")) {
-        parameters.add(createFrom(parameter.trim(), language));
+        parameters.add(createFrom(parameter.trim(), language, false, ctx));
       }
     }
 
@@ -299,7 +300,7 @@ public class TypeParser {
   }
 
   private static List<Type> getGenerics(
-      String typeName, Language<? extends LanguageFrontend> language) {
+      String typeName, Language<? extends LanguageFrontend> language, TranslationContext ctx) {
     List<Type> genericList = new ArrayList<>();
     if (language instanceof HasGenerics hasGenerics
         && typeName.indexOf(hasGenerics.getStartCharacter()) > -1
@@ -311,7 +312,7 @@ public class TypeParser {
 
       String[] parametersSplit = generics.split(",");
       for (String parameter : parametersSplit) {
-        genericList.add(createFrom(parameter.trim(), language));
+        genericList.add(createFrom(parameter.trim(), language, false, ctx));
       }
     }
     return genericList;
@@ -457,16 +458,18 @@ public class TypeParser {
   }
 
   /**
-   * Does the same as {@link #createIgnoringAlias(String, Language)} but explicitly does not use
-   * type alias resolution. This is usually not what you want. Use with care!
+   * Does the same as createFrom but explicitly does not use type alias resolution. This is usually
+   * not what you want. Use with care!
    *
    * @param string the string representation of the type
    * @return the type
    */
   @NotNull
   public static Type createIgnoringAlias(
-      @NotNull String string, @NotNull Language<? extends LanguageFrontend> language) {
-    return createFrom(string, language);
+      @NotNull String string,
+      @NotNull Language<? extends LanguageFrontend> language,
+      TranslationContext ctx) {
+    return createFrom(string, language, false, ctx);
   }
 
   @NotNull
@@ -547,7 +550,10 @@ public class TypeParser {
       @NotNull String type,
       boolean resolveAlias,
       @NotNull Language<? extends LanguageFrontend> language,
-      @Nullable ScopeManager scopeManager) {
+      TranslationContext ctx) {
+    var typeManager = ctx.getTypeManager();
+    var scopeManager = ctx.getScopeManager();
+
     // Check if Problems during Parsing
     if (!checkValidTypeString(type)) {
       return UnknownType.getUnknownType(language);
@@ -597,7 +603,6 @@ public class TypeParser {
     counter++;
 
     Type finalType;
-    TypeManager typeManager = TypeManager.getInstance();
 
     // Check if type is FunctionPointer
     Matcher funcptr = getFunctionPtrMatcher(typeBlocks.subList(counter, typeBlocks.size()));
@@ -606,8 +611,8 @@ public class TypeParser {
     if (finalType != null) {
       // Nothing to do here
     } else if (funcptr != null) {
-      Type returnType = createFrom(typeName, language);
-      List<Type> parameterList = getParameterList(funcptr.group("args"), language);
+      Type returnType = createFrom(typeName, language, false, ctx);
+      List<Type> parameterList = getParameterList(funcptr.group("args"), language, ctx);
 
       return typeManager.registerType(new FunctionPointerType(parameterList, language, returnType));
     } else if (isIncompleteType(typeName)) {
@@ -619,7 +624,7 @@ public class TypeParser {
     } else {
       // ObjectType
       // Obtain possible generic List from TypeString
-      List<Type> generics = getGenerics(typeName, language);
+      List<Type> generics = getGenerics(typeName, language, ctx);
       typeName = removeGenerics(typeName, language);
       finalType = new ObjectType(typeName, generics, primitiveType, language);
     }
@@ -638,7 +643,7 @@ public class TypeParser {
     // the graph representing the type
     finalType = typeManager.registerType(finalType);
 
-    if (resolveAlias && scopeManager != null) {
+    if (resolveAlias) {
       return typeManager.registerType(typeManager.resolvePossibleTypedef(finalType, scopeManager));
     }
 
@@ -650,18 +655,22 @@ public class TypeParser {
    * magic with generics and typedefs. This is legacy code and currently only used for CXX frontend
    * and should be removed at some point.
    */
-  public static Type createFrom(@NotNull String type, boolean resolveAlias, LanguageFrontend lang) {
-    Type templateType = searchForTemplateTypes(type, lang.getScopeManager());
+  public static Type createFrom(
+      @NotNull String type, boolean resolveAlias, LanguageFrontend frontend) {
+    Type templateType =
+        searchForTemplateTypes(type, frontend.getScopeManager(), frontend.getTypeManager());
     if (templateType != null) {
       return templateType;
     }
 
-    Type createdType = createFrom(type, lang.getLanguage(), resolveAlias, lang.getScopeManager());
+    Type createdType = createFrom(type, frontend.getLanguage(), resolveAlias, frontend.getCtx());
 
     if (createdType instanceof SecondOrderType) {
       templateType =
           searchForTemplateTypes(
-              createdType.getRoot().getName().toString(), lang.getScopeManager());
+              createdType.getRoot().getName().toString(),
+              frontend.getScopeManager(),
+              frontend.getTypeManager());
       if (templateType != null) {
         createdType.setRoot(templateType);
       }
@@ -670,9 +679,10 @@ public class TypeParser {
     return createdType;
   }
 
-  private static Type searchForTemplateTypes(@NotNull String type, ScopeManager scopeManager) {
-    return TypeManager.getInstance()
-        .searchTemplateScopeForDefinedParameterizedTypes(scopeManager.getCurrentScope(), type);
+  private static Type searchForTemplateTypes(
+      @NotNull String type, ScopeManager scopeManager, TypeManager typeManager) {
+    return typeManager.searchTemplateScopeForDefinedParameterizedTypes(
+        scopeManager.getCurrentScope(), type);
   }
 
   /**
@@ -682,7 +692,7 @@ public class TypeParser {
    * @param type string with type information
    * @param language the language in which the type exists.
    * @param resolveAlias should replace with original type in typedefs
-   * @param scopeManager optional, but required if resolveAlias is true
+   * @param ctx the translation context
    * @return new type representing the type string. If an exception occurs during the parsing,
    *     UnknownType is returned
    */
@@ -691,28 +701,12 @@ public class TypeParser {
       @NotNull String type,
       Language<? extends LanguageFrontend> language,
       boolean resolveAlias,
-      ScopeManager scopeManager) {
+      TranslationContext ctx) {
     try {
-      return createFromUnsafe(type, resolveAlias, language, scopeManager);
+      return createFromUnsafe(type, resolveAlias, language, ctx);
     } catch (Exception e) {
       log.error("Could not parse the type correctly", e);
       return UnknownType.getUnknownType(language);
     }
-  }
-
-  /** Parses the type from a char sequence and the supplied language. */
-  @NotNull
-  public static Type createFrom(
-      @NotNull CharSequence name,
-      Boolean resolveAlias,
-      Language<? extends LanguageFrontend> language) {
-    return createFrom(name.toString(), language, resolveAlias, null);
-  }
-
-  /** Parses the type from a char sequence and the supplied language. */
-  @NotNull
-  public static Type createFrom(
-      @NotNull CharSequence name, Language<? extends LanguageFrontend> language) {
-    return createFrom(name.toString(), language, false, null);
   }
 }

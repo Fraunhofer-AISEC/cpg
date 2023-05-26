@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import java.util.Optional
 
-interface HasType {
+interface HasType : ContextProvider {
     var type: Type
 
     /**
@@ -99,4 +101,34 @@ interface HasType {
     interface SecondaryTypeEdge {
         fun updateType(typeState: Collection<Type>)
     }
+}
+
+val Node.isTypeSystemActive: Boolean
+    get() {
+        return TypeManager.isTypeSystemActive()
+    }
+
+fun Node.isSupertypeOf(superType: Type, subType: Type?): Boolean {
+    val c = ctx ?: throw TranslationException("context not available")
+    return c.typeManager.isSupertypeOf(superType, subType, this)
+}
+
+fun HasType.cacheType(type: Type) {
+    val c = ctx ?: throw TranslationException("context not available")
+    c.typeManager.cacheType(this, type)
+}
+
+fun <T : Type> Node.registerType(type: T): T {
+    val c = ctx ?: throw TranslationException("context not available")
+    return c.typeManager.registerType(type)
+}
+
+fun Node.getCommonType(types: Collection<Type>): Optional<Type> {
+    val c = ctx ?: throw TranslationException("context not available")
+    return c.typeManager.getCommonType(types, this.ctx)
+}
+
+fun Node.stopPropagation(type: Type, newType: Type): Boolean {
+    val c = ctx ?: throw TranslationException("context not available")
+    return c.typeManager.stopPropagation(type, newType)
 }

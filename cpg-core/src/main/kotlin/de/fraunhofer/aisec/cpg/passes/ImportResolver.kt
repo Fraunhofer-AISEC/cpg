@@ -25,13 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -40,8 +36,7 @@ import java.util.*
 import java.util.regex.Pattern
 
 @DependsOn(TypeHierarchyResolver::class)
-open class ImportResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    ComponentPass(config, scopeManager) {
+open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
 

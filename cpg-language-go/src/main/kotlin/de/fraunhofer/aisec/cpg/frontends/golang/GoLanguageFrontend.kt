@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
@@ -40,11 +39,8 @@ import java.io.FileOutputStream
 
 @SupportsParallelParsing(false)
 @RegisterExtraPass(GoExtraPass::class)
-class GoLanguageFrontend(
-    language: Language<GoLanguageFrontend>,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : LanguageFrontend(language, config, scopeManager) {
+class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: TranslationContext) :
+    LanguageFrontend(language, ctx) {
     companion object {
 
         init {

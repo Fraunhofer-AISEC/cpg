@@ -25,10 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.builder
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -38,16 +35,17 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.executePassSequential
 
-fun LanguageFrontend.translationResult(
-    config: TranslationConfiguration,
-    init: TranslationResult.() -> Unit
-): TranslationResult {
-    val node = TranslationResult(TranslationManager.builder().config(config).build(), scopeManager)
+fun LanguageFrontend.translationResult(init: TranslationResult.() -> Unit): TranslationResult {
+    val node =
+        TranslationResult(
+            TranslationManager.builder().config(ctx.config).build(),
+            ctx,
+        )
     val component = Component()
     node.addComponent(component)
     init(node)
 
-    config.registeredPasses.forEach { executePassSequential(it, node, listOf()) }
+    ctx.config.registeredPasses.forEach { executePassSequential(it, ctx, node, listOf()) }
 
     return node
 }

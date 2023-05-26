@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -181,7 +182,7 @@ class ValueEvaluatorTest {
 
     @Test
     fun testHandlePlus() {
-        with(TestHandler()) {
+        with(TestHandler(TestLanguageFrontend())) {
             val binOp = newBinaryOperator("+")
             binOp.lhs = newLiteral(3, parseType("int"))
             binOp.rhs = newLiteral(2, parseType("int"))
@@ -242,7 +243,7 @@ class ValueEvaluatorTest {
 
     @Test
     fun testHandleMinus() {
-        with(TestHandler()) {
+        with(TestHandler(TestLanguageFrontend())) {
             val binOp = newBinaryOperator("-")
             binOp.lhs = newLiteral(3, parseType("int"))
             binOp.rhs = newLiteral(2, parseType("int"))
@@ -300,7 +301,7 @@ class ValueEvaluatorTest {
 
     @Test
     fun testHandleTimes() {
-        with(TestHandler()) {
+        with(TestHandler(TestLanguageFrontend())) {
             val binOp = newBinaryOperator("*")
             binOp.lhs = newLiteral(3, parseType("int"))
             binOp.rhs = newLiteral(2, parseType("int"))
@@ -358,7 +359,7 @@ class ValueEvaluatorTest {
 
     @Test
     fun testHandleDiv() {
-        with(TestHandler()) {
+        with(TestHandler(TestLanguageFrontend())) {
             // For two integer values, we keep the result as a long.
             val binOp = newBinaryOperator("/")
             binOp.lhs = newLiteral(3, parseType("int"))
@@ -421,7 +422,7 @@ class ValueEvaluatorTest {
 
     @Test
     fun testHandleUnary() {
-        with(TestHandler()) {
+        with(TestHandler(TestLanguageFrontend())) {
             val neg = newUnaryOperator("-", false, true)
             neg.input = newLiteral(3, parseType("int"))
             assertEquals(-3, ValueEvaluator().evaluate(neg))

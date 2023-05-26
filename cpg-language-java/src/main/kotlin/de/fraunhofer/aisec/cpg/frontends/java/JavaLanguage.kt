@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -105,13 +104,6 @@ open class JavaLanguage :
         ) {
             getSimpleTypeOf("int") ?: UnknownType.getUnknownType(this)
         } else super.propagateTypeOfBinaryOperation(operation)
-    }
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): JavaLanguageFrontend {
-        return JavaLanguageFrontend(this, config, scopeManager)
     }
 
     override fun handleSuperCall(

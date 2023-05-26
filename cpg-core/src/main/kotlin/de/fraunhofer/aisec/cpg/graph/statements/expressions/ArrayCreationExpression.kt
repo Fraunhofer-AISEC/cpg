@@ -27,11 +27,11 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.isTypeSystemActive
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -82,7 +82,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
     override fun hashCode() = Objects.hash(super.hashCode(), initializer, dimensions)
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val previous = type
@@ -93,7 +93,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

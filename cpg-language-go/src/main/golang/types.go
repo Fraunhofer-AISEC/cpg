@@ -39,6 +39,8 @@ var env *jnigi.Env
 type Type struct{ *jnigi.ObjectRef }
 type ObjectType Type
 
+type TranslationContext jnigi.ObjectRef
+
 const TypesPackage = GraphPackage + "/types"
 const TypeClass = TypesPackage + "/Type"
 const ObjectTypeClass = TypesPackage + "/ObjectType"
@@ -83,9 +85,9 @@ func InitEnv(e *jnigi.Env) {
 	env = e
 }
 
-func TypeParser_createFrom(s string, l *Language) *Type {
+func TypeParser_createFrom(s string, l *Language, ctx *TranslationContext) *Type {
 	var t Type
-	err := env.CallStaticMethod(TypeParserClass, "createFrom", &t, NewCharSequence(s), l)
+	err := env.CallStaticMethod(TypeParserClass, "createFrom", &t, NewString(s), l, false, ctx)
 	if err != nil {
 		log.Fatal(err)
 

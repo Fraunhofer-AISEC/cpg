@@ -55,7 +55,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener, ArgumentHolder
         }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val previous = type
@@ -68,7 +68,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener, ArgumentHolder
         subTypes.remove(oldType)
         subTypes.addAll(types)
         val alternative = if (types.isNotEmpty()) types[0] else newUnknownType()
-        setType(TypeManager.getInstance().getCommonType(types, this).orElse(alternative), root)
+        setType(getCommonType(types).orElse(alternative), root)
         setPossibleSubTypes(subTypes, root)
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW
@@ -76,7 +76,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener, ArgumentHolder
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

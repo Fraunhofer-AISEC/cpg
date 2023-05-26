@@ -791,9 +791,9 @@ class ScopeManager : ScopeProvider {
     override val scope: Scope?
         get() = currentScope
 
-    fun activateTypes(node: Node) {
+    fun activateTypes(node: Node, typeManager: TypeManager) {
         val num = AtomicInteger()
-        val typeCache = TypeManager.getInstance().typeCache
+        val typeCache = typeManager.typeCache
         node.accept(
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
@@ -802,8 +802,7 @@ class ScopeManager : ScopeProvider {
                         val typeNode = t as HasType
                         typeCache.getOrDefault(typeNode, emptyList()).forEach {
                             (t as HasType).type =
-                                TypeManager.getInstance()
-                                    .resolvePossibleTypedef(it, this@ScopeManager)
+                                typeManager.resolvePossibleTypedef(it, this@ScopeManager)
                         }
                         typeCache.remove(t as HasType)
                         num.getAndIncrement()
@@ -816,9 +815,7 @@ class ScopeManager : ScopeProvider {
         // For some nodes it may happen that they are not reachable via AST, but we still need to
         // set their type to the requested value
         typeCache.forEach { (n, types) ->
-            types.forEach { t ->
-                n.type = TypeManager.getInstance().resolvePossibleTypedef(t, this)
-            }
+            types.forEach { t -> n.type = typeManager.resolvePossibleTypedef(t, this) }
         }
     }
 }

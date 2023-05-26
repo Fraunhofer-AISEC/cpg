@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
 import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
@@ -65,8 +64,7 @@ import org.slf4j.LoggerFactory
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
 @DependsOn(VariableUsageResolver::class)
-open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    SymbolResolverPass(config, scopeManager) {
+open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     /**
      * This seems to be a map between function declarations (more likely method declarations) and
      * their parent record (more accurately their type). Seems to be only used by
@@ -104,8 +102,7 @@ open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeMan
 
     private fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node?) {
         if (currentNode is MethodDeclaration && currentClass != null) {
-            containingType[currentNode] =
-                TypeParser.createFrom(currentClass.name, currentClass.language)
+            containingType[currentNode] = currentNode.parseType(currentClass.name)
         }
     }
 
@@ -185,7 +182,7 @@ open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeMan
                         curClass,
                         call,
                         true,
-                        scopeManager,
+                        ctx,
                         currentTU
                     )
 
@@ -212,10 +209,8 @@ open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeMan
                     // unit. Nothing else is allowed (fow now)
                     val func =
                         when (val start = scope?.astNode) {
-                            is TranslationUnitDeclaration ->
-                                start.inferFunction(call, scopeManager = scopeManager)
-                            is NamespaceDeclaration ->
-                                start.inferFunction(call, scopeManager = scopeManager)
+                            is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
+                            is NamespaceDeclaration -> start.inferFunction(call, ctx = ctx)
                             else -> null
                         }
 
@@ -306,7 +301,7 @@ open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeMan
                 if (language is HasComplexCallResolution) {
                     // Handle CXX normal call resolution externally, otherwise it leads to increased
                     // complexity
-                    language.refineNormalCallResolution(call, scopeManager, currentTU)
+                    language.refineNormalCallResolution(call, ctx, currentTU)
                 } else {
                     scopeManager.resolveFunction(call).toMutableList()
                 }
@@ -385,7 +380,7 @@ open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeMan
                     curClass,
                     possibleContainingTypes,
                     call,
-                    scopeManager,
+                    ctx,
                     currentTU,
                     this
                 )
@@ -409,13 +404,13 @@ open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeMan
             .mapNotNull {
                 var record = recordMap[it.root.name]
                 if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
-                    record = it.startInference(scopeManager).inferRecordDeclaration(it, currentTU)
+                    record = it.startInference(ctx).inferRecordDeclaration(it, currentTU)
                     // update the record map
                     if (record != null) it.root.name.let { name -> recordMap[name] = record }
                 }
                 record
             }
-            .map { record -> record.inferMethod(call, scopeManager = scopeManager) }
+            .map { record -> record.inferMethod(call, ctx = ctx) }
     }
 
     /**
@@ -522,7 +517,8 @@ open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeMan
             (call.language as HasComplexCallResolution).refineInvocationCandidatesFromRecord(
                 recordDeclaration,
                 call,
-                namePattern
+                namePattern,
+                ctx
             )
         } else {
             recordDeclaration.methods.filter {
@@ -612,12 +608,12 @@ open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeMan
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
             constructorCandidate =
-                resolveConstructorWithImplicitCast(constructExpression, recordDeclaration)
+                resolveConstructorWithImplicitCast(constructExpression, recordDeclaration, ctx)
         }
 
         return constructorCandidate
             ?: recordDeclaration
-                .startInference(scopeManager)
+                .startInference(ctx)
                 .createInferredConstructor(constructExpression.signature)
     }
 
@@ -626,7 +622,7 @@ open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeMan
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
         return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
-            ?: recordDeclaration.startInference(scopeManager).createInferredConstructor(signature)
+            ?: recordDeclaration.startInference(ctx).createInferredConstructor(signature)
     }
 
     companion object {

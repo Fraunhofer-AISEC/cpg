@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -56,8 +55,7 @@ import java.util.*
  * at places where it is crucial to have parsed all [RecordDeclaration]s. Otherwise, type
  * information in the graph might not be fully correct
  */
-open class TypeHierarchyResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    ComponentPass(config, scopeManager) {
+open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enums = mutableListOf<EnumDeclaration>()
 

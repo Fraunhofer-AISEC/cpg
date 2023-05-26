@@ -125,11 +125,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         )
         for (parameter in methodDecl.parameters) {
             var resolvedType: Type? =
-                TypeManager.getInstance()
-                    .getTypeParameter(
-                        functionDeclaration.recordDeclaration,
-                        parameter.type.toString()
-                    )
+                frontend.typeManager.getTypeParameter(
+                    functionDeclaration.recordDeclaration,
+                    parameter.type.toString()
+                )
             if (resolvedType == null) {
                 resolvedType = frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve())
             }
@@ -196,11 +195,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         recordDeclaration.implementedInterfaces =
             classInterDecl.implementedTypes.map { type -> frontend.getTypeAsGoodAsPossible(type) }
 
-        TypeManager.getInstance()
-            .addTypeParameter(
-                recordDeclaration,
-                classInterDecl.typeParameters.map { ParameterizedType(it.nameAsString, language) }
-            )
+        frontend.typeManager.addTypeParameter(
+            recordDeclaration,
+            classInterDecl.typeParameters.map { ParameterizedType(it.nameAsString, language) }
+        )
 
         // TODO: I cannot replicate the old partionedBy logic
         val staticImports =
@@ -334,11 +332,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         try {
             // Resolve type first with ParameterizedType
             type =
-                TypeManager.getInstance()
-                    .getTypeParameter(
-                        frontend.scopeManager.currentRecord,
-                        variable.resolve().type.describe()
-                    )
+                frontend.typeManager.getTypeParameter(
+                    frontend.scopeManager.currentRecord,
+                    variable.resolve().type.describe()
+                )
                     ?: this.parseType(joinedModifiers + variable.resolve().type.describe())
         } catch (e: UnsolvedSymbolException) {
             val t = frontend.recoverTypeFromUnsolvedException(e)

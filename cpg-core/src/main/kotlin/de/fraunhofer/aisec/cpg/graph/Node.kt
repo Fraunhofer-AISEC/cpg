@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -52,15 +54,21 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
-import org.neo4j.ogm.annotation.GeneratedValue
-import org.neo4j.ogm.annotation.Id
-import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.*
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider {
+open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider, ContextProvider {
+    /**
+     * Because we are updating type information in the properties of the node, we need a reference
+     * to managers such as the [TypeManager] instance which is responsible for this particular node.
+     * All managers are bundled in [TranslationContext]. It is set in [Node.applyMetadata] when a
+     * [ContextProvider] is provided.
+     */
+    @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
+
     /**
      * This property holds the full name using our new [Name] class. It is currently not persisted
      * in the graph database.
@@ -112,7 +120,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     var prevEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
 
-    /** outgoing control flow edges. */
+    /** Outgoing control flow edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
     @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
     var nextEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
