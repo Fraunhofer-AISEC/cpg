@@ -115,7 +115,7 @@ open class JavaLanguageFrontend(
             val fileDeclaration = newTranslationUnitDeclaration(file.toString(), context.toString())
             currentTU = fileDeclaration
             scopeManager.resetToGlobal(fileDeclaration)
-            val packDecl = context?.packageDeclaration.orElse(null)
+            val packDecl = context?.packageDeclaration?.orElse(null)
             var namespaceDeclaration: NamespaceDeclaration? = null
             if (packDecl != null) {
                 namespaceDeclaration =
@@ -133,7 +133,7 @@ open class JavaLanguageFrontend(
                 scopeManager.addDeclaration(declaration)
             }
 
-            for (anImport in context.imports ?: listOf()) {
+            for (anImport in context?.imports ?: listOf()) {
                 val incl = newIncludeDeclaration(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
             }
