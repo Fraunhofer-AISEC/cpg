@@ -246,7 +246,7 @@ open class PropertyEdge<T : Node> : Persistable {
                 } else {
                     obj.start
                 }
-            } else if (obj is Collection<*> && !obj.isEmpty()) {
+            } else if (obj is Collection<*> && obj.isNotEmpty()) {
                 return unwrapPropertyEdgeCollection(obj, outgoing)
             }
             return obj
@@ -296,10 +296,10 @@ open class PropertyEdge<T : Node> : Persistable {
         ): List<PropertyEdge<T>> {
             val newPropertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
             for (propertyEdge in propertyEdges) {
-                if (end && !propertyEdge.end.equals(element)) {
+                if (end && propertyEdge.end != element) {
                     newPropertyEdges.add(propertyEdge)
                 }
-                if (!end && !propertyEdge.start.equals(element)) {
+                if (!end && propertyEdge.start != element) {
                     newPropertyEdges.add(propertyEdge)
                 }
             }

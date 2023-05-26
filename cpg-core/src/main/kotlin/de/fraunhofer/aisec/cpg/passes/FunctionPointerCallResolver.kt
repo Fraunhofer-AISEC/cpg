@@ -109,7 +109,7 @@ class FunctionPointerCallResolver : Pass() {
         val work: Deque<Node> = ArrayDeque()
         val seen = IdentitySet<Node>()
         work.push(pointer)
-        while (!work.isEmpty()) {
+        while (work.isNotEmpty()) {
             val curr = work.pop()
             if (!seen.add(curr)) {
                 continue

@@ -104,7 +104,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
                 // old stuff from getOperandValue, needs to be refactored to the when above
                 // TODO also move the other stuff to the expression handler
-                if (LLVMIsConstant(value) != 1) {
+                return if (LLVMIsConstant(value) != 1) {
                     val operandName: String =
                         if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
                             val aliasee = LLVMAliasGetAliasee(value)
@@ -115,14 +115,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                             // representation
                             LLVMPrintValueToString(value).string
                         }
-                    return newLiteral(operandName, cpgType, operandName)
+                    newLiteral(operandName, cpgType, operandName)
                 } else if (LLVMIsUndef(value) == 1) {
-                    return newDeclaredReferenceExpression("undef", cpgType, "undef")
+                    newDeclaredReferenceExpression("undef", cpgType, "undef")
                 } else if (LLVMIsPoison(value) == 1) {
-                    return newDeclaredReferenceExpression("poison", cpgType, "poison")
+                    newDeclaredReferenceExpression("poison", cpgType, "poison")
                 } else {
                     log.error("Unknown expression {}", kind)
-                    return newProblemExpression(
+                    newProblemExpression(
                         "Unknown expression $kind",
                         ProblemNode.ProblemType.TRANSLATION,
                         frontend.getCodeFromRawNode(value)
@@ -349,8 +349,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Returns a [ConstructExpression].
      */
     private fun initializeAsUndef(type: Type, code: String?): Expression {
-        if (!frontend.isKnownStructTypeName(type.name.toString()) && !type.name.contains("{")) {
-            return newLiteral(null, type, code)
+        return if (
+            !frontend.isKnownStructTypeName(type.name.toString()) && !type.name.contains("{")
+        ) {
+            newLiteral(null, type, code)
         } else {
             val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
@@ -364,7 +366,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 expr.addArgument(arg)
             }
 
-            return expr
+            expr
         }
     }
 
@@ -374,8 +376,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Returns a [ConstructExpression].
      */
     private fun initializeAsZero(type: Type, code: String?): Expression {
-        if (!frontend.isKnownStructTypeName(type.name.toString()) && !type.name.contains("{")) {
-            return newLiteral(0, type, code)
+        return if (
+            !frontend.isKnownStructTypeName(type.name.toString()) && !type.name.contains("{")
+        ) {
+            newLiteral(0, type, code)
         } else {
             val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
@@ -389,7 +393,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 expr.addArgument(arg)
             }
 
-            return expr
+            expr
         }
     }
 

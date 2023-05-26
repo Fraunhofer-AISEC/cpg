@@ -354,7 +354,6 @@ class MultiValueEvaluator : ValueEvaluator() {
             if (loopVar == null) {
                 return result
             }
-            // result.add(loopVar)
 
             if ((cond.lhs as? DeclaredReferenceExpression)?.refersTo == expr.refersTo) {
                 lhs = loopVar

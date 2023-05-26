@@ -273,7 +273,7 @@ open class CallResolver : SymbolResolverPass() {
     private fun handleArguments(call: CallExpression) {
         val worklist: Deque<Node> = ArrayDeque()
         call.arguments.forEach { worklist.push(it) }
-        while (!worklist.isEmpty()) {
+        while (worklist.isNotEmpty()) {
             val curr = worklist.pop()
             if (curr is CallExpression) {
                 handleNode(curr)
@@ -300,7 +300,7 @@ open class CallResolver : SymbolResolverPass() {
     ): List<FunctionDeclaration> {
         val language = call.language
 
-        if (curClass == null) {
+        return if (curClass == null) {
             // Handle function (not method) calls. C++ allows function overloading. Make sure we
             // have at least the same number of arguments
             val candidates =
@@ -312,9 +312,9 @@ open class CallResolver : SymbolResolverPass() {
                     scopeManager.resolveFunction(call).toMutableList()
                 }
 
-            return candidates
+            candidates
         } else {
-            return resolveMemberCallee(callee, curClass, call)
+            resolveMemberCallee(callee, curClass, call)
         }
     }
 

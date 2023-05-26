@@ -196,7 +196,7 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
                 }
         }
         val paramName = StringBuilder()
-        while (!hierarchy.isEmpty()) {
+        while (hierarchy.isNotEmpty()) {
             val part = hierarchy.pop()
             if (part.isEmpty()) {
                 continue

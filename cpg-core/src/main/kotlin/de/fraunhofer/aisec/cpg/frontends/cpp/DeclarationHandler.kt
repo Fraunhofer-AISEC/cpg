@@ -728,7 +728,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val allIncludes = HashMap<String, HashSet<String?>>()
         parseInclusions(dependencyTree.inclusions, allIncludes)
 
-        if (allIncludes.size == 0) {
+        if (allIncludes.isEmpty()) {
             return
         }
 

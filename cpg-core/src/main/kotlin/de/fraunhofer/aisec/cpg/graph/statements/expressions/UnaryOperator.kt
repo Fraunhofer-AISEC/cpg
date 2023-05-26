@@ -79,7 +79,7 @@ class UnaryOperator : Expression(), HasType.TypeListener {
     ): Boolean {
         val worklist: MutableList<HasType.TypeListener> = ArrayList()
         worklist.add(curr)
-        while (!worklist.isEmpty()) {
+        while (worklist.isNotEmpty()) {
             val tl = worklist.removeAt(0)
             if (!checked.contains(tl)) {
                 checked.add(tl)
@@ -179,17 +179,14 @@ class UnaryOperator : Expression(), HasType.TypeListener {
         if (other !is UnaryOperator) {
             return false
         }
-        val that = other
-        return super.equals(that) &&
-            isPostfix == that.isPostfix &&
-            isPrefix == that.isPrefix &&
-            input == that.input &&
-            operatorCode == that.operatorCode
+        return super.equals(other) &&
+            isPostfix == other.isPostfix &&
+            isPrefix == other.isPrefix &&
+            input == other.input &&
+            operatorCode == other.operatorCode
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode() = super.hashCode()
 
     companion object {
         const val OPERATOR_POSTFIX_INCREMENT = "++"

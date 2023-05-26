@@ -244,14 +244,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     "cleanuppad"
                 }
             )
-        if (unwindDest != null) { // For "unwind to caller", the destination is null
+        return if (unwindDest != null) { // For "unwind to caller", the destination is null
             val gotoStatement = assembleGotoStatement(instr, unwindDest)
             gotoStatement.name = name
-            return gotoStatement
+            gotoStatement
         } else {
             val emptyStatement = newEmptyStatement(frontend.getCodeFromRawNode(instr))
             emptyStatement.name = name
-            return emptyStatement
+            emptyStatement
         }
     }
 
@@ -1119,7 +1119,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         var max = LLVMGetNumOperands(instr) - 1
         var idx = 0
 
-        if (calledFuncName.equals("")) {
+        if (calledFuncName == "") {
             // Function is probably called by a local variable. For some reason, this is the last
             // operand
             val opName = frontend.getOperandValueAtIndex(instr, max)
@@ -1203,11 +1203,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         for (i in 0 until numClauses) {
             val clause = LLVMGetClause(instr, i)
             if (LLVMIsAConstantArray(clause) == null) {
-                if (LLVMIsNull(clause) == 1) {
-                    catchType += "..." + " | "
-                } else {
-                    catchType += LLVMGetValueName(clause).string + " | "
-                }
+                catchType +=
+                    if (LLVMIsNull(clause) == 1) {
+                        "..." + " | "
+                    } else {
+                        LLVMGetValueName(clause).string + " | "
+                    }
             } else {
                 // TODO: filter not handled yet
             }

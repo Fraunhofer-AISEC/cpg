@@ -88,11 +88,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             frontend.scopeManager.addDeclaration(param)
         }
 
-        val name =
-            frontend.scopeManager
-                .firstScopeOrNull { RecordScope::class.java.isInstance(it) }
-                ?.astNode
-                ?.name
+        val name = frontend.scopeManager.firstScopeOrNull { it is RecordScope }?.astNode?.name
         if (name != null) {
             val type = this.parseType(name)
             declaration.type = type
@@ -420,7 +416,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
             // get the last statement
             var lastStatement: Statement? = null
-            if (!statements.isEmpty()) {
+            if (statements.isNotEmpty()) {
                 lastStatement = statements[statements.size - 1]
             }
             // make sure, method contains a return statement

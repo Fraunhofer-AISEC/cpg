@@ -166,7 +166,7 @@ abstract class Type : Node {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        return if (other !is Type) false else name == other.name && language == other.language
+        return other is Type && name == other.name && language == other.language
     }
 
     override fun hashCode() = Objects.hash(name, language)

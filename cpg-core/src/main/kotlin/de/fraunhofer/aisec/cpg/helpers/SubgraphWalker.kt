@@ -322,11 +322,11 @@ object SubgraphWalker {
             backlog = ArrayDeque()
             val seen: MutableSet<Node> = LinkedHashSet()
             todo?.push(Pair<Node, Node?>(root, null))
-            while (!(todo as ArrayDeque<Pair<Node, Node?>>).isEmpty()) {
+            while ((todo as ArrayDeque<Pair<Node, Node?>>).isNotEmpty()) {
                 val (current, parent) = (todo as ArrayDeque<Pair<Node, Node?>>).pop()
                 if (
-                    !(backlog as ArrayDeque<Node>).isEmpty() &&
-                        (backlog as ArrayDeque<Node>).peek().equals(current)
+                    (backlog as ArrayDeque<Node>).isNotEmpty() &&
+                        (backlog as ArrayDeque<Node>).peek() == current
                 ) {
                     val exiting = (backlog as ArrayDeque<Node>).pop()
                     onScopeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })

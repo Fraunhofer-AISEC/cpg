@@ -95,7 +95,7 @@ open class ObjectType : Type, SecondaryTypeEdge {
     fun replaceGenerics(oldType: Type?, newType: Type) {
         for (i in genericsPropertyEdges.indices) {
             val propertyEdge = genericsPropertyEdges[i]
-            if (propertyEdge.end.equals(oldType)) {
+            if (propertyEdge.end == oldType) {
                 propertyEdge.end = newType
             }
         }
