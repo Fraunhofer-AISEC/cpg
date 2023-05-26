@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes.order
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.Pass
 import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation
+import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** A simple helper class to match a pass with dependencies. */
 data class PassWithDependencies(
@@ -49,4 +51,12 @@ data class PassWithDependencies(
         get() {
             return pass.hasAnnotation<ExecuteLast>()
         }
+
+    override fun toString(): String {
+        return ToStringBuilder(this, Node.TO_STRING_STYLE)
+            .append("pass", pass.simpleName)
+            .append("softDependencies", softDependencies.map { it.simpleName })
+            .append("hardDependencies", hardDependencies.map { it.simpleName })
+            .toString()
+    }
 }

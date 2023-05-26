@@ -94,6 +94,11 @@ private constructor(
      */
     val includeBlocklist: List<Path>,
     passes: List<KClass<out Pass<*>>>,
+    /**
+     * This map offers the possibility to replace certain passes for specific languages with other
+     * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass]
+     * annotation on a [LanguageFrontend].
+     */
     val replacedPasses:
         Map<KClass<out Pass<*>>, Pair<KClass<out Language<*>>, KClass<out Pass<*>>>>,
     languages: List<Language<out LanguageFrontend>>,
@@ -200,9 +205,15 @@ private constructor(
      * Builds a [TranslationConfiguration].
      *
      * Example:
-     * <pre>`TranslationManager.builder() .config( TranslationConfiguration.builder()
-     * .sourceLocations(new File("example.cpp")) .defaultPasses() .debugParser(true) .build())
-     * .build(); `</pre> *
+     * ```
+     * TranslationManager.builder()
+     *   .config(TranslationConfiguration.builder()
+     *     .sourceLocations(new File("example.cpp"))
+     *     .defaultPasses()
+     *     .debugParser(true)
+     *     .build())
+     *   .build();
+     * ```
      */
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
@@ -491,10 +502,10 @@ private constructor(
                 val replacedPasses = frontend.findAnnotations<ReplacePass>()
                 if (replacedPasses.isNotEmpty()) {
                     for (p in replacedPasses) {
-                        replacePass(p.value, p.lang, p.with)
+                        replacePass(p.old, p.lang, p.with)
                         log.info(
                             "Registered an extra (frontend dependent) default dependency, which replaced an existing pass: {}",
-                            p.value
+                            p.old
                         )
                     }
                 }
@@ -705,7 +716,7 @@ private constructor(
          *    [PassWithDepsContainer.workingList]
          * 1. The first pass [ExecuteFirst] is added to the result and removed from the other passes
          *    dependencies
-         * 1. The first pass in the [workingList] without dependencies is added to the result and it
+         * 1. The first pass in the workingList without dependencies is added to the result and it
          *    is removed from the other passes dependencies
          * 1. The above step is repeated until all passes are added to the result
          *

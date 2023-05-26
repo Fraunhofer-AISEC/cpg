@@ -26,14 +26,22 @@
 package de.fraunhofer.aisec.cpg.passes.order
 
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.Pass
 import kotlin.reflect.KClass
 
+/**
+ * This annotation can be used to replace a certain [Pass] (identified by [old]) for a specific
+ * [Language] (identified by [lang]) with another [Pass] (identified by [with]).
+ *
+ * The primary use-case for this annotation is to allow language frontends to override specific
+ * passes, such as the [EvaluationOrderGraphPass] in order to optimize language specific graphs.
+ */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
 annotation class ReplacePass(
-    val value: KClass<out Pass<*>>,
+    val old: KClass<out Pass<*>>,
     val lang: KClass<out Language<*>>,
     val with: KClass<out Pass<*>>
 )

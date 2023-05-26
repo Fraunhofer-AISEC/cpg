@@ -91,6 +91,7 @@ sealed class Pass<T : PassTarget>(
         }
         return false
     }
+
     companion object {
 
         val log: Logger = LoggerFactory.getLogger(Pass::class.java)

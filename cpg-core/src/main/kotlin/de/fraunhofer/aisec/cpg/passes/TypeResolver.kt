@@ -150,7 +150,7 @@ open class TypeResolver(config: TranslationConfiguration, scopeManager: ScopeMan
      * Pass on the TypeSystem: Sets RecordDeclaration Relationship from ObjectType to
      * RecordDeclaration
      *
-     * @param result
+     * @param component
      */
     override fun accept(component: Component) {
         removeDuplicateTypes()

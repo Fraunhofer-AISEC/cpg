@@ -175,7 +175,6 @@ open class EvaluationOrderGraphPass(config: TranslationConfiguration, scopeManag
     override fun accept(tu: TranslationUnitDeclaration) {
         createEOG(tu)
         removeUnreachableEOGEdges(tu)
-        // checkEOGInvariant(tu); To insert when trying to check if the invariant holds
     }
 
     /**
