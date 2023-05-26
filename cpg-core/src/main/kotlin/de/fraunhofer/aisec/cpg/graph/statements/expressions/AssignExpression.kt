@@ -207,6 +207,7 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
 
             return list
         }
+
     companion object {
         private val log: Logger = LoggerFactory.getLogger(Node::class.java)
     }
