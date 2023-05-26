@@ -127,7 +127,7 @@ class UnaryOperator : Expression(), HasType.TypeListener {
                 newType = src.propagationType.dereference()
             }
 
-            input.setType(newType!!, mutableListOf(this))
+            newType?.let { input.setType(it, mutableListOf(this)) }
         }
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW

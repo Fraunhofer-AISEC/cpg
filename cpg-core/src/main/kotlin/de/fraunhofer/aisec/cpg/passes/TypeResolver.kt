@@ -94,7 +94,7 @@ open class TypeResolver : Pass() {
 
         // ReferencesTypes
         if (type.root in typeState) {
-            if (type !in typeState[type.root]!!) {
+            if (type !in (typeState[type.root] ?: listOf())) {
                 typeState[type.root]?.add(type)
                 addType((type as SecondOrderType).elementType)
             }

@@ -260,8 +260,9 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         alreadyVisited: MutableMap<LLVMTypeRef, Type?>
     ): String {
         val typeStr = LLVMPrintTypeToString(typeRef).string
-        if (typeStr in frontend.typeCache && frontend.typeCache[typeStr] != null) {
-            return frontend.typeCache[typeStr]!!.name.localName
+        if (typeStr in frontend.typeCache) {
+            val localName = frontend.typeCache[typeStr]?.name?.localName
+            if (localName != null) return localName
         }
 
         var name = "literal"

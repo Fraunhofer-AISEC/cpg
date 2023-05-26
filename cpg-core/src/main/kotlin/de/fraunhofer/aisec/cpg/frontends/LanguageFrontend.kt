@@ -72,8 +72,8 @@ abstract class LanguageFrontend(
     @Throws(TranslationException::class)
     fun parseAll(): List<TranslationUnitDeclaration> {
         val units = ArrayList<TranslationUnitDeclaration>()
-        for (component in config.softwareComponents.keys) {
-            for (sourceFile in config.softwareComponents[component]!!) {
+        for (componentFiles in config.softwareComponents.values) {
+            for (sourceFile in componentFiles) {
                 units.add(parse(sourceFile))
             }
         }
