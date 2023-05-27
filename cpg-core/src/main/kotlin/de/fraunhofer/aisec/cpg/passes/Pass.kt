@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -41,15 +42,32 @@ import kotlin.reflect.full.primaryConstructor
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-abstract class ComponentPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    Pass<Component>(config, scopeManager)
-
+/**
+ * A [TranslationResultPass] is a pass that operates on a [TranslationResult]. If used with
+ * [executePassSequential], one [Pass] object is instantiated for the whole [TranslationResult].
+ */
 abstract class TranslationResultPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
     Pass<TranslationResult>(config, scopeManager)
 
+/**
+ * A [ComponentPass] is a pass that operates on a [Component]. If used with [executePassSequential],
+ * one [Pass] object is instantiated for each [Component] in a [TranslationResult].
+ */
+abstract class ComponentPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    Pass<Component>(config, scopeManager)
+
+/**
+ * A [TranslationUnitPass] is a pass that operates on a [TranslationUnitDeclaration]. If used with
+ * [executePassSequential], one [Pass] object is instantiated for each [TranslationUnitDeclaration]
+ * in a [Component].
+ */
 abstract class TranslationUnitPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
     Pass<TranslationUnitDeclaration>(config, scopeManager)
 
+/**
+ * A pass target is an interface for a [Node] on which a [Pass] can operate, it should only be
+ * implemented by [TranslationResult], [Component] and [TranslationUnitDeclaration].
+ */
 interface PassTarget
 
 /**
