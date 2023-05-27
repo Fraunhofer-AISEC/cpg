@@ -75,8 +75,7 @@ class FrontendUtils {
             }
 
             val endColumn = getEndColumnIndex(fileContent, nodeOffset + nodeLength)
-            val region = Region(startingLineNumber, startColumn, endingLineNumber, endColumn)
-            return region
+            return Region(startingLineNumber, startColumn, endingLineNumber, endColumn)
         }
 
         /**
@@ -122,7 +121,7 @@ class FrontendUtils {
             // Get a List of all Nodes that enclose the comment
             var enclosingNodes =
                 nodes.filter {
-                    val nodeRegion: Region = it.location?.let { it.region } ?: Region()
+                    val nodeRegion: Region = it.location?.region ?: Region()
                     nodeRegion.startLine <= location.startLine &&
                         nodeRegion.endLine >= location.endLine &&
                         (nodeRegion.startLine != location.startLine ||
@@ -143,8 +142,8 @@ class FrontendUtils {
             // Because in GO we wrap all elements into a NamespaceDeclaration we have to extract the
             // natural children
             children.addAll(
-                children.filterIsInstance<NamespaceDeclaration>().flatMap {
-                    SubgraphWalker.getAstChildren(it).filter { !children.contains(it) }
+                children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
+                    SubgraphWalker.getAstChildren(namespace).filter { it !in children }
                 }
             )
 

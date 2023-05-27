@@ -128,7 +128,7 @@ class TranslationResult(
                 components.add(swc)
             }
         }
-        swc.translationUnits.add(tu!!)
+        tu?.let { swc.translationUnits.add(it) }
     }
 
     /**

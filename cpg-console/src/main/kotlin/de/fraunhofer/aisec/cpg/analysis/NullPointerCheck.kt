@@ -131,7 +131,7 @@ class NullPointerCheck {
                 }
             }
         } catch (ex: Throwable) {
-            log.error("Exception while running check: {}", ex)
+            log.error("Exception while running check", ex)
         }
     }
 }

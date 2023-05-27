@@ -46,13 +46,15 @@ sealed class FSM(states: Set<State>) {
      * Checks whether the given object is an [FSM] and whether it accepts the same language as this
      * [FSM]
      */
-    override fun equals(other: Any?) = if (other is FSM) acceptsSameLanguage(this, other) else false
+    override fun equals(other: Any?) = other is FSM && acceptsSameLanguage(this, other)
 
     /**
      * This function is set as [State.edgeCheck] inside [addState]. In case the [edge] must not be
      * added to the [state], this function must throw an exception.
      */
-    open fun checkEdge(state: State, edge: Edge) {}
+    open fun checkEdge(state: State, edge: Edge) {
+        // Nothing to do here because every edge is allowed for an NFA.
+    }
 
     private fun checkState(state: State) {
         for (edge in state.outgoingEdges) checkEdge(state, edge)
@@ -145,10 +147,11 @@ sealed class FSM(states: Set<State>) {
         )
 
     fun renameStatesToBeDifferentFrom(otherFsm: FSM) {
-        otherFsm.states.forEach {
+        otherFsm.states.forEach { state ->
             otherFsm.checkedChangeStateProperty(
-                it,
-                name = it.name + maxOf(states.maxOf { it.name }, otherFsm.states.maxOf { it.name })
+                state,
+                name =
+                    state.name + maxOf(states.maxOf { it.name }, otherFsm.states.maxOf { it.name })
             )
         }
     }

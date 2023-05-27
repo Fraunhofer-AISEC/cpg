@@ -63,7 +63,7 @@ class ExpressionList : Expression(), HasType.TypeListener {
         }
 
     fun addExpression(expression: Statement) {
-        if (!expressionEdges.isEmpty()) {
+        if (expressionEdges.isNotEmpty()) {
             val lastExpression = expressionEdges[expressionEdges.size - 1].end
             if (lastExpression is HasType) (lastExpression as HasType).unregisterTypeListener(this)
         }

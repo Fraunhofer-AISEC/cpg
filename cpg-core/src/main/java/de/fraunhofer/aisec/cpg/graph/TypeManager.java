@@ -221,13 +221,11 @@ public class TypeManager {
       String typeName,
       Language<? extends LanguageFrontend> language) {
     ParameterizedType parameterizedType = getTypeParameter(templateDeclaration, typeName);
-    if (parameterizedType != null) {
-      return parameterizedType;
-    } else {
+    if (parameterizedType == null) {
       parameterizedType = new ParameterizedType(typeName, language);
       addTypeParameter(templateDeclaration, parameterizedType);
-      return parameterizedType;
     }
+    return parameterizedType;
   }
 
   @NotNull

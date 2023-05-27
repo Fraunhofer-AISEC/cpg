@@ -237,7 +237,9 @@ class LLVMIRLanguageFrontend(
         return null
     }
 
-    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
+    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
+        // There are no comments in LLVM
+    }
 
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
@@ -258,10 +260,10 @@ class LLVMIRLanguageFrontend(
 
     fun guessSlotNumber(valueRef: LLVMValueRef): String {
         val code = getCodeFromRawNode(valueRef)
-        if (code?.contains("=") == true) {
-            return code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
+        return if (code?.contains("=") == true) {
+            code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
         } else {
-            return ""
+            ""
         }
     }
 }

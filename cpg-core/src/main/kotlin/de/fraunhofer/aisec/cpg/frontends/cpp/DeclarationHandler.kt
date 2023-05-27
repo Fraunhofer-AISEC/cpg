@@ -342,8 +342,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                                 templateParameter.declarator.initializer
                             )
                         nonTypeTemplateParamDeclaration.default = defaultExpression
-                        nonTypeTemplateParamDeclaration.addPrevDFG(defaultExpression!!)
-                        defaultExpression.addNextDFG(nonTypeTemplateParamDeclaration)
+                        defaultExpression?.let {
+                            nonTypeTemplateParamDeclaration.addPrevDFG(it)
+                            it.addNextDFG(nonTypeTemplateParamDeclaration)
+                        }
                     }
                     templateDeclaration.addParameter(nonTypeTemplateParamDeclaration)
                     frontend.scopeManager.addDeclaration(nonTypeTemplateParamDeclaration)
@@ -726,7 +728,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val allIncludes = HashMap<String, HashSet<String?>>()
         parseInclusions(dependencyTree.inclusions, allIncludes)
 
-        if (allIncludes.size == 0) {
+        if (allIncludes.isEmpty()) {
             return
         }
 

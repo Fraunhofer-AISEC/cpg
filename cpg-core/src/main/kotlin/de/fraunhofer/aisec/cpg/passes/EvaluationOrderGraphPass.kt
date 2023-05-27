@@ -342,18 +342,18 @@ open class EvaluationOrderGraphPass : Pass() {
         currentPredecessors.add(node)
         var defaultArg: Expression? = null
         for (paramVariableDeclaration in node.parameters) {
-            if (paramVariableDeclaration.default != null) {
-                defaultArg = paramVariableDeclaration.default
-                pushToEOG(defaultArg!!)
+            paramVariableDeclaration.default?.let {
+                defaultArg = it
+                pushToEOG(it)
                 currentPredecessors.clear()
-                currentPredecessors.add(defaultArg)
+                currentPredecessors.add(it)
                 currentPredecessors.add(node)
             }
         }
-        if (defaultArg != null) {
+        defaultArg?.let {
             for (nextEOG in funcDeclNextEOG) {
                 currentPredecessors.clear()
-                currentPredecessors.add(defaultArg)
+                currentPredecessors.add(it)
                 pushToEOG(nextEOG)
             }
         }
@@ -572,24 +572,24 @@ open class EvaluationOrderGraphPass : Pass() {
 
         createEOG(node.tryBlock)
         val tmpEOGNodes = ArrayList(currentPredecessors)
-        val catchesOrRelays = tryScope!!.catchesOrRelays
+        val catchesOrRelays = tryScope?.catchesOrRelays
         for (catchClause in node.catchClauses) {
             currentPredecessors.clear()
             // Try to catch all internally thrown exceptions under the catching clause and remove
             // caught ones
             val toRemove = mutableSetOf<Type>()
-            for ((throwType, eogEdges) in catchesOrRelays) {
-                if (catchClause.parameter == null) { // e.g. catch (...)
+            for ((throwType, eogEdges) in catchesOrRelays ?: mapOf()) {
+                val catchParam = catchClause.parameter
+                if (catchParam == null) { // e.g. catch (...)
                     currentPredecessors.addAll(eogEdges)
                 } else if (
-                    TypeManager.getInstance()
-                        .isSupertypeOf(catchClause.parameter!!.type, throwType, node)
+                    TypeManager.getInstance().isSupertypeOf(catchParam.type, throwType, node)
                 ) {
                     currentPredecessors.addAll(eogEdges)
                     toRemove.add(throwType)
                 }
             }
-            toRemove.forEach { catchesOrRelays.remove(it) }
+            toRemove.forEach { catchesOrRelays?.remove(it) }
             createEOG(catchClause.body)
             tmpEOGNodes.addAll(currentPredecessors)
         }
@@ -600,26 +600,29 @@ open class EvaluationOrderGraphPass : Pass() {
         // finally exists
         if (node.finallyBlock != null) {
             // extends current EOG by all value EOG from open throws
-            currentPredecessors.addAll(catchesOrRelays.entries.flatMap { (_, value) -> value })
+            catchesOrRelays
+                ?.entries
+                ?.flatMap { (_, value) -> value }
+                ?.let { currentPredecessors.addAll(it) }
             createEOG(node.finallyBlock)
 
             //  all current-eog edges , result of finally execution as value List of uncaught
             // catchesOrRelaysThrows
-            for ((_, value) in catchesOrRelays) {
+            for ((_, value) in catchesOrRelays ?: mapOf()) {
                 value.clear()
                 value.addAll(currentPredecessors)
             }
         }
         // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
         val outerScope =
-            scopeManager.firstScopeOrNull(scopeManager.currentScope!!.parent) { scope: Scope? ->
+            scopeManager.firstScopeOrNull(scopeManager.currentScope?.parent) { scope: Scope? ->
                 scope is TryScope || scope is FunctionScope
             }
         if (outerScope != null) {
             val outerCatchesOrRelays =
                 if (outerScope is TryScope) outerScope.catchesOrRelays
                 else (outerScope as FunctionScope).catchesOrRelays
-            for ((key, value) in catchesOrRelays) {
+            for ((key, value) in catchesOrRelays ?: mapOf()) {
                 val catches = outerCatchesOrRelays[key] ?: ArrayList()
                 catches.addAll(value)
                 outerCatchesOrRelays[key] = catches
@@ -657,8 +660,8 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleGotoStatement(node: GotoStatement) {
         pushToEOG(node)
-        if (node.targetLabel != null) {
-            processedListener.registerObjectListener(node.targetLabel!!) { _: Any?, to: Any? ->
+        node.targetLabel?.let {
+            processedListener.registerObjectListener(it) { _: Any?, to: Any? ->
                 addEOGEdge(node, to as Node)
             }
         }

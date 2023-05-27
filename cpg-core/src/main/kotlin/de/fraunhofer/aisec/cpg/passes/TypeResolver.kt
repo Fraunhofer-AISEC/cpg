@@ -169,7 +169,6 @@ open class TypeResolver : Pass() {
                     typeState.keys
                 } else {
                     typeState.computeIfAbsent(subType.root, ::mutableListOf)
-                    // typeState[subType.root]!!
                 }
             val unique = trackedTypes.firstOrNull { it == subType }
             // TODO Why do we only take the first one even if we don't add it?

@@ -115,26 +115,18 @@ abstract class Language<T : LanguageFrontend> : Node() {
     }
 
     private fun arithmeticOpTypePropagation(lhs: Type, rhs: Type): Type {
-        return if (lhs is FloatingPointType && rhs !is FloatingPointType) {
-            lhs
-        } else if (lhs !is FloatingPointType && rhs is FloatingPointType) {
-            rhs
-        } else if (lhs is FloatingPointType && rhs is FloatingPointType) {
-            // We take the one with the bigger bitwidth
-            if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
-                lhs
-            } else {
-                rhs
-            }
-        } else if (lhs is IntegerType && rhs is IntegerType) {
-            // We take the one with the bigger bitwidth
-            if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
-                lhs
-            } else {
-                rhs
-            }
-        } else {
-            newUnknownType()
+        return when {
+            lhs is FloatingPointType && rhs !is FloatingPointType && rhs is NumericType -> lhs
+            lhs !is FloatingPointType && lhs is NumericType && rhs is FloatingPointType -> rhs
+            lhs is FloatingPointType && rhs is FloatingPointType ||
+                lhs is IntegerType && rhs is IntegerType ->
+                // We take the one with the bigger bitwidth
+                if (((lhs as NumericType).bitWidth ?: 0) >= ((rhs as NumericType).bitWidth ?: 0)) {
+                    lhs
+                } else {
+                    rhs
+                }
+            else -> newUnknownType()
         }
     }
 

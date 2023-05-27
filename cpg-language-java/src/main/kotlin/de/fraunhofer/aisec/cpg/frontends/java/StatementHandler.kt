@@ -603,90 +603,48 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     init {
         map[IfStmt::class.java] = HandlerInterface { stmt: Statement -> handleIfStatement(stmt) }
-        map[AssertStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleAssertStatement(stmt)
-            }
-        map[WhileStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleWhileStatement(stmt)
-            }
-        map[DoStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleDoStatement(stmt)
-            }
-        map[ForEachStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleForEachStatement(stmt)
-            }
-        map[ForStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleForStatement(stmt)
-            }
-        map[BreakStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleBreakStatement(stmt)
-            }
-        map[ContinueStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleContinueStatement(stmt)
-            }
-        map[ReturnStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleReturnStatement(stmt)
-            }
-        map[BlockStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleBlockStatement(stmt)
-            }
-        map[LabeledStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleLabelStatement(stmt)
-            }
-        map[ExplicitConstructorInvocationStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleExplicitConstructorInvocation(stmt)
-            }
-        map[ExpressionStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleExpressionStatement(stmt)
-            }
-        map[SwitchStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleSwitchStatement(stmt)
-            }
-        map[EmptyStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleEmptyStatement(stmt)
-            }
-        map[SynchronizedStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleSynchronizedStatement(stmt)
-            }
-        map[TryStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleTryStatement(stmt)
-            }
-        map[ThrowStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleThrowStmt(stmt)
-            }
+        map[AssertStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleAssertStatement(stmt)
+        }
+        map[WhileStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleWhileStatement(stmt)
+        }
+        map[DoStmt::class.java] = HandlerInterface { stmt: Statement -> handleDoStatement(stmt) }
+        map[ForEachStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleForEachStatement(stmt)
+        }
+        map[ForStmt::class.java] = HandlerInterface { stmt: Statement -> handleForStatement(stmt) }
+        map[BreakStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleBreakStatement(stmt)
+        }
+        map[ContinueStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleContinueStatement(stmt)
+        }
+        map[ReturnStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleReturnStatement(stmt)
+        }
+        map[BlockStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleBlockStatement(stmt)
+        }
+        map[LabeledStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleLabelStatement(stmt)
+        }
+        map[ExplicitConstructorInvocationStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleExplicitConstructorInvocation(stmt)
+        }
+        map[ExpressionStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleExpressionStatement(stmt)
+        }
+        map[SwitchStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleSwitchStatement(stmt)
+        }
+        map[EmptyStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleEmptyStatement(stmt)
+        }
+        map[SynchronizedStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleSynchronizedStatement(stmt)
+        }
+        map[TryStmt::class.java] = HandlerInterface { stmt: Statement -> handleTryStatement(stmt) }
+        map[ThrowStmt::class.java] = HandlerInterface { stmt: Statement -> handleThrowStmt(stmt) }
     }
 }

@@ -215,7 +215,7 @@ class CompressLLVMPass : Pass() {
         val worklist: Queue<Node> = LinkedList()
         worklist.add(node.body)
         val alreadyChecked = LinkedHashSet<Node>()
-        while (!worklist.isEmpty()) {
+        while (worklist.isNotEmpty()) {
             val currentNode = worklist.remove()
             alreadyChecked.add(currentNode)
             // We exclude sub-try statements as they would mess up with the results

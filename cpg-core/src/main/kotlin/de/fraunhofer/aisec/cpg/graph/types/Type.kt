@@ -69,11 +69,12 @@ abstract class Type : Node {
     }
 
     constructor(typeName: CharSequence, language: Language<out LanguageFrontend>?) {
-        if (this is FunctionType) {
-            name = Name(typeName.toString(), null, language)
-        } else {
-            name = language.parseName(typeName)
-        }
+        name =
+            if (this is FunctionType) {
+                Name(typeName.toString(), null, language)
+            } else {
+                language.parseName(typeName)
+            }
         this.language = language
         typeOrigin = Origin.UNRESOLVED
     }
@@ -172,7 +173,7 @@ abstract class Type : Node {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        return if (other !is Type) false else name == other.name && language == other.language
+        return other is Type && name == other.name && language == other.language
     }
 
     override fun hashCode() = Objects.hash(name, language)

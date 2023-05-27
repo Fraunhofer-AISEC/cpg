@@ -273,7 +273,7 @@ open class CallResolver : SymbolResolverPass() {
     private fun handleArguments(call: CallExpression) {
         val worklist: Deque<Node> = ArrayDeque()
         call.arguments.forEach { worklist.push(it) }
-        while (!worklist.isEmpty()) {
+        while (worklist.isNotEmpty()) {
             val curr = worklist.pop()
             if (curr is CallExpression) {
                 handleNode(curr)
@@ -300,7 +300,7 @@ open class CallResolver : SymbolResolverPass() {
     ): List<FunctionDeclaration> {
         val language = call.language
 
-        if (curClass == null) {
+        return if (curClass == null) {
             // Handle function (not method) calls. C++ allows function overloading. Make sure we
             // have at least the same number of arguments
             val candidates =
@@ -312,9 +312,9 @@ open class CallResolver : SymbolResolverPass() {
                     scopeManager.resolveFunction(call).toMutableList()
                 }
 
-            return candidates
+            candidates
         } else {
-            return resolveMemberCallee(callee, curClass, call)
+            resolveMemberCallee(callee, curClass, call)
         }
     }
 
@@ -333,13 +333,14 @@ open class CallResolver : SymbolResolverPass() {
         // We need to adjust certain types of the base in case of a super call and we delegate this.
         // If that is successful, we can continue with regular resolving
         if (
-            callee is MemberExpression &&
+            curClass != null &&
+                callee is MemberExpression &&
                 callee.base is DeclaredReferenceExpression &&
                 isSuperclassReference(callee.base as DeclaredReferenceExpression)
         ) {
             (callee.language as? HasSuperClasses)?.handleSuperCall(
                 callee,
-                curClass!!,
+                curClass,
                 scopeManager,
                 recordMap
             )
@@ -474,8 +475,8 @@ open class CallResolver : SymbolResolverPass() {
     }
 
     private fun handleExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
-        if (eci.containingClass != null) {
-            val recordDeclaration = recordMap[eci.parseName(eci.containingClass!!)]
+        eci.containingClass?.let { containingClass ->
+            val recordDeclaration = recordMap[eci.parseName(containingClass)]
             val signature = eci.arguments.map { it.type }
             if (recordDeclaration != null) {
                 val constructor =
@@ -490,12 +491,13 @@ open class CallResolver : SymbolResolverPass() {
     private fun getPossibleContainingTypes(node: Node?): Set<Type> {
         val possibleTypes = mutableSetOf<Type>()
         if (node is MemberCallExpression) {
-            val base = node.base!!
-            possibleTypes.add(base.type)
-            possibleTypes.addAll(base.possibleSubTypes)
+            node.base?.let { base ->
+                possibleTypes.add(base.type)
+                possibleTypes.addAll(base.possibleSubTypes)
+            }
         } else {
             // This could be a C++ member call with an implicit this (which we do not create), so
-            // lets add the current class to the possible list
+            // let's add the current class to the possible list
             scopeManager.currentRecord?.toType()?.let { possibleTypes.add(it) }
         }
 
@@ -513,7 +515,7 @@ open class CallResolver : SymbolResolverPass() {
             Pattern.compile(
                 "(" +
                     Pattern.quote(recordDeclaration.name.toString()) +
-                    Regex.escape(recordDeclaration.language!!.namespaceDelimiter) +
+                    Regex.escape(recordDeclaration.language?.namespaceDelimiter ?: "") +
                     ")?" +
                     Pattern.quote(name)
             )

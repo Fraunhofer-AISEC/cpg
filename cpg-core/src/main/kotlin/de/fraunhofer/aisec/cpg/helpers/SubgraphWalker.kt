@@ -70,7 +70,7 @@ object SubgraphWalker {
             // Note: we cannot use computeIfAbsent here, because we are calling our function
             // recursively and this would result in a ConcurrentModificationException
             if (fieldCache.containsKey(cacheKey)) {
-                return fieldCache[cacheKey]!!
+                return fieldCache[cacheKey] ?: ArrayList()
             }
             val fields = ArrayList<Field>()
             fields.addAll(getAllFields(classType.superclass))
@@ -322,11 +322,11 @@ object SubgraphWalker {
             backlog = ArrayDeque()
             val seen: MutableSet<Node> = LinkedHashSet()
             todo?.push(Pair<Node, Node?>(root, null))
-            while (!(todo as ArrayDeque<Pair<Node, Node?>>).isEmpty()) {
+            while ((todo as ArrayDeque<Pair<Node, Node?>>).isNotEmpty()) {
                 val (current, parent) = (todo as ArrayDeque<Pair<Node, Node?>>).pop()
                 if (
-                    !(backlog as ArrayDeque<Node>).isEmpty() &&
-                        (backlog as ArrayDeque<Node>).peek().equals(current)
+                    (backlog as ArrayDeque<Node>).isNotEmpty() &&
+                        (backlog as ArrayDeque<Node>).peek() == current
                 ) {
                     val exiting = (backlog as ArrayDeque<Node>).pop()
                     onScopeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })
@@ -430,9 +430,9 @@ object SubgraphWalker {
          */
         fun iterate(root: Node) {
             walker = IterativeGraphWalker()
-            handlers.forEach { h -> walker!!.registerOnNodeVisit { n -> handleNode(n, h) } }
-            walker!!.registerOnScopeExit { exiting: Node -> leaveScope(exiting) }
-            walker!!.iterate(root)
+            handlers.forEach { h -> walker?.registerOnNodeVisit { n -> handleNode(n, h) } }
+            walker?.registerOnScopeExit { exiting: Node -> leaveScope(exiting) }
+            walker?.iterate(root)
         }
 
         private fun handleNode(
@@ -440,7 +440,7 @@ object SubgraphWalker {
             handler: TriConsumer<RecordDeclaration?, Node?, Node?>
         ) {
             scopeManager.enterScopeIfExists(current)
-            val parent = walker!!.backlog!!.peek()
+            val parent = walker?.backlog?.peek()
 
             // TODO: actually we should not handle this in handleNode but have something similar to
             // onScopeEnter because the method declaration already correctly sets the scope
@@ -457,7 +457,7 @@ object SubgraphWalker {
             var parentBlock: Node? = null
 
             // get containing Record or Compound
-            for (node in walker!!.backlog!!) {
+            for (node in walker?.backlog ?: listOf()) {
                 if (
                     node is RecordDeclaration ||
                         node is CompoundStatement ||
@@ -497,13 +497,13 @@ object SubgraphWalker {
 
             // iterate all declarations from the current scope and all its parent scopes
             while (nodeToParentBlockAndContainedValueDeclarations.containsKey(scope)) {
-                val entry = nodeToParentBlockAndContainedValueDeclarations[currentScope]!!
-                for (`val` in entry.right) {
+                val entry = nodeToParentBlockAndContainedValueDeclarations[currentScope]
+                for (`val` in entry?.right ?: listOf()) {
                     if (predicate.test(`val`)) {
                         return Optional.of(`val`)
                     }
                 }
-                currentScope = entry.left
+                entry?.left?.let { currentScope = it }
             }
             return Optional.empty()
         }

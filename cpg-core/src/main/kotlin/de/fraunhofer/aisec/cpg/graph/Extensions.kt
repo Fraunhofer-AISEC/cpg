@@ -579,7 +579,7 @@ operator fun <N : Expression> Expression.invoke(): N? {
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
     return SubgraphWalker.flattenAST(this).filter { node ->
-        (node as? CallExpression)?.invokes?.any { it.name.lastPartsMatch(name) } == true
+        node is CallExpression && node.invokes.any { it.name.lastPartsMatch(name) }
     } as List<CallExpression>
 }
 
@@ -624,9 +624,12 @@ fun IfStatement.controls(): List<Node> {
 /** All nodes which depend on this if statement */
 fun Node.controlledBy(): List<Node> {
     val result = mutableListOf<Node>()
-    var checkedNode: Node = this
+    var checkedNode: Node? = this
     while (checkedNode !is FunctionDeclaration) {
-        checkedNode = checkedNode.astParent!!
+        checkedNode = checkedNode?.astParent
+        if (checkedNode == null) {
+            break
+        }
         if (checkedNode is IfStatement || checkedNode is SwitchStatement) {
             result.add(checkedNode)
         }

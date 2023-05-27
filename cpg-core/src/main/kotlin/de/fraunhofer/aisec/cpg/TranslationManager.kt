@@ -339,7 +339,7 @@ private constructor(
             result.scratch.computeIfAbsent(TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND) {
                 mutableMapOf<String, String>()
             } as MutableMap<String, String>
-        sfToFe[sourceLocation!!.name] = f.javaClass.simpleName
+        sourceLocation?.name?.let { sfToFe[it] = f.javaClass.simpleName }
     }
 
     @Throws(TranslationException::class)

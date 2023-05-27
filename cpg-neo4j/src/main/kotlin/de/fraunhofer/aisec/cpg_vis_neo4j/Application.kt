@@ -233,7 +233,8 @@ class Application : Callable<Int> {
             FunctionPointerCallResolver::class,
             FilenameMapper::class
         )
-    private var passClassMap = passClassList.map { Pair(it.simpleName, it) }.toMap()
+    private var passClassMap = passClassList.associateBy { it.simpleName }
+
     /** The list of available passes that can be registered. */
     private val passList: List<String>
         get() = passClassList.mapNotNull { it.simpleName }
@@ -436,7 +437,7 @@ class Application : Callable<Int> {
     override fun call(): Int {
         if (mutuallyExclusiveParameters.listPasses) {
             log.info("List of passes:")
-            passList.iterator().forEach { log.info("- " + it) }
+            passList.iterator().forEach { log.info("- $it") }
             log.info("--")
             log.info("End of list. Stopping.")
             return EXIT_SUCCESS
