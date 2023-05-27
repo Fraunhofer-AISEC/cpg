@@ -67,11 +67,12 @@ abstract class Type : Node {
     }
 
     constructor(typeName: CharSequence, language: Language<out LanguageFrontend>?) {
-        if (this is FunctionType) {
-            name = Name(typeName.toString(), null, language)
-        } else {
-            name = language.parseName(typeName)
-        }
+        name =
+            if (this is FunctionType) {
+                Name(typeName.toString(), null, language)
+            } else {
+                language.parseName(typeName)
+            }
         this.language = language
         typeOrigin = Origin.UNRESOLVED
     }

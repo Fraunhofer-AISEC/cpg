@@ -43,8 +43,7 @@ class SizeEvaluator : ValueEvaluator() {
         if (node is String) {
             return node.length
         }
-        val result = evaluateInternal(node as? Node, 0)
-        return result
+        return evaluateInternal(node as? Node, 0)
     }
 
     override fun evaluateInternal(node: Node?, depth: Int): Any? {

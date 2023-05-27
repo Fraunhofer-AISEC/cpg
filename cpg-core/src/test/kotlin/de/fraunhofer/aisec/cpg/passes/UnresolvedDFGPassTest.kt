@@ -113,7 +113,7 @@ class UnresolvedDFGPassTest {
                     translationUnit("DfgUnresolvedCalls.java") {
                         record("DfgUnresolvedCalls") {
                             field("i", t("int")) { modifiers = listOf("private") }
-                            constructor() {
+                            constructor {
                                 receiver = newVariableDeclaration("this", t("DfgUnresolvedCalls"))
                                 param("i", t("int"))
                                 body {

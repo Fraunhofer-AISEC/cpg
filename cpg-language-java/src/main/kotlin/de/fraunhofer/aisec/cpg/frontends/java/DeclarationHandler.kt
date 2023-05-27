@@ -237,30 +237,37 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             (decl as? com.github.javaparser.ast.body.FieldDeclaration)?.let {
                 handle(it) // will be added via the scopemanager
             }
-                ?: if (decl is MethodDeclaration) {
-                    val md =
-                        handle(decl)
-                            as de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration?
-                    frontend.scopeManager.addDeclaration(md)
-                } else if (decl is ConstructorDeclaration) {
-                    val c =
-                        handle(decl)
-                            as de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration?
-                    frontend.scopeManager.addDeclaration(c)
-                } else if (decl is ClassOrInterfaceDeclaration) {
-                    frontend.scopeManager.addDeclaration(handle(decl))
-                } else if (decl is InitializerDeclaration) {
-                    val id = decl
-                    val initializerBlock = frontend.statementHandler.handleBlockStatement(id.body)
-                    initializerBlock.isStaticBlock = id.isStatic
-                    recordDeclaration.addStatement(initializerBlock)
-                } else {
-                    log.debug(
-                        "Member {} of type {} is something that we do not parse yet: {}",
-                        decl,
-                        recordDeclaration.name,
-                        decl.javaClass.simpleName
-                    )
+                ?: when (decl) {
+                    is MethodDeclaration -> {
+                        val md =
+                            handle(decl)
+                                as de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration?
+                        frontend.scopeManager.addDeclaration(md)
+                    }
+                    is ConstructorDeclaration -> {
+                        val c =
+                            handle(decl)
+                                as
+                                de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration?
+                        frontend.scopeManager.addDeclaration(c)
+                    }
+                    is ClassOrInterfaceDeclaration -> {
+                        frontend.scopeManager.addDeclaration(handle(decl))
+                    }
+                    is InitializerDeclaration -> {
+                        val initializerBlock =
+                            frontend.statementHandler.handleBlockStatement(decl.body)
+                        initializerBlock.isStaticBlock = decl.isStatic
+                        recordDeclaration.addStatement(initializerBlock)
+                    }
+                    else -> {
+                        log.debug(
+                            "Member {} of type {} is something that we do not parse yet: {}",
+                            decl,
+                            recordDeclaration.name,
+                            decl.javaClass.simpleName
+                        )
+                    }
                 }
         }
         if (recordDeclaration.constructors.isEmpty()) {

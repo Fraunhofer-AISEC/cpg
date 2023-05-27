@@ -100,15 +100,15 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
                 operation.lhs.propagationType is NumericType &&
                 operation.rhs.propagationType is NumericType
         ) {
-            if (
+            return if (
                 operation.lhs.propagationType is IntegerType &&
                     operation.rhs.propagationType is IntegerType
             ) {
                 // In Python, the // operation keeps the type as an int if both inputs are integers
                 // or casts it to a float otherwise.
-                return getSimpleTypeOf("int") ?: unknownType
+                getSimpleTypeOf("int") ?: unknownType
             } else {
-                return getSimpleTypeOf("float") ?: unknownType
+                getSimpleTypeOf("float") ?: unknownType
             }
         }
 

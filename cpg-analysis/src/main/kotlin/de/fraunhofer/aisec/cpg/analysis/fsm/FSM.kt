@@ -146,10 +146,11 @@ sealed class FSM(states: Set<State>) {
         )
 
     fun renameStatesToBeDifferentFrom(otherFsm: FSM) {
-        otherFsm.states.forEach {
+        otherFsm.states.forEach { state ->
             otherFsm.checkedChangeStateProperty(
-                it,
-                name = it.name + maxOf(states.maxOf { it.name }, otherFsm.states.maxOf { it.name })
+                state,
+                name =
+                    state.name + maxOf(states.maxOf { it.name }, otherFsm.states.maxOf { it.name })
             )
         }
     }

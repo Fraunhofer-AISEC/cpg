@@ -354,8 +354,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         scope.asFieldAccessExpr().nameAsString
                     }
                 val qualifiedNameFromImports = frontend.getQualifiedNameFromImports(name)
-                val baseType: Type
-                baseType =
+                val baseType =
                     if (qualifiedNameFromImports != null) {
                         this.parseType(qualifiedNameFromImports)
                     } else {
@@ -433,46 +432,42 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun handleLiteralExpression(expr: Expression): Literal<*>? {
         val literalExpr = expr.asLiteralExpr()
         val value = literalExpr.toString()
-        if (literalExpr is IntegerLiteralExpr) {
-            return this.newLiteral(
-                literalExpr.asIntegerLiteralExpr().asNumber(),
-                this.parseType("int"),
-                value
-            )
-        } else if (literalExpr is StringLiteralExpr) {
-            return this.newLiteral(
-                literalExpr.asStringLiteralExpr().asString(),
-                this.parseType("java.lang.String"),
-                value
-            )
-        } else if (literalExpr is BooleanLiteralExpr) {
-            return this.newLiteral(
-                literalExpr.asBooleanLiteralExpr().value,
-                this.parseType("boolean"),
-                value
-            )
-        } else if (literalExpr is CharLiteralExpr) {
-            return this.newLiteral(
-                literalExpr.asCharLiteralExpr().asChar(),
-                this.parseType("char"),
-                value
-            )
-        } else if (literalExpr is DoubleLiteralExpr) {
-            return this.newLiteral(
-                literalExpr.asDoubleLiteralExpr().asDouble(),
-                this.parseType("double"),
-                value
-            )
-        } else if (literalExpr is LongLiteralExpr) {
-            return this.newLiteral(
-                literalExpr.asLongLiteralExpr().asNumber(),
-                this.parseType("long"),
-                value
-            )
-        } else if (literalExpr is NullLiteralExpr) {
-            return this.newLiteral<Any?>(null, this.parseType("null"), value)
+        return when (literalExpr) {
+            is IntegerLiteralExpr ->
+                newLiteral(
+                    literalExpr.asIntegerLiteralExpr().asNumber(),
+                    this.parseType("int"),
+                    value
+                )
+            is StringLiteralExpr ->
+                newLiteral(
+                    literalExpr.asStringLiteralExpr().asString(),
+                    this.parseType("java.lang.String"),
+                    value
+                )
+            is BooleanLiteralExpr ->
+                newLiteral(
+                    literalExpr.asBooleanLiteralExpr().value,
+                    this.parseType("boolean"),
+                    value
+                )
+            is CharLiteralExpr ->
+                newLiteral(literalExpr.asCharLiteralExpr().asChar(), this.parseType("char"), value)
+            is DoubleLiteralExpr ->
+                newLiteral(
+                    literalExpr.asDoubleLiteralExpr().asDouble(),
+                    this.parseType("double"),
+                    value
+                )
+            is LongLiteralExpr ->
+                newLiteral(
+                    literalExpr.asLongLiteralExpr().asNumber(),
+                    this.parseType("long"),
+                    value
+                )
+            is NullLiteralExpr -> newLiteral<Any?>(null, this.parseType("null"), value)
+            else -> null
         }
-        return null
     }
 
     private fun handleClassExpression(expr: Expression): DeclaredReferenceExpression {
@@ -599,8 +594,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 this.newDeclaredReferenceExpression(symbol.name, type, nameExpr.toString())
             }
         } catch (ex: UnsolvedSymbolException) {
-            val typeString: String?
-            typeString =
+            val typeString: String? =
                 if (
                     ex.name.startsWith(
                         "We are unable to find the value declaration corresponding to"

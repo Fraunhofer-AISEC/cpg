@@ -163,8 +163,7 @@ class TypeScriptLanguageFrontend(
 
             // Correcting node positions as we have noticed that the parser computes wrong
             // positions, it is apparent when a file starts with a comment
-            astNode.code?.let {
-                val code = it
+            astNode.code?.let { code ->
                 currentFileContent?.let { position = it.indexOf(code, position) }
             }
 
@@ -179,7 +178,7 @@ class TypeScriptLanguageFrontend(
     }
 
     fun getRegionFromStartEnd(file: File, start: Int, end: Int): Region? {
-        val lineNumberReader: LineNumberReader = LineNumberReader(FileReader(file))
+        val lineNumberReader = LineNumberReader(FileReader(file))
 
         // Start and end position given by the parser are sometimes including spaces in front of the
         // code and loc.end - loc.pos > code.length. This is caused by the parser and results in
@@ -221,9 +220,9 @@ class TypeScriptLanguageFrontend(
 
     private fun handleDecorator(node: TypeScriptNode): Annotation {
         // a decorator can contain a call expression with additional arguments
-        val call = node.firstChild("CallExpression")
-        return if (call != null) {
-            val call = this.expressionHandler.handle(call) as CallExpression
+        val callExpr = node.firstChild("CallExpression")
+        return if (callExpr != null) {
+            val call = this.expressionHandler.handle(callExpr) as CallExpression
 
             val annotation = newAnnotation(call.name.localName, this.getCodeFromRawNode(node) ?: "")
 
@@ -237,9 +236,7 @@ class TypeScriptLanguageFrontend(
             // or a decorator just has a simple identifier
             val name = this.getIdentifierName(node)
 
-            val annotation = newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
-
-            annotation
+            newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
         }
     }
 }
