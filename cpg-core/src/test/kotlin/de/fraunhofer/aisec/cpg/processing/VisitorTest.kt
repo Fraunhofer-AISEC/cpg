@@ -134,6 +134,7 @@ class VisitorTest : BaseTest() {
 
     companion object {
         private var recordDecl: RecordDeclaration? = null
+
         @BeforeAll
         @JvmStatic
         @Throws(

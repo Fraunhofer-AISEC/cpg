@@ -113,6 +113,7 @@ open class JavaLanguage :
     ): JavaLanguageFrontend {
         return JavaLanguageFrontend(this, config, scopeManager)
     }
+
     override fun handleSuperCall(
         callee: MemberExpression,
         curClass: RecordDeclaration,

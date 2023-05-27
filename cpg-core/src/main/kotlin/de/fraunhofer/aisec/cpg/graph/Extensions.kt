@@ -196,6 +196,7 @@ class DeclarationNotFound(message: String) : Exception(message)
 
 class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<List<Node>>) {
     operator fun component1(): List<List<Node>> = fulfilled
+
     operator fun component2(): List<List<Node>> = failed
 }
 

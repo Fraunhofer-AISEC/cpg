@@ -673,6 +673,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             override val namespaceDelimiter = "."
             override val superClassKeyword = "super"
             override val frontend = MyJavaLanguageFrontend::class
+
             override fun newFrontend(
                 config: TranslationConfiguration,
                 scopeManager: ScopeManager,

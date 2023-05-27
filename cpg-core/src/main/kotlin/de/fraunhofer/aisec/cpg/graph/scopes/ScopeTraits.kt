@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement
 /** Represents scopes that can be interrupted by a [BreakStatement]. */
 interface Breakable {
     fun addBreakStatement(breakStatement: BreakStatement)
+
     val breakStatements: List<BreakStatement>
 }
 

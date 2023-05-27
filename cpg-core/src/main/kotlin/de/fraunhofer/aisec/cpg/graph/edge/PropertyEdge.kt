@@ -84,6 +84,7 @@ open class PropertyEdge<T : Node> : Persistable {
 
     /** Map containing all properties of an edge */
     @Convert(PropertyEdgeConverter::class) private var properties: MutableMap<Properties, Any?>
+
     fun getProperty(property: Properties): Any? {
         return properties.getOrDefault(property, null)
     }

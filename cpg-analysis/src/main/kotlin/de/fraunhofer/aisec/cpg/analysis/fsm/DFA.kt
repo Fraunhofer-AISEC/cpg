@@ -38,6 +38,7 @@ class DFA(states: Set<State> = setOf()) : FSM(states) {
     private val _executionTrace = mutableListOf<Trace>()
     val executionTrace: List<Trace>
         get() = _executionTrace
+
     val currentState: State?
         get() = executionTrace.lastOrNull()?.edge?.nextState ?: states.singleOrNull { it.isStart }
 

@@ -31,6 +31,7 @@ sealed class FSM(states: Set<State>) {
     private val _states: MutableSet<State> = mutableSetOf()
     val states: Set<State>
         get() = _states
+
     private val nextStateName
         get() = if (states.isEmpty()) 1 else states.maxOf { it.name } + 1
 

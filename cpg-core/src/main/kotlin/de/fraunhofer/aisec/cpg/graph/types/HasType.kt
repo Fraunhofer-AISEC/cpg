@@ -42,6 +42,7 @@ interface HasType {
      * @param type new type
      */
     fun updateType(type: Type)
+
     fun updatePossibleSubtypes(types: List<Type>)
 
     /**
@@ -54,6 +55,7 @@ interface HasType {
      *   event and subsequent type listeners receive the current node as their root.
      */
     fun setType(type: Type, root: MutableList<HasType>?)
+
     var possibleSubTypes: List<Type>
 
     /**
@@ -64,9 +66,13 @@ interface HasType {
      * @param root A list of already seen nodes which is used for detecting loops.
      */
     fun setPossibleSubTypes(possibleSubTypes: List<Type>, root: MutableList<HasType>)
+
     fun registerTypeListener(listener: TypeListener)
+
     fun unregisterTypeListener(listener: TypeListener)
+
     val typeListeners: Set<TypeListener>
+
     fun refreshType()
 
     /**
@@ -76,8 +82,10 @@ interface HasType {
      * @param type the more precise type
      */
     fun resetTypes(type: Type)
+
     interface TypeListener {
         fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type)
+
         fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>)
     }
 

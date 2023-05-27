@@ -177,6 +177,7 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
 
     override val scope: Scope?
         get() = frontend.scope
+
     override val namespace: Name?
         get() = frontend.namespace
 

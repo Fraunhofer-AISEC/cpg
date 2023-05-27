@@ -52,10 +52,13 @@ private constructor(
         var inferDfgForUnresolvedCalls: Boolean = true
     ) {
         fun guessCastExpressions(guess: Boolean) = apply { this.guessCastExpressions = guess }
+
         fun inferRecords(infer: Boolean) = apply { this.inferRecords = infer }
+
         fun inferDfgForUnresolvedCalls(infer: Boolean) = apply {
             this.inferDfgForUnresolvedCalls = infer
         }
+
         fun build() =
             InferenceConfiguration(guessCastExpressions, inferRecords, inferDfgForUnresolvedCalls)
     }
