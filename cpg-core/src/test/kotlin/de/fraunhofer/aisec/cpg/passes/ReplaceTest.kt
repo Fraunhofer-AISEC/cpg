@@ -59,10 +59,11 @@ class ReplaceTest {
         val config =
             TranslationConfiguration.builder().registerLanguage<ReplaceTestLanguage>().build()
 
-        assertContains(config.replacedPasses.keys, EvaluationOrderGraphPass::class)
-
-        val pair = config.replacedPasses[EvaluationOrderGraphPass::class]
-        assertNotNull(pair)
+        assertContains(config.replacedPasses.values, ReplacedPass::class)
+        assertContains(
+            config.replacedPasses.keys,
+            Pair(EvaluationOrderGraphPass::class, ReplaceTestLanguage::class)
+        )
 
         val cls =
             checkForReplacement(EvaluationOrderGraphPass::class, ReplaceTestLanguage(), config)
@@ -74,17 +75,22 @@ class ReplaceTest {
         val config =
             TranslationConfiguration.builder()
                 .replacePass<EvaluationOrderGraphPass, StructTestLanguage, ReplacedPass>()
+                .replacePass<EvaluationOrderGraphPass, ReplaceTestLanguage, ReplacedPass>()
                 .build()
 
-        assertContains(config.replacedPasses.keys, EvaluationOrderGraphPass::class)
-
-        val pair = config.replacedPasses[EvaluationOrderGraphPass::class]
-        assertNotNull(pair)
+        assertContains(config.replacedPasses.values, ReplacedPass::class)
+        assertContains(
+            config.replacedPasses.keys,
+            Pair(EvaluationOrderGraphPass::class, StructTestLanguage::class)
+        )
 
         var cls = checkForReplacement(EvaluationOrderGraphPass::class, TestLanguage(), config)
         assertEquals(EvaluationOrderGraphPass::class, cls)
 
         cls = checkForReplacement(EvaluationOrderGraphPass::class, StructTestLanguage(), config)
+        assertEquals(ReplacedPass::class, cls)
+
+        cls = checkForReplacement(EvaluationOrderGraphPass::class, ReplaceTestLanguage(), config)
         assertEquals(ReplacedPass::class, cls)
     }
 }

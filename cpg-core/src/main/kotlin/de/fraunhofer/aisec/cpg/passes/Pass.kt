@@ -206,13 +206,9 @@ fun <T : PassTarget> checkForReplacement(
     language: Language<*>?,
     config: TranslationConfiguration
 ): KClass<out Pass<T>> {
-    val replacements = config.replacedPasses[cls]
-    if (replacements != null) {
-        val langClass = replacements.first
-        if (langClass.isInstance(language)) {
-            return replacements.second as KClass<out Pass<T>>
-        }
+    if (language == null) {
+        return cls
     }
 
-    return cls
+    return config.replacedPasses[Pair(cls, language::class)] as? KClass<out Pass<T>> ?: cls
 }

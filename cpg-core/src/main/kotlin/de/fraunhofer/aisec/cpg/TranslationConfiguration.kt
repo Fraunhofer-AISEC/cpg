@@ -100,7 +100,7 @@ private constructor(
      * annotation on a [LanguageFrontend].
      */
     val replacedPasses:
-        Map<KClass<out Pass<*>>, Pair<KClass<out Language<*>>, KClass<out Pass<*>>>>,
+        Map<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>,
     languages: List<Language<out LanguageFrontend>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
@@ -228,7 +228,7 @@ private constructor(
         private val includeBlocklist = mutableListOf<Path>()
         private val passes = mutableListOf<KClass<out Pass<*>>>()
         private val replacedPasses =
-            mutableMapOf<KClass<out Pass<*>>, Pair<KClass<out Language<*>>, KClass<out Pass<*>>>>()
+            mutableMapOf<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>()
         private var codeInNodes = true
         private var processAnnotations = false
         private var disableCleanup = false
@@ -401,7 +401,7 @@ private constructor(
             forLanguage: KClass<out Language<*>>,
             with: KClass<out Pass<*>>
         ): Builder {
-            replacedPasses[passType] = Pair(forLanguage, with)
+            replacedPasses[Pair(passType, forLanguage)] = with
             return this
         }
 
