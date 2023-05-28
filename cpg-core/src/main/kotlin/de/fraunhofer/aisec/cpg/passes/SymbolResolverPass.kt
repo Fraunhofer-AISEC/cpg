@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -32,7 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 
-abstract class SymbolResolverPass : Pass() {
+abstract class SymbolResolverPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
     protected lateinit var walker: SubgraphWalker.ScopedWalker
     lateinit var currentTU: TranslationUnitDeclaration
 

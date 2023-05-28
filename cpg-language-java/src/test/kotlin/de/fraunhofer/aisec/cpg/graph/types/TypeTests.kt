@@ -127,16 +127,12 @@ internal class TypeTests : BaseTest() {
         val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
 
         // Check Parameterized
-        val recordDeclarations = result.records
-        val recordDeclarationBox = findByUniqueName(recordDeclarations, "Box")
-        val typeT = TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T")
-        assertNotNull(typeT)
-        assertEquals(typeT, TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T"))
-
         // Type of field t
         val fieldDeclarations = result.fields
         val fieldDeclarationT = findByUniqueName(fieldDeclarations, "t")
-        assertEquals(typeT, fieldDeclarationT.type)
+        val typeT = fieldDeclarationT.type
+        assertIs<ParameterizedType>(typeT)
+        assertLocalName("T", typeT)
         assertTrue(fieldDeclarationT.possibleSubTypes.contains(typeT))
 
         // Parameter of set Method

@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
@@ -40,23 +42,24 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * by setting the [Properties.UNREACHABLE] property of an eog-edge to true.
  */
 @DependsOn(ControlFlowSensitiveDFGPass::class)
-class UnreachableEOGPass : Pass() {
-    override fun accept(t: TranslationResult) {
-        for (tu in t.translationUnits) {
-            tu.accept(
-                Strategy::AST_FORWARD,
-                object : IVisitor<Node>() {
-                    override fun visit(t: Node) {
-                        when (t) {
-                            is IfStatement -> handleIfStatement(t)
-                            is WhileStatement -> handleWhileStatement(t)
-                        }
-
-                        super.visit(t)
+class UnreachableEOGPass(
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager,
+) : TranslationUnitPass(config, scopeManager) {
+    override fun accept(tu: TranslationUnitDeclaration) {
+        tu.accept(
+            Strategy::AST_FORWARD,
+            object : IVisitor<Node>() {
+                override fun visit(t: Node) {
+                    when (t) {
+                        is IfStatement -> handleIfStatement(t)
+                        is WhileStatement -> handleWhileStatement(t)
                     }
+
+                    super.visit(t)
                 }
-            )
-        }
+            }
+        )
     }
 
     private fun handleIfStatement(n: IfStatement) {

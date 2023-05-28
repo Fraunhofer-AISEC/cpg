@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
@@ -36,13 +38,14 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
  * A [Pass] collecting statistics for the graph. Currently, it collects the number of nodes and the
  * number of problem nodes (i.e., nodes where the translation failed for some reason).
  */
-class StatisticsCollectionPass : Pass() {
+class StatisticsCollectionPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    TranslationResultPass(config, scopeManager) {
 
-    /** Iterates the nodes of the [translationResult] to collect statistics. */
-    override fun accept(translationResult: TranslationResult) {
+    /** Iterates the nodes of the [result] to collect statistics. */
+    override fun accept(result: TranslationResult) {
         var problemNodes = 0
         var nodes = 0
-        val walker = ScopedWalker(translationResult.scopeManager)
+        val walker = ScopedWalker(result.scopeManager)
         walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
             nodes++
             if (currNode is ProblemNode) {
@@ -50,12 +53,11 @@ class StatisticsCollectionPass : Pass() {
             }
         }
 
-        for (tu in translationResult.translationUnits) {
+        for (tu in result.translationUnits) {
             walker.iterate(tu)
         }
 
-        val nodeMeasurement =
-            MeasurementHolder(this.javaClass, "Measuring Nodes", false, translationResult)
+        val nodeMeasurement = MeasurementHolder(this.javaClass, "Measuring Nodes", false, result)
         nodeMeasurement.addMeasurement("Total graph nodes", nodes.toString())
         nodeMeasurement.addMeasurement("Problem nodes", problemNodes.toString())
     }

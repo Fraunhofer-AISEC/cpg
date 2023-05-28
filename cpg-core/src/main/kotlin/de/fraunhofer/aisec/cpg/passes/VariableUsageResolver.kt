@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.*
@@ -58,14 +59,12 @@ import org.slf4j.LoggerFactory
  * rather makes their "refersTo" point to the appropriate [ValueDeclaration].
  */
 @DependsOn(TypeHierarchyResolver::class)
-open class VariableUsageResolver : SymbolResolverPass() {
+open class VariableUsageResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    SymbolResolverPass(config, scopeManager) {
 
-    override fun accept(result: TranslationResult) {
-        scopeManager = result.scopeManager
-        config = result.config
-
+    override fun accept(component: Component) {
         walker = ScopedWalker(scopeManager)
-        for (tu in result.translationUnits) {
+        for (tu in component.translationUnits) {
             currentTU = tu
             walker.clearCallbacks()
             walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }
@@ -76,14 +75,14 @@ open class VariableUsageResolver : SymbolResolverPass() {
 
         collectSupertypes()
 
-        for (tu in result.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.clearCallbacks()
             walker.registerHandler { curClass, parent, node ->
                 resolveFieldUsages(curClass, parent, node)
             }
             walker.iterate(tu)
         }
-        for (tu in result.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.clearCallbacks()
             walker.registerHandler(::resolveLocalVarUsage)
             walker.iterate(tu)

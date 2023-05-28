@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,25 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg
+package de.fraunhofer.aisec.cpg.passes.order
 
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.Pass
 import kotlin.reflect.KClass
 
 /**
- * This annotation denotes that, this property is populates by a pass. Optionally, also specifying
- * which Pass class is responsible.
+ * This annotation can be used to replace a certain [Pass] (identified by [old]) for a specific
+ * [Language] (identified by [lang]) with another [Pass] (identified by [with]).
+ *
+ * The primary use-case for this annotation is to allow language frontends to override specific
+ * passes, such as the [EvaluationOrderGraphPass] in order to optimize language specific graphs.
  */
-annotation class PopulatedByPass(vararg val value: KClass<out Pass<*>>)
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
+@Repeatable
+annotation class ReplacePass(
+    val old: KClass<out Pass<*>>,
+    val lang: KClass<out Language<*>>,
+    val with: KClass<out Pass<*>>
+)

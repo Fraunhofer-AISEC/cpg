@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.newDeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
@@ -41,9 +43,10 @@ import java.util.*
 
 @ExecuteFirst
 @RequiredFrontend(LLVMIRLanguageFrontend::class)
-class CompressLLVMPass : Pass() {
-    override fun accept(t: TranslationResult) {
-        val flatAST = SubgraphWalker.flattenAST(t)
+class CompressLLVMPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
+    override fun accept(component: Component) {
+        val flatAST = SubgraphWalker.flattenAST(component)
         // Get all goto statements
         val allGotos = flatAST.filterIsInstance<GotoStatement>()
         // Get all LabelStatements which are only referenced from a single GotoStatement
@@ -84,8 +87,7 @@ class CompressLLVMPass : Pass() {
                         (node.thenStatement as GotoStatement).targetLabel?.subStatement
                 }
                 // Replace the else-statement with the basic block it jumps to iff we found that
-                // its
-                // goto statement is the only one jumping to the target
+                // its goto statement is the only one jumping to the target
                 if (
                     node.elseStatement in gotosToReplace &&
                         node !in

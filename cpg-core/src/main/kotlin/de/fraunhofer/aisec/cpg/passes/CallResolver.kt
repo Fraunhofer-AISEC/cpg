@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
 import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
@@ -64,7 +65,8 @@ import org.slf4j.LoggerFactory
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
 @DependsOn(VariableUsageResolver::class)
-open class CallResolver : SymbolResolverPass() {
+open class CallResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    SymbolResolverPass(config, scopeManager) {
     /**
      * This seems to be a map between function declarations (more likely method declarations) and
      * their parent record (more accurately their type). Seems to be only used by
@@ -76,10 +78,7 @@ open class CallResolver : SymbolResolverPass() {
         containingType.clear()
     }
 
-    override fun accept(translationResult: TranslationResult) {
-        scopeManager = translationResult.scopeManager
-        config = translationResult.config
-
+    override fun accept(component: Component) {
         walker = ScopedWalker(scopeManager)
         walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }
         walker.registerHandler { node, _ -> findRecords(node) }
@@ -88,17 +87,17 @@ open class CallResolver : SymbolResolverPass() {
             registerMethods(currentClass, currentNode)
         }
 
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
         walker.clearCallbacks()
         walker.registerHandler { node, _ -> fixInitializers(node) }
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
         walker.clearCallbacks()
         walker.registerHandler { node, _ -> handleNode(node) }
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }

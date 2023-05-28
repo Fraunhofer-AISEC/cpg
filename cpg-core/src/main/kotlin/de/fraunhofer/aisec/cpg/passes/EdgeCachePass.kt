@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -81,20 +83,21 @@ object Edges {
  *
  * The cache itself is stored in the [Edges] object.
  */
-class EdgeCachePass : Pass() {
-    override fun accept(result: TranslationResult) {
+class EdgeCachePass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
+    override fun accept(component: Component) {
         Edges.clear()
 
-        for (tu in result.translationUnits) {
+        for (tu in component.translationUnits) {
             tu.accept(
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node>() {
-                    override fun visit(n: Node) {
-                        visitAST(n)
-                        visitDFG(n)
-                        visitEOG(n)
+                    override fun visit(t: Node) {
+                        visitAST(t)
+                        visitDFG(t)
+                        visitEOG(t)
 
-                        super.visit(n)
+                        super.visit(t)
                     }
                 }
             )

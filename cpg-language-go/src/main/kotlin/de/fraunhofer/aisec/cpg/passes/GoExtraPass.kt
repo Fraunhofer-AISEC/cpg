@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
@@ -107,14 +108,13 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 @ExecuteBefore(VariableUsageResolver::class)
 @ExecuteBefore(CallResolver::class)
 @ExecuteBefore(DFGPass::class)
-class GoExtraPass : Pass(), ScopeProvider {
+class GoExtraPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager), ScopeProvider {
 
     override val scope: Scope?
         get() = scopeManager.currentScope
 
-    override fun accept(t: TranslationResult) {
-        scopeManager = t.scopeManager
-
+    override fun accept(component: Component) {
         val walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { _, parent, node ->
             when (node) {
@@ -125,7 +125,7 @@ class GoExtraPass : Pass(), ScopeProvider {
             }
         }
 
-        for (tu in t.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }
