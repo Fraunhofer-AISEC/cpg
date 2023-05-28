@@ -17,7 +17,6 @@ func main() {
 
 	i++
 	fmt.Println("Still here, yay!")
-	return
 }
 
 func do() {

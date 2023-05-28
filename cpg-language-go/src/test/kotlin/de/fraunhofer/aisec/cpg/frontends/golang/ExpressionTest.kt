@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import java.nio.file.Path
 import kotlin.test.*
@@ -156,7 +157,17 @@ class ExpressionTest {
         val main = p.functions["main"]
         assertNotNull(main)
 
-        val op = main.allChildren<UnaryOperator> { it.name.localName == "defer" }
-        assertTrue(op.isNotEmpty())
+        val op = main.allChildren<UnaryOperator> { it.name.localName == "defer" }.firstOrNull()
+        assertNotNull(op)
+
+        // The EOG for the defer statement itself should be in the regular EOG path
+        op.prevEOG.any { it is CallExpression && it.name.localName == "do" }
+        op.nextEOG.any { it is DeclaredReferenceExpression && it.name.localName == "that" }
+
+        // It should NOT connect to the call expression
+        op.nextEOG.none { it is CallExpression }
+
+        // Its call expression should connect to the return statement
+        op.input.prevEOG.all { it is ReturnStatement }
     }
 }

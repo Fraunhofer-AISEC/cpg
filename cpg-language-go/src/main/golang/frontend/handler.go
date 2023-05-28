@@ -371,10 +371,21 @@ func (g *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *ast.F
 	// parse body
 	s := g.handleBlockStmt(fset, funcDecl.Body)
 
-	err := f.SetBody((*cpg.Statement)(s))
+	// Check, if the last statement is a return statement, otherwise we insert an implicit one
+	last := s.LastOrNull()
+	ok, err := (*jnigi.ObjectRef)(last).IsInstanceOf(env, cpg.RecordDeclarationClass)
 	if err != nil {
 		log.Fatal(err)
+	}
 
+	if !ok {
+		r := g.NewReturnStatement(fset, nil)
+		s.AddStatement((*cpg.Statement)(r))
+	}
+
+	err = f.SetBody((*cpg.Statement)(s))
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// leave scope

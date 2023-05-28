@@ -26,18 +26,20 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.followNextEOGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
+/** This pass contains fine-grained improvements to the EOG for the [GoLanguage]. */
 class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraphPass(ctx) {
 
     /**
      * Go allows the automatic execution of certain cleanup calls before we exit the function (using
-     * `defer`). We need to gather the appropriate call expressions and then connect them in
-     * [handleFunctionDeclaration].
+     * `defer`). We need to gather the appropriate deferred call expressions and then connect them
+     * in [handleFunctionDeclaration].
      */
     private var deferredCalls = mutableMapOf<FunctionDeclaration, MutableList<UnaryOperator>>()
 
@@ -52,14 +54,14 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
                 calls += node
 
                 // Push the node itself to the EOG, not its "input" (the deferred call). However, it
-                // seems It seems that the arguments of the deferred call are evaluated at
-                //  the point of the deferred statement, duh!
+                // seems that the arguments of the deferred call are evaluated at the point of the
+                // deferred statement, duh!
                 pushToEOG(node)
 
-                // evaluate the callee
+                // Evaluate the callee
                 input.callee?.let { createEOG(it) }
 
-                // then the arguments
+                // Then the arguments
                 for (arg in input.arguments) {
                     createEOG(arg)
                 }
@@ -85,7 +87,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
             val paths = defer.followNextEOGEdgesUntilHit { it is ReturnStatement }
             for (path in paths.fulfilled) {
                 // It is a bit philosophical whether the deferred call happens before or after the
-                // return statement in the EOG. For now it is easier to have it as the last node
+                // return statement in the EOG. For now, it is easier to have it as the last node
                 // AFTER the return statement
                 addEOGEdge(path.last(), defer.input)
             }

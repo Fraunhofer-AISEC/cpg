@@ -48,6 +48,16 @@ func (f *CompoundStatement) AddStatement(s *Statement) {
 	(*jnigi.ObjectRef)(f).CallMethod(env, "addStatement", nil, (*jnigi.ObjectRef)(s).Cast(StatementClass))
 }
 
+func (c *CompoundStatement) LastOrNull() (s *Statement) {
+	s = new(Statement)
+	err := (*jnigi.ObjectRef)(c).CallMethod(env, "lastOrNull", s)
+	if err != nil {
+		panic(err)
+	}
+
+	return
+}
+
 func (f *DeclarationStatement) SetSingleDeclaration(d *Declaration) {
 	(*jnigi.ObjectRef)(f).CallMethod(env, "setSingleDeclaration", nil, (*jnigi.ObjectRef)(d).Cast(DeclarationClass))
 }
@@ -114,4 +124,21 @@ func (fw *ForStatement) SetIterationStatement(s *Statement) {
 
 func (r *ReturnStatement) SetReturnValue(e *Expression) {
 	(*jnigi.ObjectRef)(r).CallMethod(env, "setReturnValue", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
+}
+
+func (s *Statement) ConvertToGo(o *jnigi.ObjectRef) error {
+	*s = (Statement)(*o)
+	return nil
+}
+
+func (s *Statement) ConvertToJava() (obj *jnigi.ObjectRef, err error) {
+	return (*jnigi.ObjectRef)(s), nil
+}
+
+func (s *Statement) GetClassName() string {
+	return StatementClass
+}
+
+func (s *Statement) IsArray() bool {
+	return false
 }

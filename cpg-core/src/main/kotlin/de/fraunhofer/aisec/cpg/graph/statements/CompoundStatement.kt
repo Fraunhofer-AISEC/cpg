@@ -71,4 +71,9 @@ class CompoundStatement : Statement(), StatementHolder {
     operator fun get(n: Int): Statement {
         return statements[n]
     }
+
+    /** Returns the last statement in this list of statements or null. */
+    fun lastOrNull(): Statement? {
+        return statements.lastOrNull()
+    }
 }
