@@ -247,7 +247,7 @@ func (g *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *ast.F
 			var recordName = recordType.GetName()
 
 			// TODO: this will only find methods within the current translation unit
-			// this is a limitation that we have for C++ as well
+			//  this is a limitation that we have for C++ as well
 			record, err := g.GetScopeManager().GetRecordForName(
 				g.GetScopeManager().GetCurrentScope(),
 				recordName)
@@ -293,8 +293,8 @@ func (g *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *ast.F
 		g.GetScopeManager().AddDeclaration((*cpg.Declaration)(receiver))
 	}
 
-	var t *cpg.Type = g.handleType(fset, funcDecl.Type)
-	var returnTypes []*cpg.Type = []*cpg.Type{}
+	var t = g.handleType(fset, funcDecl.Type)
+	var returnTypes = []*cpg.Type{}
 
 	if funcDecl.Type.Results != nil {
 		for _, returnVariable := range funcDecl.Type.Results.List {

@@ -31,15 +31,17 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoExtraPass
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.io.FileOutputStream
 
 @SupportsParallelParsing(false)
 @RegisterExtraPass(GoExtraPass::class)
-<<<<<<< HEAD
 @ReplacePass(
     EvaluationOrderGraphPass::class,
     lang = GoLanguage::class,
@@ -47,13 +49,7 @@ import java.io.FileOutputStream
 )
 class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend(language, ctx) {
-=======
-class GoLanguageFrontend(
-    language: Language<GoLanguageFrontend>,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : LanguageFrontend(language, config, scopeManager) {
->>>>>>> 8dc857ab7 (Cleanup calls)
+
     companion object {
 
         init {

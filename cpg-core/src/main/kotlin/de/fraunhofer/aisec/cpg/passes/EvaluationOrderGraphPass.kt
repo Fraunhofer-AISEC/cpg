@@ -76,13 +76,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     private val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
 
     /**
-     * Certain languages (e.g. Go) allow the automatic execution of certain cleanup calls before we
-     * exit the function. We need to gather the appropriate call expressions and then connect them
-     * in [handleFunctionDeclaration].
-     */
-    private var cleanupCalls = mutableMapOf<FunctionDeclaration, MutableList<CallExpression>>()
-
-    /**
      * Allows to register EOG creation logic when a currently visited node can depend on future
      * visited nodes. Currently used to connect goto statements and the target labeled statements.
      * Implemented as listener to connect nodes when the goto appears before the label.
@@ -361,23 +354,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             }
         }
         currentPredecessors.clear()
-
-        // Before we exit, we need to call any cleanup calls
-        val calls = cleanupCalls[node]
-        calls?.forEach { call ->
-            createEOG(call)
-            node.body?.let { body -> addEOGEdge(call, body) }
-        }
-
-        // Clear them afterwards
-        calls?.clear()
     }
 
     /**
      * Tries to create the necessary EOG edges for the [node] (if it is non-null) by looking up the
      * appropriate handler function of the node's class in [map] and calling it.
      */
-    private fun createEOG(node: Node?) {
+    protected fun createEOG(node: Node?) {
         if (node == null) {
             // nothing to do
             return
@@ -547,13 +530,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         //  to be handled differently (see https://github.com/Fraunhofer-AISEC/cpg/issues/1161)
         if (node.operatorCode == "throw") {
             handleThrowOperator(node)
-        } else if (node.operatorCode == "defer" && node.input is CallExpression) {
-            // Add to the cleanup calls. We are intentionally not creating the EOG for the input
-            // yet, as this would mess up the EOG at this point.
-            scopeManager.currentFunction?.let {
-                val list = cleanupCalls.computeIfAbsent(it) { mutableListOf() }
-                list += node.input as CallExpression
-            }
         } else {
             handleUnspecificUnaryOperator(node)
         }
@@ -582,7 +558,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * function using [ReplacePass], handle specific operators on their own and delegate the rest to
      * this function.
      */
-    protected fun handleUnspecificUnaryOperator(node: UnaryOperator) {
+    protected open fun handleUnspecificUnaryOperator(node: UnaryOperator) {
         val input = node.input
         createEOG(input)
 
@@ -811,7 +787,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * @param prev the previous node
      * @param next the next node
      */
-    private fun addEOGEdge(prev: Node, next: Node) {
+    protected fun addEOGEdge(prev: Node, next: Node) {
         val propertyEdge = PropertyEdge(prev, next)
         propertyEdge.addProperties(nextEdgeProperties)
         propertyEdge.addProperty(Properties.INDEX, prev.nextEOG.size)
