@@ -607,7 +607,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(base)
         assertEquals(c, base.refersTo)
 
-        val go = main.calls["go"]
+        val go = main.allChildren<UnaryOperator>() { it.operatorCode == "go" }
         assertNotNull(go)
     }
 

@@ -39,6 +39,10 @@ type CaseStatement Statement
 type DefaultStatement Statement
 type ForStatement Statement
 type ForEachStatement Statement
+type LabelStatement Statement
+type BreakStatement Statement
+type ContinueStatement Statement
+type GotoStatement Statement
 
 const StatementsPackage = GraphPackage + "/statements"
 const StatementClass = StatementsPackage + "/Statement"
@@ -124,6 +128,26 @@ func (fw *ForStatement) SetIterationStatement(s *Statement) {
 
 func (r *ReturnStatement) SetReturnValue(e *Expression) {
 	(*jnigi.ObjectRef)(r).CallMethod(env, "setReturnValue", nil, (*jnigi.ObjectRef)(e).Cast(ExpressionClass))
+}
+
+func (l *LabelStatement) SetSubStatement(s *Statement) {
+	(*jnigi.ObjectRef)(l).CallMethod(env, "setSubStatement", nil, (*jnigi.ObjectRef)(s).Cast(StatementClass))
+}
+
+func (l *LabelStatement) SetLabel(s string) {
+	(*jnigi.ObjectRef)(l).CallMethod(env, "setLabel", nil, NewString(s))
+}
+
+func (b *BreakStatement) SetLabel(s string) {
+	(*jnigi.ObjectRef)(b).CallMethod(env, "setLabel", nil, NewString(s))
+}
+
+func (c *ContinueStatement) SetLabel(s string) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "setLabel", nil, NewString(s))
+}
+
+func (c *GotoStatement) SetLabelName(s string) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "setLabelName", nil, NewString(s))
 }
 
 func (s *Statement) ConvertToGo(o *jnigi.ObjectRef) error {

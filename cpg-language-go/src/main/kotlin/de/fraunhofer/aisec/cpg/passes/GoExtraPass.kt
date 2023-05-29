@@ -100,6 +100,10 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
  * they are compatible. Because types in the same package can be defined in multiple files, we
  * cannot decide during the frontend run. Therefore, we need to execute this pass before the
  * [CallResolver] and convert certain [CallExpression] nodes into a [CastExpression].
+ *
+ * ## Resolve Labels of Goto Statements
+ *
+ * TBD
  */
 @ExecuteBefore(VariableUsageResolver::class)
 @ExecuteBefore(CallResolver::class)

@@ -70,6 +70,22 @@ func (g *GoLanguageFrontend) NewDefaultStatement(fset *token.FileSet, astNode as
 	return (*cpg.DefaultStatement)(g.NewStatement("DefaultStatement", fset, astNode))
 }
 
+func (g *GoLanguageFrontend) NewLabelStatement(fset *token.FileSet, astNode ast.Node) *cpg.LabelStatement {
+	return (*cpg.LabelStatement)(g.NewStatement("LabelStatement", fset, astNode))
+}
+
+func (g *GoLanguageFrontend) NewBreakStatement(fset *token.FileSet, astNode ast.Node) *cpg.BreakStatement {
+	return (*cpg.BreakStatement)(g.NewStatement("BreakStatement", fset, astNode))
+}
+
+func (g *GoLanguageFrontend) NewContinueStatement(fset *token.FileSet, astNode ast.Node) *cpg.ContinueStatement {
+	return (*cpg.ContinueStatement)(g.NewStatement("ContinueStatement", fset, astNode))
+}
+
+func (g *GoLanguageFrontend) NewGotoStatement(fset *token.FileSet, astNode ast.Node) *cpg.GotoStatement {
+	return (*cpg.GotoStatement)(g.NewStatement("GotoStatement", fset, astNode))
+}
+
 func (g *GoLanguageFrontend) NewStatement(typ string, fset *token.FileSet, astNode ast.Node, args ...any) *jnigi.ObjectRef {
 	var node = jnigi.NewObjectRef(fmt.Sprintf("%s/%s", cpg.StatementsPackage, typ))
 

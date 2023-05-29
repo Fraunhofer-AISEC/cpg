@@ -434,11 +434,14 @@ func (g *GoLanguageFrontend) handleValueSpec(fset *token.FileSet, valueDecl *ast
 			d.SetType(t)
 		}
 
-		// There could either be no initializers, otherwise the amount of values
-		// must match the names
 		lenValues := len(valueDecl.Values)
 		if lenValues != 0 && lenValues != len(valueDecl.Names) {
-			g.LogError("Number of initializers does not match number of names. Initializers might be incomplete")
+			var names []string
+			for _, n := range valueDecl.Names {
+				names = append(names, n.String())
+			}
+
+			g.LogError("Number of initializers (%d) does not match number of names (%s). Initializers might be incomplete", lenValues, names)
 		}
 
 		// The initializer is in the "Values" slice with the respective index
@@ -729,6 +732,10 @@ func (g *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt, pare
 		s = (*cpg.Statement)(g.handleExpr(fset, v.X))
 	case *ast.AssignStmt:
 		s = (*cpg.Statement)(g.handleAssignStmt(fset, v, parent))
+	case *ast.BranchStmt:
+		s = (*cpg.Statement)(g.handleBranchStmt(fset, v, parent))
+	case *ast.LabeledStmt:
+		s = (*cpg.Statement)(g.handleLabeledStmt(fset, v, parent))
 	case *ast.DeclStmt:
 		s = (*cpg.Statement)(g.handleDeclStmt(fset, v))
 	case *ast.GoStmt:
@@ -812,10 +819,8 @@ func (g *GoLanguageFrontend) handleExpr(fset *token.FileSet, expr ast.Expr) (e *
 func (g *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, assignStmt *ast.AssignStmt, parent ast.Stmt) (expr *cpg.Expression) {
 	g.LogTrace("Handling assignment statement: %+v", assignStmt)
 
-	g.LogDebug("Parent: %#v", parent)
-
-	var rhs = []*cpg.Expression{}
-	var lhs = []*cpg.Expression{}
+	var rhs []*cpg.Expression
+	var lhs []*cpg.Expression
 	for _, expr := range assignStmt.Lhs {
 		lhs = append(lhs, g.handleExpr(fset, expr))
 	}
@@ -839,6 +844,46 @@ func (g *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, assignStmt *a
 	expr = (*cpg.Expression)(a)
 
 	return
+}
+
+func (g *GoLanguageFrontend) handleBranchStmt(fset *token.FileSet, branchStmt *ast.BranchStmt, parent ast.Stmt) (expr *cpg.Statement) {
+	g.LogTrace("Handling branch statement: %+v", branchStmt)
+
+	switch branchStmt.Tok.String() {
+	case "break":
+		stmt := g.NewBreakStatement(fset, branchStmt)
+		if branchStmt.Label != nil {
+			stmt.SetLabel(branchStmt.Label.Name)
+		}
+
+		return (*cpg.Statement)(stmt)
+	case "continue":
+		stmt := g.NewContinueStatement(fset, branchStmt)
+		if branchStmt.Label != nil {
+			stmt.SetLabel(branchStmt.Label.Name)
+		}
+
+		return (*cpg.Statement)(stmt)
+	case "goto":
+		stmt := g.NewGotoStatement(fset, branchStmt)
+		stmt.SetLabelName(branchStmt.Label.Name)
+
+		return (*cpg.Statement)(stmt)
+	default:
+		g.LogError("Unknown token in branch statement: %s", branchStmt.Tok)
+	}
+
+	return
+}
+
+func (g *GoLanguageFrontend) handleLabeledStmt(fset *token.FileSet, labeledStmt *ast.LabeledStmt, parent ast.Stmt) (expr *cpg.Statement) {
+	g.LogTrace("Handling labeled statement: %+v", labeledStmt)
+
+	stmt := g.NewLabelStatement(fset, labeledStmt)
+	stmt.SetSubStatement(g.handleStmt(fset, labeledStmt.Stmt, labeledStmt))
+	stmt.SetLabel(labeledStmt.Label.Name)
+
+	return (*cpg.Statement)(stmt)
 }
 
 func (g *GoLanguageFrontend) handleDeclStmt(fset *token.FileSet, declStmt *ast.DeclStmt) (expr *cpg.Expression) {
@@ -865,10 +910,8 @@ func (g *GoLanguageFrontend) handleDeclStmt(fset *token.FileSet, declStmt *ast.D
 func (g *GoLanguageFrontend) handleGoStmt(fset *token.FileSet, goStmt *ast.GoStmt) (expr *cpg.Expression) {
 	g.LogTrace("Handling go statement: %+v", *goStmt)
 
-	ref := (*cpg.Expression)(g.NewDeclaredReferenceExpression(fset, nil, "go"))
-
-	call := g.NewCallExpression(fset, goStmt, ref, "go")
-	call.AddArgument(g.handleCallExpr(fset, goStmt.Call))
+	call := g.NewUnaryOperator(fset, goStmt, "go", false, true)
+	call.SetInput(g.handleCallExpr(fset, goStmt.Call))
 
 	return (*cpg.Expression)(call)
 }
@@ -924,6 +967,8 @@ func (g *GoLanguageFrontend) handleSwitchStmt(fset *token.FileSet, switchStmt *a
 
 	s := g.NewSwitchStatement(fset, switchStmt)
 
+	g.GetScopeManager().EnterScope((*cpg.Node)(s))
+
 	if switchStmt.Init != nil {
 		s.SetInitializerStatement(g.handleStmt(fset, switchStmt.Init, switchStmt))
 	}
@@ -933,6 +978,8 @@ func (g *GoLanguageFrontend) handleSwitchStmt(fset *token.FileSet, switchStmt *a
 	}
 
 	s.SetStatement((*cpg.Statement)(g.handleBlockStmt(fset, switchStmt.Body))) // should only contain case clauses
+
+	g.GetScopeManager().LeaveScope((*cpg.Node)(s))
 
 	return (*cpg.Expression)(s)
 }
