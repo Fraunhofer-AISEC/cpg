@@ -23,4 +23,4 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.cpp
+package de.fraunhofer.aisec.cpg.frontends.cxx

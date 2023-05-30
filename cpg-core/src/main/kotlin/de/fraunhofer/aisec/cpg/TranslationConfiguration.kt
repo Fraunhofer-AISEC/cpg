@@ -515,8 +515,8 @@ private constructor(
                 "We moved all languages out of the core package and therefore you should register individual languages instead. For compatibility reasons we do a dynamic lookup to Java and C/C++ languages here but this function will be removed in the future."
         )
         fun defaultLanguages(): Builder {
-            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage")
-            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage")
+            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
+            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
             optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
 
             return this
