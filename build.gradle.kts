@@ -67,6 +67,12 @@ val enableJavaFrontend: Boolean by extra {
 }
 project.logger.lifecycle("Java frontend is ${if (enableJavaFrontend) "enabled" else "disabled"}")
 
+val enableCXXFrontend: Boolean by extra {
+    val enableCXXFrontend: String? by project
+    enableCXXFrontend.toBoolean()
+}
+project.logger.lifecycle("C/C++ frontend is ${if (enableCXXFrontend) "enabled" else "disabled"}")
+
 val enableGoFrontend: Boolean by extra {
     val enableGoFrontend: String? by project
     enableGoFrontend.toBoolean()
