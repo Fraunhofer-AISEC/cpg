@@ -40,6 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.passes.FunctionPointerCallResolver
+import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -75,6 +77,7 @@ import org.slf4j.LoggerFactory
  * ad [GPPLanguage]). This enables us (to some degree) to deal with the finer difference between C
  * and C++ code.
  */
+@RegisterExtraPass(FunctionPointerCallResolver::class)
 class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend(language, ctx) {
 
@@ -196,9 +199,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
 
         // include paths
         val includePaths: MutableList<String> = ArrayList()
-        if (config.topLevel != null) {
-            includePaths.add(config.topLevel.toPath().toAbsolutePath().toString())
-        }
+        config.topLevel?.let { includePaths.add(it.toPath().toAbsolutePath().toString()) }
 
         val symbols: HashMap<String, String> = HashMap()
         symbols.putAll(config.symbols)

@@ -30,8 +30,6 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage
-import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
@@ -475,7 +473,6 @@ private constructor(
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()
-            registerPass<FunctionPointerCallResolver>()
             registerPass<FilenameMapper>()
             return this
         }
@@ -513,9 +510,14 @@ private constructor(
         }
 
         /** Register all default languages. */
+        @Deprecated(
+            message =
+                "We moved all languages out of the core package and therefore you should register individual languages instead. For compatibility reasons we do a dynamic lookup to Java and C/C++ languages here but this function will be removed in the future."
+        )
         fun defaultLanguages(): Builder {
-            registerLanguage(CLanguage())
-            registerLanguage(CPPLanguage())
+            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage")
+            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage")
+            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
 
             return this
         }

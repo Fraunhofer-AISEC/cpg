@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 
@@ -35,7 +34,7 @@ import org.apache.commons.lang3.builder.ToStringStyle
  */
 class InferenceConfiguration
 private constructor(
-    /** Enables smart guessing of cast vs. call expressions in the [CXXLanguageFrontend] */
+    /** Enables smart guessing of cast vs. call expressions in the C/C++ language frontend */
     val guessCastExpressions: Boolean,
 
     /** Enables the inference of record declarations */

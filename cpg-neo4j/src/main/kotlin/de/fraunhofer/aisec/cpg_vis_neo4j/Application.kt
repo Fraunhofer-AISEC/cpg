@@ -230,7 +230,6 @@ class Application : Callable<Int> {
             EvaluationOrderGraphPass::class,
             TypeResolver::class,
             ControlFlowSensitiveDFGPass::class,
-            FunctionPointerCallResolver::class,
             FilenameMapper::class
         )
     private var passClassMap = passClassList.associateBy { it.simpleName }

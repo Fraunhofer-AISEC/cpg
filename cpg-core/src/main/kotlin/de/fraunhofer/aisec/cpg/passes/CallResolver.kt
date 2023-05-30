@@ -26,11 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
-import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
-import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
-import de.fraunhofer.aisec.cpg.frontends.HasTemplates
-import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
@@ -350,7 +346,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         if (
             invocationCandidates.isEmpty() &&
                 callee.name.localName.isNotEmpty() &&
-                (callee.language !is CPPLanguage || shouldSearchForInvokesInParent(call))
+                (!callee.language.isCPP || shouldSearchForInvokesInParent(call))
         ) {
             val records = possibleContainingTypes.mapNotNull { recordMap[it.root.name] }.toSet()
             invocationCandidates =
@@ -543,7 +539,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
             // FunctionDeclaration with the same name as the function in the CallExpression we have
             // to stop the search in the parent even if the FunctionDeclaration does not match with
             // the signature of the CallExpression
-            if (call.language is CPPLanguage) { // TODO: Needs a special trait?
+            if (call.language.isCPP) { // TODO: Needs a special trait?
                 workingPossibleTypes.removeIf { recordDeclaration ->
                     !shouldContinueSearchInParent(recordDeclaration, name)
                 }
@@ -556,6 +552,11 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
             }
         }
     }
+
+    private val Language<out LanguageFrontend>?.isCPP: Boolean
+        get() {
+            return this != null && this::class.simpleName == "CPPLanguage"
+        }
 
     private fun getOverridingCandidates(
         possibleSubTypes: Set<Type?>,
@@ -602,9 +603,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
             constructorCandidate =
                 resolveConstructorWithDefaults(constructExpression, signature, recordDeclaration)
         }
-        if (
-            constructorCandidate == null && constructExpression.language is CPPLanguage
-        ) { // TODO: Fix this
+        if (constructorCandidate == null && constructExpression.language.isCPP) { // TODO: Fix this
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
             constructorCandidate =
