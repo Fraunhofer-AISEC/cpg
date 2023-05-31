@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
@@ -37,11 +36,8 @@ import java.nio.file.Paths
 import jep.JepException
 import kotlin.io.path.absolutePathString
 
-class PythonLanguageFrontend(
-    language: Language<PythonLanguageFrontend>,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : LanguageFrontend(language, config, scopeManager) {
+class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
+    LanguageFrontend(language, ctx) {
     private val jep = JepSingleton // configure Jep
 
     @Throws(TranslationException::class)

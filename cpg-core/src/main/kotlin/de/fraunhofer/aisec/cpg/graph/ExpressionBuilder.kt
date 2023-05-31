@@ -601,6 +601,7 @@ fun MetadataProvider.newProblemExpression(
 
 fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     val duplicate = Literal<T>()
+    duplicate.ctx = this.ctx
     duplicate.language = this.language
     duplicate.value = this.value
     duplicate.type = this.type
@@ -623,6 +624,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
 
 fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
     val duplicate = TypeExpression()
+    duplicate.ctx = this.ctx
     duplicate.name = this.name.clone()
     duplicate.language = this.language
     duplicate.type = this.type

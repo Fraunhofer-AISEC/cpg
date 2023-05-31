@@ -125,7 +125,7 @@ open class BinaryOperator :
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val previous = type
@@ -164,7 +164,7 @@ open class BinaryOperator :
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

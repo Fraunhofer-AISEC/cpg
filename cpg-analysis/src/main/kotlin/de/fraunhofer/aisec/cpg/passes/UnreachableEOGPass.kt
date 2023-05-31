@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -43,10 +42,7 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
  * by setting the [Properties.UNREACHABLE] property of an eog-edge to true.
  */
 @DependsOn(ControlFlowSensitiveDFGPass::class)
-class UnreachableEOGPass(
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : TranslationUnitPass(config, scopeManager) {
+class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     override fun cleanup() {
         // Nothing to do
     }

@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -121,9 +120,12 @@ class CallResolverTest : BaseTest() {
     fun testJava() {
         val result =
             TestUtils.analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val tu = result.translationUnits.firstOrNull()
+        assertNotNull(tu)
+
         val records = result.records
-        val intType = TypeParser.createFrom("int", JavaLanguage())
-        val stringType = TypeParser.createFrom("java.lang.String", JavaLanguage())
+        val intType = tu.parseType("int")
+        val stringType = tu.parseType(("java.lang.String"))
         testMethods(records, intType, stringType)
         testOverriding(records)
         ensureNoUnknownClassDummies(records)

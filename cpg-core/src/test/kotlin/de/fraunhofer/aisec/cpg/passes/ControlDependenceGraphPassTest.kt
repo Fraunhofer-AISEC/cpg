@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -114,72 +115,82 @@ class ControlDependenceGraphPassTest {
     }
 
     companion object {
-        fun getIfTest() =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(
-                    TranslationConfiguration.builder()
-                        .registerLanguage(TestLanguage("::"))
-                        .defaultPasses()
-                        .registerPass(ControlDependenceGraphPass())
-                        .build()
-                ) {
-                    translationUnit("if.cpp") {
-                        // The main method
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                ifStmt {
-                                    condition { ref("i") lt literal(1, t("int")) }
-                                    thenStmt {
-                                        ref("i") assign literal(1, t("int"))
-                                        call("printf") { addArgument(literal("0\n", t("string"))) }
-                                    }
-                                }
-                                call("printf") { addArgument(literal("1\n", t("string"))) }
-                                ifStmt {
-                                    condition { ref("i") gt literal(0, t("int")) }
-                                    thenStmt { ref("i") assign literal(2, t("int")) }
-                                    elseStmt { ref("i") assign literal(3, t("int")) }
-                                }
-                                call("printf") { addArgument(literal("2\n", t("string"))) }
-                                returnStmt { ref("i") }
-                            }
-                        }
-                    }
-                }
-            }
+        fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
+            val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+            val language = config.languages.filterIsInstance<TestLanguage>().first()
+            return TestLanguageFrontend(language.namespaceDelimiter, language, ctx)
+        }
 
-        fun getForEachTest() =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(
+        fun getIfTest() =
+            testFrontend(
                     TranslationConfiguration.builder()
                         .registerLanguage(TestLanguage("::"))
                         .defaultPasses()
-                        .registerPass(ControlDependenceGraphPass())
+                        .registerPass<ControlDependenceGraphPass>()
                         .build()
-                ) {
-                    translationUnit("forEach.cpp") {
-                        // The main method
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                forEachStmt {
-                                    declare { variable("loopVar", t("string")) }
-                                    call("magicFunction")
-                                    loopBody {
-                                        call("printf") {
-                                            addArgument(literal("loop: \${}\n", t("string")))
-                                            addArgument(ref("loopVar"))
+                )
+                .build {
+                    translationResult {
+                        translationUnit("if.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                    ifStmt {
+                                        condition { ref("i") lt literal(1, t("int")) }
+                                        thenStmt {
+                                            ref("i") assign literal(1, t("int"))
+                                            call("printf") {
+                                                addArgument(literal("0\n", t("string")))
+                                            }
                                         }
                                     }
+                                    call("printf") { addArgument(literal("1\n", t("string"))) }
+                                    ifStmt {
+                                        condition { ref("i") gt literal(0, t("int")) }
+                                        thenStmt { ref("i") assign literal(2, t("int")) }
+                                        elseStmt { ref("i") assign literal(3, t("int")) }
+                                    }
+                                    call("printf") { addArgument(literal("2\n", t("string"))) }
+                                    returnStmt { ref("i") }
                                 }
-                                call("printf") { addArgument(literal("1\n", t("string"))) }
-
-                                returnStmt { ref("i") }
                             }
                         }
                     }
                 }
-            }
+
+        fun getForEachTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage(TestLanguage("::"))
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("forEach.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                    forEachStmt {
+                                        declare { variable("loopVar", t("string")) }
+                                        call("magicFunction")
+                                        loopBody {
+                                            call("printf") {
+                                                addArgument(literal("loop: \${}\n", t("string")))
+                                                addArgument(ref("loopVar"))
+                                            }
+                                        }
+                                    }
+                                    call("printf") { addArgument(literal("1\n", t("string"))) }
+
+                                    returnStmt { ref("i") }
+                                }
+                            }
+                        }
+                    }
+                }
     }
 }

@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
@@ -44,10 +43,7 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
-open class ControlDependenceGraphPass(
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : TranslationUnitPass(config, scopeManager) {
+open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     override fun cleanup() {
         // Nothing to do
     }

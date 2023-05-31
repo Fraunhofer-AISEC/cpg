@@ -44,10 +44,9 @@ import kotlin.test.*
 class FluentTest {
     @Test
     fun test() {
-        val scopeManager = ScopeManager()
         val result =
-            TestLanguageFrontend(scopeManager).build {
-                translationResult(TranslationConfiguration.builder().build()) {
+            TestLanguageFrontend().build {
+                translationResult {
                     translationUnit("file.cpp") {
                         function("main", t("int")) {
                             param("argc", t("int"))
@@ -170,8 +169,7 @@ class FluentTest {
         assertNotNull(lit2.scope)
         assertEquals(2, lit2.value)
 
-        VariableUsageResolver(TranslationConfiguration.builder().build(), scopeManager)
-            .accept(result.components.first())
+        VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
         // Now the reference should be resolved
         assertRefersTo(ref, variable)

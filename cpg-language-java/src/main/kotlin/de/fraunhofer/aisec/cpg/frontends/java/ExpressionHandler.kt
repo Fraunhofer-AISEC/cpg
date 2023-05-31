@@ -379,11 +379,10 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         try {
             val symbol = fieldAccessExpr.resolve()
             fieldType =
-                TypeManager.getInstance()
-                    .getTypeParameter(
-                        frontend.scopeManager.currentRecord,
-                        symbol.asField().type.describe()
-                    )
+                frontend.typeManager.getTypeParameter(
+                    frontend.scopeManager.currentRecord,
+                    symbol.asField().type.describe()
+                )
             if (fieldType == null) {
                 fieldType = this.parseType(symbol.asField().type.describe())
             }
@@ -583,11 +582,10 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             } else {
                 // Resolve type first with ParameterizedType
                 var type: Type? =
-                    TypeManager.getInstance()
-                        .getTypeParameter(
-                            frontend.scopeManager.currentRecord,
-                            symbol.type.describe()
-                        )
+                    frontend.typeManager.getTypeParameter(
+                        frontend.scopeManager.currentRecord,
+                        symbol.type.describe()
+                    )
                 if (type == null) {
                     type = this.parseType(symbol.type.describe())
                 }
@@ -850,7 +848,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
             frontend.scopeManager.enterScope(anonymousRecord)
 
-            anonymousRecord.addSuperClass(TypeParser.createFrom(constructorName, language))
+            anonymousRecord.addSuperClass(parseType(constructorName))
             val anonymousClassBody = objectCreationExpr.anonymousClassBody.get()
             for (classBody in anonymousClassBody) {
                 // Whatever is implemented in the anonymous class has to be added to the record

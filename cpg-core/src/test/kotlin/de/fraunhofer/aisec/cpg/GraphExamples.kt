@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
@@ -44,8 +45,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("initializerListExprDFG.cpp") {
                         function("foo", t("int")) { body { returnStmt { literal(0, t("int")) } } }
                         function("main", t("int")) {
@@ -64,6 +65,12 @@ class GraphExamples {
                 }
             }
 
+        fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
+            val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+            val language = config.languages.filterIsInstance<TestLanguage>().first()
+            return TestLanguageFrontend(language.namespaceDelimiter, language, ctx)
+        }
+
         fun getInferenceRecordPtr(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
@@ -74,30 +81,25 @@ class GraphExamples {
                     )
                     .build()
         ) =
-            TestLanguageFrontend(
-                    ScopeManager(),
-                    config.languages.first().namespaceDelimiter,
-                    config.languages.first()
-                )
-                .build {
-                    translationResult(config) {
-                        translationUnit("record.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("node", t("T*")) }
-                                    member("value", ref("node"), "->") assign literal(42, t("int"))
-                                    member("next", ref("node"), "->") assign ref("node")
-                                    memberCall(
-                                        "dump",
-                                        ref("node")
-                                    ) // TODO: Do we have to encode the "->" here?
-                                    returnStmt { isImplicit = true }
-                                }
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("record.cpp") {
+                        // The main method
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("node", t("T*")) }
+                                member("value", ref("node"), "->") assign literal(42, t("int"))
+                                member("next", ref("node"), "->") assign ref("node")
+                                memberCall(
+                                    "dump",
+                                    ref("node")
+                                ) // TODO: Do we have to encode the "->" here?
+                                returnStmt { isImplicit = true }
                             }
                         }
                     }
                 }
+            }
 
         fun getInferenceRecord(
             config: TranslationConfiguration =
@@ -109,26 +111,21 @@ class GraphExamples {
                     )
                     .build()
         ) =
-            TestLanguageFrontend(
-                    ScopeManager(),
-                    config.languages.first().namespaceDelimiter,
-                    config.languages.first()
-                )
-                .build {
-                    translationResult(config) {
-                        translationUnit("record.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("node", t("T")) }
-                                    member("value", ref("node")) assign literal(42, t("int"))
-                                    member("next", ref("node")) assign { reference(ref("node")) }
-                                    returnStmt { isImplicit = true }
-                                }
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("record.cpp") {
+                        // The main method
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("node", t("T")) }
+                                member("value", ref("node")) assign literal(42, t("int"))
+                                member("next", ref("node")) assign { reference(ref("node")) }
+                                returnStmt { isImplicit = true }
                             }
                         }
                     }
                 }
+            }
 
         fun getVariables(
             config: TranslationConfiguration =
@@ -137,8 +134,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("initializerListExprDFG.cpp") {
                         function("foo", t("int")) { body { returnStmt { literal(0, t("int")) } } }
                         function("main", t("int")) {
@@ -214,8 +211,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("unaryoperator.cpp") {
                         // The main method
                         function("somefunc") {
@@ -236,8 +233,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("compoundoperator.cpp") {
                         // The main method
                         function("somefunc") {
@@ -258,8 +255,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("conditional_expression.cpp") {
                         // The main method
                         function("main", t("int")) {
@@ -334,8 +331,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("BasicSlice.java") {
                         record("BasicSlice") {
                             // The main method
@@ -420,8 +417,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("ControlFlowSensitiveDFGIfMerge.java") {
                         record("ControlFlowSensitiveDFGIfMerge") {
                             field("bla", t("int")) {}
@@ -492,8 +489,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("ControlFlowSesitiveDFGSwitch.java") {
                         record("ControlFlowSesitiveDFGSwitch") {
                             // The main method
@@ -566,8 +563,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("ControlFlowSensitiveDFGIfNoMerge.java") {
                         record("ControlFlowSensitiveDFGIfNoMerge") {
                             // The main method
@@ -604,8 +601,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("LoopDFGs.java") {
                         record("LoopDFGs") {
                             // The main method
@@ -685,8 +682,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("LoopDFGs.java") {
                         record("LoopDFGs") {
                             // The main method
@@ -736,8 +733,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("DelayedAssignmentAfterRHS.java") {
                         record("DelayedAssignmentAfterRHS") {
                             // The main method
@@ -762,8 +759,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("ReturnTest.java") {
                         record("ReturnTest", "class") {
                             method("testReturn", t("int")) {
@@ -808,8 +805,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("RecordDeclaration.java") {
                         namespace("compiling") {
                             record("SimpleClass", "class") {
@@ -854,8 +851,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("Dataflow.java") {
                         record("Dataflow") {
                             field("attr", t("String")) { literal("", t("String")) }
@@ -917,8 +914,8 @@ class GraphExamples {
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(config) {
+            testFrontend(config).build {
+                translationResult {
                     translationUnit("ShortcutClass.java") {
                         record("ShortcutClass") {
                             field("attr", t("int")) { literal(0, t("int")) }

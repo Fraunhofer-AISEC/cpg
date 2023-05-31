@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -78,11 +76,4 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
             "bigint" to IntegerType("bigint", null, this, NumericType.Modifier.SIGNED),
             "string" to StringType("string", this),
         )
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): TypeScriptLanguageFrontend {
-        return TypeScriptLanguageFrontend(this, config, scopeManager)
-    }
 }

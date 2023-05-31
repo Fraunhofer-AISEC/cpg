@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -39,8 +38,6 @@ import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
 import kotlin.test.*
-import org.apache.commons.lang3.reflect.FieldUtils
-import org.mockito.Mockito
 
 object TestUtils {
 
@@ -189,13 +186,6 @@ object TestUtils {
             }
             configModifier?.accept(it)
         }
-    }
-
-    @Throws(IllegalAccessException::class)
-    fun disableTypeManagerCleanup() {
-        val spy = Mockito.spy(TypeManager.getInstance())
-        Mockito.doNothing().`when`(spy).cleanup()
-        FieldUtils.writeStaticField(TypeManager::class.java, "instance", spy, true)
     }
 
     /**

@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -42,7 +42,7 @@ import kotlin.reflect.KClass
  */
 open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLanguageFrontend>() {
     override val fileExtensions: List<String> = listOf()
-    override val namespaceDelimiter: String
+    final override val namespaceDelimiter: String
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
     override val compoundAssignmentOperators =
         setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "|=", "^=")
@@ -64,11 +64,8 @@ open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLangua
         this.namespaceDelimiter = namespaceDelimiter
     }
 
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): TestLanguageFrontend {
-        return TestLanguageFrontend()
+    override fun newFrontend(ctx: TranslationContext): TestLanguageFrontend {
+        return TestLanguageFrontend(language = this, ctx = ctx)
     }
 }
 
@@ -76,15 +73,15 @@ class StructTestLanguage(namespaceDelimiter: String = "::") :
     TestLanguage(namespaceDelimiter), HasStructs, HasClasses, HasDefaultArguments
 
 open class TestLanguageFrontend(
-    scopeManager: ScopeManager = ScopeManager(),
     namespaceDelimiter: String = "::",
-    language: Language<out LanguageFrontend> = TestLanguage(namespaceDelimiter)
-) :
-    LanguageFrontend(
-        language,
-        TranslationConfiguration.builder().build(),
-        scopeManager,
-    ) {
+    language: Language<out LanguageFrontend> = TestLanguage(namespaceDelimiter),
+    ctx: TranslationContext =
+        TranslationContext(
+            TranslationConfiguration.builder().build(),
+            ScopeManager(),
+            TypeManager()
+        ),
+) : LanguageFrontend(language, ctx) {
     override fun parse(file: File): TranslationUnitDeclaration {
         TODO("Not yet implemented")
     }
@@ -102,8 +99,5 @@ open class TestLanguageFrontend(
     }
 }
 
-class TestHandler :
-    Handler<Node, Any, TestLanguageFrontend>(
-        Supplier { ProblemExpression() },
-        TestLanguageFrontend()
-    )
+class TestHandler(frontend: TestLanguageFrontend) :
+    Handler<Node, Any, TestLanguageFrontend>(Supplier { ProblemExpression() }, frontend)

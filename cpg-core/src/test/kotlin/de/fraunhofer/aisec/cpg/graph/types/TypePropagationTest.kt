@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
@@ -43,7 +41,7 @@ class TypePropagationTest {
     fun testBinopTypePropagation() {
         val result =
             TestLanguageFrontend().build {
-                translationResult(TranslationConfiguration.builder().build()) {
+                translationResult {
                     translationUnit("test") {
                         function("main", t("int")) {
                             body {
@@ -76,10 +74,9 @@ class TypePropagationTest {
     @Test
     fun testAssignTypePropagation() {
         // TODO: This test is related to issue 1071 (it models case 2).
-        val scopeManager = ScopeManager()
         val result =
-            TestLanguageFrontend(scopeManager).build {
-                translationResult(TranslationConfiguration.builder().build()) {
+            TestLanguageFrontend().build {
+                translationResult {
                     translationUnit("test") {
                         function("main", t("int")) {
                             body {
@@ -92,7 +89,7 @@ class TypePropagationTest {
                     }
                 }
             }
-        VariableUsageResolver(result.config, result.scopeManager).accept(result.components.first())
+        VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
         val binaryOp =
             (result.functions["main"]?.body as? CompoundStatement)?.statements?.get(2)

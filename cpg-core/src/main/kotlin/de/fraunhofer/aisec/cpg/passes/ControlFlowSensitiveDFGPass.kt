@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -43,10 +42,8 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
-open class ControlFlowSensitiveDFGPass(
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : TranslationUnitPass(config, scopeManager) {
+open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+
     override fun cleanup() {
         // Nothing to do
     }

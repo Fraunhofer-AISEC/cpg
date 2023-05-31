@@ -26,8 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -58,24 +57,19 @@ import java.nio.file.StandardCopyOption
  */
 class TypeScriptLanguageFrontend(
     language: Language<TypeScriptLanguageFrontend>,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : LanguageFrontend(language, config, scopeManager) {
+    ctx: TranslationContext
+) : LanguageFrontend(language, ctx) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
     val expressionHandler = ExpressionHandler(this)
     val typeHandler = TypeHandler(this)
 
-    var currentFileContent: String? = null
+    private var currentFileContent: String? = null
 
-    val mapper = jacksonObjectMapper()
+    private val mapper = jacksonObjectMapper()
 
     companion object {
-        @JvmField var TYPESCRIPT_EXTENSIONS: List<String> = listOf(".ts", ".tsx")
-
-        @JvmField var JAVASCRIPT_EXTENSIONS: List<String> = listOf(".js", ".jsx")
-
         private val parserFile: File = createTempFile("parser", ".js")
 
         init {

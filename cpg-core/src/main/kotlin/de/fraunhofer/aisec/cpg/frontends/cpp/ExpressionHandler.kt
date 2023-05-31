@@ -356,7 +356,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 ) {
                     // this can either be just a meaningless bracket or it can be a cast expression
                     val typeName = (ctx.operand as IASTIdExpression).name.toString()
-                    if (TypeManager.getInstance().typeExists(typeName)) {
+                    if (frontend.typeManager.typeExists(typeName)) {
                         val cast = newCastExpression(frontend.getCodeFromRawNode<Any>(ctx))
                         cast.castType = parseType(typeName)
                         cast.expression = input ?: newProblemExpression("could not parse input")

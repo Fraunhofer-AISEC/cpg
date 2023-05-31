@@ -71,27 +71,32 @@ private constructor(
      * @return a [CompletableFuture] with the [TranslationResult].
      */
     fun analyze(): CompletableFuture<TranslationResult> {
-        val result = TranslationResult(this, ScopeManager())
-
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
-        return CompletableFuture.supplyAsync { analyze2(result) }
+        return CompletableFuture.supplyAsync { analyzeNonAsync() }
     }
 
-    fun analyze2(result: TranslationResult): TranslationResult {
+    private fun analyzeNonAsync(): TranslationResult {
+        var executedFrontends = setOf<LanguageFrontend>()
+
+        // Build a new global translation context
+        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+
+        // Build a new translation result
+        val result = TranslationResult(this, ctx)
+
         val outerBench =
             Benchmark(TranslationManager::class.java, "Translation into full graph", false, result)
-        var executedFrontends = setOf<LanguageFrontend>()
 
         try {
             // Parse Java/C/CPP files
             var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
-            executedFrontends = runFrontends(result, config)
+            executedFrontends = runFrontends(ctx, result)
             bench.addMeasurement()
 
             // Apply passes
             for (pass in config.registeredPasses) {
                 bench = Benchmark(pass.java, "Executing Pass", false, result)
-                executePassSequential(pass, result, executedFrontends)
+                executePassSequential(pass, ctx, result, executedFrontends)
 
                 bench.addMeasurement()
                 if (result.isCancelled) {
@@ -106,7 +111,7 @@ private constructor(
                 log.debug("Cleaning up {} Frontends", executedFrontends.size)
 
                 executedFrontends.forEach { it.cleanup() }
-                TypeManager.getInstance().cleanup()
+                ctx.typeManager.cleanup()
             }
         }
 
@@ -122,25 +127,25 @@ private constructor(
      * of AST nodes.
      *
      * @param result the translation result that is being mutated
-     * @param config the translation configuration
+     * @param ctx the translation context
      * @throws TranslationException if the language front-end runs into an error and
      *   [TranslationConfiguration.failOnError]
      * * is `true`.
      */
     @Throws(TranslationException::class)
     private fun runFrontends(
-        result: TranslationResult,
-        config: TranslationConfiguration,
+        ctx: TranslationContext,
+        result: TranslationResult
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
-        for (sc in this.config.softwareComponents.keys) {
+        for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
             component.name = Name(sc)
             result.addComponent(component)
 
-            var sourceLocations: List<File> = this.config.softwareComponents[sc] ?: listOf()
+            var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
 
-            var useParallelFrontends = config.useParallelFrontends
+            var useParallelFrontends = ctx.config.useParallelFrontends
 
             val list =
                 sourceLocations.flatMap { file ->
@@ -174,15 +179,15 @@ private constructor(
                         listOf(file)
                     }
                 }
-            if (config.useUnityBuild) {
+            if (ctx.config.useUnityBuild) {
                 val tmpFile = Files.createTempFile("compile", ".cpp").toFile()
                 tmpFile.deleteOnExit()
 
                 PrintWriter(tmpFile).use { writer ->
                     list.forEach {
                         if (CXXLanguageFrontend.CXX_EXTENSIONS.contains(Util.getExtension(it))) {
-                            if (config.topLevel != null) {
-                                val topLevel = config.topLevel.toPath()
+                            if (ctx.config.topLevel != null) {
+                                val topLevel = ctx.config.topLevel.toPath()
                                 writer.write(
                                     """
 #include "${topLevel.relativize(it.toPath())}"
@@ -204,24 +209,24 @@ private constructor(
                 }
 
                 sourceLocations = listOf(tmpFile)
-                if (config.compilationDatabase != null) {
+                if (ctx.config.compilationDatabase != null) {
                     // merge include paths from all translation units
-                    config.compilationDatabase.addIncludePath(
+                    ctx.config.compilationDatabase.addIncludePath(
                         tmpFile,
-                        config.compilationDatabase.allIncludePaths
+                        ctx.config.compilationDatabase.allIncludePaths
                     )
                 }
             } else {
                 sourceLocations = list
             }
 
-            TypeManager.setTypeSystemActive(config.typeSystemActiveInFrontend)
+            TypeManager.setTypeSystemActive(ctx.config.typeSystemActiveInFrontend)
 
             usedFrontends.addAll(
                 if (useParallelFrontends) {
-                    parseParallel(component, result, sourceLocations)
+                    parseParallel(component, result, ctx, sourceLocations)
                 } else {
-                    parseSequentially(component, result, sourceLocations)
+                    parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
 
@@ -232,7 +237,7 @@ private constructor(
                     s.translationUnits.forEach {
                         val bench =
                             Benchmark(this.javaClass, "Activating types for ${it.name}", true)
-                        result.scopeManager.activateTypes(it)
+                        ctx.scopeManager.activateTypes(it, ctx.typeManager)
                         bench.stop()
                     }
                 }
@@ -245,25 +250,29 @@ private constructor(
     private fun parseParallel(
         component: Component,
         result: TranslationResult,
+        globalCtx: TranslationContext,
         sourceLocations: Collection<File>
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
 
         log.info("Parallel parsing started")
         val futures = mutableListOf<CompletableFuture<Optional<LanguageFrontend>>>()
-        val parallelScopeManagers = mutableListOf<ScopeManager>()
+        val parallelContexts = mutableListOf<TranslationContext>()
 
         val futureToFile: MutableMap<CompletableFuture<Optional<LanguageFrontend>>, File> =
             IdentityHashMap()
 
         for (sourceLocation in sourceLocations) {
-            val scopeManager = ScopeManager()
-            parallelScopeManagers.add(scopeManager)
+            // Build a new translation context for this parallel parsing process. We need to do this
+            // until we can use a single scope manager concurrently. We can re-use the global
+            // configuration and type manager.
+            val ctx = TranslationContext(globalCtx.config, ScopeManager(), globalCtx.typeManager)
+            parallelContexts.add(ctx)
 
             val future =
                 CompletableFuture.supplyAsync {
                     try {
-                        return@supplyAsync parse(component, scopeManager, sourceLocation)
+                        return@supplyAsync parse(component, ctx, sourceLocation)
                     } catch (e: TranslationException) {
                         throw RuntimeException("Error parsing $sourceLocation", e)
                     }
@@ -288,7 +297,7 @@ private constructor(
         }
 
         // We want to merge everything into the final scope manager of the result
-        result.scopeManager.mergeFrom(parallelScopeManagers)
+        globalCtx.scopeManager.mergeFrom(parallelContexts.map { it.scopeManager })
 
         log.info("Parallel parsing completed")
 
@@ -299,6 +308,7 @@ private constructor(
     private fun parseSequentially(
         component: Component,
         result: TranslationResult,
+        ctx: TranslationContext,
         sourceLocations: Collection<File>
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
@@ -306,7 +316,7 @@ private constructor(
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
 
-            parse(component, result.scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
+            parse(component, ctx, sourceLocation).ifPresent { f: LanguageFrontend ->
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
         }
@@ -333,12 +343,12 @@ private constructor(
     @Throws(TranslationException::class)
     private fun parse(
         component: Component,
-        scopeManager: ScopeManager,
-        sourceLocation: File
+        ctx: TranslationContext,
+        sourceLocation: File,
     ): Optional<LanguageFrontend> {
         var frontend: LanguageFrontend? = null
         try {
-            frontend = getFrontend(sourceLocation, scopeManager)
+            frontend = getFrontend(sourceLocation, ctx)
 
             if (frontend == null) {
                 log.error("Found no parser frontend for ${sourceLocation.name}")
@@ -360,19 +370,16 @@ private constructor(
         return Optional.ofNullable(frontend)
     }
 
-    private fun getFrontend(
-        file: File,
-        scopeManager: ScopeManager,
-    ): LanguageFrontend? {
+    private fun getFrontend(file: File, ctx: TranslationContext): LanguageFrontend? {
         val language = file.language
 
         return if (language != null) {
             try {
                 // Make sure, that our simple types are also known to the type manager
-                language.builtInTypes.values.forEach { TypeManager.getInstance().registerType(it) }
+                language.builtInTypes.values.forEach { ctx.typeManager.registerType(it) }
 
                 // Return a new language frontend
-                language.newFrontend(config, scopeManager)
+                language.newFrontend(ctx)
             } catch (e: Exception) {
                 when (e) {
                     is InstantiationException,

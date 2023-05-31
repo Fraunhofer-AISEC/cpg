@@ -25,11 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
@@ -38,7 +40,7 @@ import org.slf4j.LoggerFactory
 object NodeBuilder {
     internal val LOGGER = LoggerFactory.getLogger(NodeBuilder::class.java)
 
-    fun log(node: Node?) {
+    fun log(node: Node) {
         LOGGER.trace("Creating {}", node)
     }
 }
@@ -115,6 +117,16 @@ fun Node.applyMetadata(
 
     if (provider is ScopeProvider) {
         this.scope = provider.scope
+    }
+
+    if (provider is ContextProvider) {
+        this.ctx = provider.ctx
+    }
+
+    if (this.ctx == null) {
+        throw TranslationException(
+            "Trying to create a node without a ContextProvider. This will fail."
+        )
     }
 
     if (name != null) {
@@ -224,10 +236,19 @@ fun MetadataProvider?.newUnknownType(): UnknownType {
  * since we are moving away from the [TypeParser] altogether.
  */
 @JvmOverloads
-fun LanguageProvider.parseType(name: CharSequence, resolveAlias: Boolean = false) =
-    TypeParser.createFrom(name, resolveAlias, language)
+fun LanguageProvider.parseType(name: CharSequence, resolveAlias: Boolean = false): Type {
+    return if (this is ContextProvider) {
+        TypeParser.createFrom(name.toString(), language, resolveAlias, this.ctx)
+    } else {
+        throw TranslationException("Cannot parse type without translation context")
+    }
+}
 
 /** Returns a new [Name] based on the [localName] and the current namespace as parent. */
 fun NamespaceProvider.fqn(localName: String): Name {
     return this.namespace.fqn(localName)
+}
+
+interface ContextProvider : MetadataProvider {
+    val ctx: TranslationContext?
 }

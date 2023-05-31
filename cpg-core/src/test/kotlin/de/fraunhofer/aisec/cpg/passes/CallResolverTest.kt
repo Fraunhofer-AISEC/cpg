@@ -43,7 +43,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.io.File
 import java.nio.file.Path
@@ -154,9 +153,13 @@ class CallResolverTest : BaseTest() {
                 topLevel,
                 true
             )
+        val tu = result.translationUnits.firstOrNull()
+        assertNotNull(tu)
+
         val records = result.records
-        val intType = TypeParser.createFrom("int", CPPLanguage())
-        val stringType = TypeParser.createFrom("char*", CPPLanguage())
+
+        val intType = tu.parseType("int")
+        val stringType = tu.parseType("char*")
         testMethods(records, intType, stringType)
         testOverriding(records)
 

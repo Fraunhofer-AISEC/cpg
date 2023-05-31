@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.GraphExamples.Companion.testFrontend
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -97,19 +97,19 @@ class UnresolvedDFGPassTest {
 
     companion object {
 
-        fun getDfgUnresolvedCalls(inferUnresolved: Boolean) =
-            TestLanguageFrontend(ScopeManager(), ".").build {
-                translationResult(
-                    TranslationConfiguration.builder()
-                        .defaultPasses()
-                        .registerLanguage(TestLanguage("."))
-                        .inferenceConfiguration(
-                            InferenceConfiguration.builder()
-                                .inferDfgForUnresolvedCalls(inferUnresolved)
-                                .build()
-                        )
-                        .build()
-                ) {
+        fun getDfgUnresolvedCalls(inferUnresolved: Boolean): TranslationResult {
+            val config =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferDfgForUnresolvedCalls(inferUnresolved)
+                            .build()
+                    )
+                    .build()
+            return testFrontend(config).build {
+                translationResult {
                     translationUnit("DfgUnresolvedCalls.java") {
                         record("DfgUnresolvedCalls") {
                             field("i", t("int")) { modifiers = listOf("private") }
@@ -176,5 +176,6 @@ class UnresolvedDFGPassTest {
                     }
                 }
             }
+        }
     }
 }
