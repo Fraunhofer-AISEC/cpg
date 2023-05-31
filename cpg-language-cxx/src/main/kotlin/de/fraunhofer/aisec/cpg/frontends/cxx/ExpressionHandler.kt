@@ -393,56 +393,62 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleFunctionCallExpression(ctx: IASTFunctionCallExpression): Expression {
         val reference = handle(ctx.functionNameExpression)
         val callExpression: CallExpression
-        if (reference is MemberExpression) {
-            val baseType = reference.base.type.root
-            assert(baseType !is SecondOrderType)
-            callExpression = newMemberCallExpression(reference, code = ctx.rawSignature)
-            if (
-                (ctx.functionNameExpression as? IASTFieldReference)?.fieldName is CPPASTTemplateId
-            ) {
-                // Make necessary adjustments if we are handling a function template
+        when {
+            reference is MemberExpression -> {
+                val baseType = reference.base.type.root
+                assert(baseType !is SecondOrderType)
+                callExpression = newMemberCallExpression(reference, code = ctx.rawSignature)
+                if (
+                    (ctx.functionNameExpression as? IASTFieldReference)?.fieldName
+                        is CPPASTTemplateId
+                ) {
+                    // Make necessary adjustments if we are handling a function template
+                    val name =
+                        ((ctx.functionNameExpression as IASTFieldReference).fieldName
+                                as CPPASTTemplateId)
+                            .templateName
+                            .toString()
+                    callExpression.name = language.parseName(name)
+                    getTemplateArguments(
+                            (ctx.functionNameExpression as IASTFieldReference).fieldName
+                                as CPPASTTemplateId
+                        )
+                        .forEach { callExpression.addTemplateParameter(it) }
+                }
+            }
+            reference is BinaryOperator &&
+                (reference.operatorCode == ".*" || reference.operatorCode == "->*") -> {
+                // This is a function pointer call to a class method. We keep this as a binary
+                // operator
+                // with the .* or ->* operator code, so that we can resolve this later in the
+                // FunctionPointerCallResolver
+                callExpression = newMemberCallExpression(reference, code = ctx.rawSignature)
+            }
+            reference is UnaryOperator && reference.operatorCode == "*" -> {
+                // Classic C-style function pointer call -> let's extract the target
+                callExpression = newCallExpression(reference, "", reference.code, false)
+            }
+            ctx.functionNameExpression is IASTIdExpression &&
+                (ctx.functionNameExpression as IASTIdExpression).name is CPPASTTemplateId -> {
                 val name =
-                    ((ctx.functionNameExpression as IASTFieldReference).fieldName
-                            as CPPASTTemplateId)
+                    ((ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId)
                         .templateName
                         .toString()
-                callExpression.name = language.parseName(name)
+                val ref = newDeclaredReferenceExpression(name)
+                callExpression = newCallExpression(ref, name, ctx.rawSignature, true)
                 getTemplateArguments(
-                        (ctx.functionNameExpression as IASTFieldReference).fieldName
-                            as CPPASTTemplateId
+                        (ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId
                     )
                     .forEach { callExpression.addTemplateParameter(it) }
             }
-        } else if (
-            reference is BinaryOperator &&
-                (reference.operatorCode == ".*" || reference.operatorCode == "->*")
-        ) {
-            // This is a function pointer call to a class method. We keep this as a binary operator
-            // with the .* or ->* operator code, so that we can resolve this later in the
-            // FunctionPointerCallResolver
-            callExpression = newMemberCallExpression(reference, code = ctx.rawSignature)
-        } else if (reference is UnaryOperator && reference.operatorCode == "*") {
-            // Classic C-style function pointer call -> let's extract the target
-            callExpression = newCallExpression(reference, "", reference.code, false)
-        } else if (
-            ctx.functionNameExpression is IASTIdExpression &&
-                (ctx.functionNameExpression as IASTIdExpression).name is CPPASTTemplateId
-        ) {
-            val name =
-                ((ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId)
-                    .templateName
-                    .toString()
-            val ref = newDeclaredReferenceExpression(name)
-            callExpression = newCallExpression(ref, name, ctx.rawSignature, true)
-            getTemplateArguments(
-                    (ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId
-                )
-                .forEach { callExpression.addTemplateParameter(it) }
-        } else if (reference is CastExpression) {
-            // this really is a cast expression in disguise
-            return reference
-        } else {
-            callExpression = newCallExpression(reference, reference?.name, ctx.rawSignature, false)
+            reference is CastExpression -> {
+                // this really is a cast expression in disguise
+                return reference
+            }
+            else -> {
+                callExpression =
+                    newCallExpression(reference, reference?.name, ctx.rawSignature, false)
+            }
         }
 
         for ((i, argument) in ctx.arguments.withIndex()) {
@@ -682,15 +688,19 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // next, check for possible prefixes
         var radix = 10
         var offset = 0
-        if (strippedValue.startsWith("0b")) {
-            radix = 2 // binary
-            offset = 2 // len("0b")
-        } else if (strippedValue.startsWith("0x")) {
-            radix = 16 // hex
-            offset = 2 // len("0x")
-        } else if (strippedValue.startsWith("0") && strippedValue.length > 1) {
-            radix = 8 // octal
-            offset = 1 // len("0")
+        when {
+            strippedValue.startsWith("0b") -> {
+                radix = 2 // binary
+                offset = 2 // len("0b")
+            }
+            strippedValue.startsWith("0x") -> {
+                radix = 16 // hex
+                offset = 2 // len("0x")
+            }
+            strippedValue.startsWith("0") && strippedValue.length > 1 -> {
+                radix = 8 // octal
+                offset = 1 // len("0")
+            }
         }
 
         // strip the prefix
@@ -702,61 +712,65 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // basically we parse everything as BigInteger and then decide what to do
         try {
             bigValue = BigInteger(strippedValue, radix)
-            val numberValue: Number
-            if ("ull" == suffix || "ul" == suffix) {
-                // unsigned long (long) will always be represented as BigInteger
-                numberValue = bigValue
-            } else if ("ll" == suffix || "l" == suffix) {
-                // both long and long long can be represented in Java long, but only within
-                // Long.MAX_VALUE
-                if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
-                    // keep it as BigInteger
-                    numberValue = bigValue
-                    Util.warnWithFileLocation(
-                        frontend,
-                        ctx,
-                        log,
-                        "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
-                        ctx
-                    )
-                } else {
-                    numberValue = bigValue.toLong()
+            val numberValue: Number =
+                when {
+                    "ull" == suffix || "ul" == suffix -> {
+                        // unsigned long (long) will always be represented as BigInteger
+                        bigValue
+                    }
+                    "ll" == suffix || "l" == suffix -> {
+                        // both long and long long can be represented in Java long, but only within
+                        // Long.MAX_VALUE
+                        if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
+                            Util.warnWithFileLocation(
+                                frontend,
+                                ctx,
+                                log,
+                                "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
+                                ctx
+                            )
+                            // keep it as BigInteger
+                            bigValue
+                        } else {
+                            bigValue.toLong()
+                        }
+                    }
+                    bigValue > BigInteger.valueOf(Long.MAX_VALUE) -> {
+                        // No suffix, we just cast it to the appropriate signed type that is
+                        // required, but
+                        // only within Long.MAX_VALUE
+                        Util.warnWithFileLocation(
+                            frontend,
+                            ctx,
+                            log,
+                            "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
+                            ctx
+                        )
+                        // keep it as BigInteger
+                        bigValue
+                    }
+                    bigValue.toLong() > Int.MAX_VALUE -> {
+                        bigValue.toLong()
+                    }
+                    else -> {
+                        bigValue.toInt()
+                    }
                 }
-            } else if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
-                // No suffix, we just cast it to the appropriate signed type that is required, but
-                // only within Long.MAX_VALUE
-
-                // keep it as BigInteger
-                numberValue = bigValue
-                Util.warnWithFileLocation(
-                    frontend,
-                    ctx,
-                    log,
-                    "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
-                    ctx
-                )
-            } else if (bigValue.toLong() > Int.MAX_VALUE) {
-                numberValue = bigValue.toLong()
-            } else {
-                numberValue = bigValue.toInt()
-            }
 
             // retrieve type based on stored Java number
             val type =
-                if (numberValue is BigInteger && "ul" == suffix) {
-                    // we follow the way clang/llvm handles this and this seems to always
-                    // be an unsigned long long, except if it is explicitly specified as ul
-                    parseType("unsigned long")
-                } else if (numberValue is BigInteger) {
-                    parseType("unsigned long long")
-                } else if (numberValue is Long && "ll" == suffix) {
-                    // differentiate between long and long long
-                    parseType("long long")
-                } else if (numberValue is Long) {
-                    parseType("long")
-                } else {
-                    parseType("int")
-                }
+                parseType(
+                    when {
+                        // we follow the way clang/llvm handles this and this seems to always
+                        // be an unsigned long long, except if it is explicitly specified as ul
+                        // differentiate between long and long long
+                        numberValue is BigInteger && "ul" == suffix -> "unsigned long"
+                        numberValue is BigInteger -> "unsigned long long"
+                        numberValue is Long && "ll" == suffix -> "long long"
+                        numberValue is Long -> "long"
+                        else -> "int"
+                    }
+                )
 
             return newLiteral(numberValue, type, ctx.rawSignature)
         } catch (ex: NumberFormatException) {
