@@ -30,8 +30,7 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -39,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.io.File
 import kotlin.reflect.KClass
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * Represents a programming language. When creating new languages in the CPG, one must derive custom
@@ -78,11 +78,14 @@ abstract class Language<T : LanguageFrontend> : Node() {
     /** All operators which perform and assignment and an operation using lhs and rhs. */
     abstract val compoundAssignmentOperators: Set<String>
 
-    /** Creates a new [LanguageFrontend] object to parse the language. */
-    abstract fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager = ScopeManager(),
-    ): T
+    /**
+     * Creates a new [LanguageFrontend] object to parse the language. It requires the
+     * [TranslationContext], which holds the necessary managers.
+     */
+    open fun newFrontend(ctx: TranslationContext): T {
+        return this.frontend.primaryConstructor?.call(this, ctx)
+            ?: throw TranslationException("could not instantiate language frontend")
+    }
 
     /**
      * Returns the type conforming to the given [typeString]. If no matching type is found in the

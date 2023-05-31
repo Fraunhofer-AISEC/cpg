@@ -25,14 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -133,7 +130,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                     return true
                 }
                 val provided = targetSignature[i]
-                if (!TypeManager.getInstance().isSupertypeOf(declared.type, provided, this)) {
+                if (!isSupertypeOf(declared.type, provided)) {
                     return false
                 }
             }

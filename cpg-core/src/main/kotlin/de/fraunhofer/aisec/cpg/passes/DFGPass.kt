@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -40,8 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(VariableUsageResolver::class)
 @DependsOn(CallResolver::class)
-class DFGPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    ComponentPass(config, scopeManager) {
+class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         val walker = IterativeGraphWalker()

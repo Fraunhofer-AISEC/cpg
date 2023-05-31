@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -57,8 +56,7 @@ import java.util.function.Consumer
 @DependsOn(CallResolver::class)
 @DependsOn(DFGPass::class)
 @RequiredFrontend(CXXLanguageFrontend::class)
-class FunctionPointerCallResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    ComponentPass(config, scopeManager) {
+class FunctionPointerCallResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private lateinit var walker: ScopedWalker
     private var inferDfgForUnresolvedCalls = false
 
@@ -152,7 +150,7 @@ class FunctionPointerCallResolver(config: TranslationConfiguration, scopeManager
         call.invokes = invocationCandidates
         // We have to update the dfg edges because this call could now be resolved (which was not
         // the case before).
-        DFGPass(config, scopeManager).handleCallExpression(call, inferDfgForUnresolvedCalls)
+        DFGPass(ctx).handleCallExpression(call, inferDfgForUnresolvedCalls)
     }
 
     override fun cleanup() {

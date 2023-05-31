@@ -25,14 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
@@ -51,11 +51,8 @@ import org.bytedeco.llvm.LLVM.*
 import org.bytedeco.llvm.global.LLVM.*
 
 @RegisterExtraPass(CompressLLVMPass::class)
-class LLVMIRLanguageFrontend(
-    language: Language<LLVMIRLanguageFrontend>,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : LanguageFrontend(language, config, scopeManager) {
+class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: TranslationContext) :
+    LanguageFrontend(language, ctx) {
 
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
@@ -64,7 +61,7 @@ class LLVMIRLanguageFrontend(
 
     val phiList = mutableListOf<LLVMValueRef>()
 
-    var ctx: LLVMContextRef? = null
+    var ctxRef: LLVMContextRef? = null
 
     /**
      * This contains a cache binding between an LLVMValueRef (representing a variable) and its
@@ -90,11 +87,11 @@ class LLVMIRLanguageFrontend(
         val buf = LLVMMemoryBufferRef()
 
         // create a new LLVM context
-        ctx = LLVMContextCreate()
+        ctxRef = LLVMContextCreate()
 
         // disable opaque pointers, until all necessary new functions are available in the C API.
         // See https://llvm.org/docs/OpaquePointers.html
-        LLVMContextSetOpaquePointers(ctx, 0)
+        LLVMContextSetOpaquePointers(ctxRef, 0)
 
         // allocate a buffer for a possible error message
         val errorMessage = ByteBuffer.allocate(10000)
@@ -108,22 +105,21 @@ class LLVMIRLanguageFrontend(
         if (result != 0) {
             // something went wrong
             val errorMsg = String(errorMessage.array())
-            LLVMContextDispose(ctx)
+            LLVMContextDispose(ctxRef)
             throw TranslationException("Could not create memory buffer: $errorMsg")
         }
 
-        result = LLVMParseIRInContext(ctx, buf, mod, errorMessage)
+        result = LLVMParseIRInContext(ctxRef, buf, mod, errorMessage)
         if (result != 0) {
             // something went wrong
             val errorMsg = String(errorMessage.array())
-            LLVMContextDispose(ctx)
+            LLVMContextDispose(ctxRef)
             throw TranslationException("Could not parse IR: $errorMsg")
         }
         bench.addMeasurement()
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
-        val tu = TranslationUnitDeclaration()
-        tu.language = language
+        val tu = newTranslationUnitDeclaration(file.name)
 
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)
@@ -157,7 +153,7 @@ class LLVMIRLanguageFrontend(
             counter++
         }
 
-        LLVMContextDispose(ctx)
+        LLVMContextDispose(ctxRef)
         bench.addMeasurement()
 
         return tu

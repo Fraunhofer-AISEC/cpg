@@ -25,13 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.TestUtils.disableTypeManagerCleanup
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
+import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import java.nio.file.Path
 import java.util.*
@@ -110,186 +109,208 @@ internal class TypeTests : BaseTest() {
     fun createFromCPP() {
         var result: Type
 
-        // Test 1: Function pointer
-        var typeString = "void (*single_param)(int)"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        val parameterList =
-            listOf<Type>(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
-        var expected: Type = FunctionPointerType(parameterList, CPPLanguage(), IncompleteType())
-        assertEquals(expected, result)
+        with(
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationContext(
+                    TranslationConfiguration.builder().build(),
+                    ScopeManager(),
+                    TypeManager()
+                )
+            )
+        ) {
+            // Test 1: Function pointer
+            var typeString = "void (*single_param)(int)"
+            result = parseType(typeString)
+            val parameterList =
+                listOf<Type>(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
+            var expected: Type = FunctionPointerType(parameterList, CPPLanguage(), IncompleteType())
+            assertEquals(expected, result)
 
-        // Test 1.1: interleaved brackets in function pointer
-        typeString = "void ((*single_param)(int))"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        assertEquals(result, expected)
+            // Test 1.1: interleaved brackets in function pointer
+            typeString = "void ((*single_param)(int))"
+            result = parseType(typeString)
+            assertEquals(result, expected)
 
-        // Test 2: Stronger binding of brackets and pointer
-        typeString = "char (* const a)[]"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected =
-            PointerType(
+            // Test 2: Stronger binding of brackets and pointer
+            typeString = "char (* const a)[]"
+            result = parseType(typeString)
+            expected =
                 PointerType(
-                    IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                    PointerType.PointerOrigin.ARRAY
-                ),
-                PointerType.PointerOrigin.POINTER
-            )
-        assertEquals(expected, result)
+                    PointerType(
+                        IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
+                        PointerType.PointerOrigin.ARRAY
+                    ),
+                    PointerType.PointerOrigin.POINTER
+                )
+            assertEquals(expected, result)
 
-        // Test 3: Mutable pointer to a mutable char
-        typeString = "char *p"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected =
-            PointerType(
-                IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                PointerType.PointerOrigin.POINTER
-            )
-        assertEquals(expected, result)
-
-        // Test 3.1: Different Whitespaces
-        typeString = "char* p"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        assertEquals(expected, result)
-
-        // Test 3.2: Different Whitespaces
-        typeString = "char * p"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        assertEquals(expected, result)
-
-        // Test 4: Mutable pointer to a constant char
-        typeString = "const char *p;"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected =
-            PointerType(
-                IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                PointerType.PointerOrigin.POINTER
-            )
-        assertEquals(expected, result)
-
-        // Test 5: Constant pointer to a mutable char
-        typeString = "char * const p;"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected =
-            PointerType(
-                IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                PointerType.PointerOrigin.POINTER
-            )
-        assertEquals(expected, result)
-
-        // Test 6: Constant pointer to a constant char
-        typeString = "const char * const p;"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected =
-            PointerType(
-                IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                PointerType.PointerOrigin.POINTER
-            )
-        assertEquals(expected, result)
-
-        // Test 7: Array of const pointer to static const char
-        typeString = "static const char * const somearray []"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected =
-            PointerType(
+            // Test 3: Mutable pointer to a mutable char
+            typeString = "char *p"
+            result = parseType(typeString)
+            expected =
                 PointerType(
                     IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
                     PointerType.PointerOrigin.POINTER
-                ),
-                PointerType.PointerOrigin.ARRAY
-            )
-        assertEquals(expected, result)
+                )
+            assertEquals(expected, result)
 
-        // Test 7.1: Array of array of pointer to static const char
-        typeString = "static const char * somearray[][]"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected =
-            PointerType(
+            // Test 3.1: Different Whitespaces
+            typeString = "char* p"
+            result = parseType(typeString)
+            assertEquals(expected, result)
+
+            // Test 3.2: Different Whitespaces
+            typeString = "char * p"
+            result = parseType(typeString)
+            assertEquals(expected, result)
+
+            // Test 4: Mutable pointer to a constant char
+            typeString = "const char *p;"
+            result = parseType(typeString)
+            expected =
+                PointerType(
+                    IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
+                    PointerType.PointerOrigin.POINTER
+                )
+            assertEquals(expected, result)
+
+            // Test 5: Constant pointer to a mutable char
+            typeString = "char * const p;"
+            result = parseType(typeString)
+            expected =
+                PointerType(
+                    IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
+                    PointerType.PointerOrigin.POINTER
+                )
+            assertEquals(expected, result)
+
+            // Test 6: Constant pointer to a constant char
+            typeString = "const char * const p;"
+            result = parseType(typeString)
+            expected =
+                PointerType(
+                    IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
+                    PointerType.PointerOrigin.POINTER
+                )
+            assertEquals(expected, result)
+
+            // Test 7: Array of const pointer to static const char
+            typeString = "static const char * const somearray []"
+            result = parseType(typeString)
+            expected =
                 PointerType(
                     PointerType(
                         IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
                         PointerType.PointerOrigin.POINTER
                     ),
                     PointerType.PointerOrigin.ARRAY
-                ),
-                PointerType.PointerOrigin.ARRAY
-            )
-        assertEquals(expected, result)
+                )
+            assertEquals(expected, result)
 
-        // Test 8: Generics
-        typeString = "Array<int> array"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        var generics = mutableListOf<Type>()
-        generics.add(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
-        expected = ObjectType("Array", generics, false, CPPLanguage())
-        assertEquals(expected, result)
+            // Test 7.1: Array of array of pointer to static const char
+            typeString = "static const char * somearray[][]"
+            result = parseType(typeString)
+            expected =
+                PointerType(
+                    PointerType(
+                        PointerType(
+                            IntegerType(
+                                "char",
+                                8,
+                                CPPLanguage(),
+                                NumericType.Modifier.NOT_APPLICABLE
+                            ),
+                            PointerType.PointerOrigin.POINTER
+                        ),
+                        PointerType.PointerOrigin.ARRAY
+                    ),
+                    PointerType.PointerOrigin.ARRAY
+                )
+            assertEquals(expected, result)
 
-        // Test 9: Compound Primitive Types
-        typeString = "long long int"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected = IntegerType("long long int", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
-        assertEquals(expected, result)
+            // Test 8: Generics
+            typeString = "Array<int> array"
+            result = parseType(typeString)
+            var generics = mutableListOf<Type>()
+            generics.add(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
+            expected = ObjectType("Array", generics, false, CPPLanguage())
+            assertEquals(expected, result)
 
-        // Test 10: Unsigned/Signed Types
-        typeString = "unsigned int"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected = IntegerType("unsigned int", 32, CPPLanguage(), NumericType.Modifier.UNSIGNED)
-        assertEquals(expected, result)
-        typeString = "signed int"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected = IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
-        assertEquals(expected, result)
-        typeString = "A a"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected = ObjectType("A", ArrayList(), false, CPPLanguage())
-        assertEquals(expected, result)
+            // Test 9: Compound Primitive Types
+            typeString = "long long int"
+            result = parseType(typeString)
+            expected = IntegerType("long long int", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
+            assertEquals(expected, result)
 
-        // Test 11: Unsigned + const + compound primitive Types
-        expected =
-            IntegerType("unsigned long long int", 64, CPPLanguage(), NumericType.Modifier.UNSIGNED)
-        typeString = "const unsigned long long int a = 1"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        assertEquals(expected, result)
+            // Test 10: Unsigned/Signed Types
+            typeString = "unsigned int"
+            result = parseType(typeString)
+            expected = IntegerType("unsigned int", 32, CPPLanguage(), NumericType.Modifier.UNSIGNED)
+            assertEquals(expected, result)
+            typeString = "signed int"
+            result = parseType(typeString)
+            expected = IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
+            assertEquals(expected, result)
+            typeString = "A a"
+            result = parseType(typeString)
+            expected = ObjectType("A", ArrayList(), false, CPPLanguage())
+            assertEquals(expected, result)
 
-        typeString = "unsigned const long long int b = 1"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        assertEquals(expected, result)
+            // Test 11: Unsigned + const + compound primitive Types
+            expected =
+                IntegerType(
+                    "unsigned long long int",
+                    64,
+                    CPPLanguage(),
+                    NumericType.Modifier.UNSIGNED
+                )
+            typeString = "const unsigned long long int a = 1"
+            result = parseType(typeString)
+            assertEquals(expected, result)
 
-        typeString = "unsigned long const long int c = 1"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        assertEquals(expected, result)
+            typeString = "unsigned const long long int b = 1"
+            result = parseType(typeString)
+            assertEquals(expected, result)
 
-        typeString = "unsigned long long const int d = 1"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        assertEquals(expected, result)
+            typeString = "unsigned long const long int c = 1"
+            result = parseType(typeString)
+            assertEquals(expected, result)
 
-        typeString = "unsigned long long int const e = 1"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        assertEquals(expected, result)
+            typeString = "unsigned long long const int d = 1"
+            result = parseType(typeString)
+            assertEquals(expected, result)
 
-        // Test 12: C++ Reference Types
-        typeString = "const int& ref = a"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        expected = ReferenceType(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
-        assertEquals(expected, result)
+            typeString = "unsigned long long int const e = 1"
+            result = parseType(typeString)
+            assertEquals(expected, result)
 
-        typeString = "int const &ref2 = a"
-        result = TypeParser.createFrom(typeString, CPPLanguage())
-        assertEquals(expected, result)
+            // Test 12: C++ Reference Types
+            typeString = "const int& ref = a"
+            result = parseType(typeString)
+            expected =
+                ReferenceType(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
+            assertEquals(expected, result)
 
-        // Test 13: Elaborated Type in Generics
-        result = TypeParser.createFrom("Array<struct Node>", CPPLanguage())
-        generics = ArrayList()
-        var generic = ObjectType("Node", ArrayList(), false, CPPLanguage())
-        generics.add(generic)
-        expected = ObjectType("Array", generics, false, CPPLanguage())
-        assertEquals(expected, result)
+            typeString = "int const &ref2 = a"
+            result = parseType(typeString)
+            assertEquals(expected, result)
 
-        result = TypeParser.createFrom("Array<myclass >", CPPLanguage())
-        generics = ArrayList()
-        generic = ObjectType("myclass", ArrayList(), false, CPPLanguage())
-        generics.add(generic)
-        expected = ObjectType("Array", generics, false, CPPLanguage())
-        assertEquals(expected, result)
+            // Test 13: Elaborated Type in Generics
+            result = parseType("Array<struct Node>")
+            generics = ArrayList()
+            var generic = ObjectType("Node", ArrayList(), false, CPPLanguage())
+            generics.add(generic)
+            expected = ObjectType("Array", generics, false, CPPLanguage())
+            assertEquals(expected, result)
+
+            result = parseType("Array<myclass >")
+            generics = ArrayList()
+            generic = ObjectType("myclass", ArrayList(), false, CPPLanguage())
+            generics.add(generic)
+            expected = ObjectType("Array", generics, false, CPPLanguage())
+            assertEquals(expected, result)
+        }
     }
 
     /**
@@ -348,82 +369,100 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     @Test
     fun testCommonTypeTestCpp() {
-        disableTypeManagerCleanup()
-        val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
-        val result = analyze("simple_inheritance.cpp", topLevel, true)
-        val root = TypeParser.createFrom("Root", CPPLanguage())
-        val level0 = TypeParser.createFrom("Level0", CPPLanguage())
-        val level1 = TypeParser.createFrom("Level1", CPPLanguage())
-        val level1b = TypeParser.createFrom("Level1B", CPPLanguage())
-        val level2 = TypeParser.createFrom("Level2", CPPLanguage())
-        val unrelated = TypeParser.createFrom("Unrelated", CPPLanguage())
-        getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated, result)
+        with(
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationContext(
+                    TranslationConfiguration.builder().build(),
+                    ScopeManager(),
+                    TypeManager()
+                )
+            )
+        ) {
+            val topLevel =
+                Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
+            val result = analyze("simple_inheritance.cpp", topLevel, true)
+            val root = parseType("Root")
+            val level0 = parseType("Level0")
+            val level1 = parseType("Level1")
+            val level1b = parseType("Level1B")
+            val level2 = parseType("Level2")
+            val unrelated = parseType("Unrelated")
+            getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated, result)
+        }
     }
 
     // level2 and level2b have two intersections, both root and level0 -> level0 is lower
     @Throws(Exception::class)
     @Test
     fun testCommonTypeTestCppMultiInheritance() {
-        disableTypeManagerCleanup()
-        val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
-        val result = analyze("multi_inheritance.cpp", topLevel, true)
-
-        val root = TypeParser.createFrom("Root", CPPLanguage())
-        val level0 = TypeParser.createFrom("Level0", CPPLanguage())
-        val level0b = TypeParser.createFrom("Level0B", CPPLanguage())
-        val level1 = TypeParser.createFrom("Level1", CPPLanguage())
-        val level1b = TypeParser.createFrom("Level1B", CPPLanguage())
-        val level1c = TypeParser.createFrom("Level1C", CPPLanguage())
-        val level2 = TypeParser.createFrom("Level2", CPPLanguage())
-        val level2b = TypeParser.createFrom("Level2B", CPPLanguage())
-
-        val provider = result.scopeManager
-        /*
-        Type hierarchy:
-                  Root------------
-                   |             |
-                 Level0  Level0B |
-                  / \     /  \   |
-             Level1 Level1B  Level1C
-               |       \       /
-             Level2     Level2B
-         */
-        // Root is the top, but unrelated to Level0B
-        for (t in listOf(root, level0, level1, level1b, level1c, level2, level2b)) {
-            assertEquals(
-                Optional.of(t),
-                TypeManager.getInstance().getCommonType(listOf(t), provider)
+        with(
+            CXXLanguageFrontend(
+                CPPLanguage(),
+                TranslationContext(
+                    TranslationConfiguration.builder().build(),
+                    ScopeManager(),
+                    TypeManager()
+                )
             )
-        }
-        assertEquals(
-            Optional.empty(),
-            TypeManager.getInstance().getCommonType(listOf(root, level0b), provider)
-        )
-        for (t in listOf(level0, level1, level2)) {
+        ) {
+            val topLevel =
+                Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
+            val result = analyze("multi_inheritance.cpp", topLevel, true)
+
+            val root = parseType("Root")
+            val level0 = parseType("Level0")
+            val level0b = parseType("Level0B")
+            val level1 = parseType("Level1")
+            val level1b = parseType("Level1B")
+            val level1c = parseType("Level1C")
+            val level2 = parseType("Level2")
+            val level2b = parseType("Level2B")
+
+            val typeManager = result.finalCtx.typeManager
+            /*
+            Type hierarchy:
+                      Root------------
+                       |             |
+                     Level0  Level0B |
+                      / \     /  \   |
+                 Level1 Level1B  Level1C
+                   |       \       /
+                 Level2     Level2B
+             */
+            // Root is the top, but unrelated to Level0B
+            for (t in listOf(root, level0, level1, level1b, level1c, level2, level2b)) {
+                assertEquals(Optional.of(t), typeManager.getCommonType(listOf(t), result.finalCtx))
+            }
             assertEquals(
                 Optional.empty(),
-                TypeManager.getInstance().getCommonType(listOf(t, level0b), provider)
+                typeManager.getCommonType(listOf(root, level0b), result.finalCtx)
+            )
+            for (t in listOf(level0, level1, level2)) {
+                assertEquals(
+                    Optional.empty(),
+                    typeManager.getCommonType(listOf(t, level0b), result.finalCtx)
+                )
+            }
+            assertEquals(
+                Optional.of(level0b),
+                typeManager.getCommonType(listOf(level1b, level1c), result.finalCtx)
+            )
+            assertEquals(
+                Optional.of(level0),
+                typeManager.getCommonType(listOf(level1, level1b, level2, level2b), result.finalCtx)
+            )
+            assertEquals(
+                Optional.of(root),
+                typeManager.getCommonType(listOf(level1, level1c), result.finalCtx)
+            )
+
+            // level2 and level2b have two intersections, both root and level0 -> level0 is lower
+            assertEquals(
+                Optional.of(level0),
+                typeManager.getCommonType(listOf(level2, level2b), result.finalCtx)
             )
         }
-        assertEquals(
-            Optional.of(level0b),
-            TypeManager.getInstance().getCommonType(listOf(level1b, level1c), provider)
-        )
-        assertEquals(
-            Optional.of(level0),
-            TypeManager.getInstance()
-                .getCommonType(listOf(level1, level1b, level2, level2b), provider)
-        )
-        assertEquals(
-            Optional.of(root),
-            TypeManager.getInstance().getCommonType(listOf(level1, level1c), provider)
-        )
-
-        // level2 and level2b have two intersections, both root and level0 -> level0 is lower
-        assertEquals(
-            Optional.of(level0),
-            TypeManager.getInstance().getCommonType(listOf(level2, level2b), provider)
-        )
     }
 
     @Test
@@ -467,21 +506,19 @@ internal class TypeTests : BaseTest() {
                |
              Level2
          */
-        val provider = result.scopeManager
+        val provider = result.finalCtx.scopeManager
+        val typeManager = result.finalCtx.typeManager
 
         // A single type is its own least common ancestor
         for (t in listOf(root, level0, level1, level1b, level2)) {
-            assertEquals(
-                Optional.of(t),
-                TypeManager.getInstance().getCommonType(listOf(t), provider)
-            )
+            assertEquals(Optional.of(t), typeManager.getCommonType(listOf(t), result.finalCtx))
         }
 
         // Root is the root of all types
         for (t in listOf(level0, level1, level1b, level2)) {
             assertEquals(
                 Optional.of(root),
-                TypeManager.getInstance().getCommonType(listOf(t, root), provider)
+                typeManager.getCommonType(listOf(t, root), result.finalCtx)
             )
         }
 
@@ -489,33 +526,33 @@ internal class TypeTests : BaseTest() {
         for (t in listOf(level1, level1b, level2)) {
             assertEquals(
                 Optional.of(level0),
-                TypeManager.getInstance().getCommonType(listOf(t, level0), provider)
+                typeManager.getCommonType(listOf(t, level0), result.finalCtx)
             )
         }
 
         // Level1 and Level1B have Level0 as common ancestor
         assertEquals(
             Optional.of(level0),
-            TypeManager.getInstance().getCommonType(listOf(level1, level1b), provider)
+            typeManager.getCommonType(listOf(level1, level1b), result.finalCtx)
         )
 
         // Level2 and Level1B have Level0 as common ancestor
         assertEquals(
             Optional.of(level0),
-            TypeManager.getInstance().getCommonType(listOf(level2, level1b), provider)
+            typeManager.getCommonType(listOf(level2, level1b), result.finalCtx)
         )
 
         // Level1 and Level2 have Level1 as common ancestor
         assertEquals(
             Optional.of(level1),
-            TypeManager.getInstance().getCommonType(listOf(level1, level2), provider)
+            typeManager.getCommonType(listOf(level1, level2), result.finalCtx)
         )
 
         // Check unrelated type behavior: No common root class
         for (t in listOf(root, level0, level1, level1b, level2)) {
             assertEquals(
                 Optional.empty(),
-                TypeManager.getInstance().getCommonType(listOf(unrelated, t), provider)
+                typeManager.getCommonType(listOf(unrelated, t), result.finalCtx)
             )
         }
     }

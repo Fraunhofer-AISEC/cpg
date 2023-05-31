@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newUnknownType
+import de.fraunhofer.aisec.cpg.graph.registerType
 
 /**
  * A type representing a function. It contains a list of parameters and one or more return types.
@@ -80,7 +80,7 @@ constructor(
                     func.language
                 )
 
-            return TypeManager.getInstance().registerType(type)
+            return func.registerType(type)
         }
     }
 }

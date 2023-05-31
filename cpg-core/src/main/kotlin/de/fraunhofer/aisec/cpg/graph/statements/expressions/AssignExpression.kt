@@ -113,7 +113,7 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
     override var declarations = mutableListOf<VariableDeclaration>()
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
 
@@ -138,7 +138,7 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
 

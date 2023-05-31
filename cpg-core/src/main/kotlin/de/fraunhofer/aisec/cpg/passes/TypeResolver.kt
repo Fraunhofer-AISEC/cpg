@@ -25,21 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 @DependsOn(CallResolver::class)
-open class TypeResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
-    ComponentPass(config, scopeManager) {
+open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val firstOrderTypes = mutableSetOf<Type>()
     protected val typeState = mutableMapOf<Type, MutableList<Type>>()
 
@@ -108,7 +105,6 @@ open class TypeResolver(config: TranslationConfiguration, scopeManager: ScopeMan
     }
 
     protected fun removeDuplicateTypes() {
-        val typeManager = TypeManager.getInstance()
         // Remove duplicate firstOrderTypes
         firstOrderTypes.addAll(typeManager.firstOrderTypes)
 
@@ -241,6 +237,5 @@ open class TypeResolver(config: TranslationConfiguration, scopeManager: ScopeMan
     override fun cleanup() {
         firstOrderTypes.clear()
         typeState.clear()
-        TypeManager.reset()
     }
 }

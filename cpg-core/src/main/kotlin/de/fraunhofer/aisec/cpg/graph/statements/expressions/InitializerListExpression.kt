@@ -25,15 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -60,10 +58,10 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
     var initializers by PropertyEdgeDelegate(InitializerListExpression::initializerEdges)
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
-        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
+        if (type !is UnknownType && src.propagationType == oldType) {
             return
         }
         val previous = type
@@ -71,14 +69,9 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
         val subTypes: MutableList<Type>
         if (initializers.contains(src)) {
             val types =
-                initializers
-                    .map {
-                        TypeManager.getInstance()
-                            .registerType(it.type.reference(PointerOrigin.ARRAY))
-                    }
-                    .toSet()
+                initializers.map { registerType(it.type.reference(PointerOrigin.ARRAY)) }.toSet()
             val alternative = if (types.isNotEmpty()) types.iterator().next() else newUnknownType()
-            newType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
+            newType = getCommonType(types).orElse(alternative)
             subTypes = ArrayList(possibleSubTypes)
             subTypes.remove(oldType)
             subTypes.addAll(types)
@@ -96,7 +89,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

@@ -25,20 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.nio.file.Path
 import kotlin.test.*
 import kotlin.test.Test
@@ -51,8 +48,11 @@ class LLVMIRLanguageFrontendTest {
         val frontend =
             LLVMIRLanguageFrontend(
                 LLVMIRLanguage(),
-                TranslationConfiguration.builder().build(),
-                ScopeManager(),
+                TranslationContext(
+                    TranslationConfiguration.builder().build(),
+                    ScopeManager(),
+                    TypeManager()
+                )
             )
         frontend.parse(topLevel.resolve("main.ll").toFile())
     }
@@ -312,10 +312,10 @@ class LLVMIRLanguageFrontendTest {
         val rhs = (comparison.rhs as Literal<*>)
         val lhs = (comparison.lhs as DeclaredReferenceExpression).refersTo as VariableDeclaration
         assertEquals(10L, (rhs.value as Long))
-        assertEquals(TypeParser.createFrom("i32", LLVMIRLanguage()), rhs.type)
+        assertEquals(tu.parseType("i32"), rhs.type)
         assertLocalName("x", comparison.lhs as DeclaredReferenceExpression)
         assertLocalName("x", lhs)
-        assertEquals(TypeParser.createFrom("i32", LLVMIRLanguage()), lhs.type)
+        assertEquals(tu.parseType("i32"), lhs.type)
 
         // Check that the jump targets are set correctly
         val ifStatement = main.bodyOrNull<IfStatement>(0)
@@ -346,11 +346,11 @@ class LLVMIRLanguageFrontendTest {
         assertTrue(ifBranchComp.lhs is CastExpression)
 
         val ifBranchCompRhs = ifBranchComp.rhs as CastExpression
-        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompRhs.castType)
-        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompRhs.type)
+        assertEquals(tu.parseType("ui32"), ifBranchCompRhs.castType)
+        assertEquals(tu.parseType("ui32"), ifBranchCompRhs.type)
         val ifBranchCompLhs = ifBranchComp.lhs as CastExpression
-        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompLhs.castType)
-        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompLhs.type)
+        assertEquals(tu.parseType("ui32"), ifBranchCompLhs.castType)
+        assertEquals(tu.parseType("ui32"), ifBranchCompLhs.type)
 
         val declRefExpr = ifBranchCompLhs.expression as DeclaredReferenceExpression
         assertEquals(-3, ((ifBranchCompRhs.expression as Literal<*>).value as Long))

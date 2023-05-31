@@ -31,6 +31,8 @@ import (
 
 type Language Node
 
+const TranslationContextClass = CPGPackage + "/TranslationContext"
+
 const FrontendsPackage = CPGPackage + "/frontends"
 const GolangPackage = FrontendsPackage + "/golang"
 const LanguageClass = FrontendsPackage + "/Language"
@@ -51,5 +53,22 @@ func (l *Language) GetClassName() string {
 }
 
 func (l *Language) IsArray() bool {
+	return false
+}
+
+func (ctx *TranslationContext) ConvertToGo(o *jnigi.ObjectRef) error {
+	*ctx = (TranslationContext)(*o)
+	return nil
+}
+
+func (ctx *TranslationContext) ConvertToJava() (obj *jnigi.ObjectRef, err error) {
+	return (*jnigi.ObjectRef)(ctx), nil
+}
+
+func (*TranslationContext) GetClassName() string {
+	return TranslationContextClass
+}
+
+func (*TranslationContext) IsArray() bool {
 	return false
 }

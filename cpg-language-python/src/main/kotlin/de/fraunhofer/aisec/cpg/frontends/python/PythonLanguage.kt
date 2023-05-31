@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -78,13 +76,6 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
                 ), // It's two floats
             "str" to StringType("str", this, listOf())
         )
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): PythonLanguageFrontend {
-        return PythonLanguageFrontend(this, config, scopeManager)
-    }
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
         val unknownType = UnknownType.getUnknownType(this)

@@ -133,6 +133,16 @@ func (g *GoLanguageFrontend) GetLanguage() (l *cpg.Language, err error) {
 	return
 }
 
+func (g *GoLanguageFrontend) GetCtx() (ctx *cpg.TranslationContext) {
+	ctx = new(cpg.TranslationContext)
+	err := g.ObjectRef.CallMethod(env, "getCtx", ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	return
+}
+
 func updateCode(fset *token.FileSet, node *cpg.Node, astNode ast.Node) {
 	node.SetCode(code(fset, astNode))
 }
