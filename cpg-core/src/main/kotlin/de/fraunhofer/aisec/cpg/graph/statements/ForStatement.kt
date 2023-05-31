@@ -43,7 +43,7 @@ class ForStatement : Statement(), BranchingNode {
 
     @AST var iterationStatement: Statement? = null
 
-    override val branchingDecision: Node?
+    override val branchedBy: Node?
         get() = condition ?: conditionDeclaration
 
     override fun equals(other: Any?): Boolean {

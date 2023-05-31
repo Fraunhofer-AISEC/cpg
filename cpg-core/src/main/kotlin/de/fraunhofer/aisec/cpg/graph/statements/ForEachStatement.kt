@@ -50,7 +50,7 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
     /** This field contains the body of the loop. */
     @AST var statement: Statement? = null
 
-    override val branchingDecision: Node?
+    override val branchedBy: Node?
         get() = iterable
 
     override var statementEdges: MutableList<PropertyEdge<Statement>>

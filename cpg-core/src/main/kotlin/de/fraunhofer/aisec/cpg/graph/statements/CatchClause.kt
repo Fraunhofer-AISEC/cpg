@@ -36,7 +36,7 @@ class CatchClause : Statement(), BranchingNode {
 
     @AST var body: CompoundStatement? = null
 
-    override val branchingDecision: Node?
+    override val branchedBy: Node?
         get() = parameter
 
     override fun equals(other: Any?): Boolean {

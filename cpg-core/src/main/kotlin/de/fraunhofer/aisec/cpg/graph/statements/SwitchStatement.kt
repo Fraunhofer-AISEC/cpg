@@ -53,7 +53,7 @@ class SwitchStatement : Statement(), BranchingNode {
      */
     @AST var statement: Statement? = null
 
-    override val branchingDecision: Node?
+    override val branchedBy: Node?
         get() = selector
 
     override fun equals(other: Any?): Boolean {

@@ -29,6 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 
 class ShortCircuitOperator : BinaryOperator(), BranchingNode {
-    override val branchingDecision: Node
+    override val branchedBy: Node
         get() = lhs
 }

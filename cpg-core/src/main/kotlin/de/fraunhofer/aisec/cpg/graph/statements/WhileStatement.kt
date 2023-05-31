@@ -48,7 +48,7 @@ class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
      */
     @AST var statement: Statement? = null
 
-    override val branchingDecision: Node?
+    override val branchedBy: Node?
         get() = condition ?: conditionDeclaration
 
     override fun toString(): String {

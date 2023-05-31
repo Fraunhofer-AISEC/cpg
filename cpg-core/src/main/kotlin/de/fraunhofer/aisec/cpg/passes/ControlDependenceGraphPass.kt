@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.State
 import de.fraunhofer.aisec.cpg.helpers.Worklist
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
+/** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
 class ControlDependenceGraphPass : Pass() {
     override fun cleanup() {
@@ -50,6 +51,17 @@ class ControlDependenceGraphPass : Pass() {
         t.functions.forEach(::handle)
     }
 
+    /**
+     * Computes the CDG for the given [functionDecl]. It performs the following steps:
+     * 1) Compute the "parent branching node" for each node and through which path the node is
+     *    reached
+     * 2) Find out which branch of a [BranchingNode] is actually conditional. The other ones aren't.
+     * 3) For each node: 3.a) Check if the node is reachable through an unconditional path of its
+     *    parent [BranchingNode] or through all the conditional paths. 3.b) Move the node "one layer
+     *    up" by finding the parent node of the current [BranchingNode] and changing it to this
+     *    parent node and the path(s) through which the [BranchingNode] node is reachable. 3.c)
+     *    Repeat step 3) until you cannot move the node upwards in the CDG anymore.
+     */
     private fun handle(functionDecl: FunctionDeclaration) {
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
@@ -145,40 +157,49 @@ class ControlDependenceGraphPass : Pass() {
                 }
                 .toTypedArray()
         )
+}
 
-    companion object {
-        @JvmStatic
-        fun handleEdge(
-            currentEdge: PropertyEdge<Node>,
-            currentState: State<Node, Map<Node, Set<Node>>>,
-            currentWorklist: Worklist<PropertyEdge<Node>, Node, Map<Node, Set<Node>>>
-        ): Pair<State<Node, Map<Node, Set<Node>>>, Boolean> {
-            // Check if we start in a branching node and if this edge leads to the conditional
-            // branch. In this case, the next node will move "one layer downwards" in the CDG.
-            if (currentEdge.start is BranchingNode) { // && currentEdge.isConditionalBranch()) {
-                // We start in a branching node and end in one of the branches, so we have the
-                // following state:
-                // for the branching node "start", we have a path through "end".
-                currentState.push(
-                    currentEdge.end,
-                    PrevEOGLattice(mapOf(Pair(currentEdge.start, setOf(currentEdge.end))))
-                )
-            } else {
-                // We did not start in a branching node, so for the next node, we have the same path
-                // (last branching + first end node) as for the start node of this edge.
-                // If there is no state for the start node (most likely, this is the case for the
-                // first edge in a function), we generate a new state where we start in "start" end
-                // have "end" as the first node in the "branch".
-                val state =
-                    PrevEOGLattice(
-                        currentState[currentEdge.start]?.elements
-                            ?: mapOf(Pair(currentEdge.start, setOf(currentEdge.end)))
-                    )
-                currentState.push(currentEdge.end, state)
-            }
-            return Pair(currentState, true)
-        }
+/**
+ * This method is executed for each EOG edge which is in the worklist. [currentEdge] is the edge to
+ * process, [currentState] contains the state which was observed before arriving here.
+ *
+ * This method modifies the state for the next eog edge as follows:
+ * - If [currentEdge] starts in a [BranchingNode], the end node depends on the start node. We modify
+ *   the state to express that "the end node depends on the start node and is reachable through the
+ *   path starting at the end node".
+ * - For all other starting nodes, we copy the state of the start node to the end node.
+ *
+ * Returns the updated state and true because we always expect an update of the state.
+ */
+fun handleEdge(
+    currentEdge: PropertyEdge<Node>,
+    currentState: State<Node, Map<Node, Set<Node>>>,
+    currentWorklist: Worklist<PropertyEdge<Node>, Node, Map<Node, Set<Node>>>
+): Pair<State<Node, Map<Node, Set<Node>>>, Boolean> {
+    // Check if we start in a branching node and if this edge leads to the conditional
+    // branch. In this case, the next node will move "one layer downwards" in the CDG.
+    if (currentEdge.start is BranchingNode) { // && currentEdge.isConditionalBranch()) {
+        // We start in a branching node and end in one of the branches, so we have the
+        // following state:
+        // for the branching node "start", we have a path through "end".
+        currentState.push(
+            currentEdge.end,
+            PrevEOGLattice(mapOf(Pair(currentEdge.start, setOf(currentEdge.end))))
+        )
+    } else {
+        // We did not start in a branching node, so for the next node, we have the same path
+        // (last branching + first end node) as for the start node of this edge.
+        // If there is no state for the start node (most likely, this is the case for the
+        // first edge in a function), we generate a new state where we start in "start" end
+        // have "end" as the first node in the "branch".
+        val state =
+            PrevEOGLattice(
+                currentState[currentEdge.start]?.elements
+                    ?: mapOf(Pair(currentEdge.start, setOf(currentEdge.end)))
+            )
+        currentState.push(currentEdge.end, state)
     }
+    return Pair(currentState, true)
 }
 
 /**
@@ -235,7 +256,7 @@ class PrevEOGLattice(override val elements: Map<Node, Set<Node>>) :
 }
 
 /**
- * A state which actually holds a state for all [PropertyEdge]s, one only for declarations and one
- * for ReturnStatements.
+ * A state which actually holds a state for all [PropertyEdge]s. It maps the node to its
+ * [BranchingNode]-parent and the path through which it is reached.
  */
 class PrevEOGState : State<Node, Map<Node, Set<Node>>>()

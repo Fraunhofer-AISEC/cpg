@@ -93,7 +93,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener, ArgumentHolder
             .build()
     }
 
-    override val branchingDecision: Node
+    override val branchedBy: Node
         get() = condition
 
     override fun addArgument(expression: Expression) {

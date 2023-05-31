@@ -45,7 +45,7 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
     /** The condition to be evaluated. */
     @AST var condition: Expression? = null
 
-    override val branchingDecision: Node?
+    override val branchedBy: Node?
         get() = condition ?: conditionDeclaration
 
     /** C++ constexpr construct. */
