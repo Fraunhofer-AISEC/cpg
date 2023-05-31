@@ -35,10 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.helpers.EOGWorklist
-import de.fraunhofer.aisec.cpg.helpers.Lattice
-import de.fraunhofer.aisec.cpg.helpers.State
-import de.fraunhofer.aisec.cpg.helpers.Worklist
+import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
@@ -72,8 +69,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
             functionDecl,
             PrevEOGLattice(mapOf(Pair(functionDecl, setOf(functionDecl))))
         )
-        val finalState =
-            EOGWorklist().iterateEOGEN(functionDecl.nextEOGEdges, startState, ::handleEdge)
+        val finalState = iterateEOGEN(functionDecl.nextEOGEdges, startState, ::handleEdge)
 
         val branchingNodeConditionals = getBranchingNodeConditions(functionDecl)
 

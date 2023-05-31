@@ -60,7 +60,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
     protected fun handle(node: Node) {
         if (node is FunctionDeclaration) {
             clearFlowsOfVariableDeclarations(node)
-            val finalState = EOGWorklist().iterateEOG(node, DFGPassState(), ::transfer)
+            val finalState = iterateEOG(node, DFGPassState(), ::transfer)
 
             removeUnreachableImplicitReturnStatement(
                 node,
