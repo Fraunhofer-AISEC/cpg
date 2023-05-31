@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.CallResolver
-import de.fraunhofer.aisec.cpg.passes.FunctionPointerCallResolver
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -52,7 +51,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdge, ArgumentHolder {
     /** Connection to its [FunctionDeclaration]. This will be populated by the [CallResolver]. */
-    @PopulatedByPass(CallResolver::class, FunctionPointerCallResolver::class)
+    @PopulatedByPass(CallResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
     var invokeEdges = mutableListOf<PropertyEdge<FunctionDeclaration>>()
         protected set
@@ -61,7 +60,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      * A virtual property to quickly access the list of declarations that this call invokes without
      * property edges.
      */
-    @PopulatedByPass(CallResolver::class, FunctionPointerCallResolver::class)
+    @PopulatedByPass(CallResolver::class)
     var invokes: List<FunctionDeclaration>
         get(): List<FunctionDeclaration> {
             val targets: MutableList<FunctionDeclaration> = ArrayList()

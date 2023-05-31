@@ -13,6 +13,10 @@ val enableJavaFrontend: Boolean by extra {
     val enableJavaFrontend: String? by settings
     enableJavaFrontend.toBoolean()
 }
+val enableCXXFrontend: Boolean by extra {
+    val enableCXXFrontend: String? by settings
+    enableCXXFrontend.toBoolean()
+}
 val enableGoFrontend: Boolean by extra {
     val enableGoFrontend: String? by settings
     enableGoFrontend.toBoolean()
@@ -31,6 +35,7 @@ val enableTypeScriptFrontend: Boolean by extra {
 }
 
 if (enableJavaFrontend) include(":cpg-language-java")
+if (enableCXXFrontend) include(":cpg-language-cxx")
 if (enableGoFrontend) include(":cpg-language-go")
 if (enableLLVMFrontend) include(":cpg-language-llvm")
 if (enablePythonFrontend) include(":cpg-language-python")

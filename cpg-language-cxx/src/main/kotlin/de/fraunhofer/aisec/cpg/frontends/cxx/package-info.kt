@@ -23,31 +23,4 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.helpers
-
-import java.io.File
-import kotlin.io.path.Path
-import kotlin.test.Test
-import kotlin.test.assertEquals
-
-class BenchmarkTest {
-
-    @Test
-    fun testRelativeOrAbsolute() {
-        val relPath = Path("./main.c")
-        val absPath = Path("/root/main.c")
-        val topLevelRoot = File("/root")
-        val topLevelFoo = File("/foo")
-
-        assertEquals(Path("./main.c"), relativeOrAbsolute(relPath, topLevelRoot))
-        assertEquals(Path("main.c"), relativeOrAbsolute(absPath, topLevelRoot))
-
-        // This is not what you would expect.
-        // But as topLevel is always the largest common path of all source files, this should not
-        // happen
-        assertEquals(Path("../root/main.c"), relativeOrAbsolute(absPath, topLevelFoo))
-
-        assertEquals(relPath, relativeOrAbsolute(relPath, null))
-        assertEquals(absPath, relativeOrAbsolute(absPath, null))
-    }
-}
+package de.fraunhofer.aisec.cpg.frontends.cxx

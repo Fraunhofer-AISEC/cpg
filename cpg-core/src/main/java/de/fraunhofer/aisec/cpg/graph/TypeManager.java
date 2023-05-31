@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.ScopeManager;
 import de.fraunhofer.aisec.cpg.TranslationContext;
 import de.fraunhofer.aisec.cpg.frontends.Language;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope;
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope;
@@ -566,7 +565,7 @@ public class TypeManager {
 
     // arrays and pointers match in C/C++
     // TODO: Make this independent from the specific language
-    if (language instanceof CLanguage && checkArrayAndPointer(superType, subType)) {
+    if (isCXX(language) && checkArrayAndPointer(superType, subType)) {
       return true;
     }
 
@@ -594,6 +593,12 @@ public class TypeManager {
         return false;
       }
     }
+  }
+
+  private boolean isCXX(Language<?> language) {
+    return language != null
+        && (language.getClass().getSimpleName().equals("CLanguage")
+            || language.getClass().getSimpleName().equals("CPPLanguage"));
   }
 
   public boolean checkArrayAndPointer(Type first, Type second) {

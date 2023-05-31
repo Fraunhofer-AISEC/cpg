@@ -25,18 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
+import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
-import java.io.File
 import kotlin.test.*
 
-// TODO(oxisto): Use TestLanguage instead of CPPLanguage/JavaLanguage
 internal class ScopeManagerTest : BaseTest() {
     private lateinit var config: TranslationConfiguration
 
@@ -46,40 +44,11 @@ internal class ScopeManagerTest : BaseTest() {
     }
 
     @Test
-    @Throws(TranslationException::class)
-    fun testReplaceNode() {
-        val scopeManager = ScopeManager()
-        val frontend =
-            CXXLanguageFrontend(
-                CPPLanguage(),
-                TranslationContext(config, scopeManager, TypeManager())
-            )
-        val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
-        val methods = tu.allChildren<MethodDeclaration>().filter { it !is ConstructorDeclaration }
-        assertFalse(methods.isEmpty())
-
-        methods.forEach {
-            val scope = scopeManager.lookupScope(it)
-            assertSame(it, scope!!.astNode)
-        }
-
-        val constructors = tu.allChildren<ConstructorDeclaration>()
-        assertFalse(constructors.isEmpty())
-
-        // make sure that the scope of the constructor actually has the constructor as an ast node.
-        // this is necessary, since the constructor was probably created as a function declaration
-        // which later gets 'upgraded' to a constructor declaration.
-        constructors.forEach {
-            val scope = scopeManager.lookupScope(it)
-            assertSame(it, scope!!.astNode)
-        }
-    }
-
-    @Test
     fun testMerge() {
         val tm = TypeManager()
         val s1 = ScopeManager()
-        val frontend1 = CXXLanguageFrontend(CPPLanguage(), TranslationContext(config, s1, tm))
+        val frontend1 =
+            TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, s1, tm))
         s1.resetToGlobal(frontend1.newTranslationUnitDeclaration("f1.cpp", null))
 
         // build a namespace declaration in f1.cpp with the namespace A
@@ -90,7 +59,8 @@ internal class ScopeManagerTest : BaseTest() {
         s1.leaveScope(namespaceA1)
 
         val s2 = ScopeManager()
-        val frontend2 = CXXLanguageFrontend(CPPLanguage(), TranslationContext(config, s2, tm))
+        val frontend2 =
+            TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, s2, tm))
         s2.resetToGlobal(frontend2.newTranslationUnitDeclaration("f1.cpp", null))
 
         // and do the same in the other file
@@ -102,7 +72,8 @@ internal class ScopeManagerTest : BaseTest() {
 
         // merge the two scopes. this replicates the behaviour of parseParallel
         val final = ScopeManager()
-        val frontend = CXXLanguageFrontend(CPPLanguage(), TranslationContext(config, final, tm))
+        val frontend =
+            TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, final, tm))
         final.mergeFrom(listOf(s1, s2))
 
         // in the final scope manager, there should only be one NameScope "A"
@@ -140,7 +111,7 @@ internal class ScopeManagerTest : BaseTest() {
     fun testScopeFQN() {
         val s = ScopeManager()
         val frontend =
-            CXXLanguageFrontend(CPPLanguage(), TranslationContext(config, s, TypeManager()))
+            TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, s, TypeManager()))
         s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
 
         assertNull(s.currentNamespace)

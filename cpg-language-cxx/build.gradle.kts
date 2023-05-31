@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,26 +24,29 @@
  *
  */
 plugins {
-    id("cpg.library-conventions")
+    id("cpg.frontend-conventions")
 }
-
 
 publishing {
     publications {
-        named<MavenPublication>("cpg-analysis") {
+        named<MavenPublication>("cpg-language-cxx") {
             pom {
-                artifactId = "cpg-analysis"
-                name.set("Code Property Graph - Analysis Modules")
-                description.set("Analysis modules for the CPG")
+                artifactId = "cpg-language-cxx"
+                name.set("Code Property Graph - C/C++ Frontend")
+                description.set("A C/C++ language frontend for the CPG")
             }
         }
     }
 }
 
-dependencies {
-    api(projects.cpgCore)
-    testImplementation(projects.cpgLanguageJava)
-    testImplementation(projects.cpgLanguageCxx)
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions {
+        freeCompilerArgs = listOf("-Xcontext-receivers")
+    }
+}
 
-    testImplementation(testFixtures(projects.cpgCore))
+dependencies {
+    api(libs.javaparser)
+
+    testImplementation(libs.junit.params)
 }
