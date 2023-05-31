@@ -244,14 +244,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     "cleanuppad"
                 }
             )
-        if (unwindDest != null) { // For "unwind to caller", the destination is null
+        return if (unwindDest != null) { // For "unwind to caller", the destination is null
             val gotoStatement = assembleGotoStatement(instr, unwindDest)
             gotoStatement.name = name
-            return gotoStatement
+            gotoStatement
         } else {
             val emptyStatement = newEmptyStatement(frontend.getCodeFromRawNode(instr))
             emptyStatement.name = name
-            return emptyStatement
+            emptyStatement
         }
     }
 
@@ -344,7 +344,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // that we will throw something here but we don't know what. We have to fix
             // that later once we know in which catch-block this statement is executed.
             val throwOperation = newUnaryOperator("throw", false, true, nodeCode)
-            currentIfStatement!!.elseStatement = throwOperation
+            currentIfStatement?.elseStatement = throwOperation
         }
 
         compoundStatement.addStatement(ifStatement)
@@ -1119,7 +1119,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         var max = LLVMGetNumOperands(instr) - 1
         var idx = 0
 
-        if (calledFuncName.equals("")) {
+        if (calledFuncName == "") {
             // Function is probably called by a local variable. For some reason, this is the last
             // operand
             val opName = frontend.getOperandValueAtIndex(instr, max)
@@ -1160,7 +1160,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         if (instr.opCode == LLVMInvoke) {
             // For the "invoke" instruction, the call is surrounded by a try statement which also
             // contains a goto statement after the call.
-            val tryStatement = newTryStatement(instrStr!!)
+            val tryStatement = newTryStatement(instrStr)
             frontend.scopeManager.enterScope(tryStatement)
             val tryBlock = newCompoundStatement(instrStr)
             tryBlock.addStatement(declarationOrNot(callExpr, instr))
@@ -1196,18 +1196,19 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [CompressLLVMPass] will move this instruction to the correct location
      */
     private fun handleLandingpad(instr: LLVMValueRef): Statement {
-        val catchInstr = newCatchClause(frontend.getCodeFromRawNode(instr)!!)
+        val catchInstr = newCatchClause(frontend.getCodeFromRawNode(instr))
         /* Get the number of clauses on the landingpad instruction and iterate through the clauses to get all types for the catch clauses */
         val numClauses = LLVMGetNumClauses(instr)
         var catchType = ""
         for (i in 0 until numClauses) {
             val clause = LLVMGetClause(instr, i)
             if (LLVMIsAConstantArray(clause) == null) {
-                if (LLVMIsNull(clause) == 1) {
-                    catchType += "..." + " | "
-                } else {
-                    catchType += LLVMGetValueName(clause).string + " | "
-                }
+                catchType +=
+                    if (LLVMIsNull(clause) == 1) {
+                        "..." + " | "
+                    } else {
+                        LLVMGetValueName(clause).string + " | "
+                    }
             } else {
                 // TODO: filter not handled yet
             }
@@ -1390,9 +1391,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
         if (labelMap.keys.size == 1) {
             // We only have a single pair, so we insert a declaration in that one BB.
-            val key = labelMap.keys.elementAt(0)
+            val (key, value) = labelMap.entries.elementAt(0)
             val basicBlock = key.subStatement as? CompoundStatement
-            val decl = declarationOrNot(labelMap[key]!!, instr)
+            val decl = declarationOrNot(value, instr)
             flatAST.addAll(SubgraphWalker.flattenAST(decl))
             val mutableStatements = basicBlock?.statements?.toMutableList()
             mutableStatements?.add(basicBlock.statements.size - 1, decl)
@@ -1436,10 +1437,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         mutableFunctionStatements.add(0, declStatement)
         firstBB.statements = mutableFunctionStatements
 
-        for (l in labelMap.keys) {
+        for ((l, r) in labelMap) {
             // Now, we iterate over all the basic blocks and add an assign statement.
             val assignment = newBinaryOperator("=", code)
-            assignment.rhs = labelMap[l]!!
+            assignment.rhs = r
             assignment.lhs = newDeclaredReferenceExpression(varName, type, code)
             (assignment.lhs as DeclaredReferenceExpression).type = type
             (assignment.lhs as DeclaredReferenceExpression).unregisterTypeListener(assignment)
@@ -1616,7 +1617,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         val declOp = if (unordered) binOpUnordered else binaryOperator
-        val decl = declarationOrNot(declOp!!, instr)
+        val decl =
+            declOp?.let { declarationOrNot(it, instr) }
+                ?: newProblemExpression("Could not parse declaration")
 
         (decl as? DeclarationStatement)?.let {
             // cache binding

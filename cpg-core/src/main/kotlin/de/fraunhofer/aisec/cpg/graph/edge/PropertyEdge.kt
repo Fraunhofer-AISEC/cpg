@@ -84,6 +84,7 @@ open class PropertyEdge<T : Node> : Persistable {
 
     /** Map containing all properties of an edge */
     @Convert(PropertyEdgeConverter::class) private var properties: MutableMap<Properties, Any?>
+
     fun getProperty(property: Properties): Any? {
         return properties.getOrDefault(property, null)
     }
@@ -100,7 +101,7 @@ open class PropertyEdge<T : Node> : Persistable {
     }
 
     fun addProperties(propertyMap: Map<Properties, Any?>?) {
-        properties.putAll(propertyMap!!)
+        propertyMap?.let { properties.putAll(it) }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -246,7 +247,7 @@ open class PropertyEdge<T : Node> : Persistable {
                 } else {
                     obj.start
                 }
-            } else if (obj is Collection<*> && !obj.isEmpty()) {
+            } else if (obj is Collection<*> && obj.isNotEmpty()) {
                 return unwrapPropertyEdgeCollection(obj, outgoing)
             }
             return obj
@@ -296,10 +297,10 @@ open class PropertyEdge<T : Node> : Persistable {
         ): List<PropertyEdge<T>> {
             val newPropertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
             for (propertyEdge in propertyEdges) {
-                if (end && !propertyEdge.end.equals(element)) {
+                if (end && propertyEdge.end != element) {
                     newPropertyEdges.add(propertyEdge)
                 }
-                if (!end && !propertyEdge.start.equals(element)) {
+                if (!end && propertyEdge.start != element) {
                     newPropertyEdges.add(propertyEdge)
                 }
             }

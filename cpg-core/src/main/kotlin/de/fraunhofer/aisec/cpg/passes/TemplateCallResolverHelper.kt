@@ -121,31 +121,31 @@ fun applyMissingParams(
     for (m in missingParams) {
         var missingParam = m
         if (missingParam is DeclaredReferenceExpression) {
-            missingParam = missingParam.refersTo!!
+            missingParam = missingParam.refersTo
         }
         if (missingParam in templateParametersExplicitInitialization) {
             // If default is a previously defined template argument that has been explicitly
             // passed
-            constructExpression.addTemplateParameter(
-                templateParametersExplicitInitialization[missingParam]!!,
-                TemplateDeclaration.TemplateInitialization.DEFAULT
-            )
+            templateParametersExplicitInitialization[missingParam]?.let {
+                constructExpression.addTemplateParameter(
+                    it,
+                    TemplateDeclaration.TemplateInitialization.DEFAULT
+                )
+            }
             // If template argument is a type add it as a generic to the type as well
-            if (templateParametersExplicitInitialization[missingParam] is TypeExpression) {
-                (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
-                    ?.type
-                    ?.let { (constructExpression.type as ObjectType).addGeneric(it) }
+            (templateParametersExplicitInitialization[missingParam] as? TypeExpression)?.type?.let {
+                (constructExpression.type as ObjectType).addGeneric(it)
             }
         } else if (missingParam in templateParameterRealDefaultInitialization) {
             // Add default of template parameter to construct declaration
-            constructExpression.addTemplateParameter(
-                templateParameterRealDefaultInitialization[missingParam]!!,
-                TemplateDeclaration.TemplateInitialization.DEFAULT
-            )
-            if (templateParametersExplicitInitialization[missingParam] is Type) {
-                (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
-                    ?.type
-                    ?.let { (constructExpression.type as ObjectType).addGeneric(it) }
+            templateParameterRealDefaultInitialization[missingParam]?.let {
+                constructExpression.addTemplateParameter(
+                    it,
+                    TemplateDeclaration.TemplateInitialization.DEFAULT
+                )
+            }
+            (templateParametersExplicitInitialization[missingParam] as? TypeExpression)?.type?.let {
+                (constructExpression.type as ObjectType).addGeneric(it)
             }
         }
     }

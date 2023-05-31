@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Represents an assignment of a group of expressions (in the simplest case: one) from the right
@@ -153,17 +155,17 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
 
     /** Finds the value (of [rhs]) that is assigned to the particular [lhs] expression. */
     fun findValue(lhsExpr: HasType): Expression? {
-        if (lhs.size > 1) {
-            return rhs.singleOrNull()
+        return if (lhs.size > 1) {
+            rhs.singleOrNull()
         } else {
             // Basically, we need to find out which index on the lhs this variable belongs to and
             // find the corresponding index on the rhs.
             val idx = lhs.indexOf(lhsExpr)
             if (idx == -1) {
-                return null
+                null
+            } else {
+                rhs.getOrNull(idx)
             }
-
-            return rhs.getOrNull(idx)
         }
     }
 
@@ -173,25 +175,25 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
 
         // There are now two possibilities: Either, we have a tuple type, that we need to
         // deconstruct, or we have a singular type
-        if (type is TupleType) {
+        return if (type is TupleType) {
             // We need to see if there is enough room on the left side. Currently, we only support
             // languages that do not allow to mix tuple and non-tuple types luckily, so we can just
             // assume that all arguments on the left side are assignment targets
             if (lhs.size != type.types.size) {
-                println("Tuple type size on RHS does not match number of LHS expressions")
-                return listOf()
+                log.info("Tuple type size on RHS does not match number of LHS expressions")
+                listOf()
+            } else {
+                lhs
             }
-
-            return lhs
         } else {
             // Basically, we need to find out which index on the rhs this variable belongs to and
             // find the corresponding index on the rhs.
             val idx = rhs.indexOf(rhsExpr)
             if (idx == -1) {
-                return listOf()
+                listOf()
+            } else {
+                listOfNotNull(lhs.getOrNull(idx))
             }
-
-            return listOfNotNull(lhs.getOrNull(idx))
         }
     }
 
@@ -205,4 +207,8 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
 
             return list
         }
+
+    companion object {
+        private val log: Logger = LoggerFactory.getLogger(Node::class.java)
+    }
 }

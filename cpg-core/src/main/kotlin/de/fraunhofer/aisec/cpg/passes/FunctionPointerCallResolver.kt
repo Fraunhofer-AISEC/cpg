@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -55,20 +57,20 @@ import java.util.function.Consumer
 @DependsOn(CallResolver::class)
 @DependsOn(DFGPass::class)
 @RequiredFrontend(CXXLanguageFrontend::class)
-class FunctionPointerCallResolver : Pass() {
+class FunctionPointerCallResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
     private lateinit var walker: ScopedWalker
     private var inferDfgForUnresolvedCalls = false
 
-    override fun accept(t: TranslationResult) {
-        scopeManager = t.scopeManager
-        inferDfgForUnresolvedCalls = t.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
-        walker = ScopedWalker(t.scopeManager)
+    override fun accept(component: Component) {
+        inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
+        walker = ScopedWalker(scopeManager)
         walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
             walker.collectDeclarations(currNode)
         }
         walker.registerHandler { node, _ -> resolve(node) }
 
-        for (tu in t.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }
@@ -109,7 +111,7 @@ class FunctionPointerCallResolver : Pass() {
         val work: Deque<Node> = ArrayDeque()
         val seen = IdentitySet<Node>()
         work.push(pointer)
-        while (!work.isEmpty()) {
+        while (work.isNotEmpty()) {
             val curr = work.pop()
             if (!seen.add(curr)) {
                 continue
@@ -150,7 +152,7 @@ class FunctionPointerCallResolver : Pass() {
         call.invokes = invocationCandidates
         // We have to update the dfg edges because this call could now be resolved (which was not
         // the case before).
-        DFGPass().handleCallExpression(call, inferDfgForUnresolvedCalls)
+        DFGPass(config, scopeManager).handleCallExpression(call, inferDfgForUnresolvedCalls)
     }
 
     override fun cleanup() {

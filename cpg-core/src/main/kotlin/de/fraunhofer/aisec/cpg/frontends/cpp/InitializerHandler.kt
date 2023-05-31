@@ -57,8 +57,10 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
 
         for ((i, argument) in ctx.arguments.withIndex()) {
             val arg = frontend.expressionHandler.handle(argument)
-            arg!!.argumentIndex = i
-            constructExpression.addArgument(arg)
+            arg?.let {
+                it.argumentIndex = i
+                constructExpression.addArgument(it)
+            }
         }
 
         return constructExpression

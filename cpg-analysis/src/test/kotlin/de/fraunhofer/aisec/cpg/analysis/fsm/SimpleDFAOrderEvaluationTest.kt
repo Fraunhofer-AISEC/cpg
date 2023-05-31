@@ -73,8 +73,8 @@ class SimpleDFAOrderEvaluationTest {
                 true
             ) {
                 it.registerLanguage<JavaLanguage>()
-                    .registerPass(UnreachableEOGPass())
-                    .registerPass(EdgeCachePass())
+                    .registerPass<UnreachableEOGPass>()
+                    .registerPass<EdgeCachePass>()
             }
     }
 

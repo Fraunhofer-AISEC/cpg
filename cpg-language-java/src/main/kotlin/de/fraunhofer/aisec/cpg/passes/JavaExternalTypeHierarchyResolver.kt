@@ -29,8 +29,10 @@ import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -43,23 +45,23 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @ExecuteBefore(ImportResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)
-class JavaExternalTypeHierarchyResolver : Pass() {
-    override fun accept(translationResult: TranslationResult) {
+class JavaExternalTypeHierarchyResolver(
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager
+) : ComponentPass(config, scopeManager) {
+    override fun accept(component: Component) {
         val resolver = CombinedTypeSolver()
 
         resolver.add(ReflectionTypeSolver())
-        var root = translationResult.config.topLevel
-        if (root == null && translationResult.config.softwareComponents.size == 1) {
+        var root = config.topLevel
+        if (root == null && config.softwareComponents.size == 1) {
             root =
-                translationResult.config.softwareComponents[
-                        translationResult.config.softwareComponents.keys.first()]
-                    ?.let { CommonPath.commonPath(it) }
+                config.softwareComponents[config.softwareComponents.keys.first()]?.let {
+                    CommonPath.commonPath(it)
+                }
         }
         if (root == null) {
-            log.warn(
-                "Could not determine source root for {}",
-                translationResult.config.softwareComponents
-            )
+            log.warn("Could not determine source root for {}", config.softwareComponents)
         } else {
             log.info("Source file root used for type solver: {}", root)
             resolver.add(JavaParserTypeSolver(root))

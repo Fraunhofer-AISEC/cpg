@@ -25,10 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo
-import com.fasterxml.jackson.annotation.JsonIdentityReference
-import com.fasterxml.jackson.annotation.ObjectIdGenerators
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
+import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage
@@ -38,6 +37,7 @@ import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
 import java.nio.file.Path
 import java.util.*
+import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
@@ -93,7 +93,14 @@ private constructor(
      * always take priority over those in the whitelist.
      */
     val includeBlocklist: List<Path>,
-    passes: List<Pass>,
+    passes: List<KClass<out Pass<*>>>,
+    /**
+     * This map offers the possibility to replace certain passes for specific languages with other
+     * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass]
+     * annotation on a [LanguageFrontend].
+     */
+    val replacedPasses:
+        Map<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>,
     languages: List<Language<out LanguageFrontend>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
@@ -162,12 +169,8 @@ private constructor(
     /** If true the (cpp) frontend connects a node to required includes. */
     val addIncludesToGraph: Boolean
 
-    @get:JsonIdentityReference(alwaysAsId = true)
-    @get:JsonIdentityInfo(
-        generator = ObjectIdGenerators.PropertyGenerator::class,
-        property = "name"
-    )
-    val registeredPasses: List<Pass>
+    @get:JsonSerialize(contentUsing = KClassSerializer::class)
+    val registeredPasses: List<KClass<out Pass<*>>>
 
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
@@ -202,9 +205,15 @@ private constructor(
      * Builds a [TranslationConfiguration].
      *
      * Example:
-     * <pre>`TranslationManager.builder() .config( TranslationConfiguration.builder()
-     * .sourceLocations(new File("example.cpp")) .defaultPasses() .debugParser(true) .build())
-     * .build(); `</pre> *
+     * ```
+     * TranslationManager.builder()
+     *   .config(TranslationConfiguration.builder()
+     *     .sourceLocations(new File("example.cpp"))
+     *     .defaultPasses()
+     *     .debugParser(true)
+     *     .build())
+     *   .build();
+     * ```
      */
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
@@ -217,7 +226,9 @@ private constructor(
         private val includePaths = mutableListOf<Path>()
         private val includeWhitelist = mutableListOf<Path>()
         private val includeBlocklist = mutableListOf<Path>()
-        private val passes = mutableListOf<Pass>()
+        private val passes = mutableListOf<KClass<out Pass<*>>>()
+        private val replacedPasses =
+            mutableMapOf<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>()
         private var codeInNodes = true
         private var processAnnotations = false
         private var disableCleanup = false
@@ -228,6 +239,7 @@ private constructor(
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
+
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
             return this
@@ -366,9 +378,30 @@ private constructor(
             return this
         }
 
+        inline fun <reified P : Pass<*>> registerPass(): Builder {
+            registerPass(P::class)
+            return this
+        }
+
         /** Register an additional [Pass]. */
-        fun registerPass(pass: Pass): Builder {
-            passes.add(pass)
+        fun registerPass(passType: KClass<out Pass<*>>): Builder {
+            passes.add(passType)
+            return this
+        }
+
+        inline fun <
+            reified OldPass : Pass<*>,
+            reified For : Language<*>,
+            reified With : Pass<*>> replacePass(): Builder {
+            return replacePass(OldPass::class, For::class, With::class)
+        }
+
+        fun replacePass(
+            passType: KClass<out Pass<*>>,
+            forLanguage: KClass<out Language<*>>,
+            with: KClass<out Pass<*>>
+        ): Builder {
+            replacedPasses[Pair(passType, forLanguage)] = with
             return this
         }
 
@@ -434,16 +467,16 @@ private constructor(
          * to be executed in the order specified by their annotations.
          */
         fun defaultPasses(): Builder {
-            registerPass(TypeHierarchyResolver())
-            registerPass(ImportResolver())
-            registerPass(VariableUsageResolver())
-            registerPass(CallResolver()) // creates CG
-            registerPass(DFGPass())
-            registerPass(EvaluationOrderGraphPass()) // creates EOG
-            registerPass(TypeResolver())
-            registerPass(ControlFlowSensitiveDFGPass())
-            registerPass(FunctionPointerCallResolver())
-            registerPass(FilenameMapper())
+            registerPass<TypeHierarchyResolver>()
+            registerPass<ImportResolver>()
+            registerPass<VariableUsageResolver>()
+            registerPass<CallResolver>() // creates CG
+            registerPass<DFGPass>()
+            registerPass<EvaluationOrderGraphPass>() // creates EOG
+            registerPass<TypeResolver>()
+            registerPass<ControlFlowSensitiveDFGPass>()
+            registerPass<FunctionPointerCallResolver>()
+            registerPass<FilenameMapper>()
             return this
         }
 
@@ -452,22 +485,28 @@ private constructor(
         private fun registerExtraFrontendPasses() {
             for (frontend in languages.map(Language<out LanguageFrontend>::frontend)) {
                 val extraPasses = frontend.findAnnotations<RegisterExtraPass>()
-
                 if (extraPasses.isNotEmpty()) {
                     for (p in extraPasses) {
-                        val pass = p.value.primaryConstructor?.call()
-                        if (pass != null) {
-                            registerPass(pass)
+                        registerPass(p.value)
+                        log.info(
+                            "Registered an extra (frontend dependent) default dependency: {}",
+                            p.value
+                        )
+                    }
+                }
+            }
+        }
 
-                            log.info(
-                                "Registered an extra (frontend dependent) default dependency: {}",
-                                p.value
-                            )
-                        } else {
-                            throw ConfigurationException(
-                                "Failed to load frontend because we could not register required pass dependency: ${frontend.simpleName}"
-                            )
-                        }
+        private fun registerReplacedPasses() {
+            for (frontend in languages.map(Language<out LanguageFrontend>::frontend)) {
+                val replacedPasses = frontend.findAnnotations<ReplacePass>()
+                if (replacedPasses.isNotEmpty()) {
+                    for (p in replacedPasses) {
+                        replacePass(p.old, p.lang, p.with)
+                        log.info(
+                            "Registered an extra (frontend dependent) default dependency, which replaced an existing pass: {}",
+                            p.old
+                        )
                     }
                 }
             }
@@ -566,6 +605,7 @@ private constructor(
                 )
             }
             registerExtraFrontendPasses()
+            registerReplacedPasses()
             return TranslationConfiguration(
                 symbols,
                 softwareComponents,
@@ -577,6 +617,7 @@ private constructor(
                 includeWhitelist,
                 includeBlocklist,
                 orderPasses(),
+                replacedPasses,
                 languages,
                 codeInNodes,
                 processAnnotations,
@@ -600,28 +641,58 @@ private constructor(
         private fun collectInitialPasses(): PassWithDepsContainer {
             val workingList = PassWithDepsContainer()
 
+            val softDependencies =
+                mutableMapOf<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>()
+            val hardDependencies =
+                mutableMapOf<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>()
+
             // Add the "execute before" dependencies.
             for (p in passes) {
-                val executeBefore = p.executeBefore
+                val executeBefore = mutableListOf<KClass<out Pass<*>>>()
+
+                val depAnn = p.findAnnotations<DependsOn>()
+                // collect all dependencies added by [DependsOn] annotations.
+                for (d in depAnn) {
+                    val deps =
+                        if (d.softDependency) {
+                            softDependencies.computeIfAbsent(p) { mutableSetOf() }
+                        } else {
+                            hardDependencies.computeIfAbsent(p) { mutableSetOf() }
+                        }
+                    deps += d.value
+                }
+
+                val execBeforeAnn = p.findAnnotations<ExecuteBefore>()
+                for (d in execBeforeAnn) {
+                    executeBefore.add(d.other)
+                }
+
                 for (eb in executeBefore) {
                     passes
-                        .filter { eb.isInstance(it) }
-                        .forEach { it.addSoftDependency(p.javaClass) }
+                        .filter { eb == it }
+                        .forEach {
+                            val deps = softDependencies.computeIfAbsent(it) { mutableSetOf() }
+                            deps += p
+                        }
                 }
             }
+
             for (p in passes) {
                 var passFound = false
                 for ((pass) in workingList.getWorkingList()) {
-                    if (pass.javaClass == p.javaClass) {
+                    if (pass == p) {
                         passFound = true
                         break
                     }
                 }
                 if (!passFound) {
-                    val deps: MutableSet<Class<out Pass>> = HashSet()
-                    deps.addAll(p.hardDependencies)
-                    deps.addAll(p.softDependencies)
-                    workingList.addToWorkingList(PassWithDependencies(p, deps))
+                    workingList.addToWorkingList(
+                        PassWithDependencies(
+                            p,
+                            hardDependencies[p] ?: mutableSetOf(),
+                            softDependencies[p] ?: mutableSetOf()
+                        )
+                    )
                 }
             }
             return workingList
@@ -645,16 +716,16 @@ private constructor(
          *    [PassWithDepsContainer.workingList]
          * 1. The first pass [ExecuteFirst] is added to the result and removed from the other passes
          *    dependencies
-         * 1. The first pass in the [workingList] without dependencies is added to the result and it
+         * 1. The first pass in the workingList without dependencies is added to the result and it
          *    is removed from the other passes dependencies
          * 1. The above step is repeated until all passes are added to the result
          *
          * @return a sorted list of passes
          */
         @Throws(ConfigurationException::class)
-        private fun orderPasses(): List<Pass> {
-            log.info("Passes before enforcing order: {}", passes)
-            val result = mutableListOf<Pass>()
+        private fun orderPasses(): List<KClass<out Pass<*>>> {
+            log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
+            val result = mutableListOf<KClass<out Pass<*>>>()
 
             // Create a local copy of all passes and their "current" dependencies without possible
             // duplicates
@@ -691,7 +762,7 @@ private constructor(
                     throw ConfigurationException("Failed to satisfy ordering requirements.")
                 }
             }
-            log.info("Passes after enforcing order: {}", result)
+            log.info("Passes after enforcing order: {}", result.map { it.simpleName })
             return result
         }
     }
@@ -702,6 +773,7 @@ private constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(TranslationConfiguration::class.java)
+
         fun builder(): Builder {
             return Builder()
         }

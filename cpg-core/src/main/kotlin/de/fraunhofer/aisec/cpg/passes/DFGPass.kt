@@ -25,16 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -42,15 +40,15 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(VariableUsageResolver::class)
 @DependsOn(CallResolver::class)
-class DFGPass : Pass() {
-    override fun accept(tr: TranslationResult) {
-        val inferDfgForUnresolvedCalls =
-            tr.translationManager.config.inferenceConfiguration.inferDfgForUnresolvedSymbols
+class DFGPass(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
+    override fun accept(component: Component) {
+        val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit2 { node, parent ->
             handle(node, parent, inferDfgForUnresolvedCalls)
         }
-        for (tu in tr.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }
@@ -172,13 +170,13 @@ class DFGPass : Pass() {
      * [VariableDeclaration] in the statement is the one we care about.
      */
     private fun handleForEachStatement(node: ForEachStatement) {
-        if (node.iterable != null) {
+        node.iterable?.let { iterable ->
             if (node.variable is DeclarationStatement) {
                 (node.variable as DeclarationStatement).declarations.forEach {
-                    it.addPrevDFG(node.iterable!!)
+                    it.addPrevDFG(iterable)
                 }
             } else {
-                node.variable.variables.lastOrNull()?.addPrevDFG(node.iterable!!)
+                node.variable.variables.lastOrNull()?.addPrevDFG(iterable)
             }
         }
         node.variable?.let { node.addPrevDFG(it) }

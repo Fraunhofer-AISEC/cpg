@@ -25,11 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -44,17 +43,16 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
-class ControlFlowSensitiveDFGPass : Pass() {
+open class ControlFlowSensitiveDFGPass(
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager,
+) : TranslationUnitPass(config, scopeManager) {
     override fun cleanup() {
         // Nothing to do
     }
 
-    override fun accept(translationResult: TranslationResult) {
-        val walker = SubgraphWalker.IterativeGraphWalker()
-        walker.registerOnNodeVisit(::handle)
-        for (tu in translationResult.translationUnits) {
-            walker.iterate(tu)
-        }
+    override fun accept(tu: TranslationUnitDeclaration) {
+        tu.functions.forEach(::handle)
     }
 
     /**

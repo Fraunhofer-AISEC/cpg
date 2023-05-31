@@ -25,11 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.functions
@@ -42,13 +44,16 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
-class ControlDependenceGraphPass : Pass() {
+open class ControlDependenceGraphPass(
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager,
+) : TranslationUnitPass(config, scopeManager) {
     override fun cleanup() {
         // Nothing to do
     }
 
-    override fun accept(t: TranslationResult) {
-        t.functions.forEach(::handle)
+    override fun accept(tu: TranslationUnitDeclaration) {
+        tu.functions.forEach(::handle)
     }
 
     /**
@@ -235,7 +240,9 @@ class PrevEOGLattice(override val elements: Map<Node, Set<Node>>) :
         }
         return PrevEOGLattice(newMap)
     }
+
     override fun duplicate() = PrevEOGLattice(this.elements.toMap())
+
     override fun compareTo(other: Lattice<Map<Node, Set<Node>>>?): Int {
         return if (
             this.elements.keys.containsAll(other?.elements?.keys ?: setOf()) &&

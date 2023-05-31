@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -36,7 +38,8 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 @DependsOn(CallResolver::class)
-open class TypeResolver : Pass() {
+open class TypeResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
     protected val firstOrderTypes = mutableSetOf<Type>()
     protected val typeState = mutableMapOf<Type, MutableList<Type>>()
 
@@ -94,7 +97,7 @@ open class TypeResolver : Pass() {
 
         // ReferencesTypes
         if (type.root in typeState) {
-            if (type !in typeState[type.root]!!) {
+            if (type !in (typeState[type.root] ?: listOf())) {
                 typeState[type.root]?.add(type)
                 addType((type as SecondOrderType).elementType)
             }
@@ -147,16 +150,16 @@ open class TypeResolver : Pass() {
      * Pass on the TypeSystem: Sets RecordDeclaration Relationship from ObjectType to
      * RecordDeclaration
      *
-     * @param translationResult
+     * @param component
      */
-    override fun accept(translationResult: TranslationResult) {
+    override fun accept(component: Component) {
         removeDuplicateTypes()
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit(::ensureUniqueType)
         walker.registerOnNodeVisit(::handle)
         walker.registerOnNodeVisit(::ensureUniqueSecondaryTypeEdge)
 
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }
@@ -169,7 +172,6 @@ open class TypeResolver : Pass() {
                     typeState.keys
                 } else {
                     typeState.computeIfAbsent(subType.root, ::mutableListOf)
-                    // typeState[subType.root]!!
                 }
             val unique = trackedTypes.firstOrNull { it == subType }
             // TODO Why do we only take the first one even if we don't add it?

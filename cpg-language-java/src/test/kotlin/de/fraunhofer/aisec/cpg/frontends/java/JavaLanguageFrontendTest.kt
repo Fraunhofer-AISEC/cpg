@@ -335,7 +335,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         val graphNodes = SubgraphWalker.flattenAST(declaration)
 
-        assertTrue(graphNodes.size != 0)
+        assertTrue(graphNodes.isNotEmpty())
 
         val switchStatements = graphNodes.filterIsInstance<SwitchStatement>()
         assertEquals(3, switchStatements.size)
@@ -376,8 +376,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         // names
         // vs. fully qualified names.
         assertTrue(
-            e.type?.name?.localName == "ExtendedClass" ||
-                e.type?.name?.toString() == "cast.ExtendedClass"
+            e.type.name.localName == "ExtendedClass" ||
+                e.type.name.toString() == "cast.ExtendedClass"
         )
 
         // b = (BaseClass) e
@@ -386,15 +386,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val b = stmt.getSingleDeclarationAs(VariableDeclaration::class.java)
         assertTrue(
-            b.type?.name?.localName == "BaseClass" || b.type?.name?.toString() == "cast.BaseClass"
+            b.type.name.localName == "BaseClass" || b.type.name.toString() == "cast.BaseClass"
         )
 
         // initializer
         val cast = b.initializer as? CastExpression
         assertNotNull(cast)
         assertTrue(
-            cast.type.name.localName == "BaseClass" ||
-                cast.type.name?.toString() == "cast.BaseClass"
+            cast.type.name.localName == "BaseClass" || cast.type.name.toString() == "cast.BaseClass"
         )
 
         // expression itself should be a reference
@@ -674,6 +673,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             override val namespaceDelimiter = "."
             override val superClassKeyword = "super"
             override val frontend = MyJavaLanguageFrontend::class
+
             override fun newFrontend(
                 config: TranslationConfiguration,
                 scopeManager: ScopeManager,

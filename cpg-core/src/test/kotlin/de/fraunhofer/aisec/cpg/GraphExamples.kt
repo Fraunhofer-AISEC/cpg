@@ -425,7 +425,7 @@ class GraphExamples {
                     translationUnit("ControlFlowSensitiveDFGIfMerge.java") {
                         record("ControlFlowSensitiveDFGIfMerge") {
                             field("bla", t("int")) {}
-                            constructor() {
+                            constructor {
                                 isImplicit = true
                                 receiver =
                                     newVariableDeclaration(
@@ -859,7 +859,7 @@ class GraphExamples {
                     translationUnit("Dataflow.java") {
                         record("Dataflow") {
                             field("attr", t("String")) { literal("", t("String")) }
-                            constructor() {
+                            constructor {
                                 isImplicit = true
                                 receiver = newVariableDeclaration("this", t("Dataflow"))
                                 body { returnStmt { isImplicit = true } }
@@ -922,7 +922,7 @@ class GraphExamples {
                     translationUnit("ShortcutClass.java") {
                         record("ShortcutClass") {
                             field("attr", t("int")) { literal(0, t("int")) }
-                            constructor() {
+                            constructor {
                                 receiver = newVariableDeclaration("this", t("ShortcutClass"))
                                 isImplicit = true
                                 body { returnStmt { isImplicit = true } }

@@ -170,7 +170,8 @@ class FluentTest {
         assertNotNull(lit2.scope)
         assertEquals(2, lit2.value)
 
-        VariableUsageResolver().accept(result)
+        VariableUsageResolver(TranslationConfiguration.builder().build(), scopeManager)
+            .accept(result.components.first())
 
         // Now the reference should be resolved
         assertRefersTo(ref, variable)

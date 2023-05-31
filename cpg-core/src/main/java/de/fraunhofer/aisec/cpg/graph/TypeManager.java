@@ -121,6 +121,7 @@ public class TypeManager {
    * @param typeParameters List containing all ParameterizedTypes used by the recordDeclaration and
    *     will be stored as value in the map
    */
+  @Deprecated
   public void addTypeParameter(
       RecordDeclaration recordDeclaration, List<ParameterizedType> typeParameters) {
     this.recordToTypeParameters.put(recordDeclaration, typeParameters);
@@ -135,6 +136,7 @@ public class TypeManager {
    * @return
    */
   @Nullable
+  @Deprecated
   public ParameterizedType getTypeParameter(TemplateDeclaration templateDeclaration, String name) {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
       for (ParameterizedType parameterizedType :
@@ -221,13 +223,11 @@ public class TypeManager {
       String typeName,
       Language<? extends LanguageFrontend> language) {
     ParameterizedType parameterizedType = getTypeParameter(templateDeclaration, typeName);
-    if (parameterizedType != null) {
-      return parameterizedType;
-    } else {
+    if (parameterizedType == null) {
       parameterizedType = new ParameterizedType(typeName, language);
       addTypeParameter(templateDeclaration, parameterizedType);
-      return parameterizedType;
     }
+    return parameterizedType;
   }
 
   @NotNull

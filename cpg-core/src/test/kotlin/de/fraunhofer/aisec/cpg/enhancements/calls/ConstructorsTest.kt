@@ -48,7 +48,7 @@ internal class ConstructorsTest : BaseTest() {
         val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg =
             findByUniquePredicate(constructors) {
-                it.parameters.size == 0 && it.name.localName == "A"
+                it.parameters.isEmpty() && it.name.localName == "A"
             }
         val singleArg =
             findByUniquePredicate(constructors) {

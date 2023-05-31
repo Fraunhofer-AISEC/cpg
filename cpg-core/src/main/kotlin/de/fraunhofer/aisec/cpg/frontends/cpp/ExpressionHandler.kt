@@ -223,18 +223,17 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             // we also need to "forward" our template parameters (if we have any) to the construct
             // expression since the construct expression will do the actual template instantiation
-            if (
-                newExpression.templateParameters != null &&
-                    newExpression.templateParameters!!.isNotEmpty()
-            ) {
-                CallResolver.addImplicitTemplateParametersToCall(
-                    newExpression.templateParameters!!,
-                    initializer as ConstructExpression
-                )
+            if (newExpression.templateParameters?.isNotEmpty() == true) {
+                newExpression.templateParameters?.let {
+                    CallResolver.addImplicitTemplateParametersToCall(
+                        it,
+                        initializer as ConstructExpression
+                    )
+                }
             }
 
             // our initializer, such as a construct expression, will have the non-pointer type
-            initializer!!.type = t
+            initializer?.type = t
             newExpression.initializer = initializer
             newExpression
         }
@@ -448,13 +447,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         for ((i, argument) in ctx.arguments.withIndex()) {
             val arg = handle(argument)
-            arg!!.argumentIndex = i
-            callExpression.addArgument(arg)
+            arg?.let {
+                it.argumentIndex = i
+                callExpression.addArgument(it)
+            }
         }
 
         // Important: we don't really need the reference node, but even its temporary creation might
         // leave unwanted artifacts behind in the final graph!
-        reference!!.disconnectFromGraph()
+        reference?.disconnectFromGraph()
         return callExpression
     }
 

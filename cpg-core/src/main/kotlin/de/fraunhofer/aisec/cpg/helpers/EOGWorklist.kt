@@ -51,7 +51,9 @@ abstract class Lattice<T>(open val elements: T) : Comparable<Lattice<T>?> {
 class PowersetLattice(override val elements: Set<Node>) : Lattice<Set<Node>>(elements) {
     override fun lub(other: Lattice<Set<Node>>?) =
         PowersetLattice((other?.elements ?: setOf()).union(this.elements))
+
     override fun duplicate() = PowersetLattice(this.elements.toSet())
+
     override fun compareTo(other: Lattice<Set<Node>>?): Int {
         return if (this.elements.containsAll(other?.elements ?: setOf())) {
             if (this.elements.size > (other?.elements?.size ?: 0)) 1 else 0

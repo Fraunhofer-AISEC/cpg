@@ -158,8 +158,8 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
             scopeManager.enterScope(function)
 
             for (i in signature.indices) {
-                val targetType = signature[i]
-                val paramName = generateParamName(i, targetType!!)
+                val targetType = signature[i] ?: UnknownType.getUnknownType(function.language)
+                val paramName = generateParamName(i, targetType)
                 val param = newParamVariableDeclaration(paramName, targetType, false, "")
                 param.argumentIndex = i
 
@@ -196,7 +196,7 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
                 }
         }
         val paramName = StringBuilder()
-        while (!hierarchy.isEmpty()) {
+        while (hierarchy.isNotEmpty()) {
             val part = hierarchy.pop()
             if (part.isEmpty()) {
                 continue
@@ -262,16 +262,16 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
         val inferred = newFunctionTemplateDeclaration(name, code)
         inferred.isInferred = true
 
-        val inferredRealization: FunctionDeclaration =
+        val inferredRealization =
             if (record != null) {
                 record.addDeclaration(inferred)
                 record.inferMethod(call, scopeManager = scopeManager)
             } else {
-                tu!!.addDeclaration(inferred)
-                tu.inferFunction(call, scopeManager = scopeManager)
+                tu?.addDeclaration(inferred)
+                tu?.inferFunction(call, scopeManager = scopeManager)
             }
 
-        inferred.addRealization(inferredRealization)
+        inferredRealization?.let { inferred.addRealization(it) }
 
         var typeCounter = 0
         var nonTypeCounter = 0

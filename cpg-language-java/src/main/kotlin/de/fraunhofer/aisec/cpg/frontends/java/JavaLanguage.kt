@@ -103,7 +103,7 @@ open class JavaLanguage :
                 (operation.lhs.type as? IntegerType)?.name?.localName?.equals("char") == true &&
                 (operation.rhs.type as? IntegerType)?.name?.localName?.equals("char") == true
         ) {
-            return getSimpleTypeOf("int")!!
+            getSimpleTypeOf("int") ?: UnknownType.getUnknownType(this)
         } else super.propagateTypeOfBinaryOperation(operation)
     }
 
@@ -113,6 +113,7 @@ open class JavaLanguage :
     ): JavaLanguageFrontend {
         return JavaLanguageFrontend(this, config, scopeManager)
     }
+
     override fun handleSuperCall(
         callee: MemberExpression,
         curClass: RecordDeclaration,

@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
+import de.fraunhofer.aisec.cpg.passes.PassTarget
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
@@ -47,7 +48,7 @@ class TranslationResult(
      * and then finally merged into this one.
      */
     val scopeManager: ScopeManager
-) : Node(), StatisticsHolder {
+) : Node(), StatisticsHolder, PassTarget {
 
     /**
      * Entry points to the CPG: "SoftwareComponent" refer to programs, application, other "bundles"
@@ -80,6 +81,7 @@ class TranslationResult(
      *
      * @return the list of all translation units.
      */
+    @Deprecated(message = "translation units of individual components should be accessed instead")
     val translationUnits: List<TranslationUnitDeclaration>
         get() {
             if (components.size == 1) {
@@ -128,7 +130,7 @@ class TranslationResult(
                 components.add(swc)
             }
         }
-        swc.translationUnits.add(tu!!)
+        tu?.let { swc.translationUnits.add(it) }
     }
 
     /**
@@ -161,6 +163,7 @@ class TranslationResult(
             )
             return result
         }
+
     override val config: TranslationConfiguration
         get() = translationManager.config
 

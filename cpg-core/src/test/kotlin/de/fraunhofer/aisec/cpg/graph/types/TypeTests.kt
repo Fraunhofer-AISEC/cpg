@@ -425,6 +425,7 @@ internal class TypeTests : BaseTest() {
             TypeManager.getInstance().getCommonType(listOf(level2, level2b), provider)
         )
     }
+
     @Test
     @Throws(Exception::class)
     fun graphTest() {

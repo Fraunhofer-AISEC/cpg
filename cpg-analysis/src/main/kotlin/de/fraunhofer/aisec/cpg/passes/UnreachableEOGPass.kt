@@ -25,10 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -41,17 +43,18 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
  * by setting the [Properties.UNREACHABLE] property of an eog-edge to true.
  */
 @DependsOn(ControlFlowSensitiveDFGPass::class)
-class UnreachableEOGPass : Pass() {
+class UnreachableEOGPass(
+    config: TranslationConfiguration,
+    scopeManager: ScopeManager,
+) : TranslationUnitPass(config, scopeManager) {
     override fun cleanup() {
         // Nothing to do
     }
 
-    override fun accept(translationResult: TranslationResult) {
+    override fun accept(tu: TranslationUnitDeclaration) {
         val walker = SubgraphWalker.IterativeGraphWalker()
         walker.registerOnNodeVisit(::handle)
-        for (tu in translationResult.translationUnits) {
-            walker.iterate(tu)
-        }
+        walker.iterate(tu)
     }
 
     /**
@@ -200,6 +203,7 @@ class ReachabilityLattice(override val elements: Reachability) : Lattice<Reachab
         ReachabilityLattice(maxOf(this.elements, other?.elements ?: Reachability.BOTTOM))
 
     override fun duplicate() = ReachabilityLattice(this.elements)
+
     override fun compareTo(other: Lattice<Reachability>?) =
         this.elements.compareTo(other?.elements ?: Reachability.BOTTOM)
 }

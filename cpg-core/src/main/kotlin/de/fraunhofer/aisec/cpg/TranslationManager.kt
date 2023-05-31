@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
@@ -74,56 +74,44 @@ private constructor(
         val result = TranslationResult(this, ScopeManager())
 
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
-        return CompletableFuture.supplyAsync {
-            val outerBench =
-                Benchmark(
-                    TranslationManager::class.java,
-                    "Translation into full graph",
-                    false,
-                    result
-                )
-            val executedPasses = mutableSetOf<Pass>()
-            var executedFrontends = setOf<LanguageFrontend>()
-
-            try {
-                // Parse Java/C/CPP files
-                var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
-                executedFrontends = runFrontends(result, config)
-                bench.addMeasurement()
-
-                // Apply passes
-                for (pass in config.registeredPasses) {
-                    bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                    if (pass.runsWithCurrentFrontend(executedFrontends)) {
-                        executedPasses.add(pass)
-                        pass.accept(result)
-                    }
-                    bench.addMeasurement()
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
-                    }
-                }
-            } catch (ex: TranslationException) {
-                throw CompletionException(ex)
-            } finally {
-                outerBench.addMeasurement()
-                if (!config.disableCleanup) {
-                    log.debug("Cleaning up {} Passes", executedPasses.size)
-
-                    executedPasses.forEach { it.cleanup() }
-
-                    log.debug("Cleaning up {} Frontends", executedFrontends.size)
-
-                    executedFrontends.forEach { it.cleanup() }
-                    TypeManager.getInstance().cleanup()
-                }
-            }
-            result
-        }
+        return CompletableFuture.supplyAsync { analyze2(result) }
     }
 
-    val passes: List<Pass>
-        get() = config.registeredPasses
+    fun analyze2(result: TranslationResult): TranslationResult {
+        val outerBench =
+            Benchmark(TranslationManager::class.java, "Translation into full graph", false, result)
+        var executedFrontends = setOf<LanguageFrontend>()
+
+        try {
+            // Parse Java/C/CPP files
+            var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
+            executedFrontends = runFrontends(result, config)
+            bench.addMeasurement()
+
+            // Apply passes
+            for (pass in config.registeredPasses) {
+                bench = Benchmark(pass.java, "Executing Pass", false, result)
+                executePassSequential(pass, result, executedFrontends)
+
+                bench.addMeasurement()
+                if (result.isCancelled) {
+                    log.warn("Analysis interrupted, stopping Pass evaluation")
+                }
+            }
+        } catch (ex: TranslationException) {
+            throw CompletionException(ex)
+        } finally {
+            outerBench.addMeasurement()
+            if (!config.disableCleanup) {
+                log.debug("Cleaning up {} Frontends", executedFrontends.size)
+
+                executedFrontends.forEach { it.cleanup() }
+                TypeManager.getInstance().cleanup()
+            }
+        }
+
+        return result
+    }
 
     fun isCancelled(): Boolean {
         return isCancelled.get()
@@ -150,7 +138,7 @@ private constructor(
             component.name = Name(sc)
             result.addComponent(component)
 
-            var sourceLocations: List<File> = this.config.softwareComponents[sc]!!
+            var sourceLocations: List<File> = this.config.softwareComponents[sc] ?: listOf()
 
             var useParallelFrontends = config.useParallelFrontends
 
@@ -339,7 +327,7 @@ private constructor(
             result.scratch.computeIfAbsent(TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND) {
                 mutableMapOf<String, String>()
             } as MutableMap<String, String>
-        sfToFe[sourceLocation!!.name] = f.javaClass.simpleName
+        sourceLocation?.name?.let { sfToFe[it] = f.javaClass.simpleName }
     }
 
     @Throws(TranslationException::class)

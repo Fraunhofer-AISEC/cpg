@@ -188,14 +188,12 @@ class LLVMIRLanguageFrontend(
         alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
     ): Type {
         val typeStr = LLVMPrintTypeToString(typeRef).string
-        if (typeStr in typeCache && typeCache[typeStr] != null) {
-            return typeCache[typeStr]!!
+        if (typeStr in typeCache) {
+            val result = typeCache[typeStr]
+            if (result != null) return result
         }
-        if (typeRef in alreadyVisited && alreadyVisited[typeRef] != null) {
-            return alreadyVisited[typeRef]!!
-        } else if (typeRef in alreadyVisited) {
-            // Recursive call but we can't resolve it.
-            return newUnknownType()
+        if (typeRef in alreadyVisited) {
+            return alreadyVisited[typeRef] ?: newUnknownType()
         }
         alreadyVisited[typeRef] = null
         val res: Type =
@@ -239,7 +237,9 @@ class LLVMIRLanguageFrontend(
         return null
     }
 
-    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
+    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
+        // There are no comments in LLVM
+    }
 
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
@@ -260,10 +260,10 @@ class LLVMIRLanguageFrontend(
 
     fun guessSlotNumber(valueRef: LLVMValueRef): String {
         val code = getCodeFromRawNode(valueRef)
-        if (code?.contains("=") == true) {
-            return code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
+        return if (code?.contains("=") == true) {
+            code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
         } else {
-            return ""
+            ""
         }
     }
 }

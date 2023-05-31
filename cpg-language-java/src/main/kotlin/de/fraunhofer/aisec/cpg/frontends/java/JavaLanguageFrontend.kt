@@ -109,13 +109,13 @@ open class JavaLanguageFrontend(
             context = parse(file, parser)
             bench.addMeasurement()
             bench = Benchmark(this.javaClass, "Transform to CPG")
-            context!!.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
+            context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
             val fileDeclaration = newTranslationUnitDeclaration(file.toString(), context.toString())
             currentTU = fileDeclaration
             scopeManager.resetToGlobal(fileDeclaration)
-            val packDecl = context!!.packageDeclaration.orElse(null)
+            val packDecl = context?.packageDeclaration?.orElse(null)
             var namespaceDeclaration: NamespaceDeclaration? = null
             if (packDecl != null) {
                 namespaceDeclaration =
@@ -125,7 +125,7 @@ open class JavaLanguageFrontend(
                 scopeManager.enterScope(namespaceDeclaration)
             }
 
-            for (type in context!!.types) {
+            for (type in context?.types ?: listOf()) {
                 // handle each type. all declaration in this type will be added by the scope manager
                 // along
                 // the way
@@ -133,7 +133,7 @@ open class JavaLanguageFrontend(
                 scopeManager.addDeclaration(declaration)
             }
 
-            for (anImport in context!!.imports) {
+            for (anImport in context?.imports ?: listOf()) {
                 val incl = newIncludeDeclaration(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
             }
@@ -301,14 +301,18 @@ open class JavaLanguageFrontend(
         if (
             ex is UnsolvedSymbolException || ex.cause != null && ex.cause is UnsolvedSymbolException
         ) {
-            val qualifier: String =
+            val qualifier: String? =
                 if (ex is UnsolvedSymbolException) {
                     ex.name
                 } else {
-                    (ex.cause as UnsolvedSymbolException?)!!.name
+                    (ex.cause as UnsolvedSymbolException?)?.name
                 }
             // this comes from the JavaParser!
-            if (qualifier.startsWith("We are unable to find") || qualifier.startsWith("Solving ")) {
+            if (
+                qualifier == null ||
+                    qualifier.startsWith("We are unable to find") ||
+                    qualifier.startsWith("Solving ")
+            ) {
                 return null
             }
             val fromImport = getQualifiedNameFromImports(qualifier)?.toString()
@@ -391,7 +395,7 @@ open class JavaLanguageFrontend(
         val clazz = searchType.asClassOrInterfaceType()
         if (clazz != null) {
             // try to look for imports matching the name
-            for (importDeclaration in context!!.imports) {
+            for (importDeclaration in context?.imports ?: listOf()) {
                 if (importDeclaration.name.identifier.endsWith(clazz.name.identifier)) {
                     // TODO: handle type parameters
                     return parseType(importDeclaration.nameAsString)
@@ -401,8 +405,8 @@ open class JavaLanguageFrontend(
 
             // no import found, so our last guess is that the type is in the same package
             // as our current translation unit
-            val o = context!!.packageDeclaration
-            if (o.isPresent) {
+            val o = context?.packageDeclaration
+            if (o?.isPresent == true) {
                 name = o.get().nameAsString + language.namespaceDelimiter + name
             }
             val returnType = parseType(name)

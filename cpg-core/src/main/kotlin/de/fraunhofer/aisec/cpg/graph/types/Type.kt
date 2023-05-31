@@ -48,8 +48,10 @@ abstract class Type : Node {
     @Relationship(value = "SUPER_TYPE", direction = Relationship.Direction.OUTGOING)
     var superTypes = mutableSetOf<Type>()
         protected set
+
     var isPrimitive = false
         protected set
+
     open var typeOrigin: Origin? = null
 
     constructor() {
@@ -57,7 +59,7 @@ abstract class Type : Node {
     }
 
     constructor(typeName: String?) {
-        name = language.parseName(typeName!!)
+        name = language.parseName(typeName ?: UNKNOWN_TYPE_STRING)
         typeOrigin = Origin.UNRESOLVED
     }
 
@@ -67,11 +69,12 @@ abstract class Type : Node {
     }
 
     constructor(typeName: CharSequence, language: Language<out LanguageFrontend>?) {
-        if (this is FunctionType) {
-            name = Name(typeName.toString(), null, language)
-        } else {
-            name = language.parseName(typeName)
-        }
+        name =
+            if (this is FunctionType) {
+                Name(typeName.toString(), null, language)
+            } else {
+                language.parseName(typeName)
+            }
         this.language = language
         typeOrigin = Origin.UNRESOLVED
     }
@@ -102,7 +105,9 @@ abstract class Type : Node {
      *   pointer type we obtain the type the pointer is pointing towards
      */
     abstract fun dereference(): Type
+
     open fun refreshNames() {}
+
     var root: Type
         /**
          * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a
@@ -131,12 +136,14 @@ abstract class Type : Node {
 
     val typeName: String
         get() = name.toString()
+
     open val referenceDepth: Int
         /**
          * @return number of steps that are required in order to traverse the type chain until the
          *   root is reached
          */
         get() = 0
+
     val isFirstOrderType: Boolean
         /**
          * @return True if the Type parameter t is a FirstOrderType (Root of a chain) and not a
@@ -166,7 +173,7 @@ abstract class Type : Node {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        return if (other !is Type) false else name == other.name && language == other.language
+        return other is Type && name == other.name && language == other.language
     }
 
     override fun hashCode() = Objects.hash(name, language)

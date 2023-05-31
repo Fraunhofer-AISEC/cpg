@@ -1420,16 +1420,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/c/func_ptr_call.c")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), false) {
-                it.registerPass(TypeHierarchyResolver())
-                it.registerPass(ImportResolver())
-                it.registerPass(VariableUsageResolver())
-                it.registerPass(CallResolver()) // creates CG
-                it.registerPass(DFGPass())
-                it.registerPass(EvaluationOrderGraphPass()) // creates EOG
-                it.registerPass(TypeResolver())
-                it.registerPass(ControlFlowSensitiveDFGPass())
-                it.registerPass(FunctionPointerCallResolver())
-                it.registerPass(FilenameMapper())
+                it.registerPass<TypeHierarchyResolver>()
+                it.registerPass<ImportResolver>()
+                it.registerPass<VariableUsageResolver>()
+                it.registerPass<CallResolver>() // creates CG
+                it.registerPass<DFGPass>()
+                it.registerPass<EvaluationOrderGraphPass>() // creates EOG
+                it.registerPass<TypeResolver>()
+                it.registerPass<ControlFlowSensitiveDFGPass>()
+                it.registerPass<FunctionPointerCallResolver>()
+                it.registerPass<FilenameMapper>()
             }
 
         val target = tu.functions["target"]
@@ -1468,16 +1468,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/c/func_ptr_call.c")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), false) {
-                it.registerPass(TypeHierarchyResolver())
-                it.registerPass(ImportResolver())
-                it.registerPass(VariableUsageResolver())
-                it.registerPass(CallResolver()) // creates CG
-                it.registerPass(DFGPass())
-                it.registerPass(EvaluationOrderGraphPass()) // creates EOG
-                it.registerPass(TypeResolver())
-                it.registerPass(FunctionPointerCallResolver())
-                it.registerPass(ControlFlowSensitiveDFGPass())
-                it.registerPass(FilenameMapper())
+                it.registerPass<TypeHierarchyResolver>()
+                it.registerPass<ImportResolver>()
+                it.registerPass<VariableUsageResolver>()
+                it.registerPass<CallResolver>() // creates CG
+                it.registerPass<DFGPass>()
+                it.registerPass<EvaluationOrderGraphPass>() // creates EOG
+                it.registerPass<TypeResolver>()
+                it.registerPass<FunctionPointerCallResolver>()
+                it.registerPass<ControlFlowSensitiveDFGPass>()
+                it.registerPass<FilenameMapper>()
             }
 
         val target = tu.functions["target"]

@@ -72,8 +72,8 @@ abstract class LanguageFrontend(
     @Throws(TranslationException::class)
     fun parseAll(): List<TranslationUnitDeclaration> {
         val units = ArrayList<TranslationUnitDeclaration>()
-        for (component in config.softwareComponents.keys) {
-            for (sourceFile in config.softwareComponents[component]!!) {
+        for (componentFiles in config.softwareComponents.values) {
+            for (sourceFile in componentFiles) {
                 units.add(parse(sourceFile))
             }
         }
@@ -108,6 +108,7 @@ abstract class LanguageFrontend(
      * @return the location </T>
      */
     abstract fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation?
+
     override fun <N, S> setCodeAndLocation(cpgNode: N, astNode: S?) {
         if (cpgNode is Node && astNode != null) {
             if (config.codeInNodes) {

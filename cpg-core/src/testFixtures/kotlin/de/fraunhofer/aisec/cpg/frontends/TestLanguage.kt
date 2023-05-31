@@ -59,6 +59,7 @@ open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLangua
             "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
             "string" to StringType("string", this),
         )
+
     init {
         this.namespaceDelimiter = namespaceDelimiter
     }
@@ -74,7 +75,7 @@ open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLangua
 class StructTestLanguage(namespaceDelimiter: String = "::") :
     TestLanguage(namespaceDelimiter), HasStructs, HasClasses, HasDefaultArguments
 
-class TestLanguageFrontend(
+open class TestLanguageFrontend(
     scopeManager: ScopeManager = ScopeManager(),
     namespaceDelimiter: String = "::",
     language: Language<out LanguageFrontend> = TestLanguage(namespaceDelimiter)

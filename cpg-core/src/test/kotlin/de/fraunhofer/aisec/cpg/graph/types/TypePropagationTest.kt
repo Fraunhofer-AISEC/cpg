@@ -92,7 +92,7 @@ class TypePropagationTest {
                     }
                 }
             }
-        VariableUsageResolver().accept(result)
+        VariableUsageResolver(result.config, result.scopeManager).accept(result.components.first())
 
         val binaryOp =
             (result.functions["main"]?.body as? CompoundStatement)?.statements?.get(2)

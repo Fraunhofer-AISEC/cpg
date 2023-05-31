@@ -345,7 +345,7 @@ object Util {
                     }
                     break
                 } else {
-                    param.addPrevDFG(arguments[j]!!)
+                    param.addPrevDFG(arguments[j])
                 }
             }
             j++

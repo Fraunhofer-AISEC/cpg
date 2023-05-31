@@ -49,7 +49,7 @@ fun compatibleSignatures(
     return if (callSignature.size == functionSignature.size) {
         for (i in callSignature.indices) {
             if (
-                callSignature[i]!!.isPrimitive != functionSignature[i].isPrimitive &&
+                callSignature[i]?.isPrimitive != functionSignature[i].isPrimitive &&
                     !TypeManager.getInstance()
                         .isSupertypeOf(functionSignature[i], callSignature[i], provider)
             ) {
@@ -238,7 +238,7 @@ fun resolveConstructorWithDefaults(
 fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: String?): Boolean {
     val namePattern =
         Pattern.compile(
-            "(" + Pattern.quote(recordDeclaration!!.name.toString()) + "\\.)?" + Pattern.quote(name)
+            "(" + Pattern.quote(recordDeclaration?.name.toString()) + "\\.)?" + Pattern.quote(name)
         )
     val invocationCandidate =
         recordDeclaration.methods.filter { namePattern.matcher(it.name.toString()).matches() }
@@ -370,8 +370,10 @@ fun applyTemplateInstantiation(
     // Template.
     for ((declaration) in initializationSignature) {
         if (declaration is ParamVariableDeclaration) {
-            declaration.addPrevDFG(initializationSignature[declaration]!!)
-            initializationSignature[declaration]!!.addNextDFG(declaration)
+            initializationSignature[declaration]?.let {
+                declaration.addPrevDFG(it)
+                it.addNextDFG(declaration) // TODO: This should be unnecessary
+            }
         }
     }
 
@@ -402,7 +404,7 @@ fun signatureWithImplicitCastTransformation(
     for (i in callSignature.indices) {
         val callType = callSignature[i]
         val funcType = functionSignature[i]
-        if (callType!!.isPrimitive && funcType.isPrimitive && callType != funcType) {
+        if (callType?.isPrimitive == true && funcType.isPrimitive && callType != funcType) {
             val implicitCast = CastExpression()
             implicitCast.isImplicit = true
             implicitCast.castType = funcType

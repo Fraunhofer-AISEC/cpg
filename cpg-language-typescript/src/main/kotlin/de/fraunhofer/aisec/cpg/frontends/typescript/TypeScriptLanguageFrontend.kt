@@ -125,9 +125,11 @@ class TypeScriptLanguageFrontend(
         // the parser does not support comments so we
         // use a regex as best effort approach. We may recognize something as a comment, which is
         // acceptable.
-        val matches: Sequence<MatchResult> =
-            Regex("(?:/\\*((?:[^*]|(?:\\*+[^*/]))*)\\*+/)|(?://(.*))").findAll(currentFileContent!!)
-        matches.toList().forEach { result ->
+        val matches: Sequence<MatchResult>? =
+            currentFileContent?.let {
+                Regex("(?:/\\*((?:[^*]|(?:\\*+[^*/]))*)\\*+/)|(?://(.*))").findAll(it)
+            }
+        matches?.toList()?.forEach { result ->
             val groups = result.groups
             groups[0]?.let {
                 val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
@@ -143,7 +145,7 @@ class TypeScriptLanguageFrontend(
 
                 FrontendUtils.matchCommentToNode(
                     comment,
-                    commentRegion ?: translationUnit.location!!.region,
+                    commentRegion ?: translationUnit.location?.region ?: Region(),
                     translationUnit
                 )
             }
@@ -151,11 +153,7 @@ class TypeScriptLanguageFrontend(
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
-        return if (astNode is TypeScriptNode) {
-            return astNode.code
-        } else {
-            null
-        }
+        return (astNode as? TypeScriptNode)?.code
     }
 
     override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
@@ -165,8 +163,7 @@ class TypeScriptLanguageFrontend(
 
             // Correcting node positions as we have noticed that the parser computes wrong
             // positions, it is apparent when a file starts with a comment
-            astNode.code?.let {
-                val code = it
+            astNode.code?.let { code ->
                 currentFileContent?.let { position = it.indexOf(code, position) }
             }
 
@@ -174,14 +171,14 @@ class TypeScriptLanguageFrontend(
             // should hold, only exceptions are mispositioned empty ast elements
             val region =
                 getRegionFromStartEnd(File(astNode.location.file), position, astNode.location.end)
-            return PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
+            PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
         } else {
             null
         }
     }
 
     fun getRegionFromStartEnd(file: File, start: Int, end: Int): Region? {
-        val lineNumberReader: LineNumberReader = LineNumberReader(FileReader(file))
+        val lineNumberReader = LineNumberReader(FileReader(file))
 
         // Start and end position given by the parser are sometimes including spaces in front of the
         // code and loc.end - loc.pos > code.length. This is caused by the parser and results in
@@ -192,15 +189,17 @@ class TypeScriptLanguageFrontend(
         lineNumberReader.skip((end - start).toLong())
         val endLine = lineNumberReader.lineNumber + 1
 
-        val translationUnitSignature = currentFileContent!!
-        val region: Region? =
-            FrontendUtils.parseColumnPositionsFromFile(
-                translationUnitSignature,
-                end - start,
-                start,
-                startLine,
-                endLine
-            )
+        val translationUnitSignature = currentFileContent
+        val region =
+            translationUnitSignature?.let {
+                FrontendUtils.parseColumnPositionsFromFile(
+                    it,
+                    end - start,
+                    start,
+                    startLine,
+                    endLine
+                )
+            }
         return region
     }
 
@@ -221,9 +220,9 @@ class TypeScriptLanguageFrontend(
 
     private fun handleDecorator(node: TypeScriptNode): Annotation {
         // a decorator can contain a call expression with additional arguments
-        val call = node.firstChild("CallExpression")
-        if (call != null) {
-            val call = this.expressionHandler.handle(call) as CallExpression
+        val callExpr = node.firstChild("CallExpression")
+        return if (callExpr != null) {
+            val call = this.expressionHandler.handle(callExpr) as CallExpression
 
             val annotation = newAnnotation(call.name.localName, this.getCodeFromRawNode(node) ?: "")
 
@@ -232,14 +231,12 @@ class TypeScriptLanguageFrontend(
 
             call.disconnectFromGraph()
 
-            return annotation
+            annotation
         } else {
             // or a decorator just has a simple identifier
             val name = this.getIdentifierName(node)
 
-            val annotation = newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
-
-            return annotation
+            newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
         }
     }
 }

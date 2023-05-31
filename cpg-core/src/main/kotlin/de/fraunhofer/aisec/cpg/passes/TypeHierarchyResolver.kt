@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
@@ -54,12 +56,13 @@ import java.util.*
  * at places where it is crucial to have parsed all [RecordDeclaration]s. Otherwise, type
  * information in the graph might not be fully correct
  */
-open class TypeHierarchyResolver : Pass() {
+open class TypeHierarchyResolver(config: TranslationConfiguration, scopeManager: ScopeManager) :
+    ComponentPass(config, scopeManager) {
     protected val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enums = mutableListOf<EnumDeclaration>()
 
-    override fun accept(translationResult: TranslationResult) {
-        for (tu in translationResult.translationUnits) {
+    override fun accept(component: Component) {
+        for (tu in component.translationUnits) {
             findRecordsAndEnums(tu)
         }
         for (recordDecl in recordMap.values) {
@@ -75,7 +78,7 @@ open class TypeHierarchyResolver : Pass() {
             enumDecl.superTypeDeclarations = allSupertypes
         }
 
-        translationResult.translationUnits.forEach { SubgraphWalker.refreshType(it) }
+        component.translationUnits.forEach { SubgraphWalker.refreshType(it) }
     }
 
     protected fun findRecordsAndEnums(node: Node) {

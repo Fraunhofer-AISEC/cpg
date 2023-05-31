@@ -65,9 +65,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val key = node.children?.first()?.let { this.handle(it) }
         val value = node.children?.last()?.let { this.handle(it) }
 
-        val keyValue = newKeyValueExpression(key, value, this.frontend.getCodeFromRawNode(node))
-
-        return keyValue
+        return newKeyValueExpression(key, value, this.frontend.getCodeFromRawNode(node))
     }
 
     private fun handleJsxClosingElement(node: TypeScriptNode): Expression {
@@ -141,9 +139,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val key = node.children?.first()?.let { this.handle(it) }
         val value = node.children?.last()?.let { this.handle(it) }
 
-        val keyValue = newKeyValueExpression(key, value, this.frontend.getCodeFromRawNode(node))
-
-        return keyValue
+        return newKeyValueExpression(key, value, this.frontend.getCodeFromRawNode(node))
     }
 
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
@@ -173,14 +169,11 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleIdentifier(node: TypeScriptNode): Expression {
         val name = this.frontend.getCodeFromRawNode(node)?.trim() ?: ""
 
-        val ref =
-            newDeclaredReferenceExpression(
-                name,
-                newUnknownType(),
-                this.frontend.getCodeFromRawNode(node)
-            )
-
-        return ref
+        return newDeclaredReferenceExpression(
+            name,
+            newUnknownType(),
+            this.frontend.getCodeFromRawNode(node)
+        )
     }
 
     private fun handlePropertyAccessExpression(node: TypeScriptNode): Expression {
@@ -190,16 +183,13 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         val name = this.frontend.getCodeFromRawNode(node.children?.last()) ?: ""
 
-        val memberExpression =
-            newMemberExpression(
-                name,
-                base,
-                newUnknownType(),
-                ".",
-                this.frontend.getCodeFromRawNode(node)
-            )
-
-        return memberExpression
+        return newMemberExpression(
+            name,
+            base,
+            newUnknownType(),
+            ".",
+            this.frontend.getCodeFromRawNode(node)
+        )
     }
 
     private fun handleCallExpression(node: TypeScriptNode): Expression {
