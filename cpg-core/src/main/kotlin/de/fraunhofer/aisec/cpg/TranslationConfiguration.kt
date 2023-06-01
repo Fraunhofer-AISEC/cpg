@@ -237,6 +237,7 @@ private constructor(
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
+        private var useDefaultPasses = false
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -456,7 +457,6 @@ private constructor(
          * - [VariableUsageResolver]
          * - [CallResolver]
          * - [DFGPass]
-         * - [FunctionPointerCallResolver]
          * - [EvaluationOrderGraphPass]
          * - [TypeResolver]
          * - [ControlFlowSensitiveDFGPass]
@@ -474,12 +474,22 @@ private constructor(
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<FilenameMapper>()
+            useDefaultPasses = true
             return this
         }
 
-        /** Register extra passes declared by a frontend with [RegisterExtraPass] */
+        /**
+         * Register extra passes declared by a frontend with [RegisterExtraPass], but only if
+         * [useDefaultPasses] is true (which is set to true by invoking [defaultPasses]).
+         */
         @Throws(ConfigurationException::class)
         private fun registerExtraFrontendPasses() {
+            // We do not want to register any extra passes from the frontends if we are not running
+            // the default passes
+            if (!useDefaultPasses) {
+                return
+            }
+
             for (frontend in languages.map(Language<out LanguageFrontend>::frontend)) {
                 val extraPasses = frontend.findAnnotations<RegisterExtraPass>()
                 if (extraPasses.isNotEmpty()) {
