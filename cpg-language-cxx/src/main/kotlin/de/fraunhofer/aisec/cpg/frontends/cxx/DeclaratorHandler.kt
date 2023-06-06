@@ -261,7 +261,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 )
         } else {
             // a plain old function, outside any named scope
-            declaration = newFunctionDeclaration(name, ctx.rawSignature, ctx.parent)
+            declaration = newFunctionDeclaration(name, null, ctx.parent)
         }
 
         // We want to determine, whether we are currently outside a named scope on the AST
