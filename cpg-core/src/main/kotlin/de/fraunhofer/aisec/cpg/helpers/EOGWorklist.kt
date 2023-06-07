@@ -254,37 +254,10 @@ inline fun <reified K : Node, V> iterateEOG(
     return worklist.mop()
 }
 
-inline fun <reified K : PropertyEdge<Node>, V> iterateEOG(
-    startEdges: List<K>,
-    startState: State<K, V>,
-    transformation:
-        (PropertyEdge<Node>, State<K, V>, Worklist<K, K, V>) -> Pair<State<K, V>, Boolean>
-): State<K, V> {
-    val globalState = mutableMapOf<K, State<K, V>>()
-    for (startEdge in startEdges) {
-        globalState[startEdge] = startState
-    }
-    val worklist = Worklist(globalState)
-    startEdges.forEach { worklist.push(it, startState) }
-
-    while (worklist.isNotEmpty()) {
-        val (nextEdge, state) = worklist.pop()
-
-        val (newState, expectedUpdate) = transformation(nextEdge, state.duplicate(), worklist)
-        if (worklist.update(nextEdge, newState) || !expectedUpdate) {
-            nextEdge.end.nextEOGEdges.forEach {
-                if (it is K) worklist.push(it, newState.duplicate())
-            }
-        }
-    }
-    return worklist.mop()
-}
-
-inline fun <reified K : PropertyEdge<Node>, N : Node, V> iterateEOGEN(
+inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
-    transformation:
-        (PropertyEdge<Node>, State<N, V>, Worklist<K, N, V>) -> Pair<State<N, V>, Boolean>
+    transformation: (K, State<N, V>, Worklist<K, N, V>) -> Pair<State<N, V>, Boolean>
 ): State<N, V> {
     val globalState = mutableMapOf<K, State<N, V>>()
     for (startEdge in startEdges) {
