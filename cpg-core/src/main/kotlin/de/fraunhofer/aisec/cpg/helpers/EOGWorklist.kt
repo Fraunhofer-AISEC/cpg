@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import java.util.IdentityHashMap
 
 /**
- * A complete lattices is an ordered structure of values of type [T]. [T] could be anything, e.g., a
+ * A complete lattice is an ordered structure of values of type [T]. [T] could be anything, e.g., a
  * set, a new data structure (like a range), or anything else. [T] depends on the analysis and
  * typically has to abstract the value for the specific purpose.
  *
