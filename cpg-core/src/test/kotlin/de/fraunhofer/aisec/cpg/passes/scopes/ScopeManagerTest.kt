@@ -94,6 +94,10 @@ internal class ScopeManagerTest : BaseTest() {
         assertEquals(scopeA, final.lookupScope(namespaceA1))
         assertEquals(scopeA, final.lookupScope(namespaceA2))
 
+        // in the final scope manager, the global scope should not be any of the merged scope
+        // managers' original global scopes
+        assertFalse(listOf(s1, s2).map { it.globalScope }.contains(final.globalScope))
+
         // resolve symbol
         val call =
             frontend.newCallExpression(
