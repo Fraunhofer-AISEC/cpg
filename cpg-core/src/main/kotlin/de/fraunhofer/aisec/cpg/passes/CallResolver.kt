@@ -399,7 +399,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         return possibleContainingTypes
             .mapNotNull {
                 var record = recordMap[it.root.name]
-                if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
+                if (record == null && config.inferenceConfiguration.inferRecords == true) {
                     record = it.startInference(ctx).inferRecordDeclaration(it, currentTU)
                     // update the record map
                     if (record != null) it.root.name.let { name -> recordMap[name] = record }

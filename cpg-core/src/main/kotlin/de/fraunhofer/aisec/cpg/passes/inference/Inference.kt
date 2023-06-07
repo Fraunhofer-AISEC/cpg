@@ -86,28 +86,19 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         }
 
         return inferInScopeOf(start) {
-            log.debug(
-                "Inferring a new function declaration {} with parameter types {}",
-                name,
-                signature.map { it?.name }
-            )
-
-            // "upgrade" our struct to a class, if it was inferred by us, since we are calling
-            // methods on it. But only if the language supports classes in the first place.
-            if (
-                record?.isInferred == true &&
-                    record.kind == "struct" &&
-                    record.language is HasClasses
-            ) {
-                record.kind = "class"
-            }
-
             val inferred: FunctionDeclaration =
                 if (record != null) {
                     newMethodDeclaration(name ?: "", code, isStatic, record)
                 } else {
                     newFunctionDeclaration(name ?: "", code)
                 }
+
+            log.debug(
+                "Inferred a new {} declaration {} with parameter types {}",
+                if (inferred is MethodDeclaration) "method" else "function",
+                inferred.name,
+                signature.map { it?.name }
+            )
 
             createInferredParameters(inferred, signature)
 
@@ -124,6 +115,16 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 if (isStatic) {
                     record.staticImports.add(inferred)
                 }
+            }
+
+            // "upgrade" our struct to a class, if it was inferred by us, since we are calling
+            // methods on it. But only if the language supports classes in the first place.
+            if (
+                record?.isInferred == true &&
+                    record.kind == "struct" &&
+                    record.language is HasClasses
+            ) {
+                record.kind = "class"
             }
 
             inferred
