@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.TypeManager
@@ -185,7 +184,8 @@ private constructor(
 
                 PrintWriter(tmpFile).use { writer ->
                     list.forEach {
-                        if (CXXLanguageFrontend.CXX_EXTENSIONS.contains(Util.getExtension(it))) {
+                        val cxxExtensions = listOf(".c", ".cpp", ".cc")
+                        if (cxxExtensions.contains(Util.getExtension(it))) {
                             if (ctx.config.topLevel != null) {
                                 val topLevel = ctx.config.topLevel.toPath()
                                 writer.write(

@@ -25,13 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.TestUtils
 import java.io.File
 import kotlin.io.path.Path
 import kotlin.test.Test
-import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 class BenchmarkTest {
 
@@ -52,35 +49,5 @@ class BenchmarkTest {
 
         assertEquals(relPath, relativeOrAbsolute(relPath, null))
         assertEquals(absPath, relativeOrAbsolute(absPath, null))
-    }
-
-    @Test
-    fun testGetBenchmarkResult() {
-        val file = File("src/test/resources/components/foreachstmt.cpp")
-        val tr = TestUtils.analyze(listOf(file), file.parentFile.toPath(), true)
-
-        assertNotNull(tr)
-        val res = tr.benchmarkResults
-        assertNotNull(res)
-
-        val resMap = res.entries.associate { it[0] to it[1] }
-        assertEquals(1, resMap["Number of files translated"])
-
-        val files = resMap["Translated file(s)"] as List<*>
-        assertNotNull(files)
-        assertEquals(1, files.size)
-        assertEquals(Path("foreachstmt.cpp"), files[0])
-
-        val json = res.json
-        assertContains(json, "{")
-    }
-
-    @Test
-    fun testPrintBenchmark() {
-        val file = File("src/test/resources/components/foreachstmt.cpp")
-        val tr = TestUtils.analyze(listOf(file), file.parentFile.toPath(), true)
-
-        assertNotNull(tr)
-        tr.benchmarkResults.print()
     }
 }

@@ -30,8 +30,6 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.cpp.CLanguage
-import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
@@ -239,6 +237,7 @@ private constructor(
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
+        private var useDefaultPasses = false
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -458,7 +457,6 @@ private constructor(
          * - [VariableUsageResolver]
          * - [CallResolver]
          * - [DFGPass]
-         * - [FunctionPointerCallResolver]
          * - [EvaluationOrderGraphPass]
          * - [TypeResolver]
          * - [ControlFlowSensitiveDFGPass]
@@ -475,14 +473,23 @@ private constructor(
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()
-            registerPass<FunctionPointerCallResolver>()
             registerPass<FilenameMapper>()
+            useDefaultPasses = true
             return this
         }
 
-        /** Register extra passes declared by a frontend with [RegisterExtraPass] */
+        /**
+         * Register extra passes declared by a frontend with [RegisterExtraPass], but only if
+         * [useDefaultPasses] is true (which is set to true by invoking [defaultPasses]).
+         */
         @Throws(ConfigurationException::class)
         private fun registerExtraFrontendPasses() {
+            // We do not want to register any extra passes from the frontends if we are not running
+            // the default passes
+            if (!useDefaultPasses) {
+                return
+            }
+
             for (frontend in languages.map(Language<out LanguageFrontend>::frontend)) {
                 val extraPasses = frontend.findAnnotations<RegisterExtraPass>()
                 if (extraPasses.isNotEmpty()) {
@@ -513,9 +520,14 @@ private constructor(
         }
 
         /** Register all default languages. */
+        @Deprecated(
+            message =
+                "We moved all languages out of the core package and therefore you should register individual languages instead. For compatibility reasons we do a dynamic lookup to Java and C/C++ languages here but this function will be removed in the future."
+        )
         fun defaultLanguages(): Builder {
-            registerLanguage(CLanguage())
-            registerLanguage(CPPLanguage())
+            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
+            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
+            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
 
             return this
         }
