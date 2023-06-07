@@ -172,7 +172,10 @@ class ScopeManager : ScopeProvider {
                 }
             }
 
-            scopeMap.putAll(manager.scopeMap)
+            // We need to make sure that we do not put the "null" key (aka the global scope) of the
+            // individual scope manager into our map, otherwise we would overwrite our merged global
+            // scope.
+            scopeMap.putAll(manager.scopeMap.filter { it.key != null })
 
             // free the maps, just to clear up some things. this scope manager will not be used
             // anymore
