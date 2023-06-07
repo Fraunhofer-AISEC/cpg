@@ -391,7 +391,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             handleUnresolvedCalls(call)
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach { funDecl ->
-                if (funDecl.isImplicit && inferDfgForUnresolvedSymbols) {
+                if (funDecl.isInferred && inferDfgForUnresolvedSymbols) {
                     if (call is MemberCallExpression && !call.isStatic) {
                         call.base?.let { funDecl.addPrevDFG(it) }
                     }
