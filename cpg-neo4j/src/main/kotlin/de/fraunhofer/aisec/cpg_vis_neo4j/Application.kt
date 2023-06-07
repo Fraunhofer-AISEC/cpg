@@ -220,6 +220,13 @@ class Application : Callable<Int> {
     )
     private var benchmarkJson: File? = null
 
+    @CommandLine.Option(
+        names = ["--include-blocklist"],
+        description =
+            ["Load includeBlocklist from file to exclude specific header files form parsing"]
+    )
+    private var includeBlocklist: File? = null
+
     private var passClassList =
         listOf(
             TypeHierarchyResolver::class,
@@ -416,6 +423,13 @@ class Application : Callable<Int> {
             translationConfiguration.inferenceConfiguration(
                 InferenceConfiguration.builder().inferRecords(true).build()
             )
+        }
+
+        includeBlocklist?.let { theFile ->
+            log.info("Load includeBlockList from file: $theFile")
+            theFile.inputStream().bufferedReader().lines().map(String::trim).forEach {
+                translationConfiguration.includeBlocklist(it)
+            }
         }
         return translationConfiguration.build()
     }
