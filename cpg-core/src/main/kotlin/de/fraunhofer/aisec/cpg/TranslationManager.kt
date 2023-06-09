@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.*
@@ -220,7 +219,7 @@ private constructor(
                 sourceLocations = list
             }
 
-            TypeManager.setTypeSystemActive(ctx.config.typeSystemActiveInFrontend)
+            TypeManager.isTypeSystemActive = ctx.config.typeSystemActiveInFrontend
 
             usedFrontends.addAll(
                 if (useParallelFrontends) {
@@ -231,7 +230,7 @@ private constructor(
             )
 
             if (!config.typeSystemActiveInFrontend) {
-                TypeManager.setTypeSystemActive(true)
+                TypeManager.isTypeSystemActive = true
 
                 result.components.forEach { s ->
                     s.translationUnits.forEach {

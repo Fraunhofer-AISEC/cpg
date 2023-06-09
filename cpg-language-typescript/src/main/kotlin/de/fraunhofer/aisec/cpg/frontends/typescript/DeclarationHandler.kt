@@ -56,8 +56,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handlePropertySignature(node: TypeScriptNode): FieldDeclaration {
         val name = this.frontend.getIdentifierName(node)
-        val type =
-            node.typeChildNode?.let { this.frontend.typeHandler.handle(it) } ?: newUnknownType()
+        val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
         val field =
             newFieldDeclaration(
@@ -110,8 +109,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleParameter(node: TypeScriptNode): Declaration {
         val name = this.frontend.getIdentifierName(node)
-        val type =
-            node.typeChildNode?.let { this.frontend.typeHandler.handle(it) } ?: newUnknownType()
+        val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
         return newParamVariableDeclaration(name, type, false, this.frontend.codeOf(node))
     }
@@ -160,9 +158,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 else -> newFunctionDeclaration(name, this.frontend.codeOf(node))
             }
 
-        node.typeChildNode?.let {
-            func.type = this.frontend.typeHandler.handle(it) ?: newUnknownType()
-        }
+        node.typeChildNode?.let { func.type = this.frontend.typeOf(it) }
 
         this.frontend.scopeManager.enterScope(func)
 
@@ -202,7 +198,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         // TODO: support ObjectBindingPattern (whatever it is). seems to be multiple assignment
 
         val declaration =
-            newVariableDeclaration(name, newUnknownType(), this.frontend.codeOf(node), false)
+            newVariableDeclaration(name, unknownType(), this.frontend.codeOf(node), false)
         declaration.location = this.frontend.locationOf(node)
 
         // the last node that is not an identifier or an object binding pattern is an initializer

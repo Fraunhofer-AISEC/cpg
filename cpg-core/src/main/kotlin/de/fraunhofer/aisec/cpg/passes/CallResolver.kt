@@ -98,7 +98,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
 
     protected fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node?) {
         if (currentNode is MethodDeclaration && currentClass != null) {
-            containingType[currentNode] = currentNode.parseType(currentClass.name)
+            containingType[currentNode] = currentNode.objectType(currentClass.name)
         }
     }
 
@@ -559,7 +559,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         }
 
     protected fun getOverridingCandidates(
-        possibleSubTypes: Set<Type?>,
+        possibleSubTypes: Set<Type>,
         declaration: FunctionDeclaration
     ): Set<FunctionDeclaration> {
         return declaration.overriddenBy
@@ -573,7 +573,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
      * @return ConstructorDeclaration that matches the provided signature
      */
     protected fun getConstructorDeclarationDirectMatch(
-        signature: List<Type?>,
+        signature: List<Type>,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration? {
         for (constructor in recordDeclaration.constructors) {
@@ -595,7 +595,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         constructExpression: ConstructExpression,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
-        val signature: List<Type?> = constructExpression.signature
+        val signature = constructExpression.signature
         var constructorCandidate =
             getConstructorDeclarationDirectMatch(signature, recordDeclaration)
         if (constructorCandidate == null && constructExpression.language is HasDefaultArguments) {
@@ -617,7 +617,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     }
 
     protected fun getConstructorDeclarationForExplicitInvocation(
-        signature: List<Type?>,
+        signature: List<Type>,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
         return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }

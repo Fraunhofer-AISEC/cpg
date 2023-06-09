@@ -25,21 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.ARRAY
+import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -63,7 +62,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val decl = main.iterator().next()
         val ls = decl.variables["ls"]
         assertNotNull(ls)
-        assertEquals(tu.parseType("std::vector<int>", true), ls.type)
+        assertEquals(tu.objectType("std::vector", listOf(tu.objectType("int"))), ls.type)
         assertLocalName("ls", ls)
 
         val forEachStatement = decl.getBodyStatementAs(1, ForEachStatement::class.java)
@@ -123,33 +122,36 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/typeidexpr.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
-        assertNotNull(main)
+        with(tu) {
+            assertNotNull(main)
 
-        val funcDecl = main.iterator().next()
-        val i = funcDecl.variables["i"]
-        assertNotNull(i)
+            val funcDecl = main.iterator().next()
+            val i = funcDecl.variables["i"]
+            assertNotNull(i)
 
-        val sizeof = i.initializer as? TypeIdExpression
-        assertNotNull(sizeof)
-        assertLocalName("sizeof", sizeof)
-        assertEquals(tu.parseType("std::size_t", true), sizeof.type)
+            val sizeof = i.initializer as? TypeIdExpression
+            assertNotNull(sizeof)
+            assertLocalName("sizeof", sizeof)
+            assertEquals(tu.objectType("std::size_t"), sizeof.type)
 
-        val typeInfo = funcDecl.variables["typeInfo"]
-        assertNotNull(typeInfo)
+            val typeInfo = funcDecl.variables["typeInfo"]
+            assertNotNull(typeInfo)
 
-        val typeid = typeInfo.initializer as? TypeIdExpression
-        assertNotNull(typeid)
-        assertLocalName("typeid", typeid)
-        assertEquals(tu.parseType("const std::type_info&", true), typeid.type)
+            val typeid = typeInfo.initializer as? TypeIdExpression
+            assertNotNull(typeid)
+            assertLocalName("typeid", typeid)
 
-        val j = funcDecl.variables["j"]
-        assertNotNull(j)
+            assertEquals(objectType("std::type_info").ref(), typeid.type)
 
-        val alignOf = j.initializer as? TypeIdExpression
-        assertNotNull(sizeof)
-        assertNotNull(alignOf)
-        assertLocalName("alignof", alignOf)
-        assertEquals(tu.parseType("std::size_t", true), alignOf.type)
+            val j = funcDecl.variables["j"]
+            assertNotNull(j)
+
+            val alignOf = j.initializer as? TypeIdExpression
+            assertNotNull(sizeof)
+            assertNotNull(alignOf)
+            assertLocalName("alignof", alignOf)
+            assertEquals(tu.objectType("std::size_t"), alignOf.type)
+        }
     }
 
     @Test
@@ -157,44 +159,48 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     fun testCast() {
         val file = File("src/test/resources/components/castexpr.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val main = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
-        val e =
-            Objects.requireNonNull(main!!.getBodyStatementAs(0, DeclarationStatement::class.java))
-                ?.singleDeclaration as VariableDeclaration
-        assertNotNull(e)
-        assertEquals(tu.parseType("ExtendedClass*", true), e.type)
+        with(tu) {
+            val main = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
+            val e =
+                Objects.requireNonNull(
+                        main!!.getBodyStatementAs(0, DeclarationStatement::class.java)
+                    )
+                    ?.singleDeclaration as VariableDeclaration
+            assertNotNull(e)
+            assertEquals(objectType("ExtendedClass").pointer(), e.type)
 
-        val b =
-            Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement::class.java))
-                ?.singleDeclaration as VariableDeclaration
-        assertNotNull(b)
-        assertEquals(tu.parseType("BaseClass*", true), b.type)
+            val b =
+                Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement::class.java))
+                    ?.singleDeclaration as VariableDeclaration
+            assertNotNull(b)
+            assertEquals(objectType("BaseClass").pointer(), b.type)
 
-        // initializer
-        var cast = b.initializer as? CastExpression
-        assertNotNull(cast)
-        assertEquals(tu.parseType("BaseClass*", true), cast.castType)
+            // initializer
+            var cast = b.initializer as? CastExpression
+            assertNotNull(cast)
+            assertEquals(objectType("BaseClass").pointer(), cast.castType)
 
-        val staticCast = main.getBodyStatementAs(2, BinaryOperator::class.java)
-        assertNotNull(staticCast)
-        cast = staticCast.rhs as CastExpression
-        assertNotNull(cast)
-        assertLocalName("static_cast", cast)
+            val staticCast = main.getBodyStatementAs(2, BinaryOperator::class.java)
+            assertNotNull(staticCast)
+            cast = staticCast.rhs as CastExpression
+            assertNotNull(cast)
+            assertLocalName("static_cast", cast)
 
-        val reinterpretCast = main.getBodyStatementAs(3, BinaryOperator::class.java)
-        assertNotNull(reinterpretCast)
-        cast = reinterpretCast.rhs as CastExpression
-        assertNotNull(cast)
-        assertLocalName("reinterpret_cast", cast)
+            val reinterpretCast = main.getBodyStatementAs(3, BinaryOperator::class.java)
+            assertNotNull(reinterpretCast)
+            cast = reinterpretCast.rhs as CastExpression
+            assertNotNull(cast)
+            assertLocalName("reinterpret_cast", cast)
 
-        val d =
-            Objects.requireNonNull(main.getBodyStatementAs(4, DeclarationStatement::class.java))
-                ?.singleDeclaration as VariableDeclaration
-        assertNotNull(d)
+            val d =
+                Objects.requireNonNull(main.getBodyStatementAs(4, DeclarationStatement::class.java))
+                    ?.singleDeclaration as VariableDeclaration
+            assertNotNull(d)
 
-        cast = d.initializer as? CastExpression
-        assertNotNull(cast)
-        assertEquals(tu.parseType("int", true), cast.castType)
+            cast = d.initializer as? CastExpression
+            assertNotNull(cast)
+            assertEquals(primitiveType("int"), cast.castType)
+        }
     }
 
     @Test
@@ -203,47 +209,47 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/cxx/arrays.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
-        assertNotNull(main)
-        assertNotNull(main)
+        with(tu) {
+            assertNotNull(main)
 
-        val statement = main.body as CompoundStatement
+            val statement = main.body as CompoundStatement
 
-        // first statement is the variable declaration
-        val x =
-            (statement.statements[0] as DeclarationStatement).singleDeclaration
-                as VariableDeclaration
-        assertNotNull(x)
-        assertEquals(tu.parseType("int[]", true), x.type)
+            // first statement is the variable declaration
+            val x =
+                (statement.statements[0] as DeclarationStatement).singleDeclaration
+                    as VariableDeclaration
+            assertNotNull(x)
+            assertEquals(primitiveType("int").array(), x.type)
 
-        // initializer is an initializer list expression
-        val ile = x.initializer as? InitializerListExpression
-        assertNotNull(ile)
+            // initializer is an initializer list expression
+            val ile = x.initializer as? InitializerListExpression
+            assertNotNull(ile)
 
-        val initializers = ile.initializers
-        assertNotNull(initializers)
-        assertEquals(3, initializers.size)
+            val initializers = ile.initializers
+            assertNotNull(initializers)
+            assertEquals(3, initializers.size)
 
-        // second statement is an expression directly
-        val ase = statement.statements[1] as ArraySubscriptionExpression
-        assertNotNull(ase)
-        assertEquals(x, (ase.arrayExpression as DeclaredReferenceExpression).refersTo)
-        assertEquals(0, (ase.subscriptExpression as Literal<*>).value)
+            // second statement is an expression directly
+            val ase = statement.statements[1] as ArraySubscriptionExpression
+            assertNotNull(ase)
+            assertEquals(x, (ase.arrayExpression as DeclaredReferenceExpression).refersTo)
+            assertEquals(0, (ase.subscriptExpression as Literal<*>).value)
 
-        // third statement declares a pointer to an array
-        val a =
-            (statement.statements[2] as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration
-        assertNotNull(a)
+            // third statement declares a pointer to an array
+            val a =
+                (statement.statements[2] as? DeclarationStatement)?.singleDeclaration
+                    as? VariableDeclaration
+            assertNotNull(a)
 
-        val type = a.type
-        assertTrue(type is PointerType && type.pointerOrigin == PointerType.PointerOrigin.POINTER)
+            val type = a.type
+            assertTrue(
+                type is PointerType && type.pointerOrigin == PointerType.PointerOrigin.POINTER
+            )
 
-        val elementType = (a.type as? PointerType)?.elementType
-        assertNotNull(elementType)
-        assertTrue(
-            elementType is PointerType &&
-                elementType.pointerOrigin == PointerType.PointerOrigin.ARRAY
-        )
+            val elementType = (a.type as? PointerType)?.elementType
+            assertNotNull(elementType)
+            assertTrue(elementType is PointerType && elementType.pointerOrigin == ARRAY)
+        }
     }
 
     @Test
@@ -415,85 +421,88 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     fun testDeclarationStatement() {
         val file = File("src/test/resources/cxx/declstmt.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val function = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
-        val statements = function?.statements
-        assertNotNull(statements)
-        statements.forEach(
-            Consumer { node: Statement ->
-                log.debug("{}", node)
-                assertTrue(
-                    node is DeclarationStatement ||
-                        statements.indexOf(node) == statements.size - 1 && node is ReturnStatement
+        with(tu) {
+            val function = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
+            val statements = function?.statements
+            assertNotNull(statements)
+            statements.forEach(
+                Consumer { node: Statement ->
+                    log.debug("{}", node)
+                    assertTrue(
+                        node is DeclarationStatement ||
+                            statements.indexOf(node) == statements.size - 1 &&
+                                node is ReturnStatement
+                    )
+                }
+            )
+
+            val declFromMultiplicateExpression =
+                (statements[0] as DeclarationStatement).getSingleDeclarationAs(
+                    VariableDeclaration::class.java
                 )
-            }
-        )
+            assertEquals(objectType("SSL_CTX").pointer(), declFromMultiplicateExpression.type)
+            assertLocalName("ptr", declFromMultiplicateExpression)
 
-        val declFromMultiplicateExpression =
-            (statements[0] as DeclarationStatement).getSingleDeclarationAs(
-                VariableDeclaration::class.java
-            )
-        assertEquals(tu.parseType("SSL_CTX*", true), declFromMultiplicateExpression.type)
-        assertLocalName("ptr", declFromMultiplicateExpression)
+            val withInitializer =
+                (statements[1] as DeclarationStatement).getSingleDeclarationAs(
+                    VariableDeclaration::class.java
+                )
+            var initializer = withInitializer.initializer
+            assertNotNull(initializer)
+            assertTrue(initializer is Literal<*>)
+            assertEquals(1, initializer.value)
 
-        val withInitializer =
-            (statements[1] as DeclarationStatement).getSingleDeclarationAs(
-                VariableDeclaration::class.java
-            )
-        var initializer = withInitializer.initializer
-        assertNotNull(initializer)
-        assertTrue(initializer is Literal<*>)
-        assertEquals(1, initializer.value)
+            val twoDeclarations = statements[2].declarations
+            assertEquals(2, twoDeclarations.size)
 
-        val twoDeclarations = statements[2].declarations
-        assertEquals(2, twoDeclarations.size)
+            val b = twoDeclarations[0] as VariableDeclaration
+            assertNotNull(b)
+            assertLocalName("b", b)
+            assertEquals(primitiveType("int").reference(POINTER), b.type)
 
-        val b = twoDeclarations[0] as VariableDeclaration
-        assertNotNull(b)
-        assertLocalName("b", b)
-        assertEquals(tu.parseType("int*", false), b.type)
+            val c = twoDeclarations[1] as VariableDeclaration
+            assertNotNull(c)
+            assertLocalName("c", c)
+            assertEquals(primitiveType("int"), c.type)
 
-        val c = twoDeclarations[1] as VariableDeclaration
-        assertNotNull(c)
-        assertLocalName("c", c)
-        assertEquals(tu.parseType("int", false), c.type)
+            val withoutInitializer =
+                (statements[3] as DeclarationStatement).getSingleDeclarationAs(
+                    VariableDeclaration::class.java
+                )
+            initializer = withoutInitializer.initializer
+            assertEquals(primitiveType("int").reference(POINTER), withoutInitializer.type)
+            assertLocalName("d", withoutInitializer)
+            assertNull(initializer)
 
-        val withoutInitializer =
-            (statements[3] as DeclarationStatement).getSingleDeclarationAs(
-                VariableDeclaration::class.java
-            )
-        initializer = withoutInitializer.initializer
-        assertEquals(tu.parseType("int*", true), withoutInitializer.type)
-        assertLocalName("d", withoutInitializer)
-        assertNull(initializer)
+            val qualifiedType =
+                (statements[4] as DeclarationStatement).getSingleDeclarationAs(
+                    VariableDeclaration::class.java
+                )
+            assertEquals(objectType("std::string"), qualifiedType.type)
+            assertLocalName("text", qualifiedType)
+            assertTrue(qualifiedType.initializer is Literal<*>)
+            assertEquals("some text", (qualifiedType.initializer as? Literal<*>)?.value)
 
-        val qualifiedType =
-            (statements[4] as DeclarationStatement).getSingleDeclarationAs(
-                VariableDeclaration::class.java
-            )
-        assertEquals(tu.parseType("std::string", true), qualifiedType.type)
-        assertLocalName("text", qualifiedType)
-        assertTrue(qualifiedType.initializer is Literal<*>)
-        assertEquals("some text", (qualifiedType.initializer as? Literal<*>)?.value)
+            val pointerWithAssign =
+                (statements[5] as DeclarationStatement).getSingleDeclarationAs(
+                    VariableDeclaration::class.java
+                )
+            assertEquals(incompleteType().reference(POINTER), pointerWithAssign.type)
+            assertLocalName("ptr2", pointerWithAssign)
+            assertLocalName("NULL", pointerWithAssign.initializer)
 
-        val pointerWithAssign =
-            (statements[5] as DeclarationStatement).getSingleDeclarationAs(
-                VariableDeclaration::class.java
-            )
-        assertEquals(tu.parseType("void*", true), pointerWithAssign.type)
-        assertLocalName("ptr2", pointerWithAssign)
-        assertLocalName("NULL", pointerWithAssign.initializer)
+            val classWithVariable = statements[6].declarations
+            assertEquals(2, classWithVariable.size)
 
-        val classWithVariable = statements[6].declarations
-        assertEquals(2, classWithVariable.size)
+            val classA = classWithVariable[0] as RecordDeclaration
+            assertNotNull(classA)
+            assertLocalName("A", classA)
 
-        val classA = classWithVariable[0] as RecordDeclaration
-        assertNotNull(classA)
-        assertLocalName("A", classA)
-
-        val myA = classWithVariable[1] as VariableDeclaration
-        assertNotNull(myA)
-        assertLocalName("myA", myA)
-        assertEquals(classA, (myA.type as ObjectType).recordDeclaration)
+            val myA = classWithVariable[1] as VariableDeclaration
+            assertNotNull(myA)
+            assertLocalName("myA", myA)
+            assertEquals(classA, (myA.type as ObjectType).recordDeclaration)
+        }
     }
 
     @Test
@@ -657,7 +666,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // syntactically no different than the previous ones
         val stmt = statements[4] as DeclarationStatement
         val decl = stmt.singleDeclaration as VariableDeclaration
-        assertEquals(tu.parseType("std::string*", true), decl.type)
+        with(tu) { assertEquals(objectType("std::string").pointer(), decl.type) }
         assertLocalName("notMultiplication", decl)
         assertTrue(decl.initializer is BinaryOperator)
 
@@ -686,7 +695,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val constant = recordDeclaration.fields["CONSTANT"]
         assertNotNull(constant)
-        assertEquals(tu.parseType("void*", true), field.type)
+        assertEquals(tu.incompleteType().reference(POINTER), field.type)
         assertEquals(3, recordDeclaration.methods.size)
 
         val method = recordDeclaration.methods[0]
@@ -704,12 +713,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val methodWithParam = recordDeclaration.methods[1]
         assertLocalName("method", methodWithParam)
         assertEquals(1, methodWithParam.parameters.size)
-        assertEquals(tu.parseType("int", true), methodWithParam.parameters[0].type)
+        assertEquals(tu.primitiveType("int"), methodWithParam.parameters[0].type)
         assertEquals(
             FunctionType(
                 "(int)void*",
-                listOf(tu.parseType("int", true)),
-                listOf(tu.parseType("void*", true)),
+                listOf(tu.primitiveType("int")),
+                listOf(tu.incompleteType().reference(POINTER)),
                 CPPLanguage()
             ),
             methodWithParam.type
@@ -725,7 +734,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val inlineMethod = recordDeclaration.methods[2]
         assertLocalName("inlineMethod", inlineMethod)
         assertEquals(
-            FunctionType("()void*", listOf(), listOf(tu.parseType("void*", true)), CPPLanguage()),
+            FunctionType(
+                "()void*",
+                listOf(),
+                listOf(tu.incompleteType().reference(POINTER)),
+                CPPLanguage()
+            ),
             inlineMethod.type
         )
         assertTrue(inlineMethod.hasBody())
@@ -736,7 +750,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             FunctionType(
                 "()SomeClass",
                 listOf(),
-                listOf(tu.parseType("SomeClass", true)),
+                listOf(tu.objectType("SomeClass")),
                 CPPLanguage()
             ),
             inlineConstructor.type
@@ -746,12 +760,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val constructorDefinition = tu.getDeclarationAs(3, ConstructorDeclaration::class.java)
         assertNotNull(constructorDefinition)
         assertEquals(1, constructorDefinition.parameters.size)
-        assertEquals(tu.parseType("int", true), constructorDefinition.parameters[0].type)
+        assertEquals(tu.primitiveType("int"), constructorDefinition.parameters[0].type)
         assertEquals(
             FunctionType(
                 "(int)SomeClass",
-                listOf(tu.parseType("int", false)),
-                listOf(tu.parseType("SomeClass", true)),
+                listOf(tu.primitiveType("int")),
+                listOf(tu.objectType("SomeClass")),
                 CPPLanguage()
             ),
             constructorDefinition.type
@@ -841,7 +855,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val hex = tu.variables["hex"]
         assertNotNull(hex)
         assertIs<IntegerType>(hex.type)
-        assertLocalName("unsigned long long", hex.type)
+        assertLocalName("unsigned long long int", hex.type)
 
         val duration_ms = tu.variables["duration_ms"]
         assertNotNull(duration_ms)
@@ -877,7 +891,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         // int z[] = { 2, 3, 4 };
         val z = tu.getDeclarationAs(2, VariableDeclaration::class.java)
-        assertEquals(tu.parseType("int[]", true), z!!.type)
+        assertNotNull(z)
+        with(tu) { assertEquals(primitiveType("int").array(), z.type) }
 
         initializer = z.initializer
         assertNotNull(initializer)
@@ -893,53 +908,54 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/cxx/objcreation.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         assertNotNull(tu)
+        with(tu) {
+            // get the main method
+            val main = tu.getDeclarationAs(3, FunctionDeclaration::class.java)
+            val statement = main!!.body as CompoundStatement
 
-        // get the main method
-        val main = tu.getDeclarationAs(3, FunctionDeclaration::class.java)
-        val statement = main!!.body as CompoundStatement
+            // Integer i
+            val i =
+                (statement.statements[0] as DeclarationStatement).singleDeclaration
+                    as VariableDeclaration
+            // type should be Integer
+            assertEquals(tu.objectType("Integer"), i.type)
 
-        // Integer i
-        val i =
-            (statement.statements[0] as DeclarationStatement).singleDeclaration
-                as VariableDeclaration
-        // type should be Integer
-        assertEquals(tu.parseType("Integer", true), i.type)
+            // initializer should be a construct expression
+            var constructExpression = i.initializer as? ConstructExpression
+            assertNotNull(constructExpression)
+            // type of the construct expression should also be Integer
+            assertEquals(tu.objectType("Integer"), constructExpression.type)
 
-        // initializer should be a construct expression
-        var constructExpression = i.initializer as? ConstructExpression
-        assertNotNull(constructExpression)
-        // type of the construct expression should also be Integer
-        assertEquals(tu.parseType("Integer", true), constructExpression.type)
+            // auto (Integer) m
+            val m =
+                (statement.statements[6] as DeclarationStatement).singleDeclaration
+                    as VariableDeclaration
+            // type should be Integer*
+            assertEquals(objectType("Integer").pointer(), m.type)
 
-        // auto (Integer) m
-        val m =
-            (statement.statements[6] as DeclarationStatement).singleDeclaration
-                as VariableDeclaration
-        // type should be Integer*
-        assertEquals(tu.parseType("Integer*", true), m.type)
+            val constructor = constructExpression.constructor
+            assertNotNull(constructor)
+            assertLocalName("Integer", constructor)
+            assertFalse(constructor.isImplicit)
 
-        val constructor = constructExpression.constructor
-        assertNotNull(constructor)
-        assertLocalName("Integer", constructor)
-        assertFalse(constructor.isImplicit)
+            // initializer should be a new expression
+            val newExpression = m.initializer as? NewExpression
+            assertNotNull(newExpression)
+            // type of the new expression should also be Integer*
+            assertEquals(objectType("Integer").pointer(), newExpression.type)
 
-        // initializer should be a new expression
-        val newExpression = m.initializer as? NewExpression
-        assertNotNull(newExpression)
-        // type of the new expression should also be Integer*
-        assertEquals(tu.parseType("Integer*", true), newExpression.type)
+            // initializer should be a construct expression
+            constructExpression = newExpression.initializer as? ConstructExpression
+            assertNotNull(constructExpression)
+            // type of the construct expression should be Integer
+            assertEquals(objectType("Integer"), constructExpression.type)
 
-        // initializer should be a construct expression
-        constructExpression = newExpression.initializer as? ConstructExpression
-        assertNotNull(constructExpression)
-        // type of the construct expression should be Integer
-        assertEquals(tu.parseType("Integer", true), constructExpression.type)
-
-        // argument should be named k and of type m
-        val k = constructExpression.arguments[0] as DeclaredReferenceExpression
-        assertLocalName("k", k)
-        // type of the construct expression should also be Integer
-        assertEquals(tu.parseType("int", true), k.type)
+            // argument should be named k and of type m
+            val k = constructExpression.arguments[0] as DeclaredReferenceExpression
+            assertLocalName("k", k)
+            // type of the construct expression should also be Integer
+            assertEquals(primitiveType("int"), k.type)
+        }
     }
 
     private val FunctionDeclaration.statements: List<Statement>?
@@ -1241,6 +1257,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(initializer)
         assertTrue(initializer is CastExpression)
         assertLocalName("size_t", initializer.castType)
+        assertLiteralValue(42, initializer.expression)
     }
 
     @Test
@@ -1546,5 +1563,15 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/cxx/lambdas.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         assertNotNull(tu)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testCFunctionReturnType() {
+        val file = File("src/test/resources/c/types.c")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        assertNotNull(tu)
+
+        assertLocalName("int", tu.functions["main"]?.returnTypes?.firstOrNull())
     }
 }

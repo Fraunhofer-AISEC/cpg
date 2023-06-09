@@ -23,27 +23,36 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg
+package de.fraunhofer.aisec.cpg.graph
 
-/**
- * The translation context holds all necessary managers and configurations needed during the
- * translation process.
- */
-class TranslationContext(
-    /** The configuration for this translation. */
-    val config: TranslationConfiguration,
+import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import kotlin.test.Test
+import org.junit.jupiter.api.assertThrows
 
-    /**
-     * The scope manager which comprises the complete translation result. In case of sequential
-     * parsing, this scope manager is passed to the individual frontends one after another. In case
-     * of sequential parsing, individual scope managers will be passed to each language frontend
-     * (through individual contexts) and then finally merged into a final one.
-     */
-    val scopeManager: ScopeManager,
+class TypeTest {
+    @Test
+    fun testType() {
+        with(TestLanguageFrontend()) {
+            val tu = newTranslationUnitDeclaration("file.extension")
+            this.scopeManager.resetToGlobal(tu)
 
-    /**
-     * The type manager is responsible for managing type information. Currently, we have one
-     * instance of a [TypeManager] for the overall [TranslationResult].
-     */
-    val typeManager: TypeManager
-)
+            val func = newFunctionDeclaration("main")
+            assertLocalName("main", func)
+
+            val simpleType = objectType("SomeObject")
+            assertLocalName("SomeObject", simpleType)
+        }
+    }
+
+    @Test
+    fun testPrimitive() {
+        with(TestLanguageFrontend()) {
+            val boolean = primitiveType("boolean")
+            assertLocalName("boolean", boolean)
+
+            assertThrows<TranslationException> { primitiveType("BOOLEAN") }
+        }
+    }
+}

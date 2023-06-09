@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import java.math.BigInteger
@@ -141,19 +140,19 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // there are a lot of other constants defined for type traits, but they are not really
         // parsed as type id expressions
         var operatorCode = ""
-        var type: Type = newUnknownType()
+        var type: Type = unknownType()
         when (ctx.operator) {
             IASTTypeIdExpression.op_sizeof -> {
                 operatorCode = "sizeof"
-                type = parseType("std::size_t")
+                type = objectType("std::size_t")
             }
             IASTTypeIdExpression.op_typeid -> {
                 operatorCode = "typeid"
-                type = parseType("const std::type_info&")
+                type = objectType("std::type_info").ref()
             }
             IASTTypeIdExpression.op_alignof -> {
                 operatorCode = "alignof"
-                type = parseType("std::size_t")
+                type = objectType("std::size_t")
             }
             IASTTypeIdExpression
                 .op_typeof -> // typeof is not an official c++ keyword - not sure why eclipse
@@ -174,14 +173,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleNewExpression(ctx: CPPASTNewExpression): Expression {
-        val name = ctx.typeId.declSpecifier.toString()
         val code = ctx.rawSignature
-        val t = TypeParser.createFrom(name, true, frontend)
+        val t = frontend.typeOf(ctx.typeId)
         val init = ctx.initializer
 
         // we need to check, whether this is an array initialization or a single new expression
         return if (ctx.isArrayAllocation) {
-            t.reference(PointerOrigin.ARRAY)
+            t.array()
             val arrayMods = (ctx.typeId.abstractDeclarator as IASTArrayDeclarator).arrayModifiers
             val arrayCreate = newArrayCreationExpression(code)
             arrayCreate.type = t
@@ -194,20 +192,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
             arrayCreate
         } else {
-            // Resolve possible templates
-            var templateParameters: List<Node> = emptyList()
+            // new returns a pointer, so we need to reference the type by pointer
+            val newExpression = newNewExpression(code, t.pointer(), ctx)
             val declSpecifier = ctx.typeId.declSpecifier as? IASTNamedTypeSpecifier
+            // Resolve possible templates
             if (declSpecifier?.name is CPPASTTemplateId) {
-                templateParameters = getTemplateArguments(declSpecifier.name as CPPASTTemplateId)
-                assert(t.root is ObjectType)
-                val objectType = t.root as? ObjectType
-                val generics = templateParameters.filterIsInstance<TypeExpression>().map { it.type }
-                objectType?.generics = generics
+                newExpression.templateParameters =
+                    getTemplateArguments(declSpecifier.name as CPPASTTemplateId)
             }
 
-            // new returns a pointer, so we need to reference the type by pointer
-            val newExpression = newNewExpression(code, t.reference(PointerOrigin.POINTER), ctx)
-            newExpression.templateParameters = templateParameters
             val initializer: Expression?
             if (init != null) {
                 initializer = frontend.initializerHandler.handle(init)
@@ -295,7 +288,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         castExpression.setCastOperator(ctx.operator)
         castExpression.castType = frontend.typeOf(ctx.typeId)
 
-        if (TypeManager.isPrimitive(castExpression.castType, language) || ctx.operator == 4) {
+        if (isPrimitive(castExpression.castType) || ctx.operator == 4) {
             castExpression.type = castExpression.castType
         } else {
             castExpression.expression.registerTypeListener(castExpression)
@@ -324,7 +317,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return newMemberExpression(
             name,
             base,
-            newUnknownType(),
+            unknownType(),
             if (ctx.isPointerDereference) "->" else ".",
             ctx.rawSignature
         )
@@ -357,8 +350,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     val typeName = (ctx.operand as IASTIdExpression).name.toString()
                     if (frontend.typeManager.typeExists(typeName)) {
                         val cast = newCastExpression(frontend.codeOf(ctx))
-                        cast.castType = parseType(typeName)
-                        cast.expression = input ?: newProblemExpression("could not parse input")
+                        cast.castType = frontend.typeOf((ctx.operand as IASTIdExpression).name)
+                        // The expression member can only be filled by the parent call
+                        // (handleFunctionCallExpression)
                         cast.location = frontend.locationOf(ctx)
                         return cast
                     }
@@ -442,6 +436,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
             reference is CastExpression -> {
                 // this really is a cast expression in disguise
+                reference.expression =
+                    handle(ctx.arguments.first())
+                        ?: ProblemExpression("could not parse argument for cast")
                 return reference
             }
             else -> {
@@ -468,11 +465,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // this expression could actually be a field / member expression, but somehow CDT only
         // recognizes them as a member expression if it has an explicit 'this'
         // TODO: handle this? convert the declared reference expression into a member expression?
-        return newDeclaredReferenceExpression(
-            ctx.name.toString(),
-            newUnknownType(),
-            ctx.rawSignature
-        )
+        return newDeclaredReferenceExpression(ctx.name.toString(), unknownType(), ctx.rawSignature)
     }
 
     private fun handleExpressionList(exprList: IASTExpressionList): ExpressionList {
@@ -542,18 +535,18 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return when (ctx.kind) {
             lk_integer_constant -> handleIntegerLiteral(ctx)
             lk_float_constant -> handleFloatLiteral(ctx)
-            lk_char_constant -> newLiteral(ctx.value[1], parseType("char"), ctx.rawSignature)
+            lk_char_constant -> newLiteral(ctx.value[1], primitiveType("char"), ctx.rawSignature)
             lk_string_literal ->
                 newLiteral(
                     String(ctx.value.slice(IntRange(1, ctx.value.size - 2)).toCharArray()),
-                    parseType("const char[]"),
+                    primitiveType("char").array(),
                     ctx.rawSignature
                 )
             lk_this -> handleThisLiteral(ctx)
-            lk_true -> newLiteral(true, parseType("bool"), ctx.rawSignature)
-            lk_false -> newLiteral(false, parseType("bool"), ctx.rawSignature)
-            lk_nullptr -> newLiteral(null, parseType("nullptr_t"), ctx.rawSignature)
-            else -> newLiteral(String(ctx.value), newUnknownType(), ctx.rawSignature)
+            lk_true -> newLiteral(true, primitiveType("bool"), ctx.rawSignature)
+            lk_false -> newLiteral(false, primitiveType("bool"), ctx.rawSignature)
+            lk_nullptr -> newLiteral(null, objectType("nullptr_t"), ctx.rawSignature)
+            else -> newLiteral(String(ctx.value), unknownType(), ctx.rawSignature)
         }
     }
 
@@ -591,7 +584,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         oneLhs =
                             newDeclaredReferenceExpression(
                                 des.name.toString(),
-                                newUnknownType(),
+                                unknownType(),
                                 des.getRawSignature()
                             )
                     }
@@ -645,7 +638,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         oneLhs =
                             newDeclaredReferenceExpression(
                                 des.name.toString(),
-                                newUnknownType(),
+                                unknownType(),
                                 des.getRawSignature()
                             )
                     }
@@ -759,15 +752,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             // retrieve type based on stored Java number
             val type =
-                parseType(
+                primitiveType(
                     when {
                         // we follow the way clang/llvm handles this and this seems to always
                         // be an unsigned long long, except if it is explicitly specified as ul
                         // differentiate between long and long long
-                        numberValue is BigInteger && "ul" == suffix -> "unsigned long"
-                        numberValue is BigInteger -> "unsigned long long"
-                        numberValue is Long && "ll" == suffix -> "long long"
-                        numberValue is Long -> "long"
+                        numberValue is BigInteger && "ul" == suffix -> "unsigned long int"
+                        numberValue is BigInteger -> "unsigned long long int"
+                        numberValue is Long && "ll" == suffix -> "long long int"
+                        numberValue is Long -> "long int"
                         else -> "int"
                     }
                 )
@@ -784,14 +777,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         return try {
             when (suffix) {
-                "f" -> newLiteral(strippedValue.toFloat(), parseType("float"), ctx.rawSignature)
+                "f" -> newLiteral(strippedValue.toFloat(), primitiveType("float"), ctx.rawSignature)
                 "l" ->
                     newLiteral(
                         strippedValue.toBigDecimal(),
-                        parseType("long double"),
+                        primitiveType("long double"),
                         ctx.rawSignature
                     )
-                else -> newLiteral(strippedValue.toDouble(), parseType("double"), ctx.rawSignature)
+                else ->
+                    newLiteral(strippedValue.toDouble(), primitiveType("double"), ctx.rawSignature)
             }
         } catch (ex: NumberFormatException) {
             // It could be that we cannot parse the literal, in this case we return an error
@@ -807,9 +801,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleThisLiteral(ctx: IASTLiteralExpression): DeclaredReferenceExpression {
         // We should be in a record here. However since we are a fuzzy parser, maybe things went
         // wrong, so we might have an unknown type.
-        val recordType = frontend.scopeManager.currentRecord?.toType() ?: newUnknownType()
+        val recordType = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
         // We do want to make sure that the type of the expression is at least a pointer.
-        val pointerType = recordType.reference(PointerOrigin.POINTER)
+        val pointerType = recordType.pointer()
 
         return newDeclaredReferenceExpression("this", pointerType, ctx.rawSignature, ctx)
     }

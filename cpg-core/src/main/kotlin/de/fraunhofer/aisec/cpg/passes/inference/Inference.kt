@@ -234,7 +234,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         name: String,
     ): TypeParamDeclaration {
         val parameterizedType = ParameterizedType(name, language)
-        typeManager.addTypeParameter(start as? FunctionTemplateDeclaration, parameterizedType)
+        typeManager.addTypeParameter(start as FunctionTemplateDeclaration, parameterizedType)
 
         val decl = newTypeParamDeclaration(name, name)
         decl.type = parameterizedType

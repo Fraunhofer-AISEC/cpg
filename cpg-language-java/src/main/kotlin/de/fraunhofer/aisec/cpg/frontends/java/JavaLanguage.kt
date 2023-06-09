@@ -84,6 +84,8 @@ open class JavaLanguage :
             "char" to IntegerType("char", 16, this, NumericType.Modifier.UNSIGNED),
             "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
             "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
+            "java.lang.Integer" to
+                IntegerType("java.lang.Integer", 32, this, NumericType.Modifier.SIGNED),
             "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
 
             // Floating-Point Types:

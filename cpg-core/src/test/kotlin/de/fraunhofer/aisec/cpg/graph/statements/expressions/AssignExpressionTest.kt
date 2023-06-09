@@ -50,7 +50,7 @@ class AssignExpressionTest {
             assertContains(refB.typeListeners, stmt)
 
             // Suddenly, we now we know the type of b.
-            refB.type = parseType("MyClass")
+            refB.type = objectType("MyClass")
             // It should now propagate to a
             assertLocalName("MyClass", refA.type)
 
@@ -68,7 +68,7 @@ class AssignExpressionTest {
                         val func =
                             function(
                                 "func",
-                                returnTypes = listOf(parseType("MyClass"), parseType("error"))
+                                returnTypes = listOf(objectType("MyClass"), objectType("error"))
                             )
                         function("main") {
                             val refA = newDeclaredReferenceExpression("a")

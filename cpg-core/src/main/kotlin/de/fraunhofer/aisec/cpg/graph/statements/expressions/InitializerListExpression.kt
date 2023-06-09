@@ -70,7 +70,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
         if (initializers.contains(src)) {
             val types =
                 initializers.map { registerType(it.type.reference(PointerOrigin.ARRAY)) }.toSet()
-            val alternative = if (types.isNotEmpty()) types.iterator().next() else newUnknownType()
+            val alternative = if (types.isNotEmpty()) types.iterator().next() else unknownType()
             newType = getCommonType(types).orElse(alternative)
             subTypes = ArrayList(possibleSubTypes)
             subTypes.remove(oldType)

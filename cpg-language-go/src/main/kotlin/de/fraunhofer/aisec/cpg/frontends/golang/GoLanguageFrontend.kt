@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.passes.GoExtraPass
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -93,7 +93,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
 
     override fun typeOf(type: Any): Type {
         // this is handled by native code
-        return newUnknownType()
+        return unknownType()
     }
 
     override fun codeOf(astNode: Any): String? {

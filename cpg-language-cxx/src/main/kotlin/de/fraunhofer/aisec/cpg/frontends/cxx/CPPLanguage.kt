@@ -51,36 +51,44 @@ class CPPLanguage :
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
 
+    /**
+     * The list of built-in types. See https://en.cppreference.com/w/cpp/language/types for a
+     * reference. We only list equivalent types here and use the canonical form of integer values.
+     */
     @Transient
     override val builtInTypes =
         mapOf(
-            "bool" to BooleanType("bool", language = this),
-            "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
-            "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
-            "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
+            // Integer types
+            "short int" to IntegerType("short int", 16, this, NumericType.Modifier.SIGNED),
+            "unsigned short int" to
+                IntegerType("unsigned short int", 16, this, NumericType.Modifier.UNSIGNED),
             "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
-            "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
-            "long long int" to IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
-            "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
-            "signed byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
-            "signed short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
-            "signed int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
-            "signed long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
-            "signed long long int" to
-                IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
-            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
-            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
-            "unsigned char" to IntegerType("unsigned char", 8, this, NumericType.Modifier.UNSIGNED),
-            "unsigned byte" to IntegerType("unsigned byte", 8, this, NumericType.Modifier.UNSIGNED),
-            "unsigned short" to
-                IntegerType("unsigned short", 16, this, NumericType.Modifier.UNSIGNED),
             "unsigned int" to IntegerType("unsigned int", 32, this, NumericType.Modifier.UNSIGNED),
-            "unsigned long" to
-                IntegerType("unsigned long", 64, this, NumericType.Modifier.UNSIGNED),
-            "unsigned long long" to
-                IntegerType("unsigned long long", 64, this, NumericType.Modifier.UNSIGNED),
+            "long int" to IntegerType("long int", 64, this, NumericType.Modifier.SIGNED),
+            "unsigned long int" to
+                IntegerType("unsigned long int", 64, this, NumericType.Modifier.UNSIGNED),
+            "long long int" to IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
             "unsigned long long int" to
                 IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
+
+            // Boolean type
+            "bool" to BooleanType("bool"),
+
+            // Character types
+            "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
+            "unsigned char" to IntegerType("unsigned char", 8, this, NumericType.Modifier.UNSIGNED),
+            "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "char8_t" to IntegerType("char8_t", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "char16_t" to IntegerType("char16_t", 16, this, NumericType.Modifier.NOT_APPLICABLE),
+            "char32_t" to IntegerType("char32_t", 32, this, NumericType.Modifier.NOT_APPLICABLE),
+
+            // Floating-point types
+            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
+            "long double" to
+                FloatingPointType("long double", 128, this, NumericType.Modifier.SIGNED),
+
+            // Some convenience types
             "std::string" to StringType("std::string", this),
         )
 

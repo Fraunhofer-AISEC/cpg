@@ -1,33 +1,33 @@
-/*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- *                    $$$$$$\  $$$$$$$\   $$$$$$\
- *                   $$  __$$\ $$  __$$\ $$  __$$\
- *                   $$ /  \__|$$ |  $$ |$$ /  \__|
- *                   $$ |      $$$$$$$  |$$ |$$$$\
- *                   $$ |      $$  ____/ $$ |\_$$ |
- *                   $$ |  $$\ $$ |      $$ |  $$ |
- *                   \$$$$$   |$$ |      \$$$$$   |
- *                    \______/ \__|       \______/
- *
- */
+//
+// Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+//                    $$$$$$\  $$$$$$$\   $$$$$$\
+//                   $$  __$$\ $$  __$$\ $$  __$$\
+//                   $$ /  \__|$$ |  $$ |$$ /  \__|
+//                   $$ |      $$$$$$$  |$$ |$$$$\
+//                   $$ |      $$  ____/ $$ |\_$$ |
+//                   $$ |  $$\ $$ |      $$ |  $$ |
+//                   \$$$$$   |$$ |      \$$$$$   |
+//                    \______/ \__|       \______/
+//
+//
+
 package cpg
 
 import (
 	"C"
-
 	"tekao.net/jnigi"
 )
 import (
@@ -85,28 +85,6 @@ func InitEnv(e *jnigi.Env) {
 	env = e
 }
 
-func TypeParser_createFrom(s string, l *Language, ctx *TranslationContext) *Type {
-	var t Type
-	err := env.CallStaticMethod(TypeParserClass, "createFrom", &t, NewString(s), l, false, ctx)
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	return &t
-}
-
-func UnknownType_getUnknown(l *Language) *UnknownType {
-	var t UnknownType
-	err := env.CallStaticMethod(UnknownTypeClass, "getUnknownType", &t, l)
-	if err != nil {
-		log.Fatal(err)
-
-	}
-
-	return &t
-}
-
 func (t *Type) GetRoot() *Type {
 	var root Type
 	err := t.CallMethod(env, "getRoot", &root)
@@ -115,6 +93,26 @@ func (t *Type) GetRoot() *Type {
 	}
 
 	return &root
+}
+
+func (h *HasType) SetType(t *Type) {
+	if t != nil || !t.IsNil() {
+		err := (*jnigi.ObjectRef)(h).CallMethod(env, "setType", nil, t.Cast(TypeClass))
+		if err != nil {
+			panic(err)
+		}
+	}
+
+}
+
+func (h *HasType) GetType() *Type {
+	var t Type
+	err := (*jnigi.ObjectRef)(h).CallMethod(env, "getType", &t)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &t
 }
 
 func (t *Type) Reference(o *jnigi.ObjectRef) *Type {
@@ -128,31 +126,12 @@ func (t *Type) Reference(o *jnigi.ObjectRef) *Type {
 	return &refType
 }
 
-func (h *HasType) SetType(t *Type) {
-	if t != nil {
-		(*jnigi.ObjectRef)(h).CallMethod(env, "setType", nil, t.Cast(TypeClass))
-	}
-}
-
-func (h *HasType) GetType() *Type {
-	var t Type
-	err := (*jnigi.ObjectRef)(h).CallMethod(env, "getType", &t)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return &t
-}
-
 func (t *Type) GetName() (fn *Name) {
 	return (*Node)(t.ObjectRef).GetName()
 }
 
 func (t *ObjectType) AddGeneric(g *Type) {
-	// Stupid workaround, since casting does not work. See
-	// https://github.com/timob/jnigi/issues/60
-	var objType = jnigi.WrapJObject(uintptr(t.JObject()), ObjectTypeClass, false)
-	err := objType.CallMethod(env, "addGeneric", nil, g.Cast(TypeClass))
+	err := t.Cast(ObjectTypeClass).CallMethod(env, "addGeneric", nil, g.Cast(TypeClass))
 	if err != nil {
 		log.Fatal(err)
 	}

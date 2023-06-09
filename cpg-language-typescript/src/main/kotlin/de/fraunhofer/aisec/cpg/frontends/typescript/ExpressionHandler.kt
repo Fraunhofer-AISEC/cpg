@@ -113,7 +113,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // the function will (probably) not have a defined return type, so we try to deduce this
         // from a return statement
-        if (func?.type == newUnknownType()) {
+        if (func?.type == unknownType()) {
             val returnValue = func.bodyOrNull<ReturnStatement>()?.returnValue
 
             /*if (returnValue == null) {
@@ -121,7 +121,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 func.type = TypeParser.createFrom("void", false)
             } else {*/
 
-            val returnType = returnValue?.type ?: newUnknownType()
+            val returnType = returnValue?.type ?: unknownType()
 
             func.type = returnType
             // }
@@ -163,13 +163,13 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 ?.replace("'", "")
                 ?: ""
 
-        return newLiteral(value, parseType("String"), frontend.codeOf(node))
+        return newLiteral(value, primitiveType("string"), frontend.codeOf(node))
     }
 
     private fun handleIdentifier(node: TypeScriptNode): Expression {
         val name = this.frontend.codeOf(node)?.trim() ?: ""
 
-        return newDeclaredReferenceExpression(name, newUnknownType(), this.frontend.codeOf(node))
+        return newDeclaredReferenceExpression(name, unknownType(), this.frontend.codeOf(node))
     }
 
     private fun handlePropertyAccessExpression(node: TypeScriptNode): Expression {
@@ -179,7 +179,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         val name = node.children?.last()?.let { this.frontend.codeOf(it) } ?: ""
 
-        return newMemberExpression(name, base, newUnknownType(), ".", this.frontend.codeOf(node))
+        return newMemberExpression(name, base, unknownType(), ".", this.frontend.codeOf(node))
     }
 
     private fun handleCallExpression(node: TypeScriptNode): Expression {

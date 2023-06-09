@@ -64,7 +64,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 newDeclaredReferenceExpression("poison", frontend.typeOf(value), "poison")
             }
             LLVMConstantTokenNoneValueKind ->
-                newLiteral(null, newUnknownType(), frontend.codeOf(value))
+                newLiteral(null, unknownType(), frontend.codeOf(value))
             LLVMUndefValueValueKind ->
                 initializeAsUndef(frontend.typeOf(value), frontend.codeOf(value))
             LLVMConstantAggregateZeroValueKind ->
@@ -515,11 +515,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     }
 
                 // our new base-type is the type of the field
-                baseType = field?.type ?: newUnknownType()
+                baseType = field?.type ?: unknownType()
 
                 // construct our member expression
-                expr =
-                    newMemberExpression(fieldName, base, field?.type ?: newUnknownType(), ".", "")
+                expr = newMemberExpression(fieldName, base, field?.type ?: unknownType(), ".", "")
                 log.info("{}", expr)
 
                 // the current expression is the new base

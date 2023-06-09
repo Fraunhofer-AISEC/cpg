@@ -109,8 +109,7 @@ class TypeScriptLanguageFrontend(
     }
 
     override fun typeOf(type: TypeScriptNode): Type {
-        // reserved for future use
-        return newUnknownType()
+        return typeHandler.handleNode(type)
     }
 
     /**

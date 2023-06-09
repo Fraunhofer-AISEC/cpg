@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.parseType
+import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -111,7 +111,7 @@ class JavaCallResolverHelper {
         ): RecordDeclaration? {
             val baseName = callee.base.name.parent ?: return null
 
-            if (curClass.parseType(baseName) in curClass.implementedInterfaces) {
+            if (curClass.objectType(baseName) in curClass.implementedInterfaces) {
                 // Basename is an interface -> BaseName.super refers to BaseName itself
                 return recordMap[baseName]
             } else {

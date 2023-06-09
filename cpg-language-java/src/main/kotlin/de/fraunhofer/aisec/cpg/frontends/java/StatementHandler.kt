@@ -233,7 +233,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         // and in
         // cpp StatementHandler
         if (statement.condition == null) {
-            val literal: Literal<*> = this.newLiteral(true, this.parseType("boolean"), "true")
+            val literal: Literal<*> = this.newLiteral(true, this.primitiveType("boolean"), "true")
             statement.condition = literal
         }
         if (forStmt.update.size > 1) {
@@ -577,7 +577,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             }
             // we do not know which of the exceptions was actually thrown, so we assume this might
             // be any
-            concreteType = this.parseType("java.lang.Throwable")
+            concreteType = this.objectType("java.lang.Throwable")
             concreteType.typeOrigin = Type.Origin.GUESSED
         } else {
             concreteType = frontend.getTypeAsGoodAsPossible(catchCls.parameter.type)

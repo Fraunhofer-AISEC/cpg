@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.parseType
-
 /**
  * The declaration of a constructor within a [RecordDeclaration]. Is it essentially a special case
  * of a [MethodDeclaration].
@@ -39,7 +37,7 @@ class ConstructorDeclaration : MethodDeclaration() {
             super.recordDeclaration = recordDeclaration
             if (recordDeclaration != null) {
                 // constructors always have implicitly the return type of their class
-                returnTypes = listOf(parseType(recordDeclaration.name))
+                returnTypes = listOf(recordDeclaration.toType())
             }
         }
 }

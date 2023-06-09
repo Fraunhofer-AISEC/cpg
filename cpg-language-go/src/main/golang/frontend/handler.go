@@ -1,28 +1,29 @@
-/*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- *                    $$$$$$\  $$$$$$$\   $$$$$$\
- *                   $$  __$$\ $$  __$$\ $$  __$$\
- *                   $$ /  \__|$$ |  $$ |$$ /  \__|
- *                   $$ |      $$$$$$$  |$$ |$$$$\
- *                   $$ |      $$  ____/ $$ |\_$$ |
- *                   $$ |  $$\ $$ |      $$ |  $$ |
- *                   \$$$$$   |$$ |      \$$$$$   |
- *                    \______/ \__|       \______/
- *
- */
+//
+// Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+//                    $$$$$$\  $$$$$$$\   $$$$$$\
+//                   $$  __$$\ $$  __$$\ $$  __$$\
+//                   $$ /  \__|$$ |  $$ |$$ /  \__|
+//                   $$ |      $$$$$$$  |$$ |$$$$\
+//                   $$ |      $$  ____/ $$ |\_$$ |
+//                   $$ |  $$\ $$ |      $$ |  $$ |
+//                   \$$$$$   |$$ |      \$$$$$   |
+//                    \______/ \__|       \______/
+//
+//
+
 package frontend
 
 import (
@@ -349,13 +350,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 			p.SetVariadic(true)
 			var t = this.handleType(fset, ell.Elt)
 
-			var i = jnigi.NewObjectRef(cpg.PointerOriginClass)
-			err := env.GetStaticField(cpg.PointerOriginClass, "ARRAY", i)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			p.SetType(t.Reference(i))
+			p.SetType(this.ref(t, "pointer"))
 		} else {
 			p.SetType(this.handleType(fset, param.Type))
 		}
@@ -446,7 +441,7 @@ func (this *GoLanguageFrontend) handleValueSpec(fset *token.FileSet, valueDecl *
 	return decls
 }
 
-// handleTypeSpec handles an [ast.TypeSec], which defines either a struct or an
+// handleTypeSpec handles an [ast.TypeSpec], which defines either a struct or an
 // interface. It returns a single [cpg.Declaration].
 func (this *GoLanguageFrontend) handleTypeSpec(fset *token.FileSet, typeDecl *ast.TypeSpec) *cpg.Declaration {
 	err := this.LogInfo("Type specifier with name %s and type (%T, %+v)", typeDecl.Name.Name, typeDecl.Type, typeDecl.Type)
@@ -1058,6 +1053,8 @@ func (this *GoLanguageFrontend) handleNewExpr(fset *token.FileSet, callExpr *ast
 	t := this.handleType(fset, callExpr.Args[0])
 
 	// new is a pointer, so need to reference the type with a pointer
+	// TODO(oxisto): There is a very weird bug here: If we would use this.Pointer() here, we will get a
+	//  null pointer exception and I have no idea why
 	var pointer = jnigi.NewObjectRef(cpg.PointerOriginClass)
 	err := env.GetStaticField(cpg.PointerOriginClass, "POINTER", pointer)
 	if err != nil {
@@ -1226,31 +1223,26 @@ func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.Bas
 	var value cpg.Castable
 	var t *cpg.Type
 
-	lang, err := this.GetLanguage()
-	if err != nil {
-		panic(err)
-	}
-
 	switch lit.Kind {
 	case token.STRING:
 		// strip the "
 		value = cpg.NewString(lit.Value[1 : len(lit.Value)-1])
-		t = cpg.TypeParser_createFrom("string", lang, this.GetCtx())
+		t = this.primitiveType("string")
 	case token.INT:
 		i, _ := strconv.ParseInt(lit.Value, 10, 64)
 		value = cpg.NewInteger(int(i))
-		t = cpg.TypeParser_createFrom("int", lang, this.GetCtx())
+		t = this.primitiveType("int")
 	case token.FLOAT:
 		// default seems to be float64
 		f, _ := strconv.ParseFloat(lit.Value, 64)
 		value = cpg.NewDouble(f)
-		t = cpg.TypeParser_createFrom("float64", lang, this.GetCtx())
+		t = this.primitiveType("float64")
 	case token.IMAG:
 		// TODO
-		t = &cpg.UnknownType_getUnknown(lang).Type
+		t = this.unknownType()
 	case token.CHAR:
 		value = cpg.NewString(lit.Value)
-		t = cpg.TypeParser_createFrom("rune", lang, this.GetCtx())
+		t = this.primitiveType("rune")
 		break
 	}
 
@@ -1316,14 +1308,9 @@ func (this *GoLanguageFrontend) handleFuncLit(fset *token.FileSet, lit *ast.Func
 }
 
 func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Ident) *cpg.Expression {
-	lang, err := this.GetLanguage()
-	if err != nil {
-		panic(err)
-	}
-
 	// Check, if this is 'nil', because then we handle it as a literal in the graph
 	if ident.Name == "nil" {
-		lit := this.NewLiteral(fset, ident, nil, &cpg.UnknownType_getUnknown(lang).Type)
+		lit := this.NewLiteral(fset, ident, nil, this.unknownType())
 
 		(*cpg.Node)(lit).SetName(this.ParseName(ident.Name))
 
@@ -1384,40 +1371,28 @@ func (this *GoLanguageFrontend) handleType(fset *token.FileSet, typeExpr ast.Exp
 			this.LogTrace("fqn type: %s", name)
 		}
 
-		return cpg.TypeParser_createFrom(name, lang, this.GetCtx())
+		return this.objectType(name)
 	case *ast.SelectorExpr:
 		// small shortcut
 		fqn := fmt.Sprintf("%s.%s", v.X.(*ast.Ident).Name, v.Sel.Name)
 		this.LogTrace("FQN type: %s", fqn)
-		return cpg.TypeParser_createFrom(fqn, lang, this.GetCtx())
+		return this.objectType(fqn)
 	case *ast.StarExpr:
 		t := this.handleType(fset, v.X)
 
-		var i = jnigi.NewObjectRef(cpg.PointerOriginClass)
-		err = env.GetStaticField(cpg.PointerOriginClass, "POINTER", i)
-		if err != nil {
-			log.Fatal(err)
-		}
-
 		this.LogTrace("Pointer to %s", t.GetName())
 
-		return t.Reference(i)
+		return this.ref(t, "pointer")
 	case *ast.ArrayType:
 		t := this.handleType(fset, v.Elt)
 
-		var i = jnigi.NewObjectRef(cpg.PointerOriginClass)
-		err = env.GetStaticField(cpg.PointerOriginClass, "ARRAY", i)
-		if err != nil {
-			log.Fatal(err)
-		}
-
 		this.LogTrace("Array of %s", t.GetName())
 
-		return t.Reference(i)
+		return this.ref(t, "array")
 	case *ast.MapType:
 		// we cannot properly represent Golangs built-in map types, yet so we have
 		// to make a shortcut here and represent it as a Java-like map<K, V> type.
-		t := cpg.TypeParser_createFrom("map", lang, this.GetCtx())
+		t := this.objectType("map")
 		keyType := this.handleType(fset, v.Key)
 		valueType := this.handleType(fset, v.Value)
 
@@ -1428,7 +1403,7 @@ func (this *GoLanguageFrontend) handleType(fset *token.FileSet, typeExpr ast.Exp
 		return t
 	case *ast.ChanType:
 		// handle them similar to maps
-		t := cpg.TypeParser_createFrom("chan", lang, this.GetCtx())
+		t := this.objectType("chan")
 		chanType := this.handleType(fset, v.Value)
 
 		(*cpg.ObjectType)(t).AddGeneric(chanType)
@@ -1436,8 +1411,8 @@ func (this *GoLanguageFrontend) handleType(fset *token.FileSet, typeExpr ast.Exp
 		return t
 	case *ast.FuncType:
 		var parametersTypesList, returnTypesList, name *jnigi.ObjectRef
-		var parameterTypes = []*cpg.Type{}
-		var returnTypes = []*cpg.Type{}
+		var parameterTypes []*cpg.Type
+		var returnTypes []*cpg.Type
 
 		for _, param := range v.Params.List {
 			parameterTypes = append(parameterTypes, this.handleType(fset, param.Type))
@@ -1484,7 +1459,7 @@ func (this *GoLanguageFrontend) handleType(fset *token.FileSet, typeExpr ast.Exp
 
 		name += "}"
 
-		return cpg.TypeParser_createFrom(name, lang, this.GetCtx())
+		return this.objectType(name)
 	case *ast.IndexExpr:
 		// This is a type with one type parameter. First we need to parse the "X" expression as a type
 		var t = this.handleType(fset, v.X)
@@ -1511,7 +1486,7 @@ func (this *GoLanguageFrontend) handleType(fset *token.FileSet, typeExpr ast.Exp
 		this.LogError("Not parsing type of type %T yet. Defaulting to unknown type", v)
 	}
 
-	return &cpg.UnknownType_getUnknown(lang).Type
+	return this.unknownType()
 }
 
 func (this *GoLanguageFrontend) isBuiltinType(s string) bool {

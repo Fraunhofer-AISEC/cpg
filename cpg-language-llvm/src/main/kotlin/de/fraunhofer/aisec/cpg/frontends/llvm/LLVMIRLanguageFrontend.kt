@@ -29,13 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.newUnknownType
-import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -163,7 +160,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
     }
 
     override fun typeOf(type: LLVMTypeRef): Type {
-        return typeFrom(type, mutableMapOf())
+        return typeOf(type, mutableMapOf())
     }
 
     /** Returns a pair of the name and symbol name of [valueRef]. */
@@ -183,10 +180,10 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
     fun typeOf(valueRef: LLVMValueRef): Type {
         val typeRef = LLVMTypeOf(valueRef)
 
-        return typeFrom(typeRef)
+        return typeOf(typeRef)
     }
 
-    internal fun typeFrom(
+    internal fun typeOf(
         typeRef: LLVMTypeRef,
         alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
     ): Type {
@@ -196,7 +193,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
             if (result != null) return result
         }
         if (typeRef in alreadyVisited) {
-            return alreadyVisited[typeRef] ?: newUnknownType()
+            return alreadyVisited[typeRef] ?: unknownType()
         }
         alreadyVisited[typeRef] = null
         val res: Type =
@@ -204,19 +201,19 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
                 LLVMVectorTypeKind,
                 LLVMArrayTypeKind -> {
                     // var length = LLVMGetArrayLength(typeRef)
-                    val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
-                    elementType.reference(PointerType.PointerOrigin.ARRAY)
+                    val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
+                    elementType.array()
                 }
                 LLVMPointerTypeKind -> {
-                    val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
-                    elementType.reference(PointerType.PointerOrigin.POINTER)
+                    val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
+                    elementType.pointer()
                 }
                 LLVMStructTypeKind -> {
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
                     record.toType()
                 }
                 else -> {
-                    parseType(typeStr)
+                    objectType(typeStr)
                 }
             }
         alreadyVisited[typeRef] = res

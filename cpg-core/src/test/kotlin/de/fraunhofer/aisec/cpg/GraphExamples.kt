@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -87,7 +87,7 @@ class GraphExamples {
                         // The main method
                         function("main", t("int")) {
                             body {
-                                declare { variable("node", t("T*")) }
+                                declare { variable("node", t("T").reference(POINTER)) }
                                 member("value", ref("node"), "->") assign literal(42, t("int"))
                                 member("next", ref("node"), "->") assign ref("node")
                                 memberCall(

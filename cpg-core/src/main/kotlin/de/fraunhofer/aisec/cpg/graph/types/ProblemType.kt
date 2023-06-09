@@ -23,27 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg
+package de.fraunhofer.aisec.cpg.graph.types
 
-/**
- * The translation context holds all necessary managers and configurations needed during the
- * translation process.
- */
-class TranslationContext(
-    /** The configuration for this translation. */
-    val config: TranslationConfiguration,
+class ProblemType : Type() {
+    override fun reference(pointer: PointerType.PointerOrigin?): Type {
+        return this
+    }
 
-    /**
-     * The scope manager which comprises the complete translation result. In case of sequential
-     * parsing, this scope manager is passed to the individual frontends one after another. In case
-     * of sequential parsing, individual scope managers will be passed to each language frontend
-     * (through individual contexts) and then finally merged into a final one.
-     */
-    val scopeManager: ScopeManager,
+    override fun dereference(): Type {
+        return this
+    }
 
-    /**
-     * The type manager is responsible for managing type information. Currently, we have one
-     * instance of a [TypeManager] for the overall [TranslationResult].
-     */
-    val typeManager: TypeManager
-)
+    override fun duplicate(): Type {
+        return this
+    }
+}
