@@ -388,17 +388,14 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
             // Unresolved call expression
-            handleUnresolvedCalls(call)
+            handleUnresolvedCalls(call, call)
         } else if (call.invokes.isNotEmpty()) {
-            call.invokes.forEach { funDecl ->
-                if (funDecl.isInferred && inferDfgForUnresolvedSymbols) {
-                    if (call is MemberCallExpression && !call.isStatic) {
-                        call.base?.let { funDecl.addPrevDFG(it) }
-                    }
-                    call.arguments.forEach { funDecl.addPrevDFG(it) }
+            call.invokes.forEach {
+                if (it.isInferred && inferDfgForUnresolvedSymbols) {
+                    handleUnresolvedCalls(call, it)
                 } else {
-                    Util.attachCallParameters(funDecl, call.arguments)
-                    call.addPrevDFG(funDecl)
+                    Util.attachCallParameters(it, call.arguments)
+                    call.addPrevDFG(it)
                 }
             }
         }
@@ -409,11 +406,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - from base (if available) to the CallExpression
      * - from all arguments to the CallExpression
      */
-    private fun handleUnresolvedCalls(call: CallExpression) {
+    private fun handleUnresolvedCalls(call: CallExpression, dfgTarget: Node) {
         if (call is MemberCallExpression && !call.isStatic) {
-            call.base?.let { call.addPrevDFG(it) }
+            call.base?.let { dfgTarget.addPrevDFG(it) }
         }
 
-        call.arguments.forEach { call.addPrevDFG(it) }
+        call.arguments.forEach { dfgTarget.addPrevDFG(it) }
     }
 }
