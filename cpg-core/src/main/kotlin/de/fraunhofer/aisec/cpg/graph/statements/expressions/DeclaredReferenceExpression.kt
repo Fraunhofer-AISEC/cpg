@@ -116,8 +116,7 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
         }
 
         // since we want to update the sub types, we need to exclude ourselves from the root,
-        // otherwise
-        // it won't work. What a weird and broken system!
+        // otherwise it won't work. What a weird and broken system!
         root.remove(this)
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
         subTypes.addAll(src.possibleSubTypes)
