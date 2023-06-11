@@ -149,16 +149,14 @@ class UnresolvedDFGPassTest {
                                     }
                                     declare {
                                         variable("s2", t("String")) {
-                                            memberCall("get", ref("os")) {
-                                                addArgument(literal(4, t("int")))
-                                            }
+                                            memberCall("get", ref("os")) { literal(4, t("int")) }
                                         }
                                     }
                                     declare {
                                         variable("duc", t("DfgUnresolvedCalls")) {
                                             new {
                                                 construct("DfgUnresolvedCalls") {
-                                                    addArgument(literal(3, t("int")))
+                                                    literal(3, t("int"))
                                                 }
                                             }
                                         }
@@ -166,7 +164,7 @@ class UnresolvedDFGPassTest {
                                     declare {
                                         variable("i", t("int")) {
                                             memberCall("knownFunction", ref("duc")) {
-                                                addArgument(literal(2, t("int")))
+                                                literal(2, t("int"))
                                             }
                                         }
                                     }
