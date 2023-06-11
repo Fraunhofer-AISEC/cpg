@@ -175,8 +175,10 @@ class ControlDependenceGraphPassTest {
                                 body {
                                     declare { variable("i", t("int")) { literal(0, t("int")) } }
                                     forEachStmt {
-                                        declare { variable("loopVar", t("string")) }
-                                        call("magicFunction")
+                                        loopVariable {
+                                            declare { variable("loopVar", t("string")) }
+                                        }
+                                        loopIterable { call("magicFunction") }
                                         loopBody {
                                             call("printf") {
                                                 addArgument(literal("loop: \${}\n", t("string")))
