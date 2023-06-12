@@ -184,7 +184,7 @@ private constructor(
 
                 PrintWriter(tmpFile).use { writer ->
                     list.forEach {
-                        val cxxExtensions = listOf(".c", ".cpp", ".cc")
+                        val cxxExtensions = listOf(".c", ".cpp", ".cc", ".cxx")
                         if (cxxExtensions.contains(Util.getExtension(it))) {
                             if (ctx.config.topLevel != null) {
                                 val topLevel = ctx.config.topLevel.toPath()
