@@ -638,8 +638,6 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
     }
 
     companion object {
-        @JvmField val CXX_EXTENSIONS = mutableListOf(".c", ".cpp", ".cc")
-        @JvmField val CXX_HEADER_EXTENSIONS = mutableListOf(".h", ".hpp")
         private val LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend::class.java)
 
         private fun explore(node: IASTNode, indent: Int) {
