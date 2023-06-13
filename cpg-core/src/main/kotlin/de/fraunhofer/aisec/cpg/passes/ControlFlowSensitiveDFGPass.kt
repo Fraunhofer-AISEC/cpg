@@ -114,18 +114,15 @@ fun transfer(
     currentEdge: PropertyEdge<Node>,
     state: State<Node, Set<Node>>,
     worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
-): Pair<State<Node, Set<Node>>, Boolean> {
+): State<Node, Set<Node>> {
     // We will set this if we write to a variable
     val writtenDecl: Declaration?
     val currentNode = currentEdge.end
-
-    var expectedUpdate = true // isLoopPoint(currentNode)
 
     val doubleState = state as DFGPassState
 
     val initializer = (currentNode as? VariableDeclaration)?.initializer
     if (initializer != null) {
-        expectedUpdate = true
         // A variable declaration with an initializer => The initializer flows to the
         // declaration.
         // We also wrote something to this variable declaration
@@ -133,7 +130,6 @@ fun transfer(
 
         doubleState.pushToDeclarationsState(currentNode, PowersetLattice(setOf(currentNode)))
     } else if (currentNode is AssignExpression) {
-        expectedUpdate = true
         // It's an assignment which can have one or multiple things on the lhs and on the
         // rhs. The lhs could be a declaration or a reference (or multiple of these things).
         // The rhs can be anything. The rhs flows to the respective lhs. To identify the
@@ -148,7 +144,6 @@ fun transfer(
                 }
         }
     } else if (isIncOrDec(currentNode)) {
-        expectedUpdate = true
         // Increment or decrement => Add the prevWrite of the input to the input. After the
         // operation, the prevWrite of the input's variable is this node.
         val input = (currentNode as UnaryOperator).input as DeclaredReferenceExpression
@@ -160,8 +155,6 @@ fun transfer(
             doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(input))
         }
     } else if (isSimpleAssignment(currentNode)) {
-        expectedUpdate = true
-
         // Only the lhs is the last write statement here and the variable which is written
         // to.
         writtenDecl = ((currentNode as BinaryOperator).lhs as DeclaredReferenceExpression).refersTo
@@ -170,7 +163,6 @@ fun transfer(
             doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(currentNode.lhs))
         }
     } else if (isCompoundAssignment(currentNode)) {
-        expectedUpdate = true
         // We write to the lhs, but it also serves as an input => We first get all previous
         // writes to the lhs and then add the flow from lhs and rhs to the current node.
 
@@ -191,13 +183,11 @@ fun transfer(
     ) {
         // We can only find a change if there's a state for the variable
         doubleState.declarationsState[currentNode.refersTo]?.let {
-            expectedUpdate = true
             // We only read the variable => Get previous write which have been collected in
             // the other steps
             state.push(currentNode, it)
         }
     } else if (currentNode is ForEachStatement && currentNode.variable != null) {
-        expectedUpdate = true
         // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
         // the "normal" case won't work. We handle this case separately here...
         // This is what we write to the declaration
@@ -256,7 +246,7 @@ fun transfer(
             doubleState.declarationsState[currentEdge.start]
         )
     }
-    return Pair(state, expectedUpdate)
+    return state
 }
 
 /**

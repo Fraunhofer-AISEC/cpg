@@ -93,7 +93,7 @@ fun transfer(
     currentEdge: PropertyEdge<Node>,
     currentState: State<PropertyEdge<Node>, Reachability>,
     currentWorklist: Worklist<PropertyEdge<Node>, PropertyEdge<Node>, Reachability>
-): Pair<State<PropertyEdge<Node>, Reachability>, Boolean> {
+): State<PropertyEdge<Node>, Reachability> {
     val currentNode = currentEdge.end
     if (currentNode is IfStatement) {
         handleIfStatement(currentEdge, currentNode, currentState)
@@ -105,7 +105,7 @@ fun transfer(
         currentNode.nextEOGEdges.forEach { currentState.push(it, currentState[currentEdge]) }
     }
 
-    return Pair(currentState, true)
+    return currentState
 }
 
 /**

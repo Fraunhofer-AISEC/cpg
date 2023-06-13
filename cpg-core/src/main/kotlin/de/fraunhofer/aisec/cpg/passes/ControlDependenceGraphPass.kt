@@ -172,7 +172,7 @@ fun handleEdge(
     currentEdge: PropertyEdge<Node>,
     currentState: State<Node, Map<Node, Set<Node>>>,
     currentWorklist: Worklist<PropertyEdge<Node>, Node, Map<Node, Set<Node>>>
-): Pair<State<Node, Map<Node, Set<Node>>>, Boolean> {
+): State<Node, Map<Node, Set<Node>>> {
     // Check if we start in a branching node and if this edge leads to the conditional
     // branch. In this case, the next node will move "one layer downwards" in the CDG.
     if (currentEdge.start is BranchingNode) { // && currentEdge.isConditionalBranch()) {
@@ -196,7 +196,7 @@ fun handleEdge(
             )
         currentState.push(currentEdge.end, state)
     }
-    return Pair(currentState, true)
+    return currentState
 }
 
 /**

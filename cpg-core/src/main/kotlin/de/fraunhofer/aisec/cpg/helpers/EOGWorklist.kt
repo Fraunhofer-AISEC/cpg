@@ -230,15 +230,12 @@ class Worklist<K : Any, N : Any, V>() {
  * [transformation] receives the current [Node] popped from the worklist, the [State] at this node
  * which is considered for this analysis and even the current [Worklist]. The worklist is given if
  * we have to add more elements out-of-order e.g. because the EOG is traversed in an order which is
- * not useful for this analysis. The [transformation] has to return the updated [State] and an
- * indication if we expect that the state has changed. This is necessary because not every
- * transition in the EOG will really lead to an update of the current state depending on the
- * analysis.
+ * not useful for this analysis. The [transformation] has to return the updated [State].
  */
 inline fun <reified K : Node, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
-    transformation: (K, State<K, V>, Worklist<K, K, V>) -> Pair<State<K, V>, Boolean>
+    transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>
 ): State<K, V>? {
     val worklist = Worklist(mutableMapOf(Pair(startNode, startState)))
     worklist.push(startNode, startState)
@@ -246,8 +243,8 @@ inline fun <reified K : Node, V> iterateEOG(
     while (worklist.isNotEmpty()) {
         val (nextNode, state) = worklist.pop()
 
-        val (newState, expectedUpdate) = transformation(nextNode, state.duplicate(), worklist)
-        if (worklist.update(nextNode, newState) || !expectedUpdate) {
+        val newState = transformation(nextNode, state.duplicate(), worklist)
+        if (worklist.update(nextNode, newState)) {
             nextNode.nextEOG.forEach { if (it is K) worklist.push(it, newState.duplicate()) }
         }
     }
@@ -257,7 +254,7 @@ inline fun <reified K : Node, V> iterateEOG(
 inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
-    transformation: (K, State<N, V>, Worklist<K, N, V>) -> Pair<State<N, V>, Boolean>
+    transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>
 ): State<N, V>? {
     val globalState = mutableMapOf<K, State<N, V>>()
     for (startEdge in startEdges) {
@@ -269,8 +266,8 @@ inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     while (worklist.isNotEmpty()) {
         val (nextEdge, state) = worklist.pop()
 
-        val (newState, expectedUpdate) = transformation(nextEdge, state.duplicate(), worklist)
-        if (worklist.update(nextEdge, newState) || !expectedUpdate) {
+        val newState = transformation(nextEdge, state.duplicate(), worklist)
+        if (worklist.update(nextEdge, newState)) {
             nextEdge.end.nextEOGEdges.forEach {
                 if (it is K) worklist.push(it, newState.duplicate())
             }
