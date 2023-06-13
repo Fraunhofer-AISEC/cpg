@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -60,11 +61,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
     protected fun handle(node: Node) {
         if (node is FunctionDeclaration) {
             clearFlowsOfVariableDeclarations(node)
-            val finalState = iterateEOG(node, DFGPassState(), ::transfer)
+            val startState = DFGPassState<Set<Node>>()
+            startState.declarationsState.push(node, PowersetLattice(setOf()))
+            val finalState =
+                iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
 
             removeUnreachableImplicitReturnStatement(
                 node,
-                (finalState as DFGPassState).returnStatements.values.flatMap {
+                finalState.returnStatements.values.flatMap {
                     it.elements.filterIsInstance<ReturnStatement>()
                 }
             )
@@ -107,14 +111,15 @@ fun isLoopPoint(node: Node) =
  * even if every path reaching this point already contains a return statement.
  */
 fun transfer(
-    currentNode: Node,
+    currentEdge: PropertyEdge<Node>,
     state: State<Node, Set<Node>>,
-    worklist: Worklist<Node, Node, Set<Node>>
+    worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
 ): Pair<State<Node, Set<Node>>, Boolean> {
     // We will set this if we write to a variable
     val writtenDecl: Declaration?
+    val currentNode = currentEdge.end
 
-    var expectedUpdate = isLoopPoint(currentNode)
+    var expectedUpdate = true // isLoopPoint(currentNode)
 
     val doubleState = state as DFGPassState
 
@@ -180,7 +185,10 @@ fun transfer(
             // The whole current node is the place of the last update, not (only) the lhs!
             doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(currentNode.lhs))
         }
-    } else if ((currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ) {
+    } else if (
+        (currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ &&
+            currentNode.refersTo is VariableDeclaration
+    ) {
         // We can only find a change if there's a state for the variable
         doubleState.declarationsState[currentNode.refersTo]?.let {
             expectedUpdate = true
@@ -224,7 +232,7 @@ fun transfer(
                         it.end != currentNode.statement &&
                         it.end !in currentNode.statement.allChildren<Node>()
                 }
-            nodesOutsideTheLoop.map { it.end }.forEach { worklist.push(it, state.duplicate()) }
+            nodesOutsideTheLoop.forEach { worklist.push(it, state.duplicate()) }
         }
 
         iterable?.let {
@@ -242,6 +250,11 @@ fun transfer(
         }
     } else if (currentNode is ReturnStatement) {
         doubleState.returnStatements.push(currentNode, PowersetLattice(setOf(currentNode)))
+    } else {
+        doubleState.declarationsState.push(
+            currentNode,
+            doubleState.declarationsState[currentEdge.start]
+        )
     }
     return Pair(state, expectedUpdate)
 }

@@ -64,7 +64,7 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             for (firstEdge in node.nextEOGEdges) {
                 startState.push(firstEdge, ReachabilityLattice(Reachability.REACHABLE))
             }
-            val finalState = iterateEOG(node.nextEOGEdges, startState, ::transfer)
+            val finalState = iterateEOG(node.nextEOGEdges, startState, ::transfer) ?: return
 
             for ((key, value) in finalState) {
                 if (value.elements == Reachability.UNREACHABLE) {

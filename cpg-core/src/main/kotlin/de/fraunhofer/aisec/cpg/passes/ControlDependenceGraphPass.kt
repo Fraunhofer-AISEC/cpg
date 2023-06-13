@@ -69,7 +69,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
             functionDecl,
             PrevEOGLattice(mapOf(Pair(functionDecl, setOf(functionDecl))))
         )
-        val finalState = iterateEOG(functionDecl.nextEOGEdges, startState, ::handleEdge)
+        val finalState = iterateEOG(functionDecl.nextEOGEdges, startState, ::handleEdge) ?: return
 
         val branchingNodeConditionals = getBranchingNodeConditions(functionDecl)
 

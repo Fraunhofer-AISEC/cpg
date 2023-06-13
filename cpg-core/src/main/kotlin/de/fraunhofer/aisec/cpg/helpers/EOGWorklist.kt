@@ -211,7 +211,7 @@ class Worklist<K : Any, N : Any, V>() {
     fun hasAlreadySeen(currentNode: K) = currentNode in alreadySeen
 
     /** Computes the meet over paths for all the states in [globalState]. */
-    fun mop(): State<N, V> {
+    fun mop(): State<N, V>? {
         val firstKey = globalState.keys.firstOrNull()
         val state = globalState[firstKey]
         for ((_, v) in globalState) {
@@ -239,7 +239,7 @@ inline fun <reified K : Node, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
     transformation: (K, State<K, V>, Worklist<K, K, V>) -> Pair<State<K, V>, Boolean>
-): State<K, V> {
+): State<K, V>? {
     val worklist = Worklist(mutableMapOf(Pair(startNode, startState)))
     worklist.push(startNode, startState)
 
@@ -258,7 +258,7 @@ inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
     transformation: (K, State<N, V>, Worklist<K, N, V>) -> Pair<State<N, V>, Boolean>
-): State<N, V> {
+): State<N, V>? {
     val globalState = mutableMapOf<K, State<N, V>>()
     for (startEdge in startEdges) {
         globalState[startEdge] = startState
