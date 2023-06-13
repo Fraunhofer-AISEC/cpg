@@ -72,10 +72,6 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
      */
     var bindingsCache = mutableMapOf<String, Declaration>()
 
-    companion object {
-        @JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
-    }
-
     override fun parse(file: File): TranslationUnitDeclaration {
         var bench = Benchmark(this.javaClass, "Parsing sourcefile")
         // clear the bindings cache, because it is just valid within one module
