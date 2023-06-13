@@ -140,18 +140,16 @@ class ControlDependenceGraphPassTest {
                                         condition { ref("i") lt literal(1, t("int")) }
                                         thenStmt {
                                             ref("i") assign literal(1, t("int"))
-                                            call("printf") {
-                                                addArgument(literal("0\n", t("string")))
-                                            }
+                                            call("printf") { literal("0\n", t("string")) }
                                         }
                                     }
-                                    call("printf") { addArgument(literal("1\n", t("string"))) }
+                                    call("printf") { literal("1\n", t("string")) }
                                     ifStmt {
                                         condition { ref("i") gt literal(0, t("int")) }
                                         thenStmt { ref("i") assign literal(2, t("int")) }
                                         elseStmt { ref("i") assign literal(3, t("int")) }
                                     }
-                                    call("printf") { addArgument(literal("2\n", t("string"))) }
+                                    call("printf") { literal("2\n", t("string")) }
                                     returnStmt { ref("i") }
                                 }
                             }
@@ -181,12 +179,12 @@ class ControlDependenceGraphPassTest {
                                         loopIterable { call("magicFunction") }
                                         loopBody {
                                             call("printf") {
-                                                addArgument(literal("loop: \${}\n", t("string")))
-                                                addArgument(ref("loopVar"))
+                                                literal("loop: \${}\n", t("string"))
+                                                ref("loopVar")
                                             }
                                         }
                                     }
-                                    call("printf") { addArgument(literal("1\n", t("string"))) }
+                                    call("printf") { literal("1\n", t("string")) }
 
                                     returnStmt { ref("i") }
                                 }
