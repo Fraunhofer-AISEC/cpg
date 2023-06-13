@@ -591,10 +591,9 @@ fun LanguageFrontend.loopBody(init: CompoundStatement.() -> Unit): CompoundState
 
     return node
 }
-
 /**
  * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
- * [ForEachStatement.statement] of the nearest enclosing [ForEachStatement]. The [init] block can be
+ * [WhileStatement.statement] of the nearest enclosing [WhileStatement]. The [init] block can be
  * used to create further sub-nodes as well as configuring the created node itself.
  */
 context(ForEachStatement)
@@ -605,34 +604,6 @@ fun LanguageFrontend.loopBody(init: CompoundStatement.() -> Unit): CompoundState
     statement = node
 
     return node
-}
-
-/**
- * Creates a new [Statement] in the Fluent Node DSL and sets it to the [ForEachStatement.variable]
- * of the nearest enclosing [ForEachStatement]. The [init] block can be used to create further
- * sub-nodes as well as configuring the created node itself.
- */
-context(ForEachStatement)
-
-fun LanguageFrontend.loopVariable(init: () -> Statement): Statement {
-    val s = init()
-    variable = s
-
-    return s
-}
-
-/**
- * Creates a new [Statement] in the Fluent Node DSL and sets it to the [ForEachStatement.variable]
- * of the nearest enclosing [ForEachStatement]. The [init] block can be used to create further
- * sub-nodes as well as configuring the created node itself.
- */
-context(ForEachStatement)
-
-fun LanguageFrontend.loopIterable(init: () -> Statement): Statement {
-    val s = init()
-    iterable = s
-
-    return s
 }
 
 /**
