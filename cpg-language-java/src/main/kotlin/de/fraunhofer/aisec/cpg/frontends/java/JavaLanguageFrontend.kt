@@ -485,7 +485,6 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     }
 
     companion object {
-        @JvmField val JAVA_EXTENSIONS = listOf(".java")
         const val THIS = "this"
         const val ANNOTATION_MEMBER_VALUE = "value"
     }
