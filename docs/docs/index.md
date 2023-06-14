@@ -104,11 +104,11 @@ programming language.
 
 <p class="empty"/>
 
-<div class="float-container">
+<div class="float-container" markdown>
 <div class="left-picture">
 <img src="assets/img/Institut-AISEC-Gebaeude-Nacht.jpg" />
 </div>
-<div class="left-picture-text">
+<div class="left-picture-text" markdown>
 <h2 id="about-us">About Us
 <a class="headerlink" href="#about-us" title="Permanent link" />
 </h2>
