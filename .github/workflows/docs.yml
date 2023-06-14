@@ -29,9 +29,9 @@ jobs:
           key: ${{ github.ref }}
           path: .cache
       - name: Install Material for MkDocs
-        run: cd docs && pip install mkdocs-material pillow cairosvg
+        run: pip install mkdocs-material pillow cairosvg
       - name: Build
-        run: cd docs && mkdocs build --clean --config-file mkdocs.yaml -d site -v
+        run: ls -l && cd docs && mkdocs build --clean --config-file mkdocs.yaml -d site -v
       - name: Publish main
         if: github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@v4
