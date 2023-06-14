@@ -109,15 +109,14 @@ programming language.
 <img src="assets/img/Institut-AISEC-Gebaeude-Nacht.jpg" />
 </div>
 <div class="left-picture-text" markdown>
-<h2 id="about-us">About Us
-<a class="headerlink" href="#about-us" title="Permanent link" />
-</h2>
 
-<p>We're a team of researchers at <a href="https://www.aisec.fraunhofer.de/">Fraunhofer AISEC</a>.
+## About Us
+
+We're a team of researchers at <a href="https://www.aisec.fraunhofer.de/">Fraunhofer AISEC</a>.
 We're interested in different topics in the area of static program analysis. If
 you're interested in our work, feel free to reach out to us - we're happy to
 collaborate and push the boundaries of static code analysis.
-</p></div>
+</div>
 </div>
 
 <p class="empty" style="border-top: 1px solid #c7cacc;" />
