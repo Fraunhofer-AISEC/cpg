@@ -93,19 +93,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
     }
 }
 
-fun isLoopPoint(node: Node) =
-    node is ForStatement ||
-        node is WhileStatement ||
-        node is ForEachStatement ||
-        node is DoStatement ||
-        node is GotoStatement ||
-        node is ContinueStatement ||
-        (node is Literal<*> && node in node.nextEOG)
-
 /**
- * Computes the previous write access of [node] if it is a [DeclaredReferenceExpression] or
- * [ValueDeclaration] based on the given [state] (which maps all variables to its last write
- * instruction). It also updates the [state] if [node] performs a write-operation to a variable.
+ * Computes the previous write access of [currentEdge].end if it is a [DeclaredReferenceExpression]
+ * or [ValueDeclaration] based on the given [state] (which maps all variables to its last write
+ * instruction). It also updates the [state] if [currentEdge].end performs a write-operation to a
+ * variable.
  *
  * It further determines unnecessary implicit return statement which are added by some frontends
  * even if every path reaching this point already contains a return statement.
