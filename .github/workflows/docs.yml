@@ -29,7 +29,9 @@ jobs:
           key: ${{ github.ref }}
           path: .cache
       - name: Install Material for MkDocs
-        run: pip install mkdocs-material pillow cairosvg
+        run: |
+          pip install mkdocs-material pillow cairosvg
+          pip install -r docs/mkdocs-material-plugins.txt
       - name: Build
         run: cd docs && mkdocs build --clean --config-file mkdocs.yaml -d site -v
       - name: Publish main
