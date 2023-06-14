@@ -73,7 +73,7 @@ programming language.
   * We provide an API for querying the graph for interesting properties
   </div>
 
-  <div class="box 3" markdown>
+  <div class="box 4" markdown>
   <h3>Highly Extensible</h3>
   
   ---
@@ -85,7 +85,7 @@ programming language.
   * analyses.
   </div>
 
-  <div class="box 4" markdown>
+  <div class="box 5" markdown>
   <h3>Handling Incomplete Code</h3>
   
   ---
@@ -97,7 +97,8 @@ programming language.
    <!--This allows our toolchain to analyze programs even if the current code base is incomplete and incorrect to a certain extent.-->
   </div>
 
-  <div class="box 5" />
+  <div class="box 6" markdown>
+  </div>
 
 </div>
 
