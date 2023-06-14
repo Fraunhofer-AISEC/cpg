@@ -13,7 +13,7 @@ on:
       - docs/**
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     if: github.event.repository.fork == false
     steps:
@@ -29,16 +29,16 @@ jobs:
           key: ${{ github.ref }}
           path: .cache
       - name: Install Material for MkDocs
-        run: pip install mkdocs-material pillow cairosvg
+        run: cd docs && pip install mkdocs-material pillow cairosvg
       - name: Build
-        run: mkdocs build --clean --config-file mkdocs.yaml -d site -v
+        run: cd docs && mkdocs build --clean --config-file mkdocs.yaml -d site -v
       - name: Publish main
         if: github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: site
+          folder: docs/site
       - name: Publish version
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: site
+          folder: docs/site
