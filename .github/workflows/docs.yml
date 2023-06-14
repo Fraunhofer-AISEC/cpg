@@ -33,7 +33,7 @@ jobs:
       - name: Build
         run: mkdocs build --clean --config-file mkdocs.yaml -d site -v
       - name: Publish
-        if: (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')) || github.ref == 'refs/main')
+        if: "(startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')) || github.ref == 'refs/main')"
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: site
