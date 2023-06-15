@@ -431,7 +431,6 @@ a.green-button {
     border:1px solid #FFFFFF;
     padding-top:0.2rem;
     padding-bottom:0.2rem;
-    color: initial;
     background-color: var(--fraunhofer-green);
     width:100%;
     display: inline-block;
