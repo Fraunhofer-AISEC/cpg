@@ -432,7 +432,7 @@ a.green-button {
     padding-top:0.2rem;
     padding-bottom:0.2rem;
     color: initial;
-background-color
+    background-color: var(--fraunhofer-green);
     width:100%;
     display: inline-block;
     text-align:center;
