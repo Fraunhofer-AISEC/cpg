@@ -1,9 +1,8 @@
-
 # yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
 
 # Project information
 site_name: Code Property Graph
-site_url:  https://fraunhofer-aisec.github.io/cpg/
+site_url: https://fraunhofer-aisec.github.io/cpg/
 site_author: Fraunhofer AISEC
 site_description: Language-agnostic code analysis
 
@@ -61,11 +60,12 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-  
+
   font: false
 
 extra_css:
   - stylesheets/extra.css
+  - assets/fonts/Inter/inter.css
 
 # Plugins
 plugins:
@@ -149,23 +149,23 @@ markdown_extensions:
   - pymdownx.tilde
 
 nav:
-  - 'Home': index.md
-  - 'Getting Started':
+  - "Home": index.md
+  - "Getting Started":
       - GettingStarted/index.md
-      - 'Installing the CPG library': GettingStarted/installation.md
-      - 'Usage as library': GettingStarted/library.md
-      - 'Using the Interactive CLI': GettingStarted/cli.md
-      - 'Using the Query API': GettingStarted/query.md
-  - 'Specifications':
+      - "Installing the CPG library": GettingStarted/installation.md
+      - "Usage as library": GettingStarted/library.md
+      - "Using the Interactive CLI": GettingStarted/cli.md
+      - "Using the Query API": GettingStarted/query.md
+  - "Specifications":
       - CPG/specs/index.md
-      - 'Graph Schema': CPG/specs/graph.md
-      - 'Dataflow Graph (DFG)': CPG/specs/dfg.md
-      - 'Evaluation Order Graph (EOG)': CPG/specs/eog.md
-  - 'Implementation':
+      - "Graph Schema": CPG/specs/graph.md
+      - "Dataflow Graph (DFG)": CPG/specs/dfg.md
+      - "Evaluation Order Graph (EOG)": CPG/specs/eog.md
+  - "Implementation":
       - CPG/impl/index.md
-      - 'Language Frontends': CPG/impl/language.md
-      - 'Scopes': CPG/impl/scopes.md
-      - 'Passes': CPG/impl/passes.md
-  - 'Contributing':
-      - 'Contributing to the CPG library': Contributing/index.md
-  - 'Documentation': dokka/dokkaCustomMultiModuleOutput
+      - "Language Frontends": CPG/impl/language.md
+      - "Scopes": CPG/impl/scopes.md
+      - "Passes": CPG/impl/passes.md
+  - "Contributing":
+      - "Contributing to the CPG library": Contributing/index.md
+  - "Documentation": dokka/dokkaCustomMultiModuleOutput
