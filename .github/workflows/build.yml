@@ -7,12 +7,12 @@ on:
       - main
     tags:
       - v*.**
-    paths:
-      - "!docs/**"
+    paths-ignore:
+      - "docs/**"
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - "!docs/**"
+    paths-ignore:
+      - "docs/**"
 
 jobs:
   build-cpgo-osx:
