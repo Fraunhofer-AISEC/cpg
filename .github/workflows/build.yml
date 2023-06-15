@@ -155,7 +155,7 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build/dokkaCustomMultiModuleOutput
-          target-folder: dokka/${{ env.version }}
+          target-folder: dokka/main
       - name: "Create Release"
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         id: create_release
