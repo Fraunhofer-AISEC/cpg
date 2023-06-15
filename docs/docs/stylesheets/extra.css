@@ -30,6 +30,7 @@
 
 body {
   --md-text-font-family: "Inter var experimental", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-feature-settings: "cv11", "ss01"
 }
 
 .md-typeset .admonition.paper,
