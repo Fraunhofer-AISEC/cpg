@@ -428,11 +428,11 @@ a.green-button {
     -webkit-appearance: button;
     -moz-appearance: button;
     appearance: button;
-    color:#FFFFFF;
     border:1px solid #FFFFFF;
     padding-top:0.2rem;
     padding-bottom:0.2rem;
     color: initial;
+background-color
     width:100%;
     display: inline-block;
     text-align:center;
