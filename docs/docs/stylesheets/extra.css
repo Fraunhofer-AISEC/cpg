@@ -36,7 +36,7 @@ body {
 .md-typeset .admonition.paper,
 .md-typeset details.paper {
   border-color: var(--fraunhofer-green);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
 
 .md-typeset hr {
@@ -52,6 +52,7 @@ body {
 
 .md-typeset {
   line-height: 1.1rem;
+  font-size: 0.7rem;
 }
 
 .md-typeset h1 {
@@ -242,7 +243,7 @@ body {
 .md-typeset .paper>summary {
   background-color: var(--fraunhofer-green);
   border-color: var(--fraunhofer-green);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   padding-left: 3rem;
   margin-left: 0px;
   margin-top: .625em;
