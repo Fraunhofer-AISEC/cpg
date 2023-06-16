@@ -49,8 +49,6 @@ abstract class LatticeElement<T>(open val elements: T) : Comparable<LatticeEleme
 
     /** Duplicates the object, i.e., makes a deep copy. */
     abstract fun duplicate(): LatticeElement<T>
-
-    abstract val BOT: LatticeElement<T>
 }
 
 /**
@@ -62,8 +60,6 @@ class PowersetLattice(override val elements: Set<Node>) : LatticeElement<Set<Nod
         PowersetLattice((other.elements).union(this.elements))
 
     override fun duplicate() = PowersetLattice(this.elements.toSet())
-
-    override val BOT by lazy { PowersetLattice(setOf()) }
 
     override fun compareTo(other: LatticeElement<Set<Node>>): Int {
         return if (this.elements.containsAll(other.elements)) {
@@ -105,10 +101,8 @@ open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
     open fun needsUpdate(other: State<K, V>): Boolean {
         var update = false
         for ((node, newLattice) in other) {
-            update =
-                update ||
-                    node !in this ||
-                    newLattice > this.computeIfAbsent(node) { newLattice.BOT }
+            val current = this[node]
+            update = update || current == null || newLattice > current
         }
         return update
     }
@@ -132,14 +126,14 @@ open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
         if (newLatticeElement == null) {
             return false
         }
-        if (newNode in this && this[newNode]?.let { it >= newLatticeElement } == true) {
+        val current = this[newNode]
+        if (current != null && current >= newLatticeElement) {
             // newLattice is "smaller" than the currently stored one. We don't add it anything.
             return false
-        } else if (newNode in this) {
+        } else if (current != null) {
             // newLattice is "bigger" than the currently stored one. We update it to the least
             // upper bound
-            this[newNode] =
-                newLatticeElement.lub(this.computeIfAbsent(newNode) { newLatticeElement.BOT })
+            this[newNode] = newLatticeElement.lub(current)
         } else {
             this[newNode] = newLatticeElement.duplicate()
         }

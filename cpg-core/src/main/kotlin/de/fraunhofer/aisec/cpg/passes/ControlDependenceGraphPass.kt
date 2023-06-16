@@ -224,7 +224,6 @@ private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
  */
 class PrevEOGLattice(override val elements: Map<Node, Set<Node>>) :
     LatticeElement<Map<Node, Set<Node>>>(elements) {
-    override val BOT by lazy { PrevEOGLattice(mapOf()) }
 
     override fun lub(
         other: LatticeElement<Map<Node, Set<Node>>>

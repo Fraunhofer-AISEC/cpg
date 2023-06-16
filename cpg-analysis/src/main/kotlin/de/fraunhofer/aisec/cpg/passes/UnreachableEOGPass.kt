@@ -204,8 +204,6 @@ class ReachabilityLattice(override val elements: Reachability) :
 
     override fun duplicate() = ReachabilityLattice(this.elements)
 
-    override val BOT by lazy { ReachabilityLattice(Reachability.BOTTOM) }
-
     override fun compareTo(other: LatticeElement<Reachability>) =
         this.elements.compareTo(other.elements)
 }
