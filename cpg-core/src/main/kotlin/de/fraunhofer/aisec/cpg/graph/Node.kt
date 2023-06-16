@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeCombinationDelegate
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -54,6 +55,7 @@ import de.fraunhofer.aisec.cpg.passes.FilenameMapper
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
+import kotlin.collections.ArrayList
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.*
@@ -195,6 +197,20 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     @Relationship(value = "DFG")
     var nextDFG: MutableSet<Node> = HashSet()
+
+    /**  */
+    @delegate:Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
+    val nextPDGEdges: List<PropertyEdge<Node>> by
+        PropertyEdgeCombinationDelegate(listOf(nextCDGEdges), listOf(nextDFG))
+
+    var nextPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
+
+    /**  */
+    @delegate:Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
+    val prevPDGEdges: List<PropertyEdge<Node>> by
+        PropertyEdgeCombinationDelegate(listOf(prevCDGEdges), listOf(prevDFG))
+
+    var prevPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
 
     var typedefs: MutableSet<TypedefDeclaration> = HashSet()
 
