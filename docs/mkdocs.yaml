@@ -156,6 +156,7 @@ nav:
       - "Usage as library": GettingStarted/library.md
       - "Using the Interactive CLI": GettingStarted/cli.md
       - "Using the Query API": GettingStarted/query.md
+      - "Shortcuts to Explore the Graph": GettingStarted/shortcuts.md
   - "Specifications":
       - CPG/specs/index.md
       - "Graph Schema": CPG/specs/graph.md
