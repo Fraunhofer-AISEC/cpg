@@ -56,7 +56,7 @@ Both notations allow you to quickly filter for the name by providing the
 respective string or by accessing the fields and writing conditions on them.
 
 Examples:
-```kt
+```kotlin
 import de.fraunhofer.aisec.cpg.graph.*
 
 // returns the first variable in the graph which has the name "a"
