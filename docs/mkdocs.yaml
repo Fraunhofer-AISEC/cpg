@@ -169,4 +169,7 @@ nav:
       - "Passes": CPG/impl/passes.md
   - "Contributing":
       - "Contributing to the CPG library": Contributing/index.md
-  - "Documentation": dokka/dokkaCustomMultiModuleOutput
+  - "API Reference":
+      - API/index.md
+      - "main": "/dokka/main"
+      - "v7.0.1": "/dokka/v7.0.1"
