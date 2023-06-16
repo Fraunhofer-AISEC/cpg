@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install python3
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: 3.x
       - name: Cache
@@ -44,3 +44,4 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: docs/site
+          clean-exclude: dokka/**

@@ -23,9 +23,9 @@ neo4j-ogm-bolt = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "ne
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.25.0"}
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.15.0"}
-eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.26.0"}
+eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.27.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
-icu4j = { module = "com.ibm.icu:icu4j", version = "73.1"}
+icu4j = { module = "com.ibm.icu:icu4j", version = "73.2"}
 eclipse-cdt-core = { module = "org.eclipse.cdt:core", version = "8.0.0.202211292120"}
 commons-io = { module = "commons-io:commons-io", version = "2.13.0"}
 jetbrains-annotations = { module = "org.jetbrains:annotations", version = "24.0.0"}

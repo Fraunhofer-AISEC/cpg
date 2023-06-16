@@ -73,7 +73,7 @@ programming language.
   * We provide an API for querying the graph for interesting properties
   </div>
 
-  <div class="box 3" markdown>
+  <div class="box 4" markdown>
   <h3>Highly Extensible</h3>
   
   ---
@@ -85,7 +85,7 @@ programming language.
   * analyses.
   </div>
 
-  <div class="box 4" markdown>
+  <div class="box 5" markdown>
   <h3>Handling Incomplete Code</h3>
   
   ---
@@ -97,26 +97,26 @@ programming language.
    <!--This allows our toolchain to analyze programs even if the current code base is incomplete and incorrect to a certain extent.-->
   </div>
 
-  <div class="box 5" />
+  <div class="box 6" markdown>
+  </div>
 
 </div>
 
 <p class="empty"/>
 
-<div class="float-container">
+<div class="float-container" markdown>
 <div class="left-picture">
 <img src="assets/img/Institut-AISEC-Gebaeude-Nacht.jpg" />
 </div>
-<div class="left-picture-text">
-<h2 id="about-us">About Us
-<a class="headerlink" href="#about-us" title="Permanent link" />
-</h2>
+<div class="left-picture-text" markdown>
 
-<p>We're a team of researchers at <a href="https://www.aisec.fraunhofer.de/">Fraunhofer AISEC</a>.
+## About Us
+
+We're a team of researchers at <a href="https://www.aisec.fraunhofer.de/">Fraunhofer AISEC</a>.
 We're interested in different topics in the area of static program analysis. If
 you're interested in our work, feel free to reach out to us - we're happy to
 collaborate and push the boundaries of static code analysis.
-</p></div>
+</div>
 </div>
 
 <p class="empty" style="border-top: 1px solid #c7cacc;" />

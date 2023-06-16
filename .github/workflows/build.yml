@@ -7,12 +7,12 @@ on:
       - main
     tags:
       - v*.**
-    paths:
-      - "!docs/**"
+    paths-ignore:
+      - "docs/**"
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - "!docs/**"
+    paths-ignore:
+      - "docs/**"
 
 jobs:
   build-cpgo-osx:
@@ -115,13 +115,13 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PenableJavaFrontend=true -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar testCodeCoverageReport sonar \
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PenableJavaFrontend=true -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar testCodeCoverageReport sonar dokkaHtmlMultiModule \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PenableJavaFrontend=true -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PenableJavaFrontend=true -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar dokkaHtmlMultiModule
           fi
         id: build
         env:
@@ -144,11 +144,18 @@ jobs:
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-      - name: Publish JavaDoc
+      - name: Publish JavaDoc (version)
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build/dokkaCustomMultiModuleOutput
+          target-folder: dokka/${{ env.version }}
+      - name: Publish JavaDoc (main)
+        if: github.ref == 'refs/head/main'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build/dokkaCustomMultiModuleOutput
+          target-folder: dokka/main
       - name: "Create Release"
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         id: create_release
