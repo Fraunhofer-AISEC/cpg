@@ -228,7 +228,7 @@ fun transfer(
     } else if (currentNode is FunctionDeclaration) {
         // We have to add the parameters
         currentNode.parameters.forEach {
-            doubleState.declarationsState.push(it, PowersetLattice(setOf(it)))
+            doubleState.pushToDeclarationsState(it, PowersetLattice(setOf(it)))
         }
     } else if (currentNode is ReturnStatement) {
         doubleState.returnStatements.push(currentNode, PowersetLattice(setOf(currentNode)))
@@ -286,15 +286,28 @@ private fun removeUnreachableImplicitReturnStatement(
  * ReturnStatements.
  */
 class DFGPassState<V>(
-    /** A mapping of a [Node] to its [LatticeElement]. */
+    /**
+     * A mapping of a [Node] to its [LatticeElement]. The keys of this state will later get the DFG
+     * edges from the value!
+     */
     var generalState: State<Node, V> = State(),
-    /** A mapping of [Declaration] to its [LatticeElement]. */
+    /**
+     * It's main purpose is to store the most recent mapping of a [Declaration] to its
+     * [LatticeElement]. However, it is also used to figure out if we have to continue with the
+     * iteration (something in the declarationState has changed) which is why we store all nodes
+     * here. However, since we never use them except from determining if we changed something, it
+     * won't affect the result.
+     */
     var declarationsState: State<Node, V> = State(),
     /** The [returnStatements] which are reachable. */
     var returnStatements: State<Node, V> = State()
 ) : State<Node, V>() {
     override fun duplicate(): DFGPassState<V> {
         return DFGPassState(generalState.duplicate(), declarationsState.duplicate())
+    }
+
+    override fun get(key: Node?): LatticeElement<V>? {
+        return generalState[key] ?: declarationsState[key]
     }
 
     override fun lub(other: State<Node, V>): Pair<State<Node, V>, Boolean> {
