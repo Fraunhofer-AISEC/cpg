@@ -40,15 +40,17 @@ import java.util.IdentityHashMap
  * Implementations of this class have to implement the comparator, the least upper bound of two
  * lattices.
  */
-abstract class LatticeElement<T>(open val elements: T) : Comparable<LatticeElement<T>?> {
+abstract class LatticeElement<T>(open val elements: T) : Comparable<LatticeElement<T>> {
     /**
      * Computes the least upper bound of this lattice and [other]. It returns a new object and does
      * not modify either of the objects.
      */
-    abstract fun lub(other: LatticeElement<T>?): LatticeElement<T>
+    abstract fun lub(other: LatticeElement<T>): LatticeElement<T>
 
     /** Duplicates the object, i.e., makes a deep copy. */
     abstract fun duplicate(): LatticeElement<T>
+
+    abstract val BOT: LatticeElement<T>
 }
 
 /**
@@ -56,14 +58,16 @@ abstract class LatticeElement<T>(open val elements: T) : Comparable<LatticeEleme
  * constructed by the powerset.
  */
 class PowersetLattice(override val elements: Set<Node>) : LatticeElement<Set<Node>>(elements) {
-    override fun lub(other: LatticeElement<Set<Node>>?) =
-        PowersetLattice((other?.elements ?: setOf()).union(this.elements))
+    override fun lub(other: LatticeElement<Set<Node>>) =
+        PowersetLattice((other.elements).union(this.elements))
 
     override fun duplicate() = PowersetLattice(this.elements.toSet())
 
-    override fun compareTo(other: LatticeElement<Set<Node>>?): Int {
-        return if (this.elements.containsAll(other?.elements ?: setOf())) {
-            if (this.elements.size > (other?.elements?.size ?: 0)) 1 else 0
+    override val BOT by lazy { PowersetLattice(setOf()) }
+
+    override fun compareTo(other: LatticeElement<Set<Node>>): Int {
+        return if (this.elements.containsAll(other.elements)) {
+            if (this.elements.size > (other.elements.size)) 1 else 0
         } else {
             -1
         }
@@ -101,7 +105,10 @@ open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
     open fun needsUpdate(other: State<K, V>): Boolean {
         var update = false
         for ((node, newLattice) in other) {
-            update = update || node !in this || newLattice > this[node]
+            update =
+                update ||
+                    node !in this ||
+                    newLattice > this.computeIfAbsent(node) { newLattice.BOT }
         }
         return update
     }
@@ -131,7 +138,8 @@ open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
         } else if (newNode in this) {
             // newLattice is "bigger" than the currently stored one. We update it to the least
             // upper bound
-            this[newNode] = newLatticeElement.lub(this[newNode])
+            this[newNode] =
+                newLatticeElement.lub(this.computeIfAbsent(newNode) { newLatticeElement.BOT })
         } else {
             this[newNode] = newLatticeElement.duplicate()
         }
@@ -221,7 +229,7 @@ class Worklist<K : Any, N : Any, V>() {
             state?.lub(v)
         }
 
-        return state ?: State()
+        return state
     }
 }
 

@@ -224,11 +224,12 @@ private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
  */
 class PrevEOGLattice(override val elements: Map<Node, Set<Node>>) :
     LatticeElement<Map<Node, Set<Node>>>(elements) {
+    override val BOT by lazy { PrevEOGLattice(mapOf()) }
+
     override fun lub(
-        other: LatticeElement<Map<Node, Set<Node>>>?
+        other: LatticeElement<Map<Node, Set<Node>>>
     ): LatticeElement<Map<Node, Set<Node>>> {
-        val newMap =
-            (other?.elements ?: mapOf()).mapValues { (_, v) -> v.toMutableSet() }.toMutableMap()
+        val newMap = (other.elements).mapValues { (_, v) -> v.toMutableSet() }.toMutableMap()
         for ((key, value) in this.elements) {
             newMap.computeIfAbsent(key, ::mutableSetOf).addAll(value)
         }
@@ -237,16 +238,14 @@ class PrevEOGLattice(override val elements: Map<Node, Set<Node>>) :
 
     override fun duplicate() = PrevEOGLattice(this.elements.toMap())
 
-    override fun compareTo(other: LatticeElement<Map<Node, Set<Node>>>?): Int {
+    override fun compareTo(other: LatticeElement<Map<Node, Set<Node>>>): Int {
         return if (
-            this.elements.keys.containsAll(other?.elements?.keys ?: setOf()) &&
-                this.elements.all { (k, v) -> v.containsAll(other?.elements?.get(k) ?: setOf()) }
+            this.elements.keys.containsAll(other.elements.keys) &&
+                this.elements.all { (k, v) -> v.containsAll(other.elements[k] ?: setOf()) }
         ) {
             if (
-                this.elements.keys.size > (other?.elements?.keys?.size ?: 0) ||
-                    this.elements.any { (k, v) ->
-                        v.size > (other?.elements?.get(k) ?: setOf()).size
-                    }
+                this.elements.keys.size > (other.elements.keys.size) ||
+                    this.elements.any { (k, v) -> v.size > (other.elements[k] ?: setOf()).size }
             )
                 1
             else 0

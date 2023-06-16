@@ -199,13 +199,15 @@ private fun handleWhileStatement(
  */
 class ReachabilityLattice(override val elements: Reachability) :
     LatticeElement<Reachability>(elements) {
-    override fun lub(other: LatticeElement<Reachability>?) =
-        ReachabilityLattice(maxOf(this.elements, other?.elements ?: Reachability.BOTTOM))
+    override fun lub(other: LatticeElement<Reachability>) =
+        ReachabilityLattice(maxOf(this.elements, other.elements))
 
     override fun duplicate() = ReachabilityLattice(this.elements)
 
-    override fun compareTo(other: LatticeElement<Reachability>?) =
-        this.elements.compareTo(other?.elements ?: Reachability.BOTTOM)
+    override val BOT by lazy { ReachabilityLattice(Reachability.BOTTOM) }
+
+    override fun compareTo(other: LatticeElement<Reachability>) =
+        this.elements.compareTo(other.elements)
 }
 
 /** The ordering will be as follows: BOTTOM (no information) < UNREACHABLE < REACHABLE < TOP */
