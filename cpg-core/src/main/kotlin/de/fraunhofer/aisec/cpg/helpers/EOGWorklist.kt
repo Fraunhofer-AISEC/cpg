@@ -40,27 +40,28 @@ import java.util.IdentityHashMap
  * Implementations of this class have to implement the comparator, the least upper bound of two
  * lattices.
  */
-abstract class Lattice<T>(open val elements: T) : Comparable<Lattice<T>?> {
+abstract class LatticeElement<T>(open val elements: T) : Comparable<LatticeElement<T>?> {
     /**
      * Computes the least upper bound of this lattice and [other]. It returns a new object and does
      * not modify either of the objects.
      */
-    abstract fun lub(other: Lattice<T>?): Lattice<T>
+    abstract fun lub(other: LatticeElement<T>?): LatticeElement<T>
 
     /** Duplicates the object, i.e., makes a deep copy. */
-    abstract fun duplicate(): Lattice<T>
+    abstract fun duplicate(): LatticeElement<T>
 }
 
 /**
- * Implements the [Lattice] over a set of nodes. The lattice itself is constructed by the powerset.
+ * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
+ * constructed by the powerset.
  */
-class PowersetLattice(override val elements: Set<Node>) : Lattice<Set<Node>>(elements) {
-    override fun lub(other: Lattice<Set<Node>>?) =
+class PowersetLattice(override val elements: Set<Node>) : LatticeElement<Set<Node>>(elements) {
+    override fun lub(other: LatticeElement<Set<Node>>?) =
         PowersetLattice((other?.elements ?: setOf()).union(this.elements))
 
     override fun duplicate() = PowersetLattice(this.elements.toSet())
 
-    override fun compareTo(other: Lattice<Set<Node>>?): Int {
+    override fun compareTo(other: LatticeElement<Set<Node>>?): Int {
         return if (this.elements.containsAll(other?.elements ?: setOf())) {
             if (this.elements.size > (other?.elements?.size ?: 0)) 1 else 0
         } else {
@@ -70,11 +71,12 @@ class PowersetLattice(override val elements: Set<Node>) : Lattice<Set<Node>>(ele
 }
 
 /**
- * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [PropertyEdge]) to a [Lattice]. It
- * provides some useful functions e.g. to check if the mapping has to be updated (e.g. because there
- * are new nodes or because a new lattice is bigger than the old one).
+ * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [PropertyEdge]) to a
+ * [LatticeElement]. It provides some useful functions e.g. to check if the mapping has to be
+ * updated (e.g. because there are new nodes or because a new lattice element is bigger than the old
+ * one).
  */
-open class State<K, V> : IdentityHashMap<K, Lattice<V>>() {
+open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
 
     /**
      * It updates this state by adding all new nodes in [other] to `this` and by computing the least
@@ -93,8 +95,8 @@ open class State<K, V> : IdentityHashMap<K, Lattice<V>>() {
 
     /**
      * Checks if an update is necessary, i.e., if [other] contains nodes which are not present in
-     * `this` and if the lattice of a node in [other] "is bigger" than the respective lattice in
-     * `this`. It does not modify anything.
+     * `this` and if the lattice element of a node in [other] "is bigger" than the respective
+     * lattice element in `this`. It does not modify anything.
      */
     open fun needsUpdate(other: State<K, V>): Boolean {
         var update = false
@@ -114,23 +116,24 @@ open class State<K, V> : IdentityHashMap<K, Lattice<V>>() {
     }
 
     /**
-     * Adds a new mapping from [newNode] to (a copy of) [newLattice] to this object if [newNode]
-     * does not exist in this state yet. If it already exists, it computes the least upper bound of
-     * [newLattice] and the current one for [newNode]. It returns if the state has changed.
+     * Adds a new mapping from [newNode] to (a copy of) [newLatticeElement] to this object if
+     * [newNode] does not exist in this state yet. If it already exists, it computes the least upper
+     * bound of [newLatticeElement] and the current one for [newNode]. It returns if the state has
+     * changed.
      */
-    open fun push(newNode: K, newLattice: Lattice<V>?): Boolean {
-        if (newLattice == null) {
+    open fun push(newNode: K, newLatticeElement: LatticeElement<V>?): Boolean {
+        if (newLatticeElement == null) {
             return false
         }
-        if (newNode in this && this[newNode]?.let { it >= newLattice } == true) {
+        if (newNode in this && this[newNode]?.let { it >= newLatticeElement } == true) {
             // newLattice is "smaller" than the currently stored one. We don't add it anything.
             return false
         } else if (newNode in this) {
             // newLattice is "bigger" than the currently stored one. We update it to the least
             // upper bound
-            this[newNode] = newLattice.lub(this[newNode])
+            this[newNode] = newLatticeElement.lub(this[newNode])
         } else {
-            this[newNode] = newLattice.duplicate()
+            this[newNode] = newLatticeElement.duplicate()
         }
         return true
     }

@@ -219,12 +219,14 @@ private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
 }
 
 /**
- * Implements the [Lattice] over a set of nodes and their set of "nextEOG" nodes which reach this
- * node.
+ * Implements the [LatticeElement] over a set of nodes and their set of "nextEOG" nodes which reach
+ * this node.
  */
 class PrevEOGLattice(override val elements: Map<Node, Set<Node>>) :
-    Lattice<Map<Node, Set<Node>>>(elements) {
-    override fun lub(other: Lattice<Map<Node, Set<Node>>>?): Lattice<Map<Node, Set<Node>>> {
+    LatticeElement<Map<Node, Set<Node>>>(elements) {
+    override fun lub(
+        other: LatticeElement<Map<Node, Set<Node>>>?
+    ): LatticeElement<Map<Node, Set<Node>>> {
         val newMap =
             (other?.elements ?: mapOf()).mapValues { (_, v) -> v.toMutableSet() }.toMutableMap()
         for ((key, value) in this.elements) {
@@ -235,7 +237,7 @@ class PrevEOGLattice(override val elements: Map<Node, Set<Node>>) :
 
     override fun duplicate() = PrevEOGLattice(this.elements.toMap())
 
-    override fun compareTo(other: Lattice<Map<Node, Set<Node>>>?): Int {
+    override fun compareTo(other: LatticeElement<Map<Node, Set<Node>>>?): Int {
         return if (
             this.elements.keys.containsAll(other?.elements?.keys ?: setOf()) &&
                 this.elements.all { (k, v) -> v.containsAll(other?.elements?.get(k) ?: setOf()) }

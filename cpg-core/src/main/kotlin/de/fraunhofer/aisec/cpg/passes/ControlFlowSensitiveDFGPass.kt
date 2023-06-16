@@ -286,9 +286,9 @@ private fun removeUnreachableImplicitReturnStatement(
  * ReturnStatements.
  */
 class DFGPassState<V>(
-    /** A mapping of a [Node] to its [Lattice]. */
+    /** A mapping of a [Node] to its [LatticeElement]. */
     var generalState: State<Node, V> = State(),
-    /** A mapping of [Declaration] to its [Lattice]. */
+    /** A mapping of [Declaration] to its [LatticeElement]. */
     var declarationsState: State<Node, V> = State(),
     /** The [returnStatements] which are reachable. */
     var returnStatements: State<Node, V> = State()
@@ -317,12 +317,15 @@ class DFGPassState<V>(
         }
     }
 
-    override fun push(newNode: Node, newLattice: Lattice<V>?): Boolean {
-        return generalState.push(newNode, newLattice)
+    override fun push(newNode: Node, newLatticeElement: LatticeElement<V>?): Boolean {
+        return generalState.push(newNode, newLatticeElement)
     }
 
-    /** Pushes the [newNode] and its [newLattice] to the [declarationsState]. */
-    fun pushToDeclarationsState(newNode: Declaration, newLattice: Lattice<V>?): Boolean {
-        return declarationsState.push(newNode, newLattice)
+    /** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
+    fun pushToDeclarationsState(
+        newNode: Declaration,
+        newLatticeElement: LatticeElement<V>?
+    ): Boolean {
+        return declarationsState.push(newNode, newLatticeElement)
     }
 }

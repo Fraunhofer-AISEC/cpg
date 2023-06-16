@@ -193,14 +193,18 @@ private fun handleWhileStatement(
     remainingEdges.forEach { state.push(it, state[enteringEdge]) }
 }
 
-/** Implements the [Lattice] over reachability properties: TOP | REACHABLE | UNREACHABLE | BOTTOM */
-class ReachabilityLattice(override val elements: Reachability) : Lattice<Reachability>(elements) {
-    override fun lub(other: Lattice<Reachability>?) =
+/**
+ * Implements the [LatticeElement] over reachability properties: TOP | REACHABLE | UNREACHABLE |
+ * BOTTOM
+ */
+class ReachabilityLattice(override val elements: Reachability) :
+    LatticeElement<Reachability>(elements) {
+    override fun lub(other: LatticeElement<Reachability>?) =
         ReachabilityLattice(maxOf(this.elements, other?.elements ?: Reachability.BOTTOM))
 
     override fun duplicate() = ReachabilityLattice(this.elements)
 
-    override fun compareTo(other: Lattice<Reachability>?) =
+    override fun compareTo(other: LatticeElement<Reachability>?) =
         this.elements.compareTo(other?.elements ?: Reachability.BOTTOM)
 }
 
