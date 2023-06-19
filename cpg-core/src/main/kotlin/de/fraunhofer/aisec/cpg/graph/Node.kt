@@ -199,16 +199,20 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     var nextDFG: MutableSet<Node> = HashSet()
 
     /**  */
-    @delegate:Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
-    val nextPDGEdges: List<PropertyEdge<Node>> by
-        PropertyEdgeCombinationDelegate(listOf(Node::nextCDGEdges), listOf(Node::nextDFG))
+    @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
+    var nextPDGEdges: List<PropertyEdge<Node>> = listOf()
+        get() =
+            nextCDGEdges.map { PropertyEdge(it) } +
+                    PropertyEdge.transformIntoOutgoingPropertyEdgeList(nextDFG.toList(), this)
 
     var nextPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
 
     /**  */
-    @delegate:Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
-    val prevPDGEdges: List<PropertyEdge<Node>> by
-        PropertyEdgeCombinationDelegate(listOf(Node::prevCDGEdges), listOf(Node::prevDFG))
+    @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
+    var prevPDGEdges: List<PropertyEdge<Node>> = listOf()
+        get() =
+            prevCDGEdges.map { PropertyEdge(it) } +
+                    PropertyEdge.transformIntoOutgoingPropertyEdgeList(prevDFG.toList(), this)
 
     var prevPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
 
