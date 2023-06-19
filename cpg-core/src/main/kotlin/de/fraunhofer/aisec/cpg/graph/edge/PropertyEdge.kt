@@ -380,13 +380,16 @@ class PropertyEdgeDelegate<T : Node, S : Node>(
  * It combines the given [edges] and [nodes] into a new list of [PropertyEdge]s.
  */
 class PropertyEdgeCombinationDelegate<T : Node, S : Node>(
-    val edges: Collection<Collection<PropertyEdge<T>>>,
-    val nodes: Collection<Collection<T>>
+    val edges: Collection<KProperty1<S, Collection<PropertyEdge<T>>>>,
+    val nodes: Collection<KProperty1<S, Collection<T>>>
 ) {
     operator fun getValue(thisRef: S, property: KProperty<*>): List<PropertyEdge<T>> {
-        return edges.flatten().map { PropertyEdge(it) } +
+        return edges.flatMap { it.get(thisRef) }.map { PropertyEdge(it) } +
             nodes.flatMap {
-                PropertyEdge.transformIntoOutgoingPropertyEdgeList(it.toList(), thisRef)
+                PropertyEdge.transformIntoOutgoingPropertyEdgeList(
+                    it.get(thisRef).toList(),
+                    thisRef
+                )
             }
     }
 }

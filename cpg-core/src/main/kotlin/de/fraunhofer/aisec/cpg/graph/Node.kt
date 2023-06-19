@@ -39,8 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeCombinationDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -201,14 +201,14 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /**  */
     @delegate:Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
     val nextPDGEdges: List<PropertyEdge<Node>> by
-        PropertyEdgeCombinationDelegate(listOf(nextCDGEdges), listOf(nextDFG))
+        PropertyEdgeCombinationDelegate(listOf(Node::nextCDGEdges), listOf(Node::nextDFG))
 
     var nextPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
 
     /**  */
     @delegate:Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
     val prevPDGEdges: List<PropertyEdge<Node>> by
-        PropertyEdgeCombinationDelegate(listOf(prevCDGEdges), listOf(prevDFG))
+        PropertyEdgeCombinationDelegate(listOf(Node::prevCDGEdges), listOf(Node::prevDFG))
 
     var prevPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
 
