@@ -151,7 +151,7 @@ jobs:
           folder: build/dokkaCustomMultiModuleOutput
           target-folder: dokka/${{ env.version }}
       - name: Publish JavaDoc (main)
-        if: github.ref == 'refs/head/main'
+        if: github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build/dokkaCustomMultiModuleOutput
