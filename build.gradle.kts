@@ -1,3 +1,7 @@
+import org.jetbrains.dokka.gradle.DokkaMultiModuleTask
+import java.io.BufferedOutputStream
+import java.io.ByteArrayOutputStream
+
 /*
  * Copyright (c) 2019-2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -37,11 +41,40 @@ repositories {
     mavenCentral()
 }
 
+allprojects {
+    plugins.apply("org.jetbrains.dokka")
+
+    val dokkaPlugin by configurations
+    dependencies {
+        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:1.8.10")
+    }
+}
+
 // configure dokka for the multi-module cpg project
 // this works together with the dokka configuration in the common-conventions plugin
 tasks.dokkaHtmlMultiModule {
-    outputDirectory.set(buildDir.resolve("dokkaCustomMultiModuleOutput"))
+    val stdout = ByteArrayOutputStream()
+    exec {
+        commandLine("sh", "-c", "git tag --points-at HEAD | cat")
+            standardOutput = stdout
+    }
+    val configuredVersion = stdout.toString()
+    if(configuredVersion.isNotEmpty()) {
+        generateDokkaWithVersionTag(this, configuredVersion)
+    }
+    generateDokkaWithVersionTag(this, "main")
 }
+
+fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle.AbstractDokkaParentTask, tag: String) {
+    val oldOutputPath = buildDir.resolve("dokkaCustomMultiModuleOutput").resolve("versions")
+    val id = "org.jetbrains.dokka.versioning.VersioningPlugin"
+    val config = """{ "version": "$tag", "olderVersionsDir":"${oldOutputPath.path}" }"""
+    val mapOf = mapOf(id to config)
+
+    dokkaMultiModuleTask.outputDirectory.set(file(oldOutputPath.resolve(tag)))
+    dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
+}
+
 
 //
 // Configure sonarqube for the whole cpg project
