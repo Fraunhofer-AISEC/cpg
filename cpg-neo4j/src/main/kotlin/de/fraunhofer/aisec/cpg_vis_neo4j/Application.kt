@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.*
@@ -302,7 +301,6 @@ class Application : Callable<Int> {
                         "de.fraunhofer.aisec.cpg.frontends"
                     )
                 sessionFactory.register(AstChildrenEventListener())
-                sessionFactory.register(PDGEventListener())
 
                 session = sessionFactory.openSession()
             } catch (ex: ConnectionException) {
@@ -480,18 +478,6 @@ class AstChildrenEventListener : EventListenerAdapter() {
     override fun onPreSave(event: Event?) {
         val node = event?.`object` as? Node ?: return
         node.astChildren = SubgraphWalker.getAstChildren(node)
-    }
-}
-
-class PDGEventListener : EventListenerAdapter() {
-    override fun onPreSave(event: Event?) {
-        val node = event?.`object` as? Node ?: return
-        val prevPDGEdges = node.prevCDGEdges.map { PropertyEdge(it) } +
-                PropertyEdge.transformIntoOutgoingPropertyEdgeList(node.prevDFG.toList(), node)
-        node.prevPDGEdges = prevPDGEdges
-        val nextPDGEdges = node.nextCDGEdges.map { PropertyEdge(it) } +
-                PropertyEdge.transformIntoOutgoingPropertyEdgeList(node.nextDFG.toList(), node)
-        node.nextPDGEdges = nextPDGEdges
     }
 }
 

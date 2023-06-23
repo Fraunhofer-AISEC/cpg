@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeCombinationDelegate
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -47,11 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
-import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.DFGPass
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.FilenameMapper
+import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -198,22 +193,22 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @Relationship(value = "DFG")
     var nextDFG: MutableSet<Node> = HashSet()
 
-    /**  */
+    /** Outgoing Program Dependency Edges. */
+    @PopulatedByPass(ProgramDependencyGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
-    var nextPDGEdges: List<PropertyEdge<Node>> = listOf()
-        get() =
-            nextCDGEdges.map { PropertyEdge(it) } +
-                    PropertyEdge.transformIntoOutgoingPropertyEdgeList(nextDFG.toList(), this)
+    var nextPDGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
+        protected set
 
+    /** Virtual property for accessing the children of the Program Dependency Graph (PDG). */
     var nextPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
 
-    /**  */
+    /** Incoming Program Dependency Edges. */
+    @PopulatedByPass(ProgramDependencyGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
-    var prevPDGEdges: List<PropertyEdge<Node>> = listOf()
-        get() =
-            prevCDGEdges.map { PropertyEdge(it) } +
-                    PropertyEdge.transformIntoOutgoingPropertyEdgeList(prevDFG.toList(), this)
+    var prevPDGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
+        protected set
 
+    /** Virtual property for accessing the parents of the Program Dependency Graph (PDG). */
     var prevPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
 
     var typedefs: MutableSet<TypedefDeclaration> = HashSet()
@@ -290,6 +285,22 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     fun addAllPrevDFG(prev: Collection<Node>) {
         prevDFG.addAll(prev)
         prev.forEach { it.nextDFG.add(this) }
+    }
+
+    fun addAllPrevPDG(prev: Collection<Node>) {
+        addAllPrevPDGEdges(prev.map { PropertyEdge(this, it) })
+    }
+
+    fun addAllPrevPDGEdges(prev: Collection<PropertyEdge<Node>>) {
+        prevPDGEdges.addAll(prev.map { PropertyEdge(it) })
+    }
+
+    fun addAlllNextPDG(next: Collection<Node>) {
+        addAllNextPDGEdges(next.map { PropertyEdge(this, it) })
+    }
+
+    fun addAllNextPDGEdges(next: Collection<PropertyEdge<Node>>) {
+        nextPDGEdges.addAll(next.map { PropertyEdge(it) })
     }
 
     fun removePrevDFG(prev: Node?) {
