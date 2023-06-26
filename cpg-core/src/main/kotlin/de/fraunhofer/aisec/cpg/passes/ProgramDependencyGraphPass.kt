@@ -40,8 +40,8 @@ class ProgramDependencyGraphPass(ctx: TranslationContext) : TranslationUnitPass(
         object : IVisitor<Node>() {
             override fun visit(t: Node) {
                 t.addAllPrevPDG(t.prevDFG)
-                t.addAllNextPDGEdges(t.prevCDGEdges)
-                t.addAlllNextPDG(t.nextDFG)
+                t.addAllPrevPDGEdges(t.prevCDGEdges)
+                t.addAllNextPDG(t.nextDFG)
                 t.addAllNextPDGEdges(t.nextCDGEdges)
             }
         }

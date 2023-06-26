@@ -295,7 +295,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         prevPDGEdges.addAll(prev.map { PropertyEdge(it) })
     }
 
-    fun addAlllNextPDG(next: Collection<Node>) {
+    fun addAllNextPDG(next: Collection<Node>) {
         addAllNextPDGEdges(next.map { PropertyEdge(this, it) })
     }
 
