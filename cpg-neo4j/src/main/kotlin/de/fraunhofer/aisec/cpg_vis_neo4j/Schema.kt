@@ -57,30 +57,35 @@ class Schema {
     private val hierarchy: MutableMap<ClassInfo, Pair<ClassInfo?, List<ClassInfo>>> = mutableMapOf()
 
     /**
-     * Set of fields that are translated into a relationship. The pair saves the field name, and the
-     * relationship name. Saves MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
+     * Map of entities and the relationships they can have, including relationships defined in
+     * subclasses. The pair saves the field name, and the relationship name. Saves
+     * MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
      */
-    private val relCanHave: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
+    private val allRels: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
 
     /**
      * Relationships newly defined in this specific entity. Saves
      * MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
      */
-    private val inherentFields: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
+    private val inherentRels: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
 
     /**
      * Relationships inherited from a parent in the inheritance hierarchy. A node with this label
      * can have this relationship if it is non-nullable. Saves
      * MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
      */
-    private val inheritedFields: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
+    private val inheritedRels: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
     /**
      * Relationships defined by children in the inheritance hierarchy. A node with this label can
      * have this relationship also has the label of the defining child entity. Saves
      * MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
      */
-    private val childrenFields: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
+    private val childrensRels: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
 
+    /**
+     * Stores a mapping from class information in combination with a relationship name, to the field
+     * information that contains the relationship.
+     */
     private val relationshipFields: MutableMap<Pair<ClassInfo, String>, FieldInfo> = mutableMapOf()
 
     fun extractSchema() {
@@ -96,15 +101,13 @@ class Schema {
             if (it in entities) {
                 val superC = it.directSuperclass()
 
-                hierarchy.put(
-                    it,
+                hierarchy[it] =
                     Pair(
                         if (superC in entities) superC else null,
                         it.directSubclasses()
                             .filter { it in entities }
                             .distinct() // Filter out duplicates
                     )
-                )
             }
         }
 
@@ -112,12 +115,12 @@ class Schema {
 
         entities.forEach {
             val key = meta.schema.findNode(it.neo4jName())
-            relCanHave[it.neo4jName() ?: it.underlyingClass.simpleName] =
+            allRels[it.neo4jName() ?: it.underlyingClass.simpleName] =
                 key.relationships().entries.map { Pair(it.key, it.value.type()) }.toSet()
         }
 
         // Complements the hierarchy and relationship information for abstract classes
-        completeSchema(relCanHave, hierarchy, nodeClassInfo)
+        completeSchema(allRels, hierarchy, nodeClassInfo)
         // Searches for all relationships backed by a class field to know which relationships are
         // newly defined in the
         // entity class
@@ -129,8 +132,8 @@ class Schema {
                 }
             fields.forEach { relationshipFields.put(Pair(entity, it.name), it) }
             val name = it.neo4jName() ?: it.underlyingClass.simpleName
-            relCanHave[name]?.let {
-                inherentFields[name] =
+            allRels[name]?.let {
+                inherentRels[name] =
                     it.filter {
                             val rel = it.first
                             fields.any { it.name.equals(rel) }
@@ -144,30 +147,30 @@ class Schema {
         val entityRoots: MutableList<ClassInfo> =
             hierarchy.filter { it.value.first == null }.map { it.key }.toMutableList()
         entityRoots.forEach {
-            inheritedFields[it.neo4jName() ?: it.underlyingClass.simpleName] = mutableSetOf()
+            inheritedRels[it.neo4jName() ?: it.underlyingClass.simpleName] = mutableSetOf()
         }
         entityRoots.forEach { buildInheritedFields(it) }
 
-        relCanHave.forEach {
-            childrenFields[it.key] =
+        allRels.forEach {
+            childrensRels[it.key] =
                 it.value
-                    .subtract(inheritedFields[it.key] ?: emptyList())
-                    .subtract(inherentFields[it.key] ?: emptyList())
+                    .subtract(inheritedRels[it.key] ?: emptyList())
+                    .subtract(inherentRels[it.key] ?: emptyList())
         }
         println()
     }
 
     private fun buildInheritedFields(classInfo: ClassInfo) {
         val fields: MutableSet<Pair<String, String>> = mutableSetOf()
-        inherentFields[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]?.let {
+        inherentRels[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]?.let {
             fields.addAll(it)
         }
-        inheritedFields[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]?.let {
+        inheritedRels[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]?.let {
             fields.addAll(it)
         }
 
         hierarchy[classInfo]?.second?.forEach {
-            inheritedFields[it.neo4jName() ?: it.underlyingClass.simpleName] = fields
+            inheritedRels[it.neo4jName() ?: it.underlyingClass.simpleName] = fields
             buildInheritedFields(it)
         }
     }
@@ -255,10 +258,10 @@ class Schema {
             }
         }
 
-        if (inherentFields.isNotEmpty() && inheritedFields.isNotEmpty()) {
+        if (inherentRels.isNotEmpty() && inheritedRels.isNotEmpty()) {
             out.println("### Relationships")
 
-            noLabelDups(inherentFields[entityLabel])?.forEach {
+            noLabelDups(inherentRels[entityLabel])?.forEach {
                 out.println(
                     getBoxWithClass(
                         "relationship",
@@ -266,12 +269,12 @@ class Schema {
                     )
                 )
             }
-            noLabelDups(inheritedFields[entityLabel])?.forEach {
+            noLabelDups(inheritedRels[entityLabel])?.forEach {
                 var inherited = it
                 var current = classInfo
                 var baseClass: ClassInfo? = null
                 while (baseClass == null) {
-                    inherentFields[toLabel(current)]?.let {
+                    inherentRels[toLabel(current)]?.let {
                         if (it.any { it.second.equals(inherited.second) }) {
                             baseClass = current
                         }
@@ -286,7 +289,7 @@ class Schema {
                 )
             }
 
-            noLabelDups(inherentFields[entityLabel])?.forEach {
+            noLabelDups(inherentRels[entityLabel])?.forEach {
                 printRelationships(classInfo, it, out)
             }
         }
