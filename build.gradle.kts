@@ -61,10 +61,17 @@ tasks.dokkaHtmlMultiModule {
     val configuredVersion = stdout.toString()
     if(configuredVersion.isNotEmpty()) {
         generateDokkaWithVersionTag(this, configuredVersion)
+    } else {
+        generateDokkaWithVersionTag(this, "main")
     }
-    generateDokkaWithVersionTag(this, "main")
 }
 
+/**
+ * Takes the old dokka sites in build/dokkaCustomMultiModuleOutput/versions and generates a new site.
+ * This new site contains the old ones, so copying the newly generated site to the gh page is enough.
+ * Currently, the mkdocs plugin expects it in docs/dokka/latest. The tags in the dropdown will be
+ * named based on what we configured here.
+ */
 fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle.AbstractDokkaParentTask, tag: String) {
     val oldOutputPath = buildDir.resolve("dokkaCustomMultiModuleOutput").resolve("versions")
     val id = "org.jetbrains.dokka.versioning.VersioningPlugin"

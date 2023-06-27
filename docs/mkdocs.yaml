@@ -169,7 +169,5 @@ nav:
       - "Passes": CPG/impl/passes.md
   - "Contributing":
       - "Contributing to the CPG library": Contributing/index.md
-  - "API Reference":
-      - API/index.md
-      - "main": "/dokka/main"
-      - "v7.0.1": "/dokka/v7.0.1"
+    # This assumes that the most recent dokka build was generated with the "main" tag!
+  - "API Reference": dokka/latest
