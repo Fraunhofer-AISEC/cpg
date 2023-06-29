@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -38,15 +39,18 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import java.util.stream.Stream
 import kotlin.test.assertContentEquals
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 
 class ProgramDependenceGraphPassTest {
 
-    @Test
-    fun `test pdg of if statement`() {
-        val result = getIfTest()
+    @ParameterizedTest(name = "test if pdg of {1} is equal to the union of cdg and dfg")
+    @MethodSource("provideTranslationResultForPDGTest")
+    fun `test if pdg is equal to union of cdg and dfg`(result: TranslationResult, name: String) {
         assertNotNull(result)
         val main = result.functions["main"]
         assertNotNull(main)
@@ -86,7 +90,14 @@ class ProgramDependenceGraphPassTest {
             return TestLanguageFrontend(language.namespaceDelimiter, language, ctx)
         }
 
-        fun getIfTest() =
+        @JvmStatic
+        fun provideTranslationResultForPDGTest() =
+            Stream.of(
+                Arguments.of(getIfTest(), "if statement"),
+                Arguments.of(getWhileLoopTest(), "while loop")
+            )
+
+        private fun getIfTest() =
             testFrontend(
                     TranslationConfiguration.builder()
                         .registerLanguage(TestLanguage("::"))
@@ -109,6 +120,37 @@ class ProgramDependenceGraphPassTest {
                                         }
                                     }
                                     returnStmt { ref("i") }
+                                }
+                            }
+                        }
+                    }
+                }
+
+        private fun getWhileLoopTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage(TestLanguage("::"))
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .registerPass<ProgramDependencyGraphPass>()
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("loop.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    declare { variable("i", t("int")) { call("rand") } }
+                                    whileStmt {
+                                        whileCondition { ref("i") gt literal(0, t("int")) }
+                                        loopBody {
+                                            call("printf") { literal("#", t("string")) }
+                                            ref("i").dec()
+                                        }
+                                    }
+                                    call("printf") { literal("\n", t("string")) }
+                                    returnStmt { literal(0, t("int")) }
                                 }
                             }
                         }
