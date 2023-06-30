@@ -39,8 +39,8 @@ class ProgramDependencyGraphPass(ctx: TranslationContext) : TranslationUnitPass(
     private val pdgSetter =
         object : IVisitor<Node>() {
             /**
-             * Collects the data and control dependency edges of a node and adds them to the
-             * program dependency edges
+             * Collects the data and control dependency edges of a node and adds them to the program
+             * dependency edges
              */
             override fun visit(t: Node) {
                 t.addAllPrevPDG(t.prevDFG)
