@@ -373,23 +373,3 @@ class PropertyEdgeDelegate<T : Node, S : Node>(
         }
     }
 }
-
-/**
- * This class can be used to implement
- * [delegated properties](https://kotlinlang.org/docs/delegated-properties.html) in [Node] classes.
- * It combines the given [edges] and [nodes] into a new list of [PropertyEdge]s.
- */
-class PropertyEdgeCombinationDelegate<T : Node, S : Node>(
-    val edges: Collection<KProperty1<S, Collection<PropertyEdge<T>>>>,
-    val nodes: Collection<KProperty1<S, Collection<T>>>
-) {
-    operator fun getValue(thisRef: S, property: KProperty<*>): List<PropertyEdge<T>> {
-        return edges.flatMap { it.get(thisRef) }.map { PropertyEdge(it) } +
-            nodes.flatMap {
-                PropertyEdge.transformIntoOutgoingPropertyEdgeList(
-                    it.get(thisRef).toList(),
-                    thisRef
-                )
-            }
-    }
-}
