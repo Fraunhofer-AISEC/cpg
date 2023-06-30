@@ -168,7 +168,7 @@ open class PropertyEdge<T : Node> : Persistable {
         ): MutableList<PropertyEdge<T>> {
             val propertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
             for (n in nodes) {
-                var propertyEdge = PropertyEdge(commonRelationshipNode, n)
+                val propertyEdge = PropertyEdge(commonRelationshipNode, n)
                 propertyEdge.addProperty(Properties.INDEX, propertyEdges.size)
                 propertyEdges.add(propertyEdge)
             }
@@ -369,6 +369,29 @@ class PropertyEdgeDelegate<T : Node, S : Node>(
             edge.setter.call(
                 thisRef,
                 PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, thisRef as Node)
+            )
+        }
+    }
+}
+
+
+/**
+ * Similar to a [PropertyEdgeDelegate], but with a [Set] instead of [List].
+ */
+@Transient
+class PropertyEdgeSetDelegate<T : Node, S : Node>(
+    val edge: KProperty1<S, List<PropertyEdge<T>>>,
+    val outgoing: Boolean = true
+) {
+    operator fun getValue(thisRef: S, property: KProperty<*>): MutableSet<T> {
+        return PropertyEdge.unwrap(edge.get(thisRef), outgoing).toMutableSet()
+    }
+
+    operator fun setValue(thisRef: S, property: KProperty<*>, value: MutableSet<T>) {
+        if (edge is KMutableProperty1) {
+            edge.setter.call(
+                thisRef,
+                PropertyEdge.transformIntoOutgoingPropertyEdgeList(value.toList(), thisRef as Node)
             )
         }
     }
