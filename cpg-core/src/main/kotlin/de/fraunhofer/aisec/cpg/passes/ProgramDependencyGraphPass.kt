@@ -38,6 +38,10 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 class ProgramDependencyGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private val pdgSetter =
         object : IVisitor<Node>() {
+            /**
+             * Collects the data and control dependency edges of a node and adds them to the
+             * program dependency edges
+             */
             override fun visit(t: Node) {
                 t.addAllPrevPDG(t.prevDFG)
                 t.addAllPrevPDGEdges(t.prevCDGEdges)
