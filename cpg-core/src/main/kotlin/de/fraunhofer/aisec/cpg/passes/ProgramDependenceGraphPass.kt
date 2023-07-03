@@ -32,15 +32,19 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
+/**
+ * This pass collects the dependence information of each node into a Program Dependence Graph (PDG)
+ * by traversing through the AST.
+ */
 @DependsOn(ControlDependenceGraphPass::class)
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
-class ProgramDependencyGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private val pdgSetter =
         object : IVisitor<Node>() {
             /**
-             * Collects the data and control dependency edges of a node and adds them to the program
-             * dependency edges
+             * Collects the data and control dependence edges of a node and adds them to the program
+             * dependence edges
              */
             override fun visit(t: Node) {
                 t.addAllPrevPDG(t.prevDFG)

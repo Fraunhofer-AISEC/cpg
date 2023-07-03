@@ -103,7 +103,7 @@ class ProgramDependenceGraphPassTest {
                         .registerLanguage(TestLanguage("::"))
                         .defaultPasses()
                         .registerPass<ControlDependenceGraphPass>()
-                        .registerPass<ProgramDependencyGraphPass>()
+                        .registerPass<ProgramDependenceGraphPass>()
                         .build()
                 )
                 .build {
@@ -132,7 +132,7 @@ class ProgramDependenceGraphPassTest {
                         .registerLanguage(TestLanguage("::"))
                         .defaultPasses()
                         .registerPass<ControlDependenceGraphPass>()
-                        .registerPass<ProgramDependencyGraphPass>()
+                        .registerPass<ProgramDependenceGraphPass>()
                         .build()
                 )
                 .build {

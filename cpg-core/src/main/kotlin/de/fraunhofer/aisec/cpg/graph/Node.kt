@@ -193,22 +193,22 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @Relationship(value = "DFG")
     var nextDFG: MutableSet<Node> = HashSet()
 
-    /** Outgoing Program Dependency Edges. */
-    @PopulatedByPass(ProgramDependencyGraphPass::class)
+    /** Outgoing Program Dependence Edges. */
+    @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
     var nextPDGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
         protected set
 
-    /** Virtual property for accessing the children of the Program Dependency Graph (PDG). */
+    /** Virtual property for accessing the children of the Program Dependence Graph (PDG). */
     var nextPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
 
-    /** Incoming Program Dependency Edges. */
-    @PopulatedByPass(ProgramDependencyGraphPass::class)
+    /** Incoming Program Dependence Edges. */
+    @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
     var prevPDGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
         protected set
 
-    /** Virtual property for accessing the parents of the Program Dependency Graph (PDG). */
+    /** Virtual property for accessing the parents of the Program Dependence Graph (PDG). */
     var prevPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
 
     var typedefs: MutableSet<TypedefDeclaration> = HashSet()
