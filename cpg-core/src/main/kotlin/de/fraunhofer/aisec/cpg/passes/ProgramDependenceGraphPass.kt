@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
-    private val pdgSetter =
+    private val visitor =
         object : IVisitor<Node>() {
             /**
              * Collects the data and control dependence edges of a node and adds them to the program
@@ -65,6 +65,6 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
     }
 
     private fun handle(node: Node) {
-        node.accept(Strategy::AST_FORWARD, pdgSetter)
+        node.accept(Strategy::AST_FORWARD, visitor)
     }
 }
