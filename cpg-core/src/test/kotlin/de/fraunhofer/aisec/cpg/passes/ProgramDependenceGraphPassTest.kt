@@ -34,14 +34,17 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.graph.edge.DependenceType
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import java.util.*
 import java.util.stream.Stream
-import kotlin.test.assertContentEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -60,27 +63,49 @@ class ProgramDependenceGraphPassTest {
             object : IVisitor<Node>() {
                 override fun visit(t: Node) {
                     val expectedPrevEdges =
-                        (t.prevCDGEdges + t.prevDFG.map { PropertyEdge(t, it) }).sortedBy {
-                            it.hashCode()
-                        }
-                    assertContentEquals(
-                        expectedPrevEdges,
-                        t.prevPDGEdges.sortedBy { it.hashCode() },
-                        "prevPDGEdges did not contain all prevCDGEdges and edges to all prevDFG"
-                    )
+                        t.prevCDGEdges.map {
+                            it.apply { addProperty(Properties.DEPENDENCE, DependenceType.CONTROL) }
+                        } +
+                            t.prevDFG.map {
+                                PropertyEdge(it, t).apply {
+                                    addProperty(Properties.DEPENDENCE, DependenceType.DATA)
+                                }
+                            }
+                    assertTrue(
+                        "prevPDGEdges did not contain all prevCDGEdges and edges to all prevDFG.\n" +
+                            "expectedPrevEdges: ${expectedPrevEdges.sortedBy { it.hashCode() }}\n" +
+                            "actualPrevEdges: ${t.prevPDGEdges.sortedBy { it.hashCode() }}"
+                    ) {
+                        compareListWithoutOrder(expectedPrevEdges, t.prevPDGEdges)
+                    }
 
                     val expectedNextEdges =
-                        (t.nextCDGEdges + t.nextDFG.map { PropertyEdge(t, it) }).sortedBy {
-                            it.hashCode()
-                        }
-                    assertContentEquals(
-                        expectedNextEdges,
-                        t.nextPDGEdges.sortedBy { it.hashCode() },
-                        "prevPDGEdges did not contain all nextCDGEdges and edges to all nextDFG"
-                    )
+                        t.nextCDGEdges.map {
+                            it.apply { addProperty(Properties.DEPENDENCE, DependenceType.CONTROL) }
+                        } +
+                            t.nextDFG.map {
+                                PropertyEdge(t, it).apply {
+                                    addProperty(Properties.DEPENDENCE, DependenceType.DATA)
+                                }
+                            }
+                    assertTrue(
+                        "nextPDGEdges did not contain all nextCDGEdges and edges to all nextDFG." +
+                            "\nexpectedNextEdges: ${expectedNextEdges.sortedBy { it.hashCode() }}" +
+                            "\nactualNextEdges: ${t.nextPDGEdges.sortedBy { it.hashCode() }}"
+                    ) {
+                        compareListWithoutOrder(expectedNextEdges, t.nextPDGEdges)
+                    }
                 }
             }
         )
+    }
+
+    private fun <T> compareListWithoutOrder(expected: List<T>, actual: List<T>): Boolean {
+        val expectedWithDuplicatesGrouped = expected.groupingBy { it }.eachCount()
+        val actualWithDuplicatesGrouped = actual.groupingBy { it }.eachCount()
+
+        return expected.size == actual.size &&
+            expectedWithDuplicatesGrouped == actualWithDuplicatesGrouped
     }
 
     companion object {
