@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.DependenceType
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -47,10 +48,8 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
              * dependence edges
              */
             override fun visit(t: Node) {
-                t.addAllPrevPDG(t.prevDFG)
-                t.addAllPrevPDGEdges(t.prevCDGEdges)
-                t.addAllNextPDG(t.nextDFG)
-                t.addAllNextPDGEdges(t.nextCDGEdges)
+                t.addAllPrevPDG(t.prevDFG, DependenceType.DATA)
+                t.addAllPrevPDGEdges(t.prevCDGEdges, DependenceType.CONTROL)
             }
         }
 

@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.DependenceType
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
@@ -209,7 +210,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         protected set
 
     /** Virtual property for accessing the parents of the Program Dependence Graph (PDG). */
-    var prevPDG by PropertyEdgeDelegate(Node::nextPDGEdges, true)
+    var prevPDG by PropertyEdgeDelegate(Node::prevPDGEdges, false)
 
     var typedefs: MutableSet<TypedefDeclaration> = HashSet()
 
@@ -287,20 +288,18 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         prev.forEach { it.nextDFG.add(this) }
     }
 
-    fun addAllPrevPDG(prev: Collection<Node>) {
-        addAllPrevPDGEdges(prev.map { PropertyEdge(this, it) })
+    fun addAllPrevPDG(prev: Collection<Node>, dependenceType: DependenceType) {
+        addAllPrevPDGEdges(prev.map { PropertyEdge(it, this) }, dependenceType)
     }
 
-    fun addAllPrevPDGEdges(prev: Collection<PropertyEdge<Node>>) {
-        prevPDGEdges.addAll(prev.map { PropertyEdge(it) })
-    }
+    fun addAllPrevPDGEdges(prev: Collection<PropertyEdge<Node>>, dependenceType: DependenceType) {
 
-    fun addAllNextPDG(next: Collection<Node>) {
-        addAllNextPDGEdges(next.map { PropertyEdge(this, it) })
-    }
-
-    fun addAllNextPDGEdges(next: Collection<PropertyEdge<Node>>) {
-        nextPDGEdges.addAll(next.map { PropertyEdge(it) })
+        prev.forEach {
+            val edge = PropertyEdge(it).apply { addProperty(Properties.DEPENDENCE, dependenceType) }
+            this.prevPDGEdges.add(edge)
+            val other = if (it.start != this) it.start else it.end
+            other.nextPDGEdges.add(edge)
+        }
     }
 
     fun removePrevDFG(prev: Node?) {
