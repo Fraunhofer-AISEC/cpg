@@ -38,6 +38,9 @@ package de.fraunhofer.aisec.cpg.graph.edge
  *
  * [UNREACHABLE]:(boolean) True if the edge flows into unreachable code i.e. a branch condition
  * which is always false.
+ *
+ * [DEPENDENCE]: ([DependenceType] Specifies the type of dependence the property edge might
+ * represent
  */
 enum class Properties {
     INDEX,
@@ -45,5 +48,12 @@ enum class Properties {
     NAME,
     INSTANTIATION,
     UNREACHABLE,
-    ACCESS
+    ACCESS,
+    DEPENDENCE
+}
+
+/** The types of dependencies that might be represented in the CPG */
+enum class DependenceType {
+    CONTROL,
+    DATA
 }
