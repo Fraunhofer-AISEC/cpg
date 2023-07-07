@@ -257,7 +257,10 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         nextEOGEdges.clear()
     }
 
-    fun addNextDFG(next: Node, properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)) {
+    fun addNextDFG(
+        next: Node,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
         val edge = PropertyEdge(this, next, properties)
         nextDFGEdges.add(edge)
         next.prevDFGEdges.add(edge)
@@ -275,7 +278,10 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         }
     }
 
-    fun addPrevDFG(prev: Node, properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)) {
+    fun addPrevDFG(
+        prev: Node,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
         val edge = PropertyEdge(prev, this, properties)
         prevDFGEdges.add(edge)
         prev.nextDFGEdges.add(edge)
@@ -287,7 +293,10 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         prev.nextCDGEdges.add(edge)
     }
 
-    fun addAllPrevDFG(prev: Collection<Node>, properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)) {
+    fun addAllPrevDFG(
+        prev: Collection<Node>,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
         prev.forEach { addPrevDFG(it, properties.toMutableMap()) }
     }
 
