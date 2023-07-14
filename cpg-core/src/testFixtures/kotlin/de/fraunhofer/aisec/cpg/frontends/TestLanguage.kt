@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -74,27 +75,32 @@ class StructTestLanguage(namespaceDelimiter: String = "::") :
 
 open class TestLanguageFrontend(
     namespaceDelimiter: String = "::",
-    language: Language<out LanguageFrontend> = TestLanguage(namespaceDelimiter),
+    language: Language<TestLanguageFrontend> = TestLanguage(namespaceDelimiter),
     ctx: TranslationContext =
         TranslationContext(
             TranslationConfiguration.builder().build(),
             ScopeManager(),
             TypeManager()
         ),
-) : LanguageFrontend(language, ctx) {
+) : LanguageFrontend<Any, Any>(language, ctx) {
     override fun parse(file: File): TranslationUnitDeclaration {
         TODO("Not yet implemented")
     }
 
-    override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
+    override fun typeOf(type: Any): Type {
+        // reserved for future use
+        return newUnknownType()
+    }
+
+    override fun codeOf(astNode: Any): String? {
         TODO("Not yet implemented")
     }
 
-    override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
+    override fun locationOf(astNode: Any): PhysicalLocation? {
         TODO("Not yet implemented")
     }
 
-    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
+    override fun setComment(node: Node, astNode: Any) {
         TODO("Not yet implemented")
     }
 }

@@ -64,8 +64,8 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 name,
                 type,
                 listOf(),
-                this.frontend.getCodeFromRawNode(node),
-                this.frontend.getLocationFromRawNode(node),
+                this.frontend.codeOf(node),
+                this.frontend.locationOf(node),
                 null,
                 false,
             )
@@ -86,7 +86,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 } else {
                     "class"
                 },
-                this.frontend.getCodeFromRawNode(node)
+                this.frontend.codeOf(node)
             )
 
         this.frontend.scopeManager.enterScope(record)
@@ -113,20 +113,11 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val type =
             node.typeChildNode?.let { this.frontend.typeHandler.handle(it) } ?: newUnknownType()
 
-        return newParamVariableDeclaration(
-            name,
-            type,
-            false,
-            this.frontend.getCodeFromRawNode(node)
-        )
+        return newParamVariableDeclaration(name, type, false, this.frontend.codeOf(node))
     }
 
     fun handleSourceFile(node: TypeScriptNode): TranslationUnitDeclaration {
-        val tu =
-            newTranslationUnitDeclaration(
-                node.location.file,
-                this.frontend.getCodeFromRawNode(node)
-            )
+        val tu = newTranslationUnitDeclaration(node.location.file, this.frontend.codeOf(node))
 
         this.frontend.scopeManager.resetToGlobal(tu)
 
@@ -155,23 +146,18 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 "MethodDeclaration" -> {
                     val record = this.frontend.scopeManager.currentRecord
 
-                    newMethodDeclaration(
-                        name,
-                        this.frontend.getCodeFromRawNode(node),
-                        false,
-                        record
-                    )
+                    newMethodDeclaration(name, this.frontend.codeOf(node), false, record)
                 }
                 "Constructor" -> {
                     val record = this.frontend.scopeManager.currentRecord
 
                     newConstructorDeclaration(
                         record?.name?.toString() ?: "",
-                        this.frontend.getCodeFromRawNode(node),
+                        this.frontend.codeOf(node),
                         record
                     )
                 }
-                else -> newFunctionDeclaration(name, this.frontend.getCodeFromRawNode(node))
+                else -> newFunctionDeclaration(name, this.frontend.codeOf(node))
             }
 
         node.typeChildNode?.let {
@@ -215,20 +201,15 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
         // TODO: support ObjectBindingPattern (whatever it is). seems to be multiple assignment
 
-        val `var` =
-            newVariableDeclaration(
-                name,
-                newUnknownType(),
-                this.frontend.getCodeFromRawNode(node),
-                false
-            )
-        `var`.location = this.frontend.getLocationFromRawNode(node)
+        val declaration =
+            newVariableDeclaration(name, newUnknownType(), this.frontend.codeOf(node), false)
+        declaration.location = this.frontend.locationOf(node)
 
         // the last node that is not an identifier or an object binding pattern is an initializer
         node.children
             ?.lastOrNull { it.type != "Identifier" && it.type != "ObjectBindingPattern" }
-            ?.let { `var`.initializer = this.frontend.expressionHandler.handle(it) }
+            ?.let { declaration.initializer = this.frontend.expressionHandler.handle(it) }
 
-        return `var`
+        return declaration
     }
 }

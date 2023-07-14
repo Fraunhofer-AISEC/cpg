@@ -87,8 +87,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * into a [NamespaceDeclaration].
      */
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
-        val declaration =
-            newNamespaceDeclaration(ctx.name.toString(), frontend.getCodeFromRawNode(ctx))
+        val declaration = newNamespaceDeclaration(ctx.name.toString(), frontend.codeOf(ctx))
 
         frontend.scopeManager.addDeclaration(declaration)
 
@@ -270,12 +269,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         val templateDeclaration: TemplateDeclaration =
             if (ctx.declaration is CPPASTFunctionDefinition) {
-                newFunctionTemplateDeclaration(name, frontend.getCodeFromRawNode(ctx))
+                newFunctionTemplateDeclaration(name, frontend.codeOf(ctx))
             } else {
-                newClassTemplateDeclaration(name, frontend.getCodeFromRawNode(ctx))
+                newClassTemplateDeclaration(name, frontend.codeOf(ctx))
             }
 
-        templateDeclaration.location = frontend.getLocationFromRawNode(ctx)
+        templateDeclaration.location = frontend.locationOf(ctx)
         frontend.scopeManager.addDeclaration(templateDeclaration)
         frontend.scopeManager.enterScope(templateDeclaration)
         addTemplateParameters(ctx, templateDeclaration)
@@ -543,7 +542,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declaration =
             frontend.typeManager.createTypeAlias(
                 frontend,
-                frontend.getCodeFromRawNode(ctx),
+                frontend.codeOf(ctx),
                 type,
                 nameDecl.name.toString()
             )
@@ -562,7 +561,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val enum =
             newEnumDeclaration(
                 name = declSpecifier.name.toString(),
-                location = frontend.getLocationFromRawNode(ctx),
+                location = frontend.locationOf(ctx),
             )
 
         // Loop through its members
@@ -570,8 +569,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             val enumConst =
                 newEnumConstantDeclaration(
                     enumerator.name.toString(),
-                    frontend.getCodeFromRawNode(enumerator),
-                    frontend.getLocationFromRawNode(enumerator),
+                    frontend.codeOf(enumerator),
+                    frontend.locationOf(enumerator),
                 )
 
             // In C/C++, default enums are of type int

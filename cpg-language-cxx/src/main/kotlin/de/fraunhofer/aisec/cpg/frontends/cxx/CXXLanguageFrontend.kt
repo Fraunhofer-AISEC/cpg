@@ -79,7 +79,7 @@ import org.slf4j.LoggerFactory
  */
 @RegisterExtraPass(FunctionPointerCallResolver::class)
 class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend(language, ctx) {
+    LanguageFrontend<IASTNode, IASTTypeId>(language, ctx) {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
@@ -266,21 +266,13 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         }
     }
 
-    override fun <T> getCodeFromRawNode(astNode: T): String? {
-        if (astNode is ASTNode) {
-            val node = astNode as ASTNode
-            return node.rawSignature
-        }
-
-        return null
+    override fun codeOf(astNode: IASTNode): String? {
+        val node = astNode as ASTNode
+        return node.rawSignature
     }
 
-    override fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation? {
-        if (astNode !is ASTNode) {
-            return null
-        }
-        val node = astNode as ASTNode
-        val fLocation = node.fileLocation ?: return null
+    override fun locationOf(astNode: IASTNode): PhysicalLocation? {
+        val fLocation = astNode.fileLocation ?: return null
         val lineBreaks: IntArray =
             try {
                 val fLoc = getField(fLocation.javaClass, "fLocationCtx")
@@ -313,19 +305,19 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
             }
 
         // our start line, indexed by 0
-        val startLine = node.fileLocation.startingLineNumber - 1
+        val startLine = astNode.fileLocation.startingLineNumber - 1
 
         // our end line, indexed by 0
-        val endLine = node.fileLocation.endingLineNumber - 1
+        val endLine = astNode.fileLocation.endingLineNumber - 1
 
         // our start column, index by 0
         val startColumn =
             if (startLine == 0) {
                 // if we are in the first line, the start column is just the node offset
-                node.fileLocation.nodeOffset
+                astNode.fileLocation.nodeOffset
             } else {
                 // otherwise, we need to calculate the difference to the previous line break
-                node.fileLocation.nodeOffset -
+                astNode.fileLocation.nodeOffset -
                     lineBreaks[startLine - 1] -
                     1 // additional -1 because of the '\n' itself
             }
@@ -334,10 +326,10 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         val endColumn =
             if (endLine == 0) {
                 // if we are in the first line, the end column is just the node offset
-                node.fileLocation.nodeOffset + node.fileLocation.nodeLength
+                astNode.fileLocation.nodeOffset + astNode.fileLocation.nodeLength
             } else {
                 // otherwise, we need to calculate the difference to the previous line break
-                (node.fileLocation.nodeOffset + node.fileLocation.nodeLength) -
+                (astNode.fileLocation.nodeOffset + astNode.fileLocation.nodeLength) -
                     lineBreaks[endLine - 1] -
                     1 // additional -1 because of the '\n' itself
             }
@@ -345,7 +337,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         // for a SARIF compliant format, we need to add +1, since its index begins at 1 and
         // not 0
         val region = Region(startLine + 1, startColumn + 1, endLine + 1, endColumn + 1)
-        return PhysicalLocation(Path.of(node.containingFilename).toUri(), region)
+        return PhysicalLocation(Path.of(astNode.containingFilename).toUri(), region)
     }
 
     /**
@@ -446,28 +438,25 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         }
     }
 
-    override fun <S, T> setComment(s: S, ctx: T) {
-        if (ctx is ASTNode && s is Node) {
-            val cpgNode = s as Node
-            val location = cpgNode.location ?: return
+    override fun setComment(node: Node, astNode: IASTNode) {
+        val location = node.location ?: return
 
-            // No location, no comment
+        // No location, no comment
 
-            val loc: Pair<String, Int> =
-                Pair(location.artifactLocation.uri.path, location.region.endLine)
-            comments[loc]?.let {
-                // only exact match for now}
-                cpgNode.comment = it
-            }
-            // TODO: handle orphanComments? i.e. comments which do not correspond to one line
-            // todo: what to do with comments which are in a line which contains multiple
-            // statements?
+        val loc: Pair<String, Int> =
+            Pair(location.artifactLocation.uri.path, location.region.endLine)
+        comments[loc]?.let {
+            // only exact match for now}
+            node.comment = it
         }
+        // TODO: handle orphanComments? i.e. comments which do not correspond to one line
+        // TODO: what to do with comments which are in a line which contains multiple
+        //  statements?
     }
 
     /** Returns the [Type] that is represented by an [IASTTypeId]. */
-    fun typeOf(id: IASTTypeId): Type {
-        return typeOf(id.abstractDeclarator, id.declSpecifier)
+    override fun typeOf(type: IASTTypeId): Type {
+        return typeOf(type.abstractDeclarator, type.declSpecifier)
     }
 
     /**

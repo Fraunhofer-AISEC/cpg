@@ -82,7 +82,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleLambdaExpression(node: CPPASTLambdaExpression): Expression {
-        val lambda = newLambdaExpression(frontend.getCodeFromRawNode(node))
+        val lambda = newLambdaExpression(frontend.codeOf(node))
 
         // Variables passed by reference are mutable. If we have initializers, we have to model the
         // variable explicitly.
@@ -206,8 +206,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
 
             // new returns a pointer, so we need to reference the type by pointer
-            val newExpression =
-                newNewExpression(code, t.reference(PointerOrigin.POINTER), frontend.language)
+            val newExpression = newNewExpression(code, t.reference(PointerOrigin.POINTER), ctx)
             newExpression.templateParameters = templateParameters
             val initializer: Expression?
             if (init != null) {
@@ -357,10 +356,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     // this can either be just a meaningless bracket or it can be a cast expression
                     val typeName = (ctx.operand as IASTIdExpression).name.toString()
                     if (frontend.typeManager.typeExists(typeName)) {
-                        val cast = newCastExpression(frontend.getCodeFromRawNode<Any>(ctx))
+                        val cast = newCastExpression(frontend.codeOf(ctx))
                         cast.castType = parseType(typeName)
                         cast.expression = input ?: newProblemExpression("could not parse input")
-                        cast.location = frontend.getLocationFromRawNode<Any>(ctx)
+                        cast.location = frontend.locationOf(ctx)
                         return cast
                     }
                 }

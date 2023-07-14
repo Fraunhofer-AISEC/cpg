@@ -99,7 +99,7 @@ sealed class Pass<T : PassTarget>(final override val ctx: TranslationContext) :
      * @return true, if the pass does not require a specific language frontend or if it matches the
      *   [RequiredFrontend]
      */
-    fun runsWithCurrentFrontend(usedFrontends: Collection<LanguageFrontend>): Boolean {
+    fun runsWithCurrentFrontend(usedFrontends: Collection<LanguageFrontend<*, *>>): Boolean {
         if (!this.javaClass.isAnnotationPresent(RequiredFrontend::class.java)) return true
         val requiredFrontend = this.javaClass.getAnnotation(RequiredFrontend::class.java).value
         for (used in usedFrontends) {
@@ -123,7 +123,7 @@ fun executePassSequential(
     cls: KClass<out Pass<*>>,
     ctx: TranslationContext,
     result: TranslationResult,
-    executedFrontends: Collection<LanguageFrontend>
+    executedFrontends: Collection<LanguageFrontend<*, *>>
 ) {
     // This is a bit tricky but actually better than other reflection magic. We are creating a
     // "prototype" instance of our pass class, so we can deduce certain type information more
@@ -160,7 +160,7 @@ inline fun <reified T : PassTarget> executePass(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     target: T,
-    executedFrontends: Collection<LanguageFrontend>
+    executedFrontends: Collection<LanguageFrontend<*, *>>
 ): Pass<T>? {
     val language =
         if (target is LanguageProvider) {

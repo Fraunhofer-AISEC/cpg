@@ -48,7 +48,7 @@ import kotlin.reflect.full.primaryConstructor
  * persisted in the final graph (database) and each node links to its corresponding language using
  * the [Node.language] property.
  */
-abstract class Language<T : LanguageFrontend> : Node() {
+abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
 

@@ -132,7 +132,7 @@ jobs:
       - name: Prepare test and coverage reports
         if: ${{ always() }}
         run: |
-          zip reports.zip **/build/reports/**
+          zip reports.zip **/build/reports/**/** || true
       - name: Archive test and coverage reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v3

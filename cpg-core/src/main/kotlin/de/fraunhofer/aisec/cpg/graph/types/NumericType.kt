@@ -26,14 +26,13 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
 
 /** This type collects all kind of numeric types. */
 open class NumericType(
     typeName: CharSequence = "",
     val bitWidth: Int? = null,
-    language: Language<out LanguageFrontend>? = null,
+    language: Language<*>? = null,
     val modifier: Modifier = Modifier.SIGNED
 ) : ObjectType(typeName, listOf(), true, language) {
 

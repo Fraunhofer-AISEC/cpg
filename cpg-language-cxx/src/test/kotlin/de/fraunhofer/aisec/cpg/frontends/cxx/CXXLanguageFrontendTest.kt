@@ -1076,10 +1076,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     fun testLocation() {
         val file = File("src/test/resources/components/foreachstmt.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
-        assertFalse(main.isEmpty())
+        val main = tu.functions["main"]
+        assertNotNull(main)
 
-        val location = main.iterator().next().location
+        val location = main.location
         assertNotNull(location)
 
         val path = Path.of(location.artifactLocation.uri)

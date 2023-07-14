@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -58,7 +57,7 @@ open class ObjectType : Type, SecondaryTypeEdge {
         typeName: CharSequence,
         generics: List<Type>,
         primitive: Boolean,
-        language: Language<out LanguageFrontend>?
+        language: Language<*>?
     ) : super(typeName, language) {
         this.genericsPropertyEdges = transformIntoOutgoingPropertyEdgeList(generics, this)
         isPrimitive = primitive
@@ -69,7 +68,7 @@ open class ObjectType : Type, SecondaryTypeEdge {
         type: Type?,
         generics: List<Type>,
         primitive: Boolean,
-        language: Language<out LanguageFrontend>?
+        language: Language<*>?
     ) : super(type) {
         this.language = language
         this.genericsPropertyEdges = transformIntoOutgoingPropertyEdgeList(generics, this)

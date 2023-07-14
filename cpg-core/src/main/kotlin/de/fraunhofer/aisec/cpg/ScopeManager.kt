@@ -75,7 +75,7 @@ class ScopeManager : ScopeProvider {
      * The language frontend tied to the scope manager. Can be used to implement language specific
      * scope resolution or lookup.
      */
-    var lang: LanguageFrontend? = null
+    var lang: LanguageFrontend<*, *>? = null
 
     /** True, if the scope manager is currently in a [BlockScope]. */
     val isInBlock: Boolean

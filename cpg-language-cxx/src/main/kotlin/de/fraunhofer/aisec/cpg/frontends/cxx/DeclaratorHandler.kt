@@ -51,9 +51,9 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  * See [DeclarationHandler] for a detailed explanation, why this is split into a dedicated handler.
  */
 class DeclaratorHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTNameOwner>(Supplier(::ProblemDeclaration), lang) {
+    CXXHandler<Declaration, IASTNode>(Supplier(::ProblemDeclaration), lang) {
 
-    override fun handleNode(node: IASTNameOwner): Declaration {
+    override fun handleNode(node: IASTNode): Declaration {
         return when (node) {
             is CPPASTFunctionDeclarator -> handleCPPFunctionDeclarator(node)
             is IASTStandardFunctionDeclarator -> handleFunctionDeclarator(node)
@@ -105,7 +105,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Check, if the name is qualified or if we are within a record scope
         return if (
             (frontend.scopeManager.currentScope is RecordScope ||
-                name.contains(language.namespaceDelimiter))
+                language?.namespaceDelimiter?.let { name.contains(it) } == true)
         ) {
             // If yes, treat this like a field declaration
             this.handleFieldDeclarator(ctx)
@@ -144,32 +144,18 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun handleFieldDeclarator(ctx: IASTDeclarator): FieldDeclaration {
         val initializer = ctx.initializer?.let { frontend.initializerHandler.handle(it) }
 
-        val name = ctx.name.toString()
+        val name = parseName(ctx.name.toString())
 
         val declaration =
-            if (name.contains(language.namespaceDelimiter)) {
-                val rr = name.split(language.namespaceDelimiter).toTypedArray()
-                val fieldName = rr[rr.size - 1]
-                newFieldDeclaration(
-                    fieldName,
-                    newUnknownType(),
-                    emptyList(),
-                    ctx.rawSignature,
-                    frontend.getLocationFromRawNode(ctx),
-                    initializer,
-                    true
-                )
-            } else {
-                newFieldDeclaration(
-                    name,
-                    newUnknownType(),
-                    emptyList(),
-                    ctx.rawSignature,
-                    frontend.getLocationFromRawNode(ctx),
-                    initializer,
-                    true
-                )
-            }
+            newFieldDeclaration(
+                name.localName,
+                newUnknownType(),
+                emptyList(),
+                ctx.rawSignature,
+                frontend.locationOf(ctx),
+                initializer,
+                true
+            )
 
         frontend.scopeManager.addDeclaration(declaration)
 
@@ -370,7 +356,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently."
                 )
 
-            Util.warnWithFileLocation<IASTFunctionDeclarator>(frontend, ctx, log, problem.problem)
+            Util.warnWithFileLocation(frontend, ctx, log, problem.problem)
 
             return problem
         }
@@ -434,13 +420,13 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     newUnknownType(),
                     emptyList(),
                     code,
-                    frontend.getLocationFromRawNode(ctx),
+                    frontend.locationOf(ctx),
                     initializer,
                     true
                 )
         }
 
-        result.location = frontend.getLocationFromRawNode(ctx)
+        result.location = frontend.locationOf(ctx)
         frontend.scopeManager.addDeclaration(result)
         return result
     }

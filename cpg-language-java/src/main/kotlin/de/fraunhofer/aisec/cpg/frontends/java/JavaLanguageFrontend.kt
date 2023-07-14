@@ -71,7 +71,7 @@ import java.util.function.Consumer
     JavaExternalTypeHierarchyResolver::class
 ) // this pass is always required for Java
 open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend(language, ctx) {
+    LanguageFrontend<Node, Type>(language, ctx) {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
@@ -115,7 +115,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             var namespaceDeclaration: NamespaceDeclaration? = null
             if (packDecl != null) {
                 namespaceDeclaration =
-                    newNamespaceDeclaration(packDecl.name.asString(), getCodeFromRawNode(packDecl))
+                    newNamespaceDeclaration(packDecl.name.asString(), codeOf(packDecl))
                 setCodeAndLocation(namespaceDeclaration, packDecl)
                 scopeManager.addDeclaration(namespaceDeclaration)
                 scopeManager.enterScope(namespaceDeclaration)
@@ -144,6 +144,11 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         }
     }
 
+    override fun typeOf(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {
+        // reserved for future use
+        return newUnknownType()
+    }
+
     @Throws(TranslationException::class, FileNotFoundException::class)
     fun parse(file: File?, parser: JavaParser): CompilationUnit {
         val result = parser.parse(file)
@@ -170,38 +175,31 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         return optional.get()
     }
 
-    override fun <T> getCodeFromRawNode(astNode: T): String {
-        if (astNode is Node) {
-            val node = astNode as Node
-            val optional = node.tokenRange
-            if (optional.isPresent) {
-                return optional.get().toString()
-            }
+    override fun codeOf(astNode: Node): String? {
+        val optional = astNode.tokenRange
+        if (optional?.isPresent == true) {
+            return optional.get().toString()
         }
         return astNode.toString()
     }
 
-    override fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation? {
-        if (astNode is Node) {
-            val node = astNode as Node
+    override fun locationOf(astNode: Node): PhysicalLocation? {
+        // find compilation unit of node
+        val cu = astNode.findCompilationUnit().orElse(null) ?: return null
 
-            // find compilation unit of node
-            val cu = node.findCompilationUnit().orElse(null) ?: return null
-
-            // retrieve storage
-            val storage = cu.storage.orElse(null) ?: return null
-            val optional = node.range
-            if (optional.isPresent) {
-                val r = optional.get()
-                val region =
-                    Region(
-                        r.begin.line,
-                        r.begin.column,
-                        r.end.line,
-                        r.end.column + 1
-                    ) // +1 for SARIF compliance
-                return PhysicalLocation(storage.path.toUri(), region)
-            }
+        // retrieve storage
+        val storage = cu.storage.orElse(null) ?: return null
+        val optional = astNode.range
+        if (optional.isPresent) {
+            val r = optional.get()
+            val region =
+                Region(
+                    r.begin.line,
+                    r.begin.column,
+                    r.end.line,
+                    r.end.column + 1
+                ) // +1 for SARIF compliance
+            return PhysicalLocation(storage.path.toUri(), region)
         }
         return null
     }
@@ -424,13 +422,8 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         context = null
     }
 
-    override fun <S, T> setComment(s: S, ctx: T) {
-        if (ctx is Node && s is de.fraunhofer.aisec.cpg.graph.Node) {
-            val node = ctx as Node
-            val cpgNode = s as de.fraunhofer.aisec.cpg.graph.Node
-            node.comment.ifPresent { comment: Comment -> cpgNode.comment = comment.content }
-            // TODO: handle orphanComments?
-        }
+    override fun setComment(node: de.fraunhofer.aisec.cpg.graph.Node, astNode: Node) {
+        astNode.comment.ifPresent { comment: Comment -> node.comment = comment.content }
     }
 
     /**
@@ -451,7 +444,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     private fun handleAnnotations(owner: NodeWithAnnotations<*>): List<Annotation> {
         val list = ArrayList<Annotation>()
         for (expr in owner.annotations) {
-            val annotation = newAnnotation(expr.nameAsString, getCodeFromRawNode(expr))
+            val annotation = newAnnotation(expr.nameAsString, codeOf(expr))
             val members = ArrayList<AnnotationMember>()
 
             // annotations can be specified as member / value pairs
@@ -461,7 +454,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             pair.nameAsString,
                             expressionHandler.handle(pair.value) as Expression,
-                            getCodeFromRawNode(pair)
+                            codeOf(pair)
                         )
                     members.add(member)
                 }
@@ -473,7 +466,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
                             expressionHandler.handle(value.asLiteralExpr()) as Expression,
-                            getCodeFromRawNode(value)
+                            codeOf(value)
                         )
                     members.add(member)
                 }

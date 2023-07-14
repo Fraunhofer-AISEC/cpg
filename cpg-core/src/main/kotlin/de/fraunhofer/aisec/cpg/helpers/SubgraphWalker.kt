@@ -393,7 +393,7 @@ object SubgraphWalker {
         private var walker: IterativeGraphWalker? = null
         private val scopeManager: ScopeManager
 
-        constructor(lang: LanguageFrontend) {
+        constructor(lang: LanguageFrontend<*, *>) {
             scopeManager = lang.scopeManager
         }
 
