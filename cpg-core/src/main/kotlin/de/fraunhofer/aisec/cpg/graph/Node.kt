@@ -263,8 +263,9 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     }
 
     fun addPrevCDG(prev: Node) {
-        prevCDGEdges.add(PropertyEdge(this, prev))
-        prev.nextCDGEdges.add(PropertyEdge(prev, this))
+        val edge = PropertyEdge(prev, this)
+        prevCDGEdges.add(edge)
+        prev.nextCDGEdges.add(edge)
     }
 
     fun addAllPrevDFG(prev: Collection<Node>) {
