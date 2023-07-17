@@ -215,7 +215,10 @@ fun handleEdge(
 private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
     return if (this.getProperty(Properties.BRANCH) == true) {
         true
-    } else this.start is IfStatement && this.getProperty(Properties.BRANCH) == false
+    } else
+        (this.start is IfStatement ||
+            this.start is ConditionalExpression ||
+            this.start is ShortCircuitOperator) && this.getProperty(Properties.BRANCH) == false
 }
 
 /**
