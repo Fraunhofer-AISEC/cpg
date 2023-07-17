@@ -148,7 +148,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     var prevCDGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
 
-    var prevCDG by PropertyEdgeDelegate(Node::prevCDGEdges, true)
+    var prevCDG by PropertyEdgeDelegate(Node::prevCDGEdges, false)
 
     /**
      * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
