@@ -170,4 +170,4 @@ nav:
   - "Contributing":
       - "Contributing to the CPG library": Contributing/index.md
     # This assumes that the most recent dokka build was generated with the "main" tag!
-  - "API Reference": dokka/latest
+  - "API Reference": dokka/main
