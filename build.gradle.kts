@@ -73,12 +73,12 @@ tasks.dokkaHtmlMultiModule {
  * named based on what we configured here.
  */
 fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle.AbstractDokkaParentTask, tag: String) {
-    val oldOutputPath = buildDir.resolve("dokkaCustomMultiModuleOutput").resolve("versions")
+    val oldOutputPath = projectDir.resolve("previousDocs")
     val id = "org.jetbrains.dokka.versioning.VersioningPlugin"
     val config = """{ "version": "$tag", "olderVersionsDir":"${oldOutputPath.path}" }"""
     val mapOf = mapOf(id to config)
 
-    dokkaMultiModuleTask.outputDirectory.set(file(oldOutputPath.resolve(tag)))
+    dokkaMultiModuleTask.outputDirectory.set(file(buildDir.resolve("dokkaCustomMultiModuleOutput").resolve(tag)))
     dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
 }
 

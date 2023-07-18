@@ -111,6 +111,10 @@ jobs:
         with:
           name: libcpgo-amd64.dylib
           path: cpg-language-go/src/main/resources/
+      - name: Download old dokka versions
+        run: |
+          mkdir previousDocs && cd previousDocs 
+          wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka
       - name: Build ${{ env.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
@@ -148,13 +152,13 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: build/dokkaCustomMultiModuleOutput
+          folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
           target-folder: dokka/${{ env.version }}
       - name: Publish JavaDoc (main)
         if: github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: build/dokkaCustomMultiModuleOutput
+          folder: build/dokkaCustomMultiModuleOutput/main
           target-folder: dokka/main
       - name: "Create Release"
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
