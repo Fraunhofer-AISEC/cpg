@@ -14,11 +14,12 @@ This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ 
 ## Specifications
 
 In order to improve some formal aspects of our library, we created several specifications of our core concepts. Currently, the following specifications exist:
-* [Dataflow Graph](./cpg-core/specifications/dfg.md)
-* [Evaluation Order Graph](./cpg-core/specifications/eog.md)
-* [Language and Language Frontend](./cpg-core/specifications/language.md)
+* [Dataflow Graph](https://fraunhofer-aisec.github.io/cpg/CPG/specs/dfg/)
+* [Evaluation Order Graph](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/)
+* [Graph Model in neo4j](https://fraunhofer-aisec.github.io/cpg/CPG/specs/graph/)
+* [Language and Language Frontend](https://fraunhofer-aisec.github.io/cpg/CPG/impl/language/)
 
-We aim to provide more specifications over time and also include them in a new generated documentation site.
+We aim to provide more specifications over time.
 
 ## Usage
 

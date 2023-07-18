@@ -401,6 +401,120 @@ Scheme:
     returnValue -- DFG --> node([ReturnStatement]);
     returnValue -.- node;
 ```
+## Branching Statements
+Specific statements lead to a branch in the control flow of a program. A value that influences the branching decision can lead to an implicit data flow via the branching and we therefore draw a dfg edge from the condition, to the branching node.
+
+### ForEachStatement
+
+Interesting fields:
+
+* `variable: Statement`: The statement which is used in each iteration to assign the current iteration value.
+* `iterable: Statement`: The statement or expression, which is iterated
+
+The value of the iterable flow to the `VariableDeclaration` in the `variable`. Since some languages allow arbitrary logic, we differentiate between two cases:
+
+### Case 1. The `variable` is a `DeclarationStatement`.
+
+This is the case for most languages where we can have only a variable in this place (e.g., `for(e in list)`). Here, we get the declaration(s) in the statement and add the DFG from the iterable to this declaration.
+
+
+Scheme:
+```mermaid
+  flowchart LR
+    node([ForEachStatement]) -.- variable[variable: DeclarationStatement]
+    node -.- iterable[iterable]
+    variable -.- declarations["declarations[i]"]
+    iterable -- for all i: DFG --> declarations
+```
+
+### Case 2. The `variable` is another type of `Statement`.
+
+In this case, we assume that the last VariableDeclaration is the one used for looping. We add a DFG edge only to this declaration.
+
+Scheme:
+```mermaid
+  flowchart LR
+    node([ForEachStatement]) -.- statement[variable]
+    node -.- iterable[iterable]
+    statement -.- localVars[variables]
+    localVars -. "last" .-> variable
+    iterable -- DFG --> variable
+    variable -- DFG --> node
+```
+
+### DoStatement
+
+Interesting fields:
+* `condition: Statement`: The condition that is evaluated before making the branching decision
+
+
+Scheme:
+```mermaid
+  flowchart LR
+    node([DoStatement]) -.- condition(condition)
+    condition -- DFG --> node
+```
+
+### WhileStatement
+
+Interesting fields:
+* `condition: Statement`: The condition that is evaluated before making the branching decision
+* `conditionDeclaration: Statement`: A declaration containing the condition in the initializer, used instead of the condition
+
+Scheme:
+```mermaid
+  flowchart LR
+    node([WhileStatement]) -.- condition(condition)
+    node -.- conditionDeclaration(conditionDeclaration)
+    condition -- DFG --> node
+    conditionDeclaration  -- DFG --> node
+```
+
+### ForStatement
+
+Interesting fields:
+* `condition: Statement`: The condition that is evaluated before making the branching decision
+* `conditionDeclaration: Statement`: A declaration containing the condition in the initializer, used instead of the condition.
+
+Scheme:
+```mermaid
+  flowchart LR
+    node([ForStatement]) -.- condition(condition)
+    node -.- conditionDeclaration(conditionDeclaration)
+    condition -- DFG --> node
+    conditionDeclaration  -- DFG --> node
+```
+
+
+### IfStatement
+
+Interesting fields:
+* `condition: Statement`: The condition that is evaluated before making the branching decision
+* `conditionDeclaration: Statement`: A declaration containing the condition in the initialize, used instead of the condition.
+
+Scheme:
+```mermaid
+  flowchart LR
+    node([IfStatement]) -.- condition(condition)
+    node -.- conditionDeclaration(conditionDeclaration)
+    condition -- DFG --> node
+    conditionDeclaration  -- DFG --> node
+```
+
+
+### SwitchStatement
+Interesting fields:
+* `selector: Statement`: The expression that is evaluated before making the branching decision
+* `selectorDeclaration: Statement`: A declaration containing the selector in the initializer, used instead of the selector.
+
+Scheme:
+```mermaid
+  flowchart LR
+    node([SwitchStatement]) -.- selector(selector)
+    node -.- selectorDeclaration(selectorDeclaration)
+    selector -- DFG --> node
+    selectorDeclaration  -- DFG --> node
+```
 
 ## FunctionDeclaration
 
