@@ -73,7 +73,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * Removes all the incoming and outgoing DFG edges for each variable declaration in the block of
      * code [node].
      */
-    private fun clearFlowsOfVariableDeclarations(node: Node) {
+    protected fun clearFlowsOfVariableDeclarations(node: Node) {
         for (varDecl in node.variables) {
             varDecl.clearPrevDFG()
             varDecl.clearNextDFG()
@@ -90,7 +90,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * - Assignments with an operation e.g. of the form "variable += rhs"
      * - Read operations on a variable
      */
-    private fun handleStatementHolder(node: Node) {
+    protected fun handleStatementHolder(node: Node) {
         // The list of nodes that we have to consider and the last write operations to the different
         // variables.
         val worklist =
@@ -291,7 +291,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * Removes the DFG edges for a potential implicit return statement if it is not in
      * [reachableReturnStatements].
      */
-    private fun removeUnreachableImplicitReturnStatement(
+    protected fun removeUnreachableImplicitReturnStatement(
         node: Node,
         reachableReturnStatements: MutableSet<ReturnStatement>
     ) {
@@ -311,7 +311,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * was the path through the EOG to reach this state but apparently, all the writes in the
      * different branches are obsoleted by one common write access which happens afterwards.
      */
-    private fun worklistHasSimilarPair(
+    protected fun worklistHasSimilarPair(
         worklist: MutableList<Pair<Node, MutableMap<Declaration, MutableList<Node>>>>,
         newPair: Pair<Node, MutableMap<Declaration, MutableList<Node>>>
     ): Boolean {
@@ -372,20 +372,20 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * Checks if the node performs an operation and an assignment at the same time e.g. with the
      * operators +=, -=, *=, ...
      */
-    private fun isCompoundAssignment(currentNode: Node) =
+    protected fun isCompoundAssignment(currentNode: Node) =
         currentNode is BinaryOperator &&
             currentNode.operatorCode in
                 (currentNode.language?.compoundAssignmentOperators ?: setOf()) &&
             (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
 
     /** Checks if the node is a simple assignment of the form `var = ...` */
-    private fun isSimpleAssignment(currentNode: Node) =
+    protected fun isSimpleAssignment(currentNode: Node) =
         currentNode is BinaryOperator &&
             currentNode.operatorCode == "=" &&
             (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
 
     /** Checks if the node is an increment or decrement operator (e.g. i++, i--, ++i, --i) */
-    private fun isIncOrDec(currentNode: Node) =
+    protected fun isIncOrDec(currentNode: Node) =
         currentNode is UnaryOperator &&
             (currentNode.operatorCode == "++" || currentNode.operatorCode == "--") &&
             (currentNode.input as? DeclaredReferenceExpression)?.refersTo != null
@@ -397,7 +397,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      *
      * @return true if a loop was detected, false otherwise
      */
-    private fun loopDetection(
+    protected fun loopDetection(
         currentNode: Node,
         writtenDecl: Declaration?,
         currentWritten: Node,
@@ -437,7 +437,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * Copies the map. We remove all the declarations which are no longer relevant because they are
      * in a child scope of the next hop.
      */
-    private fun copyMap(
+    protected fun copyMap(
         map: Map<Declaration, MutableList<Node>>,
         nextNode: Node
     ): MutableMap<Declaration, MutableList<Node>> {
@@ -456,7 +456,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         return result
     }
 
-    private fun Node.hasOuterScopeOf(node: Node): Boolean {
+    protected fun Node.hasOuterScopeOf(node: Node): Boolean {
         var parentScope = node.scope?.parent
         while (parentScope != null) {
             if (this.scope == parentScope) {

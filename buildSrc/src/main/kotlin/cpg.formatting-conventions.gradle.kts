@@ -108,6 +108,11 @@ spotless {
     }
 
     python {
+        targetExclude(
+            fileTree(project.projectDir) {
+                include("**/node_modules")
+            }
+        )
         target("src/main/**/*.py")
         licenseHeader(headerWithHashes, "from").yearSeparator(" - ")
     }
