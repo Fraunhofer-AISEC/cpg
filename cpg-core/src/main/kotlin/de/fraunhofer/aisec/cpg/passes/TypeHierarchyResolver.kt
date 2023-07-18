@@ -95,7 +95,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         )
     }
 
-    private fun getAllMethodsFromSupertypes(
+    protected fun getAllMethodsFromSupertypes(
         supertypeRecords: Set<RecordDeclaration>
     ): List<MethodDeclaration> {
         return supertypeRecords.map { it.methods }.flatten()
