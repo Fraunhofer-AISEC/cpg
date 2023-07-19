@@ -2,7 +2,7 @@
 kotlin = "1.9.0"
 neo4j = "4.0.2"
 log4j = "2.20.0"
-sonarqube = "4.2.0.3129"
+sonarqube = "4.3.0.3225"
 spotless = "6.20.0"
 
 [libraries]
