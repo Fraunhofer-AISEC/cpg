@@ -137,12 +137,16 @@ jobs:
           VERSION: ${{ env.version }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare test and coverage reports
+        if: ${{ always() }}
+        run: |
+          zip reports.zip **/build/reports/**
       - name: Archive test and coverage reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
           name: reports
-          path: "**/build/reports"
+          path: reports.zip
       - name: Download old dokka versions
         run: |
           # make sure the previousDocs folder exists
