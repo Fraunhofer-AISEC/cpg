@@ -47,8 +47,8 @@ jobs:
           path: cpg-language-go/src/main/resources/libcpgo-arm64.dylib
 
   build:
-    #runs-on: self-hosted
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    #runs-on: ubuntu-latest
     needs: build-cpgo-osx
     steps:
       - uses: actions/checkout@v3
@@ -126,13 +126,13 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar testCodeCoverageReport sonar \
+            ./gradlew --parallel -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar testCodeCoverageReport sonar \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar
+            ./gradlew --parallel -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar
           fi
         id: build
         env:
