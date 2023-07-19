@@ -125,13 +125,13 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PenableJavaFrontend=true -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar testCodeCoverageReport sonar \
+            ./gradlew -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar testCodeCoverageReport sonar \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PenableJavaFrontend=true -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar
+            ./gradlew -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar
           fi
         id: build
         env:
@@ -152,7 +152,6 @@ jobs:
           wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka
           # in order to avoid duplicate mains, remove the "main" version from the previous versions
           rm -rf main
-
       - name: Publish
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         run: |
@@ -166,7 +165,7 @@ jobs:
       - name: Build JavaDoc
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha') || github.ref == 'refs/heads/main'
         run: |
-          ./gradlew --no-daemon --parallel -Pversion=$VERSION -PenableJavaFrontend=true  -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true dokkaHtmlMultiModule
+          ./gradlew -Pversion=$VERSION dokkaHtmlMultiModule
       - name: Publish JavaDoc (version)
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         uses: JamesIves/github-pages-deploy-action@v4
@@ -179,7 +178,7 @@ jobs:
         with:
           folder: build/dokkaCustomMultiModuleOutput/main
           target-folder: dokka/main
-      - name: "Create Release"
+      - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         id: create_release
         uses: softprops/action-gh-release@v1
