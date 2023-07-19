@@ -44,13 +44,13 @@ publishing {
 
 node {
     download.set(findProperty("nodeDownload")?.toString()?.toBoolean() ?: false)
-    version.set("16.4.2")
+    version.set("18")
     nodeProjectDir.set(file("${project.projectDir.resolve("src/main/nodejs")}"))
 }
 
 val npmBuild by tasks.registering(NpmTask::class) {
     inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file("src/main/nodejs/package-lock.json").withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.dir("build/resources/main/nodejs")
     outputs.cacheIf { true }
