@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-import com.github.gradle.node.yarn.task.YarnTask
+import com.github.gradle.node.npm.task.NpmTask
 
 plugins {
     id("cpg.frontend-conventions")
@@ -44,32 +44,22 @@ publishing {
 
 node {
     download.set(findProperty("nodeDownload")?.toString()?.toBoolean() ?: false)
-    version.set("16.4.2")
+    version.set("18")
+    nodeProjectDir.set(file("${project.projectDir.resolve("src/main/nodejs")}"))
 }
 
-val yarnInstall by tasks.registering(YarnTask::class) {
+val npmBuild by tasks.registering(NpmTask::class) {
     inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir("src/main/nodejs/node_modules")
-    outputs.cacheIf { true }
-
-    workingDir.set(file("src/main/nodejs"))
-    yarnCommand.set(listOf("install", "--ignore-optional"))
-}
-
-val yarnBuild by tasks.registering(YarnTask::class) {
-    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file("src/main/nodejs/package-lock.json").withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.dir("build/resources/main/nodejs")
     outputs.cacheIf { true }
 
     workingDir.set(file("src/main/nodejs"))
-    yarnCommand.set(listOf("bundle"))
-
-    dependsOn(yarnInstall)
+    npmCommand.set(listOf("run", "bundle"))
+    dependsOn(tasks.getByName("npmInstall"))
 }
 
 tasks.processResources {
-    dependsOn(yarnBuild)
+    dependsOn(npmBuild)
 }

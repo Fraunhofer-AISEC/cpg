@@ -34,9 +34,6 @@ plugins {
 tasks.withType<KotlinCompile> {
     dependsOn("spotlessApply")
 }
-tasks.withType<JavaCompile> {
-    dependsOn("spotlessApply")
-}
 
 val headerWithStars = """/*
  * Copyright (c) ${"$"}YEAR, Fraunhofer AISEC. All rights reserved.
@@ -92,16 +89,6 @@ val headerWithHashes = """#
 """
 
 spotless {
-    java {
-        targetExclude(
-            fileTree(project.projectDir) {
-                include("build/generated-src/**")
-            }
-        )
-        googleJavaFormat("1.15.0")
-        licenseHeader(headerWithStars).yearSeparator(" - ")
-    }
-
     kotlin {
         ktfmt().kotlinlangStyle()
         licenseHeader(headerWithStars).yearSeparator(" - ")
