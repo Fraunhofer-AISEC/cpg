@@ -53,13 +53,8 @@ allprojects {
 // configure dokka for the multi-module cpg project
 // this works together with the dokka configuration in the common-conventions plugin
 tasks.dokkaHtmlMultiModule {
-    val stdout = ByteArrayOutputStream()
-    exec {
-        commandLine("sh", "-c", "git tag --points-at HEAD | cat")
-            standardOutput = stdout
-    }
-    val configuredVersion = stdout.toString()
-    if(configuredVersion.isNotEmpty()) {
+    val configuredVersion = project.version.toString()
+    if(configuredVersion.isNotEmpty() && configuredVersion != "unspecified") {
         generateDokkaWithVersionTag(this, configuredVersion)
     } else {
         generateDokkaWithVersionTag(this, "main")
