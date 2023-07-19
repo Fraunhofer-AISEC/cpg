@@ -47,7 +47,7 @@ jobs:
           path: cpg-language-go/src/main/resources/libcpgo-arm64.dylib
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-cpgo-osx
     steps:
       - uses: actions/checkout@v3
@@ -68,7 +68,7 @@ jobs:
           node-version: "16"
       - name: Setup neo4j
         run: |
-          docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 neo4j
+          docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 neo4j || true
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
@@ -96,7 +96,9 @@ jobs:
       - name: Install JEP
         run: |
           pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
-          find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
+          if [ -d "/opt/hostedtoolcache/Python" ]; then
+            find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
+          fi
       - name: Install pycodestyle
         run: |
           pip3 install pycodestyle
@@ -142,6 +144,15 @@ jobs:
         with:
           name: reports
           path: "**/build/reports"
+      - name: Download old dokka versions
+        run: |
+          # make sure the previousDocs folder exists
+          mkdir previousDocs && cd previousDocs 
+          # retrieve the previous documentation folders for each published version (this also includes "main")
+          wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka
+          # in order to avoid duplicate mains, remove the "main" version from the previous versions
+          rm -rf main
+
       - name: Publish
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         run: |
