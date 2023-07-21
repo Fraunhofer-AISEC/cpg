@@ -342,7 +342,7 @@ class Application : Callable<Int> {
      *   point to a file, is a directory or point to a hidden file or the paths does not have the
      *   same top level path.
      */
-    private fun setupTranslationConfiguration(): TranslationConfiguration {
+    fun setupTranslationConfiguration(): TranslationConfiguration {
         val translationConfiguration =
             TranslationConfiguration.builder()
                 .topLevel(topLevel)
