@@ -115,7 +115,7 @@ jobs:
       - name: Download old dokka versions
         run: |
           # make sure the previousDocs folder exists
-          mkdir previousDocs && cd previousDocs 
+          mkdir -p previousDocs && cd previousDocs 
           # retrieve the previous documentation folders for each published version (this also includes "main")
           wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka || echo "No dokka directory present. Will continue as if nothing happened"
           # in order to avoid duplicate mains, remove the "main" version from the previous versions
