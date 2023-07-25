@@ -3,7 +3,6 @@ jdk:
 before_install:
   - mkdir -p ~/go
   - wget -q https://go.dev/dl/go1.20.4.linux-amd64.tar.gz && tar -C ~ -xzf go1.20.4.linux-amd64.tar.gz
-  - ls -l ~/go
 install:
   - export PATH="$PATH:$HOME/go/bin"
   - cp gradle.properties.example gradle.properties
