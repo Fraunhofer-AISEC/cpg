@@ -6,10 +6,10 @@ plugins {
 
     `java-library`
     jacoco
-    kotlin("jvm")
-    id("org.jetbrains.dokka")
     signing
     `maven-publish`
+    kotlin("jvm")
+    id("org.jetbrains.dokka")
 }
 
 group = "de.fraunhofer.aisec"
@@ -76,20 +76,6 @@ publishing {
                     developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
                     url.set("https://github.com/Fraunhofer-AISEC/cpg")
                 }
-            }
-        }
-    }
-
-    repositories {
-        maven {
-            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
-
-            credentials {
-                val mavenCentralUsername: String? by project
-                val mavenCentralPassword: String? by project
-
-                username = mavenCentralUsername
-                password = mavenCentralPassword
             }
         }
     }

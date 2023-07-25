@@ -34,6 +34,7 @@ import java.io.ByteArrayOutputStream
 plugins {
     id("org.jetbrains.dokka")
     id("org.sonarqube")
+    id("io.github.gradle-nexus.publish-plugin")
 }
 
 // this is needed for the plugins block
@@ -90,6 +91,20 @@ sonarqube {
     }
 }
 
+/**
+ * Publishing to maven central
+ */
+nexusPublishing {
+    repositories {
+        sonatype() {
+            val mavenCentralUsername: String? by project
+            val mavenCentralPassword: String? by project
+
+            username.set(mavenCentralUsername)
+            password.set(mavenCentralPassword)
+        }
+    }
+}
 
 
 //
