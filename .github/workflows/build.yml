@@ -161,6 +161,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha') || github.ref == 'refs/heads/main'
         run: |
           ./gradlew --no-daemon -Pversion=$VERSION dokkaHtmlMultiModule
+        env:
+          VERSION: ${{ env.version }}
       - name: Publish JavaDoc (version)
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         uses: JamesIves/github-pages-deploy-action@v4
