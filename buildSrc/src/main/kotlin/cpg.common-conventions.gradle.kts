@@ -12,8 +12,6 @@ plugins {
     id("org.jetbrains.dokka")
 }
 
-group = "de.fraunhofer.aisec"
-
 java {
     withSourcesJar()
 }

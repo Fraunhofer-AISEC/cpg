@@ -45,6 +45,8 @@ repositories {
 allprojects {
     plugins.apply("org.jetbrains.dokka")
 
+    group = "de.fraunhofer.aisec"
+
     val dokkaPlugin by configurations
     dependencies {
         dokkaPlugin("org.jetbrains.dokka:versioning-plugin:1.8.10")
