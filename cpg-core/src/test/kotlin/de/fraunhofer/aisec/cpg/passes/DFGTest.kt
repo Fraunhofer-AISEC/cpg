@@ -497,4 +497,14 @@ class DFGTest {
         assertEquals(6, varA.nextDFG.size)
         assertEquals(1, varA.prevDFG.size) // Only the initializer should flow there.
     }
+
+    @Test
+    fun testInitializerListExpression() {
+        val result = GraphExamples.getInitializerListExprDFG()
+        val variable = result.variables["i"]
+        assertNotNull(variable)
+        assertEquals(1, variable.prevDFG.size)
+        val initializer = variable.prevDFG.first()
+        assertEquals(1, initializer.prevDFG.size)
+    }
 }

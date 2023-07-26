@@ -567,6 +567,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 edge.addProperty(Properties.INDEX, expression.initializerEdges.size)
 
                 expression.initializerEdges.add(edge)
+                expression.addPrevDFG(it)
             }
         }
 

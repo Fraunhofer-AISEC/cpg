@@ -27,13 +27,15 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.BranchingNode
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a conditional loop statement of the form: `while(...){...}`. */
-class WhileStatement : Statement(), ArgumentHolder {
+class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
     @AST var conditionDeclaration: Declaration? = null
 
@@ -45,6 +47,9 @@ class WhileStatement : Statement(), ArgumentHolder {
      * first time. Usually a [CompoundStatement].
      */
     @AST var statement: Statement? = null
+
+    override val branchedBy: Node?
+        get() = condition ?: conditionDeclaration
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

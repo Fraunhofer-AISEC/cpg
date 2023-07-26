@@ -167,21 +167,25 @@ class MultiValueEvaluatorTest {
 
         printB = main.bodyOrNull<CallExpression>(1)
         assertNotNull(printB)
+        evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2), value.values)
 
         printB = main.bodyOrNull<CallExpression>(2)
         assertNotNull(printB)
+        evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2, 4), value.values)
 
         printB = main.bodyOrNull<CallExpression>(3)
         assertNotNull(printB)
+        evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(-4, -2, -1, 0, 1, 2, 4), value.values)
 
         printB = main.bodyOrNull<CallExpression>(4)
         assertNotNull(printB)
+        evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(3, 6), value.values)
     }

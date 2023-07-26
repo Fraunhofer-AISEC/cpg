@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -37,6 +38,32 @@ import java.net.URI
 
 class GraphExamples {
     companion object {
+        fun getInitializerListExprDFG(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("initializerListExprDFG.cpp") {
+                        function("foo", t("int")) { body { returnStmt { literal(0, t("int")) } } }
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("i", t("int")) {
+                                        val initList = newInitializerListExpression()
+                                        initList.initializers = listOf(call("foo"))
+                                        initializer = initList
+                                    }
+                                }
+                                returnStmt { ref("i") }
+                            }
+                        }
+                    }
+                }
+            }
 
         fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
             val ctx = TranslationContext(config, ScopeManager(), TypeManager())
@@ -109,41 +136,67 @@ class GraphExamples {
         ) =
             testFrontend(config).build {
                 translationResult {
-                    translationUnit("Variables.java") {
-                        record("Variables") {
-                            field("field", t("int")) {
-                                literal(42, t("int"))
-                                modifiers = listOf("private")
-                            }
-                            method("getField", t("int")) {
-                                receiver = newVariableDeclaration("this", t("Variables"))
-                                body { returnStmt { member("field") } }
-                            }
-                            method("getLocal", t("int")) {
-                                receiver = newVariableDeclaration("this", t("Variables"))
-                                body {
-                                    declare {
-                                        variable("local", t("int")) { literal(42, t("int")) }
+                    translationUnit("initializerListExprDFG.cpp") {
+                        function("foo", t("int")) { body { returnStmt { literal(0, t("int")) } } }
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("i", t("int")) {
+                                        val initList = newInitializerListExpression()
+                                        initList.initializers = listOf(call("foo"))
+                                        initializer = initList
                                     }
-                                    returnStmt { ref("local") }
                                 }
-                            }
-                            method("getShadow", t("int")) {
-                                receiver = newVariableDeclaration("this", t("Variables"))
-                                body {
-                                    declare {
-                                        variable("field", t("int")) { literal(43, t("int")) }
+                                returnStmt { ref("i") }
+
+                                translationUnit("Variables.java") {
+                                    record("Variables") {
+                                        field("field", t("int")) {
+                                            literal(42, t("int"))
+                                            modifiers = listOf("private")
+                                        }
+                                        method("getField", t("int")) {
+                                            receiver =
+                                                newVariableDeclaration("this", t("Variables"))
+                                            body { returnStmt { member("field") } }
+                                        }
+                                        method("getLocal", t("int")) {
+                                            receiver =
+                                                newVariableDeclaration("this", t("Variables"))
+                                            body {
+                                                declare {
+                                                    variable("local", t("int")) {
+                                                        literal(42, t("int"))
+                                                    }
+                                                }
+                                                returnStmt { ref("local") }
+                                            }
+                                        }
+                                        method("getShadow", t("int")) {
+                                            receiver =
+                                                newVariableDeclaration("this", t("Variables"))
+                                            body {
+                                                declare {
+                                                    variable("field", t("int")) {
+                                                        literal(43, t("int"))
+                                                    }
+                                                }
+                                                returnStmt { ref("field") }
+                                            }
+                                        }
+                                        method("getNoShadow", t("int")) {
+                                            receiver =
+                                                newVariableDeclaration("this", t("Variables"))
+                                            body {
+                                                declare {
+                                                    variable("field", t("int")) {
+                                                        literal(43, t("int"))
+                                                    }
+                                                }
+                                                returnStmt { member("field", ref("this")) }
+                                            }
+                                        }
                                     }
-                                    returnStmt { ref("field") }
-                                }
-                            }
-                            method("getNoShadow", t("int")) {
-                                receiver = newVariableDeclaration("this", t("Variables"))
-                                body {
-                                    declare {
-                                        variable("field", t("int")) { literal(43, t("int")) }
-                                    }
-                                    returnStmt { member("field", ref("this")) }
                                 }
                             }
                         }

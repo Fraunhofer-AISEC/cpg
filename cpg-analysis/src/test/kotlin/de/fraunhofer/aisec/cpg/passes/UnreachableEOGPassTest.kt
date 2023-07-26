@@ -34,10 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 
@@ -80,8 +77,46 @@ class UnreachableEOGPassTest {
         val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
 
-        assertFalse(ifStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
-        assertTrue(ifStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
+        // Check if the then-branch is set as reachable including all the edges until reaching the
+        // print
+        val thenDecl = ifStatement.nextEOGEdges[0]
+        assertFalse(thenDecl.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertEquals(1, thenDecl.end.nextEOGEdges.size)
+        // The "++"
+        val incOp = thenDecl.end.nextEOGEdges[0]
+        assertFalse(incOp.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertEquals(1, incOp.end.nextEOGEdges.size)
+        // The compoundStmt
+        val thenCompound = incOp.end.nextEOGEdges[0]
+        assertFalse(thenCompound.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertEquals(1, thenCompound.end.nextEOGEdges.size)
+        // There's the outgoing EOG edge to the statement after the branching
+        val thenExit = thenCompound.end.nextEOGEdges[0]
+        assertFalse(thenExit.getProperty(Properties.UNREACHABLE) as Boolean)
+
+        // Check if the else-branch is set as unreachable including all the edges until reaching the
+        // print
+        val elseDecl = ifStatement.nextEOGEdges[1]
+        assertTrue(elseDecl.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertEquals(1, elseDecl.end.nextEOGEdges.size)
+        // The "--"
+        val decOp = elseDecl.end.nextEOGEdges[0]
+        assertTrue(decOp.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertEquals(1, decOp.end.nextEOGEdges.size)
+        // The compoundStmt
+        val elseCompound = decOp.end.nextEOGEdges[0]
+        assertTrue(elseCompound.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertEquals(1, elseCompound.end.nextEOGEdges.size)
+        // There's the outgoing EOG edge to the statement after the branching
+        val elseExit = elseCompound.end.nextEOGEdges[0]
+        assertTrue(elseExit.getProperty(Properties.UNREACHABLE) as Boolean)
+
+        // After the branching, it's reachable again. Check that we found the merge node and that we
+        // continue with reachable edges.
+        assertEquals(thenExit.end, elseExit.end)
+        val mergeNode = thenExit.end
+        assertEquals(1, mergeNode.nextEOGEdges.size)
+        assertFalse(mergeNode.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
     }
 
     @Test

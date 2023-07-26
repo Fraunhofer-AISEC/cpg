@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,27 +23,20 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import java.util.Objects
 
-class CatchClause : Statement(), BranchingNode {
-    @AST var parameter: VariableDeclaration? = null
-
-    @AST var body: CompoundStatement? = null
-
-    override val branchedBy: Node?
-        get() = parameter
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is CatchClause) return false
-        return super.equals(other) && parameter == other.parameter && body == other.body
-    }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), parameter, body)
+/**
+ * A [BinaryOperator] which only evaluates [BinaryOperator.rhs] if [BinaryOperator.lhs] fulfils some
+ * condition. For the operators in
+ * [de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators.conjunctiveOperators], the rhs has to
+ * evaluate to "true" or so to continue on the lhs, whereas for the operators in
+ * [de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators.disjunctiveOperators], the lhs has to
+ * evaluate to "false" (or similar).
+ */
+class ShortCircuitOperator : BinaryOperator(), BranchingNode {
+    override val branchedBy: Node
+        get() = lhs
 }

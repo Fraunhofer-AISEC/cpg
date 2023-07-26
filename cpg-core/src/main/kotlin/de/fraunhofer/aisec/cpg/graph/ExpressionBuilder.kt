@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
@@ -57,10 +58,12 @@ fun <T> MetadataProvider.newLiteral(
 }
 
 /**
- * Creates a new [BinaryOperator]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [BinaryOperator] or a [ShortCircuitOperator] if the language implements
+ * [HasShortCircuitOperators] and if the [operatorCode] is contained in
+ * [HasShortCircuitOperators.operatorCodes]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newBinaryOperator(
@@ -68,7 +71,17 @@ fun MetadataProvider.newBinaryOperator(
     code: String? = null,
     rawNode: Any? = null
 ): BinaryOperator {
-    val node = BinaryOperator()
+    val node =
+        if (
+            this is LanguageProvider &&
+                (this.language as? HasShortCircuitOperators)
+                    ?.operatorCodes
+                    ?.contains(operatorCode) == true
+        ) {
+            ShortCircuitOperator()
+        } else {
+            BinaryOperator()
+        }
     node.applyMetadata(this, operatorCode, rawNode, code, true)
 
     node.operatorCode = operatorCode

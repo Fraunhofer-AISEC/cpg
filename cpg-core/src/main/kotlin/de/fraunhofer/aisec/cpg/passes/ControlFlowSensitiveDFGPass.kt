@@ -29,12 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 /**
@@ -52,9 +50,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
     }
 
     override fun accept(tu: TranslationUnitDeclaration) {
-        val walker = IterativeGraphWalker()
-        walker.registerOnNodeVisit(::handle)
-        walker.iterate(tu)
+        tu.functions.forEach(::handle)
     }
 
     /**
@@ -65,7 +61,23 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
     protected fun handle(node: Node) {
         if (node is FunctionDeclaration) {
             clearFlowsOfVariableDeclarations(node)
-            handleStatementHolder(node)
+            val startState = DFGPassState<Set<Node>>()
+            startState.declarationsState.push(node, PowersetLattice(setOf()))
+            val finalState =
+                iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
+
+            removeUnreachableImplicitReturnStatement(
+                node,
+                finalState.returnStatements.values.flatMap {
+                    it.elements.filterIsInstance<ReturnStatement>()
+                }
+            )
+
+            for ((key, value) in finalState.generalState) {
+                key.addAllPrevDFG(
+                    value.elements.filterNot { it is VariableDeclaration && key == it }
+                )
+            }
         }
     }
 
@@ -81,291 +93,152 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
     }
 
     /**
-     * Performs a forward analysis through the EOG to collect all possible writes to a variable and
-     * adds them to the DFG edges to the read operations of that variable. We differentiate between
-     * the flows based on the following types of statements/expressions:
-     * - VariableDeclaration with an initializer
-     * - Unary operators ++ and --
-     * - Assignments of the form "variable = rhs"
-     * - Assignments with an operation e.g. of the form "variable += rhs"
-     * - Read operations on a variable
+     * Computes the previous write access of [currentEdge].end if it is a
+     * [DeclaredReferenceExpression] or [ValueDeclaration] based on the given [state] (which maps
+     * all variables to its last write instruction). It also updates the [state] if
+     * [currentEdge].end performs a write-operation to a variable.
+     *
+     * It further determines unnecessary implicit return statement which are added by some frontends
+     * even if every path reaching this point already contains a return statement.
      */
-    protected fun handleStatementHolder(node: Node) {
-        // The list of nodes that we have to consider and the last write operations to the different
-        // variables.
-        val worklist =
-            mutableListOf<Pair<Node, MutableMap<Declaration, MutableList<Node>>>>(
-                Pair(node, mutableMapOf())
+    protected fun transfer(
+        currentEdge: PropertyEdge<Node>,
+        state: State<Node, Set<Node>>,
+        worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
+    ): State<Node, Set<Node>> {
+        // We will set this if we write to a variable
+        val writtenDecl: Declaration?
+        val currentNode = currentEdge.end
+
+        val doubleState = state as DFGPassState
+
+        val initializer = (currentNode as? VariableDeclaration)?.initializer
+        if (initializer != null) {
+            // A variable declaration with an initializer => The initializer flows to the
+            // declaration.
+            // We also wrote something to this variable declaration
+            state.push(currentNode, PowersetLattice(setOf(initializer)))
+
+            doubleState.pushToDeclarationsState(currentNode, PowersetLattice(setOf(currentNode)))
+        } else if (currentNode is AssignExpression) {
+            // It's an assignment which can have one or multiple things on the lhs and on the
+            // rhs. The lhs could be a declaration or a reference (or multiple of these things).
+            // The rhs can be anything. The rhs flows to the respective lhs. To identify the
+            // correct mapping, we use the "assignments" property which already searches for us.
+            currentNode.assignments.forEach { assignment ->
+                // This was the last write to the respective declaration.
+                (assignment.target as? Declaration
+                        ?: (assignment.target as? DeclaredReferenceExpression)?.refersTo)
+                    ?.let {
+                        doubleState.declarationsState[it] =
+                            PowersetLattice(setOf(assignment.target as Node))
+                    }
+            }
+        } else if (isIncOrDec(currentNode)) {
+            // Increment or decrement => Add the prevWrite of the input to the input. After the
+            // operation, the prevWrite of the input's variable is this node.
+            val input = (currentNode as UnaryOperator).input as DeclaredReferenceExpression
+            // We write to the variable in the input
+            writtenDecl = input.refersTo
+
+            if (writtenDecl != null) {
+                state.push(input, doubleState.declarationsState[writtenDecl])
+                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(input))
+            }
+        } else if (isSimpleAssignment(currentNode)) {
+            // Only the lhs is the last write statement here and the variable which is written
+            // to.
+            writtenDecl =
+                ((currentNode as BinaryOperator).lhs as DeclaredReferenceExpression).refersTo
+
+            if (writtenDecl != null) {
+                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(currentNode.lhs))
+            }
+        } else if (isCompoundAssignment(currentNode)) {
+            // We write to the lhs, but it also serves as an input => We first get all previous
+            // writes to the lhs and then add the flow from lhs and rhs to the current node.
+
+            // The write operation goes to the variable in the lhs
+            writtenDecl =
+                ((currentNode as BinaryOperator).lhs as? DeclaredReferenceExpression)?.refersTo
+
+            if (writtenDecl != null) {
+                // Data flows from the last writes to the lhs variable to this node
+                state.push(currentNode.lhs, doubleState.declarationsState[writtenDecl])
+
+                // The whole current node is the place of the last update, not (only) the lhs!
+                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(currentNode.lhs))
+            }
+        } else if (
+            (currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ &&
+                currentNode.refersTo is VariableDeclaration
+        ) {
+            // We can only find a change if there's a state for the variable
+            doubleState.declarationsState[currentNode.refersTo]?.let {
+                // We only read the variable => Get previous write which have been collected in
+                // the other steps
+                state.push(currentNode, it)
+            }
+        } else if (currentNode is ForEachStatement && currentNode.variable != null) {
+            // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
+            // the "normal" case won't work. We handle this case separately here...
+            // This is what we write to the declaration
+            val iterable = currentNode.iterable as? Expression
+
+            val writtenTo =
+                when (currentNode.variable) {
+                    is DeclarationStatement ->
+                        (currentNode.variable as DeclarationStatement).singleDeclaration
+                    else -> currentNode.variable
+                }
+
+            // We wrote something to this variable declaration
+            writtenDecl =
+                when (writtenTo) {
+                    is Declaration -> writtenTo
+                    is DeclaredReferenceExpression -> writtenTo.refersTo
+                    else -> {
+                        log.error(
+                            "The variable of type ${writtenTo?.javaClass} is not yet supported in the foreach loop"
+                        )
+                        null
+                    }
+                }
+
+            if (writtenTo is DeclaredReferenceExpression) {
+                // This is a special case: We add the nextEOGEdge which goes out of the loop but
+                // with the old previousWrites map.
+                val nodesOutsideTheLoop =
+                    currentNode.nextEOGEdges.filter {
+                        it.getProperty(Properties.UNREACHABLE) != true &&
+                            it.end != currentNode.statement &&
+                            it.end !in currentNode.statement.allChildren<Node>()
+                    }
+                nodesOutsideTheLoop.forEach { worklist.push(it, state.duplicate()) }
+            }
+
+            iterable?.let {
+                writtenTo?.let {
+                    state.push(writtenTo, PowersetLattice(setOf(iterable)))
+                    // Add the variable declaration (or the reference) to the list of previous
+                    // write nodes in this path
+                    state.declarationsState[writtenDecl] = PowersetLattice(setOf(writtenTo))
+                }
+            }
+        } else if (currentNode is FunctionDeclaration) {
+            // We have to add the parameters
+            currentNode.parameters.forEach {
+                doubleState.pushToDeclarationsState(it, PowersetLattice(setOf(it)))
+            }
+        } else if (currentNode is ReturnStatement) {
+            doubleState.returnStatements.push(currentNode, PowersetLattice(setOf(currentNode)))
+        } else {
+            doubleState.declarationsState.push(
+                currentNode,
+                doubleState.declarationsState[currentEdge.start]
             )
-
-        val alreadyProcessed = mutableSetOf<Pair<Node, Map<Declaration, Node>>>()
-
-        // Different points which could be the cause of a loop (in a non-broken program). We
-        // consider ForStatements, WhileStatements, ForEachStatements, DoStatements and
-        // GotoStatements
-        val loopPoints = mutableMapOf<Node, MutableMap<Declaration, MutableSet<Node>>>()
-
-        val returnStatements = mutableSetOf<ReturnStatement>()
-
-        // Iterate through the worklist
-        while (worklist.isNotEmpty()) {
-            // The node we will analyze now and the map of the last write statements to a variable.
-            val (currentNode, previousWrites) = worklist.removeFirst()
-            if (
-                !alreadyProcessed.add(
-                    Pair(currentNode, previousWrites.mapValues { (_, v) -> v.last() })
-                )
-            ) {
-                // The entry did already exist. This means that the changes won't have any effects
-                // and we don't have to run the loop.
-                continue
-            }
-            // We will set this if we write to a variable
-            var writtenDecl: Declaration? = null
-            var currentWritten = currentNode
-
-            val initializer = (currentNode as? VariableDeclaration)?.initializer
-            if (initializer != null) {
-                // A variable declaration with an initializer => The initializer flows to the
-                // declaration.
-                currentNode.addPrevDFG(initializer)
-
-                // We wrote something to this variable declaration
-                writtenDecl = currentNode
-
-                // Add the node to the list of previous write nodes in this path
-                previousWrites[currentNode] = mutableListOf(currentNode)
-            } else if (isIncOrDec(currentNode)) {
-                // Increment or decrement => Add the prevWrite of the input to the input. After the
-                // operation, the prevWrite of the input's variable is this node.
-                val input = (currentNode as UnaryOperator).input as DeclaredReferenceExpression
-                // We write to the variable in the input
-                writtenDecl = input.refersTo
-
-                if (writtenDecl != null) {
-                    previousWrites[writtenDecl]?.lastOrNull()?.let { input.addPrevDFG(it) }
-
-                    // TODO: Do we want to have a flow from the input back to the input? This can
-                    //  cause problems if the DFG is not iterated through appropriately. The
-                    //  following line would remove it:
-                    // currentNode.removeNextDFG(input)
-
-                    // Add the whole node to the list of previous write nodes in this path. This
-                    // prevents some weird circular dependencies.
-                    previousWrites
-                        .computeIfAbsent(writtenDecl, ::mutableListOf)
-                        .add(currentNode.input)
-                    currentWritten = currentNode.input
-                }
-            } else if (isSimpleAssignment(currentNode)) {
-                // We write to the target => the rhs flows to the lhs
-                (currentNode as BinaryOperator).rhs.let { currentNode.lhs.addPrevDFG(it) }
-
-                // Only the lhs is the last write statement here and the variable which is written
-                // to.
-                writtenDecl = (currentNode.lhs as DeclaredReferenceExpression).refersTo
-
-                if (writtenDecl != null) {
-                    previousWrites
-                        .computeIfAbsent(writtenDecl, ::mutableListOf)
-                        .add(currentNode.lhs as DeclaredReferenceExpression)
-                    currentWritten = currentNode.lhs as DeclaredReferenceExpression
-                }
-            } else if (isCompoundAssignment(currentNode)) {
-                // We write to the lhs, but it also serves as an input => We first get all previous
-                // writes to the lhs and then add the flow from lhs and rhs to the current node.
-
-                // The write operation goes to the variable in the lhs
-                writtenDecl =
-                    ((currentNode as BinaryOperator).lhs as? DeclaredReferenceExpression)?.refersTo
-
-                if (writtenDecl != null) {
-                    // Data flows from the last writes to the lhs variable to this node
-                    previousWrites[writtenDecl]?.lastOrNull()?.let {
-                        currentNode.lhs.addPrevDFG(it)
-                    }
-                    currentNode.addPrevDFG(currentNode.lhs)
-
-                    // Data flows from whatever is the rhs to this node
-                    currentNode.rhs.let { currentNode.addPrevDFG(it) }
-
-                    // TODO: Similar to the ++ case: Should the DFG edge go back to the reference?
-                    //  If it shouldn't, remove the following statement:
-                    currentNode.lhs.addPrevDFG(currentNode)
-
-                    // The whole current node is the place of the last update, not (only) the lhs!
-                    previousWrites
-                        .computeIfAbsent(writtenDecl, ::mutableListOf)
-                        .add(currentNode.lhs)
-                    currentWritten = currentNode.lhs
-                }
-            } else if ((currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ) {
-                // We only read the variable => Get previous write which have been collected in the
-                // other steps
-                previousWrites[currentNode.refersTo]?.lastOrNull()?.let {
-                    currentNode.addPrevDFG(it)
-                }
-            } else if (currentNode is ForEachStatement && currentNode.variable != null) {
-                // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
-                // the "normal" case won't work. We handle this case separately here...
-                // This is what we write to the declaration
-                val iterable = currentNode.iterable as? Expression
-
-                val writtenTo =
-                    when (currentNode.variable) {
-                        is DeclarationStatement ->
-                            (currentNode.variable as DeclarationStatement).singleDeclaration
-                        else -> currentNode.variable
-                    }
-
-                // We wrote something to this variable declaration
-                writtenDecl =
-                    when (writtenTo) {
-                        is Declaration -> writtenTo
-                        is DeclaredReferenceExpression -> writtenTo.refersTo
-                        else -> {
-                            log.error(
-                                "The variable of type ${writtenTo?.javaClass} is not yet supported in the foreach loop"
-                            )
-                            null
-                        }
-                    }
-
-                currentNode.variable?.let { currentWritten = it }
-
-                if (writtenTo is DeclaredReferenceExpression) {
-                    if (currentNode !in loopPoints) {
-                        // We haven't been here before, so there's no chance we added something
-                        // already. However, as the variable is processed before, we have already
-                        // added the DFG edge from the VariableDeclaration to the
-                        // DeclaredReferenceExpression. This doesn't make any sense, so we have to
-                        // remove it again.
-                        writtenTo.removePrevDFG(writtenDecl)
-                    }
-
-                    // This is a special case: We add the nextEOGEdge which goes out of the loop but
-                    // with the old previousWrites map.
-                    val nodesOutsideTheLoop =
-                        currentNode.nextEOGEdges.filter {
-                            it.getProperty(Properties.UNREACHABLE) != true &&
-                                it.end != currentNode.statement &&
-                                it.end !in currentNode.statement.allChildren<Node>()
-                        }
-                    nodesOutsideTheLoop
-                        .map { it.end }
-                        .forEach { worklist.add(Pair(it, copyMap(previousWrites, it))) }
-                }
-
-                iterable?.let { writtenTo?.addPrevDFG(it) }
-
-                if (writtenDecl != null && writtenTo != null) {
-                    // Add the variable declaration (or the reference) to the list of previous write
-                    // nodes in this path
-                    previousWrites.computeIfAbsent(writtenDecl, ::mutableListOf).add(writtenTo)
-                }
-            } else if (currentNode is ReturnStatement) {
-                returnStatements.add(currentNode)
-            }
-
-            // Check for loops: No loop statement with the same state as before and no write which
-            // is already in the current chain of writes too often (=twice).
-            if (
-                !loopDetection(currentNode, writtenDecl, currentWritten, previousWrites, loopPoints)
-            ) {
-                // We add all the next steps in the eog to the worklist unless the exact same thing
-                // is already included in the list.
-                currentNode.nextEOGEdges
-                    .filter { it.getProperty(Properties.UNREACHABLE) != true }
-                    .map { it.end }
-                    .forEach {
-                        val newPair = Pair(it, copyMap(previousWrites, it))
-                        if (!worklistHasSimilarPair(worklist, newPair)) worklist.add(newPair)
-                    }
-            }
         }
-
-        removeUnreachableImplicitReturnStatement(node, returnStatements)
-    }
-
-    /**
-     * Removes the DFG edges for a potential implicit return statement if it is not in
-     * [reachableReturnStatements].
-     */
-    protected fun removeUnreachableImplicitReturnStatement(
-        node: Node,
-        reachableReturnStatements: MutableSet<ReturnStatement>
-    ) {
-        val lastStatement =
-            ((node as? FunctionDeclaration)?.body as? CompoundStatement)?.statements?.lastOrNull()
-        if (
-            lastStatement is ReturnStatement &&
-                lastStatement.isImplicit &&
-                lastStatement !in reachableReturnStatements
-        )
-            lastStatement.removeNextDFG(node)
-    }
-
-    /**
-     * Determines if there's an item in the [worklist] which has the same last write for each
-     * declaration in the [newPair]. If this is the case, we can ignore it because all that changed
-     * was the path through the EOG to reach this state but apparently, all the writes in the
-     * different branches are obsoleted by one common write access which happens afterwards.
-     */
-    protected fun worklistHasSimilarPair(
-        worklist: MutableList<Pair<Node, MutableMap<Declaration, MutableList<Node>>>>,
-        newPair: Pair<Node, MutableMap<Declaration, MutableList<Node>>>
-    ): Boolean {
-        // We collect all states in the worklist which are only a subset of the new pair. We will
-        // remove them to avoid unnecessary computations.
-        val subsets = mutableSetOf<Pair<Node, MutableMap<Declaration, MutableList<Node>>>>()
-        val newPairLastMap = newPair.second.mapValues { (_, v) -> v.last() }
-        for (existingPair in worklist) {
-            if (existingPair.first == newPair.first) {
-                // The next nodes match. Now check the last writes for each declaration.
-                var allWritesMatch = true
-                var allExistingWritesMatch = true
-                for ((lastWriteDecl, lastWrite) in newPairLastMap) {
-
-                    // We ignore FieldDeclarations because we cannot be sure how interprocedural
-                    // data flows affect the field. Handling them in the state would only blow up
-                    // the number of paths unnecessarily.
-                    if (lastWriteDecl is FieldDeclaration) continue
-
-                    // Will we generate the same "prev DFG" with the item that is already in the
-                    // list?
-                    allWritesMatch =
-                        allWritesMatch && existingPair.second[lastWriteDecl]?.last() == lastWrite
-                    // All last writes which exist in the "existing pair" match but we have new
-                    // declarations in the current one
-                    allExistingWritesMatch =
-                        allExistingWritesMatch &&
-                            (lastWriteDecl !in existingPair.second ||
-                                existingPair.second[lastWriteDecl]?.last() == lastWrite)
-                }
-                // We found a matching pair in the worklist? Done. Otherwise, maybe there's another
-                // pair...
-                if (allWritesMatch) return true
-                // The new state is a superset of the old one? We will add the missing pieces to the
-                // old one.
-                if (allExistingWritesMatch) {
-                    subsets.add(existingPair)
-                }
-            }
-        }
-
-        // Check the "subsets" again, and add the missing declarations
-        if (subsets.isNotEmpty()) {
-            for (s in subsets) {
-                for ((k, v) in newPair.second) {
-                    if (k !in s.second) {
-                        s.second[k] = v
-                    }
-                }
-            }
-            return true // We cover it in the respective subsets, so do not add this state again.
-        }
-
-        return false
+        return state
     }
 
     /**
@@ -391,79 +264,82 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             (currentNode.input as? DeclaredReferenceExpression)?.refersTo != null
 
     /**
-     * Determines if the [currentNode] is a loop point has already been visited with the exact same
-     * state before. Changes the state saved in the [loopPoints] by adding the current
-     * [previousWrites].
-     *
-     * @return true if a loop was detected, false otherwise
+     * Removes the DFG edges for a potential implicit return statement if it is not in
+     * [reachableReturnStatements].
      */
-    protected fun loopDetection(
-        currentNode: Node,
-        writtenDecl: Declaration?,
-        currentWritten: Node,
-        previousWrites: MutableMap<Declaration, MutableList<Node>>,
-        loopPoints: MutableMap<Node, MutableMap<Declaration, MutableSet<Node>>>
-    ): Boolean {
+    protected fun removeUnreachableImplicitReturnStatement(
+        node: Node,
+        reachableReturnStatements: Collection<ReturnStatement>
+    ) {
+        val lastStatement =
+            ((node as? FunctionDeclaration)?.body as? CompoundStatement)?.statements?.lastOrNull()
         if (
-            currentNode is ForStatement ||
-                currentNode is WhileStatement ||
-                currentNode is ForEachStatement ||
-                currentNode is DoStatement ||
-                currentNode is GotoStatement ||
-                currentNode is ContinueStatement
-        ) {
-            // Loop detection: This is a point which could serve as a loop, so we check all
-            // states which we have seen before in this place.
-            val state = loopPoints.computeIfAbsent(currentNode) { mutableMapOf() }
-            if (
-                previousWrites.all { (decl, prevs) ->
-                    (state[decl]?.contains(prevs.last())) == true
-                }
-            ) {
-                // The current state of last write operations has already been seen before =>
-                // Nothing new => Do not add the next eog steps!
-                return true
-            }
-            // Add the current state for future loop detections.
-            previousWrites.forEach { (decl, prevs) ->
-                state.computeIfAbsent(decl, ::mutableSetOf).add(prevs.last())
-            }
-        }
-        return writtenDecl != null &&
-            ((previousWrites[writtenDecl]?.filter { it == currentWritten }?.size ?: 0) >= 2)
+            lastStatement is ReturnStatement &&
+                lastStatement.isImplicit &&
+                lastStatement !in reachableReturnStatements
+        )
+            lastStatement.removeNextDFG(node)
     }
 
     /**
-     * Copies the map. We remove all the declarations which are no longer relevant because they are
-     * in a child scope of the next hop.
+     * A state which actually holds a state for all nodes, one only for declarations and one for
+     * ReturnStatements.
      */
-    protected fun copyMap(
-        map: Map<Declaration, MutableList<Node>>,
-        nextNode: Node
-    ): MutableMap<Declaration, MutableList<Node>> {
-        val result = mutableMapOf<Declaration, MutableList<Node>>()
-        for ((k, v) in map) {
-            if (
-                nextNode.scope == k.scope ||
-                    !nextNode.hasOuterScopeOf(k) ||
-                    ((nextNode is ForStatement || nextNode is ForEachStatement) &&
-                        k.scope?.parent == nextNode.scope)
-            ) {
-                result[k] = mutableListOf()
-                result[k]?.addAll(v)
-            }
+    protected class DFGPassState<V>(
+        /**
+         * A mapping of a [Node] to its [LatticeElement]. The keys of this state will later get the
+         * DFG edges from the value!
+         */
+        var generalState: State<Node, V> = State(),
+        /**
+         * It's main purpose is to store the most recent mapping of a [Declaration] to its
+         * [LatticeElement]. However, it is also used to figure out if we have to continue with the
+         * iteration (something in the declarationState has changed) which is why we store all nodes
+         * here. However, since we never use them except from determining if we changed something,
+         * it won't affect the result.
+         */
+        var declarationsState: State<Node, V> = State(),
+        /** The [returnStatements] which are reachable. */
+        var returnStatements: State<Node, V> = State()
+    ) : State<Node, V>() {
+        override fun duplicate(): DFGPassState<V> {
+            return DFGPassState(generalState.duplicate(), declarationsState.duplicate())
         }
-        return result
-    }
 
-    protected fun Node.hasOuterScopeOf(node: Node): Boolean {
-        var parentScope = node.scope?.parent
-        while (parentScope != null) {
-            if (this.scope == parentScope) {
-                return true
-            }
-            parentScope = parentScope.parent
+        override fun get(key: Node?): LatticeElement<V>? {
+            return generalState[key] ?: declarationsState[key]
         }
-        return false
+
+        override fun lub(other: State<Node, V>): Pair<State<Node, V>, Boolean> {
+            return if (other is DFGPassState) {
+                val (_, generalUpdate) = generalState.lub(other.generalState)
+                val (_, declUpdate) = declarationsState.lub(other.declarationsState)
+                Pair(this, generalUpdate || declUpdate)
+            } else {
+                val (_, generalUpdate) = generalState.lub(other)
+                Pair(this, generalUpdate)
+            }
+        }
+
+        override fun needsUpdate(other: State<Node, V>): Boolean {
+            return if (other is DFGPassState) {
+                generalState.needsUpdate(other.generalState) ||
+                    declarationsState.needsUpdate(other.declarationsState)
+            } else {
+                generalState.needsUpdate(other)
+            }
+        }
+
+        override fun push(newNode: Node, newLatticeElement: LatticeElement<V>?): Boolean {
+            return generalState.push(newNode, newLatticeElement)
+        }
+
+        /** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
+        fun pushToDeclarationsState(
+            newNode: Declaration,
+            newLatticeElement: LatticeElement<V>?
+        ): Boolean {
+            return declarationsState.push(newNode, newLatticeElement)
+        }
     }
 }

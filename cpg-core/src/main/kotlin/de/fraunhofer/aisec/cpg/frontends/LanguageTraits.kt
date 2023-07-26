@@ -204,8 +204,22 @@ interface HasUnknownType : LanguageTrait {
  * evaluation if the logical result is already known: '&&', '||' in Java or 'and','or' in Python
  */
 interface HasShortCircuitOperators : LanguageTrait {
-    // '&&', 'and', '^'
+    /**
+     * Operations which only execute the rhs of a binary operation if the lhs is `true`. Typically,
+     * these are `&&`, `and` or `^`
+     */
     val conjunctiveOperators: List<String>
-    // '||', 'or', 'v'
+
+    /**
+     * Operations which only execute the rhs of a binary operation if the lhs is `false`. Typically,
+     * these are `||`, `or` or `v`
+     */
     val disjunctiveOperators: List<String>
+
+    /**
+     * The union of [conjunctiveOperators] and [disjunctiveOperators], i.e., all binary operators of
+     * this language which result in some kind of branching behavior.
+     */
+    val operatorCodes: Set<String>
+        get() = conjunctiveOperators.union(disjunctiveOperators)
 }
