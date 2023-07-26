@@ -553,7 +553,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         }
     }
 
-    protected val Language<out LanguageFrontend>?.isCPP: Boolean
+    protected val Language<*>?.isCPP: Boolean
         get() {
             return this != null && this::class.simpleName == "CPPLanguage"
         }

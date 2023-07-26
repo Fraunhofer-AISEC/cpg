@@ -323,7 +323,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val variable = fieldDecl.getVariable(0)
         val modifiers = fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }
         val joinedModifiers = java.lang.String.join(" ", modifiers) + " "
-        val location = frontend.getLocationFromRawNode(fieldDecl)
+        val location = frontend.locationOf(fieldDecl)
         val initializer =
             variable.initializer
                 .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
@@ -374,7 +374,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         enumDecl: com.github.javaparser.ast.body.EnumDeclaration
     ): EnumDeclaration {
         val name = enumDecl.nameAsString
-        val location = frontend.getLocationFromRawNode(enumDecl)
+        val location = frontend.locationOf(enumDecl)
         val enumDeclaration = this.newEnumDeclaration(name, enumDecl.toString(), location)
         val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
 
@@ -392,7 +392,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         return this.newEnumConstantDeclaration(
             enumConstDecl.nameAsString,
             enumConstDecl.toString(),
-            frontend.getLocationFromRawNode(enumConstDecl)
+            frontend.locationOf(enumConstDecl)
         )
     }
 

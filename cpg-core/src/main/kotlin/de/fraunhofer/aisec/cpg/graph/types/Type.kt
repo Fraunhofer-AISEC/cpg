@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.parseName
@@ -68,7 +67,7 @@ abstract class Type : Node {
         typeOrigin = type?.typeOrigin
     }
 
-    constructor(typeName: CharSequence, language: Language<out LanguageFrontend>?) {
+    constructor(typeName: CharSequence, language: Language<*>?) {
         name =
             if (this is FunctionType) {
                 Name(typeName.toString(), null, language)
@@ -79,7 +78,7 @@ abstract class Type : Node {
         typeOrigin = Origin.UNRESOLVED
     }
 
-    constructor(fullTypeName: Name, language: Language<out LanguageFrontend>?) {
+    constructor(fullTypeName: Name, language: Language<*>?) {
         name = fullTypeName.clone()
         typeOrigin = Origin.UNRESOLVED
         this.language = language

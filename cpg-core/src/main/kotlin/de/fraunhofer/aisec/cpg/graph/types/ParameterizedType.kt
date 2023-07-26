@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 
 /**
@@ -38,7 +37,7 @@ class ParameterizedType : Type {
         language = type.language
     }
 
-    constructor(typeName: String?, language: Language<out LanguageFrontend>?) : super(typeName) {
+    constructor(typeName: String?, language: Language<*>?) : super(typeName) {
         this.language = language
     }
 

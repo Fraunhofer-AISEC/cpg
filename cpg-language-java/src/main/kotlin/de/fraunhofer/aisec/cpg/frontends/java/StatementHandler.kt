@@ -46,9 +46,6 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.util.function.Supplier
 import java.util.stream.Collectors
-import kotlin.collections.ArrayList
-import kotlin.collections.MutableList
-import kotlin.collections.mapNotNull
 import kotlin.collections.set
 import org.slf4j.LoggerFactory
 
@@ -63,7 +60,10 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val expression = frontend.expressionHandler.handle(stmt.asExpressionStmt().expression)
 
         // update expression's code and location to match the statement
-        frontend.setCodeAndLocation(expression, stmt)
+        if (expression != null) {
+            frontend.setCodeAndLocation(expression, stmt)
+        }
+
         return expression
     }
 
@@ -189,10 +189,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             val initExprList = this.newExpressionList()
             for (initExpr in forStmt.initialization) {
                 val s = frontend.expressionHandler.handle(initExpr)
-
-                // make sure location is set
-                frontend.setCodeAndLocation(s, initExpr)
-                s?.let { initExprList.addExpression(it) }
+                s?.let {
+                    // make sure location is set
+                    frontend.setCodeAndLocation(it, initExpr)
+                    initExprList.addExpression(it)
+                }
 
                 // can not update location
                 if (s?.location == null) {
@@ -242,10 +243,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             val iterationExprList = this.newExpressionList()
             for (updateExpr in forStmt.update) {
                 val s = frontend.expressionHandler.handle(updateExpr)
-
-                // make sure location is set
-                frontend.setCodeAndLocation(s, updateExpr)
-                s?.let { iterationExprList.addExpression(it) }
+                s?.let {
+                    // make sure location is set
+                    frontend.setCodeAndLocation(s, updateExpr)
+                    iterationExprList.addExpression(it)
+                }
 
                 // can not update location
                 if (s?.location == null) {
@@ -353,7 +355,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         caseExpression: Expression?,
         sEntry: SwitchEntry
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
-        val parentLocation = frontend.getLocationFromRawNode(sEntry)
+        val parentLocation = frontend.locationOf(sEntry)
         val optionalTokenRange = sEntry.tokenRange
         var caseTokens = Pair<JavaToken?, JavaToken?>(null, null)
         if (optionalTokenRange.isEmpty) {

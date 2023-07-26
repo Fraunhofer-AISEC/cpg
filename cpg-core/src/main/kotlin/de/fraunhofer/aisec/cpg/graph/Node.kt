@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -89,7 +88,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
-    override var language: Language<out LanguageFrontend>? = null
+    override var language: Language<*>? = null
 
     /**
      * The scope this node "lives" in / in which it is defined. This property is set in

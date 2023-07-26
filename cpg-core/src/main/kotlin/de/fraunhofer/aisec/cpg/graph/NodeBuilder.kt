@@ -56,15 +56,15 @@ interface MetadataProvider
  * each [Node], but also transformation steps, such as [Handler].
  */
 interface LanguageProvider : MetadataProvider {
-    val language: Language<out LanguageFrontend>?
+    val language: Language<*>?
 }
 
 /**
  * This interface denotes that the class is able to provide source code and location information for
  * a specific node and set it using the [setCodeAndLocation] function.
  */
-interface CodeAndLocationProvider : MetadataProvider {
-    fun <N, S> setCodeAndLocation(cpgNode: N, astNode: S?)
+interface CodeAndLocationProvider<in AstNode> : MetadataProvider {
+    fun setCodeAndLocation(cpgNode: Node, astNode: AstNode)
 }
 
 /**
@@ -103,8 +103,8 @@ fun Node.applyMetadata(
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
-    if (provider is CodeAndLocationProvider) {
-        provider.setCodeAndLocation(this, rawNode)
+    if (provider is CodeAndLocationProvider<*> && rawNode != null) {
+        (provider as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
     }
 
     if (provider is LanguageProvider) {

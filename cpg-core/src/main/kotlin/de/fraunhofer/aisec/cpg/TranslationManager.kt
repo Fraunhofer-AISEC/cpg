@@ -75,7 +75,7 @@ private constructor(
     }
 
     private fun analyzeNonAsync(): TranslationResult {
-        var executedFrontends = setOf<LanguageFrontend>()
+        var executedFrontends = setOf<LanguageFrontend<*, *>>()
 
         // Build a new global translation context
         val ctx = TranslationContext(config, ScopeManager(), TypeManager())
@@ -135,8 +135,8 @@ private constructor(
     private fun runFrontends(
         ctx: TranslationContext,
         result: TranslationResult
-    ): Set<LanguageFrontend> {
-        val usedFrontends = mutableSetOf<LanguageFrontend>()
+    ): Set<LanguageFrontend<*, *>> {
+        val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
         for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
             component.name = Name(sc)
@@ -252,14 +252,14 @@ private constructor(
         result: TranslationResult,
         globalCtx: TranslationContext,
         sourceLocations: Collection<File>
-    ): Set<LanguageFrontend> {
-        val usedFrontends = mutableSetOf<LanguageFrontend>()
+    ): Set<LanguageFrontend<*, *>> {
+        val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
         log.info("Parallel parsing started")
-        val futures = mutableListOf<CompletableFuture<Optional<LanguageFrontend>>>()
+        val futures = mutableListOf<CompletableFuture<LanguageFrontend<*, *>?>>()
         val parallelContexts = mutableListOf<TranslationContext>()
 
-        val futureToFile: MutableMap<CompletableFuture<Optional<LanguageFrontend>>, File> =
+        val futureToFile: MutableMap<CompletableFuture<LanguageFrontend<*, *>?>, File> =
             IdentityHashMap()
 
         for (sourceLocation in sourceLocations) {
@@ -284,7 +284,8 @@ private constructor(
 
         for (future in futures) {
             try {
-                future.get().ifPresent { f: LanguageFrontend ->
+                val f = future.get()
+                if (f != null) {
                     handleCompletion(result, usedFrontends, futureToFile[future], f)
                 }
             } catch (e: InterruptedException) {
@@ -310,13 +311,14 @@ private constructor(
         result: TranslationResult,
         ctx: TranslationContext,
         sourceLocations: Collection<File>
-    ): Set<LanguageFrontend> {
-        val usedFrontends = mutableSetOf<LanguageFrontend>()
+    ): Set<LanguageFrontend<*, *>> {
+        val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
 
-            parse(component, ctx, sourceLocation).ifPresent { f: LanguageFrontend ->
+            var f = parse(component, ctx, sourceLocation)
+            if (f != null) {
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
         }
@@ -326,9 +328,9 @@ private constructor(
 
     private fun handleCompletion(
         result: TranslationResult,
-        usedFrontends: MutableSet<LanguageFrontend>,
+        usedFrontends: MutableSet<LanguageFrontend<*, *>>,
         sourceLocation: File?,
-        f: LanguageFrontend
+        f: LanguageFrontend<*, *>
     ) {
         usedFrontends.add(f)
 
@@ -345,8 +347,8 @@ private constructor(
         component: Component,
         ctx: TranslationContext,
         sourceLocation: File,
-    ): Optional<LanguageFrontend> {
-        var frontend: LanguageFrontend? = null
+    ): LanguageFrontend<*, *>? {
+        var frontend: LanguageFrontend<*, *>? = null
         try {
             frontend = getFrontend(sourceLocation, ctx)
 
@@ -358,7 +360,7 @@ private constructor(
                         "Found no parser frontend for ${sourceLocation.name}"
                     )
                 }
-                return Optional.empty()
+                return null
             }
             component.translationUnits.add(frontend.parse(sourceLocation))
         } catch (ex: TranslationException) {
@@ -367,10 +369,10 @@ private constructor(
                 throw ex
             }
         }
-        return Optional.ofNullable(frontend)
+        return frontend
     }
 
-    private fun getFrontend(file: File, ctx: TranslationContext): LanguageFrontend? {
+    private fun getFrontend(file: File, ctx: TranslationContext): LanguageFrontend<*, *>? {
         val language = file.language
 
         return if (language != null) {

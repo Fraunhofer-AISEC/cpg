@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
@@ -88,7 +87,7 @@ class UnknownType : Type {
 
         /** Use this function to obtain an [UnknownType] for the particular [language]. */
         @JvmStatic
-        fun getUnknownType(language: Language<out LanguageFrontend>?): UnknownType {
+        fun getUnknownType(language: Language<*>?): UnknownType {
             if (language == null) return unknownTypeNull
 
             return unknownTypes.computeIfAbsent(language) {

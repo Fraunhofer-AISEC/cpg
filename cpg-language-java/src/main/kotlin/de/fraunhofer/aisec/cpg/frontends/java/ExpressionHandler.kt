@@ -49,8 +49,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleLambdaExpr(expr: Expression): Statement {
         val lambdaExpr = expr.asLambdaExpr()
-        val lambda = newLambdaExpression(frontend.getCodeFromRawNode(lambdaExpr))
-        val anonymousFunction = newFunctionDeclaration("", frontend.getCodeFromRawNode(lambdaExpr))
+        val lambda = newLambdaExpression(frontend.codeOf(lambdaExpr))
+        val anonymousFunction = newFunctionDeclaration("", frontend.codeOf(lambdaExpr))
         frontend.scopeManager.enterScope(anonymousFunction)
         for (parameter in lambdaExpr.parameters) {
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
@@ -326,12 +326,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     scope.toString()
                 )
             base.isStaticAccess = isStaticAccess
-            frontend.setCodeAndLocation<
-                de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression, Expression
-            >(
-                base,
-                fieldAccessExpr.scope
-            )
+            frontend.setCodeAndLocation(base, fieldAccessExpr.scope)
         } else if (scope.isFieldAccessExpr) {
             base =
                 handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
@@ -423,7 +418,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             return memberExpression
         }
         if (base.location == null) {
-            base.location = frontend.getLocationFromRawNode(fieldAccessExpr)
+            base.location = frontend.locationOf(fieldAccessExpr)
         }
         return this.newMemberExpression(fieldAccessExpr.name.identifier, base, fieldType, ".")
     }
@@ -838,7 +833,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         if (objectCreationExpr.anonymousClassBody.isPresent) {
             // We have an anonymous class and will create a RecordDeclaration for it and add all the
             // implemented methods.
-            val locationHash = frontend.getLocationFromRawNode(objectCreationExpr)?.hashCode()
+            val locationHash = frontend.locationOf(objectCreationExpr)?.hashCode()
 
             // We use the hash of the location to distinguish multiple instances of the anonymous
             // class' superclass

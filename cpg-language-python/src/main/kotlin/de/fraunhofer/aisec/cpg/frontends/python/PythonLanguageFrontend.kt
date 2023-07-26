@@ -29,7 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.newUnknownType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.file.Paths
@@ -37,7 +40,7 @@ import jep.JepException
 import kotlin.io.path.absolutePathString
 
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend(language, ctx) {
+    LanguageFrontend<Any, Any>(language, ctx) {
     private val jep = JepSingleton // configure Jep
 
     @Throws(TranslationException::class)
@@ -45,17 +48,22 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         return parseInternal(file.readText(Charsets.UTF_8), file.path)
     }
 
-    override fun <T> getCodeFromRawNode(astNode: T): String? {
+    override fun typeOf(type: Any): Type {
+        // will be invoked by native function
+        return newUnknownType()
+    }
+
+    override fun codeOf(astNode: Any): String? {
         // will be invoked by native function
         return null
     }
 
-    override fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation? {
+    override fun locationOf(astNode: Any): PhysicalLocation? {
         // will be invoked by native function
         return null
     }
 
-    override fun <S, T> setComment(s: S, ctx: T) {
+    override fun setComment(node: Node, astNode: Any) {
         // will be invoked by native function
     }
 

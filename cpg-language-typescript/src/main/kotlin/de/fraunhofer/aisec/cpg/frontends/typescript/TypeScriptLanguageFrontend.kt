@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -58,7 +59,7 @@ import java.nio.file.StandardCopyOption
 class TypeScriptLanguageFrontend(
     language: Language<TypeScriptLanguageFrontend>,
     ctx: TranslationContext
-) : LanguageFrontend(language, ctx) {
+) : LanguageFrontend<TypeScriptNode, TypeScriptNode>(language, ctx) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
@@ -107,6 +108,11 @@ class TypeScriptLanguageFrontend(
         return translationUnit
     }
 
+    override fun typeOf(type: TypeScriptNode): Type {
+        // reserved for future use
+        return newUnknownType()
+    }
+
     /**
      * Extracts comments from the file with a regular expression and calls a best effort approach
      * function that matches them to the closes ast node in the cpg.
@@ -146,29 +152,24 @@ class TypeScriptLanguageFrontend(
         }
     }
 
-    override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
-        return (astNode as? TypeScriptNode)?.code
+    override fun codeOf(astNode: TypeScriptNode): String? {
+        return astNode.code
     }
 
-    override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
-        return if (astNode is TypeScriptNode) {
+    override fun locationOf(astNode: TypeScriptNode): PhysicalLocation {
+        var position = astNode.location.pos
 
-            var position = astNode.location.pos
-
-            // Correcting node positions as we have noticed that the parser computes wrong
-            // positions, it is apparent when a file starts with a comment
-            astNode.code?.let { code ->
-                currentFileContent?.let { position = it.indexOf(code, position) }
-            }
-
-            // From here on the invariant 'astNode.location.end - position != astNode.code!!.length'
-            // should hold, only exceptions are mispositioned empty ast elements
-            val region =
-                getRegionFromStartEnd(File(astNode.location.file), position, astNode.location.end)
-            PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
-        } else {
-            null
+        // Correcting node positions as we have noticed that the parser computes wrong
+        // positions, it is apparent when a file starts with a comment
+        astNode.code?.let { code ->
+            currentFileContent?.let { position = it.indexOf(code, position) }
         }
+
+        // From here on the invariant 'astNode.location.end - position != astNode.code!!.length'
+        // should hold, only exceptions are mispositioned empty ast elements
+        val region =
+            getRegionFromStartEnd(File(astNode.location.file), position, astNode.location.end)
+        return PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
     }
 
     fun getRegionFromStartEnd(file: File, start: Int, end: Int): Region? {
@@ -197,12 +198,12 @@ class TypeScriptLanguageFrontend(
         return region
     }
 
-    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
+    override fun setComment(node: Node, astNode: TypeScriptNode) {
         // not implemented
     }
 
     internal fun getIdentifierName(node: TypeScriptNode) =
-        this.getCodeFromRawNode(node.firstChild("Identifier")) ?: ""
+        node.firstChild("Identifier")?.let { this.codeOf(it) } ?: ""
 
     fun processAnnotations(node: Node, astNode: TypeScriptNode) {
         // filter for decorators
@@ -218,7 +219,7 @@ class TypeScriptLanguageFrontend(
         return if (callExpr != null) {
             val call = this.expressionHandler.handle(callExpr) as CallExpression
 
-            val annotation = newAnnotation(call.name.localName, this.getCodeFromRawNode(node) ?: "")
+            val annotation = newAnnotation(call.name.localName, this.codeOf(node) ?: "")
 
             annotation.members =
                 call.arguments.map { newAnnotationMember("", it, it.code ?: "") }.toMutableList()
@@ -230,7 +231,7 @@ class TypeScriptLanguageFrontend(
             // or a decorator just has a simple identifier
             val name = this.getIdentifierName(node)
 
-            newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
+            newAnnotation(name, this.codeOf(node) ?: "")
         }
     }
 }
