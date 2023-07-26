@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,32 +27,35 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteLast
-import de.fraunhofer.aisec.cpg.processing.IVisitor
-import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.javaField
 
-@ExecuteLast
-class FilenameMapper(ctx: TranslationContext) : TranslationUnitPass(ctx) {
-    override fun accept(tu: TranslationUnitDeclaration) {
-        val file = tu.name.toString()
-        tu.file = file
-        handle(tu, file)
-    }
-
-    protected fun handle(node: Node, file: String) {
-        // Using a visitor to avoid loops in the AST
-        node.accept(
-            Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
-                    t.file = file
-                }
-            }
-        )
-    }
+/** Pass with some graph transformations useful when doing serialization. */
+@ExecuteBefore(FilenameMapper::class)
+class PrepareSerialization(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+    private val nodeNameField =
+        Node::class
+            .memberProperties
+            .first() { it.name == "name" }
+            .javaField
+            .also { it?.isAccessible = true }
 
     override fun cleanup() {
         // nothing to do
+    }
+
+    override fun accept(tr: TranslationUnitDeclaration) {
+        tr.allChildren<Node>().map { node ->
+            // Add explicit AST edge
+            node.astChildren = SubgraphWalker.getAstChildren(node)
+            // CallExpression overwrites name property and must be copied to JvmField
+            // to be visible by Neo4jOGM
+            if (node is CallExpression) nodeNameField?.set(node, node.name)
+        }
     }
 }

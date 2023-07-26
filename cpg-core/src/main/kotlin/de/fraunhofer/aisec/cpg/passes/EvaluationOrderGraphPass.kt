@@ -71,21 +71,21 @@ import org.slf4j.LoggerFactory
 @DependsOn(CallResolver::class)
 open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
-    private var currentPredecessors = mutableListOf<Node>()
-    private val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
+    protected var currentPredecessors = mutableListOf<Node>()
+    protected val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
 
     /**
      * Allows to register EOG creation logic when a currently visited node can depend on future
      * visited nodes. Currently used to connect goto statements and the target labeled statements.
      * Implemented as listener to connect nodes when the goto appears before the label.
      */
-    private val processedListener = ProcessedListener()
+    protected val processedListener = ProcessedListener()
 
     /**
      * Stores all nodes currently handled to add them to the processedListener even if a sub node is
      * the next target of an EOG edge.
      */
-    private val intermediateNodes = mutableListOf<Node>()
+    protected val intermediateNodes = mutableListOf<Node>()
 
     init {
         map[IncludeDeclaration::class.java] = { doNothing() }
@@ -160,7 +160,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
     }
 
-    private fun doNothing() {
+    protected fun doNothing() {
         // Nothing to do for this node type
     }
 
@@ -178,7 +178,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Removes EOG edges by first building the negative set of nodes that cannot be visited and then
      * remove there outgoing edges.In contrast to truncateLooseEdges this also removes cycles.
      */
-    private fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
+    protected fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
         val eognodes =
             SubgraphWalker.flattenAST(tu)
                 .filter { it.prevEOG.isNotEmpty() || it.nextEOG.isNotEmpty() }
@@ -359,7 +359,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Tries to create the necessary EOG edges for the [node] (if it is non-null) by looking up the
      * appropriate handler function of the node's class in [map] and calling it.
      */
-    private fun createEOG(node: Node?) {
+    protected fun createEOG(node: Node?) {
         if (node == null) {
             // nothing to do
             return
@@ -768,7 +768,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * @param prev the previous node
      * @param next the next node
      */
-    private fun addEOGEdge(prev: Node, next: Node) {
+    protected fun addEOGEdge(prev: Node, next: Node) {
         val propertyEdge = PropertyEdge(prev, next)
         propertyEdge.addProperties(nextEdgeProperties)
         propertyEdge.addProperty(Properties.INDEX, prev.nextEOG.size)
@@ -777,7 +777,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         next.addPrevEOG(propertyEdge)
     }
 
-    private fun addMultipleIncomingEOGEdges(prevs: List<Node>, next: Node) {
+    protected fun addMultipleIncomingEOGEdges(prevs: List<Node>, next: Node) {
         prevs.forEach { prev -> addEOGEdge(prev, next) }
     }
 
@@ -943,7 +943,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     companion object {
-        private val LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass::class.java)
+        protected val LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass::class.java)
 
         /**
          * Searches backwards in the EOG on whether there is a path from a function declaration to

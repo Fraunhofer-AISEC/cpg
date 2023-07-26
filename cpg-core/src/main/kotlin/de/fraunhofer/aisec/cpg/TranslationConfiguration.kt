@@ -701,8 +701,8 @@ private constructor(
                     workingList.addToWorkingList(
                         PassWithDependencies(
                             p,
-                            hardDependencies[p] ?: mutableSetOf(),
-                            softDependencies[p] ?: mutableSetOf()
+                            softDependencies[p] ?: mutableSetOf(),
+                            hardDependencies[p] ?: mutableSetOf()
                         )
                     )
                 }

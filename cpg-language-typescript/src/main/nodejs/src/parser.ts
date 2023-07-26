@@ -1,9 +1,9 @@
-import * as ts from 'typescript';
-import path = require('path');
+import { SyntaxKind, SourceFile, Node, createProgram, forEachChild } from 'typescript';
+import * as path from 'node:path';
 
 const file = path.normalize(process.argv[2]);
 
-const program = ts.createProgram([file], {
+const program = createProgram([file], {
     allowJs: true,
 });
 
@@ -14,8 +14,8 @@ sources.filter(sf => sf.fileName.endsWith(file)).forEach(sf => {
     console.log(printTree(sf, sf, false));
 })
 
-function printTree(sf: ts.SourceFile, node: ts.Node, needsComma: boolean): string {
-    var output = " ".repeat(indent) + `{ "type": "${ts.SyntaxKind[node.kind]}"`
+function printTree(sf: SourceFile, node: Node, needsComma: boolean): string {
+    var output = " ".repeat(indent) + `{ "type": "${SyntaxKind[node.kind]}"`
 
     //output += `, "code": "${node.getText(sf).replace(/"/g, "\\\"").replace(/\n/g, "\\n")}"`
     output += `, "code": ${JSON.stringify(node.getText(sf))}`
@@ -24,13 +24,13 @@ function printTree(sf: ts.SourceFile, node: ts.Node, needsComma: boolean): strin
 
     // need to use forEachChild, otherwise, we will get additional syntax nodes, that we do not want
     var numChildren = 0;
-    ts.forEachChild(node, x => {
+    forEachChild(node, x => {
         numChildren++;
     })
 
     if (numChildren == 1) {
         output += `, "children": [`;
-        ts.forEachChild(node, x => {
+        forEachChild(node, x => {
             output += printTree(sf, x, false);
         });
         output += "]";
@@ -38,7 +38,7 @@ function printTree(sf: ts.SourceFile, node: ts.Node, needsComma: boolean): strin
         output += `, "children": [\n`;
 
         var i = 0;
-        ts.forEachChild(node, x => {
+        forEachChild(node, x => {
             //console.log(`${i} == ${numChildren}`)
             output += printTree(sf, x, i < numChildren - 1)
             i++;

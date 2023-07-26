@@ -27,28 +27,20 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
 import java.lang.Class
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 import kotlin.reflect.KClass
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.javaField
 import kotlin.system.exitProcess
 import org.neo4j.driver.exceptions.AuthenticationException
 import org.neo4j.ogm.config.Configuration
 import org.neo4j.ogm.exception.ConnectionException
 import org.neo4j.ogm.session.Session
 import org.neo4j.ogm.session.SessionFactory
-import org.neo4j.ogm.session.event.Event
-import org.neo4j.ogm.session.event.EventListenerAdapter
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
@@ -303,7 +295,6 @@ class Application : Callable<Int> {
                         "de.fraunhofer.aisec.cpg.graph",
                         "de.fraunhofer.aisec.cpg.frontends"
                     )
-                sessionFactory.register(AstChildrenEventListener())
 
                 session = sessionFactory.openSession()
             } catch (ex: ConnectionException) {
@@ -351,7 +342,7 @@ class Application : Callable<Int> {
      *   point to a file, is a directory or point to a hidden file or the paths does not have the
      *   same top level path.
      */
-    private fun setupTranslationConfiguration(): TranslationConfiguration {
+    fun setupTranslationConfiguration(): TranslationConfiguration {
         val translationConfiguration =
             TranslationConfiguration.builder()
                 .topLevel(topLevel)
@@ -394,6 +385,7 @@ class Application : Callable<Int> {
                 }
             }
         }
+        translationConfiguration.registerPass(PrepareSerialization::class)
 
         mutuallyExclusiveParameters.jsonCompilationDatabase?.let {
             val db = fromFile(it)
@@ -474,27 +466,6 @@ class Application : Callable<Int> {
         }
 
         return EXIT_SUCCESS
-    }
-}
-
-class AstChildrenEventListener : EventListenerAdapter() {
-    private val nodeNameField =
-        Node::class
-            .memberProperties
-            .first() { it.name == "name" }
-            .javaField
-            .also { it?.isAccessible = true }
-
-    override fun onPreSave(event: Event?) {
-        val node = event?.`object` as? Node ?: return
-        node.astChildren = SubgraphWalker.getAstChildren(node)
-        if (node is CallExpression) fixBackingFields(node)
-    }
-
-    private fun fixBackingFields(node: CallExpression) {
-        // CallExpression overwrites name property and must be copied to JvmField
-        // to be visible by Neo4jOGM
-        nodeNameField?.set(node, node.name)
     }
 }
 
