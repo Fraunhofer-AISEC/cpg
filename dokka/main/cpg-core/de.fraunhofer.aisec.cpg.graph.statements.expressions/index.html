@@ -37,8 +37,8 @@
 <span>cpg</span>            </a>    </div>
     <div>
 <dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph.statements.expressions/index.html&quot;}"><div class="versions-dropdown">
-  <div class="versions-dropdown-button">7.1.2</div>
-  <div class="versions-dropdown-data"><a href="index.html">7.1.2</a><a href="../../older/7.1.1/cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/index.html">7.1.1</a><a href="../../older/main/cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/index.html">main</a></div>
+  <div class="versions-dropdown-button">main</div>
+  <div class="versions-dropdown-data"><a href="../../older/7.1.2/cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/index.html">7.1.2</a><a href="../../older/7.1.1/cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/index.html">7.1.1</a><a href="index.html">main</a></div>
 </div>
 </dokka-template-command>    </div>
     <div class="pull-right d-flex">
@@ -119,7 +119,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-binary-operator/index.html">BinaryOperator</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment-holder/index.html">AssignmentHolder</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-base/index.html">HasBase</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a></div><div class="brief "><p class="paragraph">A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a right hand expression (rhs) and an operatorCode.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-binary-operator/index.html">BinaryOperator</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-assignment-holder/index.html">AssignmentHolder</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-base/index.html">HasBase</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a></div><div class="brief "><p class="paragraph">A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a right hand expression (rhs) and an operatorCode.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -179,7 +179,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-conditional-expression/index.html">ConditionalExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a></div><div class="brief "><p class="paragraph">Represents an expression containing a ternary operator: <code class="lang-kotlin">var x = condition ? valueIfTrue : valueIfFalse</code>;</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-conditional-expression/index.html">ConditionalExpression</a> : <a href="-expression/index.html">Expression</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-has-type/-type-listener/index.html">HasType.TypeListener</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-branching-node/index.html">BranchingNode</a></div><div class="brief "><p class="paragraph">Represents an expression containing a ternary operator: <code class="lang-kotlin">var x = condition ? valueIfTrue : valueIfFalse</code>;</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -420,6 +420,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-range-expression/index.html">RangeExpression</a> : <a href="-expression/index.html">Expression</a></div><div class="brief "><p class="paragraph">Represents the specification of a range (e.g., of an array). Usually used in combination with an <a href="-array-subscription-expression/index.html">ArraySubscriptionExpression</a> as the <a href="-array-subscription-expression/subscript-expression.html">ArraySubscriptionExpression.subscriptExpression</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-525684034%2FClasslikes%2F1556141526" anchor-label="ShortCircuitOperator" id="-525684034%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-short-circuit-operator/index.html"><span>Short</span><wbr><span>Circuit</span><wbr><span><span>Operator</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-525684034%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-short-circuit-operator/index.html">ShortCircuitOperator</a> : <a href="-binary-operator/index.html">BinaryOperator</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-branching-node/index.html">BranchingNode</a></div><div class="brief "><p class="paragraph">A <a href="-binary-operator/index.html">BinaryOperator</a> which only evaluates <a href="-binary-operator/rhs.html">BinaryOperator.rhs</a> if <a href="-binary-operator/lhs.html">BinaryOperator.lhs</a> fulfils some condition. For the operators in <a href="../de.fraunhofer.aisec.cpg.frontends/-has-short-circuit-operators/conjunctive-operators.html">de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators.conjunctiveOperators</a>, the rhs has to evaluate to "true" or so to continue on the lhs, whereas for the operators in <a href="../de.fraunhofer.aisec.cpg.frontends/-has-short-circuit-operators/disjunctive-operators.html">de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators.disjunctiveOperators</a>, the lhs has to evaluate to "false" (or similar).</p></div></div></div>
                 </div>
               </div>
             </div>
