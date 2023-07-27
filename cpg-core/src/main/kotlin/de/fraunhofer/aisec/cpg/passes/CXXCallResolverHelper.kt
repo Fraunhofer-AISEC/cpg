@@ -378,10 +378,7 @@ fun applyTemplateInstantiation(
     // Template.
     for ((declaration) in initializationSignature) {
         if (declaration is ParamVariableDeclaration) {
-            initializationSignature[declaration]?.let {
-                declaration.addPrevDFG(it)
-                it.addNextDFG(declaration) // TODO: This should be unnecessary
-            }
+            initializationSignature[declaration]?.let { declaration.addPrevDFG(it) }
         }
     }
 

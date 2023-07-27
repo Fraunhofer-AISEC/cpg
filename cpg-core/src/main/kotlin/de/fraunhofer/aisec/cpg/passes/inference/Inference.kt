@@ -293,8 +293,6 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                     node
                         .startInference(ctx)
                         .inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
-
-                paramVariableDeclaration.addPrevDFG(node)
                 node.addNextDFG(paramVariableDeclaration)
                 nonTypeCounter++
                 inferred.addParameter(paramVariableDeclaration)
