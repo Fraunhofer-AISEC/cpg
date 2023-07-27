@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -125,10 +126,21 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
             val targets = findTargets(src)
             if (targets.size == type.types.size) {
                 // Set the corresponding type on the left-side
-                type.types.forEachIndexed { idx, t -> lhs.getOrNull(idx)?.type = t }
+                type.types.forEachIndexed { idx, t ->
+                    val lhs = lhs.getOrNull(idx)
+                    // We only want to propagate the type from right to left, if it is unknown
+                    if (lhs?.type is UnknownType) {
+                        lhs.type = t
+                    }
+                }
             }
         } else {
-            findTargets(src).forEach { it.type = src.propagationType }
+            findTargets(src).forEach {
+                // We only want to propagate the type from right to left, if it is unknown
+                if (it.type is UnknownType) {
+                    it.type = src.propagationType
+                }
+            }
         }
 
         // If this is used as an expression, we also set the type accordingly

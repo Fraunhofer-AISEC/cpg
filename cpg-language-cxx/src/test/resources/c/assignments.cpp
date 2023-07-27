@@ -1,4 +1,4 @@
-int assign1() {
+int assign_initializer_only() {
   int i;
   short s1 = 1;
   short s2 = i;
@@ -6,7 +6,7 @@ int assign1() {
   return 0;
 }
 
-int assign2() {
+int assign_after_initializer() {
   int i;
   short s1 = 1;
   short s2 = 1;
@@ -34,8 +34,8 @@ int assign_auto() {
 }
 
 int main() {
-  assign1();
-  assign2();
+  assign_initializer_only();
+  assign_after_initializer();
   assign3();
   assign_auto();
 

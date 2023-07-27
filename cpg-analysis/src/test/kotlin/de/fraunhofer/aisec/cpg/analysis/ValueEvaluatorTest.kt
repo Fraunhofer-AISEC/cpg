@@ -56,7 +56,10 @@ class ValueEvaluatorTest {
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
-        val b = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val a = main.variables["a"]
+        assertNotNull(a)
+
+        val b = main.variables["b"]
         assertNotNull(b)
 
         var value = b.evaluate()
@@ -75,7 +78,10 @@ class ValueEvaluatorTest {
         val printA = main.bodyOrNull<CallExpression>(1)
         assertNotNull(printA)
 
-        value = printA.arguments.firstOrNull()?.evaluate()
+        val refA = printA.arguments.firstOrNull()
+        assertNotNull(refA)
+
+        value = refA.evaluate()
         assertEquals(2, value)
 
         val c = main.bodyOrNull<DeclarationStatement>(2)?.singleDeclaration

@@ -107,7 +107,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
     ): State<Node, Set<Node>> {
         // We will set this if we write to a variable
-        val writtenDecl: Declaration?
+        var writtenDecl: Declaration?
         val currentNode = currentEdge.end
 
         val doubleState = state as DFGPassState
@@ -145,7 +145,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 state.push(input, doubleState.declarationsState[writtenDecl])
                 doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(input))
             }
-        } else if (isSimpleAssignment(currentNode)) {
+        } else if (isSimpleLegacyAssignment(currentNode)) {
             // Only the lhs is the last write statement here and the variable which is written
             // to.
             writtenDecl =
@@ -252,10 +252,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
 
     /** Checks if the node is a simple assignment of the form `var = ...` */
-    protected fun isSimpleAssignment(currentNode: Node) =
+    protected fun isSimpleLegacyAssignment(currentNode: Node) =
         currentNode is BinaryOperator &&
             currentNode.operatorCode == "=" &&
             (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
+
+    protected fun isSimpleAssignment(currentNode: Node) =
+        currentNode is AssignExpression && currentNode.operatorCode == "="
 
     /** Checks if the node is an increment or decrement operator (e.g. i++, i--, ++i, --i) */
     protected fun isIncOrDec(currentNode: Node) =

@@ -1581,17 +1581,46 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         assertNotNull(tu)
 
-        val assign1 = tu.functions["assign1"]
-        var s2 = assign1.variables["s2"]
-        assertNotNull(s2)
-        assertLocalName("short int", s2.type)
-
-        val assignAuto = tu.functions["assign_auto"]
-        val i = assignAuto.variables["i"]
+        // First case: Only initializers are used. All variables should have the declared type
+        val assignInitializerOnly = tu.functions["assign_initializer_only"]
+        var i = assignInitializerOnly.variables["i"]
         assertNotNull(i)
         assertLocalName("int", i.type)
 
-        val s1 = assignAuto.variables["s2"]
+        var s1 = assignInitializerOnly.variables["s1"]
+        assertNotNull(s1)
+        assertLocalName("short int", s1.type)
+
+        var s2 = assignInitializerOnly.variables["s2"]
+        assertNotNull(s2)
+        assertLocalName("short int", s2.type)
+
+        // Second case: After an initializer is used, we do an initial assignment. All variables
+        // should have the declared type. The reference to the declarations should have the same
+        // type as the declarations.
+        val assignAfterInitializer = tu.functions["assign_after_initializer"]
+        i = assignAfterInitializer.variables["i"]
+        assertNotNull(i)
+        assertLocalName("int", i.type)
+
+        s1 = assignAfterInitializer.variables["s1"]
+        assertNotNull(s1)
+        assertLocalName("short int", s1.type)
+
+        s2 = assignAfterInitializer.variables["s2"]
+        assertNotNull(s2)
+        assertLocalName("short int", s2.type)
+
+        val s2ref = assignAfterInitializer.refs["s2"]
+        assertNotNull(s2ref)
+        assertEquals(s2.type, s2ref.type)
+
+        val assignAuto = tu.functions["assign_auto"]
+        i = assignAuto.variables["i"]
+        assertNotNull(i)
+        assertLocalName("int", i.type)
+
+        s1 = assignAuto.variables["s2"]
         assertNotNull(s1)
         assertLocalName("int", s1.type)
 
