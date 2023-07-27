@@ -76,7 +76,7 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
                     val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
                     for (anc in resolvedSuperTypes) {
                         // Add all resolved supertypes to the type.
-                        val superType = provider.parseType(anc.qualifiedName)
+                        val superType = provider.objectType(anc.qualifiedName)
                         superType.typeOrigin = Type.Origin.RESOLVED
                         t.superTypes.add(superType)
                     }

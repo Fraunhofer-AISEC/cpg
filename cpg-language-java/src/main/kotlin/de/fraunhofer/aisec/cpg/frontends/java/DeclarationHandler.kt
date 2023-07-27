@@ -46,9 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
-import java.util.stream.Collectors
 import kotlin.collections.set
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
@@ -71,10 +69,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
         declaration.addThrowTypes(
-            constructorDecl.thrownExceptions
-                .stream()
-                .map { type: ReferenceType -> this.parseType(type.asString()) }
-                .collect(Collectors.toList())
+            constructorDecl.thrownExceptions.map { type: ReferenceType -> frontend.typeOf(type) }
         )
         for (parameter in constructorDecl.parameters) {
             val param =
@@ -88,9 +83,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             frontend.scopeManager.addDeclaration(param)
         }
 
-        val name = frontend.scopeManager.firstScopeOrNull { it is RecordScope }?.astNode?.name
-        if (name != null) {
-            val type = this.parseType(name)
+        val record =
+            frontend.scopeManager.firstScopeOrNull { it is RecordScope }?.astNode
+                as? RecordDeclaration
+        if (record != null) {
+            val type = record.toType()
             declaration.type = type
         }
 
@@ -118,10 +115,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         frontend.scopeManager.enterScope(functionDeclaration)
         createMethodReceiver(currentRecordDecl, functionDeclaration)
         functionDeclaration.addThrowTypes(
-            methodDecl.thrownExceptions
-                .stream()
-                .map { type: ReferenceType -> this.parseType(type.asString()) }
-                .collect(Collectors.toList())
+            methodDecl.thrownExceptions.map { type: ReferenceType -> frontend.typeOf(type) }
         )
         for (parameter in methodDecl.parameters) {
             var resolvedType: Type? =
@@ -170,7 +164,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val receiver =
             this.newVariableDeclaration(
                 "this",
-                if (recordDecl != null) this.parseType(recordDecl.name) else newUnknownType(),
+                recordDecl?.toType() ?: unknownType(),
                 "this",
                 false
             )
@@ -289,12 +283,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         // is stored as an implicit field.
         if (frontend.scopeManager.currentScope is RecordScope) {
             // Get all the information of the outer class (its name and the respective type). We
-            // need this
-            // to generate the field.
+            // need this to generate the field.
             val scope = frontend.scopeManager.currentScope as RecordScope?
             if (scope?.name != null) {
-                val fieldType =
-                    scope.name?.let { this.parseType(it) } ?: UnknownType.getUnknownType(language)
+                val fieldType = scope.name?.let { this.objectType(it) } ?: unknownType()
 
                 // Enter the scope of the inner class because the new field belongs there.
                 frontend.scopeManager.enterScope(recordDeclaration)
@@ -322,7 +314,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         // TODO: can  field have more than one variable?
         val variable = fieldDecl.getVariable(0)
         val modifiers = fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }
-        val joinedModifiers = java.lang.String.join(" ", modifiers) + " "
         val location = frontend.locationOf(fieldDecl)
         val initializer =
             variable.initializer
@@ -336,23 +327,23 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     frontend.scopeManager.currentRecord,
                     variable.resolve().type.describe()
                 )
-                    ?: this.parseType(joinedModifiers + variable.resolve().type.describe())
+                    ?: frontend.typeOf(variable.resolve().type)
         } catch (e: UnsolvedSymbolException) {
             val t = frontend.recoverTypeFromUnsolvedException(e)
             if (t == null) {
                 log.warn("Could not resolve type for {}", variable)
-                type = this.parseType(joinedModifiers + variable.type.asString())
+                type = frontend.typeOf(variable.type)
             } else {
-                type = this.parseType(joinedModifiers + t)
+                type = this.objectType(t)
                 type.typeOrigin = Type.Origin.GUESSED
             }
         } catch (e: UnsupportedOperationException) {
             val t = frontend.recoverTypeFromUnsolvedException(e)
             if (t == null) {
                 log.warn("Could not resolve type for {}", variable)
-                type = this.parseType(joinedModifiers + variable.type.asString())
+                type = frontend.typeOf(variable.type)
             } else {
-                type = this.parseType(joinedModifiers + t)
+                type = this.objectType(t)
                 type.typeOrigin = Type.Origin.GUESSED
             }
         }
@@ -378,7 +369,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val enumDeclaration = this.newEnumDeclaration(name, enumDecl.toString(), location)
         val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
 
-        entries.forEach { it.type = this.parseType(enumDeclaration.name) }
+        entries.forEach { it.type = this.objectType(enumDeclaration.name) }
         enumDeclaration.entries = entries
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superTypes = superTypes

@@ -573,7 +573,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val cmpPred =
             when (LLVMGetFCmpPredicate(instr)) {
                 LLVMRealPredicateFalse -> {
-                    return newLiteral(false, parseType("i1"), "false")
+                    return newLiteral(false, primitiveType("i1"), "false")
                 }
                 LLVMRealOEQ -> "=="
                 LLVMRealOGT -> ">"
@@ -608,7 +608,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     "!="
                 }
                 LLVMRealPredicateTrue -> {
-                    return newLiteral(true, parseType("i1"), "true")
+                    return newLiteral(true, primitiveType("i1"), "true")
                 }
                 else -> "unknown"
             }
@@ -645,7 +645,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 base =
                     newDeclaredReferenceExpression(
                         copy.singleDeclaration?.name?.localName,
-                        (copy.singleDeclaration as? VariableDeclaration)?.type ?: newUnknownType(),
+                        (copy.singleDeclaration as? VariableDeclaration)?.type ?: unknownType(),
                         frontend.codeOf(instr)
                     )
             }
@@ -695,7 +695,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val field = record.fields["field_$index"]
 
                 // our new base-type is the type of the field
-                baseType = field?.type ?: newUnknownType()
+                baseType = field?.type ?: unknownType()
 
                 // construct our member expression
                 expr = newMemberExpression(field?.name?.localName, base, baseType, ".", "")
@@ -778,12 +778,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val instrString = frontend.codeOf(instr)
         val callExpression =
             newCallExpression(llvmInternalRef("llvm.fence"), "llvm.fence", instrString, false)
-        val ordering = newLiteral(LLVMGetOrdering(instr), parseType("i32"), frontend.codeOf(instr))
+        val ordering =
+            newLiteral(LLVMGetOrdering(instr), primitiveType("i32"), frontend.codeOf(instr))
         callExpression.addArgument(ordering, "ordering")
         if (instrString?.contains("syncscope") == true) {
             val syncscope = instrString.split("\"")[1]
             callExpression.addArgument(
-                newLiteral(syncscope, parseType("String"), instrString),
+                newLiteral(syncscope, objectType("String"), instrString),
                 "syncscope"
             )
         }
@@ -958,12 +959,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     }
                 val condition = newBinaryOperator(operatorCode, instrStr)
                 val castExprLhs = newCastExpression(frontend.codeOf(instr))
-                castExprLhs.castType = parseType("u${ty.name}")
+                castExprLhs.castType = objectType("u${ty.name}")
                 castExprLhs.expression = ptrDeref
                 condition.lhs = castExprLhs
 
                 val castExprRhs = newCastExpression(frontend.codeOf(instr))
-                castExprRhs.castType = parseType("u${ty.name}")
+                castExprRhs.castType = objectType("u${ty.name}")
                 castExprRhs.expression = value
                 condition.rhs = castExprRhs
 
@@ -1023,7 +1024,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // The case statement is derived from the address of the label which we can jump to
             val caseBBAddress = LLVMValueAsBasicBlock(LLVMGetOperand(instr, idx)).address()
             val caseStatement = newCaseStatement(nodeCode)
-            caseStatement.caseExpression = newLiteral(caseBBAddress, parseType("i64"), nodeCode)
+            caseStatement.caseExpression = newLiteral(caseBBAddress, primitiveType("i64"), nodeCode)
             caseStatements.addStatement(caseStatement)
 
             // Get the label of the goto statement.
@@ -1172,7 +1173,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             catchClause.parameter =
                 newVariableDeclaration(
                     "e_${gotoCatch.labelName}",
-                    newUnknownType(),
+                    unknownType(),
                     instrStr,
                     true,
                     instr
@@ -1225,7 +1226,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val except =
             newVariableDeclaration(
                 exceptionName,
-                parseType(catchType), // TODO: This doesn't work for multiple types to catch
+                objectType(catchType), // TODO: This doesn't work for multiple types to catch
                 frontend.codeOf(instr),
                 false,
                 instr
@@ -1254,7 +1255,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         arrayExpr.arrayExpression =
             newDeclaredReferenceExpression(
                 decl?.name?.toString() ?: Node.EMPTY_NAME,
-                decl?.type ?: newUnknownType(),
+                decl?.type ?: unknownType(),
                 instrStr
             )
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 2)
@@ -1331,7 +1332,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 } else {
                     val arrayExpr = newArraySubscriptionExpression(instrStr)
                     arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 0)
-                    arrayExpr.subscriptExpression = newLiteral(idxInt, parseType("i32"), instrStr)
+                    arrayExpr.subscriptExpression =
+                        newLiteral(idxInt, primitiveType("i32"), instrStr)
                     initializers += arrayExpr
                 }
             } else if (idxInt < array1Length + array2Length) {
@@ -1343,7 +1345,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     val arrayExpr = newArraySubscriptionExpression(instrStr)
                     arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 1)
                     arrayExpr.subscriptExpression =
-                        newLiteral(idxInt - array1Length, parseType("i32"), instrStr)
+                        newLiteral(idxInt - array1Length, primitiveType("i32"), instrStr)
                     initializers += arrayExpr
                 }
             } else {
@@ -1582,13 +1584,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             if (unsigned) {
                 val op1Type = "u${op1.type.name}"
                 val castExprLhs = newCastExpression(frontend.codeOf(instr))
-                castExprLhs.castType = parseType(op1Type)
+                castExprLhs.castType = objectType(op1Type)
                 castExprLhs.expression = op1
                 binaryOperator.lhs = castExprLhs
 
                 val op2Type = "u${op2.type.name}"
                 val castExprRhs = newCastExpression(frontend.codeOf(instr))
-                castExprRhs.castType = parseType(op2Type)
+                castExprRhs.castType = objectType(op2Type)
                 castExprRhs.expression = op2
                 binaryOperator.rhs = castExprRhs
             } else {

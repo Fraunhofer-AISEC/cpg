@@ -67,7 +67,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener, ArgumentHolder
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
         subTypes.remove(oldType)
         subTypes.addAll(types)
-        val alternative = if (types.isNotEmpty()) types[0] else newUnknownType()
+        val alternative = if (types.isNotEmpty()) types[0] else unknownType()
         setType(getCommonType(types).orElse(alternative), root)
         setPossibleSubTypes(subTypes, root)
         if (previous != type) {

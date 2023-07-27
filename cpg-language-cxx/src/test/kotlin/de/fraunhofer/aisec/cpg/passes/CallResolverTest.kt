@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.io.File
@@ -158,8 +159,8 @@ class CallResolverTest : BaseTest() {
 
         val records = result.records
 
-        val intType = tu.parseType("int")
-        val stringType = tu.parseType("char*")
+        val intType = tu.primitiveType("int")
+        val stringType = tu.primitiveType("char").reference(PointerType.PointerOrigin.POINTER)
         testMethods(records, intType, stringType)
         testOverriding(records)
 

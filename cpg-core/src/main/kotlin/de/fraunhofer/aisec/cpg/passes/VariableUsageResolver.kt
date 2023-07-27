@@ -142,7 +142,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
 
         var recordDeclType: Type? = null
         if (currentClass != null) {
-            recordDeclType = currentClass.parseType(currentClass.name)
+            recordDeclType = currentClass.toType()
         }
         if (current.type is FunctionPointerType && refersTo == null) {
             refersTo = resolveFunctionPtr(current)
@@ -198,9 +198,9 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
 
         return if (language != null && language.namespaceDelimiter.isNotEmpty()) {
             val parentName = (current.name.parent ?: current.name).toString()
-            current.parseType(parentName)
+            current.objectType(parentName)
         } else {
-            current.newUnknownType()
+            current.unknownType()
         }
     }
 
@@ -234,7 +234,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                             "Could not find referring super type ${superType.typeName} for ${curClass.name} in the record map. Will set the super type to java.lang.Object"
                         )
                         // TODO: Should be more generic!
-                        base.type = current.parseType(Any::class.java.name)
+                        base.type = current.objectType(Any::class.java.name)
                     } else {
                         // We need to connect this super reference to the receiver of this
                         // method
@@ -254,7 +254,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                 } else {
                     // no explicit super type -> java.lang.Object
                     // TODO: Should be more generic
-                    val objectType = current.parseType(Any::class.java.name)
+                    val objectType = current.objectType(Any::class.java.name)
                     base.type = objectType
                 }
             } else {
@@ -269,13 +269,13 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                     return
                 }
             } else if (baseTarget is RecordDeclaration) {
-                var baseType = baseTarget.parseType(baseTarget.name)
+                var baseType = baseTarget.toType()
                 if (baseType.name !in recordMap) {
                     val containingT = baseType
                     val fqnResolvedType =
                         recordMap.keys.firstOrNull { it.lastPartsMatch(containingT.name) }
                     if (fqnResolvedType != null) {
-                        baseType = baseTarget.parseType(fqnResolvedType)
+                        baseType = baseTarget.objectType(fqnResolvedType)
                     }
                 }
                 current.refersTo = resolveMember(baseType, current)
@@ -286,7 +286,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         if (baseType.name !in recordMap) {
             val fqnResolvedType = recordMap.keys.firstOrNull { it.lastPartsMatch(baseType.name) }
             if (fqnResolvedType != null) {
-                baseType = current.base.parseType(fqnResolvedType)
+                baseType = current.base.objectType(fqnResolvedType)
             }
         }
         current.refersTo = resolveMember(baseType, current)

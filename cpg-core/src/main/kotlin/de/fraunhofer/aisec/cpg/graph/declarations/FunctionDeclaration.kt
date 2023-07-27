@@ -110,7 +110,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
             targetFunctionDeclaration.signatureTypes == signatureTypes
     }
 
-    fun hasSignature(targetSignature: List<Type?>): Boolean {
+    fun hasSignature(targetSignature: List<Type>): Boolean {
         val signature =
             parameters
                 .stream()
@@ -195,7 +195,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                 if (paramVariableDeclaration.default != null) {
                     signature.add(paramVariableDeclaration.type)
                 } else {
-                    signature.add(newUnknownType())
+                    signature.add(unknownType())
                 }
             }
             return signature

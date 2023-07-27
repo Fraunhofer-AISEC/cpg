@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
@@ -240,7 +241,7 @@ internal class CXXIncludeTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testLoadIncludes() {
+    fun testLoadIncludesDisabled() {
         val file = File("src/test/resources/include.cpp")
         val tus =
             analyzeWithBuilder(
@@ -254,8 +255,15 @@ internal class CXXIncludeTest : BaseTest() {
             )
         assertNotNull(tus)
 
+        val tu = tus.firstOrNull()
+        assertNotNull(tu)
+
         // the tu should not contain any classes, since they are defined in the header (which are
-        // not loaded)
-        assertTrue(tus.firstOrNull().records.isEmpty())
+        // not loaded) and inference is off.
+        assertTrue(tu.records.isEmpty())
+
+        // however, we should still have two methods (one of which is a constructor declaration)
+        assertEquals(2, tu.methods.size)
+        assertEquals(1, tu.methods.filterIsInstance<ConstructorDeclaration>().size)
     }
 }

@@ -69,19 +69,19 @@ class PythonFrontendTest : BaseTest() {
         val b = p.variables["b"]
         assertNotNull(b)
         assertLocalName("b", b)
-        assertEquals(tu.parseType("bool"), b.type)
+        assertEquals(tu.primitiveType("bool"), b.type)
         assertEquals(true, (b.initializer as? Literal<*>)?.value)
 
         val i = p.variables["i"]
         assertNotNull(i)
         assertLocalName("i", i)
-        assertEquals(tu.parseType("int"), i.type)
+        assertEquals(tu.primitiveType("int"), i.type)
         assertEquals(42L, (i.initializer as? Literal<*>)?.value)
 
         val f = p.variables["f"]
         assertNotNull(f)
         assertLocalName("f", f)
-        assertEquals(tu.parseType("float"), f.type)
+        assertEquals(tu.primitiveType("float"), f.type)
         assertEquals(1.0, (f.initializer as? Literal<*>)?.value)
 
         val c = p.variables["c"]
@@ -96,13 +96,13 @@ class PythonFrontendTest : BaseTest() {
         val t = p.variables["t"]
         assertNotNull(t)
         assertLocalName("t", t)
-        assertEquals(tu.parseType("str"), t.type)
+        assertEquals(tu.primitiveType("str"), t.type)
         assertEquals("Hello", (t.initializer as? Literal<*>)?.value)
 
         val n = p.variables["n"]
         assertNotNull(n)
         assertLocalName("n", n)
-        assertEquals(tu.parseType("None"), n.type)
+        assertEquals(tu.objectType("None"), n.type)
         assertEquals(null, (n.initializer as? Literal<*>)?.value)
     }
 
@@ -142,7 +142,7 @@ class PythonFrontendTest : BaseTest() {
         val s = bar.parameters.first()
         assertNotNull(s)
         assertLocalName("s", s)
-        assertEquals(tu.parseType("str"), s.type)
+        assertEquals(tu.primitiveType("str"), s.type)
 
         assertLocalName("bar", bar)
 
@@ -159,7 +159,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(literal)
 
         assertEquals("bar(s) here: ", literal.value)
-        assertEquals(tu.parseType("str"), literal.type)
+        assertEquals(tu.primitiveType("str"), literal.type)
 
         val ref = callExpression.arguments[1] as? DeclaredReferenceExpression
         assertNotNull(ref)
@@ -219,11 +219,11 @@ class PythonFrontendTest : BaseTest() {
                 as? VariableDeclaration
         assertNotNull(sel)
         assertLocalName("sel", sel)
-        assertEquals(tu.parseType("bool"), sel.type)
+        assertEquals(tu.primitiveType("bool"), sel.type)
 
         val initializer = sel.initializer as? Literal<*>
         assertNotNull(initializer)
-        assertEquals(tu.parseType("bool"), initializer.type)
+        assertEquals(tu.primitiveType("bool"), initializer.type)
         assertEquals("True", initializer.code)
 
         val `if` = body.statements[1] as? IfStatement
@@ -308,11 +308,11 @@ class PythonFrontendTest : BaseTest() {
         val foo = body.singleDeclaration as? VariableDeclaration
         assertNotNull(foo)
         assertLocalName("foo", foo)
-        assertEquals(tu.parseType("int"), foo.type)
+        assertEquals(tu.primitiveType("int"), foo.type)
 
         val initializer = foo.initializer as? ConditionalExpression
         assertNotNull(initializer)
-        assertEquals(tu.parseType("int"), initializer.type)
+        assertEquals(tu.primitiveType("int"), initializer.type)
 
         val ifCond = initializer.condition as? Literal<*>
         assertNotNull(ifCond)
@@ -321,13 +321,13 @@ class PythonFrontendTest : BaseTest() {
         val elseExpr = initializer.elseExpr as? Literal<*>
         assertNotNull(elseExpr)
 
-        assertEquals(tu.parseType("bool"), ifCond.type)
+        assertEquals(tu.primitiveType("bool"), ifCond.type)
         assertEquals(false, ifCond.value)
 
-        assertEquals(tu.parseType("int"), thenExpr.type)
+        assertEquals(tu.primitiveType("int"), thenExpr.type)
         assertEquals(21, (thenExpr.value as? Long)?.toInt())
 
-        assertEquals(tu.parseType("int"), elseExpr.type)
+        assertEquals(tu.primitiveType("int"), elseExpr.type)
         assertEquals(42, (elseExpr.value as? Long)?.toInt())
     }
 
@@ -433,7 +433,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(i)
 
         assertLocalName("i", i)
-        assertEquals(tu.parseType("int"), i.type)
+        assertEquals(tu.primitiveType("int"), i.type)
 
         // self.somevar = i
         val someVarDeclaration =

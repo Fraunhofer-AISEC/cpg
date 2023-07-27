@@ -142,7 +142,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
         assertLocalName("s", sDecl)
-        assertEquals(tu.parseType("java.lang.String"), sDecl.type)
+        assertEquals(tu.primitiveType("java.lang.String"), sDecl.type)
 
         // should contain a single statement
         val sce = forEachStatement.statement as? MemberCallExpression
@@ -189,11 +189,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(scope)
 
         // first exception type was? resolved, so we can expect a FQN
-        assertEquals(tu.parseType("java.lang.NumberFormatException"), firstCatch.parameter?.type)
+        assertEquals(tu.objectType("java.lang.NumberFormatException"), firstCatch.parameter?.type)
         // second one could not be resolved so we do not have an FQN
-        assertEquals(tu.parseType("NotResolvableTypeException"), catchClauses[1].parameter?.type)
+        assertEquals(tu.objectType("NotResolvableTypeException"), catchClauses[1].parameter?.type)
         // third type should have been resolved through the import
-        assertEquals(tu.parseType("some.ImportedException"), (catchClauses[2].parameter)?.type)
+        assertEquals(tu.objectType("some.ImportedException"), (catchClauses[2].parameter)?.type)
 
         // and 1 finally
         val finallyBlock = tryStatement.finallyBlock
@@ -303,7 +303,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
         assertLocalName("method", method)
-        assertEquals(tu.parseType("java.lang.Integer"), method.returnTypes.firstOrNull())
+        assertEquals(tu.primitiveType("java.lang.Integer"), method.returnTypes.firstOrNull())
 
         val functionType = method.type as? FunctionType
         assertNotNull(functionType)
@@ -424,8 +424,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val a = (statements[0] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
         assertNotNull(a)
 
-        // type should be Integer[]
-        assertEquals(tu.parseType("int[]"), a.type)
+        with(tu) {
+            // type should be Integer[]
+            assertEquals(primitiveType("int").array(), a.type)
+        }
 
         // it has an array creation initializer
         val ace = a.initializer as? ArrayCreationExpression
@@ -633,7 +635,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration?
         assertNotNull(receiver)
         assertLocalName("this", receiver)
-        assertEquals(tu.parseType("my.Animal"), receiver.type)
+        assertEquals(tu.objectType("my.Animal"), receiver.type)
     }
 
     @Test

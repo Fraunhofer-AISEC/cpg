@@ -92,7 +92,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         if (castExpr.type.isPrimitiveType) {
             // Set Type based on the Casting type as it will result in a conversion for primitive
             // types
-            castExpression.type = this.parseType(castExpr.type.resolve().asPrimitive().describe())
+            castExpression.type = frontend.typeOf(castExpr.type.resolve().asPrimitive())
         } else {
             // Get Runtime type from cast expression for complex types;
             castExpression.expression.registerTypeListener(castExpression)
@@ -167,20 +167,20 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val conditionalExpr = expr.asConditionalExpr()
         val superType: Type =
             try {
-                this.parseType(conditionalExpr.calculateResolvedType().describe())
+                frontend.typeOf(conditionalExpr.calculateResolvedType())
             } catch (e: RuntimeException) {
                 val s = frontend.recoverTypeFromUnsolvedException(e)
                 if (s != null) {
-                    this.parseType(s)
+                    this.objectType(s)
                 } else {
-                    newUnknownType()
+                    unknownType()
                 }
             } catch (e: NoClassDefFoundError) {
                 val s = frontend.recoverTypeFromUnsolvedException(e)
                 if (s != null) {
-                    this.parseType(s)
+                    this.objectType(s)
                 } else {
-                    newUnknownType()
+                    unknownType()
                 }
             }
         val condition =
@@ -270,12 +270,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 if (resolve.asField().isStatic) {
                     isStaticAccess = true
                 }
-                baseType = this.parseType(resolve.asField().declaringType().qualifiedName)
+                baseType = this.objectType(resolve.asField().declaringType().qualifiedName)
             } catch (ex: RuntimeException) {
                 isStaticAccess = true
                 val typeString = frontend.recoverTypeFromUnsolvedException(ex)
                 if (typeString != null) {
-                    baseType = this.parseType(typeString)
+                    baseType = this.objectType(typeString)
                 } else {
                     // try to get the name
                     val name: String
@@ -289,17 +289,17 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     val qualifiedNameFromImports = frontend.getQualifiedNameFromImports(name)
                     baseType =
                         if (qualifiedNameFromImports != null) {
-                            this.parseType(qualifiedNameFromImports)
+                            this.objectType(qualifiedNameFromImports)
                         } else {
                             log.info("Unknown base type 1 for {}", fieldAccessExpr)
-                            newUnknownType()
+                            unknownType()
                         }
                 }
             } catch (ex: NoClassDefFoundError) {
                 isStaticAccess = true
                 val typeString = frontend.recoverTypeFromUnsolvedException(ex)
                 if (typeString != null) {
-                    baseType = this.parseType(typeString)
+                    baseType = this.objectType(typeString)
                 } else {
                     val name: String
                     val tokenRange = scope.asNameExpr().tokenRange
@@ -312,10 +312,10 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     val qualifiedNameFromImports = frontend.getQualifiedNameFromImports(name)
                     baseType =
                         if (qualifiedNameFromImports != null) {
-                            this.parseType(qualifiedNameFromImports)
+                            this.objectType(qualifiedNameFromImports)
                         } else {
                             log.info("Unknown base type 1 for {}", fieldAccessExpr)
-                            newUnknownType()
+                            unknownType()
                         }
                 }
             }
@@ -351,10 +351,10 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 val qualifiedNameFromImports = frontend.getQualifiedNameFromImports(name)
                 val baseType =
                     if (qualifiedNameFromImports != null) {
-                        this.parseType(qualifiedNameFromImports)
+                        this.objectType(qualifiedNameFromImports)
                     } else {
                         log.info("Unknown base type 2 for {}", fieldAccessExpr)
-                        newUnknownType()
+                        unknownType()
                     }
                 base =
                     this.newDeclaredReferenceExpression(
@@ -379,18 +379,18 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     symbol.asField().type.describe()
                 )
             if (fieldType == null) {
-                fieldType = this.parseType(symbol.asField().type.describe())
+                fieldType = frontend.typeOf(symbol.asField().type)
             }
         } catch (ex: RuntimeException) {
             val typeString = frontend.recoverTypeFromUnsolvedException(ex)
             fieldType =
                 if (typeString != null) {
-                    this.parseType(typeString)
+                    this.objectType(typeString)
                 } else if (fieldAccessExpr.toString().endsWith(".length")) {
-                    this.parseType("int")
+                    this.primitiveType("int")
                 } else {
                     log.info("Unknown field type for {}", fieldAccessExpr)
-                    newUnknownType()
+                    unknownType()
                 }
             val memberExpression =
                 this.newMemberExpression(
@@ -405,12 +405,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val typeString = frontend.recoverTypeFromUnsolvedException(ex)
             fieldType =
                 if (typeString != null) {
-                    this.parseType(typeString)
+                    this.objectType(typeString)
                 } else if (fieldAccessExpr.toString().endsWith(".length")) {
-                    this.parseType("int")
+                    this.primitiveType("int")
                 } else {
                     log.info("Unknown field type for {}", fieldAccessExpr)
-                    newUnknownType()
+                    unknownType()
                 }
             val memberExpression =
                 this.newMemberExpression(fieldAccessExpr.name.identifier, base, fieldType, ".")
@@ -430,43 +430,47 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             is IntegerLiteralExpr ->
                 newLiteral(
                     literalExpr.asIntegerLiteralExpr().asNumber(),
-                    this.parseType("int"),
+                    this.primitiveType("int"),
                     value
                 )
             is StringLiteralExpr ->
                 newLiteral(
                     literalExpr.asStringLiteralExpr().asString(),
-                    this.parseType("java.lang.String"),
+                    this.primitiveType("java.lang.String"),
                     value
                 )
             is BooleanLiteralExpr ->
                 newLiteral(
                     literalExpr.asBooleanLiteralExpr().value,
-                    this.parseType("boolean"),
+                    this.primitiveType("boolean"),
                     value
                 )
             is CharLiteralExpr ->
-                newLiteral(literalExpr.asCharLiteralExpr().asChar(), this.parseType("char"), value)
+                newLiteral(
+                    literalExpr.asCharLiteralExpr().asChar(),
+                    this.primitiveType("char"),
+                    value
+                )
             is DoubleLiteralExpr ->
                 newLiteral(
                     literalExpr.asDoubleLiteralExpr().asDouble(),
-                    this.parseType("double"),
+                    this.primitiveType("double"),
                     value
                 )
             is LongLiteralExpr ->
                 newLiteral(
                     literalExpr.asLongLiteralExpr().asNumber(),
-                    this.parseType("long"),
+                    this.primitiveType("long"),
                     value
                 )
-            is NullLiteralExpr -> newLiteral<Any?>(null, this.parseType("null"), value)
+            is NullLiteralExpr -> newLiteral<Any?>(null, this.objectType("null"), value)
             else -> null
         }
     }
 
     private fun handleClassExpression(expr: Expression): DeclaredReferenceExpression {
         val classExpr = expr.asClassExpr()
-        val type = this.parseType(classExpr.type.asString())
+        val type = frontend.typeOf(classExpr.type)
         val thisExpression =
             this.newDeclaredReferenceExpression(
                 classExpr.toString().substring(classExpr.toString().lastIndexOf('.') + 1),
@@ -481,7 +485,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun handleThisExpression(expr: Expression): DeclaredReferenceExpression {
         val thisExpr = expr.asThisExpr()
         val resolvedValueDeclaration = thisExpr.resolve()
-        val type = this.parseType(resolvedValueDeclaration.qualifiedName)
+        val type = this.objectType(resolvedValueDeclaration.qualifiedName)
         var name = thisExpr.toString()
 
         // If the typeName is specified, then this a "qualified this" and we need to handle it
@@ -503,7 +507,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // about the inheritance structure. Thus, we delay the resolving to the variable resolving
         // process
         val superExpression =
-            this.newDeclaredReferenceExpression(expr.toString(), newUnknownType(), expr.toString())
+            this.newDeclaredReferenceExpression(expr.toString(), unknownType(), expr.toString())
         frontend.setCodeAndLocation(superExpression, expr)
         return superExpression
     }
@@ -582,7 +586,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         symbol.type.describe()
                     )
                 if (type == null) {
-                    type = this.parseType(symbol.type.describe())
+                    type = frontend.typeOf(symbol.type)
                 }
                 this.newDeclaredReferenceExpression(symbol.name, type, nameExpr.toString())
             }
@@ -599,9 +603,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 }
             val t: Type
             if (typeString == null) {
-                t = newUnknownType()
+                t = unknownType()
             } else {
-                t = this.parseType(typeString)
+                t = this.objectType(typeString)
                 t.typeOrigin = Type.Origin.GUESSED
             }
             val declaredReferenceExpression =
@@ -612,11 +616,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             }
             declaredReferenceExpression
         } catch (ex: RuntimeException) {
-            val t = this.parseType("UNKNOWN4") // TODO: What's this? UNKNOWN4??
+            val t = unknownType()
             log.info("Unresolved symbol: {}", nameExpr.nameAsString)
             this.newDeclaredReferenceExpression(nameExpr.nameAsString, t, nameExpr.toString())
         } catch (ex: NoClassDefFoundError) {
-            val t = this.parseType("UNKNOWN4")
+            val t = unknownType()
             log.info("Unresolved symbol: {}", nameExpr.nameAsString)
             this.newDeclaredReferenceExpression(nameExpr.nameAsString, t, nameExpr.toString())
         }
@@ -637,7 +641,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val rhs: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression =
             this.newLiteral(
                 typeAsGoodAsPossible.typeName,
-                this.parseType("class"),
+                this.objectType("class"),
                 binaryExpr.typeAsString
             )
         val binaryOperator = this.newBinaryOperator("instanceof", binaryExpr.toString())
@@ -747,7 +751,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     } else {
                         this.parseName(qualifiedName).parent
                     }
-                baseType = this.parseType(baseName ?: Type.UNKNOWN_TYPE_STRING)
+                baseType = this.objectType(baseName ?: Type.UNKNOWN_TYPE_STRING)
                 base = this.newDeclaredReferenceExpression(baseName, baseType)
             } else {
                 // Since it is possible to omit the "this" keyword, some methods in java do not have
@@ -758,14 +762,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 base = createImplicitThis()
             }
         }
-        val member = this.newMemberExpression(name, base, newUnknownType(), ".")
+        val member = this.newMemberExpression(name, base, unknownType(), ".")
         frontend.setCodeAndLocation(
             member,
             methodCallExpr.name
         ) // This will also overwrite the code set to the empty string set above
         callExpression =
             this.newMemberCallExpression(member, isStatic, methodCallExpr.toString(), expr)
-        callExpression.type = typeString?.let { this.parseType(it) } ?: newUnknownType()
+        callExpression.type = typeString?.let { this.objectType(it) } ?: unknownType()
         val arguments = methodCallExpr.arguments
 
         // handle the arguments
@@ -791,7 +795,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         val thisType =
             (frontend.scopeManager.currentFunction as MethodDeclaration?)?.receiver?.type
-                ?: newUnknownType()
+                ?: unknownType()
         base = this.newDeclaredReferenceExpression("this", thisType, "this")
         base.isImplicit = true
         return base
@@ -843,7 +847,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
             frontend.scopeManager.enterScope(anonymousRecord)
 
-            anonymousRecord.addSuperClass(parseType(constructorName))
+            anonymousRecord.addSuperClass(objectType(constructorName))
             val anonymousClassBody = objectCreationExpr.anonymousClassBody.get()
             for (classBody in anonymousClassBody) {
                 // Whatever is implemented in the anonymous class has to be added to the record

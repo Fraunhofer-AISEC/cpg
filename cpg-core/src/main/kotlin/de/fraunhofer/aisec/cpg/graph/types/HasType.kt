@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Optional
@@ -69,11 +70,18 @@ interface HasType : ContextProvider {
      */
     fun setPossibleSubTypes(possibleSubTypes: List<Type>, root: MutableList<HasType>)
 
-    fun registerTypeListener(listener: TypeListener)
+    val typeListeners: MutableSet<TypeListener>
 
-    fun unregisterTypeListener(listener: TypeListener)
+    fun registerTypeListener(listener: TypeListener) {
+        val root = mutableListOf(this)
+        typeListeners.add(listener)
+        listener.typeChanged(this, root, type)
+        listener.possibleSubTypesChanged(this, root)
+    }
 
-    val typeListeners: Set<TypeListener>
+    fun unregisterTypeListener(listener: TypeListener) {
+        typeListeners.remove(listener)
+    }
 
     fun refreshType()
 
@@ -105,10 +113,10 @@ interface HasType : ContextProvider {
 
 val Node.isTypeSystemActive: Boolean
     get() {
-        return TypeManager.isTypeSystemActive()
+        return TypeManager.isTypeSystemActive
     }
 
-fun Node.isSupertypeOf(superType: Type, subType: Type?): Boolean {
+fun Node.isSupertypeOf(superType: Type, subType: Type): Boolean {
     val c = ctx ?: throw TranslationException("context not available")
     return c.typeManager.isSupertypeOf(superType, subType, this)
 }

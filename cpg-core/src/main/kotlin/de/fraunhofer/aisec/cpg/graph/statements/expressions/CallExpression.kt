@@ -286,7 +286,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
                 }
                 null
             }
-        val alternative = if (types.isNotEmpty()) types[0] else newUnknownType()
+        val alternative = if (types.isNotEmpty()) types[0] else unknownType()
         val commonType = getCommonType(types).orElse(alternative)
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
 

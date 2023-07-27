@@ -31,9 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import org.slf4j.LoggerFactory
 
@@ -217,31 +215,6 @@ fun MetadataProvider.newAnnotationMember(
 
     log(node)
     return node
-}
-
-/**
- * Creates a new [UnknownType] and sets the appropriate language, if this [MetadataProvider]
- * includes a [LanguageProvider].
- */
-fun MetadataProvider?.newUnknownType(): UnknownType {
-    return if (this is LanguageProvider) {
-        UnknownType.getUnknownType(language)
-    } else {
-        UnknownType.getUnknownType(null)
-    }
-}
-
-/**
- * Provides a nice alias to [TypeParser.createFrom]. In the future, this should not be used anymore
- * since we are moving away from the [TypeParser] altogether.
- */
-@JvmOverloads
-fun LanguageProvider.parseType(name: CharSequence, resolveAlias: Boolean = false): Type {
-    return if (this is ContextProvider) {
-        TypeParser.createFrom(name.toString(), language, resolveAlias, this.ctx)
-    } else {
-        throw TranslationException("Cannot parse type without translation context")
-    }
 }
 
 /** Returns a new [Name] based on the [localName] and the current namespace as parent. */

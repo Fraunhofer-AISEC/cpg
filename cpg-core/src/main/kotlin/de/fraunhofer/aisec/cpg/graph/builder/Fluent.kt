@@ -123,7 +123,7 @@ context(DeclarationHolder)
 
 fun LanguageFrontend<*, *>.field(
     name: CharSequence,
-    type: Type = newUnknownType(),
+    type: Type = unknownType(),
     init: FieldDeclaration.() -> Unit
 ): FieldDeclaration {
     val node = newFieldDeclaration(name)
@@ -145,7 +145,7 @@ context(DeclarationHolder)
 
 fun LanguageFrontend<*, *>.function(
     name: CharSequence,
-    returnType: Type = newUnknownType(),
+    returnType: Type = unknownType(),
     returnTypes: List<Type>? = null,
     init: (FunctionDeclaration.() -> Unit)? = null
 ): FunctionDeclaration {
@@ -175,7 +175,7 @@ context(RecordDeclaration)
 
 fun LanguageFrontend<*, *>.method(
     name: CharSequence,
-    returnType: Type = newUnknownType(),
+    returnType: Type = unknownType(),
     init: MethodDeclaration.() -> Unit
 ): MethodDeclaration {
     val node = newMethodDeclaration(name)
@@ -242,7 +242,7 @@ context(FunctionDeclaration)
 
 fun LanguageFrontend<*, *>.param(
     name: CharSequence,
-    type: Type = newUnknownType(),
+    type: Type = unknownType(),
     init: (ParamVariableDeclaration.() -> Unit)? = null
 ): ParamVariableDeclaration {
     val node =
@@ -298,7 +298,7 @@ context(DeclarationStatement)
 
 fun LanguageFrontend<*, *>.variable(
     name: String,
-    type: Type = newUnknownType(),
+    type: Type = unknownType(),
     init: (VariableDeclaration.() -> Unit)? = null
 ): VariableDeclaration {
     val node = newVariableDeclaration(name, type)
@@ -435,12 +435,12 @@ fun LanguageFrontend<*, *>.new(init: (NewExpression.() -> Unit)? = null): NewExp
     return node
 }
 
-fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type = newUnknownType()): Expression {
+fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type = unknownType()): Expression {
     val node =
         if (name.parent != null) {
             newMemberExpression(name.localName, memberOrRef(name.parent))
         } else {
-            newDeclaredReferenceExpression(name.localName, parseType(name.localName))
+            newDeclaredReferenceExpression(name.localName, objectType(name.localName))
         }
     node.type = type
 
@@ -748,7 +748,7 @@ fun LanguageFrontend<*, *>.default(): DefaultStatement {
  */
 context(Holder<out Statement>)
 
-fun <N> LanguageFrontend<*, *>.literal(value: N, type: Type = newUnknownType()): Literal<N> {
+fun <N> LanguageFrontend<*, *>.literal(value: N, type: Type = unknownType()): Literal<N> {
     val node = newLiteral(value, type)
 
     // Only add this to an argument holder if the nearest holder is an argument holder
@@ -769,7 +769,7 @@ context(Holder<out Statement>)
 
 fun LanguageFrontend<*, *>.ref(
     name: CharSequence,
-    type: Type = newUnknownType(),
+    type: Type = unknownType(),
     init: (DeclaredReferenceExpression.() -> Unit)? = null
 ): DeclaredReferenceExpression {
     val node = newDeclaredReferenceExpression(name)
@@ -803,13 +803,13 @@ fun LanguageFrontend<*, *>.member(
     val parsedName = parseName(name)
     val type =
         if (parsedName.parent != null) {
-            newUnknownType()
+            unknownType()
         } else {
             var scope = ((this@Holder) as? ScopeProvider)?.scope
             while (scope != null && scope !is RecordScope) {
                 scope = scope.parent
             }
-            val scopeType = scope?.name?.let { t(it) } ?: newUnknownType()
+            val scopeType = scope?.name?.let { t(it) } ?: unknownType()
             scopeType
         }
     val memberBase = base ?: memberOrRef(parsedName.parent ?: parseName("this"), type)
@@ -1072,7 +1072,7 @@ infix fun Expression.assign(rhs: Expression): BinaryOperator {
 
 /** Creates a new [Type] with the given [name] in the Fluent Node DSL. */
 fun LanguageFrontend<*, *>.t(name: CharSequence, init: (Type.() -> Unit)? = null): Type {
-    val type = parseType(name)
+    val type = objectType(name)
     if (init != null) {
         init(type)
     }
