@@ -1140,7 +1140,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                     .sourceLocations(listOf(file))
                     .topLevel(file.parentFile)
                     .defaultPasses()
-                    .defaultLanguages()
+                    .registerLanguage<CPPLanguage>()
                     .processAnnotations(true)
                     .symbols(
                         mapOf(
@@ -1197,7 +1197,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                     .useUnityBuild(true)
                     .loadIncludes(true)
                     .defaultPasses()
-                    .defaultLanguages()
+                    .registerLanguage<CPPLanguage>()
             )
         assertEquals(1, declarations.size)
         // should contain 3 declarations (2 include and 1 function decl from the include)
@@ -1573,5 +1573,30 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(tu)
 
         assertLocalName("int", tu.functions["main"]?.returnTypes?.firstOrNull())
+    }
+
+    @Test
+    fun testAssignments() {
+        val file = File("src/test/resources/c/assignments.cpp")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        assertNotNull(tu)
+
+        val assign1 = tu.functions["assign1"]
+        var s2 = assign1.variables["s2"]
+        assertNotNull(s2)
+        assertLocalName("short int", s2.type)
+
+        val assignAuto = tu.functions["assign_auto"]
+        val i = assignAuto.variables["i"]
+        assertNotNull(i)
+        assertLocalName("int", i.type)
+
+        val s1 = assignAuto.variables["s2"]
+        assertNotNull(s1)
+        assertLocalName("int", s1.type)
+
+        s2 = assignAuto.variables["s2"]
+        assertNotNull(s2)
+        assertLocalName("int", s2.type)
     }
 }

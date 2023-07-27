@@ -85,9 +85,18 @@ class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitial
         if (!isTypeSystemActive) {
             return
         }
+
         if (type !is UnknownType && src.propagationType == oldType) {
             return
         }
+
+        // Since we are a declaration, we are also defining the type. We only want to change our
+        // type, if we don't know it, e.g. if we are in a language that uses auto-inferred types,
+        // such as C++'s auto keyword
+        if (type !is UnknownType) {
+            return
+        }
+
         val previous = type
         val newType =
             if (src === initializer && initializer is InitializerListExpression) {
