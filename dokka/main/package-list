@@ -1,6 +1,6 @@
 $dokka.format:html-v1
 $dokka.linkExtension:html
-$dokka.location:de.fraunhofer.aisec.cpg.graph//ast/de.fraunhofer.aisec.cpg.graph.Node#/PointingToDeclaration/cpg-core/de.fraunhofer.aisec.cpg.graph/[jvm]ast.html
+
 module:cpg-analysis
 de.fraunhofer.aisec.cpg.analysis
 de.fraunhofer.aisec.cpg.analysis.fsm
