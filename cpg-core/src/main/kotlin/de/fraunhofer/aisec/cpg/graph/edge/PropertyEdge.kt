@@ -374,10 +374,7 @@ class PropertyEdgeDelegate<T : Node, S : Node>(
     }
 }
 
-
-/**
- * Similar to a [PropertyEdgeDelegate], but with a [Set] instead of [List].
- */
+/** Similar to a [PropertyEdgeDelegate], but with a [Set] instead of [List]. */
 @Transient
 class PropertyEdgeSetDelegate<T : Node, S : Node>(
     val edge: KProperty1<S, List<PropertyEdge<T>>>,
