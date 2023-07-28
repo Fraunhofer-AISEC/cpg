@@ -54,7 +54,17 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
 
     var operatorCode: String = "="
 
-    @AST var lhs: List<Expression> = listOf()
+    @AST
+    var lhs: List<Expression> = listOf()
+        set(value) {
+            field = value
+            if (operatorCode == "=")
+                field.forEach { (it as? DeclaredReferenceExpression)?.access = AccessValues.WRITE }
+            else
+                field.forEach {
+                    (it as? DeclaredReferenceExpression)?.access = AccessValues.READWRITE
+                }
+        }
 
     @AST
     var rhs: List<Expression> = listOf()

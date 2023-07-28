@@ -120,7 +120,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             state.push(currentNode, PowersetLattice(setOf(initializer)))
 
             doubleState.pushToDeclarationsState(currentNode, PowersetLattice(setOf(currentNode)))
-        } else if (currentNode is AssignExpression) {
+        } else if (isSimpleAssignment(currentNode)) {
             // It's an assignment which can have one or multiple things on the lhs and on the
             // rhs. The lhs could be a declaration or a reference (or multiple of these things).
             // The rhs can be anything. The rhs flows to the respective lhs. To identify the
