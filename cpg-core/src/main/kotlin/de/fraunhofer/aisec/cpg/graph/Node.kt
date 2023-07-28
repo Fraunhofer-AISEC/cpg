@@ -47,11 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
-import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.DFGPass
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.FilenameMapper
+import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*

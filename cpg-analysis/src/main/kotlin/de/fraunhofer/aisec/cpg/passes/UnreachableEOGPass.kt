@@ -191,7 +191,6 @@ private fun handleWhileStatement(
     // For all other edges, we simply propagate the reachability property of the edge which
     // made us come here.
     remainingEdges.forEach { state.push(it, state[enteringEdge]) }
-
 }
 
 /**
