@@ -73,13 +73,7 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
             field.forEach { it.unregisterTypeListener(this) }
             field = value
             // Register this statement as a type listener for each expression
-            value.forEach {
-                it.registerTypeListener(this)
-
-                if (it is DeclaredReferenceExpression) {
-                    it.access = AccessValues.WRITE
-                }
-            }
+            value.forEach { it.registerTypeListener(this) }
         }
 
     /**

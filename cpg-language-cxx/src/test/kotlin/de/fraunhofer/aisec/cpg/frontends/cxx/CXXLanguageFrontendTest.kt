@@ -180,15 +180,17 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(cast)
             assertEquals(objectType("BaseClass").pointer(), cast.castType)
 
-            val staticCast = main.getBodyStatementAs(2, BinaryOperator::class.java)
+            val staticCast = main.getBodyStatementAs(2, AssignExpression::class.java)
             assertNotNull(staticCast)
-            cast = staticCast.rhs as CastExpression
+            assertEquals(1, staticCast.rhs.size)
+            cast = staticCast.rhs.first() as CastExpression
             assertNotNull(cast)
             assertLocalName("static_cast", cast)
 
-            val reinterpretCast = main.getBodyStatementAs(3, BinaryOperator::class.java)
+            val reinterpretCast = main.getBodyStatementAs(3, AssignExpression::class.java)
             assertNotNull(reinterpretCast)
-            cast = reinterpretCast.rhs as CastExpression
+            assertEquals(1, reinterpretCast.rhs.size)
+            cast = reinterpretCast.rhs.first() as CastExpression
             assertNotNull(cast)
             assertLocalName("reinterpret_cast", cast)
 
@@ -519,13 +521,17 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val declareA = statements[0]
         val a = (declareA as DeclarationStatement).singleDeclaration
         val assignA = statements[1]
-        assertTrue(assignA is BinaryOperator)
+        assertTrue(assignA is AssignExpression)
 
-        var lhs = assignA.lhs
-        var rhs = assignA.rhs
+        var lhsList = assignA.lhs
+        assertEquals(1, lhsList.size)
+        var lhs = lhsList.first()
+        var rhsList = assignA.rhs
+        assertEquals(1, rhsList.size)
+        var rhs = rhsList.first()
         assertLocalName("a", lhs)
         assertEquals(2, (rhs as? Literal<*>)?.value)
-        assertRefersTo(assignA.lhs, a)
+        assertRefersTo(lhs, a)
 
         val declareB = statements[2]
         assertTrue(declareB is DeclarationStatement)
@@ -534,21 +540,28 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         // a = b
         val assignB = statements[3]
-        assertTrue(assignB is BinaryOperator)
+        assertTrue(assignB is AssignExpression)
 
-        lhs = assignB.lhs
-        rhs = assignB.rhs
+        lhsList = assignB.lhs
+        assertEquals(1, lhsList.size)
+        lhs = lhsList.first()
+        rhsList = assignB.rhs
+        assertEquals(1, rhsList.size)
+        rhs = rhsList.first()
         assertLocalName("a", lhs)
         assertTrue(rhs is DeclaredReferenceExpression)
         assertLocalName("b", rhs)
         assertRefersTo(rhs, b)
 
         val assignBWithFunction = statements[4]
-        assertTrue(assignBWithFunction is BinaryOperator)
-        assertLocalName("a", assignBWithFunction.lhs)
-        assertTrue(assignBWithFunction.rhs is CallExpression)
+        assertTrue(assignBWithFunction is AssignExpression)
 
-        val call = assignBWithFunction.rhs as CallExpression
+        assertEquals(1, assignBWithFunction.lhs.size)
+        assertLocalName("a", assignBWithFunction.lhs.first())
+        assertEquals(1, assignBWithFunction.rhs.size)
+        assertTrue(assignBWithFunction.rhs.first() is CallExpression)
+
+        val call = assignBWithFunction.rhs.first() as CallExpression
         assertLocalName("someFunction", call)
         assertRefersTo(call.arguments[0], b)
     }
@@ -620,8 +633,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(statement)
 
         // b = *ptr;
-        val assign = statements[++line] as BinaryOperator
-        val dereference = assign.rhs as UnaryOperator
+        val assign = statements[++line] as AssignExpression
+        assertEquals(1, assign.rhs.size)
+        val dereference = assign.rhs.first() as UnaryOperator
         input = dereference.input
         assertLocalName("ptr", input)
         assertEquals("*", dereference.operatorCode)
@@ -638,24 +652,28 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // first two statements are just declarations
 
         // a = b * 2
-        var operator = statements[2] as? BinaryOperator
+        var operator = statements[2] as? AssignExpression
         assertNotNull(operator)
-        assertLocalName("a", operator.lhs)
-        assertTrue(operator.rhs is BinaryOperator)
+        assertEquals(1, operator.lhs.size)
+        assertEquals(1, operator.rhs.size)
+        assertLocalName("a", operator.lhs.first())
+        assertTrue(operator.rhs.first() is BinaryOperator)
 
-        var rhs = operator.rhs as BinaryOperator
+        var rhs = operator.rhs.first() as BinaryOperator
         assertTrue(rhs.lhs is DeclaredReferenceExpression)
         assertLocalName("b", rhs.lhs)
         assertTrue(rhs.rhs is Literal<*>)
         assertEquals(2, (rhs.rhs as Literal<*>).value)
 
         // a = 1 * 1
-        operator = statements[3] as? BinaryOperator
+        operator = statements[3] as? AssignExpression
         assertNotNull(operator)
-        assertLocalName("a", operator.lhs)
-        assertTrue(operator.rhs is BinaryOperator)
+        assertEquals(1, operator.lhs.size)
+        assertEquals(1, operator.rhs.size)
+        assertLocalName("a", operator.lhs.first())
+        assertTrue(operator.rhs.first() is BinaryOperator)
 
-        rhs = operator.rhs as BinaryOperator
+        rhs = operator.rhs.first() as BinaryOperator
         assertTrue(rhs.lhs is Literal<*>)
         assertEquals(1, (rhs.lhs as Literal<*>).value)
         assertTrue(rhs.rhs is Literal<*>)
@@ -663,19 +681,19 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         // std::string* notMultiplication
         // this is not a multiplication, but a variable declaration with a pointer type, but
-        // syntactically no different than the previous ones
+        // syntactically no different to the previous ones
         val stmt = statements[4] as DeclarationStatement
         val decl = stmt.singleDeclaration as VariableDeclaration
         with(tu) { assertEquals(objectType("std::string").pointer(), decl.type) }
         assertLocalName("notMultiplication", decl)
         assertTrue(decl.initializer is BinaryOperator)
 
-        operator = decl.initializer as? BinaryOperator
-        assertNotNull(operator)
-        assertTrue(operator.lhs is Literal<*>)
-        assertEquals(0, (operator.lhs as Literal<*>).value)
-        assertTrue(operator.rhs is Literal<*>)
-        assertEquals(0, (operator.rhs as Literal<*>).value)
+        val initializer = decl.initializer as? BinaryOperator
+        assertNotNull(initializer)
+        assertTrue(initializer.lhs is Literal<*>)
+        assertEquals(0, (initializer.lhs as Literal<*>).value)
+        assertTrue(initializer.rhs is Literal<*>)
+        assertEquals(0, (initializer.rhs as Literal<*>).value)
     }
 
     @Test
