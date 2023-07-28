@@ -53,12 +53,12 @@ internal class CXXLiteralTest : BaseTest() {
 
         val funcDecl = zero.iterator().next()
         assertLocalName("zero", funcDecl)
-        assertLiteral(0, tu.parseType("int"), funcDecl, "i")
-        assertLiteral(0L, tu.parseType("long"), funcDecl, "l_with_suffix")
-        assertLiteral(0L, tu.parseType("long long"), funcDecl, "l_long_long_with_suffix")
+        assertLiteral(0, tu.primitiveType("int"), funcDecl, "i")
+        assertLiteral(0L, tu.primitiveType("long int"), funcDecl, "l_with_suffix")
+        assertLiteral(0L, tu.primitiveType("long long int"), funcDecl, "l_long_long_with_suffix")
         assertLiteral(
             BigInteger.valueOf(0),
-            tu.parseType("unsigned long long"),
+            tu.primitiveType("unsigned long long int"),
             funcDecl,
             "l_unsigned_long_long_with_suffix"
         )
@@ -73,31 +73,31 @@ internal class CXXLiteralTest : BaseTest() {
         assertFalse(decimal.isEmpty())
         val funcDecl = decimal.iterator().next()
         assertLocalName("decimal", funcDecl)
-        assertLiteral(42, tu.parseType("int"), funcDecl, "i")
-        assertLiteral(1000, tu.parseType("int"), funcDecl, "i_with_literal")
-        assertLiteral(9223372036854775807L, tu.parseType("long"), funcDecl, "l")
-        assertLiteral(9223372036854775807L, tu.parseType("long"), funcDecl, "l_with_suffix")
+        assertLiteral(42, tu.primitiveType("int"), funcDecl, "i")
+        assertLiteral(1000, tu.primitiveType("int"), funcDecl, "i_with_literal")
+        assertLiteral(9223372036854775807L, tu.primitiveType("long int"), funcDecl, "l")
+        assertLiteral(9223372036854775807L, tu.primitiveType("long int"), funcDecl, "l_with_suffix")
         assertLiteral(
             9223372036854775807L,
-            tu.parseType("long long"),
+            tu.primitiveType("long long int"),
             funcDecl,
             "l_long_long_with_suffix"
         )
         assertLiteral(
             BigInteger("9223372036854775809"),
-            tu.parseType("unsigned long"),
+            tu.primitiveType("unsigned long int"),
             funcDecl,
             "l_unsigned_long_with_suffix"
         )
         assertLiteral(
             BigInteger("9223372036854775808"),
-            tu.parseType("unsigned long long"),
+            tu.primitiveType("unsigned long long int"),
             funcDecl,
             "l_long_long_implicit"
         )
         assertLiteral(
             BigInteger("9223372036854775809"),
-            tu.parseType("unsigned long long"),
+            tu.primitiveType("unsigned long long int"),
             funcDecl,
             "l_unsigned_long_long_with_suffix"
         )
@@ -112,11 +112,11 @@ internal class CXXLiteralTest : BaseTest() {
         assertFalse(octal.isEmpty())
         val funcDecl = octal.iterator().next()
         assertLocalName("octal", funcDecl)
-        assertLiteral(42, tu.parseType("int"), funcDecl, "i")
-        assertLiteral(42L, tu.parseType("long"), funcDecl, "l_with_suffix")
+        assertLiteral(42, tu.primitiveType("int"), funcDecl, "i")
+        assertLiteral(42L, tu.primitiveType("long int"), funcDecl, "l_with_suffix")
         assertLiteral(
             BigInteger.valueOf(42),
-            tu.parseType("unsigned long long"),
+            tu.primitiveType("unsigned long long int"),
             funcDecl,
             "l_unsigned_long_long_with_suffix"
         )
@@ -132,11 +132,11 @@ internal class CXXLiteralTest : BaseTest() {
         assertFalse(hex.isEmpty())
         val funcDecl = hex.iterator().next()
         assertLocalName("hex", funcDecl)
-        assertLiteral(42, tu.parseType("int"), funcDecl, "i")
-        assertLiteral(42L, tu.parseType("long"), funcDecl, "l_with_suffix")
+        assertLiteral(42, tu.primitiveType("int"), funcDecl, "i")
+        assertLiteral(42L, tu.primitiveType("long int"), funcDecl, "l_with_suffix")
         assertLiteral(
             BigInteger.valueOf(42),
-            tu.parseType("unsigned long long"),
+            tu.primitiveType("unsigned long long int"),
             funcDecl,
             "l_unsigned_long_long_with_suffix"
         )

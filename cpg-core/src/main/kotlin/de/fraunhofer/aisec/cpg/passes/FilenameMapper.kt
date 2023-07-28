@@ -40,7 +40,7 @@ class FilenameMapper(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         handle(tu, file)
     }
 
-    private fun handle(node: Node, file: String) {
+    protected fun handle(node: Node, file: String) {
         // Using a visitor to avoid loops in the AST
         node.accept(
             Strategy::AST_FORWARD,

@@ -53,7 +53,7 @@ abstract class SymbolResolverPass(ctx: TranslationContext) : ComponentPass(ctx) 
     protected fun findEnums(node: Node?) {
         if (node is EnumDeclaration) {
             // TODO: Use the name instead of the type.
-            val type = node.parseType(node.name)
+            val type = node.objectType(node.name)
             enumMap.putIfAbsent(type, node)
         }
     }
@@ -69,7 +69,7 @@ abstract class SymbolResolverPass(ctx: TranslationContext) : ComponentPass(ctx) 
     protected fun FunctionDeclaration.matches(
         name: Name,
         returnType: Type,
-        signature: List<Type?>
+        signature: List<Type>
     ): Boolean {
         val thisReturnType =
             if (this.returnTypes.isEmpty()) {

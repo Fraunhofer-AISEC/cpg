@@ -1,6 +1,6 @@
 ---
-title: "Implementation and Concepts - Query API"
-linkTitle: "Implementation and Concepts - Query API"
+title: "The Query API"
+linkTitle: "The Query API"
 weight: 20
 no_list: false
 menu:

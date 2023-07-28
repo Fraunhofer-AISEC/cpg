@@ -124,8 +124,8 @@ class CallResolverTest : BaseTest() {
         assertNotNull(tu)
 
         val records = result.records
-        val intType = tu.parseType("int")
-        val stringType = tu.parseType(("java.lang.String"))
+        val intType = tu.primitiveType("int")
+        val stringType = tu.primitiveType(("java.lang.String"))
         testMethods(records, intType, stringType)
         testOverriding(records)
         ensureNoUnknownClassDummies(records)

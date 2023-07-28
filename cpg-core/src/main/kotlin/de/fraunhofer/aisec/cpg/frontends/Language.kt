@@ -31,11 +31,12 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -48,7 +49,7 @@ import kotlin.reflect.full.primaryConstructor
  * persisted in the final graph (database) and each node links to its corresponding language using
  * the [Node.language] property.
  */
-abstract class Language<T : LanguageFrontend> : Node() {
+abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
 
@@ -114,7 +115,10 @@ abstract class Language<T : LanguageFrontend> : Node() {
     }
 
     init {
-        this.also { this.language = it }
+        this.also { language ->
+            this.language = language
+            language::class.simpleName?.let { this.name = Name(it) }
+        }
     }
 
     private fun arithmeticOpTypePropagation(lhs: Type, rhs: Type): Type {
@@ -129,7 +133,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
                 } else {
                     rhs
                 }
-            else -> newUnknownType()
+            else -> unknownType()
         }
     }
 
@@ -142,7 +146,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
             // A comparison, so we return the type "boolean"
             return this.builtInTypes.values.firstOrNull { it is BooleanType }
                 ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
-                    ?: newUnknownType()
+                    ?: unknownType()
         }
 
         return when (operation.operatorCode) {
@@ -175,9 +179,9 @@ abstract class Language<T : LanguageFrontend> : Node() {
                     // primitive type 1 OP primitive type 2 => primitive type 1
                     operation.lhs.propagationType
                 } else {
-                    newUnknownType()
+                    unknownType()
                 }
-            else -> newUnknownType() // We don't know what is this thing
+            else -> unknownType() // We don't know what is this thing
         }
     }
 }

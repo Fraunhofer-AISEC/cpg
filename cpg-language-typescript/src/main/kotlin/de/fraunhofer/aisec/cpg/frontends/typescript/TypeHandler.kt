@@ -26,11 +26,12 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.newUnknownType
-import de.fraunhofer.aisec.cpg.graph.parseType
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.graph.array
+import de.fraunhofer.aisec.cpg.graph.objectType
+import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.unknownType
 
 class TypeHandler(frontend: TypeScriptLanguageFrontend) :
     Handler<Type, TypeScriptNode, TypeScriptLanguageFrontend>(
@@ -51,32 +52,32 @@ class TypeHandler(frontend: TypeScriptLanguageFrontend) :
             "ArrayType" -> return handleArrayType(node)
         }
 
-        return newUnknownType()
+        return unknownType()
     }
 
     private fun handleArrayType(node: TypeScriptNode): Type {
-        val type = node.firstChild("TypeReference")?.let { this.handle(it) } ?: newUnknownType()
+        val type = node.firstChild("TypeReference")?.let { this.handle(it) } ?: unknownType()
 
-        return type.reference(PointerType.PointerOrigin.ARRAY)
+        return type.array()
     }
 
     private fun handleStringKeyword(): Type {
-        return parseType("string")
+        return primitiveType("string")
     }
 
     private fun handleNumberKeyword(): Type {
-        return parseType("number")
+        return primitiveType("number")
     }
 
     private fun handleAnyKeyword(): Type {
-        return parseType("any")
+        return objectType("any")
     }
 
     private fun handleTypeReference(node: TypeScriptNode): Type {
         node.firstChild("Identifier")?.let {
-            return parseType(this.frontend.getIdentifierName(node))
+            return objectType(this.frontend.getIdentifierName(node))
         }
 
-        return newUnknownType()
+        return unknownType()
     }
 }

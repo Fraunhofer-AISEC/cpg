@@ -30,9 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
+import org.eclipse.cdt.core.dom.ast.IASTNode
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 
-abstract class CXXHandler<S : Node, T : Any>(
+abstract class CXXHandler<S : Node, T : IASTNode>(
     configConstructor: Supplier<S>,
     lang: CXXLanguageFrontend
 ) : Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {
@@ -58,7 +59,7 @@ abstract class CXXHandler<S : Node, T : Any>(
         // The language frontend might set a location, which we should respect. Otherwise, we will
         // set the location here.
         if (node.location == null) {
-            frontend.setCodeAndLocation<S, T>(node, ctx)
+            frontend.setCodeAndLocation(node, ctx)
         }
 
         frontend.setComment(node, ctx)

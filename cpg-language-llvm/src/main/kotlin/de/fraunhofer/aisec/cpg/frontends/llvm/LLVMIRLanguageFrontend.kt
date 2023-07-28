@@ -29,12 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.newUnknownType
-import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -47,12 +45,18 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer
 import org.bytedeco.javacpp.BytePointer
+import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.*
 import org.bytedeco.llvm.global.LLVM.*
 
+/**
+ * Because we are using the C LLVM API, there are two possibly AST nodes that we need to consider:
+ * [LLVMValueRef] and [LLVMBasicBlockRef]. Because they do not share any class hierarchy, we need to
+ * resort to use [Pointer] as the AST node type here.
+ */
 @RegisterExtraPass(CompressLLVMPass::class)
 class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend(language, ctx) {
+    LanguageFrontend<Pointer, LLVMTypeRef>(language, ctx) {
 
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
@@ -155,6 +159,10 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         return tu
     }
 
+    override fun typeOf(type: LLVMTypeRef): Type {
+        return typeOf(type, mutableMapOf())
+    }
+
     /** Returns a pair of the name and symbol name of [valueRef]. */
     fun getNameOf(valueRef: LLVMValueRef): Pair<String, String> {
         var name = valueRef.name
@@ -172,10 +180,10 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
     fun typeOf(valueRef: LLVMValueRef): Type {
         val typeRef = LLVMTypeOf(valueRef)
 
-        return typeFrom(typeRef)
+        return typeOf(typeRef)
     }
 
-    internal fun typeFrom(
+    internal fun typeOf(
         typeRef: LLVMTypeRef,
         alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
     ): Type {
@@ -185,7 +193,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
             if (result != null) return result
         }
         if (typeRef in alreadyVisited) {
-            return alreadyVisited[typeRef] ?: newUnknownType()
+            return alreadyVisited[typeRef] ?: unknownType()
         }
         alreadyVisited[typeRef] = null
         val res: Type =
@@ -193,19 +201,19 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
                 LLVMVectorTypeKind,
                 LLVMArrayTypeKind -> {
                     // var length = LLVMGetArrayLength(typeRef)
-                    val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
-                    elementType.reference(PointerType.PointerOrigin.ARRAY)
+                    val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
+                    elementType.array()
                 }
                 LLVMPointerTypeKind -> {
-                    val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
-                    elementType.reference(PointerType.PointerOrigin.POINTER)
+                    val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
+                    elementType.pointer()
                 }
                 LLVMStructTypeKind -> {
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
                     record.toType()
                 }
                 else -> {
-                    parseType(typeStr)
+                    objectType(typeStr)
                 }
             }
         alreadyVisited[typeRef] = res
@@ -213,23 +221,23 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         return res
     }
 
-    override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
+    override fun codeOf(astNode: Pointer): String? {
         if (astNode is LLVMValueRef) {
             val code = LLVMPrintValueToString(astNode)
 
             return code.string
         } else if (astNode is LLVMBasicBlockRef) {
-            return this.getCodeFromRawNode(LLVMBasicBlockAsValue(astNode))
+            return this.codeOf(LLVMBasicBlockAsValue(astNode))
         }
 
         return null
     }
 
-    override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
+    override fun locationOf(astNode: Pointer): PhysicalLocation? {
         return null
     }
 
-    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
+    override fun setComment(node: Node, astNode: Pointer) {
         // There are no comments in LLVM
     }
 
@@ -251,7 +259,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
     }
 
     fun guessSlotNumber(valueRef: LLVMValueRef): String {
-        val code = getCodeFromRawNode(valueRef)
+        val code = codeOf(valueRef)
         return if (code?.contains("=") == true) {
             code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
         } else {

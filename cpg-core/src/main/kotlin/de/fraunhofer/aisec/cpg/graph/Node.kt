@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -41,13 +40,18 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeSetDelegate
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
-import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.FilenameMapper
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -87,7 +91,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
-    override var language: Language<out LanguageFrontend>? = null
+    override var language: Language<*>? = null
 
     /**
      * The scope this node "lives" in / in which it is defined. This property is set in
@@ -146,7 +150,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     var prevCDGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
 
-    var prevCDG by PropertyEdgeDelegate(Node::prevCDGEdges, true)
+    var prevCDG by PropertyEdgeDelegate(Node::prevCDGEdges, false)
 
     /**
      * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
@@ -186,13 +190,25 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
             this.nextEOGEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
         }
 
+    /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    var prevDFG: MutableSet<Node> = HashSet()
+    var prevDFGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
+        internal set
 
+    /** Virtual property for accessing [prevDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    @Relationship(value = "DFG")
-    var nextDFG: MutableSet<Node> = HashSet()
+    var prevDFG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::prevDFGEdges, false)
+
+    /** Outgoing data flow edges */
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
+    var nextDFGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
+        internal set
+
+    /** Virtual property for accessing [nextDFGEdges] without property edges. */
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    var nextDFG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::nextDFGEdges, true)
 
     /** Outgoing Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
@@ -261,31 +277,47 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         nextEOGEdges.clear()
     }
 
-    fun addNextDFG(next: Node) {
-        nextDFG.add(next)
-        next.prevDFG.add(this)
+    fun addNextDFG(
+        next: Node,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
+        val edge = PropertyEdge(this, next, properties)
+        nextDFGEdges.add(edge)
+        next.prevDFGEdges.add(edge)
     }
 
     fun removeNextDFG(next: Node?) {
         if (next != null) {
-            nextDFG.remove(next)
-            next.prevDFG.remove(this)
+            val thisRemove =
+                PropertyEdge.findPropertyEdgesByPredicate(nextDFGEdges) { it.end === next }
+            nextDFGEdges.removeAll(thisRemove)
+
+            val nextRemove =
+                PropertyEdge.findPropertyEdgesByPredicate(next.prevDFGEdges) { it.start == this }
+            next.prevDFGEdges.removeAll(nextRemove)
         }
     }
 
-    fun addPrevDFG(prev: Node) {
-        prevDFG.add(prev)
-        prev.nextDFG.add(this)
+    fun addPrevDFG(
+        prev: Node,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
+        val edge = PropertyEdge(prev, this, properties)
+        prevDFGEdges.add(edge)
+        prev.nextDFGEdges.add(edge)
     }
 
     fun addPrevCDG(prev: Node) {
-        prevCDGEdges.add(PropertyEdge(this, prev))
-        prev.nextCDGEdges.add(PropertyEdge(prev, this))
+        val edge = PropertyEdge(prev, this)
+        prevCDGEdges.add(edge)
+        prev.nextCDGEdges.add(edge)
     }
 
-    fun addAllPrevDFG(prev: Collection<Node>) {
-        prevDFG.addAll(prev)
-        prev.forEach { it.nextDFG.add(this) }
+    fun addAllPrevDFG(
+        prev: Collection<Node>,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
+        prev.forEach { addPrevDFG(it, properties.toMutableMap()) }
     }
 
     fun addAllPrevPDG(prev: Collection<Node>, dependenceType: DependenceType) {
@@ -304,8 +336,13 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
 
     fun removePrevDFG(prev: Node?) {
         if (prev != null) {
-            prevDFG.remove(prev)
-            prev.nextDFG.remove(this)
+            val thisRemove =
+                PropertyEdge.findPropertyEdgesByPredicate(prevDFGEdges) { it.start === prev }
+            prevDFGEdges.removeAll(thisRemove)
+
+            val prevRemove =
+                PropertyEdge.findPropertyEdgesByPredicate(prev.nextDFGEdges) { it.end === this }
+            prev.nextDFGEdges.removeAll(prevRemove)
         }
     }
 
@@ -339,15 +376,19 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * further children that have no alternative connection paths to the rest of the graph.
      */
     fun disconnectFromGraph() {
-        for (n in nextDFG) {
-            n.prevDFG.remove(this)
+        for (n in nextDFGEdges) {
+            val remove =
+                PropertyEdge.findPropertyEdgesByPredicate(n.end.prevDFGEdges) { it.start == this }
+            n.end.prevDFGEdges.removeAll(remove)
         }
-        nextDFG.clear()
+        nextDFGEdges.clear()
 
-        for (n in prevDFG) {
-            n.nextDFG.remove(this)
+        for (n in prevDFGEdges) {
+            val remove =
+                PropertyEdge.findPropertyEdgesByPredicate(n.start.nextDFGEdges) { it.end == this }
+            n.start.nextDFGEdges.removeAll(remove)
         }
-        prevDFG.clear()
+        prevDFGEdges.clear()
 
         for (n in nextEOGEdges) {
             val remove =

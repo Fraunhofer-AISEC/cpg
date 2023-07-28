@@ -35,7 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.executePassSequential
 
-fun LanguageFrontend.translationResult(init: TranslationResult.() -> Unit): TranslationResult {
+fun LanguageFrontend<*, *>.translationResult(
+    init: TranslationResult.() -> Unit
+): TranslationResult {
     val node =
         TranslationResult(
             TranslationManager.builder().config(ctx.config).build(),
@@ -57,7 +59,7 @@ fun LanguageFrontend.translationResult(init: TranslationResult.() -> Unit): Tran
  */
 context(TranslationResult)
 
-fun LanguageFrontend.translationUnit(
+fun LanguageFrontend<*, *>.translationUnit(
     name: CharSequence = Node.EMPTY_NAME,
     init: TranslationUnitDeclaration.() -> Unit
 ): TranslationUnitDeclaration {
@@ -77,7 +79,7 @@ fun LanguageFrontend.translationUnit(
  */
 context(DeclarationHolder)
 
-fun LanguageFrontend.namespace(
+fun LanguageFrontend<*, *>.namespace(
     name: CharSequence,
     init: NamespaceDeclaration.() -> Unit
 ): NamespaceDeclaration {
@@ -97,7 +99,7 @@ fun LanguageFrontend.namespace(
  */
 context(DeclarationHolder)
 
-fun LanguageFrontend.record(
+fun LanguageFrontend<*, *>.record(
     name: CharSequence,
     kind: String = "class",
     init: RecordDeclaration.() -> Unit
@@ -119,9 +121,9 @@ fun LanguageFrontend.record(
  */
 context(DeclarationHolder)
 
-fun LanguageFrontend.field(
+fun LanguageFrontend<*, *>.field(
     name: CharSequence,
-    type: Type = newUnknownType(),
+    type: Type = unknownType(),
     init: FieldDeclaration.() -> Unit
 ): FieldDeclaration {
     val node = newFieldDeclaration(name)
@@ -141,9 +143,9 @@ fun LanguageFrontend.field(
  */
 context(DeclarationHolder)
 
-fun LanguageFrontend.function(
+fun LanguageFrontend<*, *>.function(
     name: CharSequence,
-    returnType: Type = newUnknownType(),
+    returnType: Type = unknownType(),
     returnTypes: List<Type>? = null,
     init: (FunctionDeclaration.() -> Unit)? = null
 ): FunctionDeclaration {
@@ -171,9 +173,9 @@ fun LanguageFrontend.function(
  */
 context(RecordDeclaration)
 
-fun LanguageFrontend.method(
+fun LanguageFrontend<*, *>.method(
     name: CharSequence,
-    returnType: Type = newUnknownType(),
+    returnType: Type = unknownType(),
     init: MethodDeclaration.() -> Unit
 ): MethodDeclaration {
     val node = newMethodDeclaration(name)
@@ -196,7 +198,9 @@ fun LanguageFrontend.method(
  */
 context(RecordDeclaration)
 
-fun LanguageFrontend.constructor(init: ConstructorDeclaration.() -> Unit): ConstructorDeclaration {
+fun LanguageFrontend<*, *>.constructor(
+    init: ConstructorDeclaration.() -> Unit
+): ConstructorDeclaration {
     val recordDecl: RecordDeclaration = this@RecordDeclaration
     val node = newConstructorDeclaration(recordDecl.name, recordDeclaration = recordDecl)
 
@@ -217,7 +221,7 @@ fun LanguageFrontend.constructor(init: ConstructorDeclaration.() -> Unit): Const
  */
 context(FunctionDeclaration)
 
-fun LanguageFrontend.body(
+fun LanguageFrontend<*, *>.body(
     needsScope: Boolean = true,
     init: CompoundStatement.() -> Unit
 ): CompoundStatement {
@@ -236,9 +240,9 @@ fun LanguageFrontend.body(
  */
 context(FunctionDeclaration)
 
-fun LanguageFrontend.param(
+fun LanguageFrontend<*, *>.param(
     name: CharSequence,
-    type: Type = newUnknownType(),
+    type: Type = unknownType(),
     init: (ParamVariableDeclaration.() -> Unit)? = null
 ): ParamVariableDeclaration {
     val node =
@@ -260,7 +264,7 @@ fun LanguageFrontend.param(
  */
 context(StatementHolder)
 
-fun LanguageFrontend.returnStmt(init: ReturnStatement.() -> Unit): ReturnStatement {
+fun LanguageFrontend<*, *>.returnStmt(init: ReturnStatement.() -> Unit): ReturnStatement {
     val node = (this@LanguageFrontend).newReturnStatement()
     init(node)
 
@@ -276,7 +280,7 @@ fun LanguageFrontend.returnStmt(init: ReturnStatement.() -> Unit): ReturnStateme
  */
 context(StatementHolder)
 
-fun LanguageFrontend.declare(init: DeclarationStatement.() -> Unit): DeclarationStatement {
+fun LanguageFrontend<*, *>.declare(init: DeclarationStatement.() -> Unit): DeclarationStatement {
     val node = (this@LanguageFrontend).newDeclarationStatement()
     init(node)
 
@@ -292,9 +296,9 @@ fun LanguageFrontend.declare(init: DeclarationStatement.() -> Unit): Declaration
  */
 context(DeclarationStatement)
 
-fun LanguageFrontend.variable(
+fun LanguageFrontend<*, *>.variable(
     name: String,
-    type: Type = newUnknownType(),
+    type: Type = unknownType(),
     init: (VariableDeclaration.() -> Unit)? = null
 ): VariableDeclaration {
     val node = newVariableDeclaration(name, type)
@@ -321,7 +325,7 @@ fun LanguageFrontend.variable(
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.call(
+fun LanguageFrontend<*, *>.call(
     name: CharSequence,
     isStatic: Boolean = false,
     init: (CallExpression.() -> Unit)? = null
@@ -364,7 +368,7 @@ fun LanguageFrontend.call(
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.memberCall(
+fun LanguageFrontend<*, *>.memberCall(
     localName: CharSequence,
     member: Expression,
     isStatic: Boolean = false,
@@ -395,7 +399,7 @@ fun LanguageFrontend.memberCall(
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.construct(
+fun LanguageFrontend<*, *>.construct(
     name: CharSequence,
     init: (ConstructExpression.() -> Unit)? = null
 ): ConstructExpression {
@@ -418,7 +422,7 @@ fun LanguageFrontend.construct(
 
 context(Holder<out Statement>)
 
-fun LanguageFrontend.new(init: (NewExpression.() -> Unit)? = null): NewExpression {
+fun LanguageFrontend<*, *>.new(init: (NewExpression.() -> Unit)? = null): NewExpression {
     val node = newNewExpression()
     if (init != null) init(node)
 
@@ -431,12 +435,12 @@ fun LanguageFrontend.new(init: (NewExpression.() -> Unit)? = null): NewExpressio
     return node
 }
 
-fun LanguageFrontend.memberOrRef(name: Name, type: Type = newUnknownType()): Expression {
+fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type = unknownType()): Expression {
     val node =
         if (name.parent != null) {
             newMemberExpression(name.localName, memberOrRef(name.parent))
         } else {
-            newDeclaredReferenceExpression(name.localName, parseType(name.localName))
+            newDeclaredReferenceExpression(name.localName, objectType(name.localName))
         }
     node.type = type
 
@@ -450,7 +454,7 @@ fun LanguageFrontend.memberOrRef(name: Name, type: Type = newUnknownType()): Exp
  */
 context(StatementHolder)
 
-fun LanguageFrontend.ifStmt(init: IfStatement.() -> Unit): IfStatement {
+fun LanguageFrontend<*, *>.ifStmt(init: IfStatement.() -> Unit): IfStatement {
     val node = newIfStatement()
     init(node)
 
@@ -465,8 +469,7 @@ fun LanguageFrontend.ifStmt(init: IfStatement.() -> Unit): IfStatement {
  * used to create further sub-nodes as well as configuring the created node itself.
  */
 context(StatementHolder)
-
-fun LanguageFrontend.forEachStmt(init: ForEachStatement.() -> Unit): ForEachStatement {
+fun LanguageFrontend<*, *>.forEachStmt(init: ForEachStatement.() -> Unit): ForEachStatement {
     val node = newForEachStatement()
 
     init(node)
@@ -483,7 +486,7 @@ fun LanguageFrontend.forEachStmt(init: ForEachStatement.() -> Unit): ForEachStat
  */
 context(StatementHolder)
 
-fun LanguageFrontend.switchStmt(
+fun LanguageFrontend<*, *>.switchStmt(
     selector: Expression,
     needsScope: Boolean = true,
     init: SwitchStatement.() -> Unit
@@ -504,7 +507,7 @@ fun LanguageFrontend.switchStmt(
  */
 context(StatementHolder)
 
-fun LanguageFrontend.whileStmt(
+fun LanguageFrontend<*, *>.whileStmt(
     needsScope: Boolean = true,
     init: WhileStatement.() -> Unit
 ): WhileStatement {
@@ -525,7 +528,7 @@ fun LanguageFrontend.whileStmt(
  */
 context(IfStatement)
 
-fun LanguageFrontend.condition(init: IfStatement.() -> BinaryOperator): BinaryOperator {
+fun LanguageFrontend<*, *>.condition(init: IfStatement.() -> BinaryOperator): BinaryOperator {
     return init(this@IfStatement)
 }
 
@@ -536,7 +539,9 @@ fun LanguageFrontend.condition(init: IfStatement.() -> BinaryOperator): BinaryOp
  */
 context(WhileStatement)
 
-fun LanguageFrontend.whileCondition(init: WhileStatement.() -> BinaryOperator): BinaryOperator {
+fun LanguageFrontend<*, *>.whileCondition(
+    init: WhileStatement.() -> BinaryOperator
+): BinaryOperator {
     return init(this@WhileStatement)
 }
 
@@ -547,7 +552,7 @@ fun LanguageFrontend.whileCondition(init: WhileStatement.() -> BinaryOperator): 
  */
 context(IfStatement)
 
-fun LanguageFrontend.thenStmt(
+fun LanguageFrontend<*, *>.thenStmt(
     needsScope: Boolean = true,
     init: CompoundStatement.() -> Unit
 ): CompoundStatement {
@@ -566,7 +571,7 @@ fun LanguageFrontend.thenStmt(
  */
 context(IfStatement)
 
-fun LanguageFrontend.elseIf(init: IfStatement.() -> Unit): IfStatement {
+fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
     val node = newIfStatement()
     init(node)
 
@@ -584,7 +589,21 @@ fun LanguageFrontend.elseIf(init: IfStatement.() -> Unit): IfStatement {
  */
 context(WhileStatement)
 
-fun LanguageFrontend.loopBody(init: CompoundStatement.() -> Unit): CompoundStatement {
+fun LanguageFrontend<*, *>.loopBody(init: CompoundStatement.() -> Unit): CompoundStatement {
+    val node = newCompoundStatement()
+    init(node)
+    statement = node
+
+    return node
+}
+/**
+ * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
+ * [WhileStatement.statement] of the nearest enclosing [WhileStatement]. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(ForEachStatement)
+
+fun LanguageFrontend<*, *>.loopBody(init: CompoundStatement.() -> Unit): CompoundStatement {
     val node = newCompoundStatement()
     init(node)
     statement = node
@@ -613,7 +632,7 @@ fun LanguageFrontend.loopBody(init: CompoundStatement.() -> Unit): CompoundState
  */
 context(SwitchStatement)
 
-fun LanguageFrontend.switchBody(init: CompoundStatement.() -> Unit): CompoundStatement {
+fun LanguageFrontend<*, *>.switchBody(init: CompoundStatement.() -> Unit): CompoundStatement {
     val node = newCompoundStatement()
     init(node)
     statement = node
@@ -628,7 +647,7 @@ fun LanguageFrontend.switchBody(init: CompoundStatement.() -> Unit): CompoundSta
  */
 context(IfStatement)
 
-fun LanguageFrontend.elseStmt(
+fun LanguageFrontend<*, *>.elseStmt(
     needsScope: Boolean = true,
     init: CompoundStatement.() -> Unit
 ): CompoundStatement {
@@ -646,7 +665,7 @@ fun LanguageFrontend.elseStmt(
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.label(
+fun LanguageFrontend<*, *>.label(
     label: String,
     init: (LabelStatement.() -> Statement)? = null
 ): LabelStatement {
@@ -671,7 +690,7 @@ fun LanguageFrontend.label(
  */
 context(StatementHolder)
 
-fun LanguageFrontend.continueStmt(label: String? = null): ContinueStatement {
+fun LanguageFrontend<*, *>.continueStmt(label: String? = null): ContinueStatement {
     val node = newContinueStatement()
     node.label = label
 
@@ -686,7 +705,7 @@ fun LanguageFrontend.continueStmt(label: String? = null): ContinueStatement {
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.breakStmt(label: String? = null): BreakStatement {
+fun LanguageFrontend<*, *>.breakStmt(label: String? = null): BreakStatement {
     val node = newBreakStatement()
     node.label = label
 
@@ -705,7 +724,7 @@ fun LanguageFrontend.breakStmt(label: String? = null): BreakStatement {
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.case(caseExpr: Expression? = null): CaseStatement {
+fun LanguageFrontend<*, *>.case(caseExpr: Expression? = null): CaseStatement {
     val node = newCaseStatement()
     node.caseExpression = caseExpr
 
@@ -724,7 +743,7 @@ fun LanguageFrontend.case(caseExpr: Expression? = null): CaseStatement {
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.default(): DefaultStatement {
+fun LanguageFrontend<*, *>.default(): DefaultStatement {
     val node = newDefaultStatement()
 
     // Only add this to a statement holder if the nearest holder is a statement holder
@@ -742,7 +761,7 @@ fun LanguageFrontend.default(): DefaultStatement {
  */
 context(Holder<out Statement>)
 
-fun <N> LanguageFrontend.literal(value: N, type: Type = newUnknownType()): Literal<N> {
+fun <N> LanguageFrontend<*, *>.literal(value: N, type: Type = unknownType()): Literal<N> {
     val node = newLiteral(value, type)
 
     // Only add this to an argument holder if the nearest holder is an argument holder
@@ -761,9 +780,9 @@ fun <N> LanguageFrontend.literal(value: N, type: Type = newUnknownType()): Liter
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.ref(
+fun LanguageFrontend<*, *>.ref(
     name: CharSequence,
-    type: Type = newUnknownType(),
+    type: Type = unknownType(),
     init: (DeclaredReferenceExpression.() -> Unit)? = null
 ): DeclaredReferenceExpression {
     val node = newDeclaredReferenceExpression(name)
@@ -789,7 +808,7 @@ fun LanguageFrontend.ref(
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend.member(
+fun LanguageFrontend<*, *>.member(
     name: CharSequence,
     base: Expression? = null,
     operatorCode: String = "."
@@ -797,13 +816,13 @@ fun LanguageFrontend.member(
     val parsedName = parseName(name)
     val type =
         if (parsedName.parent != null) {
-            newUnknownType()
+            unknownType()
         } else {
             var scope = ((this@Holder) as? ScopeProvider)?.scope
             while (scope != null && scope !is RecordScope) {
                 scope = scope.parent
             }
-            val scopeType = scope?.name?.let { t(it) } ?: newUnknownType()
+            val scopeType = scope?.name?.let { t(it) } ?: unknownType()
             scopeType
         }
     val memberBase = base ?: memberOrRef(parsedName.parent ?: parseName("this"), type)
@@ -823,7 +842,7 @@ fun LanguageFrontend.member(
  * Creates a new [BinaryOperator] with a `*` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend, ArgumentHolder)
+context(LanguageFrontend<*, *>, ArgumentHolder)
 
 operator fun Expression.times(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator("*")
@@ -845,7 +864,7 @@ operator fun Expression.times(rhs: Expression): BinaryOperator {
  * Creates a new [BinaryOperator] with a `+` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend, ArgumentHolder)
+context(LanguageFrontend<*, *>, ArgumentHolder)
 
 operator fun Expression.plus(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator("+")
@@ -867,7 +886,7 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
  * Creates a new [BinaryOperator] with a `+` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
-context(LanguageFrontend, StatementHolder)
+context(LanguageFrontend<*, *>, StatementHolder)
 
 operator fun Expression.plusAssign(rhs: Expression): Unit {
     val node = (this@LanguageFrontend).newBinaryOperator("+=")
@@ -881,7 +900,7 @@ operator fun Expression.plusAssign(rhs: Expression): Unit {
  * Creates a new [BinaryOperator] with a `+` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend, ArgumentHolder)
+context(LanguageFrontend<*, *>, ArgumentHolder)
 
 operator fun Expression.rem(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator("%")
@@ -903,7 +922,7 @@ operator fun Expression.rem(rhs: Expression): BinaryOperator {
  * Creates a new [BinaryOperator] with a `-` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend, ArgumentHolder)
+context(LanguageFrontend<*, *>, ArgumentHolder)
 
 operator fun Expression.minus(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator("-")
@@ -919,7 +938,7 @@ operator fun Expression.minus(rhs: Expression): BinaryOperator {
  * Creates a new [UnaryOperator] with a `&` [UnaryOperator.operatorCode] in the Fluent Node DSL and
  * invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend, ArgumentHolder)
+context(LanguageFrontend<*, *>, ArgumentHolder)
 
 fun reference(input: Expression): UnaryOperator {
     val node = (this@LanguageFrontend).newUnaryOperator("&", false, false)
@@ -934,7 +953,7 @@ fun reference(input: Expression): UnaryOperator {
  * Creates a new [UnaryOperator] with a `--` [UnaryOperator.operatorCode] in the Fluent Node DSL and
  * invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
-context(LanguageFrontend, Holder<out Statement>)
+context(LanguageFrontend<*, *>, Holder<out Statement>)
 
 operator fun Expression.dec(): UnaryOperator {
     val node = (this@LanguageFrontend).newUnaryOperator("--", true, false)
@@ -951,7 +970,7 @@ operator fun Expression.dec(): UnaryOperator {
  * Creates a new [UnaryOperator] with a `++` [UnaryOperator.operatorCode] in the Fluent Node DSL and
  * invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend, Holder<out Statement>)
+context(LanguageFrontend<*, *>, Holder<out Statement>)
 
 operator fun Expression.inc(): UnaryOperator {
     val node = (this@LanguageFrontend).newUnaryOperator("++", true, false)
@@ -968,7 +987,7 @@ operator fun Expression.inc(): UnaryOperator {
  * Creates a new [BinaryOperator] with a `==` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend, ArgumentHolder)
+context(LanguageFrontend<*, *>, ArgumentHolder)
 
 infix fun Expression.eq(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator("==")
@@ -984,7 +1003,7 @@ infix fun Expression.eq(rhs: Expression): BinaryOperator {
  * Creates a new [BinaryOperator] with a `>` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend, ArgumentHolder)
+context(LanguageFrontend<*, *>, ArgumentHolder)
 
 infix fun Expression.gt(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator(">")
@@ -1000,7 +1019,7 @@ infix fun Expression.gt(rhs: Expression): BinaryOperator {
  * Creates a new [BinaryOperator] with a `<` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend, ArgumentHolder)
+context(LanguageFrontend<*, *>, ArgumentHolder)
 
 infix fun Expression.lt(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator("<")
@@ -1016,7 +1035,7 @@ infix fun Expression.lt(rhs: Expression): BinaryOperator {
  * Creates a new [ConditionalExpression] with a `=` [BinaryOperator.operatorCode] in the Fluent Node
  * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
-context(LanguageFrontend, StatementHolder)
+context(LanguageFrontend<*, *>, StatementHolder)
 
 fun Expression.conditional(
     condition: Expression,
@@ -1034,7 +1053,7 @@ fun Expression.conditional(
  * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
-context(LanguageFrontend, StatementHolder)
+context(LanguageFrontend<*, *>, StatementHolder)
 
 infix fun Expression.assign(init: BinaryOperator.() -> Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator("=")
@@ -1050,7 +1069,7 @@ infix fun Expression.assign(init: BinaryOperator.() -> Expression): BinaryOperat
  * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
-context(LanguageFrontend, Holder<out Node>)
+context(LanguageFrontend<*, *>, Holder<out Node>)
 
 infix fun Expression.assign(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator("=")
@@ -1065,8 +1084,8 @@ infix fun Expression.assign(rhs: Expression): BinaryOperator {
 }
 
 /** Creates a new [Type] with the given [name] in the Fluent Node DSL. */
-fun LanguageFrontend.t(name: CharSequence, init: (Type.() -> Unit)? = null): Type {
-    val type = parseType(name)
+fun LanguageFrontend<*, *>.t(name: CharSequence, init: (Type.() -> Unit)? = null): Type {
+    val type = objectType(name)
     if (init != null) {
         init(type)
     }
@@ -1077,7 +1096,7 @@ fun LanguageFrontend.t(name: CharSequence, init: (Type.() -> Unit)? = null): Typ
  * Internally used to enter a new scope if [needsScope] is true before invoking [init] and leaving
  * it afterwards.
  */
-private fun <T : Node> LanguageFrontend.scopeIfNecessary(
+private fun <T : Node> LanguageFrontend<*, *>.scopeIfNecessary(
     needsScope: Boolean,
     node: T,
     init: T.() -> Unit

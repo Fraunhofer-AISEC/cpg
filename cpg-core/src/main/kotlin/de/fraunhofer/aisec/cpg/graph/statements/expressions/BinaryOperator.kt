@@ -152,7 +152,7 @@ open class BinaryOperator :
             // function pointer call.
             setType(src.propagationType, root)
         } else {
-            val resultingType = language?.propagateTypeOfBinaryOperation(this) ?: newUnknownType()
+            val resultingType = language?.propagateTypeOfBinaryOperation(this) ?: unknownType()
             if (resultingType !is UnknownType) {
                 setType(resultingType, root)
             }

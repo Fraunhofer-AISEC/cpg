@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.parseName
@@ -68,7 +68,7 @@ abstract class Type : Node {
         typeOrigin = type?.typeOrigin
     }
 
-    constructor(typeName: CharSequence, language: Language<out LanguageFrontend>?) {
+    constructor(typeName: CharSequence, language: Language<*>?) {
         name =
             if (this is FunctionType) {
                 Name(typeName.toString(), null, language)
@@ -79,7 +79,7 @@ abstract class Type : Node {
         typeOrigin = Origin.UNRESOLVED
     }
 
-    constructor(fullTypeName: Name, language: Language<out LanguageFrontend>?) {
+    constructor(fullTypeName: Name, language: Language<*>?) {
         name = fullTypeName.clone()
         typeOrigin = Origin.UNRESOLVED
         this.language = language
@@ -94,9 +94,17 @@ abstract class Type : Node {
     }
 
     /**
+     * Creates a new [Type] based on a reference of this type. The main usage is to create pointer
+     * and array types. This function does NOT invoke [TypeManager.registerType] and should only be
+     * used internally. For the public API, the extension functions, such as [Type.array] should be
+     * used instead.
+     *
      * @param pointer Reason for the reference (array of pointer)
      * @return Returns a reference to the current Type. E.g. when creating a pointer to an existing
      *   ObjectType
+     *
+     * TODO(oxisto) Ideally, we would make this function "internal", but there is a bug in the Go
+     *   frontend, so that we still need this function :(
      */
     abstract fun reference(pointer: PointerOrigin?): Type
 

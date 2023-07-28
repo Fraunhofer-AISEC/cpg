@@ -64,7 +64,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
                         ?.typeCache
                         ?.computeIfAbsent(this) { mutableListOf() }
                         ?.firstOrNull()
-                        ?: newUnknownType()
+                        ?: unknownType()
                 }
             return result
         }
@@ -127,7 +127,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
     override val propagationType: Type
         get() {
             return if (type is ReferenceType) {
-                (type as ReferenceType?)?.elementType ?: newUnknownType()
+                (type as ReferenceType?)?.elementType ?: unknownType()
             } else type
         }
 
@@ -224,17 +224,6 @@ abstract class ValueDeclaration : Declaration(), HasType {
                 .stream()
                 .filter { l: HasType.TypeListener -> l != this }
                 .forEach { l: HasType.TypeListener -> l.possibleSubTypesChanged(this, root) }
-    }
-
-    override fun registerTypeListener(listener: HasType.TypeListener) {
-        val root = mutableListOf<HasType>(this)
-        typeListeners.add(listener)
-        listener.typeChanged(this, root, type)
-        listener.possibleSubTypesChanged(this, root)
-    }
-
-    override fun unregisterTypeListener(listener: HasType.TypeListener) {
-        typeListeners.remove(listener)
     }
 
     override fun refreshType() {

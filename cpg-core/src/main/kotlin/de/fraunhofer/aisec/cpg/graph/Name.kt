@@ -46,7 +46,7 @@ class Name(
     constructor(
         localName: String,
         parent: Name? = null,
-        language: Language<out LanguageFrontend>?
+        language: Language<*>?
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
 
     /**

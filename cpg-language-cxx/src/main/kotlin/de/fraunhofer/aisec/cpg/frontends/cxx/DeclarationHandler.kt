@@ -87,8 +87,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * into a [NamespaceDeclaration].
      */
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
-        val declaration =
-            newNamespaceDeclaration(ctx.name.toString(), frontend.getCodeFromRawNode(ctx))
+        val declaration = newNamespaceDeclaration(ctx.name.toString(), frontend.codeOf(ctx))
 
         frontend.scopeManager.addDeclaration(declaration)
 
@@ -133,7 +132,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Retrieve the type. This should parse as a function type, otherwise it is unknown.
         val type = frontend.typeOf(ctx.declarator, ctx.declSpecifier, declaration) as? FunctionType
-        declaration.type = type ?: newUnknownType()
+        declaration.type = type ?: unknownType()
         declaration.isDefinition = true
 
         // We also need to set the return type, based on the function type.
@@ -270,12 +269,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         val templateDeclaration: TemplateDeclaration =
             if (ctx.declaration is CPPASTFunctionDefinition) {
-                newFunctionTemplateDeclaration(name, frontend.getCodeFromRawNode(ctx))
+                newFunctionTemplateDeclaration(name, frontend.codeOf(ctx))
             } else {
-                newClassTemplateDeclaration(name, frontend.getCodeFromRawNode(ctx))
+                newClassTemplateDeclaration(name, frontend.codeOf(ctx))
             }
 
-        templateDeclaration.location = frontend.getLocationFromRawNode(ctx)
+        templateDeclaration.location = frontend.locationOf(ctx)
         frontend.scopeManager.addDeclaration(templateDeclaration)
         frontend.scopeManager.enterScope(templateDeclaration)
         addTemplateParameters(ctx, templateDeclaration)
@@ -319,12 +318,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     )
                 typeParamDeclaration.type = parameterizedType
                 if (templateParameter.defaultType != null) {
-                    val defaultType =
-                        TypeParser.createFrom(
-                            templateParameter.defaultType.declSpecifier.rawSignature,
-                            false,
-                            frontend
-                        )
+                    val defaultType = frontend.typeOf(templateParameter.defaultType)
                     typeParamDeclaration.default = defaultType
                 }
                 templateDeclaration.addParameter(typeParamDeclaration)
@@ -488,27 +482,31 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         declSpecifier
                     }
 
-                // It is important, that we parse the type first, so that the type is known before
-                // parsing the declaration.
-                // This allows us to guess cast vs. call expression in
-                // ExpressionHandler.handleUnaryExpression.
-                var type = frontend.typeOf(declarator, declSpecifierToUse)
+                var type: Type
+
+                // If this is a variable declaration with initializer, it is important, that we
+                // parse the type first, so that the type is known before parsing the declaration.
+                // This allows us to guess cast vs. call expression in the initializer.
+                if (declarator !is IASTFunctionDeclarator && declarator.initializer != null) {
+                    // We only need to parse it, but we are not really storing the result. That is
+                    // not ideal, but probably the "best" way.
+                    frontend.typeOf(declarator, declSpecifierToUse)
+                }
 
                 if (ctx.isTypedef) {
+                    type = frontend.typeOf(declarator, declSpecifierToUse)
+
                     // Handle typedefs.
                     val declaration = handleTypedef(declarator, ctx, type)
 
                     sequence.addDeclaration(declaration)
                 } else {
+                    // Parse the declaration first, so we can supply the declaration as a hint to
+                    // the typeOf function.
                     val declaration =
                         frontend.declaratorHandler.handle(declarator) as? ValueDeclaration
 
-                    // We need to reparse the type, if this is a constructor declaration, so that we
-                    // can supply this as a hint to
-                    // the typeOf
-                    if (declaration is ConstructorDeclaration) {
-                        type = frontend.typeOf(declarator, declSpecifierToUse, declaration)
-                    }
+                    type = frontend.typeOf(declarator, declSpecifierToUse, declaration)
 
                     // For function *declarations*, we need to update the return types based on the
                     // function type. For function *definitions*, this is done in
@@ -519,7 +517,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     }
 
                     if (declaration != null) {
-                        // We also need to set the return type, based on the declrator type.
+                        // We also need to set the return type, based on the declarator type.
                         declaration.type = type
 
                         // process attributes
@@ -543,9 +541,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declaration =
             frontend.typeManager.createTypeAlias(
                 frontend,
-                frontend.getCodeFromRawNode(ctx),
+                frontend.codeOf(ctx),
                 type,
-                nameDecl.name.toString()
+                frontend.typeOf(nameDecl.name)
             )
 
         // Add the declaration to the current scope
@@ -562,7 +560,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val enum =
             newEnumDeclaration(
                 name = declSpecifier.name.toString(),
-                location = frontend.getLocationFromRawNode(ctx),
+                location = frontend.locationOf(ctx),
             )
 
         // Loop through its members
@@ -570,12 +568,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             val enumConst =
                 newEnumConstantDeclaration(
                     enumerator.name.toString(),
-                    frontend.getCodeFromRawNode(enumerator),
-                    frontend.getLocationFromRawNode(enumerator),
+                    frontend.codeOf(enumerator),
+                    frontend.locationOf(enumerator),
                 )
 
             // In C/C++, default enums are of type int
-            enumConst.type = parseType("int")
+            enumConst.type = primitiveType("int")
 
             // We need to make them visible to the enclosing scope. However, we do NOT
             // want to add it to the AST of the enclosing scope, but to the AST of the
@@ -616,21 +614,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         sequence: DeclarationSequence
     ) {
         val templateId = typeSpecifier.name as CPPASTTemplateId
-        val type = parseType(ctx.rawSignature)
         val templateParams = mutableListOf<Node>()
-
-        if (type.root !is ObjectType) {
-            // we cannot continue in this case
-            return
-        }
-
-        val objectType = type.root as ObjectType
-        objectType.generics = emptyList()
 
         for (templateArgument in templateId.templateArguments) {
             if (templateArgument is CPPASTTypeId) {
-                val genericInstantiation = parseType(templateArgument.getRawSignature())
-                objectType.addGeneric(genericInstantiation)
+                val genericInstantiation = frontend.typeOf(templateArgument)
                 templateParams.add(
                     newTypeExpression(
                         genericInstantiation.name.toString(),
@@ -642,11 +630,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 expression?.let { templateParams.add(it) }
             }
         }
+
         for (declarator in ctx.declarators) {
             val declaration = frontend.declaratorHandler.handle(declarator) as ValueDeclaration
 
             // Update Type
-            declaration.type = type
+            declaration.type = frontend.typeOf(declarator, typeSpecifier)
 
             // Set TemplateParameters into VariableDeclaration
             if (declaration is VariableDeclaration) {

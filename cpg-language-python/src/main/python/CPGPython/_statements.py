@@ -26,6 +26,7 @@ from ._misc import NOT_IMPLEMENTED_MSG
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import DeclarationBuilderKt
 from de.fraunhofer.aisec.cpg.graph import NodeBuilderKt
+from de.fraunhofer.aisec.cpg.graph import TypeBuilderKt
 from de.fraunhofer.aisec.cpg.graph import StatementBuilderKt
 from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
@@ -63,7 +64,7 @@ def handle_statement_impl(self, stmt):
                 tname = "%s.%s" % (namespace.toString(), base.id)
                 self.log_with_loc("Building super type using current "
                                   "namespace: %s" % tname)
-                t = NodeBuilderKt.parseType(self.frontend, tname)
+                t = TypeBuilderKt.objectType(self.frontend, tname)
                 bases.append(t)
         cls.setSuperClasses(bases)
 
@@ -170,7 +171,7 @@ def handle_statement_impl(self, stmt):
             else:
                 name = s.name
                 src = name
-            tpe = UnknownType.getUnknownType(self.frontend.getLanguage())
+            tpe = TypeBuilderKt.unknownType(self.frontend)
             v = DeclarationBuilderKt.newVariableDeclaration(self.frontend,
                                                             name, tpe, src,
                                                             False)
@@ -200,7 +201,7 @@ def handle_statement_impl(self, stmt):
             else:
                 name = s.name
                 src = name
-            tpe = UnknownType.getUnknownType(self.frontend.getLanguage())
+            tpe = TypeBuilderKt.unknownType(self.frontend)
             v = DeclarationBuilderKt.newVariableDeclaration(
                 self.frontend, name, tpe, src, False)
             # inaccurate but ast.alias does not hold location information
@@ -301,8 +302,9 @@ def handle_function_or_method(self, node, record=None):
     if record is not None:
         if len(node.args.args) > 0:
             recv_node = node.args.args[0]
-            tpe = NodeBuilderKt.parseType(self.frontend,
-                                          record.getName())
+            tpe = TypeBuilderKt.objectType(
+                self.frontend,
+                record.getName())
             recv = DeclarationBuilderKt.newVariableDeclaration(
                 self.frontend,
                 recv_node.arg, tpe, self.get_src_code(recv_node),
@@ -406,9 +408,10 @@ def handle_function_or_method(self, node, record=None):
 def handle_argument(self, arg: ast.arg):
     self.log_with_loc("Handling an argument: %s" % (ast.dump(arg)))
     if arg.annotation is not None:
-        tpe = NodeBuilderKt.parseType(self.frontend, arg.annotation.id)
+        # TODO: parse non-scalar types
+        tpe = TypeBuilderKt.objectType(self.frontend, arg.annotation.id)
     else:
-        tpe = UnknownType.getUnknownType(self.frontend.getLanguage())
+        tpe = TypeBuilderKt.unknownType(self.frontend)
     # TODO variadic
     pvd = DeclarationBuilderKt.newParamVariableDeclaration(
         self.frontend, arg.arg, tpe, False, self.get_src_code(arg))
@@ -579,7 +582,7 @@ def handle_assign_impl(self, stmt):
             else:
                 v = DeclarationBuilderKt.newFieldDeclaration(
                     self.frontend, name,
-                    UnknownType.getUnknownType(self.frontend.getLanguage()),
+                    TypeBuilderKt.unknownType(self.frontend),
                     None, self.get_src_code(stmt),
                     None, None, False)  # TODO None -> add infos
             self.scopemanager.addDeclaration(v)
@@ -604,8 +607,7 @@ def handle_assign_impl(self, stmt):
                 else:
                     v = DeclarationBuilderKt.newVariableDeclaration(
                         self.frontend, lhs.getName(),
-                        UnknownType.getUnknownType(
-                            self.frontend.getLanguage()),
+                        TypeBuilderKt.unknownType(self.frontend),
                         self.get_src_code(stmt),
                         False)
                 if rhs is not None:
@@ -643,8 +645,7 @@ def handle_assign_impl(self, stmt):
                 else:
                     v = DeclarationBuilderKt.newFieldDeclaration(
                         self.frontend, lhs.getName(),
-                        UnknownType.getUnknownType(
-                            self.frontend.getLanguage()),
+                        TypeBuilderKt.unknownType(self.frontend),
                         None, self.get_src_code(stmt),
                         None, None, False)
                 self.scopemanager.addDeclaration(v)
@@ -666,7 +667,7 @@ def handle_assign_impl(self, stmt):
             else:
                 v = DeclarationBuilderKt.newVariableDeclaration(
                     self.frontend, lhs.getName(),
-                    UnknownType.getUnknownType(self.frontend.getLanguage()),
+                    TypeBuilderKt.unknownType(self.frontend),
                     self.get_src_code(stmt),
                     False)
             if rhs is not None:

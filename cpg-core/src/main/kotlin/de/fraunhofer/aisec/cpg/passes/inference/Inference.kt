@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.passes.inference
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -54,7 +53,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
     LanguageProvider, ScopeProvider, IsInferredProvider, ContextProvider {
     val log: Logger = LoggerFactory.getLogger(Inference::class.java)
 
-    override val language: Language<out LanguageFrontend>?
+    override val language: Language<*>?
         get() = start.language
 
     override val isInferred: Boolean
@@ -235,7 +234,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         name: String,
     ): TypeParamDeclaration {
         val parameterizedType = ParameterizedType(name, language)
-        typeManager.addTypeParameter(start as? FunctionTemplateDeclaration, parameterizedType)
+        typeManager.addTypeParameter(start as FunctionTemplateDeclaration, parameterizedType)
 
         val decl = newTypeParamDeclaration(name, name)
         decl.type = parameterizedType
@@ -294,8 +293,6 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                     node
                         .startInference(ctx)
                         .inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
-
-                paramVariableDeclaration.addPrevDFG(node)
                 node.addNextDFG(paramVariableDeclaration)
                 nonTypeCounter++
                 inferred.addParameter(paramVariableDeclaration)

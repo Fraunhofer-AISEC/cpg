@@ -143,7 +143,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                         // The key is the first variable. It is always an int
                         val keyVariable =
                             variable.declarations.firstOrNull() as? VariableDeclaration
-                        keyVariable?.type = forEach.parseType("int")
+                        keyVariable?.type = forEach.primitiveType("int")
 
                         // The value is the second one. Its type depends on the array type
                         val valueVariable =
@@ -254,7 +254,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     ) {
         val cast = parent.newCastExpression(call.code)
         cast.location = call.location
-        cast.castType = call.parseType(typeName.toString())
+        cast.castType = call.objectType(typeName)
         cast.expression = call.arguments.single()
 
         if (parent !is ArgumentHolder) {

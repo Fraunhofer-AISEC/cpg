@@ -53,7 +53,7 @@ class PerformanceRegressionTest {
      *   in reasonable time. We had issues with literals and their hashcode when they were inserted
      *   into a set.
      * * Second, we want to make that list essentially a one-liner because we had issues when
-     *   populating the [Node.location] property using [CXXLanguageFrontend.getLocationFromRawNode].
+     *   populating the [Node.location] property using [CXXLanguageFrontend.locationOf].
      */
     @Test
     fun testParseLargeList() {

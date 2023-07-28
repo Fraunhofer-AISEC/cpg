@@ -36,10 +36,15 @@ import com.github.javaparser.ast.expr.MethodCallExpr
 import com.github.javaparser.ast.expr.NameExpr
 import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations
 import com.github.javaparser.ast.nodeTypes.NodeWithType
-import com.github.javaparser.ast.type.Type
+import com.github.javaparser.ast.type.*
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration
+import com.github.javaparser.resolution.types.ResolvedArrayType
+import com.github.javaparser.resolution.types.ResolvedPrimitiveType
+import com.github.javaparser.resolution.types.ResolvedReferenceType
+import com.github.javaparser.resolution.types.ResolvedType
+import com.github.javaparser.resolution.types.ResolvedVoidType
 import com.github.javaparser.symbolsolver.JavaSymbolSolver
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
@@ -65,13 +70,14 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.function.Consumer
+import kotlin.jvm.optionals.getOrNull
 
 /** Main parser for ONE Java file. */
 @RegisterExtraPass(
     JavaExternalTypeHierarchyResolver::class
 ) // this pass is always required for Java
 open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend(language, ctx) {
+    LanguageFrontend<Node, Type>(language, ctx) {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
@@ -115,7 +121,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             var namespaceDeclaration: NamespaceDeclaration? = null
             if (packDecl != null) {
                 namespaceDeclaration =
-                    newNamespaceDeclaration(packDecl.name.asString(), getCodeFromRawNode(packDecl))
+                    newNamespaceDeclaration(packDecl.name.asString(), codeOf(packDecl))
                 setCodeAndLocation(namespaceDeclaration, packDecl)
                 scopeManager.addDeclaration(namespaceDeclaration)
                 scopeManager.enterScope(namespaceDeclaration)
@@ -170,38 +176,31 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         return optional.get()
     }
 
-    override fun <T> getCodeFromRawNode(astNode: T): String {
-        if (astNode is Node) {
-            val node = astNode as Node
-            val optional = node.tokenRange
-            if (optional.isPresent) {
-                return optional.get().toString()
-            }
+    override fun codeOf(astNode: Node): String? {
+        val optional = astNode.tokenRange
+        if (optional?.isPresent == true) {
+            return optional.get().toString()
         }
         return astNode.toString()
     }
 
-    override fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation? {
-        if (astNode is Node) {
-            val node = astNode as Node
+    override fun locationOf(astNode: Node): PhysicalLocation? {
+        // find compilation unit of node
+        val cu = astNode.findCompilationUnit().orElse(null) ?: return null
 
-            // find compilation unit of node
-            val cu = node.findCompilationUnit().orElse(null) ?: return null
-
-            // retrieve storage
-            val storage = cu.storage.orElse(null) ?: return null
-            val optional = node.range
-            if (optional.isPresent) {
-                val r = optional.get()
-                val region =
-                    Region(
-                        r.begin.line,
-                        r.begin.column,
-                        r.end.line,
-                        r.end.column + 1
-                    ) // +1 for SARIF compliance
-                return PhysicalLocation(storage.path.toUri(), region)
-            }
+        // retrieve storage
+        val storage = cu.storage.orElse(null) ?: return null
+        val optional = astNode.range
+        if (optional.isPresent) {
+            val r = optional.get()
+            val region =
+                Region(
+                    r.begin.line,
+                    r.begin.column,
+                    r.end.line,
+                    r.end.column + 1
+                ) // +1 for SARIF compliance
+            return PhysicalLocation(storage.path.toUri(), region)
         }
         return null
     }
@@ -213,8 +212,8 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         return try {
             val type = nodeWithType.typeAsString
             if (type == "var") {
-                newUnknownType()
-            } else parseType(resolved.type.describe())
+                unknownType()
+            } else typeOf(resolved.type)
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
         } catch (ex: NoClassDefFoundError) {
@@ -225,8 +224,8 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     fun getTypeAsGoodAsPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {
         return try {
             if (type.toString() == "var") {
-                newUnknownType()
-            } else parseType(type.resolve().describe())
+                unknownType()
+            } else typeOf(type.resolve())
         } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(type)
         } catch (ex: NoClassDefFoundError) {
@@ -352,7 +351,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     resolved.returnType.describe()
                 )
             if (type == null) {
-                type = parseType(resolved.returnType.describe())
+                type = typeOf(resolved.returnType)
             }
             type
         } catch (ex: RuntimeException) {
@@ -386,7 +385,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         // if this is not a ClassOrInterfaceType, just return
         if (!searchType.isClassOrInterfaceType || context == null) {
             log.warn("Unable to resolve type for {}", type.asString())
-            val returnType = parseType(type.asString())
+            val returnType = this.typeOf(type)
             returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
             return returnType
         }
@@ -396,23 +395,24 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             for (importDeclaration in context?.imports ?: listOf()) {
                 if (importDeclaration.name.identifier.endsWith(clazz.name.identifier)) {
                     // TODO: handle type parameters
-                    return parseType(importDeclaration.nameAsString)
+                    return objectType(importDeclaration.nameAsString)
                 }
             }
-            var name = clazz.asString()
+            val returnType = this.typeOf(clazz)
 
             // no import found, so our last guess is that the type is in the same package
-            // as our current translation unit
+            // as our current translation unit, so we can "adjust" the name to an FQN
             val o = context?.packageDeclaration
             if (o?.isPresent == true) {
-                name = o.get().nameAsString + language.namespaceDelimiter + name
+                returnType.name =
+                    parseName(o.get().nameAsString + language.namespaceDelimiter + returnType.name)
             }
-            val returnType = parseType(name)
+
             returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
             return returnType
         }
         log.warn("Unable to resolve type for {}", type.asString())
-        val returnType = parseType(type.asString())
+        val returnType = this.typeOf(type)
         returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
         return returnType
     }
@@ -424,13 +424,8 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         context = null
     }
 
-    override fun <S, T> setComment(s: S, ctx: T) {
-        if (ctx is Node && s is de.fraunhofer.aisec.cpg.graph.Node) {
-            val node = ctx as Node
-            val cpgNode = s as de.fraunhofer.aisec.cpg.graph.Node
-            node.comment.ifPresent { comment: Comment -> cpgNode.comment = comment.content }
-            // TODO: handle orphanComments?
-        }
+    override fun setComment(node: de.fraunhofer.aisec.cpg.graph.Node, astNode: Node) {
+        astNode.comment.ifPresent { comment: Comment -> node.comment = comment.content }
     }
 
     /**
@@ -451,7 +446,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     private fun handleAnnotations(owner: NodeWithAnnotations<*>): List<Annotation> {
         val list = ArrayList<Annotation>()
         for (expr in owner.annotations) {
-            val annotation = newAnnotation(expr.nameAsString, getCodeFromRawNode(expr))
+            val annotation = newAnnotation(expr.nameAsString, codeOf(expr))
             val members = ArrayList<AnnotationMember>()
 
             // annotations can be specified as member / value pairs
@@ -461,7 +456,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             pair.nameAsString,
                             expressionHandler.handle(pair.value) as Expression,
-                            getCodeFromRawNode(pair)
+                            codeOf(pair)
                         )
                     members.add(member)
                 }
@@ -473,7 +468,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
                             expressionHandler.handle(value.asLiteralExpr()) as Expression,
-                            getCodeFromRawNode(value)
+                            codeOf(value)
                         )
                     members.add(member)
                 }
@@ -482,6 +477,32 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             list.add(annotation)
         }
         return list
+    }
+
+    override fun typeOf(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {
+        return when (type) {
+            is ArrayType -> this.typeOf(type.elementType).array()
+            is VoidType -> incompleteType()
+            is PrimitiveType -> primitiveType(type.asString())
+            is ClassOrInterfaceType ->
+                objectType(
+                    type.nameAsString,
+                    type.typeArguments.getOrNull()?.map { this.typeOf(it) } ?: listOf()
+                )
+            is ReferenceType -> objectType(type.asString())
+            else -> objectType(type.asString())
+        }
+    }
+
+    fun typeOf(type: ResolvedType): de.fraunhofer.aisec.cpg.graph.types.Type {
+        return when (type) {
+            is ResolvedArrayType -> typeOf(type.componentType).array()
+            is ResolvedVoidType -> incompleteType()
+            is ResolvedPrimitiveType -> primitiveType(type.describe())
+            is ResolvedReferenceType ->
+                objectType(type.describe(), type.typeParametersValues().map { typeOf(it) })
+            else -> objectType(type.describe())
+        }
     }
 
     companion object {

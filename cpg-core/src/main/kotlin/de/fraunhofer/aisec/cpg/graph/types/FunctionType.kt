@@ -26,10 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.registerType
+import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
  * A type representing a function. It contains a list of parameters and one or more return types.
@@ -43,7 +42,7 @@ constructor(
     typeName: String = "",
     var parameters: List<Type> = listOf(),
     var returnTypes: List<Type> = listOf(),
-    language: Language<out LanguageFrontend>? = null
+    language: Language<*>? = null
 ) : Type(typeName, language) {
 
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
@@ -52,12 +51,12 @@ constructor(
         return FunctionPointerType(
             parameters.toList(),
             language,
-            returnTypes.firstOrNull() ?: newUnknownType(),
+            returnTypes.firstOrNull() ?: unknownType(),
         )
     }
 
     override fun dereference(): Type {
-        return newUnknownType()
+        return unknownType()
     }
 
     override fun duplicate(): Type {

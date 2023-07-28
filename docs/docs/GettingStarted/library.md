@@ -42,9 +42,9 @@ The following lines give you a small example:
 ```kotlin
 val inferenceConfig = InferenceConfiguration
     .builder()
-    .guessCastExpression(true)
+    .guessCastExpressions(true)
     .inferRecords(true)
-    .inferDfgForUnresolvedSymbols(true)
+    .inferDfgForUnresolvedCalls(true)
     .build()
 
 val translationConfig = TranslationConfiguration

@@ -71,7 +71,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      *   In the other case the parameter type is stored into the map and the parameter type is
      *   returned
      */
-    private fun obtainType(type: Type): Type {
+    protected fun obtainType(type: Type): Type {
         return if (type.root == type && type in typeState) {
             typeState.keys.first { it == type }
         } else {

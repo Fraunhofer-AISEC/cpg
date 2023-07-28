@@ -191,6 +191,7 @@ private fun handleWhileStatement(
     // For all other edges, we simply propagate the reachability property of the edge which
     // made us come here.
     remainingEdges.forEach { state.push(it, state[enteringEdge]) }
+
 }
 
 /**
@@ -208,12 +209,14 @@ class ReachabilityLattice(override val elements: Reachability) :
         this.elements.compareTo(other.elements)
 }
 
-/** The ordering will be as follows: BOTTOM (no information) < UNREACHABLE < REACHABLE < TOP */
+/**
+ * The ordering will be as follows: BOTTOM (no information) < UNREACHABLE < REACHABLE (= Top of the
+ * lattice)
+ */
 enum class Reachability {
     BOTTOM,
     UNREACHABLE,
-    REACHABLE,
-    TOP
+    REACHABLE
 }
 
 /**

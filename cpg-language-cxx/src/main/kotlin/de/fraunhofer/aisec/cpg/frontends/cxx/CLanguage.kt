@@ -32,10 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
-import de.fraunhofer.aisec.cpg.graph.types.IntegerType
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import de.fraunhofer.aisec.cpg.passes.resolveWithImplicitCast
 import java.util.regex.Pattern
@@ -66,50 +63,38 @@ open class CLanguage :
     override val compoundAssignmentOperators =
         setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "|=", "^=")
 
+    /**
+     * The list of built-in types. See https://en.cppreference.com/w/c/language/arithmetic_types for
+     * a reference. We only list equivalent types here and use the canonical form of integer values.
+     */
     @Transient
     @JsonIgnore
     override val builtInTypes: Map<String, Type> =
         mapOf(
-            "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
+            // Integer types
             "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
-            "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
-            "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
-            "short int" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
-            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
-            "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
-            "long int" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
-            "long long" to IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
-            "long long int" to IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
             "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
-            "signed byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
-            "signed short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
-            "signed short int" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
-            "signed" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
-            "signed int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
-            "signed long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
-            "signed long int" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
-            "signed long long" to
-                IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
-            "signed long long int" to
-                IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
+            "unsigned char" to IntegerType("unsigned char", 8, this, NumericType.Modifier.UNSIGNED),
+            "short int" to IntegerType("short int", 16, this, NumericType.Modifier.SIGNED),
+            "unsigned short int" to
+                IntegerType("unsigned short int", 16, this, NumericType.Modifier.UNSIGNED),
+            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
+            "unsigned int" to IntegerType("unsigned int", 32, this, NumericType.Modifier.UNSIGNED),
+            "long int" to IntegerType("long int", 64, this, NumericType.Modifier.SIGNED),
+            "unsigned long int" to
+                IntegerType("unsigned long int", 64, this, NumericType.Modifier.UNSIGNED),
+            "long long int" to IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
+            "unsigned long long int" to
+                IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
+
+            // Floating-point types
             "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
             "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
-            "unsigned char" to IntegerType("unsigned char", 8, this, NumericType.Modifier.UNSIGNED),
-            "unsigned byte" to IntegerType("unsigned byte", 8, this, NumericType.Modifier.UNSIGNED),
-            "unsigned short" to
-                IntegerType("unsigned short", 16, this, NumericType.Modifier.UNSIGNED),
-            "unsigned short int" to
-                IntegerType("unsigned short", 16, this, NumericType.Modifier.UNSIGNED),
-            "unsigned" to IntegerType("unsigned int", 32, this, NumericType.Modifier.UNSIGNED),
-            "unsigned int" to IntegerType("unsigned int", 32, this, NumericType.Modifier.UNSIGNED),
-            "unsigned long" to
-                IntegerType("unsigned long", 64, this, NumericType.Modifier.UNSIGNED),
-            "unsigned long int" to
-                IntegerType("unsigned long", 64, this, NumericType.Modifier.UNSIGNED),
-            "unsigned long long" to
-                IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
-            "unsigned long long int" to
-                IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED)
+            "long double" to
+                FloatingPointType("long double", 128, this, NumericType.Modifier.SIGNED),
+
+            // Convenience types, defined in <stddef.h>
+            "bool" to IntegerType("bool", 1, this, NumericType.Modifier.SIGNED),
         )
 
     override fun refineNormalCallResolution(

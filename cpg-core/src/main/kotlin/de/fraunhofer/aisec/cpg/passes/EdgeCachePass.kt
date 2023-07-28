@@ -102,14 +102,14 @@ class EdgeCachePass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun visitAST(n: Node) {
+    protected fun visitAST(n: Node) {
         for (node in SubgraphWalker.getAstChildren(n)) {
             val edge = Edge(n, node, EdgeType.AST)
             Edges.add(edge)
         }
     }
 
-    private fun visitDFG(n: Node) {
+    protected fun visitDFG(n: Node) {
         for (dfg in n.prevDFG) {
             val edge = Edge(dfg, n, EdgeType.DFG)
             Edges.add(edge)
@@ -121,7 +121,7 @@ class EdgeCachePass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun visitEOG(n: Node) {
+    protected fun visitEOG(n: Node) {
         for (eog in n.prevEOG) {
             val edge = Edge(eog, n, EdgeType.EOG)
             Edges.add(edge)

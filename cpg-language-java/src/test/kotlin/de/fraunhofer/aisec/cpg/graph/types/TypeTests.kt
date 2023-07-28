@@ -38,96 +38,6 @@ import kotlin.test.*
 
 internal class TypeTests : BaseTest() {
 
-    @Test
-    fun createFromJava() {
-        var result: Type
-        var expected: Type
-
-        with(
-            JavaLanguageFrontend(
-                JavaLanguage(),
-                TranslationContext(
-                    TranslationConfiguration.builder().build(),
-                    ScopeManager(),
-                    TypeManager()
-                )
-            )
-        ) {
-            // Test 1: Ignore Access Modifier Keyword (public, private, protected)
-            var typeString = "private int a"
-            result = parseType(typeString)
-            expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
-            assertEquals(expected, result)
-
-            // Test 2: constant type using final
-            typeString = "final int a"
-            result = parseType(typeString)
-            expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
-            assertEquals(expected, result)
-
-            // Test 3: static type
-            typeString = "static int a"
-            result = parseType(typeString)
-            expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
-            assertEquals(expected, result)
-
-            // Test 4: volatile type
-            typeString = "public volatile int a"
-            result = parseType(typeString)
-            expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
-            assertEquals(expected, result)
-
-            // Test 5: combining a storage type and a qualifier
-            typeString = "private static final String a"
-            result = parseType(typeString)
-            expected = StringType("java.lang.String", JavaLanguage())
-            assertEquals(expected, result)
-
-            // Test 6: using two different qualifiers
-            typeString = "public final volatile int a"
-            result = parseType(typeString)
-            expected = IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED)
-            assertEquals(expected, result)
-
-            // Test 7: Reference level using arrays
-            typeString = "int[] a"
-            result = parseType(typeString)
-            expected =
-                PointerType(
-                    IntegerType("int", 32, JavaLanguage(), NumericType.Modifier.SIGNED),
-                    PointerType.PointerOrigin.ARRAY
-                )
-            assertEquals(expected, result)
-
-            // Test 8: generics
-            typeString = "List<String> list"
-            result = parseType(typeString)
-            var generics = mutableListOf<Type>()
-            generics.add(StringType("java.lang.String", JavaLanguage()))
-            expected = ObjectType("List", generics, false, JavaLanguage())
-            assertEquals(expected, result)
-
-            // Test 9: more generics
-            typeString = "List<List<List<String>>, List<String>> data"
-            result = parseType(typeString)
-            val genericStringType = StringType("java.lang.String", JavaLanguage())
-            val generics3: MutableList<Type> = ArrayList()
-            generics3.add(genericStringType)
-            val genericElement3 = ObjectType("List", generics3, false, JavaLanguage())
-            val generics2a: MutableList<Type> = ArrayList()
-            generics2a.add(genericElement3)
-            val generics2b: MutableList<Type> = ArrayList()
-            generics2b.add(genericStringType)
-            val genericElement1 = ObjectType("List", generics2a, false, JavaLanguage())
-            val genericElement2 = ObjectType("List", generics2b, false, JavaLanguage())
-            generics = ArrayList()
-            generics.add(genericElement1)
-            generics.add(genericElement2)
-            expected = ObjectType("List", generics, false, JavaLanguage())
-            assertEquals(expected, result)
-        }
-    }
-
     // Tests on the resulting graph
     @Test
     @Throws(Exception::class)
@@ -224,12 +134,12 @@ internal class TypeTests : BaseTest() {
         ) {
             val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy")
             val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
-            val root = parseType("multistep.Root")
-            val level0 = parseType("multistep.Level0")
-            val level1 = parseType("multistep.Level1")
-            val level1b = parseType("multistep.Level1B")
-            val level2 = parseType("multistep.Level2")
-            val unrelated = parseType("multistep.Unrelated")
+            val root = objectType("multistep.Root")
+            val level0 = objectType("multistep.Level0")
+            val level1 = objectType("multistep.Level1")
+            val level1b = objectType("multistep.Level1B")
+            val level2 = objectType("multistep.Level2")
+            val unrelated = objectType("multistep.Unrelated")
             getCommonTypeTestGeneral(
                 root,
                 level0,

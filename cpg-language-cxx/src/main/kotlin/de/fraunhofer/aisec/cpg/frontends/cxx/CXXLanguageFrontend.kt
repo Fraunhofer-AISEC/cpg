@@ -38,8 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.FunctionPointerCallResolver
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -61,7 +61,10 @@ import org.eclipse.cdt.core.parser.IncludeFileContentProvider
 import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.ASTTranslationUnit
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLiteralExpression
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTemplateId
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTypeId
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
@@ -79,7 +82,7 @@ import org.slf4j.LoggerFactory
  */
 @RegisterExtraPass(FunctionPointerCallResolver::class)
 class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend(language, ctx) {
+    LanguageFrontend<IASTNode, IASTTypeId>(language, ctx) {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
@@ -266,21 +269,13 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         }
     }
 
-    override fun <T> getCodeFromRawNode(astNode: T): String? {
-        if (astNode is ASTNode) {
-            val node = astNode as ASTNode
-            return node.rawSignature
-        }
-
-        return null
+    override fun codeOf(astNode: IASTNode): String? {
+        val node = astNode as ASTNode
+        return node.rawSignature
     }
 
-    override fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation? {
-        if (astNode !is ASTNode) {
-            return null
-        }
-        val node = astNode as ASTNode
-        val fLocation = node.fileLocation ?: return null
+    override fun locationOf(astNode: IASTNode): PhysicalLocation? {
+        val fLocation = astNode.fileLocation ?: return null
         val lineBreaks: IntArray =
             try {
                 val fLoc = getField(fLocation.javaClass, "fLocationCtx")
@@ -313,19 +308,19 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
             }
 
         // our start line, indexed by 0
-        val startLine = node.fileLocation.startingLineNumber - 1
+        val startLine = astNode.fileLocation.startingLineNumber - 1
 
         // our end line, indexed by 0
-        val endLine = node.fileLocation.endingLineNumber - 1
+        val endLine = astNode.fileLocation.endingLineNumber - 1
 
         // our start column, index by 0
         val startColumn =
             if (startLine == 0) {
                 // if we are in the first line, the start column is just the node offset
-                node.fileLocation.nodeOffset
+                astNode.fileLocation.nodeOffset
             } else {
                 // otherwise, we need to calculate the difference to the previous line break
-                node.fileLocation.nodeOffset -
+                astNode.fileLocation.nodeOffset -
                     lineBreaks[startLine - 1] -
                     1 // additional -1 because of the '\n' itself
             }
@@ -334,10 +329,10 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         val endColumn =
             if (endLine == 0) {
                 // if we are in the first line, the end column is just the node offset
-                node.fileLocation.nodeOffset + node.fileLocation.nodeLength
+                astNode.fileLocation.nodeOffset + astNode.fileLocation.nodeLength
             } else {
                 // otherwise, we need to calculate the difference to the previous line break
-                (node.fileLocation.nodeOffset + node.fileLocation.nodeLength) -
+                (astNode.fileLocation.nodeOffset + astNode.fileLocation.nodeLength) -
                     lineBreaks[endLine - 1] -
                     1 // additional -1 because of the '\n' itself
             }
@@ -345,7 +340,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         // for a SARIF compliant format, we need to add +1, since its index begins at 1 and
         // not 0
         val region = Region(startLine + 1, startColumn + 1, endLine + 1, endColumn + 1)
-        return PhysicalLocation(Path.of(node.containingFilename).toUri(), region)
+        return PhysicalLocation(Path.of(astNode.containingFilename).toUri(), region)
     }
 
     /**
@@ -393,27 +388,16 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                newDeclaredReferenceExpression(code, newUnknownType(), code)
+                newDeclaredReferenceExpression(code, unknownType(), code)
                 2 -> // an integer
-                newLiteral(
-                        code.toInt(),
-                        (language.getSimpleTypeOf("int") as? ObjectType) ?: parseType("int"),
-                        code
-                    )
+                newLiteral(code.toInt(), primitiveType("int"), code)
                 130 -> // a string
                 newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
-                        (language.getSimpleTypeOf("char") as? ObjectType)?.reference()
-                            ?: parseType("char"),
+                        primitiveType("char").pointer(),
                         code
                     )
-                else ->
-                    newLiteral(
-                        code,
-                        (language.getSimpleTypeOf("char") as? ObjectType)?.reference()
-                            ?: parseType("char"),
-                        code
-                    )
+                else -> newLiteral(code, primitiveType("char").pointer(), code)
             }
         return newAnnotationMember("", expression, code)
     }
@@ -446,28 +430,25 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         }
     }
 
-    override fun <S, T> setComment(s: S, ctx: T) {
-        if (ctx is ASTNode && s is Node) {
-            val cpgNode = s as Node
-            val location = cpgNode.location ?: return
+    override fun setComment(node: Node, astNode: IASTNode) {
+        val location = node.location ?: return
 
-            // No location, no comment
+        // No location, no comment
 
-            val loc: Pair<String, Int> =
-                Pair(location.artifactLocation.uri.path, location.region.endLine)
-            comments[loc]?.let {
-                // only exact match for now}
-                cpgNode.comment = it
-            }
-            // TODO: handle orphanComments? i.e. comments which do not correspond to one line
-            // todo: what to do with comments which are in a line which contains multiple
-            // statements?
+        val loc: Pair<String, Int> =
+            Pair(location.artifactLocation.uri.path, location.region.endLine)
+        comments[loc]?.let {
+            // only exact match for now
+            node.comment = it
         }
+        // TODO: handle orphanComments? i.e. comments which do not correspond to one line
+        // TODO: what to do with comments which are in a line which contains multiple
+        //  statements?
     }
 
     /** Returns the [Type] that is represented by an [IASTTypeId]. */
-    fun typeOf(id: IASTTypeId): Type {
-        return typeOf(id.abstractDeclarator, id.declSpecifier)
+    override fun typeOf(type: IASTTypeId): Type {
+        return typeOf(type.abstractDeclarator, type.declSpecifier)
     }
 
     /**
@@ -493,20 +474,13 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         hint: Declaration? = null
     ): Type {
         // Retrieve the "name" of this type, including qualifiers.
-        // TODO: In the future, we should parse the qualifiers, such as const here, instead of in
-        //  the TypeParser
         val name = ASTStringUtil.getSignatureString(specifier, null)
+
+        var resolveAlias = false
 
         var type =
             when (specifier) {
-                is IASTSimpleDeclSpecifier -> {
-                    if (hint is ConstructorDeclaration && hint.name.parent != null) {
-                        parseType(hint.name.parent!!)
-                    } else {
-                        // A primitive type
-                        parseType(name)
-                    }
-                }
+                is IASTSimpleDeclSpecifier -> typeOf(specifier, hint)
                 is IASTNamedTypeSpecifier -> {
                     // A reference to an object type. We need to differentiate between two cases:
                     // a) the type name is already an FQN. In this case, we can just parse it as
@@ -515,16 +489,17 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
                     //    refers to a symbol in our current namespace. This means that we are doing
                     //    some resolving in the frontend, which we actually want to avoid since it
                     //    has limited view.
-                    //
-                    // Note: we cannot use parseType here, because of typedefs (and templates?) the
-                    // TypeParser still needs to have access directly to the language frontend
-                    // (meh!)
-                    if (specifier.name is CPPASTQualifiedName) {
-                        // Case a: FQN
-                        TypeParser.createFrom(name, true, this)
+                    if (
+                        specifier.name is CPPASTQualifiedName || specifier.name is CPPASTTemplateId
+                    ) {
+                        // Case a: FQN or template
+                        resolveAlias = true
+                        typeOf(specifier.name)
                     } else {
                         // Case b: Peek into our symbols. This is most likely limited to our current
                         // translation unit
+                        resolveAlias = true
+
                         val decl =
                             scopeManager.currentScope?.let {
                                 scopeManager.getRecordForName(it, Name(name))
@@ -532,31 +507,129 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
 
                         // We found a symbol, so we can use its name
                         if (decl != null) {
-                            TypeParser.createFrom(decl.name.toString(), true, this)
+                            objectType(decl.name)
                         } else {
+                            // It could be, that this is a parameterized type
+                            val paramType =
+                                typeManager.searchTemplateScopeForDefinedParameterizedTypes(
+                                    scopeManager.currentScope,
+                                    specifier.name.toString()
+                                )
                             // Otherwise, we keep it as a local name and hope for the best
-                            TypeParser.createFrom(name, true, this)
+                            paramType ?: typeOf(specifier.name)
                         }
                     }
                 }
                 is IASTCompositeTypeSpecifier -> {
                     // A class. This actually also declares the class. At the moment, we handle this
                     // in handleSimpleDeclaration, but we might want to move it here
-                    TypeParser.createFrom(name, true, this)
+                    resolveAlias = true
+
+                    objectType(specifier.name.toString())
                 }
                 is IASTElaboratedTypeSpecifier -> {
+                    resolveAlias = true
+
                     // A class or struct
-                    TypeParser.createFrom(name, true, this)
+                    objectType(specifier.name.toString())
                 }
                 else -> {
-                    newUnknownType()
+                    unknownType()
                 }
             }
 
-        type = typeManager.registerType(type)
+        type =
+            if (resolveAlias) {
+                typeManager.registerType(typeManager.resolvePossibleTypedef(type, scopeManager))
+            } else {
+                typeManager.registerType(type)
+            }
         type = this.adjustType(declarator, type)
 
         return type
+    }
+
+    private fun typeOf(
+        specifier: IASTSimpleDeclSpecifier,
+        hint: Declaration? = null,
+    ): Type {
+        val name = specifier.rawSignature
+
+        return when {
+            // auto type; we model this as an unknown type. Maybe in the future, we will
+            // differentiate between unknown types and "auto-deduced" types
+            specifier.type == IASTSimpleDeclSpecifier.t_auto -> {
+                unknownType()
+            }
+            // void type
+            specifier.type == IASTSimpleDeclSpecifier.t_void -> {
+                IncompleteType()
+            }
+            // The type of constructor declaration is always the declaration itself
+            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
+                hint is ConstructorDeclaration -> {
+                hint.name.parent?.let { objectType(it) } ?: unknownType()
+            }
+            // C (not C++) allows unspecified types in function declarations, they
+            // default to int and usually produce a warning
+            name == "" && language !is CPPLanguage -> {
+                Util.warnWithFileLocation(
+                    this,
+                    specifier,
+                    log,
+                    "Type specifier missing, defaulting to 'int'"
+                )
+                primitiveType("int")
+            }
+            name == "" && language is CPPLanguage -> {
+                Util.errorWithFileLocation(
+                    this,
+                    specifier,
+                    log,
+                    "C++ does not allow unspecified type specifiers"
+                )
+                newProblemType()
+            }
+            // In all other cases, this must be a primitive type, otherwise it's an error
+            else -> {
+                // We need to remove qualifiers such as "const" from the name here, because
+                // we model them as part of the variable declaration and not the type, so use
+                // the "canonical" name
+                primitiveType(specifier.canonicalName)
+            }
+        }
+    }
+
+    fun typeOf(name: IASTName, prefix: String? = null): Type {
+        if (name is CPPASTQualifiedName) {
+            val last = name.lastName
+            if (last is CPPASTTemplateId) {
+                return typeOf(last, name.qualifier.joinToString("::", postfix = "::"))
+            }
+        } else if (name is CPPASTTemplateId) {
+            // Build fqn
+            val fqn =
+                if (prefix != null) {
+                    prefix + name.templateName.toString()
+                } else {
+                    name.templateName.toString()
+                }
+            val generics = mutableListOf<Type>()
+
+            // Loop through template arguments
+            for (arg in name.templateArguments) {
+                if (arg is CPPASTTypeId) {
+                    generics += typeOf(arg)
+                } else if (arg is CPPASTLiteralExpression) {
+                    // This is most likely a constant in a template class definition, but we need to
+                    // model this somehow, but it seems the old code just ignored this, so we do as
+                    // well!
+                }
+            }
+
+            return objectType(fqn, generics)
+        }
+        return objectType(name.toString())
     }
 
     /**
@@ -567,27 +640,21 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
     private fun adjustType(declarator: IASTDeclarator, incoming: Type): Type {
         var type = incoming
 
-        // First, look at the declarator's pointer operator, to see whether, we need to wrap the
+        // First, look at the declarator's pointer operator, to see whether we need to wrap the
         // type into a pointer or similar
         for (op in declarator.pointerOperators) {
             type =
                 when (op) {
-                    is IASTPointer -> {
-                        type.reference(PointerType.PointerOrigin.POINTER)
-                    }
-                    is ICPPASTReferenceOperator -> {
-                        ReferenceType(type)
-                    }
-                    else -> {
-                        type
-                    }
+                    is IASTPointer -> type.pointer()
+                    is ICPPASTReferenceOperator -> ReferenceType(type)
+                    else -> type
                 }
         }
 
         // Check, if we are an array type
         if (declarator is IASTArrayDeclarator) {
             for (mod in declarator.arrayModifiers) {
-                type = type.reference(PointerType.PointerOrigin.ARRAY)
+                type = type.array()
             }
         } else if (declarator is IASTStandardFunctionDeclarator) {
             // Loop through the parameters
@@ -633,8 +700,22 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
             type = adjustType(declarator.nestedDeclarator, type)
         }
 
+        type = typeManager.registerType(type)
+
+        // Check for parameterized types
+        if (type is SecondOrderType) {
+            val templateType =
+                typeManager.searchTemplateScopeForDefinedParameterizedTypes(
+                    scopeManager.currentScope,
+                    type.root.name.toString()
+                )
+            if (templateType != null) {
+                type.root = templateType
+            }
+        }
+
         // Make sure, the type manager knows about this type
-        return typeManager.registerType(type)
+        return type
     }
 
     companion object {
@@ -660,3 +741,56 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         }
     }
 }
+
+/**
+ * Returns the type specified in the [IASTSimpleDeclSpecifier] in a "canonical" form and without any
+ * other specifiers or keywords such as "typedef" or "const".
+ */
+private val IASTSimpleDeclSpecifier.canonicalName: CharSequence
+    get() {
+        var type = this.type
+        var parts = mutableListOf<String>()
+        // First, we specify whether it is signed or unsigned. We only need "signed" for chars
+        if (this.isUnsigned) {
+            parts += "unsigned"
+        } else if (this.isSigned && this.type == IASTSimpleDeclSpecifier.t_char) {
+            parts += "signed"
+        }
+
+        // Next, we analyze the size (long, long long, ...)
+        if (this.isShort || this.isLong || this.isLongLong) {
+            parts +=
+                if (this.isShort) {
+                    "short"
+                } else if (this.isLong) {
+                    "long"
+                } else {
+                    "long long"
+                }
+
+            // Also make this an int, if it is omitted
+            if (type == IASTSimpleDeclSpecifier.t_unspecified) {
+                type = IASTSimpleDeclSpecifier.t_int
+            }
+        }
+
+        // Last part is the actual type (int, float, ...)
+        when (type) {
+            IASTSimpleDeclSpecifier.t_char -> parts += "char"
+            IASTSimpleDeclSpecifier.t_char16_t -> parts += "char16_t"
+            IASTSimpleDeclSpecifier.t_char32_t -> parts += "chat32_t"
+            IASTSimpleDeclSpecifier.t_int -> parts += "int"
+            IASTSimpleDeclSpecifier.t_float -> parts += "float"
+            IASTSimpleDeclSpecifier.t_double -> parts += "double"
+            IASTSimpleDeclSpecifier.t_bool -> parts += "bool"
+            IASTSimpleDeclSpecifier.t_unspecified -> {
+                // nothing to do
+            }
+            IASTSimpleDeclSpecifier.t_auto -> parts = mutableListOf("auto")
+            else -> {
+                LanguageFrontend.Companion.log.error("Unknown C/C++ simple type: {}", type)
+            }
+        }
+
+        return parts.joinToString(" ")
+    }

@@ -99,7 +99,7 @@ private constructor(
      */
     val replacedPasses:
         Map<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>,
-    languages: List<Language<out LanguageFrontend>>,
+    languages: List<Language<*>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
     disableCleanup: Boolean,
@@ -112,7 +112,7 @@ private constructor(
     addIncludesToGraph: Boolean
 ) {
     /** This list contains all languages which we want to translate. */
-    val languages: List<Language<out LanguageFrontend>>
+    val languages: List<Language<*>>
 
     /**
      * Switch off cleaning up TypeManager memory after analysis.
@@ -215,7 +215,7 @@ private constructor(
      */
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
-        private val languages = mutableListOf<Language<out LanguageFrontend>>()
+        private val languages = mutableListOf<Language<*>>()
         private var topLevel: File? = null
         private var debugParser = false
         private var failOnError = false
@@ -405,7 +405,7 @@ private constructor(
         }
 
         /** Registers an additional [Language]. */
-        fun registerLanguage(language: Language<out LanguageFrontend>): Builder {
+        fun registerLanguage(language: Language<*>): Builder {
             languages.add(language)
             log.info(
                 "Registered language frontend '${language::class.simpleName}' for following file types: ${language.fileExtensions}"
@@ -414,7 +414,7 @@ private constructor(
         }
 
         /** Registers an additional [Language]. */
-        inline fun <reified T : Language<out LanguageFrontend>> registerLanguage(): Builder {
+        inline fun <reified T : Language<*>> registerLanguage(): Builder {
             T::class.primaryConstructor?.call()?.let { registerLanguage(it) }
             return this
         }
@@ -443,8 +443,8 @@ private constructor(
         }
 
         /** Unregisters a registered [de.fraunhofer.aisec.cpg.frontends.Language]. */
-        fun unregisterLanguage(language: Class<out Language<out LanguageFrontend>?>): Builder {
-            languages.removeIf { obj: Language<out LanguageFrontend>? -> language.isInstance(obj) }
+        fun unregisterLanguage(language: Class<out Language<*>?>): Builder {
+            languages.removeIf { obj: Language<*>? -> language.isInstance(obj) }
             return this
         }
 
@@ -490,7 +490,7 @@ private constructor(
                 return
             }
 
-            for (frontend in languages.map(Language<out LanguageFrontend>::frontend)) {
+            for (frontend in languages.map(Language<*>::frontend)) {
                 val extraPasses = frontend.findAnnotations<RegisterExtraPass>()
                 if (extraPasses.isNotEmpty()) {
                     for (p in extraPasses) {
@@ -505,7 +505,7 @@ private constructor(
         }
 
         private fun registerReplacedPasses() {
-            for (frontend in languages.map(Language<out LanguageFrontend>::frontend)) {
+            for (frontend in languages.map(Language<*>::frontend)) {
                 val replacedPasses = frontend.findAnnotations<ReplacePass>()
                 if (replacedPasses.isNotEmpty()) {
                     for (p in replacedPasses) {
@@ -701,8 +701,8 @@ private constructor(
                     workingList.addToWorkingList(
                         PassWithDependencies(
                             p,
-                            hardDependencies[p] ?: mutableSetOf(),
-                            softDependencies[p] ?: mutableSetOf()
+                            softDependencies[p] ?: mutableSetOf(),
+                            hardDependencies[p] ?: mutableSetOf()
                         )
                     )
                 }

@@ -106,214 +106,6 @@ internal class TypeTests : BaseTest() {
         assertEquals(functionPointerType, functionPointerType.dereference())
     }
 
-    @Test
-    fun createFromCPP() {
-        var result: Type
-
-        with(
-            CXXLanguageFrontend(
-                CPPLanguage(),
-                TranslationContext(
-                    TranslationConfiguration.builder().build(),
-                    ScopeManager(),
-                    TypeManager()
-                )
-            )
-        ) {
-            // Test 1: Function pointer
-            var typeString = "void (*single_param)(int)"
-            result = parseType(typeString)
-            val parameterList =
-                listOf<Type>(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
-            var expected: Type = FunctionPointerType(parameterList, CPPLanguage(), IncompleteType())
-            assertEquals(expected, result)
-
-            // Test 1.1: interleaved brackets in function pointer
-            typeString = "void ((*single_param)(int))"
-            result = parseType(typeString)
-            assertEquals(result, expected)
-
-            // Test 2: Stronger binding of brackets and pointer
-            typeString = "char (* const a)[]"
-            result = parseType(typeString)
-            expected =
-                PointerType(
-                    PointerType(
-                        IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                        PointerType.PointerOrigin.ARRAY
-                    ),
-                    PointerType.PointerOrigin.POINTER
-                )
-            assertEquals(expected, result)
-
-            // Test 3: Mutable pointer to a mutable char
-            typeString = "char *p"
-            result = parseType(typeString)
-            expected =
-                PointerType(
-                    IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                    PointerType.PointerOrigin.POINTER
-                )
-            assertEquals(expected, result)
-
-            // Test 3.1: Different Whitespaces
-            typeString = "char* p"
-            result = parseType(typeString)
-            assertEquals(expected, result)
-
-            // Test 3.2: Different Whitespaces
-            typeString = "char * p"
-            result = parseType(typeString)
-            assertEquals(expected, result)
-
-            // Test 4: Mutable pointer to a constant char
-            typeString = "const char *p;"
-            result = parseType(typeString)
-            expected =
-                PointerType(
-                    IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                    PointerType.PointerOrigin.POINTER
-                )
-            assertEquals(expected, result)
-
-            // Test 5: Constant pointer to a mutable char
-            typeString = "char * const p;"
-            result = parseType(typeString)
-            expected =
-                PointerType(
-                    IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                    PointerType.PointerOrigin.POINTER
-                )
-            assertEquals(expected, result)
-
-            // Test 6: Constant pointer to a constant char
-            typeString = "const char * const p;"
-            result = parseType(typeString)
-            expected =
-                PointerType(
-                    IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                    PointerType.PointerOrigin.POINTER
-                )
-            assertEquals(expected, result)
-
-            // Test 7: Array of const pointer to static const char
-            typeString = "static const char * const somearray []"
-            result = parseType(typeString)
-            expected =
-                PointerType(
-                    PointerType(
-                        IntegerType("char", 8, CPPLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-                        PointerType.PointerOrigin.POINTER
-                    ),
-                    PointerType.PointerOrigin.ARRAY
-                )
-            assertEquals(expected, result)
-
-            // Test 7.1: Array of array of pointer to static const char
-            typeString = "static const char * somearray[][]"
-            result = parseType(typeString)
-            expected =
-                PointerType(
-                    PointerType(
-                        PointerType(
-                            IntegerType(
-                                "char",
-                                8,
-                                CPPLanguage(),
-                                NumericType.Modifier.NOT_APPLICABLE
-                            ),
-                            PointerType.PointerOrigin.POINTER
-                        ),
-                        PointerType.PointerOrigin.ARRAY
-                    ),
-                    PointerType.PointerOrigin.ARRAY
-                )
-            assertEquals(expected, result)
-
-            // Test 8: Generics
-            typeString = "Array<int> array"
-            result = parseType(typeString)
-            var generics = mutableListOf<Type>()
-            generics.add(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
-            expected = ObjectType("Array", generics, false, CPPLanguage())
-            assertEquals(expected, result)
-
-            // Test 9: Compound Primitive Types
-            typeString = "long long int"
-            result = parseType(typeString)
-            expected = IntegerType("long long int", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
-            assertEquals(expected, result)
-
-            // Test 10: Unsigned/Signed Types
-            typeString = "unsigned int"
-            result = parseType(typeString)
-            expected = IntegerType("unsigned int", 32, CPPLanguage(), NumericType.Modifier.UNSIGNED)
-            assertEquals(expected, result)
-            typeString = "signed int"
-            result = parseType(typeString)
-            expected = IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
-            assertEquals(expected, result)
-            typeString = "A a"
-            result = parseType(typeString)
-            expected = ObjectType("A", ArrayList(), false, CPPLanguage())
-            assertEquals(expected, result)
-
-            // Test 11: Unsigned + const + compound primitive Types
-            expected =
-                IntegerType(
-                    "unsigned long long int",
-                    64,
-                    CPPLanguage(),
-                    NumericType.Modifier.UNSIGNED
-                )
-            typeString = "const unsigned long long int a = 1"
-            result = parseType(typeString)
-            assertEquals(expected, result)
-
-            typeString = "unsigned const long long int b = 1"
-            result = parseType(typeString)
-            assertEquals(expected, result)
-
-            typeString = "unsigned long const long int c = 1"
-            result = parseType(typeString)
-            assertEquals(expected, result)
-
-            typeString = "unsigned long long const int d = 1"
-            result = parseType(typeString)
-            assertEquals(expected, result)
-
-            typeString = "unsigned long long int const e = 1"
-            result = parseType(typeString)
-            assertEquals(expected, result)
-
-            // Test 12: C++ Reference Types
-            typeString = "const int& ref = a"
-            result = parseType(typeString)
-            expected =
-                ReferenceType(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
-            assertEquals(expected, result)
-
-            typeString = "int const &ref2 = a"
-            result = parseType(typeString)
-            assertEquals(expected, result)
-
-            // Test 13: Elaborated Type in Generics
-            result = parseType("Array<struct Node>")
-            generics = ArrayList()
-            var generic = ObjectType("Node", ArrayList(), false, CPPLanguage())
-            generics.add(generic)
-            expected = ObjectType("Array", generics, false, CPPLanguage())
-            assertEquals(expected, result)
-
-            result = parseType("Array<myclass >")
-            generics = ArrayList()
-            generic = ObjectType("myclass", ArrayList(), false, CPPLanguage())
-            generics.add(generic)
-            expected = ObjectType("Array", generics, false, CPPLanguage())
-            assertEquals(expected, result)
-        }
-    }
-
     /**
      * Test for usage of getTypeStringFromDeclarator to determine function pointer raw type string
      *
@@ -328,16 +120,13 @@ internal class TypeTests : BaseTest() {
         val noParamType = FunctionPointerType(emptyList(), CPPLanguage(), IncompleteType())
         val oneParamType =
             FunctionPointerType(
-                listOf<Type>(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)),
+                listOf<Type>(tu.primitiveType("int")),
                 CPPLanguage(),
                 IncompleteType()
             )
         val twoParamType =
             FunctionPointerType(
-                listOf<Type>(
-                    IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED),
-                    IntegerType("unsigned long", 64, CPPLanguage(), NumericType.Modifier.UNSIGNED)
-                ),
+                listOf(tu.primitiveType("int"), tu.primitiveType("unsigned long int")),
                 CPPLanguage(),
                 IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
             )
@@ -383,12 +172,12 @@ internal class TypeTests : BaseTest() {
             val topLevel =
                 Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
             val result = analyze("simple_inheritance.cpp", topLevel, true)
-            val root = parseType("Root")
-            val level0 = parseType("Level0")
-            val level1 = parseType("Level1")
-            val level1b = parseType("Level1B")
-            val level2 = parseType("Level2")
-            val unrelated = parseType("Unrelated")
+            val root = objectType("Root")
+            val level0 = objectType("Level0")
+            val level1 = objectType("Level1")
+            val level1b = objectType("Level1B")
+            val level2 = objectType("Level2")
+            val unrelated = objectType("Unrelated")
             getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated, result)
         }
     }
@@ -411,14 +200,14 @@ internal class TypeTests : BaseTest() {
                 Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
             val result = analyze("multi_inheritance.cpp", topLevel, true)
 
-            val root = parseType("Root")
-            val level0 = parseType("Level0")
-            val level0b = parseType("Level0B")
-            val level1 = parseType("Level1")
-            val level1b = parseType("Level1B")
-            val level1c = parseType("Level1C")
-            val level2 = parseType("Level2")
-            val level2b = parseType("Level2B")
+            val root = objectType("Root")
+            val level0 = objectType("Level0")
+            val level0b = objectType("Level0B")
+            val level1 = objectType("Level1")
+            val level1b = objectType("Level1B")
+            val level1c = objectType("Level1C")
+            val level2 = objectType("Level2")
+            val level2b = objectType("Level2B")
 
             val typeManager = result.finalCtx.typeManager
             /*

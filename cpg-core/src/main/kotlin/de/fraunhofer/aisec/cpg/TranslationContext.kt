@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.graph.TypeManager
-
 /**
  * The translation context holds all necessary managers and configurations needed during the
  * translation process.

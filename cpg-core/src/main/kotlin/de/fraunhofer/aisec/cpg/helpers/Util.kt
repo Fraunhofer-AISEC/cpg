@@ -177,9 +177,9 @@ object Util {
     }
 
     @JvmStatic
-    fun <S> warnWithFileLocation(
-        lang: LanguageFrontend,
-        astNode: S,
+    fun <AstNode> warnWithFileLocation(
+        lang: LanguageFrontend<AstNode, *>,
+        astNode: AstNode,
         log: Logger,
         format: String?,
         vararg arguments: Any?
@@ -187,7 +187,7 @@ object Util {
         log.warn(
             String.format(
                 "%s: %s",
-                PhysicalLocation.locationLink(lang.getLocationFromRawNode(astNode)),
+                PhysicalLocation.locationLink(lang.locationOf(astNode)),
                 format
             ),
             *arguments
@@ -195,9 +195,9 @@ object Util {
     }
 
     @JvmStatic
-    fun <S> errorWithFileLocation(
-        lang: LanguageFrontend,
-        astNode: S,
+    fun <AstNode> errorWithFileLocation(
+        lang: LanguageFrontend<AstNode, *>,
+        astNode: AstNode,
         log: Logger,
         format: String?,
         vararg arguments: Any?
@@ -205,7 +205,7 @@ object Util {
         log.error(
             String.format(
                 "%s: %s",
-                PhysicalLocation.locationLink(lang.getLocationFromRawNode(astNode)),
+                PhysicalLocation.locationLink(lang.locationOf(astNode)),
                 format
             ),
             *arguments

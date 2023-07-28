@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
@@ -37,19 +36,10 @@ import java.util.concurrent.ConcurrentHashMap
  * used. E.g.: This occurs when the type is inferred by the compiler automatically when using
  * keywords such as auto in cpp
  */
-class UnknownType : Type {
-    private constructor() : super() {
+class UnknownType private constructor() : Type() {
+    init {
         name = Name(UNKNOWN_TYPE_STRING, null, language)
     }
-
-    /**
-     * This is only intended to be used by [TypeParser] for edge cases like distinct unknown types,
-     * such as "UNKNOWN1", thus the package-private visibility. Other users should see
-     * [getUnknownType] instead
-     *
-     * @param typeName The name of this unknown type, usually a variation of UNKNOWN
-     */
-    internal constructor(typeName: String?) : super(typeName)
 
     /**
      * @return Same UnknownType, as it is makes no sense to obtain a pointer/reference to an
@@ -88,7 +78,7 @@ class UnknownType : Type {
 
         /** Use this function to obtain an [UnknownType] for the particular [language]. */
         @JvmStatic
-        fun getUnknownType(language: Language<out LanguageFrontend>?): UnknownType {
+        fun getUnknownType(language: Language<*>?): UnknownType {
             if (language == null) return unknownTypeNull
 
             return unknownTypes.computeIfAbsent(language) {

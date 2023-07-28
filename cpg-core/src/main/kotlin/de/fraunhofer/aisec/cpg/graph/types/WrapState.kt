@@ -31,14 +31,14 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 class WrapState {
     @JvmField var depth = 0
     var isReference = false
-    @JvmField var pointerOrigins: Array<PointerOrigin>
+    @JvmField var pointerOrigins: Array<PointerOrigin?>
     @JvmField var referenceType: ReferenceType? = null
 
     init {
         pointerOrigins = arrayOf(PointerOrigin.ARRAY)
     }
 
-    fun setPointerOrigin(pointerOrigin: Array<PointerOrigin>) {
+    fun setPointerOrigin(pointerOrigin: Array<PointerOrigin?>) {
         pointerOrigins = pointerOrigin
     }
 }

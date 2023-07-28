@@ -30,7 +30,10 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.passes.GoExtraPass
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -40,7 +43,7 @@ import java.io.FileOutputStream
 @SupportsParallelParsing(false)
 @RegisterExtraPass(GoExtraPass::class)
 class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend(language, ctx) {
+    LanguageFrontend<Any, Any>(language, ctx) {
     companion object {
 
         init {
@@ -88,17 +91,24 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         )
     }
 
-    override fun <T> getCodeFromRawNode(astNode: T): String? {
+    override fun typeOf(type: Any): Type {
+        // this is handled by native code
+        return unknownType()
+    }
+
+    override fun codeOf(astNode: Any): String? {
         // this is handled by native code
         return null
     }
 
-    override fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation? {
+    override fun locationOf(astNode: Any): PhysicalLocation? {
         // this is handled by native code
         return null
     }
 
-    override fun <S, T> setComment(s: S, ctx: T) {}
+    override fun setComment(node: Node, astNode: Any) {
+        // this is handled by native code
+    }
 
     private external fun parseInternal(
         s: String?,

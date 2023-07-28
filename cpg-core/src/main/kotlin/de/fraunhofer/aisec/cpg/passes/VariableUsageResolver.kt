@@ -87,7 +87,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         }
     }
 
-    private fun resolveFunctionPtr(reference: DeclaredReferenceExpression): ValueDeclaration? {
+    protected fun resolveFunctionPtr(reference: DeclaredReferenceExpression): ValueDeclaration? {
         // Without FunctionPointerType, we cannot resolve function pointers
         val fptrType = reference.type as? FunctionPointerType ?: return null
 
@@ -104,7 +104,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         )
     }
 
-    private fun resolveLocalVarUsage(
+    protected fun resolveLocalVarUsage(
         currentClass: RecordDeclaration?,
         parent: Node?,
         current: Node?
@@ -142,7 +142,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
 
         var recordDeclType: Type? = null
         if (currentClass != null) {
-            recordDeclType = currentClass.parseType(currentClass.name)
+            recordDeclType = currentClass.toType()
         }
         if (current.type is FunctionPointerType && refersTo == null) {
             refersTo = resolveFunctionPtr(current)
@@ -193,18 +193,18 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
      * We get the type of the "scope" this node is in. (e.g. for a field, we drop the field's name
      * and have the class)
      */
-    private fun getEnclosingTypeOf(current: Node): Type {
+    protected fun getEnclosingTypeOf(current: Node): Type {
         val language = current.language
 
         return if (language != null && language.namespaceDelimiter.isNotEmpty()) {
             val parentName = (current.name.parent ?: current.name).toString()
-            current.parseType(parentName)
+            current.objectType(parentName)
         } else {
-            current.newUnknownType()
+            current.unknownType()
         }
     }
 
-    private fun resolveFieldUsages(curClass: RecordDeclaration?, parent: Node?, current: Node?) {
+    protected fun resolveFieldUsages(curClass: RecordDeclaration?, parent: Node?, current: Node?) {
         if (current !is MemberExpression) {
             return
         }
@@ -234,7 +234,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                             "Could not find referring super type ${superType.typeName} for ${curClass.name} in the record map. Will set the super type to java.lang.Object"
                         )
                         // TODO: Should be more generic!
-                        base.type = current.parseType(Any::class.java.name)
+                        base.type = current.objectType(Any::class.java.name)
                     } else {
                         // We need to connect this super reference to the receiver of this
                         // method
@@ -254,7 +254,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                 } else {
                     // no explicit super type -> java.lang.Object
                     // TODO: Should be more generic
-                    val objectType = current.parseType(Any::class.java.name)
+                    val objectType = current.objectType(Any::class.java.name)
                     base.type = objectType
                 }
             } else {
@@ -269,13 +269,13 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                     return
                 }
             } else if (baseTarget is RecordDeclaration) {
-                var baseType = baseTarget.parseType(baseTarget.name)
+                var baseType = baseTarget.toType()
                 if (baseType.name !in recordMap) {
                     val containingT = baseType
                     val fqnResolvedType =
                         recordMap.keys.firstOrNull { it.lastPartsMatch(containingT.name) }
                     if (fqnResolvedType != null) {
-                        baseType = baseTarget.parseType(fqnResolvedType)
+                        baseType = baseTarget.objectType(fqnResolvedType)
                     }
                 }
                 current.refersTo = resolveMember(baseType, current)
@@ -286,13 +286,13 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         if (baseType.name !in recordMap) {
             val fqnResolvedType = recordMap.keys.firstOrNull { it.lastPartsMatch(baseType.name) }
             if (fqnResolvedType != null) {
-                baseType = current.base.parseType(fqnResolvedType)
+                baseType = current.base.objectType(fqnResolvedType)
             }
         }
         current.refersTo = resolveMember(baseType, current)
     }
 
-    private fun resolveBase(reference: DeclaredReferenceExpression): Declaration? {
+    protected fun resolveBase(reference: DeclaredReferenceExpression): Declaration? {
         val declaration = scopeManager.resolveReference(reference)
         if (declaration != null) {
             return declaration
@@ -308,7 +308,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         }
     }
 
-    private fun resolveMember(
+    protected fun resolveMember(
         containingClass: Type,
         reference: DeclaredReferenceExpression
     ): ValueDeclaration? {
@@ -342,7 +342,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
     }
 
     // TODO(oxisto): Move to inference class
-    private fun handleUnknownField(base: Type, name: Name, type: Type): FieldDeclaration? {
+    protected fun handleUnknownField(base: Type, name: Name, type: Type): FieldDeclaration? {
         // unwrap a potential pointer-type
         if (base is PointerType) {
             return handleUnknownField(base.elementType, name, type)
@@ -399,7 +399,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
      * resulting function/method has the signature and return type specified in [fctPtrType] and the
      * specified [name].
      */
-    private fun handleUnknownFunction(
+    protected fun handleUnknownFunction(
         declarationHolder: RecordDeclaration?,
         name: Name,
         fctPtrType: FunctionPointerType
@@ -429,6 +429,6 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
     }
 
     companion object {
-        private val log = LoggerFactory.getLogger(VariableUsageResolver::class.java)
+        protected val log = LoggerFactory.getLogger(VariableUsageResolver::class.java)
     }
 }

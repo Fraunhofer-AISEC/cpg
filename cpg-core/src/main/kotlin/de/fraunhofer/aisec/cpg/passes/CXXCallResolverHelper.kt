@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -43,14 +44,14 @@ import java.util.regex.Pattern
  *   signature by means of casting
  */
 fun compatibleSignatures(
-    callSignature: List<Type?>,
+    callSignature: List<Type>,
     functionSignature: List<Type>,
     ctx: TranslationContext
 ): Boolean {
     return if (callSignature.size == functionSignature.size) {
         for (i in callSignature.indices) {
             if (
-                callSignature[i]?.isPrimitive != functionSignature[i].isPrimitive &&
+                callSignature[i].isPrimitive != functionSignature[i].isPrimitive &&
                     !ctx.typeManager.isSupertypeOf(
                         functionSignature[i],
                         callSignature[i],
@@ -75,7 +76,7 @@ fun compatibleSignatures(
 fun getCallSignatureWithDefaults(
     call: CallExpression,
     functionDeclaration: FunctionDeclaration
-): List<Type?> {
+): List<Type> {
     val callSignature = mutableListOf(*call.signature.toTypedArray())
     if (call.signature.size < functionDeclaration.parameters.size) {
         callSignature.addAll(
@@ -377,10 +378,7 @@ fun applyTemplateInstantiation(
     // Template.
     for ((declaration) in initializationSignature) {
         if (declaration is ParamVariableDeclaration) {
-            initializationSignature[declaration]?.let {
-                declaration.addPrevDFG(it)
-                it.addNextDFG(declaration) // TODO: This should be unnecessary
-            }
+            initializationSignature[declaration]?.let { declaration.addPrevDFG(it) }
         }
     }
 
