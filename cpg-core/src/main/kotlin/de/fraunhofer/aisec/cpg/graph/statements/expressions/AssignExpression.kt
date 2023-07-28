@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -57,13 +58,20 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
     @AST
     var lhs: List<Expression> = listOf()
         set(value) {
+            field.forEach { it.unregisterTypeListener(this) }
             field = value
-            if (operatorCode == "=")
+            if (operatorCode == "=") {
                 field.forEach { (it as? DeclaredReferenceExpression)?.access = AccessValues.WRITE }
-            else
+            } else {
                 field.forEach {
                     (it as? DeclaredReferenceExpression)?.access = AccessValues.READWRITE
                 }
+            }
+            field.forEach {
+                it.registerTypeListener(this)
+                (it as? HasType.TypeListener)?.let { it1 -> this.registerTypeListener(it1) }
+                // registerTypeListener(this.lhs as HasType.TypeListener)
+            }
         }
 
     @AST
@@ -74,6 +82,11 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
             field = value
             // Register this statement as a type listener for each expression
             value.forEach { it.registerTypeListener(this) }
+            if ("=" == operatorCode) {
+                rhs.forEach {
+                    (it as? HasType.TypeListener)?.let { it1 -> this.registerTypeListener(it1) }
+                }
+            }
         }
 
     /**
@@ -139,6 +152,19 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
                 }
             }
         } else {
+            val srcWidth = (src.type as? NumericType)?.bitWidth
+            val lhsWidth = (lhs.first().type as? NumericType)?.bitWidth
+            if (
+                src == rhs.firstOrNull() &&
+                    lhsWidth != null &&
+                    srcWidth != null &&
+                    lhsWidth < srcWidth
+            ) {
+                // Do not propagate anything if the new type is too big for the current type.
+                return
+            }
+
+            setType(src.propagationType, root)
             findTargets(src).forEach {
                 // We only want to propagate the type from right to left, if it is unknown
                 if (it.type is UnknownType) {
