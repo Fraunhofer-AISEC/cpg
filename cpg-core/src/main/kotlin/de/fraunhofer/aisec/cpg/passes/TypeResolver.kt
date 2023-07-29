@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.HasLegacyType
+import de.fraunhofer.aisec.cpg.graph.HasLegacyType.SecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -187,8 +187,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 } else {
                     typeState.computeIfAbsent(type.root, ::mutableListOf)
                 }
-            updateType(node, types)
-            node.updatePossibleSubtypes(ensureUniqueSubTypes(node.possibleSubTypes))
+            // updateType(node, types)
+            // node.updatePossibleSubtypes(ensureUniqueSubTypes(node.possibleSubTypes))
         }
     }
 
@@ -196,26 +196,26 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * ensures that the if a nodes contains secondary type edges, those types are also merged and no
      * duplicate is left
      *
-     * @param node implementing [HasType.SecondaryTypeEdge]
+     * @param node implementing [HasLegacyType.SecondaryTypeEdge]
      */
     protected fun ensureUniqueSecondaryTypeEdge(node: Node) {
         if (node is SecondaryTypeEdge) {
             node.updateType(typeState.keys)
         } else if (node is HasType && node.type is SecondaryTypeEdge) {
             (node.type as SecondaryTypeEdge).updateType(typeState.keys)
-            for (possibleSubType in node.possibleSubTypes) {
+            /*for (possibleSubType in node.possibleSubTypes) {
                 if (possibleSubType is SecondaryTypeEdge) {
                     possibleSubType.updateType(typeState.keys)
                 }
-            }
+            }*/
         }
     }
 
-    protected fun updateType(node: HasType, types: Collection<Type>) {
+    /*protected fun updateType(node: HasLegacyType, types: Collection<Type>) {
         // TODO: Why do we perform the update only for the first type?
         val typeToUpdate = types.firstOrNull { it == node.type } ?: return
         node.updateType(typeToUpdate)
-    }
+    }*/
 
     /**
      * Creates the recordDeclaration relationship between ObjectTypes and RecordDeclaration (from

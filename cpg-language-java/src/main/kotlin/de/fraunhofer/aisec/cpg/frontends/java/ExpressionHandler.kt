@@ -95,7 +95,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             castExpression.type = frontend.typeOf(castExpr.type.resolve().asPrimitive())
         } else {
             // Get Runtime type from cast expression for complex types;
-            castExpression.expression.registerTypeListener(castExpression)
+            // castExpression.expression.registerTypeListener(castExpression)
         }
         return castExpression
     }

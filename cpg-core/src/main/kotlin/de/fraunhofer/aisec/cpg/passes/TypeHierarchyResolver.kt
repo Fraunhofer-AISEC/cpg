@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
@@ -76,7 +75,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             enumDecl.superTypeDeclarations = allSupertypes
         }
 
-        component.translationUnits.forEach { SubgraphWalker.refreshType(it) }
+        // component.translationUnits.forEach { SubgraphWalker.refreshType(it) }
     }
 
     protected fun findRecordsAndEnums(node: Node) {

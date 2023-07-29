@@ -26,13 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.isTypeSystemActive
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
@@ -40,7 +37,7 @@ import org.neo4j.ogm.annotation.Relationship
  * Expressions of the form `new Type[]` that represents the creation of an array, mostly used in
  * combination with a [VariableDeclaration].
  */
-class ArrayCreationExpression : Expression(), HasType.TypeListener {
+class ArrayCreationExpression : Expression() {
     /**
      * The initializer of the expression, if present. Many languages, such as Java, either specify
      * [dimensions] or an initializer.
@@ -48,9 +45,7 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
     @AST
     var initializer: Expression? = null
         set(value) {
-            field?.unregisterTypeListener(this)
             field = value
-            value?.registerTypeListener(this)
         }
 
     /**
@@ -80,24 +75,4 @@ class ArrayCreationExpression : Expression(), HasType.TypeListener {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), initializer, dimensions)
-
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val previous = type
-        setType(src.propagationType, root)
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-        subTypes.addAll(src.possibleSubTypes)
-        setPossibleSubTypes(subTypes, root)
-    }
 }

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 
 /**
  * Specifies that a certain node has an initializer. It is a special case of [ArgumentHolder], in

@@ -29,73 +29,24 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** A list of initializer expressions. */
-class InitializerListExpression : Expression(), HasType.TypeListener {
+class InitializerListExpression : Expression() {
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
     @AST
     var initializerEdges = mutableListOf<PropertyEdge<Expression>>()
         set(value) {
-            field.forEach {
-                it.end.unregisterTypeListener(this)
-                removePrevDFG(it.end)
-            }
+            field.forEach { removePrevDFG(it.end) }
             field = value
-            value.forEach {
-                it.end.registerTypeListener(this)
-                addPrevDFG(it.end)
-            }
+            value.forEach { addPrevDFG(it.end) }
         }
 
     /** Virtual property to access [initializerEdges] without property edges. */
     var initializers by PropertyEdgeDelegate(InitializerListExpression::initializerEdges)
-
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        if (type !is UnknownType && src.propagationType == oldType) {
-            return
-        }
-        val previous = type
-        val newType: Type
-        val subTypes: MutableList<Type>
-        if (initializers.contains(src)) {
-            val types =
-                initializers.map { registerType(it.type.reference(PointerOrigin.ARRAY)) }.toSet()
-            val alternative = if (types.isNotEmpty()) types.iterator().next() else unknownType()
-            newType = getCommonType(types).orElse(alternative)
-            subTypes = ArrayList(possibleSubTypes)
-            subTypes.remove(oldType)
-            subTypes.addAll(types)
-        } else {
-            newType = src.type
-            subTypes = ArrayList(possibleSubTypes)
-            subTypes.remove(oldType)
-            subTypes.add(newType)
-        }
-        setType(newType, root)
-        setPossibleSubTypes(subTypes, root)
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-        subTypes.addAll(src.possibleSubTypes)
-        setPossibleSubTypes(subTypes, root)
-    }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

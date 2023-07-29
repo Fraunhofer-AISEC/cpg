@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -126,14 +127,19 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     }
 
     /**
-     * handleForEachStatement adds a [HasType.TypeListener] to the [ForEachStatement.iterable] of an
-     * [ForEachStatement] in order to determine the types used in [ForEachStatement.variable] (index
-     * and iterated value).
+     * handleForEachStatement adds a [HasLegacyType.TypeListener] to the [ForEachStatement.iterable]
+     * of an [ForEachStatement] in order to determine the types used in [ForEachStatement.variable]
+     * (index and iterated value).
      */
     private fun handleForEachStatement(forEach: ForEachStatement) {
-        (forEach.iterable as HasType).registerTypeListener(
-            object : HasType.TypeListener {
-                override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
+        (forEach.iterable as HasType).registerTypeObserver(
+            object : HasType.TypeObserver {
+                override fun typeChanged(
+                    newType: Type,
+                    changeType: HasType.TypeObserver.ChangeType,
+                    src: HasType,
+                    chain: MutableList<HasType>
+                ) {
                     if (src.type is UnknownType) {
                         return
                     }
@@ -152,10 +158,6 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                             valueVariable?.type = it.elementType
                         }
                     }
-                }
-
-                override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-                    // Nothing to do
                 }
             }
         )

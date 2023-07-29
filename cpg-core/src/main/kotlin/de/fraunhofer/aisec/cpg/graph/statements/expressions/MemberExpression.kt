@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasBase
-import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -43,10 +43,10 @@ class MemberExpression : DeclaredReferenceExpression(), HasBase {
     @AST
     override var base: Expression = ProblemExpression("could not parse base expression")
         set(value) {
-            field.unregisterTypeListener(this)
+            field.unregisterTypeObserver(this)
             field = value
             updateName()
-            value.registerTypeListener(this)
+            value.registerTypeObserver(this)
         }
 
     override var operatorCode: String? = null
@@ -58,22 +58,6 @@ class MemberExpression : DeclaredReferenceExpression(), HasBase {
             .toString()
     }
 
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        // We are basically only interested in type changes from our base to update the naming. We
-        // need to ignore actual changes to the type because otherwise things go horribly wrong
-        if (src == base) {
-            updateName()
-        } else {
-            super.typeChanged(src, root, oldType)
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (src != base) {
-            super.possibleSubTypesChanged(src, root)
-        }
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is MemberExpression) return false
@@ -81,6 +65,21 @@ class MemberExpression : DeclaredReferenceExpression(), HasBase {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), base)
+
+    override fun typeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // We are basically only interested in type changes from our base to update the naming. We
+        // need to ignore actual changes to the type because otherwise things go horribly wrong
+        if (src == base) {
+            updateName()
+        } else {
+            super.typeChanged(newType, changeType, src, chain)
+        }
+    }
 
     private fun updateName() {
         this.name = base.type.root.name.fqn(name.localName)

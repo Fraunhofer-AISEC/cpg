@@ -291,7 +291,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         if (isPrimitive(castExpression.castType) || ctx.operator == 4) {
             castExpression.type = castExpression.castType
         } else {
-            castExpression.expression.registerTypeListener(castExpression)
+            // castExpression.expression.registerTypeListener(castExpression)
         }
 
         return castExpression

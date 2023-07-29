@@ -590,7 +590,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 catchCls.parameter.toString(),
                 false
             )
-        parameter.possibleSubTypes = possibleTypes
+        // parameter.possibleSubTypes = possibleTypes
         val body = handleBlockStatement(catchCls.body)
         cClause.body = body
         cClause.parameter = parameter

@@ -27,39 +27,41 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.isTypeSystemActive
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
-import kotlin.collections.ArrayList
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the
- * expression `a = b`, which itself is a [BinaryOperator], contains two [ ]s, one for the variable
- * `a` and one for variable `b ` * , which have been previously been declared.
+ * expression `a = b`, which itself is an [AssignExpression], contains two
+ * [DeclaredReferenceExpression]s, one for the variable `a` and one for variable `b`, which have
+ * been previously been declared.
  */
-open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
-    /** The [Declaration]s this expression might refer to. */
+open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
+    /**
+     * The [Declaration]s this expression might refer to. This will influence the [declaredType] of
+     * this expression.
+     */
     @PopulatedByPass(VariableUsageResolver::class)
     @Relationship(value = "REFERS_TO")
     var refersTo: Declaration? = null
         set(value) {
             val current = field
 
-            // unregister type listeners for current declaration
+            // unregister type observers for current declaration
             if (current != null) {
-                if (current is ValueDeclaration) {
-                    current.unregisterTypeListener(this)
+                if (current is HasType) {
+                    current.unregisterTypeObserver(this)
                 }
-                if (current is HasType.TypeListener) {
+                /*if (current is HasLegacyType.TypeListener) {
                     unregisterTypeListener(current as HasType.TypeListener)
-                }
+                }*/
             }
 
             // set it
@@ -68,13 +70,13 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
                 value.addUsage(this)
             }
 
-            // update type listeners
-            if (field is ValueDeclaration) {
-                (field as ValueDeclaration).registerTypeListener(this)
+            // update type observers
+            if (value is HasType) {
+                value.registerTypeObserver(this)
             }
-            if (field is HasType.TypeListener) {
+            /*if (field is HasLegacyType.TypeListener) {
                 registerTypeListener(field as HasType.TypeListener)
-            }
+            }*/
         }
     // set the access
     /**
@@ -85,7 +87,7 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
     var isStaticAccess = false
 
     /**
-     * Returns the contents of [.refersTo] as the specified class, if the class is assignable.
+     * Returns the contents of [refersTo] as the specified class, if the class is assignable.
      * Otherwise, it will return null.
      *
      * @param clazz the expected class
@@ -99,35 +101,30 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
         else null
     }
 
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val previous = type
-        setType(src.propagationType, root)
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!isTypeSystemActive) {
-            return
-        }
-
-        // since we want to update the sub types, we need to exclude ourselves from the root,
-        // otherwise it won't work. What a weird and broken system!
-        root.remove(this)
-        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-        subTypes.addAll(src.possibleSubTypes)
-        setPossibleSubTypes(subTypes, root)
-    }
-
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .append(super.toString())
             .append("refersTo", refersTo)
             .toString()
+    }
+
+    override fun typeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // Make sure that the update comes from our declaration, if we change our declared type
+        if (src == refersTo && changeType == HasType.TypeObserver.ChangeType.DECLARED_TYPE) {
+            // Set our declared type (in case we need to differentiate between the "current" type
+            // and the declared one)
+            declaredType = newType
+
+            // Set it as the new type
+            setType(newType, chain)
+        }
+
+        if (changeType == HasType.TypeObserver.ChangeType.ASSIGNED_TYPE) {}
     }
 
     override fun equals(other: Any?): Boolean {

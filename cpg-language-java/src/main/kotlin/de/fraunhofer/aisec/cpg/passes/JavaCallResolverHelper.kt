@@ -96,7 +96,7 @@ class JavaCallResolverHelper {
                 callee.base.type = superType
                 // And set the possible subtypes, to ensure, that really only our super type is in
                 // there
-                callee.base.updatePossibleSubtypes(listOf(superType))
+                // callee.base.updatePossibleSubtypes(listOf(superType))
 
                 return true
             }

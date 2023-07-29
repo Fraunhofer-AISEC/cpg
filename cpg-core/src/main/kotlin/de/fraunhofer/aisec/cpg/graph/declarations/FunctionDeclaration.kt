@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.isSupertypeOf
 import java.util.*
 import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
