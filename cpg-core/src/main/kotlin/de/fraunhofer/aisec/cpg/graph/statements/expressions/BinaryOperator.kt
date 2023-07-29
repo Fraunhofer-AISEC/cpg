@@ -26,10 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
-import de.fraunhofer.aisec.cpg.graph.types.StringType
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -38,7 +36,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * right hand expression (rhs) and an operatorCode.
  */
 open class BinaryOperator :
-    Expression(), HasType.TypeListener, AssignmentHolder, HasBase, ArgumentHolder {
+    Expression(), AssignmentHolder, HasBase, ArgumentHolder, HasType.TypeObserver {
     /** The left-hand expression. */
     @AST
     var lhs: Expression = ProblemExpression("could not parse lhs")
@@ -56,6 +54,7 @@ open class BinaryOperator :
             field = value
             connectNewRhs(value)
         }
+
     /** The operator code. */
     override var operatorCode: String? = null
         set(value) {
@@ -75,16 +74,12 @@ open class BinaryOperator :
     }
 
     private fun connectNewLhs(lhs: Expression) {
-        lhs.registerTypeListener(this)
+        lhs.registerTypeObserver(this)
         if ("=" == operatorCode) {
             if (lhs is DeclaredReferenceExpression) {
                 // declared reference expr is the left-hand side of an assignment -> writing to the
                 // var
                 lhs.access = AccessValues.WRITE
-            }
-            if (lhs is HasType.TypeListener) {
-                registerTypeListener(lhs as HasType.TypeListener)
-                registerTypeListener(this.lhs as HasType.TypeListener)
             }
         } else if (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) {
             if (lhs is DeclaredReferenceExpression) {
@@ -92,18 +87,11 @@ open class BinaryOperator :
                 // var
                 lhs.access = AccessValues.READWRITE
             }
-            if (lhs is HasType.TypeListener) {
-                registerTypeListener(lhs as HasType.TypeListener)
-                registerTypeListener(this.lhs as HasType.TypeListener)
-            }
         }
     }
 
     private fun disconnectOldLhs() {
-        lhs.unregisterTypeListener(this)
-        if ("=" == operatorCode && lhs is HasType.TypeListener) {
-            unregisterTypeListener(lhs as HasType.TypeListener)
-        }
+        lhs.unregisterTypeObserver(this)
     }
 
     fun <T : Expression?> getRhsAs(clazz: Class<T>): T? {
@@ -111,65 +99,11 @@ open class BinaryOperator :
     }
 
     private fun connectNewRhs(rhs: Expression) {
-        rhs.registerTypeListener(this)
-        if ("=" == operatorCode && rhs is HasType.TypeListener) {
-            registerTypeListener(rhs as HasType.TypeListener)
-        }
+        rhs.registerTypeObserver(this)
     }
 
     private fun disconnectOldRhs() {
-        rhs.unregisterTypeListener(this)
-        if ("=" == operatorCode && rhs is HasType.TypeListener) {
-            unregisterTypeListener(rhs as HasType.TypeListener)
-        }
-    }
-
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val previous = type
-        if (operatorCode == "=") {
-            val srcWidth = (src.type as? NumericType)?.bitWidth
-            val lhsWidth = (lhs.type as? NumericType)?.bitWidth
-            if (src == rhs && lhsWidth != null && srcWidth != null && lhsWidth < srcWidth) {
-                // Do not propagate anything if the new type is too big for the current type.
-                return
-            }
-            setType(src.propagationType, root)
-        } else if (
-            operatorCode == "+" &&
-                (lhs.propagationType is StringType || rhs.propagationType is StringType)
-        ) {
-            // String + any other type results in a String
-            _possibleSubTypes.clear() // TODO: Why do we clear the list here?
-            val stringType =
-                if (lhs.propagationType is StringType) lhs.propagationType else rhs.propagationType
-            setType(stringType, root)
-        } else if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
-            // Propagate the function pointer type to the expression itself. This helps us later in
-            // the call resolver, when trying to determine, whether this is a regular call or a
-            // function pointer call.
-            setType(src.propagationType, root)
-        } else {
-            val resultingType = language?.propagateTypeOfBinaryOperation(this) ?: unknownType()
-            if (resultingType !is UnknownType) {
-                setType(resultingType, root)
-            }
-        }
-
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-        subTypes.addAll(src.possibleSubTypes)
-        setPossibleSubTypes(subTypes, root)
+        rhs.unregisterTypeObserver(this)
     }
 
     override fun toString(): String {
@@ -189,6 +123,27 @@ open class BinaryOperator :
                 listOf()
             }
         }
+
+    override fun typeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // We need to do some special dealings for function pointer calls
+        if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
+            // Propagate the function pointer type to the expression itself. This helps us later in
+            // the call resolver, when trying to determine, whether this is a regular call or a
+            // function pointer call.
+            setType(newType, chain)
+        } else {
+            // Otherwise, we have a special language-specific function to deal with type propagation
+            val type = language?.propagateTypeOfBinaryOperation(this)
+            if (type != null) {
+                setType(type, chain)
+            }
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

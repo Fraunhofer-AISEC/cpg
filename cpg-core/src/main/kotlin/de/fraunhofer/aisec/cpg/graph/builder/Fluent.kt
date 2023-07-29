@@ -32,7 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.executePassSequential
 
 fun LanguageFrontend<*, *>.translationResult(
@@ -157,6 +159,9 @@ fun LanguageFrontend<*, *>.function(
         node.returnTypes = listOf(returnType)
     }
 
+    // Make sure that our function has the correct type
+    node.type = FunctionType.computeType(node)
+
     scopeManager.enterScope(node)
     init?.let { it(node) }
     scopeManager.leaveScope(node)
@@ -180,6 +185,7 @@ fun LanguageFrontend<*, *>.method(
 ): MethodDeclaration {
     val node = newMethodDeclaration(name)
     node.returnTypes = listOf(returnType)
+    node.type = FunctionType.computeType(node)
 
     scopeManager.enterScope(node)
     init(node)
@@ -331,7 +337,7 @@ fun LanguageFrontend<*, *>.call(
     init: (CallExpression.() -> Unit)? = null
 ): CallExpression {
     // Try to parse the name
-    val parsedName = parseName(name)
+    val parsedName = parseName(name, ".")
     val node =
         if (parsedName.parent != null) {
             newMemberCallExpression(
@@ -440,9 +446,11 @@ fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type = unknownType()): 
         if (name.parent != null) {
             newMemberExpression(name.localName, memberOrRef(name.parent))
         } else {
-            newDeclaredReferenceExpression(name.localName, objectType(name.localName))
+            newDeclaredReferenceExpression(name.localName)
         }
-    node.type = type
+    if (type !is UnknownType) {
+        node.type = type
+    }
 
     return node
 }
@@ -1042,10 +1050,10 @@ fun Expression.conditional(
  */
 context(LanguageFrontend<*, *>, StatementHolder)
 
-infix fun Expression.assign(init: BinaryOperator.() -> Expression): BinaryOperator {
-    val node = (this@LanguageFrontend).newBinaryOperator("=")
-    node.lhs = this
-    node.rhs = init(node)
+infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("=")
+    node.lhs = listOf(this)
+    node.rhs = listOf(init(node))
 
     (this@StatementHolder) += node
 
@@ -1053,15 +1061,13 @@ infix fun Expression.assign(init: BinaryOperator.() -> Expression): BinaryOperat
 }
 
 /**
- * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 
-infix fun Expression.assign(rhs: Expression): BinaryOperator {
-    val node = (this@LanguageFrontend).newBinaryOperator("=")
-    node.lhs = this
-    node.rhs = rhs
+infix fun Expression.assign(rhs: Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("=", listOf(this), listOf(rhs))
 
     if (this@Holder is StatementHolder) {
         this@Holder += node

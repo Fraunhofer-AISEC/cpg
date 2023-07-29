@@ -47,12 +47,12 @@ class AssignExpressionTest {
             val stmt = newAssignExpression(lhs = listOf(refA), rhs = listOf(refB))
 
             // Type listeners should be configured
-            assertContains(refB.typeListeners, stmt)
+            assertContains(refB.typeObservers, stmt)
 
-            // Suddenly, we now we know the type of b.
+            // Suddenly, we now we know the type of "b".
             refB.type = objectType("MyClass")
-            // It should now propagate to a
-            assertLocalName("MyClass", refA.type)
+            // It should now propagate to the assigned type of "a"
+            assertLocalName("MyClass", refA.assignedType)
 
             val assignments = stmt.assignments
             assertEquals(1, assignments.size)
@@ -70,6 +70,7 @@ class AssignExpressionTest {
                                 "func",
                                 returnTypes = listOf(objectType("MyClass"), objectType("error"))
                             )
+
                         function("main") {
                             val refA = newDeclaredReferenceExpression("a")
                             val refErr = newDeclaredReferenceExpression("err")
@@ -103,8 +104,10 @@ class AssignExpressionTest {
             call.invokes = listOf(func)
             assertIs<TupleType>(call.type)
 
-            assertLocalName("MyClass", refA.type)
-            assertLocalName("error", refErr.type)
+            // We should at least know the "assigned" type of the references. Their declared type is
+            // still unknown to us, because we don't know the declarations.
+            assertLocalName("MyClass", refA.assignedType)
+            assertLocalName("error", refErr.assignedType)
 
             // Invoke the DFG pass
             DFGPass(ctx).accept(result.components.first())

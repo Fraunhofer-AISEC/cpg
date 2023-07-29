@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import java.util.*
@@ -41,7 +40,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  *   as part of a [NewExpression].
  * * In Java, it is the initializer of a [NewExpression].
  */
-class ConstructExpression : CallExpression(), HasType.TypeListener {
+class ConstructExpression : CallExpression() {
     /**
      * The link to the [ConstructorDeclaration]. This is populated by the
      * [de.fraunhofer.aisec.cpg.passes.CallResolver] later.
@@ -82,12 +81,12 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         }
 
     /**
-     * This function implements the [HasType.TypeListener] interface. We need to be really careful
-     * about type changes in the [ConstructExpression]. The problem is, that usually, a
+     * This function implements the [HasLegacyType.TypeListener] interface. We need to be really
+     * careful about type changes in the [ConstructExpression]. The problem is, that usually, a
      * [VariableDeclaration] is registered as a type listener for its initializer, e.g, to infer the
      * type of the variable declaration based on its literal initializer. BUT, if the initializer
-     * also implements [HasType.TypeListener], as does [ConstructExpression], the initializer is
-     * also registered as a type listener for the declaration. The reason for that is primary
+     * also implements [HasLegacyType.TypeListener], as does [ConstructExpression], the initializer
+     * is also registered as a type listener for the declaration. The reason for that is primary
      * stemming from the way the C++ AST works where we need to get information about `Integer
      * i(4)`, in which the `Integer` type is only available to the declaration AST element and `(4)`
      * which is the [ConstructExpression] does not have the type information.
@@ -103,7 +102,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
      * In fact, we could get rid of this particular implementation altogether, if we would somehow
      * work around the first case in a different way.
      */
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
+    /*override fun typeChanged(src: HasLegacyType, root: MutableList<HasLegacyType>, oldType: Type) {
         if (!isTypeSystemActive) {
             return
         }
@@ -119,7 +118,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         if (previous != this.type) {
             this.type.typeOrigin = Type.Origin.DATAFLOW
         }
-    }
+    }*/
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

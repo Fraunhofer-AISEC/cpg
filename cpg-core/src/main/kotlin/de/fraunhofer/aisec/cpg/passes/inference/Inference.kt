@@ -419,3 +419,32 @@ fun RecordDeclaration.inferMethod(
             call.type
         ) as MethodDeclaration
 }
+
+/**
+ * This class implements a [HasType.TypeObserver] and uses the observed type to set the
+ * [ValueDeclaration.declaredType] of a [ValueDeclaration], based on the types we see. It can be
+ * registered on objects that are used to "start" an inference, for example a [MemberExpression],
+ * which infers a [FieldDeclaration]. Once the type of the member expression becomes known, we can
+ * use this information to set the type of the field.
+ *
+ * For now, this implementation uses the first type that we "see" and once the type of our
+ * [declaration] is known, we ignore further updates. In a future implementation, we could try to
+ * fine-tune this, e.g. by finding a common type (such as an interface) that is more probable, if
+ * multiple types are assigned.
+ */
+public class TypeInferenceObserver(var declaration: ValueDeclaration) : HasType.TypeObserver {
+    override fun typeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // Only set a new type, if it is unknown for now
+        if (declaration.type is UnknownType) {
+            declaration.setType(newType, chain)
+        } else {
+            // TODO(oxisto): We could "refine" the type here based on further type
+            //  observations
+        }
+    }
+}

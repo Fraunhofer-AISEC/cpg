@@ -25,13 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import kotlin.test.*
@@ -59,13 +59,24 @@ class TypePropagationTest {
                 }
             }
 
-        val binaryOp =
-            (((result.functions["main"]?.body as? CompoundStatement)?.statements?.get(2)
-                        as? DeclarationStatement)
-                    ?.singleDeclaration as? VariableDeclaration)
-                ?.initializer
+        VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
+        val intVar = result.variables["intVar"]
+        assertNotNull(intVar)
+        assertLocalName("int", intVar.type)
+        assertLocalName("int", intVar.declaredType)
+
+        val intVarRef = result.refs["intVar"]
+        assertNotNull(intVarRef)
+        assertLocalName("int", intVarRef.type)
+        assertLocalName("int", intVar.declaredType)
+
+        val addResult = result.variables["addResult"]
+        assertNotNull(addResult)
+
+        val binaryOp = addResult.initializer
         assertNotNull(binaryOp)
+
         assertTrue(binaryOp.type is IntegerType)
         assertEquals("int", (binaryOp.type as IntegerType).name.toString())
         assertEquals(32, (binaryOp.type as IntegerType).bitWidth)
@@ -73,7 +84,6 @@ class TypePropagationTest {
 
     @Test
     fun testAssignTypePropagation() {
-        // TODO: This test is related to issue 1071 (it models case 2).
         val result =
             TestLanguageFrontend().build {
                 translationResult {
@@ -89,33 +99,33 @@ class TypePropagationTest {
                     }
                 }
             }
+
         VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
-        val binaryOp =
+        val assign =
             (result.functions["main"]?.body as? CompoundStatement)?.statements?.get(2)
-                as? BinaryOperator
-        assertNotNull(binaryOp)
+                as? AssignExpression
+        assertNotNull(assign)
 
-        val rhs = binaryOp.rhs as? DeclaredReferenceExpression
+        val rhs = assign.rhs.firstOrNull() as? DeclaredReferenceExpression
         assertNotNull(rhs)
-        assertTrue(rhs.type is IntegerType)
-        assertEquals("int", (rhs.type as IntegerType).name.toString())
+        assertIs<IntegerType>(rhs.type)
+        assertLocalName("int", rhs.type)
         assertEquals(32, (rhs.type as IntegerType).bitWidth)
 
-        assertTrue(binaryOp.type is IntegerType)
-        assertEquals("short", (binaryOp.type as IntegerType).name.toString())
-        assertEquals(16, (binaryOp.type as IntegerType).bitWidth)
-
-        val lhs = binaryOp.lhs as? DeclaredReferenceExpression
+        val lhs = assign.lhs.firstOrNull() as? DeclaredReferenceExpression
         assertNotNull(lhs)
-        assertTrue(lhs.type is IntegerType)
-        assertEquals("short", (lhs.type as IntegerType).name.toString())
+        assertIs<IntegerType>(lhs.type)
+        assertLocalName("short", lhs.type)
         assertEquals(16, (lhs.type as IntegerType).bitWidth)
+
+        assertIs<IntegerType>(lhs.assignedType)
+        assertLocalName("int", lhs.assignedType)
 
         val refersTo = lhs.refersTo as? VariableDeclaration
         assertNotNull(refersTo)
-        assertTrue(refersTo.type is IntegerType)
-        assertEquals("short", (refersTo.type as IntegerType).name.toString())
+        assertIs<IntegerType>(refersTo.type)
+        assertLocalName("short", refersTo.type)
         assertEquals(16, (refersTo.type as IntegerType).bitWidth)
     }
 }

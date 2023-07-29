@@ -125,7 +125,7 @@ class DFGTest {
         val result = GraphExamples.getDelayedAssignmentAfterRHS()
 
         val binaryOperatorAssignment =
-            TestUtils.findByUniqueName(result.allChildren<BinaryOperator>(), "=")
+            TestUtils.findByUniqueName(result.allChildren<AssignExpression>(), "=")
         assertNotNull(binaryOperatorAssignment)
 
         val binaryOperatorAddition =
@@ -138,7 +138,7 @@ class DFGTest {
         val varB = TestUtils.findByUniqueName(result.variables, "b")
         assertNotNull(varB)
 
-        val lhsA = binaryOperatorAssignment.lhs as DeclaredReferenceExpression
+        val lhsA = binaryOperatorAssignment.lhs.first() as DeclaredReferenceExpression
         val rhsA = binaryOperatorAddition.lhs as DeclaredReferenceExpression
         val b = TestUtils.findByUniqueName(result.refs, "b")
         assertNotNull(b)

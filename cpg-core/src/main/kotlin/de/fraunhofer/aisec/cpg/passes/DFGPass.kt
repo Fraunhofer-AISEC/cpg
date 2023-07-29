@@ -276,10 +276,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * TODO: This change seems to have performance issues!
      */
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
-        node.initializers.forEach {
-            it.registerTypeListener(node)
-            node.addPrevDFG(it)
-        }
+        node.initializers.forEach { node.addPrevDFG(it) }
     }
 
     /**

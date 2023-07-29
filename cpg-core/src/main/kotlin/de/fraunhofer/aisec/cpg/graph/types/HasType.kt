@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,91 +23,110 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import java.util.Optional
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import java.util.*
 
 interface HasType : ContextProvider {
+
     var type: Type
 
     /**
-     * @return The returned Type is always the same as getType() with the exception of ReferenceType
-     *   since there is no case in which we want to propagate a reference when using typeChanged()
+     * This property refers to the [Type] that is either defined by the [Node] (e.g., by a
+     * [ValueDeclaration]). If the [Node] does not define or use declared type, this will be null.
      */
-    val propagationType: Type
+    val declaredType: Type?
 
     /**
-     * Side-effect free type modification WARNING: This should only be used by the TypeSystem Pass
+     * This property refers to the [Type] that the [Node] is assigned to. This could be different
+     * from the [HasType.declaredType]. A common example is that a node could contain an interface
+     * as a [HasType.declaredType], but the actual implementation of the type as [assignedType].
      *
-     * @param type new type
+     * An implementation of this must be sure to invoke [TypeObserver.typeChanged] of all
+     * [typeObservers].
      */
-    fun updateType(type: Type)
+    val assignedType: Type
 
-    fun updatePossibleSubtypes(types: List<Type>)
+    fun setType(type: Type, chain: MutableList<HasType>)
 
-    /**
-     * Set the node's type. This may start a chain of type listener notifications
-     *
-     * @param type new type
-     * @param root The nodes which we have seen in the type change chain. When a node receives a
-     *   type setting command where root.contains(this), we know that we have a type listener circle
-     *   and can abort. If root is an empty list, the type change is seen as an externally triggered
-     *   event and subsequent type listeners receive the current node as their root.
-     */
-    fun setType(type: Type, root: MutableList<HasType>?)
+    fun setAssignedType(type: Type, chain: MutableList<HasType>)
 
-    var possibleSubTypes: List<Type>
+    val typeObservers: MutableList<TypeObserver>
 
-    /**
-     * Set the node's possible subtypes. Listener circle detection works the same way as with
-     * [ ][.setType]
-     *
-     * @param possibleSubTypes the set of possible sub types
-     * @param root A list of already seen nodes which is used for detecting loops.
-     */
-    fun setPossibleSubTypes(possibleSubTypes: List<Type>, root: MutableList<HasType>)
+    interface TypeObserver {
+        enum class ChangeType {
+            DECLARED_TYPE,
+            ASSIGNED_TYPE
+        }
 
-    val typeListeners: MutableSet<TypeListener>
-
-    fun registerTypeListener(listener: TypeListener) {
-        val root = mutableListOf(this)
-        typeListeners.add(listener)
-        listener.typeChanged(this, root, type)
-        listener.possibleSubTypesChanged(this, root)
+        fun typeChanged(
+            newType: Type,
+            changeType: ChangeType,
+            src: HasType,
+            chain: MutableList<HasType>
+        )
     }
 
-    fun unregisterTypeListener(listener: TypeListener) {
-        typeListeners.remove(listener)
+    fun informObservers(changeType: TypeObserver.ChangeType, chain: MutableList<HasType>) {
+        // TODO(oxisto): this is not really working too well
+        // If we are already in the chain, we are running into a loop, so we abort
+        // here
+        if (chain.filter { it == this }.size > 2) {
+            return
+        }
+
+        // Add ourselves to the chain
+        chain += this
+
+        // If we would only propagate the unknown type, we can also skip it
+        val newType =
+            if (changeType == TypeObserver.ChangeType.ASSIGNED_TYPE) {
+                this.assignedType
+            } else {
+                this.type
+            }
+
+        // Inform all type observers about the changes
+        for (observer in typeObservers) {
+            observer.typeChanged(newType, changeType, this, chain)
+        }
     }
 
-    fun refreshType()
+    fun registerTypeObserver(typeObserver: TypeObserver) {
+        typeObservers += typeObserver
 
-    /**
-     * Used to set the type and clear the possible subtypes list for when a type is more precise
-     * than the current.
-     *
-     * @param type the more precise type
-     */
-    fun resetTypes(type: Type)
+        // If we would only propagate the unknown type, we can also skip it
+        var newType = this.type
+        if (newType !is UnknownType) {
+            // Immediately inform about changes
+            typeObserver.typeChanged(
+                newType,
+                TypeObserver.ChangeType.DECLARED_TYPE,
+                this,
+                mutableListOf(this)
+            )
+        }
 
-    interface TypeListener {
-        fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type)
-
-        fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>)
+        // If we would only propagate the unknown type, we can also skip it
+        newType = this.assignedType
+        if (newType !is UnknownType) {
+            // Immediately inform about changes
+            typeObserver.typeChanged(
+                newType,
+                TypeObserver.ChangeType.ASSIGNED_TYPE,
+                this,
+                mutableListOf(this)
+            )
+        }
     }
 
-    /**
-     * The Typeresolver needs to be aware of all outgoing edges to types in order to merge equal
-     * types to the same node. For the primary type edge, this is achieved through the hasType
-     * interface. If a node has additional type edges (e.g. default type in [ ]) the node must
-     * implement the updateType method, so that the current type is always replaced with the merged
-     * one
-     */
-    interface SecondaryTypeEdge {
-        fun updateType(typeState: Collection<Type>)
+    fun unregisterTypeObserver(typeObserver: TypeObserver) {
+        typeObservers -= typeObserver
     }
 }
 

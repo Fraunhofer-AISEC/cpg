@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.inference.TypeInferenceObserver
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import org.slf4j.LoggerFactory
@@ -248,7 +249,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                             base.type = superType
                             // And set the possible subtypes, to ensure, that really only our
                             // super type is in there
-                            base.updatePossibleSubtypes(listOf(superType))
+                            // base.updatePossibleSubtypes(listOf(superType))
                         }
                     }
                 } else {
@@ -336,21 +337,24 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                     .map { it.definition }
                     .firstOrNull()
         }
-        // Attention: using orElse instead of orElseGet will always invoke unknown declaration
-        // handling!
-        return member ?: handleUnknownField(containingClass, reference.name, reference.type)
+        return member ?: handleUnknownField(containingClass, reference)
     }
 
     // TODO(oxisto): Move to inference class
-    protected fun handleUnknownField(base: Type, name: Name, type: Type): FieldDeclaration? {
+    protected fun handleUnknownField(
+        base: Type,
+        ref: DeclaredReferenceExpression
+    ): FieldDeclaration? {
+        val name = ref.name
+
         // unwrap a potential pointer-type
         if (base is PointerType) {
-            return handleUnknownField(base.elementType, name, type)
+            return handleUnknownField(base.elementType, ref)
         }
 
         if (base.name !in recordMap) {
             // No matching record in the map? If we should infer it, we do so, otherwise we stop.
-            if (config?.inferenceConfiguration?.inferRecords != true) return null
+            if (!config.inferenceConfiguration.inferRecords) return null
 
             // We access an unknown field of an unknown record. so we need to handle that
             val kind =
@@ -380,7 +384,8 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
             val declaration =
                 recordDeclaration.newFieldDeclaration(
                     name.localName,
-                    type,
+                    // we will set the type later through the type inference observer
+                    unknownType(),
                     listOf(),
                     "",
                     null,
@@ -389,6 +394,11 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                 )
             recordDeclaration.addField(declaration)
             declaration.isInferred = true
+
+            // We might be able to resolve the type later (or better), if a type is
+            // assigned to our reference later
+            ref.registerTypeObserver(TypeInferenceObserver(declaration))
+
             declaration
         }
     }

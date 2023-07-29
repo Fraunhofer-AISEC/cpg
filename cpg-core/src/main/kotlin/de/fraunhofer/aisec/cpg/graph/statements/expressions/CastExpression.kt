@@ -28,10 +28,9 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
-import kotlin.collections.ArrayList
 import org.slf4j.LoggerFactory
 
-class CastExpression : Expression(), HasType.TypeListener {
+class CastExpression : Expression() {
     @AST var expression: Expression = ProblemExpression("could not parse inner expression")
 
     var castType: Type = unknownType()
@@ -39,33 +38,6 @@ class CastExpression : Expression(), HasType.TypeListener {
             field = value
             type = value
         }
-
-    override fun updateType(type: Type) {
-        super.updateType(type)
-        castType = type
-    }
-
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val previous = type
-        if (isSupertypeOf(castType, src.propagationType)) {
-            setType(src.propagationType, root)
-        } else {
-            resetTypes(castType)
-        }
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        setPossibleSubTypes(ArrayList(src.possibleSubTypes), root)
-    }
 
     fun setCastOperator(operatorCode: Int) {
         var localName: String? = null

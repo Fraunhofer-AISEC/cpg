@@ -483,7 +483,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         if (node is MemberCallExpression) {
             node.base?.let { base ->
                 possibleTypes.add(base.type)
-                possibleTypes.addAll(base.possibleSubTypes)
+                possibleTypes.add(base.assignedType)
             }
         } else {
             // This could be a C++ member call with an implicit this (which we do not create), so

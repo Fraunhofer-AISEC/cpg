@@ -151,33 +151,23 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 
         return when (operation.operatorCode) {
             "+" ->
-                if (operation.lhs.propagationType is StringType) {
+                if (operation.lhs.type is StringType) {
                     // string + anything => string
-                    operation.lhs.propagationType
-                } else if (operation.rhs.propagationType is StringType) {
+                    operation.lhs.type
+                } else if (operation.rhs.type is StringType) {
                     // anything + string => string
-                    operation.rhs.propagationType
+                    operation.rhs.type
                 } else {
-                    arithmeticOpTypePropagation(
-                        operation.lhs.propagationType,
-                        operation.rhs.propagationType
-                    )
+                    arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
                 }
             "-",
             "*",
-            "/" ->
-                arithmeticOpTypePropagation(
-                    operation.lhs.propagationType,
-                    operation.rhs.propagationType
-                )
+            "/" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
             "<<",
             ">>" ->
-                if (
-                    operation.lhs.propagationType.isPrimitive &&
-                        operation.rhs.propagationType.isPrimitive
-                ) {
+                if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
                     // primitive type 1 OP primitive type 2 => primitive type 1
-                    operation.lhs.propagationType
+                    operation.lhs.type
                 } else {
                     unknownType()
                 }
