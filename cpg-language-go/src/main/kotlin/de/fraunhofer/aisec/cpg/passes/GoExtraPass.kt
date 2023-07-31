@@ -199,6 +199,12 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
      */
     // TODO: Somehow, this gets called twice?!
     private fun handleInclude(include: IncludeDeclaration) {
+        // If the namespace is included as _, we can ignore it, as its only included as a runtime
+        // dependency
+        if (include.name.localName == "_") {
+            return
+        }
+
         // Try to see if we already know about this namespace somehow
         val namespace =
             scopeManager.resolve<NamespaceDeclaration>(scopeManager.globalScope, true) {
