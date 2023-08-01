@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
@@ -40,6 +38,7 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val namespaceDelimiter = "::"
     @Transient
     override val frontend: KClass<out LLVMIRLanguageFrontend> = LLVMIRLanguageFrontend::class
+    override val compoundAssignmentOperators = setOf<String>()
 
     // TODO: In theory, the integers can have any bitwidth from 1 to 1^32 bits. It's not known if
     //  they are interpreted as signed or unsigned.
@@ -59,11 +58,4 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
             "x86_fp80" to FloatingPointType("x86_fp80", 80, this, NumericType.Modifier.SIGNED),
             "ppc_fp128" to FloatingPointType("ppc_fp128", 128, this, NumericType.Modifier.SIGNED),
         )
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): LLVMIRLanguageFrontend {
-        return LLVMIRLanguageFrontend(this, config, scopeManager)
-    }
 }

@@ -25,44 +25,35 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import java.io.File
+import de.fraunhofer.aisec.cpg.graph.functions
 import java.nio.file.Paths
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Tag
+import picocli.CommandLine
 
 @Tag("integration")
 class ApplicationTest {
-
-    private var translationResult: TranslationResult? = null
-
     @Test
     @Throws(InterruptedException::class)
     fun testPush() {
         val topLevel = Paths.get("src").resolve("test").resolve("resources").toAbsolutePath()
         val path = topLevel.resolve("client.cpp").toAbsolutePath()
-        val file = File(path.toString())
-        assert(file.exists() && !file.isDirectory && !file.isHidden)
-        val translationConfiguration =
-            TranslationConfiguration.builder()
-                .sourceLocations(file)
-                .topLevel(topLevel.toFile())
-                .defaultPasses()
-                .defaultLanguages()
-                .debugParser(true)
-                .build()
-        val translationManager =
-            TranslationManager.builder().config(translationConfiguration).build()
-        translationResult = translationManager.analyze().get()
 
-        val application = Application()
+        val cmd = CommandLine(Application::class.java)
+        cmd.parseArgs(path.toString())
+        val application = cmd.getCommand<Application>()
 
-        application.pushToNeo4j(translationResult!!)
+        val translationConfiguration = application.setupTranslationConfiguration()
+        val translationResult =
+            TranslationManager.builder().config(translationConfiguration).build().analyze().get()
+
+        assertEquals(31, translationResult.functions.size)
+
+        application.pushToNeo4j(translationResult)
 
         val sessionAndSessionFactoryPair = application.connect()
 
@@ -71,7 +62,7 @@ class ApplicationTest {
             val functions = session.loadAll(FunctionDeclaration::class.java)
             assertNotNull(functions)
 
-            assertEquals(38, functions.size)
+            assertEquals(31, functions.size)
 
             transaction.commit()
         }

@@ -25,13 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.HasInitializer
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -81,10 +79,10 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
     var modifiers: List<String> = mutableListOf()
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
-        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
+        if (type !is UnknownType && src.propagationType == oldType) {
             return
         }
         val previous = type
@@ -98,7 +96,7 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
                 // can be ignored once we have a type
                 if (isArray) {
                     src.type
-                } else if (!TypeManager.getInstance().isUnknown(type)) {
+                } else if (type !is UnknownType) {
                     return
                 } else {
                     src.type.dereference()
@@ -113,7 +111,7 @@ class FieldDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitialize
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)

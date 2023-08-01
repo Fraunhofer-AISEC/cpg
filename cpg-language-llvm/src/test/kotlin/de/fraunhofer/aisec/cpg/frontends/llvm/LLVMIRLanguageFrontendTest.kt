@@ -25,20 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLocalName
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.nio.file.Path
 import kotlin.test.*
 import kotlin.test.Test
@@ -51,8 +45,11 @@ class LLVMIRLanguageFrontendTest {
         val frontend =
             LLVMIRLanguageFrontend(
                 LLVMIRLanguage(),
-                TranslationConfiguration.builder().build(),
-                ScopeManager(),
+                TranslationContext(
+                    TranslationConfiguration.builder().build(),
+                    ScopeManager(),
+                    TypeManager()
+                )
             )
         frontend.parse(topLevel.resolve("main.ll").toFile())
     }
@@ -312,10 +309,10 @@ class LLVMIRLanguageFrontendTest {
         val rhs = (comparison.rhs as Literal<*>)
         val lhs = (comparison.lhs as DeclaredReferenceExpression).refersTo as VariableDeclaration
         assertEquals(10L, (rhs.value as Long))
-        assertEquals(TypeParser.createFrom("i32", LLVMIRLanguage()), rhs.type)
+        assertEquals(tu.primitiveType("i32"), rhs.type)
         assertLocalName("x", comparison.lhs as DeclaredReferenceExpression)
         assertLocalName("x", lhs)
-        assertEquals(TypeParser.createFrom("i32", LLVMIRLanguage()), lhs.type)
+        assertEquals(tu.primitiveType("i32"), lhs.type)
 
         // Check that the jump targets are set correctly
         val ifStatement = main.bodyOrNull<IfStatement>(0)
@@ -346,11 +343,11 @@ class LLVMIRLanguageFrontendTest {
         assertTrue(ifBranchComp.lhs is CastExpression)
 
         val ifBranchCompRhs = ifBranchComp.rhs as CastExpression
-        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompRhs.castType)
-        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompRhs.type)
+        assertEquals(tu.objectType("ui32"), ifBranchCompRhs.castType)
+        assertEquals(tu.objectType("ui32"), ifBranchCompRhs.type)
         val ifBranchCompLhs = ifBranchComp.lhs as CastExpression
-        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompLhs.castType)
-        assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompLhs.type)
+        assertEquals(tu.objectType("ui32"), ifBranchCompLhs.castType)
+        assertEquals(tu.objectType("ui32"), ifBranchCompLhs.type)
 
         val declRefExpr = ifBranchCompLhs.expression as DeclaredReferenceExpression
         assertEquals(-3, ((ifBranchCompRhs.expression as Literal<*>).value as Long))
@@ -391,12 +388,14 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("ptr", (decl.initializer as UnaryOperator).input)
 
         // Check that the replacement equals *ptr = *ptr + 1
-        val replacement = (atomicrmwStatement.statements[1] as BinaryOperator)
+        val replacement = (atomicrmwStatement.statements[1] as AssignExpression)
+        assertEquals(1, replacement.lhs.size)
+        assertEquals(1, replacement.rhs.size)
         assertEquals("=", replacement.operatorCode)
-        assertEquals("*", (replacement.lhs as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (replacement.lhs as UnaryOperator).input)
+        assertEquals("*", (replacement.lhs.first() as UnaryOperator).operatorCode)
+        assertLocalName("ptr", (replacement.lhs.first() as UnaryOperator).input)
         // Check that the rhs is equal to *ptr + 1
-        val add = replacement.rhs as BinaryOperator
+        val add = replacement.rhs.first() as BinaryOperator
         assertEquals("+", add.operatorCode)
         assertEquals("*", (add.lhs as UnaryOperator).operatorCode)
         assertLocalName("ptr", (add.lhs as UnaryOperator).input)
@@ -448,12 +447,14 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("ptr", (ifExpr.lhs as UnaryOperator).input)
         assertEquals(5L, (ifExpr.rhs as Literal<*>).value as Long)
 
-        val thenExpr = ifStatement.thenStatement as BinaryOperator
+        val thenExpr = ifStatement.thenStatement as AssignExpression
+        assertEquals(1, thenExpr.lhs.size)
+        assertEquals(1, thenExpr.rhs.size)
         assertEquals("=", thenExpr.operatorCode)
-        assertEquals("*", (thenExpr.lhs as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (thenExpr.lhs as UnaryOperator).input)
-        assertLocalName("old", thenExpr.rhs as DeclaredReferenceExpression)
-        assertLocalName("old", (thenExpr.rhs as DeclaredReferenceExpression).refersTo)
+        assertEquals("*", (thenExpr.lhs.first() as UnaryOperator).operatorCode)
+        assertLocalName("ptr", (thenExpr.lhs.first() as UnaryOperator).input)
+        assertLocalName("old", thenExpr.rhs.first() as DeclaredReferenceExpression)
+        assertLocalName("old", (thenExpr.rhs.first() as DeclaredReferenceExpression).refersTo)
     }
 
     @Test
@@ -599,17 +600,19 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("i32*", alloca.type.typeName)
 
         // store i32 3, i32* %ptr
-        val store = main.bodyOrNull<BinaryOperator>()
+        val store = main.bodyOrNull<AssignExpression>()
         assertNotNull(store)
         assertEquals("=", store.operatorCode)
 
-        val dereferencePtr = store.lhs as? UnaryOperator
+        assertEquals(1, store.lhs.size)
+        val dereferencePtr = store.lhs.first() as? UnaryOperator
         assertNotNull(dereferencePtr)
         assertEquals("*", dereferencePtr.operatorCode)
         assertEquals("i32", dereferencePtr.type.typeName)
         assertSame(ptr, (dereferencePtr.input as? DeclaredReferenceExpression)?.refersTo)
 
-        val value = store.rhs as? Literal<*>
+        assertEquals(1, store.rhs.size)
+        val value = store.rhs.first() as? Literal<*>
         assertNotNull(value)
         assertEquals(3L, value.value)
         assertEquals("i32", value.type.typeName)
@@ -658,12 +661,14 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("literal_i32_i8", copyStatement.type.typeName)
 
         // Now, we set b.field_1 to 7
-        val assignment = (compoundStatement.statements[1] as BinaryOperator)
+        val assignment = (compoundStatement.statements[1] as AssignExpression)
         assertEquals("=", assignment.operatorCode)
-        assertLocalName("b", (assignment.lhs as MemberExpression).base)
-        assertEquals(".", (assignment.lhs as MemberExpression).operatorCode)
-        assertLocalName("field_1", assignment.lhs as MemberExpression)
-        assertEquals(7L, (assignment.rhs as Literal<*>).value as Long)
+        assertEquals(1, assignment.lhs.size)
+        assertEquals(1, assignment.rhs.size)
+        assertLocalName("b", (assignment.lhs.first() as MemberExpression).base)
+        assertEquals(".", (assignment.lhs.first() as MemberExpression).operatorCode)
+        assertLocalName("field_1", assignment.lhs.first() as MemberExpression)
+        assertEquals(7L, (assignment.rhs.first() as Literal<*>).value as Long)
     }
 
     @Test
@@ -761,13 +766,15 @@ class LLVMIRLanguageFrontendTest {
         val thenStmt = ifStatement.thenStatement as? CompoundStatement
         assertNotNull(thenStmt)
         assertEquals(3, thenStmt.statements.size)
-        assertNotNull(thenStmt.statements[1] as? BinaryOperator)
+        assertNotNull(thenStmt.statements[1] as? AssignExpression)
         val aDecl =
             (thenStmt.statements[0] as DeclarationStatement).singleDeclaration
                 as VariableDeclaration
-        val thenY = thenStmt.statements[1] as BinaryOperator
-        assertSame(aDecl, (thenY.rhs as DeclaredReferenceExpression).refersTo)
-        assertSame(yDecl, (thenY.lhs as DeclaredReferenceExpression).refersTo)
+        val thenY = thenStmt.statements[1] as AssignExpression
+        assertEquals(1, thenY.lhs.size)
+        assertEquals(1, thenY.rhs.size)
+        assertSame(aDecl, (thenY.rhs.first() as DeclaredReferenceExpression).refersTo)
+        assertSame(yDecl, (thenY.lhs.first() as DeclaredReferenceExpression).refersTo)
 
         val elseStmt = ifStatement.elseStatement as? CompoundStatement
         assertNotNull(elseStmt)
@@ -775,10 +782,12 @@ class LLVMIRLanguageFrontendTest {
         val bDecl =
             (elseStmt.statements[0] as DeclarationStatement).singleDeclaration
                 as VariableDeclaration
-        assertNotNull(elseStmt.statements[1] as? BinaryOperator)
-        val elseY = elseStmt.statements[1] as BinaryOperator
-        assertSame(bDecl, (elseY.rhs as DeclaredReferenceExpression).refersTo)
-        assertSame(yDecl, (elseY.lhs as DeclaredReferenceExpression).refersTo)
+        assertNotNull(elseStmt.statements[1] as? AssignExpression)
+        val elseY = elseStmt.statements[1] as AssignExpression
+        assertEquals(1, elseY.lhs.size)
+        assertEquals(1, elseY.lhs.size)
+        assertSame(bDecl, (elseY.rhs.first() as DeclaredReferenceExpression).refersTo)
+        assertSame(yDecl, (elseY.lhs.first() as DeclaredReferenceExpression).refersTo)
 
         val continueBlock =
             (thenStmt.statements[2] as? GotoStatement)?.targetLabel?.subStatement
@@ -847,19 +856,23 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("y", (yModInit.initializer as? DeclaredReferenceExpression)?.name?.localName)
         assertSame(origY, (yModInit.initializer as? DeclaredReferenceExpression)?.refersTo)
         // Now, test the modification of yMod[3] = 8
-        val yMod = ((mainBody.statements[3] as CompoundStatement).statements[1] as? BinaryOperator)
+        val yMod =
+            ((mainBody.statements[3] as CompoundStatement).statements[1] as? AssignExpression)
         assertNotNull(yMod)
+        assertEquals(1, yMod.lhs.size)
+        assertEquals(1, yMod.rhs.size)
         assertEquals(
             3L,
-            ((yMod.lhs as? ArraySubscriptionExpression)?.subscriptExpression as? Literal<*>)?.value
+            ((yMod.lhs.first() as? ArraySubscriptionExpression)?.subscriptExpression as? Literal<*>)
+                ?.value
         )
         assertSame(
             yModInit,
-            ((yMod.lhs as? ArraySubscriptionExpression)?.arrayExpression
+            ((yMod.lhs.first() as? ArraySubscriptionExpression)?.arrayExpression
                     as? DeclaredReferenceExpression)
                 ?.refersTo
         )
-        assertEquals(8L, (yMod.rhs as? Literal<*>)?.value)
+        assertEquals(8L, (yMod.rhs.first() as? Literal<*>)?.value)
 
         // Test the last shufflevector instruction which does not contain constant as initializers.
         val shuffledInit =

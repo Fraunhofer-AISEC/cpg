@@ -359,7 +359,8 @@ open class DFAOrderEvaluator(
                 // The base was the parameter of the function? We have an inter-procedural flow!
                 interproceduralFlows[prefixedBase] = true
             }
-            return Pair(prefixedBase, nodeToRelevantMethod[node]!!)
+            val relevantMethod = nodeToRelevantMethod[node]
+            if (relevantMethod != null) return Pair(prefixedBase, relevantMethod)
         }
 
         if (base == null) {
@@ -513,7 +514,7 @@ open class DFAOrderEvaluator(
             baseToFSM.entries
                 .groupBy { e -> e.key.split("|")[1] }
                 .map { x ->
-                    "${x.key}(${x.value.map { y -> y.value.currentState!! }.toSet().joinToString(",")})"
+                    "${x.key}(${x.value.mapNotNull { y -> y.value.currentState }.toSet().joinToString(",")})"
                 }
                 .sorted()
                 .joinToString(",")

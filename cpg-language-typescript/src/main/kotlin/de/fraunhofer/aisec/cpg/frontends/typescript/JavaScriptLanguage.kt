@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -44,6 +42,29 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
     override val disjunctiveOperators = listOf("||", "||=")
 
     /**
+     * All operators which perform and assignment and an operation using lhs and rhs. See
+     * https://tc39.es/ecma262/#sec-assignment-operators
+     */
+    override val compoundAssignmentOperators =
+        setOf(
+            "+=",
+            "-=",
+            "*=",
+            "**=",
+            "/=",
+            "%=",
+            "<<=",
+            ">>=",
+            ">>>=",
+            "&=",
+            "&&=",
+            "|=",
+            "||=",
+            "^=",
+            "??="
+        )
+
+    /**
      * See
      * [Documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_values).
      */
@@ -55,11 +76,4 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
             "bigint" to IntegerType("bigint", null, this, NumericType.Modifier.SIGNED),
             "string" to StringType("string", this),
         )
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): TypeScriptLanguageFrontend {
-        return TypeScriptLanguageFrontend(this, config, scopeManager)
-    }
 }

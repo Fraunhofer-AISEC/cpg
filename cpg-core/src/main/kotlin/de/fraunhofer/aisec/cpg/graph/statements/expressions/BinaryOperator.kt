@@ -32,13 +32,12 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Transient
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
  * right hand expression (rhs) and an operatorCode.
  */
-class BinaryOperator :
+open class BinaryOperator :
     Expression(), HasType.TypeListener, AssignmentHolder, HasBase, ArgumentHolder {
     /** The left-hand expression. */
     @AST
@@ -61,7 +60,10 @@ class BinaryOperator :
     override var operatorCode: String? = null
         set(value) {
             field = value
-            if (compoundOperators.contains(operatorCode) || operatorCode == "=") {
+            if (
+                (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) ||
+                    (operatorCode == "=")
+            ) {
                 NodeBuilder.LOGGER.warn(
                     "Creating a BinaryOperator with an assignment operator code is deprecated. The class AssignExpression should be used instead."
                 )
@@ -84,7 +86,7 @@ class BinaryOperator :
                 registerTypeListener(lhs as HasType.TypeListener)
                 registerTypeListener(this.lhs as HasType.TypeListener)
             }
-        } else if (compoundOperators.contains(operatorCode)) {
+        } else if (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) {
             if (lhs is DeclaredReferenceExpression) {
                 // declared reference expr is the left-hand side of an assignment -> writing to the
                 // var
@@ -123,17 +125,14 @@ class BinaryOperator :
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val previous = type
         if (operatorCode == "=") {
-            if (
-                src == rhs &&
-                    lhs.type is NumericType &&
-                    src.type is NumericType &&
-                    (lhs.type as NumericType).bitWidth!! < (src.type as NumericType).bitWidth!!
-            ) {
+            val srcWidth = (src.type as? NumericType)?.bitWidth
+            val lhsWidth = (lhs.type as? NumericType)?.bitWidth
+            if (src == rhs && lhsWidth != null && srcWidth != null && lhsWidth < srcWidth) {
                 // Do not propagate anything if the new type is too big for the current type.
                 return
             }
@@ -153,9 +152,7 @@ class BinaryOperator :
             // function pointer call.
             setType(src.propagationType, root)
         } else {
-            val resultingType =
-                language?.propagateTypeOfBinaryOperation(this)
-                    ?: UnknownType.getUnknownType(language)
+            val resultingType = language?.propagateTypeOfBinaryOperation(this) ?: unknownType()
             if (resultingType !is UnknownType) {
                 setType(resultingType, root)
             }
@@ -167,7 +164,7 @@ class BinaryOperator :
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
@@ -245,10 +242,4 @@ class BinaryOperator :
                 null
             }
         }
-
-    companion object {
-        /** Required for compound BinaryOperators. This should not be stored in the graph */
-        @Transient
-        val compoundOperators = listOf("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=")
-    }
 }

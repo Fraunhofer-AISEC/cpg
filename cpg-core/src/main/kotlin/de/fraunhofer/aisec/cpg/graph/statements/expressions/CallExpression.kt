@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
@@ -52,8 +51,8 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdge, ArgumentHolder {
     /** Connection to its [FunctionDeclaration]. This will be populated by the [CallResolver]. */
-    @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(CallResolver::class)
+    @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
     var invokeEdges = mutableListOf<PropertyEdge<FunctionDeclaration>>()
         protected set
 
@@ -61,6 +60,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
      * A virtual property to quickly access the list of declarations that this call invokes without
      * property edges.
      */
+    @PopulatedByPass(CallResolver::class)
     var invokes: List<FunctionDeclaration>
         get(): List<FunctionDeclaration> {
             val targets: MutableList<FunctionDeclaration> = ArrayList()
@@ -199,9 +199,9 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
 
     private fun replaceTypeTemplateParameter(oldType: Type?, newType: Type) {
         for (i in templateParameterEdges?.indices ?: listOf()) {
-            val propertyEdge = templateParameterEdges!![i]
-            if (propertyEdge.end == oldType) {
-                propertyEdge.end = newType
+            val propertyEdge = templateParameterEdges?.get(i)
+            if (propertyEdge?.end == oldType) {
+                propertyEdge?.end = newType
             }
         }
     }
@@ -223,7 +223,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             val propertyEdge = PropertyEdge(this, templateParam)
             propertyEdge.addProperty(Properties.INDEX, templateParameters.size)
             propertyEdge.addProperty(Properties.INSTANTIATION, templateInitialization)
-            templateParameterEdges!!.add(propertyEdge)
+            templateParameterEdges?.add(propertyEdge)
             template = true
         }
     }
@@ -236,7 +236,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             templateParameterEdges = mutableListOf()
         }
 
-        for (edge in templateParameterEdges!!) {
+        for (edge in templateParameterEdges ?: listOf()) {
             if (
                 edge.getProperty(Properties.INSTANTIATION) != null &&
                     (edge.getProperty(Properties.INSTANTIATION) ==
@@ -247,9 +247,9 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
             }
         }
 
-        for (i in templateParameterEdges!!.size until orderedInitializationSignature.size) {
+        for (i in (templateParameterEdges?.size ?: 0) until orderedInitializationSignature.size) {
             val propertyEdge = PropertyEdge(this, orderedInitializationSignature[i])
-            propertyEdge.addProperty(Properties.INDEX, templateParameterEdges!!.size)
+            propertyEdge.addProperty(Properties.INDEX, templateParameterEdges?.size)
             propertyEdge.addProperty(
                 Properties.INSTANTIATION,
                 initializationType.getOrDefault(
@@ -257,7 +257,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
                     TemplateInitialization.UNKNOWN
                 )
             )
-            templateParameterEdges!!.add(propertyEdge)
+            templateParameterEdges?.add(propertyEdge)
         }
     }
 
@@ -266,7 +266,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
 
@@ -286,8 +286,8 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
                 }
                 null
             }
-        val alternative = if (types.isNotEmpty()) types[0] else UnknownType.getUnknownType(language)
-        val commonType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
+        val alternative = if (types.isNotEmpty()) types[0] else unknownType()
+        val commonType = getCommonType(types).orElse(alternative)
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
 
         subTypes.remove(oldType)
@@ -300,7 +300,7 @@ open class CallExpression : Expression(), HasType.TypeListener, SecondaryTypeEdg
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
 

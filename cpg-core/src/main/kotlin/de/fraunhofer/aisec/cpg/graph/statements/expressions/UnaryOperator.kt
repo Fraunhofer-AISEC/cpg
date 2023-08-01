@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.isTypeSystemActive
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util.distinctBy
@@ -79,7 +79,7 @@ class UnaryOperator : Expression(), HasType.TypeListener {
     ): Boolean {
         val worklist: MutableList<HasType.TypeListener> = ArrayList()
         worklist.add(curr)
-        while (!worklist.isEmpty()) {
+        while (worklist.isNotEmpty()) {
             val tl = worklist.removeAt(0)
             if (!checked.contains(tl)) {
                 checked.add(tl)
@@ -103,7 +103,7 @@ class UnaryOperator : Expression(), HasType.TypeListener {
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val previous = type
@@ -127,7 +127,7 @@ class UnaryOperator : Expression(), HasType.TypeListener {
                 newType = src.propagationType.dereference()
             }
 
-            input.setType(newType!!, mutableListOf(this))
+            newType?.let { input.setType(it, mutableListOf(this)) }
         }
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW
@@ -135,7 +135,7 @@ class UnaryOperator : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         if (src is HasType.TypeListener && getsDataFromInput(src as HasType.TypeListener)) {
@@ -179,17 +179,14 @@ class UnaryOperator : Expression(), HasType.TypeListener {
         if (other !is UnaryOperator) {
             return false
         }
-        val that = other
-        return super.equals(that) &&
-            isPostfix == that.isPostfix &&
-            isPrefix == that.isPrefix &&
-            input == that.input &&
-            operatorCode == that.operatorCode
+        return super.equals(other) &&
+            isPostfix == other.isPostfix &&
+            isPrefix == other.isPrefix &&
+            input == other.input &&
+            operatorCode == other.operatorCode
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode() = super.hashCode()
 
     companion object {
         const val OPERATOR_POSTFIX_INCREMENT = "++"

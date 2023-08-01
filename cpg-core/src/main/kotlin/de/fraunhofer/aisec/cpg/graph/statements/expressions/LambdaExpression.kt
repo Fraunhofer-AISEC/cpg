@@ -27,11 +27,12 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.isTypeSystemActive
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 /**
  * This expression denotes the usage of an anonymous / lambda function. It connects the inner
@@ -62,11 +63,11 @@ class LambdaExpression : Expression(), HasType.TypeListener {
         }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
 
-        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
+        if (type !is UnknownType && src.propagationType == oldType) {
             return
         }
 
@@ -82,7 +83,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
         // the incoming "type" is associated to the function and it is only its return type (if it
         // is known). what we really want is to construct a function type, or rather a function
         // pointer type, since this is the closest to what we have
-        val functionType = FunctionPointerType(parameterTypes, returnType, this.language)
+        val functionType = FunctionPointerType(parameterTypes, this.language, returnType)
 
         setType(functionType, root)
         if (previous != type) {

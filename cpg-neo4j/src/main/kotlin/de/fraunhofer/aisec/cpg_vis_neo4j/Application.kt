@@ -27,21 +27,20 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
+import java.lang.Class
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
+import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 import org.neo4j.driver.exceptions.AuthenticationException
 import org.neo4j.ogm.config.Configuration
 import org.neo4j.ogm.exception.ConnectionException
 import org.neo4j.ogm.session.Session
 import org.neo4j.ogm.session.SessionFactory
-import org.neo4j.ogm.session.event.Event
-import org.neo4j.ogm.session.event.EventListenerAdapter
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
@@ -101,6 +100,12 @@ class Application : Callable<Int> {
             description = ["The path to an optional a JSON compilation database"]
         )
         var jsonCompilationDatabase: File? = null
+
+        @CommandLine.Option(
+            names = ["--list-passes"],
+            description = ["Prints the list available passes"]
+        )
+        var listPasses: Boolean = false
     }
 
     @CommandLine.Option(
@@ -166,6 +171,18 @@ class Application : Callable<Int> {
     private var noDefaultPasses: Boolean = false
 
     @CommandLine.Option(
+        names = ["--custom-pass-list"],
+        description =
+            [
+                "Add custom list of passes (includes --no-default-passes) which is" +
+                    " passed as a comma-separated list; give either pass name if pass is in list," +
+                    " or its FQDN" +
+                    " (e.g. --custom-pass-list=DFGPass,CallResolver)"
+            ]
+    )
+    private var customPasses: String = "DEFAULT"
+
+    @CommandLine.Option(
         names = ["--no-neo4j"],
         description = ["Do not push cpg into neo4j [used for debugging]"]
     )
@@ -203,6 +220,24 @@ class Application : Callable<Int> {
         description = ["Save benchmark results to json file"]
     )
     private var benchmarkJson: File? = null
+
+    private var passClassList =
+        listOf(
+            TypeHierarchyResolver::class,
+            ImportResolver::class,
+            VariableUsageResolver::class,
+            CallResolver::class,
+            DFGPass::class,
+            EvaluationOrderGraphPass::class,
+            TypeResolver::class,
+            ControlFlowSensitiveDFGPass::class,
+            FilenameMapper::class
+        )
+    private var passClassMap = passClassList.associateBy { it.simpleName }
+
+    /** The list of available passes that can be registered. */
+    private val passList: List<String>
+        get() = passClassList.mapNotNull { it.simpleName }
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -266,7 +301,6 @@ class Application : Callable<Int> {
                         "de.fraunhofer.aisec.cpg.graph",
                         "de.fraunhofer.aisec.cpg.frontends"
                     )
-                sessionFactory.register(AstChildrenEventListener())
 
                 session = sessionFactory.openSession()
             } catch (ex: ConnectionException) {
@@ -314,16 +348,18 @@ class Application : Callable<Int> {
      *   point to a file, is a directory or point to a hidden file or the paths does not have the
      *   same top level path.
      */
-    private fun setupTranslationConfiguration(): TranslationConfiguration {
+    fun setupTranslationConfiguration(): TranslationConfiguration {
         val translationConfiguration =
             TranslationConfiguration.builder()
                 .topLevel(topLevel)
                 .defaultLanguages()
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
                 .loadIncludes(loadIncludes)
+                .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
 
@@ -338,12 +374,27 @@ class Application : Callable<Int> {
             translationConfiguration.sourceLocations(filePaths)
         }
 
-        if (!noDefaultPasses) {
+        if (!noDefaultPasses && customPasses == "DEFAULT") {
             translationConfiguration.defaultPasses()
+        } else if (!noDefaultPasses && customPasses != "DEFAULT") {
+            val pieces = customPasses.split(",")
+            for (pass in pieces) {
+                if (pass.contains(".")) {
+                    translationConfiguration.registerPass(
+                        Class.forName(pass).kotlin as KClass<out Pass<*>>
+                    )
+                } else {
+                    if (pass !in passClassMap) {
+                        throw ConfigurationException("Asked to produce unknown pass")
+                    }
+                    passClassMap[pass]?.let { translationConfiguration.registerPass(it) }
+                }
+            }
         }
+        translationConfiguration.registerPass(PrepareSerialization::class)
 
-        if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
-            val db = fromFile(mutuallyExclusiveParameters.jsonCompilationDatabase!!)
+        mutuallyExclusiveParameters.jsonCompilationDatabase?.let {
+            val db = fromFile(it)
             if (db.isNotEmpty()) {
                 translationConfiguration.useCompilationDatabase(db)
                 translationConfiguration.sourceLocations(db.sourceFiles)
@@ -388,11 +439,19 @@ class Application : Callable<Int> {
      */
     @Throws(Exception::class, ConnectException::class, IllegalArgumentException::class)
     override fun call(): Int {
-
         if (schema) {
             printSchema(mutuallyExclusiveParameters.files)
             return EXIT_SUCCESS
         }
+
+        if (mutuallyExclusiveParameters.listPasses) {
+            log.info("List of passes:")
+            passList.iterator().forEach { log.info("- $it") }
+            log.info("--")
+            log.info("End of list. Stopping.")
+            return EXIT_SUCCESS
+        }
+
         val translationConfiguration = setupTranslationConfiguration()
 
         val startTime = System.currentTimeMillis()
@@ -424,13 +483,6 @@ class Application : Callable<Int> {
         }
 
         return EXIT_SUCCESS
-    }
-}
-
-class AstChildrenEventListener : EventListenerAdapter() {
-    override fun onPreSave(event: Event?) {
-        val node = event?.`object` as? Node ?: return
-        node.astChildren = SubgraphWalker.getAstChildren(node)
     }
 }
 

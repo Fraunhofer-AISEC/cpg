@@ -25,19 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
     internal val LOGGER = LoggerFactory.getLogger(NodeBuilder::class.java)
 
-    fun log(node: Node?) {
+    fun log(node: Node) {
         LOGGER.trace("Creating {}", node)
     }
 }
@@ -53,15 +54,15 @@ interface MetadataProvider
  * each [Node], but also transformation steps, such as [Handler].
  */
 interface LanguageProvider : MetadataProvider {
-    val language: Language<out LanguageFrontend>?
+    val language: Language<*>?
 }
 
 /**
  * This interface denotes that the class is able to provide source code and location information for
  * a specific node and set it using the [setCodeAndLocation] function.
  */
-interface CodeAndLocationProvider : MetadataProvider {
-    fun <N, S> setCodeAndLocation(cpgNode: N, astNode: S?)
+interface CodeAndLocationProvider<in AstNode> : MetadataProvider {
+    fun setCodeAndLocation(cpgNode: Node, astNode: AstNode)
 }
 
 /**
@@ -100,8 +101,8 @@ fun Node.applyMetadata(
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
-    if (provider is CodeAndLocationProvider) {
-        provider.setCodeAndLocation(this, rawNode)
+    if (provider is CodeAndLocationProvider<*> && rawNode != null) {
+        (provider as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
     }
 
     if (provider is LanguageProvider) {
@@ -114,6 +115,16 @@ fun Node.applyMetadata(
 
     if (provider is ScopeProvider) {
         this.scope = provider.scope
+    }
+
+    if (provider is ContextProvider) {
+        this.ctx = provider.ctx
+    }
+
+    if (this.ctx == null) {
+        throw TranslationException(
+            "Trying to create a node without a ContextProvider. This will fail."
+        )
     }
 
     if (name != null) {
@@ -206,15 +217,11 @@ fun MetadataProvider.newAnnotationMember(
     return node
 }
 
-/**
- * Provides a nice alias to [TypeParser.createFrom]. In the future, this should not be used anymore
- * since we are moving away from the [TypeParser] altogether.
- */
-@JvmOverloads
-fun LanguageProvider.parseType(name: CharSequence, resolveAlias: Boolean = false) =
-    TypeParser.createFrom(name, resolveAlias, language)
-
 /** Returns a new [Name] based on the [localName] and the current namespace as parent. */
 fun NamespaceProvider.fqn(localName: String): Name {
     return this.namespace.fqn(localName)
+}
+
+interface ContextProvider : MetadataProvider {
+    val ctx: TranslationContext?
 }

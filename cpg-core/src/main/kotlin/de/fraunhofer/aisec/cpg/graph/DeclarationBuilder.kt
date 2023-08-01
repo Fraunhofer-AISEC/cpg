@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 /**
@@ -66,10 +65,11 @@ fun MetadataProvider.newTranslationUnitDeclaration(
 fun MetadataProvider.newFunctionDeclaration(
     name: CharSequence?,
     code: String? = null,
-    rawNode: Any? = null
+    rawNode: Any? = null,
+    localNameOnly: Boolean = false
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, localNameOnly)
 
     log(node)
     return node
@@ -131,7 +131,7 @@ fun MetadataProvider.newConstructorDeclaration(
 @JvmOverloads
 fun MetadataProvider.newParamVariableDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = unknownType(),
     variadic: Boolean = false,
     code: String? = null,
     rawNode: Any? = null
@@ -155,7 +155,7 @@ fun MetadataProvider.newParamVariableDeclaration(
 @JvmOverloads
 fun MetadataProvider.newVariableDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = unknownType(),
     code: String? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
@@ -325,7 +325,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
 @JvmOverloads
 fun MetadataProvider.newFieldDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = unknownType(),
     modifiers: List<String>? = listOf(),
     code: String? = null,
     location: PhysicalLocation? = null,

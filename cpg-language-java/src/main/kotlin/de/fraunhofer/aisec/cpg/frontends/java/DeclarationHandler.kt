@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
-import com.github.javaparser.ast.Modifier
 import com.github.javaparser.ast.body.*
 import com.github.javaparser.ast.body.ConstructorDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
@@ -33,9 +32,7 @@ import com.github.javaparser.ast.expr.Expression
 import com.github.javaparser.ast.stmt.BlockStmt
 import com.github.javaparser.ast.stmt.ReturnStmt
 import com.github.javaparser.ast.stmt.Statement
-import com.github.javaparser.ast.type.ClassOrInterfaceType
 import com.github.javaparser.ast.type.ReferenceType
-import com.github.javaparser.ast.type.TypeParameter
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
@@ -49,9 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
-import java.util.stream.Collectors
 import kotlin.collections.set
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
@@ -74,10 +69,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
         declaration.addThrowTypes(
-            constructorDecl.thrownExceptions
-                .stream()
-                .map { type: ReferenceType -> this.parseType(type.asString()) }
-                .collect(Collectors.toList())
+            constructorDecl.thrownExceptions.map { type: ReferenceType -> frontend.typeOf(type) }
         )
         for (parameter in constructorDecl.parameters) {
             val param =
@@ -91,13 +83,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             frontend.scopeManager.addDeclaration(param)
         }
 
-        val name =
-            frontend.scopeManager
-                .firstScopeOrNull { RecordScope::class.java.isInstance(it) }
-                ?.astNode
-                ?.name
-        if (name != null) {
-            val type = this.parseType(name)
+        val record =
+            frontend.scopeManager.firstScopeOrNull { it is RecordScope }?.astNode
+                as? RecordDeclaration
+        if (record != null) {
+            val type = record.toType()
             declaration.type = type
         }
 
@@ -125,18 +115,14 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         frontend.scopeManager.enterScope(functionDeclaration)
         createMethodReceiver(currentRecordDecl, functionDeclaration)
         functionDeclaration.addThrowTypes(
-            methodDecl.thrownExceptions
-                .stream()
-                .map { type: ReferenceType -> this.parseType(type.asString()) }
-                .collect(Collectors.toList())
+            methodDecl.thrownExceptions.map { type: ReferenceType -> frontend.typeOf(type) }
         )
         for (parameter in methodDecl.parameters) {
             var resolvedType: Type? =
-                TypeManager.getInstance()
-                    .getTypeParameter(
-                        functionDeclaration.recordDeclaration,
-                        parameter.type.toString()
-                    )
+                frontend.typeManager.getTypeParameter(
+                    functionDeclaration.recordDeclaration,
+                    parameter.type.toString()
+                )
             if (resolvedType == null) {
                 resolvedType = frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve())
             }
@@ -178,8 +164,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val receiver =
             this.newVariableDeclaration(
                 "this",
-                if (recordDecl != null) this.parseType(recordDecl.name)
-                else UnknownType.getUnknownType(language),
+                recordDecl?.toType() ?: unknownType(),
                 "this",
                 false
             )
@@ -199,22 +184,15 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val recordDeclaration = this.newRecordDeclaration(fqn, "class", null, classInterDecl)
         recordDeclaration.superClasses =
             classInterDecl.extendedTypes
-                .stream()
-                .map { type: ClassOrInterfaceType? -> frontend.getTypeAsGoodAsPossible(type!!) }
-                .collect(Collectors.toList())
+                .map { type -> frontend.getTypeAsGoodAsPossible(type) }
+                .toMutableList()
         recordDeclaration.implementedInterfaces =
-            classInterDecl.implementedTypes
-                .stream()
-                .map { type: ClassOrInterfaceType? -> frontend.getTypeAsGoodAsPossible(type!!) }
-                .collect(Collectors.toList())
-        TypeManager.getInstance()
-            .addTypeParameter(
-                recordDeclaration,
-                classInterDecl.typeParameters
-                    .stream()
-                    .map { t: TypeParameter -> ParameterizedType(t.nameAsString, language) }
-                    .collect(Collectors.toList())
-            )
+            classInterDecl.implementedTypes.map { type -> frontend.getTypeAsGoodAsPossible(type) }
+
+        frontend.typeManager.addTypeParameter(
+            recordDeclaration,
+            classInterDecl.typeParameters.map { ParameterizedType(it.nameAsString, language) }
+        )
 
         // TODO: I cannot replicate the old partionedBy logic
         val staticImports =
@@ -251,30 +229,37 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             (decl as? com.github.javaparser.ast.body.FieldDeclaration)?.let {
                 handle(it) // will be added via the scopemanager
             }
-                ?: if (decl is MethodDeclaration) {
-                    val md =
-                        handle(decl)
-                            as de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration?
-                    frontend.scopeManager.addDeclaration(md)
-                } else if (decl is ConstructorDeclaration) {
-                    val c =
-                        handle(decl)
-                            as de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration?
-                    frontend.scopeManager.addDeclaration(c)
-                } else if (decl is ClassOrInterfaceDeclaration) {
-                    frontend.scopeManager.addDeclaration(handle(decl))
-                } else if (decl is InitializerDeclaration) {
-                    val id = decl
-                    val initializerBlock = frontend.statementHandler.handleBlockStatement(id.body)
-                    initializerBlock.isStaticBlock = id.isStatic
-                    recordDeclaration.addStatement(initializerBlock)
-                } else {
-                    log.debug(
-                        "Member {} of type {} is something that we do not parse yet: {}",
-                        decl,
-                        recordDeclaration.name,
-                        decl.javaClass.simpleName
-                    )
+                ?: when (decl) {
+                    is MethodDeclaration -> {
+                        val md =
+                            handle(decl)
+                                as de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration?
+                        frontend.scopeManager.addDeclaration(md)
+                    }
+                    is ConstructorDeclaration -> {
+                        val c =
+                            handle(decl)
+                                as
+                                de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration?
+                        frontend.scopeManager.addDeclaration(c)
+                    }
+                    is ClassOrInterfaceDeclaration -> {
+                        frontend.scopeManager.addDeclaration(handle(decl))
+                    }
+                    is InitializerDeclaration -> {
+                        val initializerBlock =
+                            frontend.statementHandler.handleBlockStatement(decl.body)
+                        initializerBlock.isStaticBlock = decl.isStatic
+                        recordDeclaration.addStatement(initializerBlock)
+                    }
+                    else -> {
+                        log.debug(
+                            "Member {} of type {} is something that we do not parse yet: {}",
+                            decl,
+                            recordDeclaration.name,
+                            decl.javaClass.simpleName
+                        )
+                    }
                 }
         }
         if (recordDeclaration.constructors.isEmpty()) {
@@ -298,19 +283,18 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         // is stored as an implicit field.
         if (frontend.scopeManager.currentScope is RecordScope) {
             // Get all the information of the outer class (its name and the respective type). We
-            // need this
-            // to generate the field.
+            // need this to generate the field.
             val scope = frontend.scopeManager.currentScope as RecordScope?
-            if (scope!!.name != null) {
-                val fieldType = this.parseType(scope.name!!)
+            if (scope?.name != null) {
+                val fieldType = scope.name?.let { this.objectType(it) } ?: unknownType()
 
                 // Enter the scope of the inner class because the new field belongs there.
                 frontend.scopeManager.enterScope(recordDeclaration)
                 val field =
                     this.newFieldDeclaration(
-                        "this$" + scope.name!!.localName,
+                        "this$" + scope.name?.localName,
                         fieldType,
-                        listOf<String>(),
+                        listOf(),
                         null,
                         null,
                         null
@@ -329,13 +313,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         // TODO: can  field have more than one variable?
         val variable = fieldDecl.getVariable(0)
-        val modifiers =
-            fieldDecl.modifiers
-                .stream()
-                .map { modifier: Modifier -> modifier.keyword.asString() }
-                .collect(Collectors.toList())
-        val joinedModifiers = java.lang.String.join(" ", modifiers) + " "
-        val location = frontend.getLocationFromRawNode(fieldDecl)
+        val modifiers = fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }
+        val location = frontend.locationOf(fieldDecl)
         val initializer =
             variable.initializer
                 .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
@@ -344,28 +323,27 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         try {
             // Resolve type first with ParameterizedType
             type =
-                TypeManager.getInstance()
-                    .getTypeParameter(
-                        frontend.scopeManager.currentRecord,
-                        variable.resolve().type.describe()
-                    )
-                    ?: this.parseType(joinedModifiers + variable.resolve().type.describe())
+                frontend.typeManager.getTypeParameter(
+                    frontend.scopeManager.currentRecord,
+                    variable.resolve().type.describe()
+                )
+                    ?: frontend.typeOf(variable.resolve().type)
         } catch (e: UnsolvedSymbolException) {
             val t = frontend.recoverTypeFromUnsolvedException(e)
             if (t == null) {
                 log.warn("Could not resolve type for {}", variable)
-                type = this.parseType(joinedModifiers + variable.type.asString())
+                type = frontend.typeOf(variable.type)
             } else {
-                type = this.parseType(joinedModifiers + t)
+                type = this.objectType(t)
                 type.typeOrigin = Type.Origin.GUESSED
             }
         } catch (e: UnsupportedOperationException) {
             val t = frontend.recoverTypeFromUnsolvedException(e)
             if (t == null) {
                 log.warn("Could not resolve type for {}", variable)
-                type = this.parseType(joinedModifiers + variable.type.asString())
+                type = frontend.typeOf(variable.type)
             } else {
-                type = this.parseType(joinedModifiers + t)
+                type = this.objectType(t)
                 type.typeOrigin = Type.Origin.GUESSED
             }
         }
@@ -387,11 +365,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         enumDecl: com.github.javaparser.ast.body.EnumDeclaration
     ): EnumDeclaration {
         val name = enumDecl.nameAsString
-        val location = frontend.getLocationFromRawNode(enumDecl)
+        val location = frontend.locationOf(enumDecl)
         val enumDeclaration = this.newEnumDeclaration(name, enumDecl.toString(), location)
         val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
 
-        entries.forEach { it.type = this.parseType(enumDeclaration.name) }
+        entries.forEach { it.type = this.objectType(enumDeclaration.name) }
         enumDeclaration.entries = entries
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superTypes = superTypes
@@ -405,7 +383,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         return this.newEnumConstantDeclaration(
             enumConstDecl.nameAsString,
             enumConstDecl.toString(),
-            frontend.getLocationFromRawNode(enumConstDecl)
+            frontend.locationOf(enumConstDecl)
         )
     }
 
@@ -433,7 +411,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
             // get the last statement
             var lastStatement: Statement? = null
-            if (!statements.isEmpty()) {
+            if (statements.isNotEmpty()) {
                 lastStatement = statements[statements.size - 1]
             }
             // make sure, method contains a return statement

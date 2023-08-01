@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -70,19 +69,19 @@ class PythonFrontendTest : BaseTest() {
         val b = p.variables["b"]
         assertNotNull(b)
         assertLocalName("b", b)
-        assertEquals(TypeParser.createFrom("bool", PythonLanguage()), b.type)
+        assertEquals(tu.primitiveType("bool"), b.type)
         assertEquals(true, (b.initializer as? Literal<*>)?.value)
 
         val i = p.variables["i"]
         assertNotNull(i)
         assertLocalName("i", i)
-        assertEquals(TypeParser.createFrom("int", PythonLanguage()), i.type)
+        assertEquals(tu.primitiveType("int"), i.type)
         assertEquals(42L, (i.initializer as? Literal<*>)?.value)
 
         val f = p.variables["f"]
         assertNotNull(f)
         assertLocalName("f", f)
-        assertEquals(TypeParser.createFrom("float", PythonLanguage()), f.type)
+        assertEquals(tu.primitiveType("float"), f.type)
         assertEquals(1.0, (f.initializer as? Literal<*>)?.value)
 
         val c = p.variables["c"]
@@ -97,13 +96,13 @@ class PythonFrontendTest : BaseTest() {
         val t = p.variables["t"]
         assertNotNull(t)
         assertLocalName("t", t)
-        assertEquals(TypeParser.createFrom("str", PythonLanguage()), t.type)
+        assertEquals(tu.primitiveType("str"), t.type)
         assertEquals("Hello", (t.initializer as? Literal<*>)?.value)
 
         val n = p.variables["n"]
         assertNotNull(n)
         assertLocalName("n", n)
-        assertEquals(TypeParser.createFrom("None", PythonLanguage()), n.type)
+        assertEquals(tu.objectType("None"), n.type)
         assertEquals(null, (n.initializer as? Literal<*>)?.value)
     }
 
@@ -143,7 +142,7 @@ class PythonFrontendTest : BaseTest() {
         val s = bar.parameters.first()
         assertNotNull(s)
         assertLocalName("s", s)
-        assertEquals(TypeParser.createFrom("str", PythonLanguage()), s.type)
+        assertEquals(tu.primitiveType("str"), s.type)
 
         assertLocalName("bar", bar)
 
@@ -160,7 +159,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(literal)
 
         assertEquals("bar(s) here: ", literal.value)
-        assertEquals(TypeParser.createFrom("str", PythonLanguage()), literal.type)
+        assertEquals(tu.primitiveType("str"), literal.type)
 
         val ref = callExpression.arguments[1] as? DeclaredReferenceExpression
         assertNotNull(ref)
@@ -220,11 +219,11 @@ class PythonFrontendTest : BaseTest() {
                 as? VariableDeclaration
         assertNotNull(sel)
         assertLocalName("sel", sel)
-        assertEquals(TypeParser.createFrom("bool", PythonLanguage()), sel.type)
+        assertEquals(tu.primitiveType("bool"), sel.type)
 
         val initializer = sel.initializer as? Literal<*>
         assertNotNull(initializer)
-        assertEquals(TypeParser.createFrom("bool", PythonLanguage()), initializer.type)
+        assertEquals(tu.primitiveType("bool"), initializer.type)
         assertEquals("True", initializer.code)
 
         val `if` = body.statements[1] as? IfStatement
@@ -309,11 +308,11 @@ class PythonFrontendTest : BaseTest() {
         val foo = body.singleDeclaration as? VariableDeclaration
         assertNotNull(foo)
         assertLocalName("foo", foo)
-        assertEquals(TypeParser.createFrom("int", PythonLanguage()), foo.type)
+        assertEquals(tu.primitiveType("int"), foo.type)
 
         val initializer = foo.initializer as? ConditionalExpression
         assertNotNull(initializer)
-        assertEquals(TypeParser.createFrom("int", PythonLanguage()), initializer.type)
+        assertEquals(tu.primitiveType("int"), initializer.type)
 
         val ifCond = initializer.condition as? Literal<*>
         assertNotNull(ifCond)
@@ -322,13 +321,13 @@ class PythonFrontendTest : BaseTest() {
         val elseExpr = initializer.elseExpr as? Literal<*>
         assertNotNull(elseExpr)
 
-        assertEquals(TypeParser.createFrom("bool", PythonLanguage()), ifCond.type)
+        assertEquals(tu.primitiveType("bool"), ifCond.type)
         assertEquals(false, ifCond.value)
 
-        assertEquals(TypeParser.createFrom("int", PythonLanguage()), thenExpr.type)
+        assertEquals(tu.primitiveType("int"), thenExpr.type)
         assertEquals(21, (thenExpr.value as? Long)?.toInt())
 
-        assertEquals(TypeParser.createFrom("int", PythonLanguage()), elseExpr.type)
+        assertEquals(tu.primitiveType("int"), elseExpr.type)
         assertEquals(42, (elseExpr.value as? Long)?.toInt())
     }
 
@@ -412,7 +411,7 @@ class PythonFrontendTest : BaseTest() {
         val somevar = recordFoo.fields[0]
         assertNotNull(somevar)
         assertLocalName("somevar", somevar)
-        // assertEquals(TypeParser.createFrom("int", false), somevar.type) TODO fix type deduction
+        // assertEquals(tu.parseType("int", false), somevar.type) TODO fix type deduction
 
         assertEquals(2, recordFoo.methods.size)
         val bar = recordFoo.methods[0]
@@ -434,7 +433,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(i)
 
         assertLocalName("i", i)
-        assertEquals(TypeParser.createFrom("int", PythonLanguage()), i.type)
+        assertEquals(tu.primitiveType("int"), i.type)
 
         // self.somevar = i
         val someVarDeclaration =
@@ -895,6 +894,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(formatArgT3)
         // TODO check refersTo
     }
+
     @Test
     fun testIssue473() {
         val topLevel = Path.of("src", "test", "resources", "python")

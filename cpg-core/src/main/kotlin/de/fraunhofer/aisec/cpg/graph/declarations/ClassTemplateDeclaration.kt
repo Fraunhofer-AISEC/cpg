@@ -66,11 +66,11 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
         }
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) return true
-        if (o == null || javaClass != o.javaClass) return false
-        if (!super.equals(o)) return false
-        val that = o as ClassTemplateDeclaration
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || javaClass != other.javaClass) return false
+        if (!super.equals(other)) return false
+        val that = other as ClassTemplateDeclaration
         return realizations == that.realizations &&
             propertyEqualsList(realizationEdges, that.realizationEdges) &&
             parameters == that.parameters &&

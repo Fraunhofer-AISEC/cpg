@@ -58,6 +58,12 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder {
     override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
 
     /**
+     * In some languages, there is a relationship between paths / directories and the package
+     * structure. Therefore, we need to be aware of the path this namespace / package is in.
+     */
+    var path: String? = null
+
+    /**
      * Returns a non-null, possibly empty `Set` of the declaration of a specified type and clazz.
      *
      * @param name the name to search for

@@ -25,12 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.HasComplexCallResolution
-import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
-import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
-import de.fraunhofer.aisec.cpg.frontends.HasTemplates
-import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
@@ -64,22 +60,19 @@ import org.slf4j.LoggerFactory
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
 @DependsOn(VariableUsageResolver::class)
-open class CallResolver : SymbolResolverPass() {
+open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     /**
      * This seems to be a map between function declarations (more likely method declarations) and
      * their parent record (more accurately their type). Seems to be only used by
      * [getOverridingCandidates] and should probably be replaced through a scope manager call.
      */
-    private val containingType = mutableMapOf<FunctionDeclaration, Type>()
+    protected val containingType = mutableMapOf<FunctionDeclaration, Type>()
 
     override fun cleanup() {
         containingType.clear()
     }
 
-    override fun accept(translationResult: TranslationResult) {
-        scopeManager = translationResult.scopeManager
-        config = translationResult.config
-
+    override fun accept(component: Component) {
         walker = ScopedWalker(scopeManager)
         walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }
         walker.registerHandler { node, _ -> findRecords(node) }
@@ -88,29 +81,28 @@ open class CallResolver : SymbolResolverPass() {
             registerMethods(currentClass, currentNode)
         }
 
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
         walker.clearCallbacks()
         walker.registerHandler { node, _ -> fixInitializers(node) }
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
         walker.clearCallbacks()
         walker.registerHandler { node, _ -> handleNode(node) }
-        for (tu in translationResult.translationUnits) {
+        for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
     }
 
-    private fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node) {
+    protected fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node?) {
         if (currentNode is MethodDeclaration && currentClass != null) {
-            containingType[currentNode] =
-                TypeParser.createFrom(currentClass.name, currentClass.language)
+            containingType[currentNode] = currentNode.objectType(currentClass.name)
         }
     }
 
-    private fun fixInitializers(node: Node) {
+    protected fun fixInitializers(node: Node?) {
         if (node is VariableDeclaration) {
             // check if we have the corresponding class for this type
             val typeString = node.type.root.name
@@ -142,7 +134,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    protected fun handleNode(node: Node) {
+    protected fun handleNode(node: Node?) {
         when (node) {
             is TranslationUnitDeclaration -> {
                 currentTU = node
@@ -167,7 +159,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    private fun handleCallExpression(curClass: RecordDeclaration?, call: CallExpression) {
+    protected fun handleCallExpression(curClass: RecordDeclaration?, call: CallExpression) {
         // Function pointers are handled by extra pass, so we are not resolving them here
         if (call.callee?.type is FunctionPointerType) {
             return
@@ -186,7 +178,7 @@ open class CallResolver : SymbolResolverPass() {
                         curClass,
                         call,
                         true,
-                        scopeManager,
+                        ctx,
                         currentTU
                     )
 
@@ -201,7 +193,24 @@ open class CallResolver : SymbolResolverPass() {
             val suitableBases = getPossibleContainingTypes(call)
             candidates =
                 if (suitableBases.isEmpty()) {
-                    listOf(currentTU.inferFunction(call))
+                    // This is not really the most ideal place, but for now this will do. While this
+                    // is definitely a function, it could still be a function inside a namespace. In
+                    // this case, we want to start inference in that particular namespace and not in
+                    // the TU. It is also a little bit redundant, since ScopeManager.resolveFunction
+                    // (which gets called before) already extracts the scope, but this information
+                    // gets lost.
+                    val scope = scopeManager.extractScope(call, scopeManager.globalScope)
+
+                    // We have two possible start points, a namespace declaration or a translation
+                    // unit. Nothing else is allowed (fow now)
+                    val func =
+                        when (val start = scope?.astNode) {
+                            is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
+                            is NamespaceDeclaration -> start.inferFunction(call, ctx = ctx)
+                            else -> null
+                        }
+
+                    listOfNotNull(func)
                 } else {
                     createMethodDummies(suitableBases, call)
                 }
@@ -224,7 +233,7 @@ open class CallResolver : SymbolResolverPass() {
      *
      * In case a resolution is not possible, `null` can be returned.
      */
-    private fun resolveCallee(
+    protected fun resolveCallee(
         callee: Expression?,
         curClass: RecordDeclaration?,
         call: CallExpression
@@ -251,10 +260,10 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    private fun handleArguments(call: CallExpression) {
+    protected fun handleArguments(call: CallExpression) {
         val worklist: Deque<Node> = ArrayDeque()
         call.arguments.forEach { worklist.push(it) }
-        while (!worklist.isEmpty()) {
+        while (worklist.isNotEmpty()) {
             val curr = worklist.pop()
             if (curr is CallExpression) {
                 handleNode(curr)
@@ -274,28 +283,28 @@ open class CallResolver : SymbolResolverPass() {
      * Resolves a [CallExpression.callee] of type [DeclaredReferenceExpression] to a possible list
      * of [FunctionDeclaration] nodes.
      */
-    private fun resolveReferenceCallee(
+    protected fun resolveReferenceCallee(
         callee: DeclaredReferenceExpression,
         curClass: RecordDeclaration?,
         call: CallExpression
     ): List<FunctionDeclaration> {
         val language = call.language
 
-        if (curClass == null) {
+        return if (curClass == null) {
             // Handle function (not method) calls. C++ allows function overloading. Make sure we
             // have at least the same number of arguments
             val candidates =
                 if (language is HasComplexCallResolution) {
                     // Handle CXX normal call resolution externally, otherwise it leads to increased
                     // complexity
-                    language.refineNormalCallResolution(call, scopeManager, currentTU)
+                    language.refineNormalCallResolution(call, ctx, currentTU)
                 } else {
                     scopeManager.resolveFunction(call).toMutableList()
                 }
 
-            return candidates
+            candidates
         } else {
-            return resolveMemberCallee(callee, curClass, call)
+            resolveMemberCallee(callee, curClass, call)
         }
     }
 
@@ -314,13 +323,14 @@ open class CallResolver : SymbolResolverPass() {
         // We need to adjust certain types of the base in case of a super call and we delegate this.
         // If that is successful, we can continue with regular resolving
         if (
-            callee is MemberExpression &&
+            curClass != null &&
+                callee is MemberExpression &&
                 callee.base is DeclaredReferenceExpression &&
                 isSuperclassReference(callee.base as DeclaredReferenceExpression)
         ) {
             (callee.language as? HasSuperClasses)?.handleSuperCall(
                 callee,
-                curClass!!,
+                curClass,
                 scopeManager,
                 recordMap
             )
@@ -336,7 +346,7 @@ open class CallResolver : SymbolResolverPass() {
         if (
             invocationCandidates.isEmpty() &&
                 callee.name.localName.isNotEmpty() &&
-                (callee.language !is CPPLanguage || shouldSearchForInvokesInParent(call))
+                (!callee.language.isCPP || shouldSearchForInvokesInParent(call))
         ) {
             val records = possibleContainingTypes.mapNotNull { recordMap[it.root.name] }.toSet()
             invocationCandidates =
@@ -355,7 +365,7 @@ open class CallResolver : SymbolResolverPass() {
         return invocationCandidates
     }
 
-    private fun retrieveInvocationCandidatesFromCall(
+    protected fun retrieveInvocationCandidatesFromCall(
         call: CallExpression,
         curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>
@@ -366,7 +376,7 @@ open class CallResolver : SymbolResolverPass() {
                     curClass,
                     possibleContainingTypes,
                     call,
-                    scopeManager,
+                    ctx,
                     currentTU,
                     this
                 )
@@ -382,21 +392,21 @@ open class CallResolver : SymbolResolverPass() {
      * @param possibleContainingTypes
      * @param call
      */
-    private fun createMethodDummies(
+    protected fun createMethodDummies(
         possibleContainingTypes: Set<Type>,
         call: CallExpression
     ): List<FunctionDeclaration> {
         return possibleContainingTypes
             .mapNotNull {
                 var record = recordMap[it.root.name]
-                if (record == null && config?.inferenceConfiguration?.inferRecords == true) {
-                    record = it.startInference().inferRecordDeclaration(it, currentTU)
+                if (record == null && config.inferenceConfiguration.inferRecords == true) {
+                    record = it.startInference(ctx).inferRecordDeclaration(it, currentTU)
                     // update the record map
-                    if (record != null) recordMap[it.root.name] = record
+                    if (record != null) it.root.name.let { name -> recordMap[name] = record }
                 }
                 record
             }
-            .map { record -> record.inferMethod(call) }
+            .map { record -> record.inferMethod(call, ctx = ctx) }
     }
 
     /**
@@ -406,11 +416,11 @@ open class CallResolver : SymbolResolverPass() {
      * @param call
      * @return true if we should stop searching parent, false otherwise
      */
-    private fun shouldSearchForInvokesInParent(call: CallExpression): Boolean {
+    protected fun shouldSearchForInvokesInParent(call: CallExpression): Boolean {
         return scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
     }
 
-    private fun handleConstructExpression(constructExpression: ConstructExpression) {
+    protected fun handleConstructExpression(constructExpression: ConstructExpression) {
         if (constructExpression.instantiates != null && constructExpression.constructor != null)
             return
         val typeName = constructExpression.type.name
@@ -454,9 +464,9 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    private fun handleExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
-        if (eci.containingClass != null) {
-            val recordDeclaration = recordMap[eci.parseName(eci.containingClass!!)]
+    protected fun handleExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
+        eci.containingClass?.let { containingClass ->
+            val recordDeclaration = recordMap[eci.parseName(containingClass)]
             val signature = eci.arguments.map { it.type }
             if (recordDeclaration != null) {
                 val constructor =
@@ -468,15 +478,16 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    private fun getPossibleContainingTypes(node: Node?): Set<Type> {
+    protected fun getPossibleContainingTypes(node: Node?): Set<Type> {
         val possibleTypes = mutableSetOf<Type>()
         if (node is MemberCallExpression) {
-            val base = node.base!!
-            possibleTypes.add(base.type)
-            possibleTypes.addAll(base.possibleSubTypes)
+            node.base?.let { base ->
+                possibleTypes.add(base.type)
+                possibleTypes.addAll(base.possibleSubTypes)
+            }
         } else {
             // This could be a C++ member call with an implicit this (which we do not create), so
-            // lets add the current class to the possible list
+            // let's add the current class to the possible list
             scopeManager.currentRecord?.toType()?.let { possibleTypes.add(it) }
         }
 
@@ -494,7 +505,7 @@ open class CallResolver : SymbolResolverPass() {
             Pattern.compile(
                 "(" +
                     Pattern.quote(recordDeclaration.name.toString()) +
-                    Regex.escape(recordDeclaration.language!!.namespaceDelimiter) +
+                    Regex.escape(recordDeclaration.language?.namespaceDelimiter ?: "") +
                     ")?" +
                     Pattern.quote(name)
             )
@@ -502,7 +513,8 @@ open class CallResolver : SymbolResolverPass() {
             (call.language as HasComplexCallResolution).refineInvocationCandidatesFromRecord(
                 recordDeclaration,
                 call,
-                namePattern
+                namePattern,
+                ctx
             )
         } else {
             recordDeclaration.methods.filter {
@@ -511,7 +523,7 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    private fun getInvocationCandidatesFromParents(
+    protected fun getInvocationCandidatesFromParents(
         name: String?,
         call: CallExpression,
         possibleTypes: Set<RecordDeclaration>
@@ -527,7 +539,7 @@ open class CallResolver : SymbolResolverPass() {
             // FunctionDeclaration with the same name as the function in the CallExpression we have
             // to stop the search in the parent even if the FunctionDeclaration does not match with
             // the signature of the CallExpression
-            if (call.language is CPPLanguage) { // TODO: Needs a special trait?
+            if (call.language.isCPP) { // TODO: Needs a special trait?
                 workingPossibleTypes.removeIf { recordDeclaration ->
                     !shouldContinueSearchInParent(recordDeclaration, name)
                 }
@@ -541,8 +553,13 @@ open class CallResolver : SymbolResolverPass() {
         }
     }
 
-    private fun getOverridingCandidates(
-        possibleSubTypes: Set<Type?>,
+    protected val Language<*>?.isCPP: Boolean
+        get() {
+            return this != null && this::class.simpleName == "CPPLanguage"
+        }
+
+    protected fun getOverridingCandidates(
+        possibleSubTypes: Set<Type>,
         declaration: FunctionDeclaration
     ): Set<FunctionDeclaration> {
         return declaration.overriddenBy
@@ -555,8 +572,8 @@ open class CallResolver : SymbolResolverPass() {
      * @param recordDeclaration matching the class the ConstructExpression wants to construct
      * @return ConstructorDeclaration that matches the provided signature
      */
-    private fun getConstructorDeclarationDirectMatch(
-        signature: List<Type?>,
+    protected fun getConstructorDeclarationDirectMatch(
+        signature: List<Type>,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration? {
         for (constructor in recordDeclaration.constructors) {
@@ -574,11 +591,11 @@ open class CallResolver : SymbolResolverPass() {
      *   there is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
      *   matches the ConstructExpression.
      */
-    private fun getConstructorDeclaration(
+    protected fun getConstructorDeclaration(
         constructExpression: ConstructExpression,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
-        val signature: List<Type?> = constructExpression.signature
+        val signature = constructExpression.signature
         var constructorCandidate =
             getConstructorDeclarationDirectMatch(signature, recordDeclaration)
         if (constructorCandidate == null && constructExpression.language is HasDefaultArguments) {
@@ -586,27 +603,25 @@ open class CallResolver : SymbolResolverPass() {
             constructorCandidate =
                 resolveConstructorWithDefaults(constructExpression, signature, recordDeclaration)
         }
-        if (
-            constructorCandidate == null && constructExpression.language is CPPLanguage
-        ) { // TODO: Fix this
+        if (constructorCandidate == null && constructExpression.language.isCPP) { // TODO: Fix this
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
             constructorCandidate =
-                resolveConstructorWithImplicitCast(constructExpression, recordDeclaration)
+                resolveConstructorWithImplicitCast(constructExpression, recordDeclaration, ctx)
         }
 
         return constructorCandidate
             ?: recordDeclaration
-                .startInference()
+                .startInference(ctx)
                 .createInferredConstructor(constructExpression.signature)
     }
 
-    private fun getConstructorDeclarationForExplicitInvocation(
-        signature: List<Type?>,
+    protected fun getConstructorDeclarationForExplicitInvocation(
+        signature: List<Type>,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
         return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
-            ?: recordDeclaration.startInference().createInferredConstructor(signature)
+            ?: recordDeclaration.startInference(ctx).createInferredConstructor(signature)
     }
 
     companion object {

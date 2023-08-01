@@ -25,12 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -38,10 +37,10 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
 import java.util.*
 import org.slf4j.LoggerFactory
 
@@ -71,26 +70,26 @@ import org.slf4j.LoggerFactory
  */
 @Suppress("MemberVisibilityCanBePrivate")
 @DependsOn(CallResolver::class)
-open class EvaluationOrderGraphPass : Pass() {
+open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
-    private var currentPredecessors = mutableListOf<Node>()
-    private val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
+    protected var currentPredecessors = mutableListOf<Node>()
+    protected val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
 
     /**
      * Allows to register EOG creation logic when a currently visited node can depend on future
      * visited nodes. Currently used to connect goto statements and the target labeled statements.
      * Implemented as listener to connect nodes when the goto appears before the label.
      */
-    private val processedListener = ProcessedListener()
+    protected val processedListener = ProcessedListener()
 
     /**
      * Stores all nodes currently handled to add them to the processedListener even if a sub node is
      * the next target of an EOG edge.
      */
-    private val intermediateNodes = mutableListOf<Node>()
+    protected val intermediateNodes = mutableListOf<Node>()
 
     init {
-        map[IncludeDeclaration::class.java] = { doNothing(it) }
+        map[IncludeDeclaration::class.java] = { doNothing() }
         map[TranslationUnitDeclaration::class.java] = {
             handleTranslationUnitDeclaration(it as TranslationUnitDeclaration)
         }
@@ -112,9 +111,7 @@ open class EvaluationOrderGraphPass : Pass() {
         map[ArrayCreationExpression::class.java] = {
             handleArrayCreationExpression(it as ArrayCreationExpression)
         }
-        map[ArrayRangeExpression::class.java] = {
-            handleArrayRangeExpression(it as ArrayRangeExpression)
-        }
+        map[RangeExpression::class.java] = { handleRangeExpression(it as RangeExpression) }
         map[DeclarationStatement::class.java] = {
             handleDeclarationStatement(it as DeclarationStatement)
         }
@@ -164,7 +161,7 @@ open class EvaluationOrderGraphPass : Pass() {
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
     }
 
-    private fun doNothing(node: Node) {
+    protected fun doNothing() {
         // Nothing to do for this node type
     }
 
@@ -173,20 +170,16 @@ open class EvaluationOrderGraphPass : Pass() {
         currentPredecessors.clear()
     }
 
-    override fun accept(result: TranslationResult) {
-        scopeManager = result.scopeManager
-        for (tu in result.translationUnits) {
-            createEOG(tu)
-            removeUnreachableEOGEdges(tu)
-            // checkEOGInvariant(tu); To insert when trying to check if the invariant holds
-        }
+    override fun accept(tu: TranslationUnitDeclaration) {
+        createEOG(tu)
+        removeUnreachableEOGEdges(tu)
     }
 
     /**
      * Removes EOG edges by first building the negative set of nodes that cannot be visited and then
      * remove there outgoing edges.In contrast to truncateLooseEdges this also removes cycles.
      */
-    private fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
+    protected fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
         val eognodes =
             SubgraphWalker.flattenAST(tu)
                 .filter { it.prevEOG.isNotEmpty() || it.nextEOG.isNotEmpty() }
@@ -298,7 +291,7 @@ open class EvaluationOrderGraphPass : Pass() {
         pushToEOG(node)
     }
 
-    protected fun handleFunctionDeclaration(node: FunctionDeclaration) {
+    protected open fun handleFunctionDeclaration(node: FunctionDeclaration) {
         // reset EOG
         currentPredecessors.clear()
         var needToLeaveRecord = false
@@ -345,18 +338,18 @@ open class EvaluationOrderGraphPass : Pass() {
         currentPredecessors.add(node)
         var defaultArg: Expression? = null
         for (paramVariableDeclaration in node.parameters) {
-            if (paramVariableDeclaration.default != null) {
-                defaultArg = paramVariableDeclaration.default
-                pushToEOG(defaultArg!!)
+            paramVariableDeclaration.default?.let {
+                defaultArg = it
+                pushToEOG(it)
                 currentPredecessors.clear()
-                currentPredecessors.add(defaultArg)
+                currentPredecessors.add(it)
                 currentPredecessors.add(node)
             }
         }
-        if (defaultArg != null) {
+        defaultArg?.let {
             for (nextEOG in funcDeclNextEOG) {
                 currentPredecessors.clear()
-                currentPredecessors.add(defaultArg)
+                currentPredecessors.add(it)
                 pushToEOG(nextEOG)
             }
         }
@@ -367,7 +360,7 @@ open class EvaluationOrderGraphPass : Pass() {
      * Tries to create the necessary EOG edges for the [node] (if it is non-null) by looking up the
      * appropriate handler function of the node's class in [map] and calling it.
      */
-    private fun createEOG(node: Node?) {
+    protected fun createEOG(node: Node?) {
         if (node == null) {
             // nothing to do
             return
@@ -428,10 +421,10 @@ open class EvaluationOrderGraphPass : Pass() {
         pushToEOG(node)
     }
 
-    protected fun handleArrayRangeExpression(node: ArrayRangeExpression) {
+    protected fun handleRangeExpression(node: RangeExpression) {
         createEOG(node.floor)
         createEOG(node.ceiling)
-        createEOG(node.step)
+        createEOG(node.third)
         pushToEOG(node)
     }
 
@@ -533,49 +526,43 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     protected fun handleUnaryOperator(node: UnaryOperator) {
-        val input = node.input
-        if (input != null) {
-            createEOG(input)
-        }
+        // TODO(oxisto): These operator codes are highly language specific and might be more suited
+        //  to be handled differently (see https://github.com/Fraunhofer-AISEC/cpg/issues/1161)
         if (node.operatorCode == "throw") {
-            val catchingScope =
-                scopeManager.firstScopeOrNull { scope ->
-                    scope is TryScope || scope is FunctionScope
-                }
-
-            val throwType =
-                if (input != null) {
-                    input.type
-                } else {
-                    // do not check via instanceof, since we do not want to allow subclasses of
-                    // DeclarationScope here
-                    val decl =
-                        scopeManager.firstScopeOrNull { scope ->
-                            scope.javaClass == ValueDeclarationScope::class.java
-                        }
-
-                    if (
-                        decl != null &&
-                            decl.astNode is CatchClause &&
-                            (decl.astNode as CatchClause?)!!.parameter != null
-                    ) {
-                        val param = (decl.astNode as CatchClause?)!!.parameter!!
-                        param.type
-                    } else {
-                        LOGGER.info("Unknown throw type, potentially throw; in a method")
-                        TypeParser.createFrom("UNKNOWN_THROW_TYPE", node.language)
-                    }
-                }
-            pushToEOG(node)
-            if (catchingScope is TryScope) {
-                catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)
-            } else if (catchingScope is FunctionScope) {
-                catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)
-            }
-            currentPredecessors.clear()
+            handleThrowOperator(node)
         } else {
-            pushToEOG(node)
+            handleUnspecificUnaryOperator(node)
         }
+    }
+
+    protected fun handleThrowOperator(node: UnaryOperator) {
+        val input = node.input
+        createEOG(input)
+
+        val catchingScope =
+            scopeManager.firstScopeOrNull { scope -> scope is TryScope || scope is FunctionScope }
+
+        val throwType = input.type
+        pushToEOG(node)
+        if (catchingScope is TryScope) {
+            catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)
+        } else if (catchingScope is FunctionScope) {
+            catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)
+        }
+        currentPredecessors.clear()
+    }
+
+    /**
+     * This function handles all regular unary operators that do not receive any special handling
+     * (such as [handleThrowOperator]). This gives language frontends a chance to override this
+     * function using [ReplacePass], handle specific operators on their own and delegate the rest to
+     * this function.
+     */
+    protected open fun handleUnspecificUnaryOperator(node: UnaryOperator) {
+        val input = node.input
+        createEOG(input)
+
+        pushToEOG(node)
     }
 
     protected fun handleCompoundStatementExpression(node: CompoundStatementExpression) {
@@ -599,24 +586,22 @@ open class EvaluationOrderGraphPass : Pass() {
 
         createEOG(node.tryBlock)
         val tmpEOGNodes = ArrayList(currentPredecessors)
-        val catchesOrRelays = tryScope!!.catchesOrRelays
+        val catchesOrRelays = tryScope?.catchesOrRelays
         for (catchClause in node.catchClauses) {
             currentPredecessors.clear()
             // Try to catch all internally thrown exceptions under the catching clause and remove
             // caught ones
             val toRemove = mutableSetOf<Type>()
-            for ((throwType, eogEdges) in catchesOrRelays) {
-                if (catchClause.parameter == null) { // e.g. catch (...)
+            for ((throwType, eogEdges) in catchesOrRelays ?: mapOf()) {
+                val catchParam = catchClause.parameter
+                if (catchParam == null) { // e.g. catch (...)
                     currentPredecessors.addAll(eogEdges)
-                } else if (
-                    TypeManager.getInstance()
-                        .isSupertypeOf(catchClause.parameter!!.type, throwType, node)
-                ) {
+                } else if (typeManager.isSupertypeOf(catchParam.type, throwType, node)) {
                     currentPredecessors.addAll(eogEdges)
                     toRemove.add(throwType)
                 }
             }
-            toRemove.forEach { catchesOrRelays.remove(it) }
+            toRemove.forEach { catchesOrRelays?.remove(it) }
             createEOG(catchClause.body)
             tmpEOGNodes.addAll(currentPredecessors)
         }
@@ -627,26 +612,29 @@ open class EvaluationOrderGraphPass : Pass() {
         // finally exists
         if (node.finallyBlock != null) {
             // extends current EOG by all value EOG from open throws
-            currentPredecessors.addAll(catchesOrRelays.entries.flatMap { (_, value) -> value })
+            catchesOrRelays
+                ?.entries
+                ?.flatMap { (_, value) -> value }
+                ?.let { currentPredecessors.addAll(it) }
             createEOG(node.finallyBlock)
 
             //  all current-eog edges , result of finally execution as value List of uncaught
             // catchesOrRelaysThrows
-            for ((_, value) in catchesOrRelays) {
+            for ((_, value) in catchesOrRelays ?: mapOf()) {
                 value.clear()
                 value.addAll(currentPredecessors)
             }
         }
         // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
         val outerScope =
-            scopeManager.firstScopeOrNull(scopeManager.currentScope!!.parent) { scope: Scope? ->
+            scopeManager.firstScopeOrNull(scopeManager.currentScope?.parent) { scope: Scope? ->
                 scope is TryScope || scope is FunctionScope
             }
         if (outerScope != null) {
             val outerCatchesOrRelays =
                 if (outerScope is TryScope) outerScope.catchesOrRelays
                 else (outerScope as FunctionScope).catchesOrRelays
-            for ((key, value) in catchesOrRelays) {
+            for ((key, value) in catchesOrRelays ?: mapOf()) {
                 val catches = outerCatchesOrRelays[key] ?: ArrayList()
                 catches.addAll(value)
                 outerCatchesOrRelays[key] = catches
@@ -684,8 +672,8 @@ open class EvaluationOrderGraphPass : Pass() {
 
     protected fun handleGotoStatement(node: GotoStatement) {
         pushToEOG(node)
-        if (node.targetLabel != null) {
-            processedListener.registerObjectListener(node.targetLabel!!) { _: Any?, to: Any? ->
+        node.targetLabel?.let {
+            processedListener.registerObjectListener(it) { _: Any?, to: Any? ->
                 addEOGEdge(node, to as Node)
             }
         }
@@ -799,7 +787,7 @@ open class EvaluationOrderGraphPass : Pass() {
      * @param prev the previous node
      * @param next the next node
      */
-    private fun addEOGEdge(prev: Node, next: Node) {
+    protected fun addEOGEdge(prev: Node, next: Node) {
         val propertyEdge = PropertyEdge(prev, next)
         propertyEdge.addProperties(nextEdgeProperties)
         propertyEdge.addProperty(Properties.INDEX, prev.nextEOG.size)
@@ -808,7 +796,7 @@ open class EvaluationOrderGraphPass : Pass() {
         next.addPrevEOG(propertyEdge)
     }
 
-    private fun addMultipleIncomingEOGEdges(prevs: List<Node>, next: Node) {
+    protected fun addMultipleIncomingEOGEdges(prevs: List<Node>, next: Node) {
         prevs.forEach { prev -> addEOGEdge(prev, next) }
     }
 
@@ -974,7 +962,7 @@ open class EvaluationOrderGraphPass : Pass() {
     }
 
     companion object {
-        private val LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass::class.java)
+        protected val LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass::class.java)
 
         /**
          * Searches backwards in the EOG on whether there is a path from a function declaration to

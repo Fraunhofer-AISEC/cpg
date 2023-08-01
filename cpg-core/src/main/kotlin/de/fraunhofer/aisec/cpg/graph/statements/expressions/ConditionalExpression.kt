@@ -25,11 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.ArrayList
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -38,7 +35,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represents an expression containing a ternary operator: `var x = condition ? valueIfTrue :
  * valueIfFalse`;
  */
-class ConditionalExpression : Expression(), HasType.TypeListener {
+class ConditionalExpression : Expression(), HasType.TypeListener, ArgumentHolder, BranchingNode {
     @AST var condition: Expression = ProblemExpression("could not parse condition expression")
 
     @AST
@@ -58,7 +55,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
         }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val previous = type
@@ -70,8 +67,8 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
         subTypes.remove(oldType)
         subTypes.addAll(types)
-        val alternative = if (types.isNotEmpty()) types[0] else UnknownType.getUnknownType()
-        setType(TypeManager.getInstance().getCommonType(types, this).orElse(alternative), root)
+        val alternative = if (types.isNotEmpty()) types[0] else unknownType()
+        setType(getCommonType(types).orElse(alternative), root)
         setPossibleSubTypes(subTypes, root)
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW
@@ -79,7 +76,7 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
@@ -94,6 +91,18 @@ class ConditionalExpression : Expression(), HasType.TypeListener {
             .append("thenExpr", thenExpr)
             .append("elseExpr", elseExpr)
             .build()
+    }
+
+    override val branchedBy: Node
+        get() = condition
+
+    override fun addArgument(expression: Expression) {
+        // Do nothing
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        // Do nothing
+        return false
     }
 
     override fun equals(other: Any?): Boolean {

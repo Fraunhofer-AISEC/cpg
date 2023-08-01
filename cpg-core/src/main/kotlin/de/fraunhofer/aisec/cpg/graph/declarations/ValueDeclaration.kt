@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -46,7 +47,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
      * A dedicated backing field, so that [setType] can actually set the type without any loops,
      * since we are using a custom setter in [type] (which calls [setType]).
      */
-    @Relationship("TYPE") protected var _type: Type = UnknownType.getUnknownType()
+    @Relationship("TYPE") protected var _type: Type = UnknownType.getUnknownType(null)
 
     /**
      * The type of this declaration. In order to maximize compatibility with Java legacy code
@@ -56,15 +57,14 @@ abstract class ValueDeclaration : Declaration(), HasType {
     override var type: Type
         get() {
             val result: Type =
-                if (TypeManager.isTypeSystemActive()) {
+                if (isTypeSystemActive) {
                     _type
                 } else {
-                    TypeManager.getInstance()
-                        .typeCache
-                        .computeIfAbsent(this) { mutableListOf() }
-                        .stream()
-                        .findAny()
-                        .orElse(UnknownType.getUnknownType())
+                    ctx?.typeManager
+                        ?.typeCache
+                        ?.computeIfAbsent(this) { mutableListOf() }
+                        ?.firstOrNull()
+                        ?: unknownType()
                 }
             return result
         }
@@ -74,11 +74,10 @@ abstract class ValueDeclaration : Declaration(), HasType {
         }
 
     @Relationship("POSSIBLE_SUB_TYPES") protected var _possibleSubTypes = mutableListOf<Type>()
-
     override var possibleSubTypes: List<Type>
         get() {
-            return if (!TypeManager.isTypeSystemActive()) {
-                TypeManager.getInstance().typeCache.getOrDefault(this, emptyList())
+            return if (!isTypeSystemActive) {
+                ctx?.typeManager?.typeCache?.getOrDefault(this, emptyList()) ?: listOf()
             } else _possibleSubTypes
         }
         set(value) {
@@ -91,13 +90,15 @@ abstract class ValueDeclaration : Declaration(), HasType {
      * Links to all the [DeclaredReferenceExpression]s accessing the variable and the respective
      * access value (read, write, readwrite).
      */
+    @PopulatedByPass(VariableUsageResolver::class)
     @Relationship(value = "USAGE")
     var usageEdges: MutableList<PropertyEdge<DeclaredReferenceExpression>> = ArrayList()
 
     /** All usages of the variable/field. */
-    /** Set all usages of the variable/field and assembles the access properties. */
+    @PopulatedByPass(VariableUsageResolver::class)
     var usages: List<DeclaredReferenceExpression>
         get() = unwrap(usageEdges, true)
+        /** Set all usages of the variable/field and assembles the access properties. */
         set(usages) {
             usageEdges =
                 usages
@@ -126,69 +127,62 @@ abstract class ValueDeclaration : Declaration(), HasType {
     override val propagationType: Type
         get() {
             return if (type is ReferenceType) {
-                (type as ReferenceType?)?.elementType ?: UnknownType.getUnknownType()
+                (type as ReferenceType?)?.elementType ?: unknownType()
             } else type
         }
 
     override fun setType(type: Type, root: MutableList<HasType>?) {
-        var type: Type? = type
-        var root: MutableList<HasType>? = root
-        if (!TypeManager.isTypeSystemActive()) {
-            TypeManager.getInstance().cacheType(this, type)
+        var t: Type = type
+        var r: MutableList<HasType>? = root
+        if (!isTypeSystemActive) {
+            cacheType(t)
             return
         }
-        if (root == null) {
-            root = ArrayList()
+        if (r == null) {
+            r = ArrayList()
         }
         if (
-            type == null ||
-                root.contains(this) ||
-                TypeManager.getInstance().isUnknown(type) ||
-                this._type is FunctionPointerType && type !is FunctionPointerType
+            r.contains(this) ||
+                t is UnknownType ||
+                this._type is FunctionPointerType && t !is FunctionPointerType
         ) {
             return
         }
         val oldType = this.type
-        type = type.duplicate()
-        val subTypes: MutableSet<Type?> = HashSet()
+        t = t.duplicate()
+        val subTypes = mutableSetOf<Type>()
         for (t in possibleSubTypes) {
-            if (!t.isSimilar(type)) {
+            if (!t.isSimilar(t)) {
                 subTypes.add(t)
             }
         }
-        subTypes.add(type)
-        this._type =
-            TypeManager.getInstance()
-                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type))
+        subTypes.add(t)
+        this._type = registerType(getCommonType(subTypes).orElse(t))
         val newSubtypes: MutableList<Type> = ArrayList()
         for (s in subTypes) {
-            if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
-                newSubtypes.add(TypeManager.getInstance().registerType(s))
+            if (isSupertypeOf(this.type, s)) {
+                newSubtypes.add(registerType(s))
             }
         }
         possibleSubTypes = newSubtypes
-        if (oldType == type) {
+        if (oldType == t) {
             // Nothing changed, so we do not have to notify the listeners.
             return
         }
-        root.add(this) // Add current node to the set of "triggers" to detect potential loops.
+        r.add(this) // Add current node to the set of "triggers" to detect potential loops.
         // Notify all listeners about the changed type
         for (l in typeListeners) {
             if (l != this) {
-                l.typeChanged(this, root, oldType)
+                l.typeChanged(this, r, oldType)
             }
         }
     }
 
     override fun setPossibleSubTypes(possibleSubTypes: List<Type>, root: MutableList<HasType>) {
-        var possibleSubTypes = possibleSubTypes
-        possibleSubTypes =
-            possibleSubTypes
-                .filterNot { type -> TypeManager.getInstance().isUnknown(type) }
-                .distinct()
-                .toMutableList()
-        if (!TypeManager.isTypeSystemActive()) {
-            possibleSubTypes.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
+        var list = possibleSubTypes
+        list = list.filterNot { type -> type is UnknownType }.distinct().toMutableList()
+        if (!isTypeSystemActive) {
+            list.forEach { t -> cacheType(t) }
 
             return
         }
@@ -196,9 +190,9 @@ abstract class ValueDeclaration : Declaration(), HasType {
             return
         }
         val oldSubTypes = this.possibleSubTypes
-        this._possibleSubTypes = possibleSubTypes
+        this._possibleSubTypes = list
 
-        if (HashSet(oldSubTypes).containsAll(possibleSubTypes)) {
+        if (HashSet(oldSubTypes).containsAll(list)) {
             // Nothing changed, so we do not have to notify the listeners.
             return
         }
@@ -230,17 +224,6 @@ abstract class ValueDeclaration : Declaration(), HasType {
                 .stream()
                 .filter { l: HasType.TypeListener -> l != this }
                 .forEach { l: HasType.TypeListener -> l.possibleSubTypesChanged(this, root) }
-    }
-
-    override fun registerTypeListener(listener: HasType.TypeListener) {
-        val root = mutableListOf<HasType>(this)
-        typeListeners.add(listener)
-        listener.typeChanged(this, root, type)
-        listener.possibleSubTypesChanged(this, root)
-    }
-
-    override fun unregisterTypeListener(listener: HasType.TypeListener) {
-        typeListeners.remove(listener)
     }
 
     override fun refreshType() {

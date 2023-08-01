@@ -25,10 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.TypeManager
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
@@ -60,19 +57,11 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
     /** Virtual property to access [initializerEdges] without property edges. */
     var initializers by PropertyEdgeDelegate(InitializerListExpression::initializerEdges)
 
-    fun addInitializer(initializer: Expression) {
-        val edge = PropertyEdge(this, initializer)
-        edge.addProperty(Properties.INDEX, initializerEdges.size)
-        initializer.registerTypeListener(this)
-        addPrevDFG(initializer)
-        initializerEdges.add(edge)
-    }
-
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
-        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
+        if (type !is UnknownType && src.propagationType == oldType) {
             return
         }
         val previous = type
@@ -80,15 +69,9 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
         val subTypes: MutableList<Type>
         if (initializers.contains(src)) {
             val types =
-                initializers
-                    .map {
-                        TypeManager.getInstance()
-                            .registerType(it.type.reference(PointerOrigin.ARRAY))
-                    }
-                    .toSet()
-            val alternative =
-                if (types.isNotEmpty()) types.iterator().next() else UnknownType.getUnknownType()
-            newType = TypeManager.getInstance().getCommonType(types, this).orElse(alternative)
+                initializers.map { registerType(it.type.reference(PointerOrigin.ARRAY)) }.toSet()
+            val alternative = if (types.isNotEmpty()) types.iterator().next() else unknownType()
+            newType = getCommonType(types).orElse(alternative)
             subTypes = ArrayList(possibleSubTypes)
             subTypes.remove(oldType)
             subTypes.addAll(types)
@@ -106,7 +89,7 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
@@ -129,5 +112,10 @@ class InitializerListExpression : Expression(), HasType.TypeListener {
             propertyEqualsList(initializerEdges, other.initializerEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), initializers)
+    override fun hashCode(): Int {
+        // Including initializerEdges directly is a HUGE performance loss in the calculation of each
+        // hash code. Therefore, we only include the array's size, which should hopefully be sort of
+        // unique to avoid too many hash collisions.
+        return Objects.hash(super.hashCode(), initializerEdges.size)
+    }
 }

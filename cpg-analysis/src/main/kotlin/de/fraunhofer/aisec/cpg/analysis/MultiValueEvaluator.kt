@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.astParent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -249,7 +250,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 as? ForStatement
         if (loop == null || loop.condition !is BinaryOperator) return setOf()
 
-        var loopVar: Number? =
+        var loopVar: Any? =
             evaluateInternal(loop.initializerStatement?.declarations?.first(), depth) as? Number
                 ?: return setOf()
 
@@ -338,7 +339,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                                 (loopOp.input as? DeclaredReferenceExpression)?.refersTo ==
                                     expr.refersTo
                             ) {
-                                loopVar!!
+                                loopVar
                             } else {
                                 loopOp.input
                             },
@@ -353,7 +354,6 @@ class MultiValueEvaluator : ValueEvaluator() {
             if (loopVar == null) {
                 return result
             }
-            // result.add(loopVar)
 
             if ((cond.lhs as? DeclaredReferenceExpression)?.refersTo == expr.refersTo) {
                 lhs = loopVar
@@ -366,7 +366,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         return result
     }
 
-    private fun computeUnaryOpEffect(input: Any, expr: UnaryOperator): Any? {
+    private fun computeUnaryOpEffect(input: Any?, expr: UnaryOperator): Any? {
         return when (expr.operatorCode) {
             "-" -> {
                 when (input) {

@@ -25,11 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.newDeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -41,9 +39,9 @@ import java.util.*
 
 @ExecuteFirst
 @RequiredFrontend(LLVMIRLanguageFrontend::class)
-class CompressLLVMPass : Pass() {
-    override fun accept(t: TranslationResult) {
-        val flatAST = SubgraphWalker.flattenAST(t)
+class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
+    override fun accept(component: Component) {
+        val flatAST = SubgraphWalker.flattenAST(component)
         // Get all goto statements
         val allGotos = flatAST.filterIsInstance<GotoStatement>()
         // Get all LabelStatements which are only referenced from a single GotoStatement
@@ -84,8 +82,7 @@ class CompressLLVMPass : Pass() {
                         (node.thenStatement as GotoStatement).targetLabel?.subStatement
                 }
                 // Replace the else-statement with the basic block it jumps to iff we found that
-                // its
-                // goto statement is the only one jumping to the target
+                // its goto statement is the only one jumping to the target
                 if (
                     node.elseStatement in gotosToReplace &&
                         node !in
@@ -215,7 +212,7 @@ class CompressLLVMPass : Pass() {
         val worklist: Queue<Node> = LinkedList()
         worklist.add(node.body)
         val alreadyChecked = LinkedHashSet<Node>()
-        while (!worklist.isEmpty()) {
+        while (worklist.isNotEmpty()) {
             val currentNode = worklist.remove()
             alreadyChecked.add(currentNode)
             // We exclude sub-try statements as they would mess up with the results

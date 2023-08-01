@@ -49,21 +49,20 @@ import org.neo4j.ogm.annotation.Transient
  */
 abstract class Expression : Statement(), HasType {
 
-    @Relationship("TYPE") private var _type: Type = UnknownType.getUnknownType()
+    @Relationship("TYPE") private var _type: Type = unknownType()
 
     /** The type of the value after evaluation. */
     override var type: Type
         get() {
             val result: Type =
-                if (TypeManager.isTypeSystemActive()) {
+                if (isTypeSystemActive) {
                     _type
                 } else {
-                    TypeManager.getInstance()
-                        .typeCache
-                        .computeIfAbsent(this) { mutableListOf() }
-                        .stream()
-                        .findAny()
-                        .orElse(UnknownType.getUnknownType())
+                    ctx?.typeManager
+                        ?.typeCache
+                        ?.computeIfAbsent(this) { mutableListOf() }
+                        ?.firstOrNull()
+                        ?: unknownType()
                 }
             return result
         }
@@ -76,8 +75,8 @@ abstract class Expression : Statement(), HasType {
 
     override var possibleSubTypes: List<Type>
         get() {
-            return if (!TypeManager.isTypeSystemActive()) {
-                TypeManager.getInstance().typeCache.getOrDefault(this, emptyList())
+            return if (!isTypeSystemActive) {
+                ctx?.typeManager?.typeCache?.getOrDefault(this, emptyList()) ?: listOf()
             } else _possibleSubTypes
         }
         set(value) {
@@ -89,34 +88,34 @@ abstract class Expression : Statement(), HasType {
     override val propagationType: Type
         get() {
             return if (type is ReferenceType) {
-                (type as ReferenceType?)?.elementType ?: UnknownType.getUnknownType()
+                (type as ReferenceType?)?.elementType ?: unknownType()
             } else type
         }
 
     @Override
     override fun setType(type: Type, root: MutableList<HasType>?) {
-        var type: Type = type
-        var root: MutableList<HasType>? = root
+        var t: Type = type
+        var r: MutableList<HasType>? = root
 
         // TODO Document this method. It is called very often (potentially for each AST node) and
         //  performs less than optimal.
-        if (!TypeManager.isTypeSystemActive()) {
-            this._type = type
-            TypeManager.getInstance().cacheType(this, type)
+        if (!isTypeSystemActive) {
+            this._type = t
+            cacheType(t)
             return
         }
 
-        if (root == null) {
-            root = mutableListOf()
+        if (r == null) {
+            r = mutableListOf()
         }
 
         // No (or only unknown) type given, loop detected? Stop early because there's nothing we can
         // do.
         if (
-            root.contains(this) ||
-                TypeManager.getInstance().isUnknown(type) ||
-                TypeManager.getInstance().stopPropagation(this.type, type) ||
-                (this.type is FunctionPointerType && type !is FunctionPointerType)
+            r.contains(this) ||
+                t is UnknownType ||
+                stopPropagation(this.type, t) ||
+                (this.type is FunctionPointerType && t !is FunctionPointerType)
         ) {
             return
         }
@@ -124,68 +123,62 @@ abstract class Expression : Statement(), HasType {
         val oldType = this.type
         // Backup to check if something changed
 
-        type = type.duplicate()
+        t = t.duplicate()
         val subTypes = mutableSetOf<Type>()
 
         // Check all current subtypes and consider only those which are "different enough" to type.
-        for (t in possibleSubTypes) {
-            if (!t.isSimilar(type)) {
-                subTypes.add(t)
+        for (s in possibleSubTypes) {
+            if (!s.isSimilar(s)) {
+                subTypes.add(s)
             }
         }
 
-        subTypes.add(type)
+        subTypes.add(t)
 
         // Probably tries to get something like the best supertype of all possible subtypes.
-        this._type =
-            TypeManager.getInstance()
-                .registerType(TypeManager.getInstance().getCommonType(subTypes, this).orElse(type))
+        this._type = registerType(getCommonType(subTypes).orElse(t))
 
         // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
         //  getting the common type??
         val newSubtypes = mutableListOf<Type>()
         for (s in subTypes) {
-            if (TypeManager.getInstance().isSupertypeOf(this.type, s, this)) {
-                newSubtypes.add(TypeManager.getInstance().registerType(s))
+            if (isSupertypeOf(this.type, s)) {
+                newSubtypes.add(registerType(s))
             }
         }
 
         possibleSubTypes = newSubtypes
 
-        if (oldType == type) {
+        if (oldType == t) {
             // Nothing changed, so we do not have to notify the listeners.
             return
         }
 
         // Add current node to the set of "triggers" to detect potential loops.
-        root.add(this)
+        r.add(this)
 
         // Notify all listeners about the changed type
         for (l in typeListeners) {
             if (l != this) {
-                l.typeChanged(this, root, oldType)
+                l.typeChanged(this, r, oldType)
             }
         }
     }
 
     override fun setPossibleSubTypes(possibleSubTypes: List<Type>, root: MutableList<HasType>) {
-        var possibleSubTypes = possibleSubTypes
-        possibleSubTypes =
-            possibleSubTypes
-                .filterNot { type -> TypeManager.getInstance().isUnknown(type) }
-                .distinct()
-                .toMutableList()
-        if (!TypeManager.isTypeSystemActive()) {
-            possibleSubTypes.forEach { t -> TypeManager.getInstance().cacheType(this, t) }
+        var list = possibleSubTypes
+        list = list.filterNot { type -> type is UnknownType }.distinct().toMutableList()
+        if (!isTypeSystemActive) {
+            list.forEach { t -> cacheType(t) }
             return
         }
         if (root.contains(this)) {
             return
         }
         val oldSubTypes = this.possibleSubTypes
-        this._possibleSubTypes = possibleSubTypes
+        this._possibleSubTypes = list
 
-        if (HashSet(oldSubTypes).containsAll(possibleSubTypes)) {
+        if (HashSet(oldSubTypes).containsAll(list)) {
             // Nothing changed, so we do not have to notify the listeners.
             return
         }
@@ -217,17 +210,6 @@ abstract class Expression : Statement(), HasType {
                 .stream()
                 .filter { l: HasType.TypeListener -> l != this }
                 .forEach { l: HasType.TypeListener -> l.possibleSubTypesChanged(this, root) }
-    }
-
-    override fun registerTypeListener(listener: HasType.TypeListener) {
-        val root = mutableListOf<HasType>(this)
-        typeListeners.add(listener)
-        listener.typeChanged(this, root, type)
-        listener.possibleSubTypesChanged(this, root)
-    }
-
-    override fun unregisterTypeListener(listener: HasType.TypeListener) {
-        typeListeners.remove(listener)
     }
 
     override fun refreshType() {

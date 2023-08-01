@@ -25,13 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.isTypeSystemActive
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
 import kotlin.collections.ArrayList
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -44,6 +46,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
     /** The [Declaration]s this expression might refer to. */
+    @PopulatedByPass(VariableUsageResolver::class)
     @Relationship(value = "REFERS_TO")
     var refersTo: Declaration? = null
         set(value) {
@@ -55,7 +58,7 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
                     current.unregisterTypeListener(this)
                 }
                 if (current is HasType.TypeListener) {
-                    unregisterTypeListener((current as HasType.TypeListener?)!!)
+                    unregisterTypeListener(current as HasType.TypeListener)
                 }
             }
 
@@ -91,14 +94,13 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
      *   </T>
      */
     fun <T : VariableDeclaration?> getRefersToAs(clazz: Class<T>): T? {
-        if (refersTo == null) {
-            return null
-        }
-        return if (clazz.isAssignableFrom(refersTo!!.javaClass)) clazz.cast(refersTo) else null
+        return if (refersTo?.javaClass?.let { clazz.isAssignableFrom(it) } == true)
+            clazz.cast(refersTo)
+        else null
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val previous = type
@@ -109,13 +111,12 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeListener {
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
 
         // since we want to update the sub types, we need to exclude ourselves from the root,
-        // otherwise
-        // it won't work. What a weird and broken system!
+        // otherwise it won't work. What a weird and broken system!
         root.remove(this)
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
         subTypes.addAll(src.possibleSubTypes)

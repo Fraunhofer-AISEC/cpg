@@ -25,9 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.assertLocalName
-import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.function
@@ -41,7 +39,7 @@ import kotlin.test.*
 class AssignExpressionTest {
     @Test
     fun propagateSimple() {
-        with(TestLanguage()) {
+        with(TestLanguageFrontend()) {
             val refA = newDeclaredReferenceExpression("a")
             val refB = newDeclaredReferenceExpression("b")
 
@@ -52,7 +50,7 @@ class AssignExpressionTest {
             assertContains(refB.typeListeners, stmt)
 
             // Suddenly, we now we know the type of b.
-            refB.type = parseType("MyClass")
+            refB.type = objectType("MyClass")
             // It should now propagate to a
             assertLocalName("MyClass", refA.type)
 
@@ -65,12 +63,12 @@ class AssignExpressionTest {
     fun propagateTuple() {
         with(TestLanguageFrontend()) {
             val result = build {
-                translationResult(TranslationConfiguration.builder().build()) {
+                translationResult {
                     translationUnit {
                         val func =
                             function(
                                 "func",
-                                returnTypes = listOf(parseType("MyClass"), parseType("error"))
+                                returnTypes = listOf(objectType("MyClass"), objectType("error"))
                             )
                         function("main") {
                             val refA = newDeclaredReferenceExpression("a")
@@ -109,7 +107,7 @@ class AssignExpressionTest {
             assertLocalName("error", refErr.type)
 
             // Invoke the DFG pass
-            DFGPass().accept(result)
+            DFGPass(ctx).accept(result.components.first())
 
             assertTrue(refA.prevDFG.contains(call))
             assertTrue(refErr.prevDFG.contains(call))

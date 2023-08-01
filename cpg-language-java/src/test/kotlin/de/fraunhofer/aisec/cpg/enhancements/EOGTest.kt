@@ -47,7 +47,6 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.file.Path
-import java.util.function.Consumer
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import kotlin.test.*
@@ -83,18 +82,11 @@ internal class EOGTest : BaseTest() {
         }
         val ifs = nodes.filterIsInstance<IfStatement>()
         assertEquals(2, ifs.size)
-        ifs.forEach(Consumer { ifnode: IfStatement -> assertNotNull(ifnode.thenStatement) })
-        assertTrue(
-            ifs.stream().anyMatch { node: IfStatement -> node.elseStatement == null } &&
-                ifs.stream().anyMatch { node: IfStatement -> node.elseStatement != null }
-        )
+        ifs.forEach { assertNotNull(it.thenStatement) }
+        assertTrue(ifs.any { it.elseStatement == null } && ifs.any { it.elseStatement != null })
         val ifSimple = ifs[0]
         val ifBranched = ifs[1]
-        val prints =
-            nodes
-                .stream()
-                .filter { node: Node -> node.code == refNodeString }
-                .collect(Collectors.toList())
+        val prints = nodes.filter { it.code == refNodeString }
         val ifEOG = SubgraphWalker.getEOGPathEdges(ifSimple)
         var conditionEOG = SubgraphWalker.getEOGPathEdges(ifSimple.condition)
         var thenEOG = SubgraphWalker.getEOGPathEdges(ifSimple.thenStatement)
@@ -237,7 +229,7 @@ internal class EOGTest : BaseTest() {
     fun testConditionShortCircuit() {
         val nodes = translateToNodes("src/test/resources/cfg/ShortCircuit.java")
         val binaryOperators =
-            nodes.filterIsInstance<BinaryOperator>().filter { bo: BinaryOperator ->
+            nodes.filterIsInstance<BinaryOperator>().filter { bo ->
                 bo.operatorCode == "&&" || bo.operatorCode == "||"
             }
         for (bo in binaryOperators) {
@@ -291,11 +283,7 @@ internal class EOGTest : BaseTest() {
     @Throws(Exception::class)
     fun testJavaFor() {
         val nodes = translateToNodes("src/test/resources/cfg/ForLoop.java")
-        val prints =
-            nodes
-                .stream()
-                .filter { node: Node -> node.code == REFNODESTRINGJAVA }
-                .collect(Collectors.toList())
+        val prints = nodes.filter { it.code == REFNODESTRINGJAVA }
         val fstat = nodes.filterIsInstance<ForStatement>()
         var fs = fstat[0]
         assertTrue(
@@ -436,12 +424,8 @@ internal class EOGTest : BaseTest() {
     @Throws(Exception::class)
     fun testLoops(relPath: String, refNodeString: String?) {
         val nodes = translateToNodes(relPath)
-        val prints =
-            nodes
-                .stream()
-                .filter { node: Node -> node.code == refNodeString }
-                .collect(Collectors.toList())
-        assertEquals(1, nodes.stream().filter { node: Node? -> node is WhileStatement }.count())
+        val prints = nodes.filter { it.code == refNodeString }
+        assertEquals(1, nodes.filterIsInstance<WhileStatement>().count())
 
         val wstat = nodes.filterIsInstance<WhileStatement>().firstOrNull()
         assertNotNull(wstat)
@@ -771,7 +755,7 @@ internal class EOGTest : BaseTest() {
             }
 
         // Test If-Block
-        val firstIf: IfStatement =
+        val firstIf =
             result.allChildren<IfStatement>().filter { l -> l.location?.region?.startLine == 6 }[0]
         val a =
             result.refs[
@@ -828,12 +812,8 @@ internal class EOGTest : BaseTest() {
     @Throws(Exception::class)
     fun testBreakContinue(relPath: String, refNodeString: String) {
         val nodes = translateToNodes(relPath)
-        val prints =
-            nodes
-                .stream()
-                .filter { node: Node -> node.code == refNodeString }
-                .collect(Collectors.toList())
-        assertEquals(1, nodes.stream().filter { node: Node? -> node is WhileStatement }.count())
+        val prints = nodes.filter { it.code == refNodeString }
+        assertEquals(1, nodes.filterIsInstance<WhileStatement>().count())
         val breaks = nodes.filterIsInstance<BreakStatement>()
         val continues = nodes.filterIsInstance<ContinueStatement>()
         val wstat = nodes.filterIsInstance<WhileStatement>().firstOrNull()
@@ -981,10 +961,8 @@ internal class EOGTest : BaseTest() {
             }
         var nodes = SubgraphWalker.flattenAST(tu)
         // TODO: until explicitly added Return Statements are either removed again or code and
-        // region
-        //  set properly
-        nodes =
-            nodes.stream().filter { node: Node -> node.code != null }.collect(Collectors.toList())
+        // region set properly
+        nodes = nodes.filter { it.code != null }
         return nodes
     }
 

@@ -63,7 +63,7 @@ object JepSingleton {
             // We want to have the parent folder of "CPGPython" so that we can do "import CPGPython"
             // in python. The layout looks like `.../main/CPGPython/__init__.py` -> we have to go
             // two levels up to get the path of `main`.
-            var pyFolder = Paths.get(pyInitFile.toURI()).parent.parent
+            val pyFolder = Paths.get(pyInitFile.toURI()).parent.parent
             config.addIncludePaths(pyFolder.toString())
         } else {
             val targetFolder = tempFileHolder.pyFolder

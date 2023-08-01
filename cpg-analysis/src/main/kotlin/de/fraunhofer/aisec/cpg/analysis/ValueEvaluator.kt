@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import kotlin.UnsupportedOperationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -75,6 +74,10 @@ open class ValueEvaluator(
         if (node !is Node) return node
 
         return evaluateInternal(node as? Node, 0)
+    }
+
+    fun clearPath() {
+        path.clear()
     }
 
     /** Tries to evaluate this node. Anything can happen. */

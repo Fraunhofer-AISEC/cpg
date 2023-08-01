@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -72,7 +73,7 @@ class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitial
             // since the type is tied to the declaration, but it is convenient to have the type
             // information in the initializer, i.e. in a ConstructExpression.
             if (value is HasType.TypeListener) {
-                registerTypeListener((value as HasType.TypeListener?)!!)
+                registerTypeListener(value as HasType.TypeListener)
             }
         }
 
@@ -81,10 +82,10 @@ class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitial
     }
 
     override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
-        if (!TypeManager.getInstance().isUnknown(type) && src.propagationType == oldType) {
+        if (type !is UnknownType && src.propagationType == oldType) {
             return
         }
         val previous = type
@@ -97,7 +98,7 @@ class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitial
                 // otherwise it can be ignored once we have a type
                 if (isArray) {
                     src.type
-                } else if (!TypeManager.getInstance().isUnknown(type)) {
+                } else if (type !is UnknownType) {
                     return
                 } else {
                     src.type.dereference()
@@ -112,7 +113,7 @@ class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitial
     }
 
     override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
+        if (!isTypeSystemActive) {
             return
         }
         val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
@@ -127,6 +128,11 @@ class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitial
             .append("initializer", initializer)
             .toString()
     }
+
+    override val assignments: List<Assignment>
+        get() {
+            return initializer?.let { listOf(Assignment(it, this, this)) } ?: listOf()
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

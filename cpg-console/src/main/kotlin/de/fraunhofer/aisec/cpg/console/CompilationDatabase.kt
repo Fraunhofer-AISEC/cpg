@@ -99,5 +99,7 @@ class CompilationDatabase : Plugin {
         repl.registerCommand(Load(config))
     }
 
-    override fun cleanUp() {}
+    override fun cleanUp() {
+        // Nothing to do
+    }
 }

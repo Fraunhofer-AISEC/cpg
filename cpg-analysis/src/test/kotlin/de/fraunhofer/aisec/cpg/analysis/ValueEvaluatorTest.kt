@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -181,272 +182,272 @@ class ValueEvaluatorTest {
 
     @Test
     fun testHandlePlus() {
-        with(TestHandler()) {
+        with(TestHandler(TestLanguageFrontend())) {
             val binOp = newBinaryOperator("+")
-            binOp.lhs = newLiteral(3, parseType("int"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(5L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(5.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3L, parseType("long"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(5L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(5.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral((3).toShort(), parseType("short"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral((3).toShort(), primitiveType("short"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(5L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(5.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral((3).toByte(), parseType("byte"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral((3).toByte(), primitiveType("byte"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(5L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(5.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3.0, parseType("double"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3.0, primitiveType("double"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(5.0, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(5.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3.0f, parseType("float"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3.0f, primitiveType("float"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(5.0, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(5.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral("Hello", parseType("String"))
-            binOp.rhs = newLiteral(" world", parseType("String"))
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
             assertEquals("Hello world", ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
             assertEquals("Hello2", ValueEvaluator().evaluate(binOp))
         }
     }
 
     @Test
     fun testHandleMinus() {
-        with(TestHandler()) {
+        with(TestHandler(TestLanguageFrontend())) {
             val binOp = newBinaryOperator("-")
-            binOp.lhs = newLiteral(3, parseType("int"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 - 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3L, parseType("long"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 - 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral((3).toShort(), parseType("short"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral((3).toShort(), primitiveType("short"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 - 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral((3).toByte(), parseType("byte"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral((3).toByte(), primitiveType("byte"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 - 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3.0, parseType("double"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3.0, primitiveType("double"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1.0, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 - 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3.0f, parseType("float"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3.0f, primitiveType("float"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1.0, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 - 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral("Hello", parseType("String"))
-            binOp.rhs = newLiteral(" world", parseType("String"))
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
             assertEquals("{-}", ValueEvaluator().evaluate(binOp))
         }
     }
 
     @Test
     fun testHandleTimes() {
-        with(TestHandler()) {
+        with(TestHandler(TestLanguageFrontend())) {
             val binOp = newBinaryOperator("*")
-            binOp.lhs = newLiteral(3, parseType("int"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(6L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 * 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3L, parseType("long"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(6L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 * 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral((3).toShort(), parseType("short"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral((3).toShort(), primitiveType("short"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(6L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 * 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral((3).toByte(), parseType("byte"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral((3).toByte(), primitiveType("byte"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(6L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 * 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3.0, parseType("double"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3.0, primitiveType("double"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(6.0, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 * 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3.0f, parseType("float"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3.0f, primitiveType("float"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(6.0, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 * 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral("Hello", parseType("String"))
-            binOp.rhs = newLiteral(" world", parseType("String"))
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
             assertEquals("{*}", ValueEvaluator().evaluate(binOp))
         }
     }
 
     @Test
     fun testHandleDiv() {
-        with(TestHandler()) {
+        with(TestHandler(TestLanguageFrontend())) {
             // For two integer values, we keep the result as a long.
             val binOp = newBinaryOperator("/")
-            binOp.lhs = newLiteral(3, parseType("int"))
-            binOp.rhs = newLiteral(0, parseType("int"))
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(0, primitiveType("int"))
             assertEquals("{/}", ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3, parseType("int"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 / 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3L, parseType("long"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 / 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral((3).toShort(), parseType("short"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral((3).toShort(), primitiveType("short"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 / 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral((3).toByte(), parseType("byte"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral((3).toByte(), primitiveType("byte"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1L, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 / 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3.0, parseType("double"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3.0, primitiveType("double"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1.5, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 / 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral(3.0f, parseType("float"))
-            binOp.rhs = newLiteral(2, parseType("int"))
+            binOp.lhs = newLiteral(3.0f, primitiveType("float"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
 
             assertEquals(1.5, ValueEvaluator().evaluate(binOp))
 
-            binOp.rhs = newLiteral(2.4, parseType("double"))
+            binOp.rhs = newLiteral(2.4, primitiveType("double"))
             assertEquals(3 / 2.4, ValueEvaluator().evaluate(binOp))
 
-            binOp.lhs = newLiteral("Hello", parseType("String"))
-            binOp.rhs = newLiteral(" world", parseType("String"))
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
             assertEquals("{/}", ValueEvaluator().evaluate(binOp))
         }
     }
 
     @Test
     fun testHandleUnary() {
-        with(TestHandler()) {
+        with(TestHandler(TestLanguageFrontend())) {
             val neg = newUnaryOperator("-", false, true)
-            neg.input = newLiteral(3, parseType("int"))
+            neg.input = newLiteral(3, primitiveType("int"))
             assertEquals(-3, ValueEvaluator().evaluate(neg))
 
-            neg.input = newLiteral(3.5, parseType("double"))
+            neg.input = newLiteral(3.5, primitiveType("double"))
             assertEquals(-3.5, ValueEvaluator().evaluate(neg))
 
             val plusplus = newUnaryOperator("++", true, false)
-            plusplus.input = newLiteral(3, parseType("int"))
+            plusplus.input = newLiteral(3, primitiveType("int"))
             assertEquals(4, ValueEvaluator().evaluate(plusplus))
 
-            plusplus.input = newLiteral(3.5, parseType("double"))
+            plusplus.input = newLiteral(3.5, primitiveType("double"))
             assertEquals(4.5, ValueEvaluator().evaluate(plusplus))
 
-            plusplus.input = newLiteral(3.5f, parseType("float"))
+            plusplus.input = newLiteral(3.5f, primitiveType("float"))
             assertEquals(4.5f, ValueEvaluator().evaluate(plusplus))
 
             val minusminus = newUnaryOperator("--", true, false)
-            minusminus.input = newLiteral(3, parseType("int"))
+            minusminus.input = newLiteral(3, primitiveType("int"))
             assertEquals(2, ValueEvaluator().evaluate(minusminus))
 
-            minusminus.input = newLiteral(3.5, parseType("double"))
+            minusminus.input = newLiteral(3.5, primitiveType("double"))
             assertEquals(2.5, ValueEvaluator().evaluate(minusminus))
 
-            minusminus.input = newLiteral(3.5f, parseType("float"))
+            minusminus.input = newLiteral(3.5f, primitiveType("float"))
             assertEquals(2.5f, ValueEvaluator().evaluate(minusminus))
         }
     }

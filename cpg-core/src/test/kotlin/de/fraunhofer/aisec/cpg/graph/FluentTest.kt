@@ -44,10 +44,9 @@ import kotlin.test.*
 class FluentTest {
     @Test
     fun test() {
-        val scopeManager = ScopeManager()
         val result =
-            TestLanguageFrontend(scopeManager).build {
-                translationResult(TranslationConfiguration.builder().build()) {
+            TestLanguageFrontend().build {
+                translationResult {
                     translationUnit("file.cpp") {
                         function("main", t("int")) {
                             param("argc", t("int"))
@@ -139,7 +138,8 @@ class FluentTest {
         assertNotNull(lit1)
         assertEquals(1, lit1.value)
 
-        // Third line is the CallExpression (containing another MemberCallExpression as argument)
+        // Third line is th
+        // e CallExpression (containing another MemberCallExpression as argument)
         val call = main[2] as? CallExpression
         assertNotNull(call)
         assertLocalName("do", call)
@@ -169,7 +169,7 @@ class FluentTest {
         assertNotNull(lit2.scope)
         assertEquals(2, lit2.value)
 
-        VariableUsageResolver().accept(result)
+        VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
         // Now the reference should be resolved
         assertRefersTo(ref, variable)

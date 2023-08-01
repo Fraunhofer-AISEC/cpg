@@ -25,15 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.parseType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -46,15 +45,18 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer
 import org.bytedeco.javacpp.BytePointer
+import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.*
 import org.bytedeco.llvm.global.LLVM.*
 
+/**
+ * Because we are using the C LLVM API, there are two possibly AST nodes that we need to consider:
+ * [LLVMValueRef] and [LLVMBasicBlockRef]. Because they do not share any class hierarchy, we need to
+ * resort to use [Pointer] as the AST node type here.
+ */
 @RegisterExtraPass(CompressLLVMPass::class)
-class LLVMIRLanguageFrontend(
-    language: Language<LLVMIRLanguageFrontend>,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : LanguageFrontend(language, config, scopeManager) {
+class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: TranslationContext) :
+    LanguageFrontend<Pointer, LLVMTypeRef>(language, ctx) {
 
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
@@ -63,7 +65,7 @@ class LLVMIRLanguageFrontend(
 
     val phiList = mutableListOf<LLVMValueRef>()
 
-    var ctx: LLVMContextRef? = null
+    var ctxRef: LLVMContextRef? = null
 
     /**
      * This contains a cache binding between an LLVMValueRef (representing a variable) and its
@@ -73,10 +75,6 @@ class LLVMIRLanguageFrontend(
      * [VariableUsageResolver].
      */
     var bindingsCache = mutableMapOf<String, Declaration>()
-
-    companion object {
-        @JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
-    }
 
     override fun parse(file: File): TranslationUnitDeclaration {
         var bench = Benchmark(this.javaClass, "Parsing sourcefile")
@@ -89,11 +87,11 @@ class LLVMIRLanguageFrontend(
         val buf = LLVMMemoryBufferRef()
 
         // create a new LLVM context
-        ctx = LLVMContextCreate()
+        ctxRef = LLVMContextCreate()
 
         // disable opaque pointers, until all necessary new functions are available in the C API.
         // See https://llvm.org/docs/OpaquePointers.html
-        LLVMContextSetOpaquePointers(ctx, 0)
+        LLVMContextSetOpaquePointers(ctxRef, 0)
 
         // allocate a buffer for a possible error message
         val errorMessage = ByteBuffer.allocate(10000)
@@ -107,22 +105,21 @@ class LLVMIRLanguageFrontend(
         if (result != 0) {
             // something went wrong
             val errorMsg = String(errorMessage.array())
-            LLVMContextDispose(ctx)
+            LLVMContextDispose(ctxRef)
             throw TranslationException("Could not create memory buffer: $errorMsg")
         }
 
-        result = LLVMParseIRInContext(ctx, buf, mod, errorMessage)
+        result = LLVMParseIRInContext(ctxRef, buf, mod, errorMessage)
         if (result != 0) {
             // something went wrong
             val errorMsg = String(errorMessage.array())
-            LLVMContextDispose(ctx)
+            LLVMContextDispose(ctxRef)
             throw TranslationException("Could not parse IR: $errorMsg")
         }
         bench.addMeasurement()
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
-        val tu = TranslationUnitDeclaration()
-        tu.language = language
+        val tu = newTranslationUnitDeclaration(file.name)
 
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)
@@ -156,10 +153,14 @@ class LLVMIRLanguageFrontend(
             counter++
         }
 
-        LLVMContextDispose(ctx)
+        LLVMContextDispose(ctxRef)
         bench.addMeasurement()
 
         return tu
+    }
+
+    override fun typeOf(type: LLVMTypeRef): Type {
+        return typeOf(type, mutableMapOf())
     }
 
     /** Returns a pair of the name and symbol name of [valueRef]. */
@@ -179,22 +180,20 @@ class LLVMIRLanguageFrontend(
     fun typeOf(valueRef: LLVMValueRef): Type {
         val typeRef = LLVMTypeOf(valueRef)
 
-        return typeFrom(typeRef)
+        return typeOf(typeRef)
     }
 
-    internal fun typeFrom(
+    internal fun typeOf(
         typeRef: LLVMTypeRef,
         alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
     ): Type {
         val typeStr = LLVMPrintTypeToString(typeRef).string
-        if (typeStr in typeCache && typeCache[typeStr] != null) {
-            return typeCache[typeStr]!!
+        if (typeStr in typeCache) {
+            val result = typeCache[typeStr]
+            if (result != null) return result
         }
-        if (typeRef in alreadyVisited && alreadyVisited[typeRef] != null) {
-            return alreadyVisited[typeRef]!!
-        } else if (typeRef in alreadyVisited) {
-            // Recursive call but we can't resolve it.
-            return UnknownType.getUnknownType(language)
+        if (typeRef in alreadyVisited) {
+            return alreadyVisited[typeRef] ?: unknownType()
         }
         alreadyVisited[typeRef] = null
         val res: Type =
@@ -202,19 +201,19 @@ class LLVMIRLanguageFrontend(
                 LLVMVectorTypeKind,
                 LLVMArrayTypeKind -> {
                     // var length = LLVMGetArrayLength(typeRef)
-                    val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
-                    elementType.reference(PointerType.PointerOrigin.ARRAY)
+                    val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
+                    elementType.array()
                 }
                 LLVMPointerTypeKind -> {
-                    val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
-                    elementType.reference(PointerType.PointerOrigin.POINTER)
+                    val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
+                    elementType.pointer()
                 }
                 LLVMStructTypeKind -> {
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
                     record.toType()
                 }
                 else -> {
-                    parseType(typeStr)
+                    objectType(typeStr)
                 }
             }
         alreadyVisited[typeRef] = res
@@ -222,23 +221,25 @@ class LLVMIRLanguageFrontend(
         return res
     }
 
-    override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
+    override fun codeOf(astNode: Pointer): String? {
         if (astNode is LLVMValueRef) {
             val code = LLVMPrintValueToString(astNode)
 
             return code.string
         } else if (astNode is LLVMBasicBlockRef) {
-            return this.getCodeFromRawNode(LLVMBasicBlockAsValue(astNode))
+            return this.codeOf(LLVMBasicBlockAsValue(astNode))
         }
 
         return null
     }
 
-    override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
+    override fun locationOf(astNode: Pointer): PhysicalLocation? {
         return null
     }
 
-    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
+    override fun setComment(node: Node, astNode: Pointer) {
+        // There are no comments in LLVM
+    }
 
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
@@ -258,11 +259,11 @@ class LLVMIRLanguageFrontend(
     }
 
     fun guessSlotNumber(valueRef: LLVMValueRef): String {
-        val code = getCodeFromRawNode(valueRef)
-        if (code?.contains("=") == true) {
-            return code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
+        val code = codeOf(valueRef)
+        return if (code?.contains("=") == true) {
+            code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
         } else {
-            return ""
+            ""
         }
     }
 }

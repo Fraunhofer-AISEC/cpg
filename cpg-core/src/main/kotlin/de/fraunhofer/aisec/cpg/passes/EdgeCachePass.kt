@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -81,34 +82,34 @@ object Edges {
  *
  * The cache itself is stored in the [Edges] object.
  */
-class EdgeCachePass : Pass() {
-    override fun accept(result: TranslationResult) {
+class EdgeCachePass(ctx: TranslationContext) : ComponentPass(ctx) {
+    override fun accept(component: Component) {
         Edges.clear()
 
-        for (tu in result.translationUnits) {
+        for (tu in component.translationUnits) {
             tu.accept(
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node>() {
-                    override fun visit(n: Node) {
-                        visitAST(n)
-                        visitDFG(n)
-                        visitEOG(n)
+                    override fun visit(t: Node) {
+                        visitAST(t)
+                        visitDFG(t)
+                        visitEOG(t)
 
-                        super.visit(n)
+                        super.visit(t)
                     }
                 }
             )
         }
     }
 
-    private fun visitAST(n: Node) {
+    protected fun visitAST(n: Node) {
         for (node in SubgraphWalker.getAstChildren(n)) {
             val edge = Edge(n, node, EdgeType.AST)
             Edges.add(edge)
         }
     }
 
-    private fun visitDFG(n: Node) {
+    protected fun visitDFG(n: Node) {
         for (dfg in n.prevDFG) {
             val edge = Edge(dfg, n, EdgeType.DFG)
             Edges.add(edge)
@@ -120,7 +121,7 @@ class EdgeCachePass : Pass() {
         }
     }
 
-    private fun visitEOG(n: Node) {
+    protected fun visitEOG(n: Node) {
         for (eog in n.prevEOG) {
             val edge = Edge(eog, n, EdgeType.EOG)
             Edges.add(edge)

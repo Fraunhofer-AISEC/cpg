@@ -26,6 +26,7 @@ from ._misc import NOT_IMPLEMENTED_MSG
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
 from de.fraunhofer.aisec.cpg.graph import NodeBuilderKt
+from de.fraunhofer.aisec.cpg.graph import TypeBuilderKt
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 import ast
 
@@ -63,11 +64,12 @@ def handle_expression_impl(self, expr):
                 return ExpressionBuilderKt(
                     self.frontend,
                     None,
-                    UnknownType.getUnknownType(),
+                    UnknownType.getUnknownType(self.frontend.getLanguage()),
                     self.get_src_code(expr),
                     expr)
             # we got a complex number
-            complextype = NodeBuilderKt.parseType(self.frontend, "complex")
+            complextype = TypeBuilderKt.primitiveType(self.frontend,
+                                                      "complex")
 
             # TODO: fix this once the CPG supports complex numbers
             realpart = complex(lhs.getValue())
@@ -100,7 +102,8 @@ def handle_expression_impl(self, expr):
         body = self.handle_expression(expr.body)
         orelse = self.handle_expression(expr.orelse)
         r = ExpressionBuilderKt.newConditionalExpression(
-            self.frontend, test, body, orelse, UnknownType.getUnknownType())
+            self.frontend, test, body, orelse,
+            UnknownType.getUnknownType(self.frontend.getLanguage()))
         return r
     elif isinstance(expr, ast.Dict):
         ile = ExpressionBuilderKt.newInitializerListExpression(
@@ -241,7 +244,7 @@ def handle_expression_impl(self, expr):
                     cast = ExpressionBuilderKt.newCastExpression(
                         self.frontend, self.get_src_code(expr))
                     cast.setCastType(
-                        NodeBuilderKt.parseType(self.frontend, "str"))
+                        TypeBuilderKt.primitiveType(self.frontend, "str"))
                     cast.setExpression(
                         self.handle_expression(expr.args[0]))
                     return cast
@@ -274,27 +277,31 @@ def handle_expression_impl(self, expr):
     elif isinstance(expr, ast.Constant):
         resultvalue = expr.value
         if isinstance(expr.value, type(None)):
-            tpe = NodeBuilderKt.parseType(self.frontend, "None")
+            tpe = TypeBuilderKt.objectType(self.frontend, "None")
         elif isinstance(expr.value, bool):
-            tpe = NodeBuilderKt.parseType(self.frontend, "bool")
+            tpe = TypeBuilderKt.primitiveType(self.frontend, "bool")
         elif isinstance(expr.value, int):
-            tpe = NodeBuilderKt.parseType(self.frontend, "int")
+            tpe = TypeBuilderKt.primitiveType(self.frontend, "int")
         elif isinstance(expr.value, float):
-            tpe = NodeBuilderKt.parseType(self.frontend, "float")
+            tpe = TypeBuilderKt.primitiveType(self.frontend, "float")
         elif isinstance(expr.value, complex):
-            tpe = NodeBuilderKt.parseType(self.frontend, "complex")
+            tpe = TypeBuilderKt.primitiveType(self.frontend, "complex")
             # TODO: fix this once the CPG supports complex numbers
             resultvalue = str(resultvalue)
         elif isinstance(expr.value, str):
-            tpe = NodeBuilderKt.parseType(self.frontend, "str")
+            tpe = TypeBuilderKt.primitiveType(self.frontend, "str")
         elif isinstance(expr.value, bytes):
-            tpe = NodeBuilderKt.parseType(self.frontend, "byte[]")
+            tpe = NodeBuilderKt.array(
+                self.frontend,
+                TypeBuilderKt.primitiveType(
+                    self.frontend,
+                    "byte"))
         else:
             self.log_with_loc(
                 "Found unexpected type - using a dummy: %s" %
                 (type(expr.value)),
                 loglevel="ERROR")
-            tpe = UnknownType.getUnknownType()
+            tpe = TypeBuilderKt.unknownType(self.frontend)
         lit = ExpressionBuilderKt.newLiteral(
             self.frontend,
             resultvalue, tpe, self.get_src_code(expr))
@@ -312,7 +319,8 @@ def handle_expression_impl(self, expr):
                 self.frontend,
                 value.getName(), value.getType(), value.getCode())
         mem = ExpressionBuilderKt.newMemberExpression(
-            self.frontend, expr.attr, value, UnknownType.getUnknownType(),
+            self.frontend, expr.attr, value,
+            TypeBuilderKt.unknownType(self.frontend),
             ".", self.get_src_code(expr))
         return mem
 
@@ -330,7 +338,8 @@ def handle_expression_impl(self, expr):
         return r
     elif isinstance(expr, ast.Name):
         r = ExpressionBuilderKt.newDeclaredReferenceExpression(
-            self.frontend, expr.id, UnknownType.getUnknownType(),
+            self.frontend, expr.id,
+            TypeBuilderKt.unknownType(self.frontend),
             self.get_src_code(expr))
 
         # Take a little shortcut and set refersTo, in case this is a method

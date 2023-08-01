@@ -187,20 +187,21 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
     when (node) {
         is MemberExpression -> {
             // color the member
-            node.location?.let { list += Pair(styles.identifier!!, it.region) }
+            node.location?.let { styles.identifier?.let { id -> list += Pair(id, it.region) } }
 
             return list
         }
         is DeclaredReferenceExpression -> {
             // also color it, if it's on its own
             if (original == node) {
-                node.location?.let { list += Pair(styles.identifier!!, it.region) }
+                node.location?.let { styles.identifier?.let { id -> list += Pair(id, it.region) } }
             }
 
             return list
         }
         is DeclarationStatement -> {
-            fancyType(node, (node.singleDeclaration as? HasType)!!, list)
+            if (node.singleDeclaration is HasType)
+                fancyType(node, (node.singleDeclaration as HasType), list)
 
             for (declaration in node.declarations) {
                 list.addAll(getFanciesFor(original, declaration))

@@ -95,7 +95,7 @@ open class ProcessedListener {
      */
     open fun registerObjectListener(from: Any, biConsumer: BiConsumer<Any, Node>) {
         if (from in processedMapping) {
-            biConsumer.accept(from, processedMapping[from]!!)
+            processedMapping[from]?.let { biConsumer.accept(from, it) }
         }
         objectListeners[from] = biConsumer
     }

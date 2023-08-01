@@ -84,6 +84,7 @@ open class PropertyEdge<T : Node> : Persistable {
 
     /** Map containing all properties of an edge */
     @Convert(PropertyEdgeConverter::class) private var properties: MutableMap<Properties, Any?>
+
     fun getProperty(property: Properties): Any? {
         return properties.getOrDefault(property, null)
     }
@@ -100,7 +101,7 @@ open class PropertyEdge<T : Node> : Persistable {
     }
 
     fun addProperties(propertyMap: Map<Properties, Any?>?) {
-        properties.putAll(propertyMap!!)
+        propertyMap?.let { properties.putAll(it) }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -167,7 +168,7 @@ open class PropertyEdge<T : Node> : Persistable {
         ): MutableList<PropertyEdge<T>> {
             val propertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
             for (n in nodes) {
-                var propertyEdge = PropertyEdge(commonRelationshipNode, n)
+                val propertyEdge = PropertyEdge(commonRelationshipNode, n)
                 propertyEdge.addProperty(Properties.INDEX, propertyEdges.size)
                 propertyEdges.add(propertyEdge)
             }
@@ -246,7 +247,7 @@ open class PropertyEdge<T : Node> : Persistable {
                 } else {
                     obj.start
                 }
-            } else if (obj is Collection<*> && !obj.isEmpty()) {
+            } else if (obj is Collection<*> && obj.isNotEmpty()) {
                 return unwrapPropertyEdgeCollection(obj, outgoing)
             }
             return obj
@@ -296,10 +297,10 @@ open class PropertyEdge<T : Node> : Persistable {
         ): List<PropertyEdge<T>> {
             val newPropertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
             for (propertyEdge in propertyEdges) {
-                if (end && !propertyEdge.end.equals(element)) {
+                if (end && propertyEdge.end != element) {
                     newPropertyEdges.add(propertyEdge)
                 }
-                if (!end && !propertyEdge.start.equals(element)) {
+                if (!end && propertyEdge.start != element) {
                     newPropertyEdges.add(propertyEdge)
                 }
             }
@@ -368,6 +369,26 @@ class PropertyEdgeDelegate<T : Node, S : Node>(
             edge.setter.call(
                 thisRef,
                 PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, thisRef as Node)
+            )
+        }
+    }
+}
+
+/** Similar to a [PropertyEdgeDelegate], but with a [Set] instead of [List]. */
+@Transient
+class PropertyEdgeSetDelegate<T : Node, S : Node>(
+    val edge: KProperty1<S, List<PropertyEdge<T>>>,
+    val outgoing: Boolean = true
+) {
+    operator fun getValue(thisRef: S, property: KProperty<*>): MutableSet<T> {
+        return PropertyEdge.unwrap(edge.get(thisRef), outgoing).toMutableSet()
+    }
+
+    operator fun setValue(thisRef: S, property: KProperty<*>, value: MutableSet<T>) {
+        if (edge is KMutableProperty1) {
+            edge.setter.call(
+                thisRef,
+                PropertyEdge.transformIntoOutgoingPropertyEdgeList(value.toList(), thisRef as Node)
             )
         }
     }

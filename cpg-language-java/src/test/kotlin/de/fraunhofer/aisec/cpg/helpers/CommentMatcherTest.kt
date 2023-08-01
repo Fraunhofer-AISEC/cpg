@@ -59,7 +59,7 @@ class CommentMatcherTest {
         // The class should have 2 comments: The javadoc and "Class comment"
         val tu = result.translationUnits.first()
         val classDeclaration = tu.declarations.first() as RecordDeclaration
-        classDeclaration.comment = "" // Reset the comment of the ClassDerclaration
+        classDeclaration.comment = "" // Reset the comment of the ClassDeclaration
 
         val comment = "This comment clearly belongs to the class."
         CommentMatcher().matchCommentToNode(comment, Region(2, 4, 2, 46), tu)
@@ -101,11 +101,10 @@ class CommentMatcherTest {
         assertEquals(
             comment6,
             forLoop.comment
-        ) // It doesn't put the whole comment, only the part that amtches
+        ) // It doesn't put the whole comment, only the part that matches
 
         // TODO IMHO the comment "i decl" should belong to the declaration statement of i. But
-        // somehow,
-        // the comment matcher puts it to the loop condition.
+        // somehow, the comment matcher puts it to the loop condition.
         val comment7 = "i decl"
         CommentMatcher().matchCommentToNode(comment7, Region(16, 26, 16, 32), tu)
         // assertEquals(comment7, forLoop.initializerStatement.comment)
