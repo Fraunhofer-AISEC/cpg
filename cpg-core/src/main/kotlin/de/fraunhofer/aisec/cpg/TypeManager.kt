@@ -45,9 +45,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.slf4j.LoggerFactory
 
 class TypeManager {
-    val typeCache: MutableMap<HasType, MutableList<Type>> =
-        Collections.synchronizedMap(IdentityHashMap())
-
     private val typeToRecord = Collections.synchronizedMap(HashMap<Type?, RecordDeclaration?>())
 
     /**
@@ -211,16 +208,6 @@ class TypeManager {
 
     fun typeExists(name: String): Boolean {
         return firstOrderTypes.stream().anyMatch { type: Type -> type.root.name.toString() == name }
-    }
-
-    @Synchronized
-    fun cacheType(node: HasType, type: Type) {
-        if (!isUnknown(type)) {
-            val types = typeCache.computeIfAbsent(node) { mutableListOf() }
-            if (!types.contains(type)) {
-                types.add(type)
-            }
-        }
     }
 
     fun isUnknown(type: Type?): Boolean {
@@ -637,7 +624,5 @@ class TypeManager {
 
     companion object {
         private val log = LoggerFactory.getLogger(TypeManager::class.java)
-
-        var isTypeSystemActive = true
     }
 }
