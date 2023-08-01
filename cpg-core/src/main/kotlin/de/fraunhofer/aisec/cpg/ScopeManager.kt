@@ -37,10 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.processing.IVisitor
-import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
 
@@ -794,32 +791,4 @@ class ScopeManager : ScopeProvider {
     /** Returns the current scope for the [ScopeProvider] interface. */
     override val scope: Scope?
         get() = currentScope
-
-    fun activateTypes(node: Node, typeManager: TypeManager) {
-        val num = AtomicInteger()
-        val typeCache = typeManager.typeCache
-        node.accept(
-            Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
-                    if (t is HasType) {
-                        val typeNode = t as HasType
-                        typeCache.getOrDefault(typeNode, emptyList()).forEach {
-                            (t as HasType).type =
-                                typeManager.resolvePossibleTypedef(it, this@ScopeManager)
-                        }
-                        typeCache.remove(t as HasType)
-                        num.getAndIncrement()
-                    }
-                }
-            }
-        )
-        LOGGER.debug("Activated {} nodes for {}", num, node.name)
-
-        // For some nodes it may happen that they are not reachable via AST, but we still need to
-        // set their type to the requested value
-        typeCache.forEach { (n, types) ->
-            types.forEach { t -> n.type = typeManager.resolvePossibleTypedef(t, this) }
-        }
-    }
 }

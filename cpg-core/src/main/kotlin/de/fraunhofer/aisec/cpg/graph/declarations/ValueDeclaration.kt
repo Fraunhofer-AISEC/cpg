@@ -54,17 +54,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
      */
     override var type: Type
         get() {
-            val result: Type =
-                if (isTypeSystemActive) {
-                    declaredType
-                } else {
-                    ctx?.typeManager
-                        ?.typeCache
-                        ?.computeIfAbsent(this) { mutableListOf() }
-                        ?.firstOrNull()
-                        ?: unknownType()
-                }
-            return result
+            return declaredType
         }
         set(value) {
             // Trigger the type listener foo
@@ -124,17 +114,13 @@ abstract class ValueDeclaration : Declaration(), HasType {
     override var assignedType: Type = unknownType()
 
     override fun setType(type: Type, chain: MutableList<HasType>) {
-        if (isTypeSystemActive) {
-            declaredType = type
+        declaredType = type
 
-            informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, chain)
+        informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, chain)
 
-            // If our assigned type is unknown, we can also set it to our type
-            if (assignedType is UnknownType) {
-                setAssignedType(type, chain)
-            }
-        } else {
-            cacheType(type)
+        // If our assigned type is unknown, we can also set it to our type
+        if (assignedType is UnknownType) {
+            setAssignedType(type, chain)
         }
     }
 

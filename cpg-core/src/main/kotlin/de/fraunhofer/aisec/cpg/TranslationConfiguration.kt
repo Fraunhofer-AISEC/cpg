@@ -105,7 +105,6 @@ private constructor(
     disableCleanup: Boolean,
     useUnityBuild: Boolean,
     useParallelFrontends: Boolean,
-    typeSystemActiveInFrontend: Boolean,
     inferenceConfiguration: InferenceConfiguration,
     compilationDatabase: CompilationDatabase?,
     matchCommentsToNodes: Boolean,
@@ -142,13 +141,6 @@ private constructor(
     val useParallelFrontends: Boolean
 
     /**
-     * If false, the type listener system is only activated once the frontends are done building the
-     * initial AST structure. This avoids errors where the type of a node may depend on the order in
-     * which the source files have been parsed.
-     */
-    val typeSystemActiveInFrontend: Boolean
-
-    /**
      * This is the data structure for storing the compilation database. It stores a mapping from the
      * File to the list of files that have to be included to their path, specified by the parameter
      * in the compilation database. This is currently only used by the [CXXLanguageFrontend].
@@ -182,7 +174,6 @@ private constructor(
         this.disableCleanup = disableCleanup
         this.useUnityBuild = useUnityBuild
         this.useParallelFrontends = useParallelFrontends
-        this.typeSystemActiveInFrontend = typeSystemActiveInFrontend
         this.inferenceConfiguration = inferenceConfiguration
         this.compilationDatabase = compilationDatabase
         this.matchCommentsToNodes = matchCommentsToNodes
@@ -232,7 +223,6 @@ private constructor(
         private var disableCleanup = false
         private var useUnityBuild = false
         private var useParallelFrontends = false
-        private var typeSystemActiveInFrontend = true
         private var inferenceConfiguration = InferenceConfiguration.Builder().build()
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
@@ -579,26 +569,12 @@ private constructor(
         /**
          * If true, the ASTs for the source files are parsed in parallel, but the passes afterwards
          * will still run in a single thread. This speeds up initial parsing but makes sure that
-         * further graph enrichment algorithms remain correct. Please make sure to also set
-         * [ ][.typeSystemActiveInFrontend] to false to avoid probabilistic errors that appear
-         * depending on the parsing order.
+         * further graph enrichment algorithms remain correct.
          *
          * @param b the new value
          */
         fun useParallelFrontends(b: Boolean): Builder {
             useParallelFrontends = b
-            return this
-        }
-
-        /**
-         * If false, the type system is only activated once the frontends are done building the
-         * initial AST structure. This avoids errors where the type of a node may depend on the
-         * order in which the source files have been parsed.
-         *
-         * @param b the new value
-         */
-        fun typeSystemActiveInFrontend(b: Boolean): Builder {
-            typeSystemActiveInFrontend = b
             return this
         }
 
@@ -609,13 +585,6 @@ private constructor(
 
         @Throws(ConfigurationException::class)
         fun build(): TranslationConfiguration {
-            if (useParallelFrontends && typeSystemActiveInFrontend) {
-                log.warn(
-                    "Not disabling the type system during the frontend " +
-                        "phase is not recommended when using the parallel frontends feature! " +
-                        "This may result in erroneous results."
-                )
-            }
             registerExtraFrontendPasses()
             registerReplacedPasses()
             return TranslationConfiguration(
@@ -636,7 +605,6 @@ private constructor(
                 disableCleanup,
                 useUnityBuild,
                 useParallelFrontends,
-                typeSystemActiveInFrontend,
                 inferenceConfiguration,
                 compilationDatabase,
                 matchCommentsToNodes,
