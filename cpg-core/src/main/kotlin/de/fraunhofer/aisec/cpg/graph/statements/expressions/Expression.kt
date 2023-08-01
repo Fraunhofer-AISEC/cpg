@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
-import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Transient
 
@@ -54,12 +53,9 @@ abstract class Expression : Statement(), HasType {
 
             field = value
             informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, mutableListOf(this))
-
-            // If the assigned type is unknown, we also set it
-            assignedType = value
         }
 
-    override var assignedType: Type = unknownType()
+    override var assignedTypes: Set<Type> = mutableSetOf()
         set(value) {
             if (field == value) {
                 return

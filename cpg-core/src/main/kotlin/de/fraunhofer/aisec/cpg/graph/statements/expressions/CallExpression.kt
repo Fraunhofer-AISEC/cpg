@@ -295,7 +295,7 @@ open class CallExpression : Expression(), HasType.TypeObserver, SecondaryTypeEdg
     }
 
     override fun assignedTypeChanged(
-        newType: Type,
+        assignedTypes: Set<Type>,
         changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>

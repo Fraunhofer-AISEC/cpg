@@ -27,9 +27,11 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
@@ -70,13 +72,10 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
                 value.addUsage(this)
             }
 
-            // update type observers
+            // Register ourselves to get type updates from the declaration
             if (value is HasType) {
                 value.registerTypeObserver(this)
             }
-            /*if (field is HasLegacyType.TypeListener) {
-                registerTypeListener(field as HasType.TypeListener)
-            }*/
         }
     // set the access
     /**
@@ -122,12 +121,21 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
     }
 
     override fun assignedTypeChanged(
-        newType: Type,
+        assignedTypes: Set<Type>,
         changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>
     ) {
-        // Nothing to do
+        // Make sure that the update comes from our declaration, if we change our assigned types
+        if (src == refersTo) {
+            // Set our type
+            this.addAssignedTypes(assignedTypes)
+        }
+
+        // We also allow updates from our previous DFG nodes
+        if (prevDFG.contains(src as Node)) {
+            this.addAssignedTypes(assignedTypes)
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -138,6 +146,17 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
             return false
         }
         return super.equals(other) && refersTo == other.refersTo
+    }
+
+    override fun addPrevDFG(prev: Node, properties: MutableMap<Properties, Any?>) {
+        super.addPrevDFG(prev, properties)
+
+        // We want to propagate assigned types all through the previous DFG nodes. Therefore, we
+        // override the DFG adding function here and add a type observer to the previous node (if it
+        // is not ourselves)
+        if (prev != this && prev is HasType) {
+            prev.registerTypeObserver(this)
+        }
     }
 
     override fun hashCode(): Int = Objects.hash(super.hashCode(), refersTo)

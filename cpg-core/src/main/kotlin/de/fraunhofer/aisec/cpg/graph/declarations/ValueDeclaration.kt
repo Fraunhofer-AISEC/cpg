@@ -51,11 +51,14 @@ abstract class ValueDeclaration : Declaration(), HasType {
             field = value
             informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, mutableListOf(this))
 
-            // If the assigned type is unknown, we also set it
-            assignedType = value
+            // For declarations, we also want to add the definitive type (if known) to our assigned
+            // types
+            if (value !is UnknownType) {
+                assignedTypes.add(value)
+            }
         }
 
-    override var assignedType: Type = unknownType()
+    override var assignedTypes: MutableSet<Type> = mutableSetOf()
         set(value) {
             if (field == value) {
                 return

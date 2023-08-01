@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.inference.TypeInferenceObserver
+import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import org.slf4j.LoggerFactory

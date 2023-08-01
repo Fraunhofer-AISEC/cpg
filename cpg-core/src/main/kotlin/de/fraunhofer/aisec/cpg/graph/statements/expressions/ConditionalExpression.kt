@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -33,7 +35,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represents an expression containing a ternary operator: `var x = condition ? valueIfTrue :
  * valueIfFalse`;
  */
-class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode {
+class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasType.TypeObserver {
     @AST var condition: Expression = ProblemExpression("could not parse condition expression")
 
     @AST
@@ -67,6 +69,24 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode {
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
         // Do nothing
         return false
+    }
+
+    override fun typeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        println("hello")
+    }
+
+    override fun assignedTypeChanged(
+        assignedTypes: Set<Type>,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        println("hello")
     }
 
     override fun equals(other: Any?): Boolean {

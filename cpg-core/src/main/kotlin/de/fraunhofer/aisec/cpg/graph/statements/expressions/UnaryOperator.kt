@@ -107,7 +107,7 @@ class UnaryOperator : Expression(), HasType.TypeObserver {
     }
 
     override fun assignedTypeChanged(
-        newType: Type,
+        assignedTypes: Set<Type>,
         changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>
@@ -117,13 +117,18 @@ class UnaryOperator : Expression(), HasType.TypeObserver {
             return
         }
 
-        val type =
-            when (operatorCode) {
-                "*" -> newType.dereference()
-                "&" -> newType.pointer()
-                else -> newType
-            }
-        this.assignedType = type
+        // Apply our operator to all assigned types and forward them to us
+        this.addAssignedTypes(
+            assignedTypes
+                .map {
+                    when (operatorCode) {
+                        "*" -> it.dereference()
+                        "&" -> it.pointer()
+                        else -> it
+                    }
+                }
+                .toSet()
+        )
     }
 
     override fun equals(other: Any?): Boolean {
