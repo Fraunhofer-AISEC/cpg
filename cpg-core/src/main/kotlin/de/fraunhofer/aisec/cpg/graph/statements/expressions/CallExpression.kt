@@ -291,7 +291,16 @@ open class CallExpression : Expression(), HasType.TypeObserver, SecondaryTypeEdg
         val alternative = if (types.isNotEmpty()) types[0] else unknownType()
         val commonType = getCommonType(types).orElse(alternative)
 
-        setType(commonType, chain)
+        this.type = commonType
+    }
+
+    override fun assignedTypeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // Nothing to do
     }
 
     override fun toString(): String {

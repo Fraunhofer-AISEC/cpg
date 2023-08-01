@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /**
@@ -45,20 +44,30 @@ import org.neo4j.ogm.annotation.Transient
  * <p>This is not possible in Java, the aforementioned code example would prompt a compile error.
  */
 abstract class Expression : Statement(), HasType {
-
-    @Relationship("TYPE") override var declaredType: Type = unknownType()
-
-    /** The type of the value after evaluation. */
-    override var type: Type
-        get() {
-            return declaredType
-        }
-        set(value) {
-            // Trigger the type listener foo
-            setType(value, mutableListOf())
-        }
-
     @Transient override val typeObservers = mutableListOf<HasType.TypeObserver>()
+
+    override var type: Type = unknownType()
+        set(value) {
+            if (field == value) {
+                return
+            }
+
+            field = value
+            informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, mutableListOf(this))
+
+            // If the assigned type is unknown, we also set it
+            assignedType = value
+        }
+
+    override var assignedType: Type = unknownType()
+        set(value) {
+            if (field == value) {
+                return
+            }
+
+            field = value
+            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE, mutableListOf(this))
+        }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -77,26 +86,7 @@ abstract class Expression : Statement(), HasType {
         return (super.equals(other) && type == other.type)
     }
 
-    override fun setType(type: Type, chain: MutableList<HasType>) {
-        declaredType = type
-
-        informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, chain)
-
-        // If our assigned type is unknown, we can also set it to our type
-        if (assignedType is UnknownType) {
-            setAssignedType(type, chain)
-        }
-    }
-
-    override fun setAssignedType(type: Type, chain: MutableList<HasType>) {
-        assignedType = type
-
-        informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE, chain)
-    }
-
     override fun hashCode(): Int {
         return super.hashCode()
     }
-
-    override var assignedType: Type = unknownType()
 }

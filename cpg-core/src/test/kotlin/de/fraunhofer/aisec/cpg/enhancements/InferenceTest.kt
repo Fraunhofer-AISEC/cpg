@@ -32,17 +32,14 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class InferenceTest {
 
     @Test
     fun testRecordInference() {
-        val tu =
-            GraphExamples.getInferenceRecord()
-                .components
-                .firstOrNull()
-                ?.translationUnits
-                ?.firstOrNull()
+        val result = GraphExamples.getInferenceRecord()
+        val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
 
         assertNotNull(tu)
 
@@ -71,6 +68,8 @@ class InferenceTest {
         val nextField = record.fields["next"]
         assertNotNull(nextField)
         assertLocalName("T*", nextField.type)
+
+        assertTrue(result.finalCtx.typeObserverInvocations.get() < 30)
     }
 
     @Test

@@ -441,10 +441,19 @@ public class TypeInferenceObserver(var declaration: ValueDeclaration) : HasType.
     ) {
         // Only set a new type, if it is unknown for now
         if (declaration.type is UnknownType) {
-            declaration.setType(newType, chain)
+            declaration.type = newType
         } else {
             // TODO(oxisto): We could "refine" the type here based on further type
             //  observations
         }
+    }
+
+    override fun assignedTypeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        TODO("Not yet implemented")
     }
 }

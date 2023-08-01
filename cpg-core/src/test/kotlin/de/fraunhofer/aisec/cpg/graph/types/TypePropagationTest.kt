@@ -64,12 +64,10 @@ class TypePropagationTest {
         val intVar = result.variables["intVar"]
         assertNotNull(intVar)
         assertLocalName("int", intVar.type)
-        assertLocalName("int", intVar.declaredType)
 
         val intVarRef = result.refs["intVar"]
         assertNotNull(intVarRef)
         assertLocalName("int", intVarRef.type)
-        assertLocalName("int", intVar.declaredType)
 
         val addResult = result.variables["addResult"]
         assertNotNull(addResult)
@@ -80,6 +78,8 @@ class TypePropagationTest {
         assertTrue(binaryOp.type is IntegerType)
         assertEquals("int", (binaryOp.type as IntegerType).name.toString())
         assertEquals(32, (binaryOp.type as IntegerType).bitWidth)
+
+        assertTrue(result.finalCtx.typeObserverInvocations.get() < 20)
     }
 
     @Test

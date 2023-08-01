@@ -29,31 +29,31 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.util.*
 
 interface HasType : ContextProvider {
 
+    /**
+     * This property refers to the [Type] that is one of the following:
+     * - declared by the [Node], e.g., by a [ValueDeclaration]
+     * - intrinsically tied to the node, e.g. an [IntegerType] in an integer [Literal]
+     * - the [Type] of a declaration a node is referring to, e.g., in a
+     *   [DeclaredReferenceExpression]
+     *
+     * An implementation of this must be sure to invoke [informObservers].
+     */
     var type: Type
 
     /**
-     * This property refers to the [Type] that is either defined by the [Node] (e.g., by a
-     * [ValueDeclaration]). If the [Node] does not define or use declared type, this will be null.
-     */
-    val declaredType: Type?
-
-    /**
      * This property refers to the [Type] that the [Node] is assigned to. This could be different
-     * from the [HasType.declaredType]. A common example is that a node could contain an interface
-     * as a [HasType.declaredType], but the actual implementation of the type as [assignedType].
+     * from the [HasType.type]. A common example is that a node could contain an interface as a
+     * [HasType.type], but the actual implementation of the type as [assignedType].
      *
-     * An implementation of this must be sure to invoke [TypeObserver.typeChanged] of all
-     * [typeObservers].
+     * An implementation of this must be sure to invoke [informObservers].
      */
     val assignedType: Type
-
-    fun setType(type: Type, chain: MutableList<HasType>)
-
-    fun setAssignedType(type: Type, chain: MutableList<HasType>)
 
     val typeObservers: MutableList<TypeObserver>
 
@@ -69,9 +69,18 @@ interface HasType : ContextProvider {
             src: HasType,
             chain: MutableList<HasType>
         )
+
+        fun assignedTypeChanged(
+            newType: Type,
+            changeType: ChangeType,
+            src: HasType,
+            chain: MutableList<HasType>
+        )
     }
 
     fun informObservers(changeType: TypeObserver.ChangeType, chain: MutableList<HasType>) {
+        ctx?.typeObserverInvocations?.addAndGet(1)
+
         // TODO(oxisto): this is not really working too well
         // If we are already in the chain, we are running into a loop, so we abort
         // here

@@ -103,11 +103,27 @@ class UnaryOperator : Expression(), HasType.TypeObserver {
                 else -> newType
             }
 
-        if (changeType == HasType.TypeObserver.ChangeType.ASSIGNED_TYPE) {
-            setAssignedType(type, chain)
-        } else {
-            setType(type, chain)
+        this.type = type
+    }
+
+    override fun assignedTypeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // Only accept type changes from out input
+        if (src != input) {
+            return
         }
+
+        val type =
+            when (operatorCode) {
+                "*" -> newType.dereference()
+                "&" -> newType.pointer()
+                else -> newType
+            }
+        this.assignedType = type
     }
 
     override fun equals(other: Any?): Boolean {

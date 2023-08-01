@@ -116,17 +116,25 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
         src: HasType,
         chain: MutableList<HasType>
     ) {
-        // Double-check, if we want to infer the declaration type, otherwise, we can ignore the
-        // declared type update
-        if (changeType == HasType.TypeObserver.ChangeType.DECLARED_TYPE && !needsTypeInference) {
+        // There is only one use case to listen for type changes, and this is when we need type
+        // inference from an initializer. There is also the possibility that we want to infer types
+        // for inferred fields, but this handled by the inference system itself
+        if (!needsTypeInference) {
             return
         }
 
-        if (changeType == HasType.TypeObserver.ChangeType.ASSIGNED_TYPE) {
-            setAssignedType(newType, chain)
-        } else {
-            setType(newType, chain)
-        }
+        // In this case, want to set the type of our declaration to the declared type of the
+        // initializer
+        type = newType
+    }
+
+    override fun assignedTypeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // Nothing to do
     }
 
     override fun equals(other: Any?): Boolean {
