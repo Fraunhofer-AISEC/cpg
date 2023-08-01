@@ -115,16 +115,19 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
         chain: MutableList<HasType>
     ) {
         // Make sure that the update comes from our declaration, if we change our declared type
-        if (src == refersTo && changeType == HasType.TypeObserver.ChangeType.DECLARED_TYPE) {
-            // Set our declared type (in case we need to differentiate between the "current" type
-            // and the declared one)
-            declaredType = newType
-
-            // Set it as the new type
-            setType(newType, chain)
+        if (src == refersTo) {
+            // Set our type
+            this.type = newType
         }
+    }
 
-        if (changeType == HasType.TypeObserver.ChangeType.ASSIGNED_TYPE) {}
+    override fun assignedTypeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // Nothing to do
     }
 
     override fun equals(other: Any?): Boolean {

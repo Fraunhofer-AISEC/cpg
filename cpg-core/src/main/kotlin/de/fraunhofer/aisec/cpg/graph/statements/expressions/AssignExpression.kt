@@ -181,11 +181,6 @@ class AssignExpression : Expression(), AssignmentHolder, ArgumentHolder, HasType
         src: HasType,
         chain: MutableList<HasType>
     ) {
-        // We only want to have assigned type changes
-        if (changeType != HasType.TypeObserver.ChangeType.ASSIGNED_TYPE) {
-            return
-        }
-
         // Double-check, if the src is really from the rhs
         if (!rhs.contains(src)) {
             return
@@ -193,23 +188,30 @@ class AssignExpression : Expression(), AssignmentHolder, ArgumentHolder, HasType
 
         // There are now two possibilities: Either, we have a tuple type, that we need to
         // deconstruct, or we have a singular type. Now, its getting tricky. We do NOT want
-        // to propagate the type to the declared type, but only to our "assigned" type
+        // to propagate the type to the declared type, but only to the "assigned" type
         if (newType is TupleType) {
             val targets = findTargets(src)
             if (targets.size == newType.types.size) {
                 // Set the corresponding type on the left-side
-                newType.types.forEachIndexed { idx, t ->
-                    lhs.getOrNull(idx)?.setAssignedType(t, chain)
-                }
+                newType.types.forEachIndexed { idx, t -> lhs.getOrNull(idx)?.assignedType = t }
             }
         } else {
-            findTargets(src).forEach { it.setAssignedType(newType, chain) }
+            findTargets(src).forEach { it.assignedType = newType }
         }
 
         // If this is used as an expression, we also set the type accordingly
         if (usedAsExpression) {
-            expressionValue?.type?.let { setType(it, chain) }
+            expressionValue?.type?.let { type = it }
         }
+    }
+
+    override fun assignedTypeChanged(
+        newType: Type,
+        changeType: HasType.TypeObserver.ChangeType,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // TODO
     }
 
     override fun addArgument(expression: Expression) {

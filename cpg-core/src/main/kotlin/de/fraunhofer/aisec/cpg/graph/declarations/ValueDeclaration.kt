@@ -39,26 +39,30 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration who has a type. */
 abstract class ValueDeclaration : Declaration(), HasType {
-    /**
-     * A dedicated backing field, so that [setType] can actually set the type without any loops,
-     * since we are using a custom setter in [type] (which calls [setType]).
-     */
-    @Relationship("TYPE") override var declaredType: Type = unknownType()
-
     override val typeObservers = mutableListOf<HasType.TypeObserver>()
 
-    /**
-     * The type of this declaration. In order to maximize compatibility with Java legacy code
-     * (primarily the type listeners), this is a virtual property which wraps around a dedicated
-     * backing field [_type].
-     */
-    override var type: Type
-        get() {
-            return declaredType
-        }
+    /** The type of this declaration. */
+    override var type: Type = unknownType()
         set(value) {
-            // Trigger the type listener foo
-            setType(value, mutableListOf())
+            if (field == value) {
+                return
+            }
+
+            field = value
+            informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, mutableListOf(this))
+
+            // If the assigned type is unknown, we also set it
+            assignedType = value
+        }
+
+    override var assignedType: Type = unknownType()
+        set(value) {
+            if (field == value) {
+                return
+            }
+
+            field = value
+            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE, mutableListOf(this))
         }
 
     /**
@@ -109,24 +113,5 @@ abstract class ValueDeclaration : Declaration(), HasType {
 
     override fun hashCode(): Int {
         return super.hashCode()
-    }
-
-    override var assignedType: Type = unknownType()
-
-    override fun setType(type: Type, chain: MutableList<HasType>) {
-        declaredType = type
-
-        informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, chain)
-
-        // If our assigned type is unknown, we can also set it to our type
-        if (assignedType is UnknownType) {
-            setAssignedType(type, chain)
-        }
-    }
-
-    override fun setAssignedType(type: Type, chain: MutableList<HasType>) {
-        assignedType = type
-
-        informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE, chain)
     }
 }
