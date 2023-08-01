@@ -36,8 +36,10 @@ import java.util.*
 interface HasType : ContextProvider {
 
     /**
-     * This property refers to the [Type] that is one of the following:
-     * - declared by the [Node], e.g., by a [ValueDeclaration]
+     * This property refers to the *definite* [Type] that the [Node] has. If you are unsure about
+     * what it's type is, you should prefer to set it to the [UnknownType]. It is usually one of the
+     * following:
+     * - the type declared by the [Node], e.g., by a [ValueDeclaration]
      * - intrinsically tied to the node, e.g. an [IntegerType] in an integer [Literal]
      * - the [Type] of a declaration a node is referring to, e.g., in a
      *   [DeclaredReferenceExpression]
@@ -47,13 +49,31 @@ interface HasType : ContextProvider {
     var type: Type
 
     /**
-     * This property refers to the [Type] that the [Node] is assigned to. This could be different
-     * from the [HasType.type]. A common example is that a node could contain an interface as a
-     * [HasType.type], but the actual implementation of the type as [assignedType].
+     * This property refers to a list of [Type] nodes that the [Node] is assigned to. This could be
+     * different from the [HasType.type]. A common example is that a node could contain an interface
+     * as a [HasType.type], but the actual implementation of the type as one of the [assignedTypes].
+     * This could potentially also be empty, if we don't see any assignments to this expression.
      *
-     * An implementation of this must be sure to invoke [informObservers].
+     * Note: in order to properly inform observers, one should NOT use the regular [MutableSet.add]
+     * or [MutableSet.addAll] but rather use [addAssignedType] and [addAssignedTypes]. Otherwise, we
+     * cannot watch for changes within the set. We therefore only expose this as a [Set], but an
+     * implementing class MUST implement this as a [MutableSet] so that we can modify it internally.
      */
-    val assignedType: Type
+    val assignedTypes: Set<Type>
+
+    fun addAssignedType(type: Type) {
+        val changed = (this.assignedTypes as MutableSet).add(type)
+        if (changed) {
+            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE, mutableListOf(this))
+        }
+    }
+
+    fun addAssignedTypes(types: Set<Type>) {
+        val changed = (this.assignedTypes as MutableSet).addAll(types)
+        if (changed) {
+            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE, mutableListOf(this))
+        }
+    }
 
     val typeObservers: MutableList<TypeObserver>
 
@@ -71,7 +91,7 @@ interface HasType : ContextProvider {
         )
 
         fun assignedTypeChanged(
-            newType: Type,
+            assignedTypes: Set<Type>,
             changeType: ChangeType,
             src: HasType,
             chain: MutableList<HasType>
@@ -91,17 +111,26 @@ interface HasType : ContextProvider {
         // Add ourselves to the chain
         chain += this
 
-        // If we would only propagate the unknown type, we can also skip it
-        val newType =
-            if (changeType == TypeObserver.ChangeType.ASSIGNED_TYPE) {
-                this.assignedType
-            } else {
-                this.type
+        if (changeType == TypeObserver.ChangeType.ASSIGNED_TYPE) {
+            val assignedTypes = this.assignedTypes
+            if (assignedTypes.isEmpty()) {
+                return
             }
-
-        // Inform all type observers about the changes
-        for (observer in typeObservers) {
-            observer.typeChanged(newType, changeType, this, chain)
+            // Inform all type observers about the changes
+            for (observer in typeObservers) {
+                observer.assignedTypeChanged(assignedTypes, changeType, this, chain)
+            }
+            this.assignedTypes
+        } else {
+            val newType = this.type
+            if (newType is UnknownType) {
+                return
+            }
+            // Inform all type observers about the changes
+            for (observer in typeObservers) {
+                observer.typeChanged(newType, changeType, this, chain)
+            }
+            this.type
         }
     }
 
@@ -109,7 +138,7 @@ interface HasType : ContextProvider {
         typeObservers += typeObserver
 
         // If we would only propagate the unknown type, we can also skip it
-        var newType = this.type
+        val newType = this.type
         if (newType !is UnknownType) {
             // Immediately inform about changes
             typeObserver.typeChanged(
@@ -120,12 +149,12 @@ interface HasType : ContextProvider {
             )
         }
 
-        // If we would only propagate the unknown type, we can also skip it
-        newType = this.assignedType
-        if (newType !is UnknownType) {
+        // If we would propagate an empty list, we can also skip it
+        val assignedTypes = this.assignedTypes
+        if (assignedTypes.isNotEmpty()) {
             // Immediately inform about changes
-            typeObserver.typeChanged(
-                newType,
+            typeObserver.assignedTypeChanged(
+                assignedTypes,
                 TypeObserver.ChangeType.ASSIGNED_TYPE,
                 this,
                 mutableListOf(this)

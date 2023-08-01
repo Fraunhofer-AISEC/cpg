@@ -129,7 +129,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     }
 
     override fun assignedTypeChanged(
-        newType: Type,
+        assignedTypes: Set<Type>,
         changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>

@@ -294,7 +294,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         }
     }
 
-    fun addPrevDFG(
+    open fun addPrevDFG(
         prev: Node,
         properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
     ) {

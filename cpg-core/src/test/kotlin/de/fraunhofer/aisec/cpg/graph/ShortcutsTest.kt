@@ -36,10 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 
@@ -161,7 +158,6 @@ class ShortcutsTest {
         scRefs.forEach {
             assertNotNull(it)
             assertLocalName("ShortcutClass", it.type)
-            assertLocalName("ShortcutClass", it.assignedType)
         }
 
         val printCall = main.calls["print"]

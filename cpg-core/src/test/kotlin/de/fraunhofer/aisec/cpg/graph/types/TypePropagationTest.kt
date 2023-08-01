@@ -31,8 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import kotlin.test.*
 
@@ -84,8 +87,23 @@ class TypePropagationTest {
 
     @Test
     fun testAssignTypePropagation() {
+        var frontend = TestLanguageFrontend()
+        /**
+         * This roughly represents the following program in C:
+         * ```c
+         * int main() {
+         *   int intVar;
+         *   short shortVar;
+         *   shortVar = intVar;
+         *   return shortVar;
+         * }
+         * ```
+         *
+         * `shortVar` and `intVar` should hold `short` and `int` as their respective [HasType.type].
+         * The assignment will then propagate `int` as the [HasType.assignedType] to `shortVar`.
+         */
         val result =
-            TestLanguageFrontend().build {
+            frontend.build {
                 translationResult {
                     translationUnit("test") {
                         function("main", t("int")) {
@@ -93,7 +111,7 @@ class TypePropagationTest {
                                 declare { variable("intVar", t("int")) {} }
                                 declare { variable("shortVar", t("short")) {} }
                                 ref("shortVar") assign ref("intVar")
-                                returnStmt { literal(0) }
+                                returnStmt { ref("shortVar") }
                             }
                         }
                     }
@@ -101,31 +119,57 @@ class TypePropagationTest {
             }
 
         VariableUsageResolver(result.finalCtx).accept(result.components.first())
+        EvaluationOrderGraphPass(result.finalCtx)
+            .accept(result.components.first().translationUnits.first())
+        ControlFlowSensitiveDFGPass(result.finalCtx)
+            .accept(result.components.first().translationUnits.first())
 
-        val assign =
-            (result.functions["main"]?.body as? CompoundStatement)?.statements?.get(2)
-                as? AssignExpression
-        assertNotNull(assign)
+        with(frontend) {
+            val main = result.functions["main"]
+            assertNotNull(main)
 
-        val rhs = assign.rhs.firstOrNull() as? DeclaredReferenceExpression
-        assertNotNull(rhs)
-        assertIs<IntegerType>(rhs.type)
-        assertLocalName("int", rhs.type)
-        assertEquals(32, (rhs.type as IntegerType).bitWidth)
+            val assign = (main.body as? CompoundStatement)?.statements?.get(2) as? AssignExpression
+            assertNotNull(assign)
 
-        val lhs = assign.lhs.firstOrNull() as? DeclaredReferenceExpression
-        assertNotNull(lhs)
-        assertIs<IntegerType>(lhs.type)
-        assertLocalName("short", lhs.type)
-        assertEquals(16, (lhs.type as IntegerType).bitWidth)
+            val shortVar = main.variables["shortVar"]
+            assertNotNull(shortVar)
+            // At this point, shortVar should only have "short" as type and assigned types
+            assertEquals(primitiveType("short"), shortVar.type)
+            assertEquals(setOf(primitiveType("short")), shortVar.assignedTypes)
 
-        assertIs<IntegerType>(lhs.assignedType)
-        assertLocalName("int", lhs.assignedType)
+            val rhs = assign.rhs.firstOrNull() as? DeclaredReferenceExpression
+            assertNotNull(rhs)
+            assertIs<IntegerType>(rhs.type)
+            assertLocalName("int", rhs.type)
+            assertEquals(32, (rhs.type as IntegerType).bitWidth)
 
-        val refersTo = lhs.refersTo as? VariableDeclaration
-        assertNotNull(refersTo)
-        assertIs<IntegerType>(refersTo.type)
-        assertLocalName("short", refersTo.type)
-        assertEquals(16, (refersTo.type as IntegerType).bitWidth)
+            val shortVarRefLhs = assign.lhs.firstOrNull() as? DeclaredReferenceExpression
+            assertNotNull(shortVarRefLhs)
+            // At this point, shortVar was target of an assignment of an int variable, therefore
+            // assigned type should contain short and int. the "type" is still "short", since it is
+            // only determined by the declaration
+            assertEquals(primitiveType("short"), shortVarRefLhs.type)
+            assertEquals(
+                setOf(primitiveType("int"), primitiveType("short")),
+                shortVarRefLhs.assignedTypes
+            )
+
+            val shortVarRefReturnValue =
+                main.allChildren<ReturnStatement>().firstOrNull()?.returnValue
+            assertNotNull(shortVarRefReturnValue)
+            // Finally, the assigned types should propagate along the DFG, meaning that the
+            // reference to shortVar in the return statement should also hold short and int as the
+            // assigned types
+            assertEquals(
+                setOf(primitiveType("int"), primitiveType("short")),
+                shortVarRefLhs.assignedTypes
+            )
+
+            val refersTo = shortVarRefLhs.refersTo as? VariableDeclaration
+            assertNotNull(refersTo)
+            assertIs<IntegerType>(refersTo.type)
+            assertLocalName("short", refersTo.type)
+            assertEquals(16, (refersTo.type as IntegerType).bitWidth)
+        }
     }
 }

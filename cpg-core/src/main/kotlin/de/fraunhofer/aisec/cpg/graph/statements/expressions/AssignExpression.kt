@@ -193,10 +193,10 @@ class AssignExpression : Expression(), AssignmentHolder, ArgumentHolder, HasType
             val targets = findTargets(src)
             if (targets.size == newType.types.size) {
                 // Set the corresponding type on the left-side
-                newType.types.forEachIndexed { idx, t -> lhs.getOrNull(idx)?.assignedType = t }
+                newType.types.forEachIndexed { idx, t -> lhs.getOrNull(idx)?.addAssignedType(t) }
             }
         } else {
-            findTargets(src).forEach { it.assignedType = newType }
+            findTargets(src).forEach { it.addAssignedType(newType) }
         }
 
         // If this is used as an expression, we also set the type accordingly
@@ -206,7 +206,7 @@ class AssignExpression : Expression(), AssignmentHolder, ArgumentHolder, HasType
     }
 
     override fun assignedTypeChanged(
-        newType: Type,
+        assignedTypes: Set<Type>,
         changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>

@@ -146,24 +146,12 @@ open class BinaryOperator :
     }
 
     override fun assignedTypeChanged(
-        newType: Type,
+        assignedTypes: Set<Type>,
         changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>
     ) {
-        // We need to do some special dealings for function pointer calls
-        if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
-            // Propagate the function pointer type to the expression itself. This helps us later in
-            // the call resolver, when trying to determine, whether this is a regular call or a
-            // function pointer call.
-            this.assignedType = newType
-        } else {
-            // Otherwise, we have a special language-specific function to deal with type propagation
-            val type = language?.propagateTypeOfBinaryOperation(this)
-            if (type != null) {
-                this.assignedType = newType
-            }
-        }
+        // TODO: replicate something similar like propagateTypeOfBinaryOperation for assigned types
     }
 
     override fun equals(other: Any?): Boolean {
