@@ -127,9 +127,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     }
 
     /**
-     * handleForEachStatement adds a [HasType.TypeObserver] to the [ForEachStatement.iterable]
-     * of an [ForEachStatement] in order to determine the types used in [ForEachStatement.variable]
-     * (index and iterated value).
+     * handleForEachStatement adds a [HasType.TypeObserver] to the [ForEachStatement.iterable] of an
+     * [ForEachStatement] in order to determine the types used in [ForEachStatement.variable] (index
+     * and iterated value).
      */
     private fun handleForEachStatement(forEach: ForEachStatement) {
         (forEach.iterable as HasType).registerTypeObserver(

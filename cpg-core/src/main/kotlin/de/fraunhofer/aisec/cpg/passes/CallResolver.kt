@@ -110,6 +110,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
                     val initializer = node.newConstructExpression(typeString, "$typeString()")
+                    initializer.type = node.type
                     initializer.isImplicit = true
                     node.initializer = initializer
                     node.templateParameters?.let {
@@ -125,6 +126,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
                     val signature = arguments.map(Node::code).joinToString(", ")
                     val initializer =
                         node.newConstructExpression(typeString, "$typeString($signature)")
+                    initializer.type = node.type
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
                     initializer.isImplicit = true
                     node.initializer = initializer
