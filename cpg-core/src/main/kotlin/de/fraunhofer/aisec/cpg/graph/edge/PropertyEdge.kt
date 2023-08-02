@@ -377,11 +377,11 @@ class PropertyEdgeDelegate<T : Node, S : Node>(
 /** Similar to a [PropertyEdgeDelegate], but with a [Set] instead of [List]. */
 @Transient
 class PropertyEdgeSetDelegate<T : Node, S : Node>(
-    val edge: KProperty1<S, List<PropertyEdge<T>>>,
+    val edge: KProperty1<S, Collection<PropertyEdge<T>>>,
     val outgoing: Boolean = true
 ) {
     operator fun getValue(thisRef: S, property: KProperty<*>): MutableSet<T> {
-        return PropertyEdge.unwrap(edge.get(thisRef), outgoing).toMutableSet()
+        return PropertyEdge.unwrap(edge.get(thisRef).toList(), outgoing).toMutableSet()
     }
 
     operator fun setValue(thisRef: S, property: KProperty<*>, value: MutableSet<T>) {
