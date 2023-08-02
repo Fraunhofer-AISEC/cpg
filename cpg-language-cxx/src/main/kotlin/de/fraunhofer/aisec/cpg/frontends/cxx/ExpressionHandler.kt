@@ -477,7 +477,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return expressionList
     }
 
-    private fun handleBinaryExpression(ctx: IASTBinaryExpression): BinaryOperator {
+    private fun handleBinaryExpression(ctx: IASTBinaryExpression): Expression {
         var operatorCode = ""
         when (ctx.operator) {
             op_multiply -> operatorCode = "*"
@@ -496,17 +496,19 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             op_binaryOr -> operatorCode = "|"
             op_logicalAnd -> operatorCode = "&&"
             op_logicalOr -> operatorCode = "||"
-            op_assign -> operatorCode = "="
-            op_multiplyAssign -> operatorCode = "*="
-            op_divideAssign -> operatorCode = "/="
-            op_moduloAssign -> operatorCode = "%="
-            op_plusAssign -> operatorCode = "+="
-            op_minusAssign -> operatorCode = "-="
-            op_shiftLeftAssign -> operatorCode = "<<="
-            op_shiftRightAssign -> operatorCode = ">>="
-            op_binaryAndAssign -> operatorCode = "&="
-            op_binaryXorAssign -> operatorCode = "^="
-            op_binaryOrAssign -> operatorCode = "|="
+            op_assign,
+            op_multiplyAssign,
+            op_divideAssign,
+            op_moduloAssign,
+            op_plusAssign,
+            op_minusAssign,
+            op_shiftLeftAssign,
+            op_shiftRightAssign,
+            op_binaryAndAssign,
+            op_binaryXorAssign,
+            op_binaryOrAssign -> {
+                return handleAssignment(ctx)
+            }
             op_equals -> operatorCode = "=="
             op_notequals -> operatorCode = "!="
             op_pmdot -> operatorCode = ".*"
@@ -530,6 +532,36 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         binaryOperator.rhs = rhs
 
         return binaryOperator
+    }
+
+    private fun handleAssignment(ctx: IASTBinaryExpression): Expression {
+        val lhs = handle(ctx.operand1) ?: newProblemExpression("missing LHS")
+        val rhs =
+            if (ctx.operand2 != null) {
+                handle(ctx.operand2)
+            } else {
+                handle(ctx.initOperand2)
+            }
+                ?: newProblemExpression("missing RHS")
+        val operatorCode =
+            when (ctx.operator) {
+                op_assign -> "="
+                op_multiplyAssign -> "*="
+                op_divideAssign -> "/="
+                op_moduloAssign -> "%="
+                op_plusAssign -> "+="
+                op_minusAssign -> "-="
+                op_shiftLeftAssign -> "<<="
+                op_shiftRightAssign -> ">>="
+                op_binaryAndAssign -> "&="
+                op_binaryXorAssign -> "^="
+                op_binaryOrAssign -> "|="
+                else -> ""
+            }
+
+        val assign = newAssignExpression(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
+
+        return assign
     }
 
     private fun handleLiteralExpression(ctx: IASTLiteralExpression): Expression {
