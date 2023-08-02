@@ -266,12 +266,7 @@ open class CallExpression : Expression(), HasType.TypeObserver, SecondaryTypeEdg
         return templateInstantiation != null || templateParameterEdges != null || template
     }
 
-    override fun typeChanged(
-        newType: Type,
-        changeType: HasType.TypeObserver.ChangeType,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
         // If this is a template, we need to ignore incoming type changes, because our template
         // system will explicitly set the type
         if (this.template) {
@@ -296,7 +291,6 @@ open class CallExpression : Expression(), HasType.TypeObserver, SecondaryTypeEdg
 
     override fun assignedTypeChanged(
         assignedTypes: Set<Type>,
-        changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>
     ) {

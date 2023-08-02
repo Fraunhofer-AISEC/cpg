@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -57,40 +58,18 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     var isImplicitInitializerAllowed = false
     var isArray = false
 
-    /**
-     * This property MUST be set if the declaration needs to infer its [type] from the
-     * [initializer], rather than using the type specified in its declaration. There are a couple of
-     * use cases for this:
-     * - In C++, usage of the `auto` keyword
-     * - In languages where specifying a type declaration is optional, such as TypeScript, the type
-     *   of a declaration is defined by its initializer.
-     *
-     * This must be set BEFORE setting the [initializer].
-     */
-    val needsTypeInference = false
-
     /** The (optional) initializer of the declaration. */
     @AST
     override var initializer: Expression? = null
         set(value) {
-            if (needsTypeInference) {
-                field?.unregisterTypeObserver(this)
-            }
-            /*if (field is HasLegacyType.TypeListener) {
-                unregisterTypeListener(field as HasLegacyType.TypeListener)
-            }*/
+            // Make sure to unregister an eventual type observer
+            field?.unregisterTypeObserver(this)
             field = value
-
-            if (needsTypeInference) {
+            // If we have an auto type, we register a type observer in order to retrieve the type
+            // from our initializer
+            if (type is AutoType) {
                 value?.registerTypeObserver(this)
             }
-
-            // if the initializer implements a type listener, inform it about our type changes
-            // since the type is tied to the declaration, but it is convenient to have the type
-            // information in the initializer, i.e. in a ConstructExpression.
-            /*if (value is HasLegacyType.TypeListener) {
-                registerTypeListener(value as HasLegacyType.TypeListener)
-            }*/
         }
 
     fun <T> getInitializerAs(clazz: Class<T>): T? {
@@ -110,27 +89,35 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
             return initializer?.let { listOf(Assignment(it, this, this)) } ?: listOf()
         }
 
-    override fun typeChanged(
-        newType: Type,
-        changeType: HasType.TypeObserver.ChangeType,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override var type: Type
+        get() = super.type
+        set(value) {
+            super.type = value
+
+            // There is an additional special case for variable declarations: The handling of the
+            // "auto" type. If this type is assigned, it means that we need to auto-infer the type
+            // from a suitable source (most likely the initializer). We do this here as well as in
+            // the setter of the initializer, because the order in which either the type or the
+            // initializer is set differs from frontend to frontend.
+            if (value is AutoType) {
+                initializer?.registerTypeObserver(this)
+            }
+        }
+
+    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
         // There is only one use case to listen for type changes, and this is when we need type
         // inference from an initializer. There is also the possibility that we want to infer types
         // for inferred fields, but this handled by the inference system itself
-        if (!needsTypeInference) {
-            return
+        if (this.type is AutoType && src == initializer) {
+            // In the auto-inference case, we want to set the type of our declaration to the
+            // declared type of the
+            // initializer
+            type = newType
         }
-
-        // In this case, want to set the type of our declaration to the declared type of the
-        // initializer
-        type = newType
     }
 
     override fun assignedTypeChanged(
         assignedTypes: Set<Type>,
-        changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>
     ) {

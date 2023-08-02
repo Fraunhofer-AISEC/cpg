@@ -372,12 +372,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
      * probable, if multiple types are assigned.
      */
     class TypeInferenceObserver(var declaration: ValueDeclaration) : HasType.TypeObserver {
-        override fun typeChanged(
-            newType: Type,
-            changeType: HasType.TypeObserver.ChangeType,
-            src: HasType,
-            chain: MutableList<HasType>
-        ) {
+        override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
             // Only set a new type, if it is unknown for now
             if (declaration.type is UnknownType) {
                 declaration.type = newType
@@ -389,7 +384,6 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
 
         override fun assignedTypeChanged(
             assignedTypes: Set<Type>,
-            changeType: HasType.TypeObserver.ChangeType,
             src: HasType,
             chain: MutableList<HasType>
         ) {

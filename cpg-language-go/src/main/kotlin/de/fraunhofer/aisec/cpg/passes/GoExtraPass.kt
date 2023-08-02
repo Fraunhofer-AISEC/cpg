@@ -127,19 +127,14 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     }
 
     /**
-     * handleForEachStatement adds a [HasLegacyType.TypeListener] to the [ForEachStatement.iterable]
+     * handleForEachStatement adds a [HasType.TypeObserver] to the [ForEachStatement.iterable]
      * of an [ForEachStatement] in order to determine the types used in [ForEachStatement.variable]
      * (index and iterated value).
      */
     private fun handleForEachStatement(forEach: ForEachStatement) {
         (forEach.iterable as HasType).registerTypeObserver(
             object : HasType.TypeObserver {
-                override fun typeChanged(
-                    newType: Type,
-                    changeType: HasType.TypeObserver.ChangeType,
-                    src: HasType,
-                    chain: MutableList<HasType>
-                ) {
+                override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
                     if (src.type is UnknownType) {
                         return
                     }
@@ -158,6 +153,14 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                             valueVariable?.type = it.elementType
                         }
                     }
+                }
+
+                override fun assignedTypeChanged(
+                    assignedTypes: Set<Type>,
+                    src: HasType,
+                    chain: MutableList<HasType>
+                ) {
+                    // Nothing to do
                 }
             }
         )

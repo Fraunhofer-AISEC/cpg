@@ -66,18 +66,13 @@ class MemberExpression : DeclaredReferenceExpression(), HasBase {
 
     override fun hashCode() = Objects.hash(super.hashCode(), base)
 
-    override fun typeChanged(
-        newType: Type,
-        changeType: HasType.TypeObserver.ChangeType,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
         // We are basically only interested in type changes from our base to update the naming. We
         // need to ignore actual changes to the type because otherwise things go horribly wrong
         if (src == base) {
             updateName()
         } else {
-            super.typeChanged(newType, changeType, src, chain)
+            super.typeChanged(newType, src, chain)
         }
     }
 
