@@ -47,8 +47,9 @@ class DeclarationSequence : Declaration(), DeclarationHolder {
             for (declarationChild in declaration.children) {
                 addIfNotContains(childEdges, declarationChild)
             }
+        } else {
+            addIfNotContains(childEdges, declaration)
         }
-        addIfNotContains(childEdges, declaration)
     }
 
     fun asList(): List<Declaration> {
@@ -60,6 +61,10 @@ class DeclarationSequence : Declaration(), DeclarationHolder {
 
     fun first(): Declaration {
         return childEdges[0].end
+    }
+
+    operator fun plusAssign(declaration: Declaration) {
+        return addDeclaration(declaration)
     }
 
     override val declarations: List<Declaration>

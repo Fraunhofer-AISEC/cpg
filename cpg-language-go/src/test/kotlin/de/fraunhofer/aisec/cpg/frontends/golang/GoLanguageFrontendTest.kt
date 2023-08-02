@@ -355,20 +355,18 @@ class GoLanguageFrontendTest : BaseTest() {
 
         var methods = myStruct.methods
 
-        var myFunc = methods.first()
+        var myFunc = methods.firstOrNull()
+        assertNotNull(myFunc)
 
         assertLocalName("MyFunc", myFunc)
 
-        val myField = fields.first()
+        val myField = fields.firstOrNull()
+        assertNotNull(myField)
 
         assertLocalName("MyField", myField)
         assertEquals(tu.primitiveType("int"), myField.type)
 
-        val myInterface =
-            p.getDeclarationsByName("p.MyInterface", RecordDeclaration::class.java)
-                .iterator()
-                .next()
-
+        val myInterface = p.records["p.MyInterface"]
         assertNotNull(myInterface)
         assertEquals("interface", myInterface.kind)
 
@@ -683,6 +681,10 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val tu1 = tus[1]
         assertNotNull(tu1)
+
+        val include = tu1.includes["awesome"]
+        assertNotNull(include)
+        assertEquals("example.io/awesome", include.filename)
 
         val main = tu1.functions["main.main"]
         assertNotNull(main)

@@ -506,15 +506,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * of a de-referenced pointer in C like `*a = 1`.
      */
     private fun handleStore(instr: LLVMValueRef): Statement {
-        val binOp = newBinaryOperator("=", frontend.codeOf(instr))
-
         val dereference = newUnaryOperator("*", postfix = false, prefix = true, "")
         dereference.input = frontend.getOperandValueAtIndex(instr, 1)
 
-        binOp.lhs = dereference
-        binOp.rhs = frontend.getOperandValueAtIndex(instr, 0)
-
-        return binOp
+        return newAssignExpression(
+            "=",
+            listOf(dereference),
+            listOf(frontend.getOperandValueAtIndex(instr, 0)),
+            frontend.codeOf(instr)
+        )
     }
 
     /**
@@ -707,10 +707,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         val compoundStatement = newCompoundStatement(frontend.codeOf(instr))
-
-        val assignment = newBinaryOperator("=", frontend.codeOf(instr))
-        assignment.lhs = base
-        assignment.rhs = valueToSet
+        val assignment =
+            newAssignExpression("=", listOf(base), listOf(valueToSet), frontend.codeOf(instr))
         compoundStatement.addStatement(copy)
         compoundStatement.addStatement(assignment)
 
@@ -848,9 +846,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val ptrDerefAssign = newUnaryOperator("*", false, true, instrStr)
         ptrDerefAssign.input = frontend.getOperandValueAtIndex(instr, 0)
 
-        val assignment = newBinaryOperator("=", instrStr)
-        assignment.lhs = ptrDerefAssign
-        assignment.rhs = value
+        val assignment = newAssignExpression("=", listOf(ptrDerefAssign), listOf(value), instrStr)
 
         val ifStatement = newIfStatement(instrStr)
         ifStatement.condition = cmpExpr
@@ -872,7 +868,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val ptr = frontend.getOperandValueAtIndex(instr, 0)
         val value = frontend.getOperandValueAtIndex(instr, 1)
         val ty = value.type
-        val exchOp = newBinaryOperator("=", instrStr)
+        val exchOp = newAssignExpression("=", code = instrStr)
         exchOp.name = Name("atomicrmw")
 
         val ptrDeref = newUnaryOperator("*", false, true, instrStr)
@@ -880,31 +876,31 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val ptrDerefExch = newUnaryOperator("*", false, true, instrStr)
         ptrDerefExch.input = frontend.getOperandValueAtIndex(instr, 0)
-        exchOp.lhs = ptrDerefExch
+        exchOp.lhs = listOf(ptrDerefExch)
 
         when (operation) {
             LLVMAtomicRMWBinOpXchg -> {
-                exchOp.rhs = value
+                exchOp.rhs = listOf(value)
             }
             LLVMAtomicRMWBinOpFAdd,
             LLVMAtomicRMWBinOpAdd -> {
                 val binaryOperator = newBinaryOperator("+", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                exchOp.rhs = binaryOperator
+                exchOp.rhs = listOf(binaryOperator)
             }
             LLVMAtomicRMWBinOpFSub,
             LLVMAtomicRMWBinOpSub -> {
                 val binaryOperator = newBinaryOperator("-", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                exchOp.rhs = binaryOperator
+                exchOp.rhs = listOf(binaryOperator)
             }
             LLVMAtomicRMWBinOpAnd -> {
                 val binaryOperator = newBinaryOperator("&", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                exchOp.rhs = binaryOperator
+                exchOp.rhs = listOf(binaryOperator)
             }
             LLVMAtomicRMWBinOpNand -> {
                 val binaryOperator = newBinaryOperator("|", instrStr)
@@ -912,19 +908,19 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 binaryOperator.rhs = value
                 val unaryOperator = newUnaryOperator("~", false, true, instrStr)
                 unaryOperator.input = binaryOperator
-                exchOp.rhs = unaryOperator
+                exchOp.rhs = listOf(unaryOperator)
             }
             LLVMAtomicRMWBinOpOr -> {
                 val binaryOperator = newBinaryOperator("|", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                exchOp.rhs = binaryOperator
+                exchOp.rhs = listOf(binaryOperator)
             }
             LLVMAtomicRMWBinOpXor -> {
                 val binaryOperator = newBinaryOperator("^", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                exchOp.rhs = binaryOperator
+                exchOp.rhs = listOf(binaryOperator)
             }
             LLVMAtomicRMWBinOpMax,
             LLVMAtomicRMWBinOpMin -> {
@@ -947,7 +943,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                         value,
                         ty,
                     )
-                exchOp.rhs = conditional
+                exchOp.rhs = listOf(conditional)
             }
             LLVMAtomicRMWBinOpUMax,
             LLVMAtomicRMWBinOpUMin -> {
@@ -977,7 +973,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                         value,
                         ty,
                     )
-                exchOp.rhs = conditional
+                exchOp.rhs = listOf(conditional)
             }
             else -> {
                 throw TranslationException("LLVMAtomicRMWBinOp $operation not supported")
@@ -1260,10 +1256,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             )
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 2)
 
-        val binaryExpr = newBinaryOperator("=", instrStr)
-        binaryExpr.lhs = arrayExpr
-        binaryExpr.rhs = frontend.getOperandValueAtIndex(instr, 1)
-        compoundStatement.addStatement(binaryExpr)
+        val assignExpr =
+            newAssignExpression(
+                "=",
+                listOf(arrayExpr),
+                listOf(frontend.getOperandValueAtIndex(instr, 1)),
+                instrStr
+            )
+        compoundStatement.addStatement(assignExpr)
 
         return compoundStatement
     }
@@ -1440,13 +1440,19 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         for ((l, r) in labelMap) {
             // Now, we iterate over all the basic blocks and add an assign statement.
-            val assignment = newBinaryOperator("=", code)
-            assignment.rhs = r
-            assignment.lhs = newDeclaredReferenceExpression(varName, type, code)
-            (assignment.lhs as DeclaredReferenceExpression).type = type
-            (assignment.lhs as DeclaredReferenceExpression).unregisterTypeListener(assignment)
-            assignment.unregisterTypeListener(assignment.lhs as DeclaredReferenceExpression)
-            (assignment.lhs as DeclaredReferenceExpression).refersTo = declaration
+            val assignment =
+                newAssignExpression(
+                    "=",
+                    listOf(newDeclaredReferenceExpression(varName, type, code)),
+                    listOf(r),
+                    code
+                )
+            (assignment.lhs.first() as DeclaredReferenceExpression).type = type
+            (assignment.lhs.first() as DeclaredReferenceExpression).unregisterTypeListener(
+                assignment
+            )
+            assignment.unregisterTypeListener(assignment.lhs.first() as DeclaredReferenceExpression)
+            (assignment.lhs.first() as DeclaredReferenceExpression).refersTo = declaration
             flatAST.add(assignment)
 
             val basicBlock = l.subStatement as? CompoundStatement
