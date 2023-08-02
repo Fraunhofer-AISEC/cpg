@@ -33,6 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
@@ -541,6 +543,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                                 // Make sure we set the type of our construct expression
                                 initializer.type = declaration.type
                             }
+
+                            if (type is FunctionPointerType && initializer is UnaryOperator) {
+                                var ref = initializer.input as? DeclaredReferenceExpression
+                                ref?.resolutionHelper = declaration
+                            }
+
                             declaration.initializer = initializer
                         }
                     }

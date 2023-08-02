@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -603,10 +602,11 @@ class ScopeManager : ScopeProvider {
                 if (
                     it.name.lastPartsMatch(ref.name)
                 ) { // TODO: This place is likely to make things fail
+                    var helper = ref.resolutionHelper
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
-                    if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
-                        val fptrType = (ref as HasType).type as FunctionPointerType
+                    if (helper?.type is FunctionPointerType && it is FunctionDeclaration) {
+                        val fptrType = helper.type as FunctionPointerType
                         // TODO(oxisto): This is the third place where function pointers are
                         //   resolved. WHY?
                         // TODO(oxisto): Support multiple return values
