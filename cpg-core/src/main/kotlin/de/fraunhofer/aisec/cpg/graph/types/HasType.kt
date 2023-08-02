@@ -83,19 +83,9 @@ interface HasType : ContextProvider {
             ASSIGNED_TYPE
         }
 
-        fun typeChanged(
-            newType: Type,
-            changeType: ChangeType,
-            src: HasType,
-            chain: MutableList<HasType>
-        )
+        fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>)
 
-        fun assignedTypeChanged(
-            assignedTypes: Set<Type>,
-            changeType: ChangeType,
-            src: HasType,
-            chain: MutableList<HasType>
-        )
+        fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType, chain: MutableList<HasType>)
     }
 
     fun informObservers(changeType: TypeObserver.ChangeType, chain: MutableList<HasType>) {
@@ -118,7 +108,7 @@ interface HasType : ContextProvider {
             }
             // Inform all type observers about the changes
             for (observer in typeObservers) {
-                observer.assignedTypeChanged(assignedTypes, changeType, this, chain)
+                observer.assignedTypeChanged(assignedTypes, this, chain)
             }
             this.assignedTypes
         } else {
@@ -128,7 +118,7 @@ interface HasType : ContextProvider {
             }
             // Inform all type observers about the changes
             for (observer in typeObservers) {
-                observer.typeChanged(newType, changeType, this, chain)
+                observer.typeChanged(newType, this, chain)
             }
             this.type
         }
@@ -141,24 +131,14 @@ interface HasType : ContextProvider {
         val newType = this.type
         if (newType !is UnknownType) {
             // Immediately inform about changes
-            typeObserver.typeChanged(
-                newType,
-                TypeObserver.ChangeType.DECLARED_TYPE,
-                this,
-                mutableListOf(this)
-            )
+            typeObserver.typeChanged(newType, this, mutableListOf(this))
         }
 
         // If we would propagate an empty list, we can also skip it
         val assignedTypes = this.assignedTypes
         if (assignedTypes.isNotEmpty()) {
             // Immediately inform about changes
-            typeObserver.assignedTypeChanged(
-                assignedTypes,
-                TypeObserver.ChangeType.ASSIGNED_TYPE,
-                this,
-                mutableListOf(this)
-            )
+            typeObserver.assignedTypeChanged(assignedTypes, this, mutableListOf(this))
         }
     }
 

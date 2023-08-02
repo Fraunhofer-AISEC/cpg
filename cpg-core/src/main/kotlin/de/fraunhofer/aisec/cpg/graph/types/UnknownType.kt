@@ -32,9 +32,9 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * UnknownType describe the case in which it is not possible for the CPG to determine which Type is
- * used. E.g.: This occurs when the type is inferred by the compiler automatically when using
- * keywords such as auto in cpp
+ * UnknownType describe the case in which it is not possible for the CPG to determine which [Type]
+ * is used. Ideally, this type is only assigned temporary and then later replaced with an actual
+ * known type. But, because we sometimes do fuzzy parsing, this might not be the case all the time.
  */
 class UnknownType private constructor() : Type() {
     init {

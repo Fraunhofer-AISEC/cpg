@@ -71,18 +71,12 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
         return false
     }
 
-    override fun typeChanged(
-        newType: Type,
-        changeType: HasType.TypeObserver.ChangeType,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
         println("hello")
     }
 
     override fun assignedTypeChanged(
         assignedTypes: Set<Type>,
-        changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>
     ) {

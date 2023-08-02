@@ -107,12 +107,7 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
             .toString()
     }
 
-    override fun typeChanged(
-        newType: Type,
-        changeType: HasType.TypeObserver.ChangeType,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
         // Make sure that the update comes from our declaration, if we change our declared type
         if (src == refersTo) {
             // Set our type
@@ -122,7 +117,6 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
 
     override fun assignedTypeChanged(
         assignedTypes: Set<Type>,
-        changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>
     ) {

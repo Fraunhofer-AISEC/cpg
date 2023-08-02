@@ -175,12 +175,7 @@ class AssignExpression : Expression(), AssignmentHolder, ArgumentHolder, HasType
         private val log: Logger = LoggerFactory.getLogger(Node::class.java)
     }
 
-    override fun typeChanged(
-        newType: Type,
-        changeType: HasType.TypeObserver.ChangeType,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
         // Double-check, if the src is really from the rhs
         if (!rhs.contains(src)) {
             return
@@ -207,7 +202,6 @@ class AssignExpression : Expression(), AssignmentHolder, ArgumentHolder, HasType
 
     override fun assignedTypeChanged(
         assignedTypes: Set<Type>,
-        changeType: HasType.TypeObserver.ChangeType,
         src: HasType,
         chain: MutableList<HasType>
     ) {

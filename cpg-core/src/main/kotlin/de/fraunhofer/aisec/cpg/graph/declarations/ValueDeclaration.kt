@@ -51,8 +51,8 @@ abstract class ValueDeclaration : Declaration(), HasType {
             field = value
             informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, mutableListOf(this))
 
-            // For declarations, we also want to add the definitive type (if known) to our assigned
-            // types
+            // For declarations, we also want to add the definitive type (if known) to our
+            // assigned types
             if (value !is UnknownType) {
                 assignedTypes.add(value)
             }

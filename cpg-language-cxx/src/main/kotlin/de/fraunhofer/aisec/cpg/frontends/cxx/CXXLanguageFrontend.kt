@@ -556,10 +556,9 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         val name = specifier.rawSignature
 
         return when {
-            // auto type; we model this as an unknown type. Maybe in the future, we will
-            // differentiate between unknown types and "auto-deduced" types
+            // auto type
             specifier.type == IASTSimpleDeclSpecifier.t_auto -> {
-                unknownType()
+                autoType()
             }
             // void type
             specifier.type == IASTSimpleDeclSpecifier.t_void -> {

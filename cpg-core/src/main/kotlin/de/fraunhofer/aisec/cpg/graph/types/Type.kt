@@ -159,6 +159,7 @@ abstract class Type : Node {
          */
         get() =
             (this is ObjectType ||
+                this is AutoType ||
                 this is UnknownType ||
                 this is FunctionType ||
                 this is TupleType // TODO(oxisto): convert FunctionPointerType to second order type
