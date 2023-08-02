@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.helpers.neo4j.CpgCompositeConverter
 import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.ParameterizedType
@@ -75,6 +76,22 @@ class Schema {
      * MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
      */
     private val inheritedRels: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
+
+    /**
+     * Relationships newly defined in this specific entity. Saves
+     * MutableMap<EntityName,Set<Pair<Type-Name, PropertyName>>>
+     */
+    private val inherentProperties: MutableMap<String, MutableSet<Pair<String, String>>> =
+        mutableMapOf()
+
+    /**
+     * Relationships inherited from a parent in the inheritance hierarchy. A node with this label
+     * can have this relationship if it is non-nullable. Saves
+     * MutableMap<EntityName,Set<Pair<Type-Name, PropertyName>>>
+     */
+    private val inheritedProperties: MutableMap<String, MutableSet<Pair<String, String>>> =
+        mutableMapOf()
+
     /**
      * Relationships defined by children in the inheritance hierarchy. A node with this label can
      * have this relationship also has the label of the defining child entity. Saves
@@ -97,18 +114,17 @@ class Schema {
                 Node::class.java.isAssignableFrom(it.underlyingClass) && !it.isRelationshipEntity
             } // Node to filter for, filter out what is not explicitly a
 
-        entities.forEach {
-            if (it in entities) {
-                val superC = it.directSuperclass()
+        entities.forEach { entity ->
+            val superC = entity.directSuperclass()
 
-                hierarchy[it] =
-                    Pair(
-                        if (superC in entities) superC else null,
-                        it.directSubclasses()
-                            .filter { it in entities }
-                            .distinct() // Filter out duplicates
-                    )
-            }
+            hierarchy[entity] =
+                Pair(
+                    if (superC in entities) superC else null,
+                    entity
+                        .directSubclasses()
+                        .filter { it in entities }
+                        .distinct() // Filter out duplicates
+                )
         }
 
         // node in neo4j
@@ -121,24 +137,42 @@ class Schema {
 
         // Complements the hierarchy and relationship information for abstract classes
         completeSchema(allRels, hierarchy, nodeClassInfo)
-        // Searches for all relationships backed by a class field to know which relationships are
-        // newly defined in the
-        // entity class
-        entities.forEach {
-            val entity = it
+        // Searches for all relationships and properties backed by a class field to know which
+        // of them are newly defined in the entity class
+        entities.forEach { entity ->
             val fields =
                 entity.relationshipFields().filter {
                     it.field.declaringClass == entity.underlyingClass
                 }
             fields.forEach { relationshipFields.put(Pair(entity, it.name), it) }
-            val name = it.neo4jName() ?: it.underlyingClass.simpleName
-            allRels[name]?.let {
+            val name = entity.neo4jName() ?: entity.underlyingClass.simpleName
+            allRels[name]?.let { relationPair ->
                 inherentRels[name] =
-                    it.filter {
-                            val rel = it.first
-                            fields.any { it.name.equals(rel) }
-                        }
-                        .toSet()
+                    relationPair.filter { rel -> fields.any { it.name.equals(rel.first) } }.toSet()
+            }
+
+            entity.propertyFields().forEach { property ->
+                val persistedField =
+                    if (
+                        property.hasCompositeConverter() &&
+                            property.compositeConverter is CpgCompositeConverter
+                    ) {
+                        (property.compositeConverter as CpgCompositeConverter).graphSchema
+                    } else {
+                        listOf<Pair<String, String>>(
+                            Pair(property.field.type.simpleName, property.name)
+                        )
+                    }
+
+                if (property.field.declaringClass == entity.underlyingClass) {
+                    inherentProperties
+                        .computeIfAbsent(name) { mutableSetOf() }
+                        .addAll(persistedField)
+                } else {
+                    inheritedProperties
+                        .computeIfAbsent(name) { mutableSetOf() }
+                        .addAll(persistedField)
+                }
             }
         }
 
@@ -261,7 +295,7 @@ class Schema {
         if (inherentRels.isNotEmpty() && inheritedRels.isNotEmpty()) {
             out.println("### Relationships")
 
-            noLabelDups(inherentRels[entityLabel])?.forEach {
+            removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
                 out.println(
                     getBoxWithClass(
                         "relationship",
@@ -269,7 +303,7 @@ class Schema {
                     )
                 )
             }
-            noLabelDups(inheritedRels[entityLabel])?.forEach {
+            removeLabelDuplicates(inheritedRels[entityLabel])?.forEach {
                 var inherited = it
                 var current = classInfo
                 var baseClass: ClassInfo? = null
@@ -289,23 +323,40 @@ class Schema {
                 )
             }
 
-            noLabelDups(inherentRels[entityLabel])?.forEach {
+            removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
                 printRelationships(classInfo, it, out)
+            }
+        }
+
+        if (inherentProperties.isNotEmpty() && inheritedProperties.isNotEmpty()) {
+            out.println("### Properties")
+
+            removeLabelDuplicates(inherentProperties[entityLabel])?.forEach {
+                out.println("${it.second} : ${it.first}")
+                out.println()
+            }
+            if (inheritedProperties[entityLabel]?.isNotEmpty() == true) {
+                out.println("<details markdown><summary>Inherited Properties</summary>")
+                removeLabelDuplicates(inheritedProperties[entityLabel])?.forEach {
+                    out.println("${it.second} : ${it.first}")
+                    out.println()
+                }
+                out.println("</details>")
+                out.println()
             }
         }
 
         hierarchy[classInfo]?.second?.forEach { printEntities(it, out) }
     }
 
-    private fun noLabelDups(list: Set<Pair<String, String>>?): Set<Pair<String, String>>? {
+    private fun removeLabelDuplicates(
+        list: Set<Pair<String, String>>?
+    ): Set<Pair<String, String>>? {
         if (list == null) return null
         return list
             .map { it.second }
             .distinct()
-            .map {
-                val label = it
-                list.first { it.second == label }
-            }
+            .map { label -> list.first { it.second == label } }
             .toSet()
     }
 
