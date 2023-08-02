@@ -37,7 +37,7 @@ class BenchmarkCXXTest {
 
     @Test
     fun testGetBenchmarkResult() {
-        val file = File("src/test/resources/components/foreachstmt.cpp")
+        val file = File("src/test/resources/cxx/foreachstmt.cpp")
         val tr = TestUtils.analyze(listOf(file), file.parentFile.toPath(), true)
 
         assertNotNull(tr)
@@ -58,7 +58,7 @@ class BenchmarkCXXTest {
 
     @Test
     fun testPrintBenchmark() {
-        val file = File("src/test/resources/components/foreachstmt.cpp")
+        val file = File("src/test/resources/cxx/foreachstmt.cpp")
         val tr = TestUtils.analyze(listOf(file), file.parentFile.toPath(), true)
 
         assertNotNull(tr)

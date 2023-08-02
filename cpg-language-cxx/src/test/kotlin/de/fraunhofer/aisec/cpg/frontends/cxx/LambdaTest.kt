@@ -40,7 +40,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()

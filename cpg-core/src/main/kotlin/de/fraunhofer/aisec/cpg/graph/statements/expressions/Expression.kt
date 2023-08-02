@@ -47,12 +47,15 @@ abstract class Expression : Statement(), HasType {
 
     override var type: Type = unknownType()
         set(value) {
-            if (field == value) {
-                return
-            }
-
+            val old = field
             field = value
-            informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, mutableListOf(this))
+
+            // Only inform our observer if the type has changed. This should not trigger if we
+            // "squash" types into one, because they should still be regarded as "equal", but not
+            // the "same".
+            if (old != value) {
+                informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, mutableListOf(this))
+            }
         }
 
     override var assignedTypes: Set<Type> = mutableSetOf()
