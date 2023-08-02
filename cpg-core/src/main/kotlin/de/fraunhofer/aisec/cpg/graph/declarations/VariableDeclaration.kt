@@ -62,14 +62,9 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     @AST
     override var initializer: Expression? = null
         set(value) {
-            // Make sure to unregister an eventual type observer
             field?.unregisterTypeObserver(this)
             field = value
-            // If we have an auto type, we register a type observer in order to retrieve the type
-            // from our initializer
-            if (type is AutoType) {
-                value?.registerTypeObserver(this)
-            }
+            value?.registerTypeObserver(this)
         }
 
     fun <T> getInitializerAs(clazz: Class<T>): T? {
@@ -89,30 +84,20 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
             return initializer?.let { listOf(Assignment(it, this, this)) } ?: listOf()
         }
 
-    override var type: Type
-        get() = super.type
-        set(value) {
-            super.type = value
-
-            // There is an additional special case for variable declarations: The handling of the
-            // "auto" type. If this type is assigned, it means that we need to auto-infer the type
-            // from a suitable source (most likely the initializer). We do this here as well as in
-            // the setter of the initializer, because the order in which either the type or the
-            // initializer is set differs from frontend to frontend.
-            if (value is AutoType) {
-                initializer?.registerTypeObserver(this)
-            }
+    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
+        // Only accept type changes from our initializer, if any
+        if (src != initializer) {
+            return
         }
 
-    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
-        // There is only one use case to listen for type changes, and this is when we need type
-        // inference from an initializer. There is also the possibility that we want to infer types
-        // for inferred fields, but this handled by the inference system itself
-        if (this.type is AutoType && src == initializer) {
-            // In the auto-inference case, we want to set the type of our declaration to the
-            // declared type of the
-            // initializer
+        // In the auto-inference case, we want to set the type of our declaration to the
+        // declared type of the initializer
+        if (this.type is AutoType) {
             type = newType
+        } else {
+            // Otherwise, we are at least interested in what the initializer's type is, to see
+            // whether we can fill our assigned types with that
+            addAssignedType(newType)
         }
     }
 

@@ -87,7 +87,8 @@ class TypePropagationTest {
 
     @Test
     fun testAssignTypePropagation() {
-        var frontend = TestLanguageFrontend()
+        val frontend = TestLanguageFrontend()
+
         /**
          * This roughly represents the following program in C:
          * ```c
@@ -100,7 +101,7 @@ class TypePropagationTest {
          * ```
          *
          * `shortVar` and `intVar` should hold `short` and `int` as their respective [HasType.type].
-         * The assignment will then propagate `int` as the [HasType.assignedType] to `shortVar`.
+         * The assignment will then propagate `int` as the [HasType.assignedTypes] to `shortVar`.
          */
         val result =
             frontend.build {
@@ -170,6 +171,64 @@ class TypePropagationTest {
             assertIs<IntegerType>(refersTo.type)
             assertLocalName("short", refersTo.type)
             assertEquals(16, (refersTo.type as IntegerType).bitWidth)
+        }
+    }
+
+    @Test
+    fun testNewPropagation() {
+        val frontend = TestLanguageFrontend()
+
+        /**
+         * This roughly represents the following C++ code:
+         * ```cpp
+         * int main() {
+         *   BaseClass *b = new DerivedClass();
+         *   b.doSomething();
+         * }
+         * ```
+         */
+        val result =
+            frontend.build {
+                translationResult {
+                    translationUnit("test") {
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("b", t("BaseClass").pointer()) {
+                                        new {
+                                            construct("DerivedClass")
+                                            type = t("DerivedClass").pointer()
+                                        }
+                                    }
+                                }
+                                call("b.doSomething")
+                            }
+                        }
+                    }
+                }
+            }
+
+        VariableUsageResolver(result.finalCtx).accept(result.components.first())
+
+        with(frontend) {
+            val main = result.functions["main"]
+            assertNotNull(main)
+
+            val b = main.variables["b"]
+            assertNotNull(b)
+            assertEquals(objectType("BaseClass").pointer(), b.type)
+            assertEquals(
+                setOf(
+                    objectType("BaseClass").pointer(),
+                    objectType("DerivedClass").pointer(),
+                ),
+                b.assignedTypes
+            )
+
+            val bRef = main.refs["b"]
+            assertNotNull(bRef)
+            assertEquals(b.type, bRef.type)
+            assertEquals(b.assignedTypes, bRef.assignedTypes)
         }
     }
 }

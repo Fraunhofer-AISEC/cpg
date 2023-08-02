@@ -1090,7 +1090,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testLocation() {
-        val file = File("src/test/resources/components/foreachstmt.cpp")
+        val file = File("src/test/resources/cxx/foreachstmt.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val main = tu.functions["main"]
         assertNotNull(main)

@@ -44,7 +44,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
     /** The type of this declaration. */
     override var type: Type = unknownType()
         set(value) {
-            var old = field
+            val old = field
             field = value
 
             // Only inform our observer if the type has changed. This should not trigger if we
