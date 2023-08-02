@@ -80,7 +80,7 @@ class AssignExpression : Expression(), AssignmentHolder, ArgumentHolder, HasType
      * support that. In the regular case, an assignment is a simple statement and does not hold any
      * value itself.
      */
-    val usedAsExpression = false
+    var usedAsExpression = false
 
     /**
      * If this node is used an expression, this property contains a reference of the [Expression]
