@@ -122,12 +122,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     implicitInitializerAllowed,
                 )
 
-            // Parse the initializer, if we have one
-            val init = ctx.initializer
-            if (init != null) {
-                declaration.initializer = frontend.initializerHandler.handle(init)
-            }
-
             // Add this declaration to the current scope
             frontend.scopeManager.addDeclaration(declaration)
 

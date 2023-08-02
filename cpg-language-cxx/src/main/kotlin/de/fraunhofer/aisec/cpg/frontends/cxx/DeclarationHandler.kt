@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
@@ -517,12 +518,31 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     }
 
                     if (declaration != null) {
-                        // We also need to set the return type, based on the declarator type.
+                        // We also need to set the type, based on the declarator type.
                         declaration.type = type
 
                         // process attributes
                         frontend.processAttributes(declaration, ctx)
                         sequence.addDeclaration(declaration)
+                    }
+
+                    // We want to make sure that we parse the initializer *after* we have set the
+                    // type. This way we can deduce, whether our initializer needs to have the
+                    // declared type (in case of a ConstructExpression); or if the declaration needs
+                    // to have the same type as the initializer (when an auto-type is used). The
+                    // latter case is done internally by the VariableDeclaration class and its type
+                    // observer.
+                    if (declaration is VariableDeclaration) {
+                        // Parse the initializer, if we have one
+                        val init = declarator.initializer
+                        if (init != null) {
+                            val initializer = frontend.initializerHandler.handle(init)
+                            if (initializer is ConstructExpression) {
+                                // Make sure we set the type of our construct expression
+                                initializer.type = declaration.type
+                            }
+                            declaration.initializer = initializer
+                        }
                     }
                 }
             }

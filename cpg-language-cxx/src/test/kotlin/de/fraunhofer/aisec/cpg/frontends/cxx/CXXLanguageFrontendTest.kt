@@ -54,7 +54,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testForEach() {
-        val file = File("src/test/resources/components/foreachstmt.cpp")
+        val file = File("src/test/resources/cxx/foreachstmt.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
         assertFalse(main.isEmpty())
@@ -80,7 +80,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val i = stmt.singleDeclaration as VariableDeclaration
         assertNotNull(i)
         assertLocalName("i", i)
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), i.type)
+        assertIs<AutoType>(i.type)
     }
 
     @Test

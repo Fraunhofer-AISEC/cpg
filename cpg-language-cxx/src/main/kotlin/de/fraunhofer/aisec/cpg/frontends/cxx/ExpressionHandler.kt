@@ -211,6 +211,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // an implicit one
                 initializer = newConstructExpression(t.name.localName, "${t.name.localName}()")
                 initializer.isImplicit = true
+                initializer.type = t
             }
 
             // we also need to "forward" our template parameters (if we have any) to the construct
