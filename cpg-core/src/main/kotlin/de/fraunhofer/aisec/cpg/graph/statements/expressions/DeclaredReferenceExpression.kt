@@ -85,6 +85,8 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
     var access = AccessValues.READ
     var isStaticAccess = false
 
+    var resolutionHelper: HasType? = null
+
     /**
      * Returns the contents of [refersTo] as the specified class, if the class is assignable.
      * Otherwise, it will return null.

@@ -560,6 +560,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
 
         val assign = newAssignExpression(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
+        if (rhs is UnaryOperator && rhs.input is DeclaredReferenceExpression) {
+            (rhs.input as DeclaredReferenceExpression).resolutionHelper = lhs
+        }
 
         return assign
     }
