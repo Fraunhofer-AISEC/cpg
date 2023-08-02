@@ -129,9 +129,9 @@ class Schema {
 
         // node in neo4j
 
-        entities.forEach {
-            val key = meta.schema.findNode(it.neo4jName())
-            allRels[it.neo4jName() ?: it.underlyingClass.simpleName] =
+        entities.forEach { classInfo ->
+            val key = meta.schema.findNode(classInfo.neo4jName())
+            allRels[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName] =
                 key.relationships().entries.map { Pair(it.key, it.value.type()) }.toSet()
         }
 
@@ -188,8 +188,8 @@ class Schema {
         allRels.forEach {
             childrensRels[it.key] =
                 it.value
-                    .subtract(inheritedRels[it.key] ?: emptyList())
-                    .subtract(inherentRels[it.key] ?: emptyList())
+                    .subtract(inheritedRels[it.key] ?: emptySet())
+                    .subtract(inherentRels[it.key] ?: emptySet())
         }
         println()
     }
@@ -223,8 +223,10 @@ class Schema {
                     it.neo4jName() ?: it.underlyingClass.simpleName,
                     hierarchy[it]
                         ?.second
-                        ?.flatMap {
-                            relCanHave[it.neo4jName() ?: it.underlyingClass.simpleName] ?: setOf()
+                        ?.flatMap { classInfo ->
+                            relCanHave[
+                                classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]
+                                ?: setOf()
                         }
                         ?.toSet()
                         ?: setOf()
@@ -244,10 +246,14 @@ class Schema {
         }
     }
 
+    /**
+     * Prints a section for every entity with a list of labels (e.g. superclasses), a list of
+     * relationships, a dropdown with inherited relationships, a list of properties and a dropdown
+     * with inherited properties.
+     *
+     * Generates links between the boxes.
+     */
     private fun printEntities(classInfo: ClassInfo, out: PrintWriter) {
-        // TODO print a section for every entity. List of relationships not inherent. List of rel
-        // inherent with result node. try to get links into relationship and target.
-        // TODO subsection with inherent relationships.
         val entityLabel = toLabel(classInfo)
 
         out.println("## $entityLabel<a id=\"${toAnchorLink("e${entityLabel}")}\"></a>")
@@ -277,15 +283,13 @@ class Schema {
 
             hierarchy[classInfo]?.second?.let {
                 if (it.isNotEmpty()) {
-                    it.forEach {
+                    it.forEach { classInfo ->
                         out.print(
                             getBoxWithClass(
                                 "child",
-                                "[${toLabel(it)}](#${toAnchorLink("e"+toLabel(it))})"
+                                "[${toLabel(classInfo)}](#${toAnchorLink("e"+toLabel(classInfo))})"
                             )
                         )
-                        // out.println("click ${toLabel(it)} href
-                        // \"#${toAnchorLink(toLabel(it))}\"")
                     }
                     out.println()
                 }
@@ -303,24 +307,30 @@ class Schema {
                     )
                 )
             }
-            removeLabelDuplicates(inheritedRels[entityLabel])?.forEach {
-                var inherited = it
-                var current = classInfo
-                var baseClass: ClassInfo? = null
-                while (baseClass == null) {
-                    inherentRels[toLabel(current)]?.let {
-                        if (it.any { it.second.equals(inherited.second) }) {
-                            baseClass = current
+
+            if (inheritedRels[entityLabel]?.isNotEmpty() == true) {
+                out.println("<details markdown><summary>Inherited Relationships</summary>")
+                out.println()
+                removeLabelDuplicates(inheritedRels[entityLabel])?.forEach { inherited ->
+                    var current = classInfo
+                    var baseClass: ClassInfo? = null
+                    while (baseClass == null) {
+                        inherentRels[toLabel(current)]?.let { rels ->
+                            if (rels.any { it.second == inherited.second }) {
+                                baseClass = current
+                            }
                         }
+                        hierarchy[current]?.first?.let { current = it }
                     }
-                    hierarchy[current]?.first?.let { current = it }
-                }
-                out.println(
-                    getBoxWithClass(
-                        "inherited-relationship",
-                        "[${it.second}](#${toConcatName(toLabel(baseClass)+it.second)})"
+                    out.println(
+                        getBoxWithClass(
+                            "inherited-relationship",
+                            "[${inherited.second}](#${toConcatName(toLabel(baseClass) + inherited.second)})"
+                        )
                     )
-                )
+                }
+                out.println("</details>")
+                out.println()
             }
 
             removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
@@ -402,7 +412,7 @@ class Schema {
             .filterIsInstance<ParameterizedType>()
             .map { it.rawType }
         val baseClass: Type? = getNestedBaseType(type)
-        var multiplicity = getNestedMultiplicity(type)
+        val multiplicity = getNestedMultiplicity(type)
 
         var targetClassInfo: ClassInfo? = null
         if (baseClass != null) {
@@ -426,12 +436,12 @@ class Schema {
 
     private fun getNestedMultiplicity(type: Type): Boolean {
         if (type is ParameterizedType) {
-            if (
+            return if (
                 type.rawType.typeName.substringBeforeLast(".") == "java.util"
             ) { // listOf(List::class).contains(type.rawType)
-                return true
+                true
             } else {
-                return type.actualTypeArguments.any { getNestedMultiplicity(it) }
+                type.actualTypeArguments.any { getNestedMultiplicity(it) }
             }
         }
         return false
