@@ -48,7 +48,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
              * dependence edges
              */
             override fun visit(t: Node) {
-                t.addAllPrevPDG(t.prevDFG, DependenceType.DATA)
+                t.addAllPrevPDGEdges(t.prevDFGEdges, DependenceType.DATA)
                 t.addAllPrevPDGEdges(t.prevCDGEdges, DependenceType.CONTROL)
             }
         }
