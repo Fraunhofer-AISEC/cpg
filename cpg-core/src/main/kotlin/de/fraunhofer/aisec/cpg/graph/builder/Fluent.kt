@@ -1076,6 +1076,23 @@ infix fun Expression.assign(rhs: Expression): AssignExpression {
     return node
 }
 
+/**
+ * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+
+infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("=", listOf(this), listOf(rhs))
+    node.usedAsExpression = true
+
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
+    }
+
+    return node
+}
+
 /** Creates a new [Type] with the given [name] in the Fluent Node DSL. */
 fun LanguageFrontend<*, *>.t(name: CharSequence, init: (Type.() -> Unit)? = null): Type {
     val type = objectType(name)
