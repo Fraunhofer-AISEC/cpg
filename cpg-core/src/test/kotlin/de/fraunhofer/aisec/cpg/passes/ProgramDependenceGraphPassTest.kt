@@ -72,7 +72,7 @@ class ProgramDependenceGraphPassTest {
                             "expectedPrevEdges: ${expectedPrevEdges.sortedBy { it.hashCode() }}\n" +
                             "actualPrevEdges: ${t.prevPDGEdges.sortedBy { it.hashCode() }}"
                     ) {
-                        compareListWithoutOrder(expectedPrevEdges, t.prevPDGEdges)
+                        compareCollectionWithoutOrder(expectedPrevEdges, t.prevPDGEdges)
                     }
 
                     val expectedNextEdges =
@@ -89,14 +89,17 @@ class ProgramDependenceGraphPassTest {
                             "\nexpectedNextEdges: ${expectedNextEdges.sortedBy { it.hashCode() }}" +
                             "\nactualNextEdges: ${t.nextPDGEdges.sortedBy { it.hashCode() }}"
                     ) {
-                        compareListWithoutOrder(expectedNextEdges, t.nextPDGEdges)
+                        compareCollectionWithoutOrder(expectedNextEdges, t.nextPDGEdges)
                     }
                 }
             }
         )
     }
 
-    private fun <T> compareListWithoutOrder(expected: List<T>, actual: List<T>): Boolean {
+    private fun <T> compareCollectionWithoutOrder(
+        expected: Collection<T>,
+        actual: Collection<T>
+    ): Boolean {
         val expectedWithDuplicatesGrouped = expected.groupingBy { it }.eachCount()
         val actualWithDuplicatesGrouped = actual.groupingBy { it }.eachCount()
 
