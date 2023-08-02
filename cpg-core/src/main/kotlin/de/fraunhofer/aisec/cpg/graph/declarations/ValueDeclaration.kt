@@ -44,12 +44,15 @@ abstract class ValueDeclaration : Declaration(), HasType {
     /** The type of this declaration. */
     override var type: Type = unknownType()
         set(value) {
-            if (field == value) {
-                return
-            }
-
+            var old = field
             field = value
-            informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, mutableListOf(this))
+
+            // Only inform our observer if the type has changed. This should not trigger if we
+            // "squash" types into one, because they should still be regarded as "equal", but not
+            // the "same".
+            if (old != value) {
+                informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, mutableListOf(this))
+            }
 
             // For declarations, we also want to add the definitive type (if known) to our
             // assigned types

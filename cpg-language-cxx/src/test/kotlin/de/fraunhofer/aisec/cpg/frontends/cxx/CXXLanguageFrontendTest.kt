@@ -1325,16 +1325,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/c/struct.c")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.functions["main"]
         assertNotNull(main)
 
-        val myStruct = tu.byNameOrNull<RecordDeclaration>("MyStruct")
+        val myStruct = tu.records["MyStruct"]
         assertNotNull(myStruct)
 
-        val field = myStruct.byNameOrNull<FieldDeclaration>("field")
+        val field = myStruct.fields["field"]
         assertNotNull(field)
 
-        val s = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration as? VariableDeclaration
+        val s = main.variables["s"]
         assertNotNull(s)
 
         assertEquals(myStruct, (s.type as? ObjectType)?.recordDeclaration)

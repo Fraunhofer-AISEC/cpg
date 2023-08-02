@@ -181,13 +181,16 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // globally unique
         if (node is HasType && node.type !is ParameterizedType) {
             val type = node.type
-            val types =
+            val newType =
                 if (type.isFirstOrderType) {
-                    typeState.keys
-                } else {
-                    typeState.computeIfAbsent(type.root, ::mutableListOf)
-                }
-            // updateType(node, types)
+                        typeState.keys
+                    } else {
+                        typeState.computeIfAbsent(type.root, ::mutableListOf)
+                    }
+                    .firstOrNull { it == type }
+            if (newType != null) {
+                node.type = newType
+            }
             // node.updatePossibleSubtypes(ensureUniqueSubTypes(node.possibleSubTypes))
         }
     }
@@ -210,12 +213,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }*/
         }
     }
-
-    /*protected fun updateType(node: HasLegacyType, types: Collection<Type>) {
-        // TODO: Why do we perform the update only for the first type?
-        val typeToUpdate = types.firstOrNull { it == node.type } ?: return
-        node.updateType(typeToUpdate)
-    }*/
 
     /**
      * Creates the recordDeclaration relationship between ObjectTypes and RecordDeclaration (from
