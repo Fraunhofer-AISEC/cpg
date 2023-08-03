@@ -103,7 +103,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        // By default, the outer variables passed by value to the lambda are unmutable. But we can
+        // By default, the outer variables passed by value to the lambda are immutable. But we can
         // either make the function "mutable" or pass everything by reference.
         lambda.areVariablesMutable =
             (node.declarator as? CPPASTFunctionDeclarator)?.isMutable == true ||
@@ -112,6 +112,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val anonymousFunction =
             node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
                 ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
+        anonymousFunction.type = FunctionType.computeType(anonymousFunction)
 
         frontend.scopeManager.enterScope(anonymousFunction)
         anonymousFunction.body = frontend.statementHandler.handle(node.body)
