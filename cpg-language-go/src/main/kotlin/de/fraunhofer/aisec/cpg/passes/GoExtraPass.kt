@@ -183,7 +183,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                 val ref = scopeManager.resolveReference(expr)
                 if (ref == null) {
                     // We need to implicitly declare it, if its not declared before.
-                    val decl = newVariableDeclaration(expr.name, expr.type)
+                    val decl = newVariableDeclaration(expr.name, expr.autoType())
                     decl.location = expr.location
                     decl.isImplicit = true
                     decl.initializer = assign.findValue(expr)

@@ -201,10 +201,10 @@ fun MetadataProvider.newConditionalExpression(
     val node = ConditionalExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
+    node.type = type
     node.condition = condition
     node.thenExpr = thenExpr
     node.elseExpr = elseExpr
-    node.type = type
 
     log(node)
     return node

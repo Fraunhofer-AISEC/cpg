@@ -1146,7 +1146,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                     .sourceLocations(listOf(file))
                     .topLevel(file.parentFile)
                     .defaultPasses()
-                    .defaultLanguages()
+                    .registerLanguage<CPPLanguage>()
                     .processAnnotations(true)
                     .symbols(
                         mapOf(
@@ -1203,7 +1203,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                     .useUnityBuild(true)
                     .loadIncludes(true)
                     .defaultPasses()
-                    .defaultLanguages()
+                    .registerLanguage<CPPLanguage>()
             )
         assertEquals(1, declarations.size)
         // should contain 3 declarations (2 include and 1 function decl from the include)
