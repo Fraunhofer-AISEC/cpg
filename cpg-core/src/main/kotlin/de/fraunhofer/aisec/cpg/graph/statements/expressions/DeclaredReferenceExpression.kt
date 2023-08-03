@@ -85,6 +85,11 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
     var access = AccessValues.READ
     var isStaticAccess = false
 
+    /**
+     * This is a MAJOR workaround needed to resolve function pointers, until we properly re-design
+     * the call resolver. When this [DeclaredReferenceExpression] contains a function pointer
+     * reference that is assigned to a variable (or to another reference), we need to set
+     */
     var resolutionHelper: HasType? = null
 
     /**

@@ -28,12 +28,16 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.pointer
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
  * This expression denotes the usage of an anonymous / lambda function. It connects the inner
  * anonymous function to the user of a lambda function with an expression.
  */
-class LambdaExpression : Expression() {
+class LambdaExpression : Expression(), HasType.TypeObserver {
 
     /**
      * If [areVariablesMutable] is false, only the (outer) variables in this list can be modified
@@ -47,7 +51,29 @@ class LambdaExpression : Expression() {
     @AST
     var function: FunctionDeclaration? = null
         set(value) {
-            if (value != null) {}
+            value?.unregisterTypeObserver(this)
             field = value
+            value?.registerTypeObserver(this)
         }
+
+    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
+        // Make sure our src is the function
+        if (src != function) {
+            return
+        }
+
+        // We should only propagate a function type, coming from our declared function
+        if (newType is FunctionType) {
+            // Propagate a pointer reference to the function
+            this.type = newType.pointer()
+        }
+    }
+
+    override fun assignedTypeChanged(
+        assignedTypes: Set<Type>,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // Nothing to do
+    }
 }
