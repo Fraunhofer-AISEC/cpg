@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 
@@ -34,7 +35,7 @@ import java.util.*
  * ([arrayExpression]) and `index` ([subscriptExpression]) are of type [Expression]. CPP can
  * overload operators thus changing semantics of array access.
  */
-class ArraySubscriptionExpression : Expression(), HasBase {
+class ArraySubscriptionExpression : Expression(), HasBase, HasType.TypeObserver {
     /**
      * The array on which the access is happening. This is most likely a
      * [DeclaredReferenceExpression].
@@ -42,8 +43,10 @@ class ArraySubscriptionExpression : Expression(), HasBase {
     @AST
     var arrayExpression: Expression = ProblemExpression("could not parse array expression")
         set(value) {
+            field.unregisterTypeObserver(this)
             field = value
             type = getSubscriptType(value.type)
+            value.registerTypeObserver(this)
         }
 
     /**
@@ -71,6 +74,28 @@ class ArraySubscriptionExpression : Expression(), HasBase {
             is RangeExpression -> arrayType
             else -> arrayType.dereference()
         }
+    }
+
+    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
+        // Make sure the source is really our array
+        if (src != arrayExpression) {
+            return
+        }
+
+        this.type = getSubscriptType(newType)
+    }
+
+    override fun assignedTypeChanged(
+        assignedTypes: Set<Type>,
+        src: HasType,
+        chain: MutableList<HasType>
+    ) {
+        // Make sure the source is really our array
+        if (src != arrayExpression) {
+            return
+        }
+
+        addAssignedTypes(assignedTypes.map { getSubscriptType(it) }.toSet())
     }
 
     override fun equals(other: Any?): Boolean {

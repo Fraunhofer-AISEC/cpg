@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.getCommonType
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -41,13 +42,17 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
     @AST
     var thenExpr: Expression? = null
         set(value) {
+            field?.unregisterTypeObserver(this)
             field = value
+            value?.registerTypeObserver(this)
         }
 
     @AST
     var elseExpr: Expression? = null
         set(value) {
+            field?.unregisterTypeObserver(this)
             field = value
+            value?.registerTypeObserver(this)
         }
 
     override fun toString(): String {
@@ -72,7 +77,13 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
     }
 
     override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
-        println("hello")
+        val types = mutableListOf<Type>()
+
+        thenExpr?.type?.let { types.add(it) }
+        elseExpr?.type?.let { types.add(it) }
+
+        val alternative = if (types.isNotEmpty()) types[0] else unknownType()
+        this.type = getCommonType(types).orElse(alternative)
     }
 
     override fun assignedTypeChanged(
@@ -80,7 +91,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
         src: HasType,
         chain: MutableList<HasType>
     ) {
-        println("hello")
+        addAssignedTypes(setOfNotNull(thenExpr?.type, elseExpr?.type))
     }
 
     override fun equals(other: Any?): Boolean {

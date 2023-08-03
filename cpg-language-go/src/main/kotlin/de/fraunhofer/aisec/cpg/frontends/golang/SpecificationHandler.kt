@@ -163,6 +163,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
             if (valueSpec.type != null) {
                 decl.type = frontend.typeOf(valueSpec.type!!)
+            } else {
+                decl.type = autoType()
             }
 
             // There could either be no initializers, otherwise the amount of values
