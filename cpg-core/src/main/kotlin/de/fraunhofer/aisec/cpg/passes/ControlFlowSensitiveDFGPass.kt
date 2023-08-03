@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 /**
  * This pass determines the data flows of DeclaredReferenceExpressions which refer to a
@@ -257,8 +259,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             currentNode.operatorCode == "=" &&
             (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
 
-    protected fun isSimpleAssignment(currentNode: Node) =
-        currentNode is AssignExpression && currentNode.operatorCode == "="
+    @OptIn(ExperimentalContracts::class)
+    protected fun isSimpleAssignment(currentNode: Node): Boolean {
+        contract { returns(true) implies (currentNode is AssignExpression) }
+        return currentNode is AssignExpression && currentNode.operatorCode == "="
+    }
 
     /** Checks if the node is an increment or decrement operator (e.g. i++, i--, ++i, --i) */
     protected fun isIncOrDec(currentNode: Node) =

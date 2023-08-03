@@ -1030,7 +1030,7 @@ infix fun Expression.lt(rhs: Expression): BinaryOperator {
  * Creates a new [ConditionalExpression] with a `=` [BinaryOperator.operatorCode] in the Fluent Node
  * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
-context(LanguageFrontend<*, *>, StatementHolder)
+context(LanguageFrontend<*, *>, Holder<out Node>)
 
 fun Expression.conditional(
     condition: Expression,
@@ -1039,7 +1039,11 @@ fun Expression.conditional(
 ): ConditionalExpression {
     val node = (this@LanguageFrontend).newConditionalExpression(condition, thenExpr, elseExpr)
 
-    (this@StatementHolder) += node
+    if (this@Holder is StatementHolder) {
+        (this@Holder) += node
+    } else if (this@Holder is ArgumentHolder) {
+        this@Holder += node
+    }
 
     return node
 }
@@ -1053,7 +1057,8 @@ context(LanguageFrontend<*, *>, StatementHolder)
 infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpression {
     val node = (this@LanguageFrontend).newAssignExpression("=")
     node.lhs = listOf(this)
-    node.rhs = listOf(init(node))
+    init(node)
+    // node.rhs = listOf(init(node))
 
     (this@StatementHolder) += node
 
@@ -1084,11 +1089,30 @@ context(LanguageFrontend<*, *>, Holder<out Node>)
 
 infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
     val node = (this@LanguageFrontend).newAssignExpression("=", listOf(this), listOf(rhs))
+
     node.usedAsExpression = true
 
-    if (this@Holder is StatementHolder) {
+    /*if (this@Holder is StatementHolder) {
         this@Holder += node
-    }
+    }*/
+
+    return node
+}
+/**
+ * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+
+infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("=", listOf(this))
+    rhs(node)
+
+    node.usedAsExpression = true
+
+    /*if (this@Holder is StatementHolder) {
+        this@Holder += node
+    }*/
 
     return node
 }
