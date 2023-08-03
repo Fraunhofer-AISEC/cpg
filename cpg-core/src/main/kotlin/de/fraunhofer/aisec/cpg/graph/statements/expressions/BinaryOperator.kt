@@ -135,7 +135,7 @@ open class BinaryOperator :
             // Otherwise, we have a special language-specific function to deal with type propagation
             val type = language?.propagateTypeOfBinaryOperation(this)
             if (type != null) {
-                this.type = newType
+                this.type = type
             }
         }
     }
