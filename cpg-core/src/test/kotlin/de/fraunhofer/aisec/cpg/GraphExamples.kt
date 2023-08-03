@@ -293,14 +293,14 @@ class GraphExamples {
                                                         URI("conditional_expression.cpp"),
                                                         Region(5, 16, 5, 17)
                                                     )
-                                            } assignAsExpr literal(2, t("int")),
+                                            } assignAsExpr { literal(2, t("int")) },
                                             ref("b") {
                                                 location =
                                                     PhysicalLocation(
                                                         URI("conditional_expression.cpp"),
                                                         Region(5, 23, 5, 24)
                                                     )
-                                            } assignAsExpr literal(3, t("int"))
+                                            } assignAsExpr { literal(3, t("int")) }
                                         )
                                     }
                                 ref("a") {
