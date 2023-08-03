@@ -668,6 +668,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             // Set TemplateParameters into VariableDeclaration
             if (declaration is VariableDeclaration) {
                 declaration.templateParameters = templateParams
+
+                // Parse the initializer, if we have one
+                val init = declarator.initializer
+                if (init != null) {
+                    val initializer = frontend.initializerHandler.handle(init)
+                    declaration.initializer = initializer
+                }
             }
 
             // process attributes
