@@ -88,10 +88,11 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         }
     }
 
-    protected fun resolveFunctionPtr(reference: DeclaredReferenceExpression): ValueDeclaration? {
-        // Without FunctionPointerType, we cannot resolve function pointers
-        val fptrType = reference.type as? FunctionPointerType ?: return null
-
+    /** This function seems to resolve function pointers pointing to a [MethodDeclaration]. */
+    protected fun resolveMethodFunctionPointer(
+        reference: DeclaredReferenceExpression,
+        type: FunctionPointerType
+    ): ValueDeclaration? {
         val parent = reference.name.parent
 
         return handleUnknownFunction(
@@ -101,7 +102,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                 null
             },
             reference.name,
-            fptrType
+            type
         )
     }
 
@@ -145,8 +146,10 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         if (currentClass != null) {
             recordDeclType = currentClass.toType()
         }
-        if (current.type is FunctionPointerType && refersTo == null) {
-            refersTo = resolveFunctionPtr(current)
+
+        val helperType = current.resolutionHelper?.type
+        if (helperType is FunctionPointerType && refersTo == null) {
+            refersTo = resolveMethodFunctionPointer(current, helperType)
         }
 
         // only add new nodes for non-static unknown
