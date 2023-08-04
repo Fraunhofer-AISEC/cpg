@@ -534,7 +534,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     // to have the same type as the initializer (when an auto-type is used). The
                     // latter case is done internally by the VariableDeclaration class and its type
                     // observer.
-                    if (declaration is VariableDeclaration || declaration is FieldDeclaration) {
+                    if (declaration is VariableDeclaration) {
                         // Parse the initializer, if we have one
                         val init = declarator.initializer
                         if (init != null) {
@@ -549,9 +549,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                                 ref?.resolutionHelper = declaration
                             }
 
-                            ((declaration as? VariableDeclaration)
-                                    ?: (declaration as FieldDeclaration))
-                                .initializer = initializer
+                            declaration.initializer = initializer
                         }
                     }
                 }
@@ -671,13 +669,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             if (declaration is VariableDeclaration) {
                 declaration.templateParameters = templateParams
 
-                // Parse the initializer, if we have one
-                val init = declarator.initializer
-                if (init != null) {
-                    val initializer = frontend.initializerHandler.handle(init)
-                    declaration.initializer = initializer
-                }
-            } else if (declaration is FieldDeclaration) {
                 // Parse the initializer, if we have one
                 val init = declarator.initializer
                 if (init != null) {
