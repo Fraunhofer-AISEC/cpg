@@ -83,11 +83,6 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
             .toString()
     }
 
-    override val assignments: List<Assignment>
-        get() {
-            return initializer?.let { listOf(Assignment(it, this, this)) } ?: listOf()
-        }
-
     override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
         // Only accept type changes from our initializer, if any
         if (src != initializer) {
