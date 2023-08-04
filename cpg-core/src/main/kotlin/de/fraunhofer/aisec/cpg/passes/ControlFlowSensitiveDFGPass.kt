@@ -43,6 +43,7 @@ import kotlin.contracts.contract
  * path, only such data flows are left which can occur when following the control flow (in terms of
  * the EOG) of the program.
  */
+@OptIn(ExperimentalContracts::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
 open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
@@ -147,29 +148,20 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 state.push(input, doubleState.declarationsState[writtenDecl])
                 doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(input))
             }
-        } else if (isSimpleLegacyAssignment(currentNode)) {
-            // Only the lhs is the last write statement here and the variable which is written
-            // to.
-            writtenDecl =
-                ((currentNode as BinaryOperator).lhs as DeclaredReferenceExpression).refersTo
-
-            if (writtenDecl != null) {
-                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(currentNode.lhs))
-            }
         } else if (isCompoundAssignment(currentNode)) {
             // We write to the lhs, but it also serves as an input => We first get all previous
             // writes to the lhs and then add the flow from lhs and rhs to the current node.
 
             // The write operation goes to the variable in the lhs
-            writtenDecl =
-                ((currentNode as BinaryOperator).lhs as? DeclaredReferenceExpression)?.refersTo
+            val lhs = currentNode.lhs.singleOrNull()
+            writtenDecl = (lhs as? DeclaredReferenceExpression)?.refersTo
 
-            if (writtenDecl != null) {
+            if (writtenDecl != null && lhs != null) {
                 // Data flows from the last writes to the lhs variable to this node
-                state.push(currentNode.lhs, doubleState.declarationsState[writtenDecl])
+                state.push(lhs, doubleState.declarationsState[writtenDecl])
 
                 // The whole current node is the place of the last update, not (only) the lhs!
-                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(currentNode.lhs))
+                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(lhs))
             }
         } else if (
             (currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ &&
@@ -248,19 +240,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * Checks if the node performs an operation and an assignment at the same time e.g. with the
      * operators +=, -=, *=, ...
      */
-    protected fun isCompoundAssignment(currentNode: Node) =
-        currentNode is BinaryOperator &&
+    protected fun isCompoundAssignment(currentNode: Node): Boolean {
+        contract { returns(true) implies (currentNode is AssignExpression) }
+        return currentNode is AssignExpression &&
             currentNode.operatorCode in
                 (currentNode.language?.compoundAssignmentOperators ?: setOf()) &&
-            (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
+            (currentNode.lhs.singleOrNull() as? DeclaredReferenceExpression)?.refersTo != null
+    }
 
-    /** Checks if the node is a simple assignment of the form `var = ...` */
-    protected fun isSimpleLegacyAssignment(currentNode: Node) =
-        currentNode is BinaryOperator &&
-            currentNode.operatorCode == "=" &&
-            (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
-
-    @OptIn(ExperimentalContracts::class)
     protected fun isSimpleAssignment(currentNode: Node): Boolean {
         contract { returns(true) implies (currentNode is AssignExpression) }
         return currentNode is AssignExpression && currentNode.operatorCode == "="

@@ -50,9 +50,10 @@ import org.slf4j.LoggerFactory
  * [usedAsExpression]. When this property is set to true (it defaults to false), we model a dataflow
  * from the (first) rhs to the [AssignExpression] itself.
  */
-class AssignExpression : Expression(), AssignmentHolder, ArgumentHolder, HasType.TypeObserver {
+class AssignExpression :
+    Expression(), AssignmentHolder, ArgumentHolder, HasType.TypeObserver, HasOperatorCode {
 
-    var operatorCode: String = "="
+    override var operatorCode: String = "="
 
     @AST
     var lhs: List<Expression> = listOf()

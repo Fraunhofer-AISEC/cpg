@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -34,9 +35,11 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
  * right hand expression (rhs) and an operatorCode.
+ *
+ * Note: For assignments, i.e., using an `=` or `+=`, etc. the [AssignExpression] MUST be used.
  */
 open class BinaryOperator :
-    Expression(), AssignmentHolder, HasBase, ArgumentHolder, HasType.TypeObserver {
+    Expression(), HasBase, HasOperatorCode, ArgumentHolder, HasType.TypeObserver {
     /** The left-hand expression. */
     @AST
     var lhs: Expression = ProblemExpression("could not parse lhs")
@@ -63,8 +66,8 @@ open class BinaryOperator :
                 (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) ||
                     (operatorCode == "=")
             ) {
-                NodeBuilder.LOGGER.warn(
-                    "Creating a BinaryOperator with an assignment operator code is deprecated. The class AssignExpression should be used instead."
+                throw TranslationException(
+                    "Creating a BinaryOperator with an assignment operator code is not allowed. The class AssignExpression should be used instead."
                 )
             }
         }
@@ -111,16 +114,6 @@ open class BinaryOperator :
             .toString()
     }
 
-    @Deprecated("BinaryOperator should not be used for assignments anymore")
-    override val assignments: List<Assignment>
-        get() {
-            return if (isAssignment) {
-                listOf(Assignment(rhs, lhs, this))
-            } else {
-                listOf()
-            }
-        }
-
     override fun typeChanged(newType: Type, src: HasType) {
         // We need to do some special dealings for function pointer calls
         if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
@@ -155,15 +148,6 @@ open class BinaryOperator :
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), lhs, rhs, operatorCode)
-
-    private val isAssignment: Boolean
-        get() {
-            // TODO(oxisto): We need to discuss, if the other operators are also assignments and if
-            //  we really want them
-            return this.operatorCode.equals("=")
-            /*||this.operatorCode.equals("+=") ||this.operatorCode.equals("-=")
-            ||this.operatorCode.equals("/=")  ||this.operatorCode.equals("*=")*/
-        }
 
     override fun addArgument(expression: Expression) {
         if (lhs is ProblemExpression) {

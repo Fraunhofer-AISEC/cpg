@@ -883,10 +883,8 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
  */
 context(LanguageFrontend<*, *>, StatementHolder)
 
-operator fun Expression.plusAssign(rhs: Expression): Unit {
-    val node = (this@LanguageFrontend).newBinaryOperator("+=")
-    node.lhs = this
-    node.rhs = rhs
+operator fun Expression.plusAssign(rhs: Expression) {
+    val node = (this@LanguageFrontend).newAssignExpression("+=", listOf(this), listOf(rhs))
 
     (this@StatementHolder) += node
 }
