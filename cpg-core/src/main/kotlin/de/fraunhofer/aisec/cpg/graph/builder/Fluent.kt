@@ -181,14 +181,16 @@ context(RecordDeclaration)
 fun LanguageFrontend<*, *>.method(
     name: CharSequence,
     returnType: Type = unknownType(),
-    init: MethodDeclaration.() -> Unit
+    init: (MethodDeclaration.() -> Unit)? = null
 ): MethodDeclaration {
     val node = newMethodDeclaration(name)
     node.returnTypes = listOf(returnType)
     node.type = FunctionType.computeType(node)
 
     scopeManager.enterScope(node)
-    init(node)
+    if (init != null) {
+        init(node)
+    }
     scopeManager.leaveScope(node)
 
     scopeManager.addDeclaration(node)
@@ -275,6 +277,30 @@ fun LanguageFrontend<*, *>.returnStmt(init: ReturnStatement.() -> Unit): ReturnS
     init(node)
 
     (this@StatementHolder) += node
+
+    return node
+}
+
+context(Holder<out Statement>)
+
+fun LanguageFrontend<*, *>.ase(
+    array: Expression,
+    subscript: Expression,
+    init: (ArraySubscriptionExpression.() -> Unit)? = null
+): ArraySubscriptionExpression {
+    val node = newArraySubscriptionExpression()
+    node.arrayExpression = array
+    node.subscriptExpression = subscript
+
+    if (init != null) {
+        init(node)
+    }
+
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    val holder = this@Holder
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
 
     return node
 }
@@ -423,6 +449,25 @@ fun LanguageFrontend<*, *>.construct(
         holder += node
     }
 
+    return node
+}
+
+context(Holder<out Statement>)
+
+fun LanguageFrontend<*, *>.cast(
+    castType: Type,
+    init: (CastExpression.() -> Unit)? = null
+): CastExpression {
+    val node = newCastExpression()
+    node.castType = castType
+    if (init != null) init(node)
+
+    val holder = this@Holder
+    if (holder is StatementHolder) {
+        holder += node
+    } else if (holder is ArgumentHolder) {
+        holder += node
+    }
     return node
 }
 

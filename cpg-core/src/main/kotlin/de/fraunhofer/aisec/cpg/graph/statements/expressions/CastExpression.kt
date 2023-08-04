@@ -26,12 +26,19 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 import org.slf4j.LoggerFactory
 
-class CastExpression : Expression() {
-    @AST var expression: Expression = ProblemExpression("could not parse inner expression")
+class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
+    @AST
+    var expression: Expression = ProblemExpression("could not parse inner expression")
+        set(value) {
+            field.unregisterTypeObserver(this)
+            field = value
+            value.registerTypeObserver(this)
+        }
 
     var castType: Type = unknownType()
         set(value) {
@@ -51,6 +58,30 @@ class CastExpression : Expression() {
         }
         if (localName != null) {
             name = Name(localName, null, language)
+        }
+    }
+
+    override fun addArgument(expression: Expression) {
+        this.expression = expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (this.expression == old) {
+            this.expression = new
+            return true
+        }
+
+        return false
+    }
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        // Nothing to do, the cast type always stays the same
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // We want to propagate the assigned types, if they come from our expression
+        if (src == expression) {
+            addAssignedTypes(assignedTypes)
         }
     }
 

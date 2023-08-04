@@ -87,7 +87,13 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-        addAssignedTypes(setOfNotNull(thenExpr?.type, elseExpr?.type))
+        // Merge and propagate the assigned types of our branches
+        if (src == thenExpr || src == elseExpr) {
+            val types = mutableSetOf<Type>()
+            thenExpr?.assignedTypes?.let { types.addAll(it) }
+            elseExpr?.assignedTypes?.let { types.addAll(it) }
+            addAssignedTypes(types)
+        }
     }
 
     override fun equals(other: Any?): Boolean {
