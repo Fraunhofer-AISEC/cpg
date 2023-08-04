@@ -84,7 +84,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
             .toString()
     }
 
-    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
+    override fun typeChanged(newType: Type, src: HasType) {
         // Only accept type changes from our initializer, if any
         if (src != initializer) {
             return
@@ -101,11 +101,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
         }
     }
 
-    override fun assignedTypeChanged(
-        assignedTypes: Set<Type>,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
         // Nothing to do
     }
 

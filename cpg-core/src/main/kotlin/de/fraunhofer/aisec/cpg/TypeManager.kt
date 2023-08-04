@@ -227,19 +227,6 @@ class TypeManager {
         return false
     }
 
-    /**
-     * @param type oldType that we want to replace
-     * @param newType newType
-     * @return true if an objectType with instantiated generics is replaced by the same objectType
-     *   with parameterizedTypes as generics false otherwise
-     */
-    fun stopPropagation(type: Type, newType: Type): Boolean {
-        return if (type is ObjectType && newType is ObjectType && type.name == newType.name) {
-            (containsParameterizedType(newType.generics) &&
-                !containsParameterizedType(type.generics))
-        } else false
-    }
-
     private fun rewrapType(
         type: Type,
         depth: Int,

@@ -196,7 +196,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         return this.newConditionalExpression(condition, thenExpr, elseExpr, superType)
     }
 
-    private fun handleAssignmentExpression(expr: Expression): BinaryOperator {
+    private fun handleAssignmentExpression(expr: Expression): AssignExpression {
         val assignExpr = expr.asAssignExpr()
 
         // first, handle the target. this is the first argument of the operator call
@@ -210,11 +210,15 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             handle(assignExpr.value)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                 ?: newProblemExpression("could not parse lhs")
-        val binaryOperator =
-            this.newBinaryOperator(assignExpr.operator.asString(), assignExpr.toString())
-        binaryOperator.lhs = lhs
-        binaryOperator.rhs = rhs
-        return binaryOperator
+        val assign =
+            this.newAssignExpression(
+                assignExpr.operator.asString(),
+                listOf(lhs),
+                listOf(rhs),
+                rawNode = assignExpr
+            )
+
+        return assign
     }
 
     // Not sure how to handle this exactly yet

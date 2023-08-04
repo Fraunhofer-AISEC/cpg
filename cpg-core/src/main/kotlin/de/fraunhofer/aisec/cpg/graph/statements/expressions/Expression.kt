@@ -54,7 +54,7 @@ abstract class Expression : Statement(), HasType {
             // "squash" types into one, because they should still be regarded as "equal", but not
             // the "same".
             if (old != value) {
-                informObservers(HasType.TypeObserver.ChangeType.DECLARED_TYPE, mutableListOf(this))
+                informObservers(HasType.TypeObserver.ChangeType.TYPE)
             }
         }
 
@@ -65,7 +65,7 @@ abstract class Expression : Statement(), HasType {
             }
 
             field = value
-            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE, mutableListOf(this))
+            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
 
     override fun toString(): String {

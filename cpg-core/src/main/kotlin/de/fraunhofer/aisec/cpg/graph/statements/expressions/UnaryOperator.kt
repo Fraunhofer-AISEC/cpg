@@ -76,7 +76,7 @@ class UnaryOperator : Expression(), HasType.TypeObserver {
             .toString()
     }
 
-    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
+    override fun typeChanged(newType: Type, src: HasType) {
         // Only accept type changes from out input
         if (src != input) {
             return
@@ -92,11 +92,7 @@ class UnaryOperator : Expression(), HasType.TypeObserver {
         this.type = type
     }
 
-    override fun assignedTypeChanged(
-        assignedTypes: Set<Type>,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
         // Only accept type changes from out input
         if (src != input) {
             return

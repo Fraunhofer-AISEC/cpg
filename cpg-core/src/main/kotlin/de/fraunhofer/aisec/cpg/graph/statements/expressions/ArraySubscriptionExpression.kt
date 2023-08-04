@@ -76,7 +76,7 @@ class ArraySubscriptionExpression : Expression(), HasBase, HasType.TypeObserver 
         }
     }
 
-    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
+    override fun typeChanged(newType: Type, src: HasType) {
         // Make sure the source is really our array
         if (src != arrayExpression) {
             return
@@ -85,11 +85,7 @@ class ArraySubscriptionExpression : Expression(), HasBase, HasType.TypeObserver 
         this.type = getSubscriptType(newType)
     }
 
-    override fun assignedTypeChanged(
-        assignedTypes: Set<Type>,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
         // Make sure the source is really our array
         if (src != arrayExpression) {
             return

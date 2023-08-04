@@ -64,14 +64,14 @@ interface HasType : ContextProvider {
     fun addAssignedType(type: Type) {
         val changed = (this.assignedTypes as MutableSet).add(type)
         if (changed) {
-            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE, mutableListOf(this))
+            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
     }
 
     fun addAssignedTypes(types: Set<Type>) {
         val changed = (this.assignedTypes as MutableSet).addAll(types)
         if (changed) {
-            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE, mutableListOf(this))
+            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
     }
 
@@ -79,27 +79,17 @@ interface HasType : ContextProvider {
 
     interface TypeObserver {
         enum class ChangeType {
-            DECLARED_TYPE,
+            TYPE,
             ASSIGNED_TYPE
         }
 
-        fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>)
+        fun typeChanged(newType: Type, src: HasType)
 
-        fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType, chain: MutableList<HasType>)
+        fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType)
     }
 
-    fun informObservers(changeType: TypeObserver.ChangeType, chain: MutableList<HasType>) {
+    fun informObservers(changeType: TypeObserver.ChangeType) {
         ctx?.typeObserverInvocations?.addAndGet(1)
-
-        // TODO(oxisto): this is not really working too well
-        // If we are already in the chain, we are running into a loop, so we abort
-        // here
-        if (chain.filter { it == this }.size > 2) {
-            return
-        }
-
-        // Add ourselves to the chain
-        chain += this
 
         if (changeType == TypeObserver.ChangeType.ASSIGNED_TYPE) {
             val assignedTypes = this.assignedTypes
@@ -108,9 +98,8 @@ interface HasType : ContextProvider {
             }
             // Inform all type observers about the changes
             for (observer in typeObservers) {
-                observer.assignedTypeChanged(assignedTypes, this, chain)
+                observer.assignedTypeChanged(assignedTypes, this)
             }
-            this.assignedTypes
         } else {
             val newType = this.type
             if (newType is UnknownType) {
@@ -118,9 +107,8 @@ interface HasType : ContextProvider {
             }
             // Inform all type observers about the changes
             for (observer in typeObservers) {
-                observer.typeChanged(newType, this, chain)
+                observer.typeChanged(newType, this)
             }
-            this.type
         }
     }
 
@@ -131,14 +119,14 @@ interface HasType : ContextProvider {
         val newType = this.type
         if (newType !is UnknownType) {
             // Immediately inform about changes
-            typeObserver.typeChanged(newType, this, mutableListOf(this))
+            typeObserver.typeChanged(newType, this)
         }
 
         // If we would propagate an empty list, we can also skip it
         val assignedTypes = this.assignedTypes
         if (assignedTypes.isNotEmpty()) {
             // Immediately inform about changes
-            typeObserver.assignedTypeChanged(assignedTypes, this, mutableListOf(this))
+            typeObserver.assignedTypeChanged(assignedTypes, this)
         }
     }
 
@@ -160,9 +148,4 @@ fun <T : Type> Node.registerType(type: T): T {
 fun Node.getCommonType(types: Collection<Type>): Optional<Type> {
     val c = ctx ?: throw TranslationException("context not available")
     return c.typeManager.getCommonType(types, this.ctx)
-}
-
-fun Node.stopPropagation(type: Type, newType: Type): Boolean {
-    val c = ctx ?: throw TranslationException("context not available")
-    return c.typeManager.stopPropagation(type, newType)
 }

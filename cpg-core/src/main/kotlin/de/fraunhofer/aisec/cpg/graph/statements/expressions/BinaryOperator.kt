@@ -121,7 +121,7 @@ open class BinaryOperator :
             }
         }
 
-    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
+    override fun typeChanged(newType: Type, src: HasType) {
         // We need to do some special dealings for function pointer calls
         if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
             // Propagate the function pointer type to the expression itself. This helps us later in
@@ -137,11 +137,7 @@ open class BinaryOperator :
         }
     }
 
-    override fun assignedTypeChanged(
-        assignedTypes: Set<Type>,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
         // TODO: replicate something similar like propagateTypeOfBinaryOperation for assigned types
     }
 
@@ -163,7 +159,7 @@ open class BinaryOperator :
     private val isAssignment: Boolean
         get() {
             // TODO(oxisto): We need to discuss, if the other operators are also assignments and if
-            // we really want them
+            //  we really want them
             return this.operatorCode.equals("=")
             /*||this.operatorCode.equals("+=") ||this.operatorCode.equals("-=")
             ||this.operatorCode.equals("/=")  ||this.operatorCode.equals("*=")*/

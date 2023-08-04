@@ -76,7 +76,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
         return false
     }
 
-    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
+    override fun typeChanged(newType: Type, src: HasType) {
         val types = mutableListOf<Type>()
 
         thenExpr?.type?.let { types.add(it) }
@@ -86,11 +86,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
         this.type = getCommonType(types).orElse(alternative)
     }
 
-    override fun assignedTypeChanged(
-        assignedTypes: Set<Type>,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
         addAssignedTypes(setOfNotNull(thenExpr?.type, elseExpr?.type))
     }
 

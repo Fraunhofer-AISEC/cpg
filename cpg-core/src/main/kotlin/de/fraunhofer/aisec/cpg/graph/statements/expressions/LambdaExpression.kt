@@ -56,7 +56,7 @@ class LambdaExpression : Expression(), HasType.TypeObserver {
             value?.registerTypeObserver(this)
         }
 
-    override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
+    override fun typeChanged(newType: Type, src: HasType) {
         // Make sure our src is the function
         if (src != function) {
             return
@@ -69,11 +69,7 @@ class LambdaExpression : Expression(), HasType.TypeObserver {
         }
     }
 
-    override fun assignedTypeChanged(
-        assignedTypes: Set<Type>,
-        src: HasType,
-        chain: MutableList<HasType>
-    ) {
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
         // Nothing to do
     }
 }
