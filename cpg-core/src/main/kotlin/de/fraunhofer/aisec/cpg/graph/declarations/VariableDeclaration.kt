@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
@@ -38,8 +39,8 @@ import org.neo4j.ogm.annotation.Relationship
 open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
 
     /**
-     * We need a way to store the templateParameters that a VariableDeclaration might have before
-     * the ConstructExpression is created.
+     * We need a way to store the templateParameters that a [VariableDeclaration] might have before
+     * the [ConstructExpression] is created.
      *
      * Because templates are only used by a small subset of languages and variable declarations are
      * used often, we intentionally make this a nullable list instead of an empty list.

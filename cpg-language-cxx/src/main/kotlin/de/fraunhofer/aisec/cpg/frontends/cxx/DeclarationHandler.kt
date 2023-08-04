@@ -413,14 +413,120 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {
-        var primaryDeclaration: Declaration? = null
         val sequence = DeclarationSequence()
+        val declSpecifier = ctx.declSpecifier
 
+        // check, whether the declaration specifier also contains declarations, e.g. class
+        // definitions or enums
+        val (primaryDeclaration, useNameOfDeclarator) =
+            handleDeclarationSpecifier(declSpecifier, ctx, sequence)
+
+        // Fill template params, if needed
+        val templateParams: List<Node>? = extractTemplateParams(ctx, declSpecifier)
+
+        // Loop through all declarators, as we can potentially have multiple declarations here
+        for (declarator in ctx.declarators) {
+            // If a previous step informed us that we should take the name of the primary
+            // declaration, we do so here. This most likely is the case of a typedef struct.
+            val declSpecifierToUse =
+                if (useNameOfDeclarator && declSpecifier is IASTCompositeTypeSpecifier) {
+                    val copy = declSpecifier.copy()
+                    copy.name = CPPASTName(primaryDeclaration?.name?.toString()?.toCharArray())
+                    copy
+                } else {
+                    declSpecifier
+                }
+
+            var type: Type
+
+            if (ctx.isTypedef) {
+                type = frontend.typeOf(declarator, declSpecifierToUse)
+
+                // Handle typedefs.
+                val declaration = handleTypedef(declarator, ctx, type)
+
+                sequence.addDeclaration(declaration)
+            } else {
+                // Parse the declaration first, so we can supply the declaration as a hint to
+                // the typeOf function.
+                val declaration =
+                    frontend.declaratorHandler.handle(declarator) as? ValueDeclaration ?: continue
+
+                // Parse the type (with some hints)
+                type = frontend.typeOf(declarator, declSpecifierToUse, declaration)
+
+                // For function *declarations*, we need to update the return types based on the
+                // function type. For function *definitions*, this is done in
+                // [handleFunctionDefinition].
+                if (declaration is FunctionDeclaration) {
+                    declaration.returnTypes =
+                        (type as? FunctionType)?.returnTypes ?: listOf(IncompleteType())
+                }
+
+                // We also need to set the type, based on the declarator type.
+                declaration.type = type
+
+                // process attributes
+                frontend.processAttributes(declaration, ctx)
+                sequence.addDeclaration(declaration)
+
+                // We want to make sure that we parse the initializer *after* we have set the
+                // type. This has several advantages:
+                // * This way we can deduce, whether our initializer needs to have the
+                //   declared type (in case of a ConstructExpression);
+                // * or if the declaration needs to have the same type as the initializer (when
+                //   an auto-type is used). The latter case is done internally by the
+                //   VariableDeclaration class and its type observer.
+                // * Additionally, it makes sure that the type is known before parsing the
+                //   initializer. This allows us to guess cast vs. call expression in the
+                //   initializer.
+                if (declaration is VariableDeclaration) {
+                    // Set template parameters of the variable (if any)
+                    declaration.templateParameters = templateParams
+
+                    // Parse the initializer, if we have one
+                    declarator.initializer?.let {
+                        val initializer = frontend.initializerHandler.handle(it)
+                        when {
+                            // Make sure we set the type of our construct expression. This is needed
+                            // because of the way the C/C++ AST is built. We do not have the
+                            // necessary type information in the handler that creates the construct
+                            // expression.
+                            initializer is ConstructExpression -> {
+                                initializer.type = declaration.type
+                            }
+                            // We need to set a resolution "helper" for function pointers, so that a
+                            // reference to this declaration can resolve the function pointer (using
+                            // the type of this declaration). The typical (and only) scenario we
+                            // support here is the assignment of a `&ref` as initializer.
+                            initializer is UnaryOperator && type is FunctionPointerType -> {
+                                val ref = initializer.input as? DeclaredReferenceExpression
+                                ref?.resolutionHelper = declaration
+                            }
+                        }
+
+                        declaration.initializer = initializer
+                    }
+                }
+            }
+        }
+
+        return simplifySequence(sequence)
+    }
+
+    /**
+     * In C++, a [IASTDeclSpecifier] can potentially also contain declarations, e.g. records or
+     * enums. This function gathers these [Declaration] nodes, before processing the remainder of
+     * declarations within [IASTSimpleDeclaration.getDeclarators].
+     */
+    private fun handleDeclarationSpecifier(
+        declSpecifier: IASTDeclSpecifier?,
+        ctx: IASTSimpleDeclaration,
+        sequence: DeclarationSequence
+    ): Pair<Declaration?, Boolean> {
+        var primaryDeclaration: Declaration? = null
         var useNameOfDeclarator = false
 
-        // check, whether the declaration specifier also contains declarations, i.e. class
-        // definitions
-        val declSpecifier = ctx.declSpecifier
         when (declSpecifier) {
             is IASTCompositeTypeSpecifier -> {
                 primaryDeclaration =
@@ -447,6 +553,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         }
                     }
                     frontend.processAttributes(primaryDeclaration, ctx)
+
                     sequence.addDeclaration(primaryDeclaration)
                 }
             }
@@ -466,97 +573,43 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         }
 
+        return Pair(primaryDeclaration, useNameOfDeclarator)
+    }
+
+    /**
+     * Extracts template parameters (used for [VariableDeclaration.templateParameters] out of the
+     * declaration (if it has any), otherwise null is returned.
+     */
+    private fun extractTemplateParams(
+        ctx: IASTSimpleDeclaration,
+        declSpecifier: IASTDeclSpecifier,
+    ): MutableList<Node>? {
         if (
             !ctx.isTypedef &&
                 declSpecifier is CPPASTNamedTypeSpecifier &&
                 declSpecifier.name is CPPASTTemplateId
         ) {
-            handleTemplateUsage(declSpecifier, ctx, sequence)
-        } else {
-            for (declarator in ctx.declarators) {
-                // If a previous step informed us that we should take the name of the primary
-                // declaration, we do so here. This most likely is the case of a typedef struct.
-                val declSpecifierToUse =
-                    if (useNameOfDeclarator && declSpecifier is IASTCompositeTypeSpecifier) {
-                        val copy = declSpecifier.copy()
-                        copy.name = CPPASTName(primaryDeclaration?.name?.toString()?.toCharArray())
-                        copy
-                    } else {
-                        declSpecifier
-                    }
-
-                var type: Type
-
-                // If this is a variable declaration with initializer, it is important, that we
-                // parse the type first, so that the type is known before parsing the declaration.
-                // This allows us to guess cast vs. call expression in the initializer.
-                if (declarator !is IASTFunctionDeclarator && declarator.initializer != null) {
-                    // We only need to parse it, but we are not really storing the result. That is
-                    // not ideal, but probably the "best" way.
-                    frontend.typeOf(declarator, declSpecifierToUse)
-                }
-
-                if (ctx.isTypedef) {
-                    type = frontend.typeOf(declarator, declSpecifierToUse)
-
-                    // Handle typedefs.
-                    val declaration = handleTypedef(declarator, ctx, type)
-
-                    sequence.addDeclaration(declaration)
-                } else {
-                    // Parse the declaration first, so we can supply the declaration as a hint to
-                    // the typeOf function.
-                    val declaration =
-                        frontend.declaratorHandler.handle(declarator) as? ValueDeclaration
-
-                    type = frontend.typeOf(declarator, declSpecifierToUse, declaration)
-
-                    // For function *declarations*, we need to update the return types based on the
-                    // function type. For function *definitions*, this is done in
-                    // [handleFunctionDefinition].
-                    if (declaration is FunctionDeclaration) {
-                        declaration.returnTypes =
-                            (type as? FunctionType)?.returnTypes ?: listOf(IncompleteType())
-                    }
-
-                    if (declaration != null) {
-                        // We also need to set the type, based on the declarator type.
-                        declaration.type = type
-
-                        // process attributes
-                        frontend.processAttributes(declaration, ctx)
-                        sequence.addDeclaration(declaration)
-                    }
-
-                    // We want to make sure that we parse the initializer *after* we have set the
-                    // type. This way we can deduce, whether our initializer needs to have the
-                    // declared type (in case of a ConstructExpression); or if the declaration needs
-                    // to have the same type as the initializer (when an auto-type is used). The
-                    // latter case is done internally by the VariableDeclaration class and its type
-                    // observer.
-                    if (declaration is VariableDeclaration) {
-                        // Parse the initializer, if we have one
-                        val init = declarator.initializer
-                        if (init != null) {
-                            val initializer = frontend.initializerHandler.handle(init)
-                            if (initializer is ConstructExpression) {
-                                // Make sure we set the type of our construct expression
-                                initializer.type = declaration.type
-                            }
-
-                            if (type is FunctionPointerType && initializer is UnaryOperator) {
-                                var ref = initializer.input as? DeclaredReferenceExpression
-                                ref?.resolutionHelper = declaration
-                            }
-
-                            declaration.initializer = initializer
-                        }
-                    }
+            val templateParams = mutableListOf<Node>()
+            val templateId = declSpecifier.name as CPPASTTemplateId
+            for (templateArgument in templateId.templateArguments) {
+                if (templateArgument is CPPASTTypeId) {
+                    val genericInstantiation = frontend.typeOf(templateArgument)
+                    templateParams.add(
+                        newTypeExpression(
+                            genericInstantiation.name.toString(),
+                            genericInstantiation,
+                        )
+                    )
+                } else if (templateArgument is IASTExpression) {
+                    val expression = frontend.expressionHandler.handle(templateArgument)
+                    expression?.let { templateParams.add(it) }
                 }
             }
+
+            return templateParams
         }
 
-        return simplifySequence(sequence)
+        return null
     }
 
     private fun handleTypedef(
@@ -626,60 +679,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             sequence.first()
         } else {
             sequence
-        }
-    }
-
-    /**
-     * Handles usage of Templates in SimpleDeclarations
-     *
-     * @param typeSpecifier
-     * @param ctx
-     * @param sequence
-     */
-    private fun handleTemplateUsage(
-        typeSpecifier: CPPASTNamedTypeSpecifier,
-        ctx: IASTSimpleDeclaration,
-        sequence: DeclarationSequence
-    ) {
-        val templateId = typeSpecifier.name as CPPASTTemplateId
-        val templateParams = mutableListOf<Node>()
-
-        for (templateArgument in templateId.templateArguments) {
-            if (templateArgument is CPPASTTypeId) {
-                val genericInstantiation = frontend.typeOf(templateArgument)
-                templateParams.add(
-                    newTypeExpression(
-                        genericInstantiation.name.toString(),
-                        genericInstantiation,
-                    )
-                )
-            } else if (templateArgument is IASTExpression) {
-                val expression = frontend.expressionHandler.handle(templateArgument)
-                expression?.let { templateParams.add(it) }
-            }
-        }
-
-        for (declarator in ctx.declarators) {
-            val declaration = frontend.declaratorHandler.handle(declarator) as ValueDeclaration
-
-            // Update Type
-            declaration.type = frontend.typeOf(declarator, typeSpecifier)
-
-            // Set TemplateParameters into VariableDeclaration
-            if (declaration is VariableDeclaration) {
-                declaration.templateParameters = templateParams
-
-                // Parse the initializer, if we have one
-                val init = declarator.initializer
-                if (init != null) {
-                    val initializer = frontend.initializerHandler.handle(init)
-                    declaration.initializer = initializer
-                }
-            }
-
-            // process attributes
-            frontend.processAttributes(declaration, ctx)
-            sequence.addDeclaration(declaration)
         }
     }
 

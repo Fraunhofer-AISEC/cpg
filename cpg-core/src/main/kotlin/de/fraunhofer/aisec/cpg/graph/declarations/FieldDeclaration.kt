@@ -67,9 +67,7 @@ class FieldDeclaration : VariableDeclaration() {
         if (other !is FieldDeclaration) {
             return false
         }
-        return (super.equals(other) &&
-            initializer == other.initializer &&
-            modifiers == other.modifiers)
+        return (super.equals(other) && modifiers == other.modifiers)
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), initializer, modifiers)
