@@ -1448,10 +1448,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     code
                 )
             (assignment.lhs.first() as DeclaredReferenceExpression).type = type
-            /*(assignment.lhs.first() as DeclaredReferenceExpression).unregisterTypeListener(
-                assignment
-            )
-            assignment.unregisterTypeListener(assignment.lhs.first() as DeclaredReferenceExpression)*/
             (assignment.lhs.first() as DeclaredReferenceExpression).refersTo = declaration
             flatAST.add(assignment)
 

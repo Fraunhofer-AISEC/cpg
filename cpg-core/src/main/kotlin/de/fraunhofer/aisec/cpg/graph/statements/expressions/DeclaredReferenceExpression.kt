@@ -57,13 +57,8 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
             val current = field
 
             // unregister type observers for current declaration
-            if (current != null) {
-                if (current is HasType) {
-                    current.unregisterTypeObserver(this)
-                }
-                /*if (current is HasLegacyType.TypeListener) {
-                    unregisterTypeListener(current as HasType.TypeListener)
-                }*/
+            if (current != null && current is HasType) {
+                current.unregisterTypeObserver(this)
             }
 
             // set it

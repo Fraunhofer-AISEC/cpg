@@ -67,15 +67,6 @@ class UnaryOperator : Expression(), HasType.TypeObserver {
         }
     }
 
-    /*
-    private fun getsDataFromInput(listener: HasLegacyType.TypeListener): Boolean {
-        checked.clear()
-        for (l in input.typeListeners) {
-            if (getsDataFromInput(l, listener)) return true
-        }
-        return false
-    }*/
-
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())

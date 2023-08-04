@@ -74,8 +74,6 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 directSupertypeRecords.map { findSupertypeRecords(it) }.flatten().toSet()
             enumDecl.superTypeDeclarations = allSupertypes
         }
-
-        // component.translationUnits.forEach { SubgraphWalker.refreshType(it) }
     }
 
     protected fun findRecordsAndEnums(node: Node) {

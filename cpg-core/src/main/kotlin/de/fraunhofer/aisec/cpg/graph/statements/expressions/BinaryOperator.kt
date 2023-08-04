@@ -75,18 +75,15 @@ open class BinaryOperator :
 
     private fun connectNewLhs(lhs: Expression) {
         lhs.registerTypeObserver(this)
-        if ("=" == operatorCode) {
-            if (lhs is DeclaredReferenceExpression) {
-                // declared reference expr is the left-hand side of an assignment -> writing to the
-                // var
-                lhs.access = AccessValues.WRITE
-            }
-        } else if (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) {
-            if (lhs is DeclaredReferenceExpression) {
-                // declared reference expr is the left-hand side of an assignment -> writing to the
-                // var
-                lhs.access = AccessValues.READWRITE
-            }
+        if (lhs is DeclaredReferenceExpression && "=" == operatorCode) {
+            // declared reference expr is the left-hand side of an assignment -> writing to the var
+            lhs.access = AccessValues.WRITE
+        } else if (
+            lhs is DeclaredReferenceExpression &&
+                operatorCode in (language?.compoundAssignmentOperators ?: setOf())
+        ) {
+            // declared reference expr is the left-hand side of an assignment -> writing to the var
+            lhs.access = AccessValues.READWRITE
         }
     }
 
