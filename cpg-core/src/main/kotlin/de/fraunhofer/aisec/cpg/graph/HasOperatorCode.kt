@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,15 +27,9 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-/** Specifies that a certain node has a base on which it executes an operation. */
-interface HasBase : HasOperatorCode {
+/** A simple interface to denote that the implementing class has some kind of [operatorCode]. */
+interface HasOperatorCode {
 
-    /** The base. */
-    val base: Expression?
-
-    /**
-     * The operator that is used to access the base. Usually either `.` or `->`, but some languages
-     * offer additional operator codes.
-     */
-    override val operatorCode: String?
+    /** The operator code, identifying an operation executed on one or more [Expression]s */
+    val operatorCode: String?
 }

@@ -572,9 +572,7 @@ val VariableDeclaration.firstAssignment: Expression?
             ?.value
     }
 
-/**
- * Returns the [i]-th item in this list (or null) and casts it to [T].
- */
+/** Returns the [i]-th item in this list (or null) and casts it to [T]. */
 inline operator fun <reified T> List<Node>.invoke(i: Int = 0): T? {
     return this.getOrNull(i) as? T
 }
