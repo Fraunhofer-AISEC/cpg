@@ -202,7 +202,13 @@ class AssignExpression :
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-        // TODO
+        // Double-check, if the src is really from the rhs
+        if (!rhs.contains(src)) {
+            return
+        }
+
+        // Propagate any assigned types from the source to the target
+        findTargets(src).forEach { it.addAssignedTypes(assignedTypes) }
     }
 
     override fun addArgument(expression: Expression) {

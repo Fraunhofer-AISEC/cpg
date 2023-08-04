@@ -56,6 +56,11 @@ abstract class Expression : Statement(), HasType {
             if (old != value) {
                 informObservers(HasType.TypeObserver.ChangeType.TYPE)
             }
+
+            // We also want to add the definitive type (if known) to our assigned types
+            if (value !is UnknownType) {
+                addAssignedType(value)
+            }
         }
 
     override var assignedTypes: Set<Type> = mutableSetOf()

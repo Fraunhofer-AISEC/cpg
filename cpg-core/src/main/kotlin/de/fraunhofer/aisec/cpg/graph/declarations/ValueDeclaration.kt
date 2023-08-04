@@ -54,10 +54,9 @@ abstract class ValueDeclaration : Declaration(), HasType {
                 informObservers(HasType.TypeObserver.ChangeType.TYPE)
             }
 
-            // For declarations, we also want to add the definitive type (if known) to our
-            // assigned types
+            // We also want to add the definitive type (if known) to our assigned types
             if (value !is UnknownType) {
-                assignedTypes.add(value)
+                addAssignedType(value)
             }
         }
 

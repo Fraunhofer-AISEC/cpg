@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
@@ -229,6 +229,158 @@ class TypePropagationTest {
             assertNotNull(bRef)
             assertEquals(b.type, bRef.type)
             assertEquals(b.assignedTypes, bRef.assignedTypes)
+        }
+    }
+
+    @Test
+    fun testComplexPropagation() {
+        val frontend =
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(
+                        TranslationConfiguration.builder().defaultPasses().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
+            )
+
+        /**
+         * This is a more complex scenario in which we want to follow some of the data-flows and see
+         * how the types propagate.
+         *
+         * This roughly represents the following C++ code:
+         * ```cpp
+         * class BaseClass {
+         *   virtual void doSomething();
+         * };
+         * class DerivedClassA : public BaseClass {
+         *   void doSomething();
+         * };
+         * class DerivedClassB : public BaseClass {
+         *   void doSomething();
+         * };
+         *
+         * BaseClass **create(bool flip)
+         * {
+         *   // Create memory for a pointer to the base class
+         *   BaseClass *b;
+         *   // Create either DerivedClassA or DerivedClassB. This should assign both to the assigned types
+         *   b = (flip == true) ? (BaseClass *)new DerivedClassA() : (BaseClass *)new DerivedClassB();
+         *
+         *   // Create a new array of pointers and assign our base class pointer to it
+         *   BaseClass *bb[];
+         *   bb[0] = b;
+         *
+         *   // Combination of unary expression and array subscription expression
+         *   return &bb[0];
+         * }
+         *
+         * int main() {
+         *   // Call the create function. We don't know which of the derived classes we return
+         *   BaseClass *b = *create(random);
+         *   b->doSomething();
+         * }
+         * ```
+         */
+        val result =
+            frontend.build {
+                translationResult {
+                    translationUnit("test") {
+                        record("BaseClass") { method("doSomething") }
+                        record("DerivedClassA") {
+                            superClasses = mutableListOf(t("BaseClass"))
+                            method("doSomething")
+                        }
+                        record("DerivedClassB") {
+                            superClasses = mutableListOf(t("BaseClass"))
+                            method("doSomething")
+                        }
+                        function("create", t("BaseClass").pointer().pointer()) {
+                            param("flip", t("bool"))
+                            body {
+                                declare { variable("b", t("BaseClass").pointer()) }
+                                ref("b") assign
+                                    {
+                                        conditional(
+                                            ref("flip") eq literal(true),
+                                            cast(t("BaseClass").pointer()) {
+                                                new {
+                                                    construct("DerivedClassA")
+                                                    type = t("DerivedClassA").pointer()
+                                                }
+                                            },
+                                            cast(t("BaseClass").pointer()) {
+                                                new {
+                                                    construct("DerivedClassB")
+                                                    type = t("DerivedClassB").pointer()
+                                                }
+                                            },
+                                        )
+                                    }
+                                declare { variable("bb", t("BaseClass").pointer().array()) }
+                                ase(ref("bb"), literal(1)) assign ref("b")
+                            }
+                        }
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("b", t("BaseClass").pointer()) {
+                                        new {
+                                            construct("DerivedClass")
+                                            type = t("DerivedClass").pointer()
+                                        }
+                                    }
+                                }
+                                call("b.doSomething")
+                            }
+                        }
+                    }
+                }
+            }
+
+        val baseClass = result.records["BaseClass"]
+        assertNotNull(baseClass)
+
+        val derivedClassA = result.records["DerivedClassA"]
+        assertNotNull(derivedClassA)
+        assertContains(derivedClassA.superTypeDeclarations, baseClass)
+
+        val derivedClassB = result.records["DerivedClassB"]
+        assertNotNull(derivedClassB)
+        assertContains(derivedClassB.superTypeDeclarations, baseClass)
+
+        val create = result.functions["create"]
+        assertNotNull(create)
+
+        with(create) {
+            val b = variables["b"]
+            assertNotNull(b)
+            assertEquals(objectType("BaseClass").pointer(), b.type)
+
+            val bRefs = refs("b")
+            // The "type" of a reference must always be the same as its declaration
+            assertEquals(b.type, bRefs[0].type)
+            // The assigned types should now contain both classes and the base class
+            assertEquals(
+                setOf(
+                    objectType("BaseClass").pointer(),
+                    objectType("DerivedClassA").pointer(),
+                    objectType("DerivedClassB").pointer()
+                ),
+                bRefs[0].assignedTypes
+            )
+
+            var assign = (body as CompoundStatement).statements<AssignExpression>(1)
+            assertNotNull(assign)
+            assertContains(assign.lhs, bRefs[0])
+
+            val bb = variables["bb"]
+            assertNotNull(bb)
+            assertEquals(objectType("BaseClass").pointer().array(), bb.type)
+
+            assign = (body as CompoundStatement).statements<AssignExpression>(3)
+            assertNotNull(assign)
+            assertContains(assign.lhs, bRefs[1])
         }
     }
 }
