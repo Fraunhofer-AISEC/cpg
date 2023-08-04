@@ -30,10 +30,12 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
 
@@ -94,6 +96,11 @@ class JavaCallResolverHelper {
                 // the
                 // "this" object to the super class
                 callee.base.type = superType
+                ((callee.base as? DeclaredReferenceExpression)?.refersTo as? HasType)?.type =
+                    superType
+                callee.base.assignedTypes = mutableSetOf(superType)
+                ((callee.base as? DeclaredReferenceExpression)?.refersTo as? ValueDeclaration)
+                    ?.assignedTypes = mutableSetOf(superType)
                 // And set the possible subtypes, to ensure, that really only our super type is in
                 // there
                 // callee.base.updatePossibleSubtypes(listOf(superType))
