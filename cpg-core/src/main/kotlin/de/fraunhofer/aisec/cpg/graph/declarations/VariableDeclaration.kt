@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-/** Represents the declaration of a variable. */
+/** Represents the declaration of a local variable. */
 open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
 
     /**
