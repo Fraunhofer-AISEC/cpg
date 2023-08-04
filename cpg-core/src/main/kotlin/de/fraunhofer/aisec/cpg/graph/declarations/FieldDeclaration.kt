@@ -40,6 +40,17 @@ import org.neo4j.ogm.annotation.Relationship
  * the field as well as an initializer [Expression] which provides an initial value for the field.
  */
 class FieldDeclaration : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
+    /**
+     * We need a way to store the templateParameters that a VariableDeclaration might have before
+     * the ConstructExpression is created.
+     *
+     * Because templates are only used by a small subset of languages and variable declarations are
+     * used often, we intentionally make this a nullable list instead of an empty list.
+     */
+    @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
+    @AST
+    var templateParameters: List<Node>? = null
+
     /** Specifies, whether this field declaration is also a definition, i.e. has an initializer. */
     private var isDefinition = false
 
