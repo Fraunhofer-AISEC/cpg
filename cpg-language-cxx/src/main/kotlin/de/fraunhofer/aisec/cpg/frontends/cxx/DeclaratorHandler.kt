@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
 import java.util.function.Supplier
-import java.util.regex.Pattern
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
@@ -396,9 +395,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleFunctionPointer(ctx: IASTFunctionDeclarator, name: String): ValueDeclaration {
-        val initializer =
-            if (ctx.initializer == null) null
-            else frontend.initializerHandler.handle(ctx.initializer)
         // unfortunately we are not told whether this is a field or not, so we have to find it out
         // ourselves
         val result: ValueDeclaration
@@ -406,25 +402,18 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration == null) {
             // variable
             result = newVariableDeclaration(name, unknownType(), ctx.rawSignature, true)
-            result.initializer = initializer
         } else {
             // field
             val code = ctx.rawSignature
-            val namePattern = Pattern.compile("\\((\\*|.+\\*)(?<name>[^)]*)")
-            val matcher = namePattern.matcher(code)
-            var fieldName: String? = ""
-            if (matcher.find()) {
-                fieldName = matcher.group("name").trim()
-            }
             result =
                 newFieldDeclaration(
-                    fieldName,
+                    name,
                     unknownType(),
                     emptyList(),
                     code,
                     frontend.locationOf(ctx),
-                    initializer,
-                    true
+                    null,
+                    false,
                 )
         }
 
