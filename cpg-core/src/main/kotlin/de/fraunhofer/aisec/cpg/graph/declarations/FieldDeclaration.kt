@@ -86,11 +86,6 @@ class FieldDeclaration : ValueDeclaration(), HasInitializer, HasType.TypeObserve
             value?.registerTypeObserver(this)
         }
 
-    override val assignments: List<Assignment>
-        get() {
-            return initializer?.let { listOf(Assignment(it, this, this)) } ?: listOf()
-        }
-
     override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
         // Only accept type changes from our initializer, if any
         if (src != initializer) {
