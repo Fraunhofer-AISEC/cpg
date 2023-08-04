@@ -593,11 +593,11 @@ class PythonFrontendTest : BaseTest() {
         val methBody = meth.body as? CompoundStatement
         assertNotNull(methBody)
 
-        val assign = methBody.statements[0] as? BinaryOperator
+        val assign = methBody.statements[0] as? AssignExpression
         assertNotNull(assign)
 
-        val assignLhs = assign.lhs as? MemberExpression
-        val assignRhs = assign.rhs as? BinaryOperator
+        val assignLhs = assign.lhs<MemberExpression>()
+        val assignRhs = assign.rhs<BinaryOperator>()
         assertEquals("=", assign.operatorCode)
         assertNotNull(assignLhs)
         assertNotNull(assignRhs)
@@ -657,15 +657,15 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(classFieldWithInit)
 
         // classFieldNoInitializer = classFieldWithInit
-        val assignClsFieldOutsideFunc = clsFoo.statements[2] as? BinaryOperator
+        val assignClsFieldOutsideFunc = clsFoo.statements[2] as? AssignExpression
         assertNotNull(assignClsFieldOutsideFunc)
         assertEquals(
             classFieldNoInitializer,
-            (assignClsFieldOutsideFunc.lhs as? DeclaredReferenceExpression)?.refersTo
+            (assignClsFieldOutsideFunc.lhs<DeclaredReferenceExpression>())?.refersTo
         )
         assertEquals(
             classFieldWithInit,
-            (assignClsFieldOutsideFunc.rhs as? DeclaredReferenceExpression)?.refersTo
+            (assignClsFieldOutsideFunc.rhs<DeclaredReferenceExpression>())?.refersTo
         )
         assertEquals("=", assignClsFieldOutsideFunc.operatorCode)
 
@@ -680,41 +680,41 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(decl0.initializer)
 
         // self.classFieldNoInitializer = 789
-        val barStmt1 = barBody.statements[1] as? BinaryOperator
+        val barStmt1 = barBody.statements[1] as? AssignExpression
         assertNotNull(barStmt1)
-        assertEquals(classFieldNoInitializer, (barStmt1.lhs as? MemberExpression)?.refersTo)
+        assertEquals(classFieldNoInitializer, (barStmt1.lhs<MemberExpression>())?.refersTo)
 
         // self.classFieldWithInit = 12
-        val barStmt2 = barBody.statements[2] as? BinaryOperator
+        val barStmt2 = barBody.statements[2] as? AssignExpression
         assertNotNull(barStmt2)
-        assertEquals(classFieldWithInit, (barStmt2.lhs as? MemberExpression)?.refersTo)
+        assertEquals(classFieldWithInit, (barStmt2.lhs<MemberExpression>())?.refersTo)
 
         // classFieldNoInitializer = "shadowed"
-        val barStmt3 = barBody.statements[3] as? BinaryOperator
+        val barStmt3 = barBody.statements[3] as? AssignExpression
         assertNotNull(barStmt3)
         assertEquals("=", barStmt3.operatorCode)
         assertEquals(
             classFieldNoInitializer,
-            (barStmt3.lhs as? DeclaredReferenceExpression)?.refersTo
+            (barStmt3.lhs<DeclaredReferenceExpression>())?.refersTo
         )
-        assertEquals("shadowed", (barStmt3.rhs as? Literal<*>)?.value)
+        assertEquals("shadowed", (barStmt3.rhs<Literal<*>>())?.value)
 
         // classFieldWithInit = "shadowed"
-        val barStmt4 = barBody.statements[4] as? BinaryOperator
+        val barStmt4 = barBody.statements[4] as? AssignExpression
         assertNotNull(barStmt4)
         assertEquals("=", barStmt4.operatorCode)
-        assertEquals(classFieldWithInit, (barStmt4.lhs as? DeclaredReferenceExpression)?.refersTo)
-        assertEquals("shadowed", (barStmt4.rhs as? Literal<*>)?.value)
+        assertEquals(classFieldWithInit, (barStmt4.lhs<DeclaredReferenceExpression>())?.refersTo)
+        assertEquals("shadowed", (barStmt4.rhs<Literal<*>>())?.value)
 
         // classFieldDeclaredInFunction = "shadowed"
-        val barStmt5 = barBody.statements[5] as? BinaryOperator
+        val barStmt5 = barBody.statements[5] as? AssignExpression
         assertNotNull(barStmt5)
         assertEquals("=", barStmt5.operatorCode)
         assertEquals(
             classFieldDeclaredInFunction,
-            (barStmt5.lhs as? DeclaredReferenceExpression)?.refersTo
+            (barStmt5.lhs<DeclaredReferenceExpression>())?.refersTo
         )
-        assertEquals("shadowed", (barStmt5.rhs as? Literal<*>)?.value)
+        assertEquals("shadowed", (barStmt5.rhs<Literal<*>>())?.value)
 
         /* TODO:
         foo = Foo()
@@ -943,10 +943,10 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("z", elseStmt1)
 
         // phr = {**z, **content}
-        val elseStmt2 = ifElse.statements[1] as? BinaryOperator
+        val elseStmt2 = ifElse.statements<AssignExpression>(1)
         assertNotNull(elseStmt2)
         assertEquals("=", elseStmt2.operatorCode)
-        val elseStmt2Rhs = elseStmt2.rhs as? InitializerListExpression
+        val elseStmt2Rhs = elseStmt2.rhs<InitializerListExpression>()
         assertNotNull(elseStmt2Rhs)
     }
 
