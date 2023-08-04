@@ -134,7 +134,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     private fun handleForEachStatement(forEach: ForEachStatement) {
         (forEach.iterable as HasType).registerTypeObserver(
             object : HasType.TypeObserver {
-                override fun typeChanged(newType: Type, src: HasType, chain: MutableList<HasType>) {
+                override fun typeChanged(newType: Type, src: HasType) {
                     if (src.type is UnknownType) {
                         return
                     }
@@ -155,11 +155,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                     }
                 }
 
-                override fun assignedTypeChanged(
-                    assignedTypes: Set<Type>,
-                    src: HasType,
-                    chain: MutableList<HasType>
-                ) {
+                override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
                     // Nothing to do
                 }
             }
