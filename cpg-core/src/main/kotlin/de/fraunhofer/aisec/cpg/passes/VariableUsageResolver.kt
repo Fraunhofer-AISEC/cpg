@@ -92,7 +92,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
     protected fun resolveMethodFunctionPointer(
         reference: DeclaredReferenceExpression,
         type: FunctionPointerType
-    ): ValueDeclaration? {
+    ): ValueDeclaration {
         val parent = reference.name.parent
 
         return handleUnknownFunction(
@@ -250,9 +250,13 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                             base.refersTo = baseTarget
                             // Explicitly set the type of the call's base to the super type
                             base.type = superType
+                            (base.refersTo as? HasType)?.type = superType
+                            base.assignedTypes = mutableSetOf(superType)
+                            (base.refersTo as? ValueDeclaration)?.assignedTypes =
+                                mutableSetOf(superType)
                             // And set the possible subtypes, to ensure, that really only our
                             // super type is in there
-                            // base.updatePossibleSubtypes(listOf(superType))
+                            // base.addAssignedType(superType)
                         }
                     }
                 } else {
