@@ -572,12 +572,11 @@ val VariableDeclaration.firstAssignment: Expression?
             ?.value
     }
 
-inline fun <reified T> AssignExpression.lhs(i: Int = 0): T? {
-    return lhs.getOrNull(i) as? T
-}
-
-inline fun <reified T> AssignExpression.rhs(i: Int = 0): T? {
-    return rhs.getOrNull(i) as? T
+/**
+ * Returns the [i]-th item in this list (or null) and casts it to [T].
+ */
+inline operator fun <reified T> List<Node>.invoke(i: Int = 0): T? {
+    return this.getOrNull(i) as? T
 }
 
 operator fun <N : Expression> Expression.invoke(): N? {

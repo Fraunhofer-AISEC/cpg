@@ -31,6 +31,7 @@ from de.fraunhofer.aisec.cpg.graph import StatementBuilderKt
 from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
+from java.util import ArrayList
 import ast
 
 
@@ -510,16 +511,20 @@ def handle_assign_impl(self, stmt):
         target = self.handle_expression(stmt.target)
         op = self.handle_operator_code(stmt.op)
         value = self.handle_expression(stmt.value)
-        r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
-                                                  op, self.get_src_code(stmt))
-        r.setLhs(target)
-        r.setRhs(value)
+        lhs = ArrayList()
+        lhs.add(target)
+        rhs = ArrayList()
+        rhs.add(value)
+        r = ExpressionBuilderKt.newAssignExpression(self.frontend,
+                                                    op, lhs, rhs,
+                                                    self.get_src_code(stmt))
         return r
     if isinstance(stmt, ast.Assign) and len(stmt.targets) != 1:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
-                                                  "=", self.get_src_code(stmt)
-                                                  )
+        r = ExpressionBuilderKt.newAssignExpression(self.frontend,
+                                                    "=", ArrayList(),
+                                                    ArrayList(),
+                                                    self.get_src_code(stmt))
         return r
     if isinstance(stmt, ast.Assign):
         target = stmt.targets[0]
@@ -539,9 +544,9 @@ def handle_assign_impl(self, stmt):
             "Expected a DeclaredReferenceExpression or MemberExpression "
             "but got \"%s\". Skipping." %
             lhs.java_name, loglevel="ERROR")
-        r = ExpressionBuilderKt.newBinaryOperator(self.frontend,
-                                                  "=",
-                                                  self.get_src_code(stmt))
+        r = ExpressionBuilderKt.newArrayList(self.frontend,
+                                             "=", ArrayList(), ArrayList(),
+                                             self.get_src_code(stmt))
         return r
 
     resolved_lhs = self.scopemanager.resolveReference(lhs)
@@ -549,12 +554,16 @@ def handle_assign_impl(self, stmt):
     in_function = self.scopemanager.isInFunction()
 
     if resolved_lhs is not None:
-        # found var => BinaryOperator "="
-        binop = ExpressionBuilderKt.newBinaryOperator(
-            self.frontend, "=", self.get_src_code(stmt))
-        binop.setLhs(lhs)
+        lhsList = ArrayList()
+        lhsList.add(lhs)
+        rhsList = ArrayList()
         if rhs is not None:
-            binop.setRhs(rhs)
+            rhsList.add(rhs)
+
+        # found var => BinaryOperator "="
+        binop = ExpressionBuilderKt.newAssignExpression(
+            self.frontend, "=", lhsList, rhsList, self.get_src_code(stmt))
+
         return binop
     else:
         if in_record and not in_function:
