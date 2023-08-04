@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.*
 import kotlin.collections.ArrayList
@@ -41,24 +40,9 @@ class ExpressionList : Expression() {
     @AST
     var expressionEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
 
-    var expressions: List<Statement>
-        get() {
-            return unwrap(expressionEdges)
-        }
-        set(value) {
-            if (this.expressionEdges.isNotEmpty()) {
-                val lastExpression = this.expressionEdges[this.expressionEdges.size - 1].end
-            }
-            this.expressionEdges = transformIntoOutgoingPropertyEdgeList(value, this)
-            if (this.expressionEdges.isNotEmpty()) {
-                val lastExpression = this.expressionEdges[this.expressionEdges.size - 1].end
-            }
-        }
+    var expressions: List<Statement> by PropertyEdgeDelegate(ExpressionList::expressionEdges, true)
 
     fun addExpression(expression: Statement) {
-        if (expressionEdges.isNotEmpty()) {
-            val lastExpression = expressionEdges[expressionEdges.size - 1].end
-        }
         val propertyEdge = PropertyEdge(this, expression)
         propertyEdge.addProperty(Properties.INDEX, expressionEdges.size)
         expressionEdges.add(propertyEdge)

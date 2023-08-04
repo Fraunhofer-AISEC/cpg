@@ -1092,10 +1092,6 @@ infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
 
     node.usedAsExpression = true
 
-    /*if (this@Holder is StatementHolder) {
-        this@Holder += node
-    }*/
-
     return node
 }
 /**
@@ -1109,10 +1105,6 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
     rhs(node)
 
     node.usedAsExpression = true
-
-    /*if (this@Holder is StatementHolder) {
-        this@Holder += node
-    }*/
 
     return node
 }

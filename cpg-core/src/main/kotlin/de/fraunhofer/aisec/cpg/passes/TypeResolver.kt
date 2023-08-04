@@ -191,7 +191,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             if (newType != null) {
                 node.type = newType
             }
-            // node.updatePossibleSubtypes(ensureUniqueSubTypes(node.possibleSubTypes))
         }
     }
 
@@ -206,11 +205,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             node.updateType(typeState.keys)
         } else if (node is HasType && node.type is SecondaryTypeEdge) {
             (node.type as SecondaryTypeEdge).updateType(typeState.keys)
-            /*for (possibleSubType in node.possibleSubTypes) {
-                if (possibleSubType is SecondaryTypeEdge) {
-                    possibleSubType.updateType(typeState.keys)
-                }
-            }*/
         }
     }
 
