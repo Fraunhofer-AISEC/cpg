@@ -102,7 +102,9 @@ internal class FunctionPointerTest : BaseTest() {
                 "no_param",
                 "no_param_uninitialized",
                 "no_param_field",
-                "no_param_field_uninitialized" -> assertEquals(listOf(noParam), call.invokes)
+                "no_param_field_uninitialized" -> {
+                    assertEquals(listOf(noParam), call.invokes)
+                }
                 "single_param",
                 "single_param_uninitialized",
                 "single_param_field",
