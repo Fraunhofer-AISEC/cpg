@@ -437,8 +437,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             reference is CastExpression -> {
                 // this really is a cast expression in disguise
                 reference.expression =
-                    handle(ctx.arguments.first())
-                        ?: ProblemExpression("could not parse argument for cast")
+                    ctx.arguments.firstOrNull()?.let { handle(it) }
+                        ?: newProblemExpression("could not parse argument for cast")
                 return reference
             }
             else -> {

@@ -78,6 +78,7 @@ class CPPLanguage :
             "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
             "unsigned char" to IntegerType("unsigned char", 8, this, NumericType.Modifier.UNSIGNED),
             "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "wchar_t" to IntegerType("wchar_t", 32, this, NumericType.Modifier.NOT_APPLICABLE),
             "char8_t" to IntegerType("char8_t", 8, this, NumericType.Modifier.NOT_APPLICABLE),
             "char16_t" to IntegerType("char16_t", 16, this, NumericType.Modifier.NOT_APPLICABLE),
             "char32_t" to IntegerType("char32_t", 32, this, NumericType.Modifier.NOT_APPLICABLE),
