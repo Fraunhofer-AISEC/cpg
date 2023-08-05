@@ -71,7 +71,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is NewExpression -> handleNewExpression(node)
             // We keep the logic for the InitializerListExpression in that class because the
             // performance would decrease too much.
-            // is InitializerListExpression -> handleInitializerListExpression(node)
+            is InitializerListExpression -> handleInitializerListExpression(node)
             is KeyValueExpression -> handleKeyValueExpression(node)
             is LambdaExpression -> handleLambdaExpression(node)
             is UnaryOperator -> handleUnaryOperator(node)
@@ -272,8 +272,6 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     /**
      * Adds the DFG edges for an [InitializerListExpression]. All values in the initializer flow to
      * this expression.
-     *
-     * TODO: This change seems to have performance issues!
      */
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
         node.initializers.forEach { node.addPrevDFG(it) }

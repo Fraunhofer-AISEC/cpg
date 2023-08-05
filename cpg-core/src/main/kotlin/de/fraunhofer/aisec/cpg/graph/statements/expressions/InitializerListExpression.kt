@@ -48,15 +48,9 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
     @AST
     var initializerEdges = mutableListOf<PropertyEdge<Expression>>()
         set(value) {
-            field.forEach {
-                it.end.unregisterTypeObserver(this)
-                removePrevDFG(it.end)
-            }
+            field.forEach { it.end.unregisterTypeObserver(this) }
             field = value
-            value.forEach {
-                it.end.registerTypeObserver(this)
-                addPrevDFG(it.end)
-            }
+            value.forEach { it.end.registerTypeObserver(this) }
         }
 
     /** Virtual property to access [initializerEdges] without property edges. */
