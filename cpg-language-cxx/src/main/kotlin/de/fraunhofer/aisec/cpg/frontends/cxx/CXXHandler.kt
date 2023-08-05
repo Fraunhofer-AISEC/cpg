@@ -37,6 +37,7 @@ abstract class CXXHandler<S : Node, T : IASTNode>(
     configConstructor: Supplier<S>,
     lang: CXXLanguageFrontend
 ) : Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {
+
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
      * logic, but rather want to make use of the Kotlin-when syntax.
@@ -64,6 +65,8 @@ abstract class CXXHandler<S : Node, T : IASTNode>(
 
         frontend.setComment(node, ctx)
         frontend.process(ctx, node)
+
+        this.lastNode = node
 
         return node
     }

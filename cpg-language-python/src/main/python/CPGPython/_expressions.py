@@ -107,7 +107,9 @@ def handle_expression_impl(self, expr):
         return r
     elif isinstance(expr, ast.Dict):
         ile = ExpressionBuilderKt.newInitializerListExpression(
-            self.frontend, self.get_src_code(expr))
+            self.frontend,
+            UnknownType.getUnknownType(self.frontend.getLanguage()),
+            self.get_src_code(expr))
 
         lst = []
 
@@ -357,7 +359,9 @@ def handle_expression_impl(self, expr):
         return r
     elif isinstance(expr, ast.List):
         ile = ExpressionBuilderKt.newInitializerListExpression(
-            self.frontend, self.get_src_code(expr))
+            self.frontend,
+            UnknownType.getUnknownType(self.frontend.getLanguage()),
+            self.get_src_code(expr))
 
         lst = []
 
@@ -370,7 +374,9 @@ def handle_expression_impl(self, expr):
         return ile
     elif isinstance(expr, ast.Tuple):
         ile = ExpressionBuilderKt.newInitializerListExpression(
-            self.frontend, self.get_src_code(expr))
+            self.frontend,
+            UnknownType.getUnknownType(self.frontend.getLanguage()),
+            self.get_src_code(expr))
 
         lst = []
 

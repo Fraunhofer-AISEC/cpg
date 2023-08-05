@@ -284,13 +284,9 @@ fun LanguageFrontend<*, *>.returnStmt(init: ReturnStatement.() -> Unit): ReturnS
 context(Holder<out Statement>)
 
 fun LanguageFrontend<*, *>.ase(
-    array: Expression,
-    subscript: Expression,
     init: (ArraySubscriptionExpression.() -> Unit)? = null
 ): ArraySubscriptionExpression {
     val node = newArraySubscriptionExpression()
-    node.arrayExpression = array
-    node.subscriptExpression = subscript
 
     if (init != null) {
         init(node)
@@ -803,6 +799,32 @@ context(Holder<out Statement>)
 
 fun <N> LanguageFrontend<*, *>.literal(value: N, type: Type = unknownType()): Literal<N> {
     val node = newLiteral(value, type)
+
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    val holder = this@Holder
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [InitializerListExpression] in the Fluent Node DSL and invokes
+ * [ArgumentHolder.addArgument] of the nearest enclosing [Holder], but only if it is an
+ * [ArgumentHolder].
+ */
+context(Holder<out Statement>)
+
+fun LanguageFrontend<*, *>.ile(
+    targetType: Type = unknownType(),
+    init: (InitializerListExpression.() -> Unit)? = null
+): InitializerListExpression {
+    val node = newInitializerListExpression(targetType)
+
+    if (init != null) {
+        init(node)
+    }
 
     // Only add this to an argument holder if the nearest holder is an argument holder
     val holder = this@Holder

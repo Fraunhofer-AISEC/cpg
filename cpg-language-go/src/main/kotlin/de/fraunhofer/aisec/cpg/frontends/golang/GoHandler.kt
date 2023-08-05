@@ -53,6 +53,8 @@ abstract class GoHandler<ResultNode : Node, HandlerNode : GoStandardLibrary.Ast.
         frontend.setComment(node, ctx)
         frontend.process(ctx, node)
 
+        lastNode = node
+
         return node
     }
 

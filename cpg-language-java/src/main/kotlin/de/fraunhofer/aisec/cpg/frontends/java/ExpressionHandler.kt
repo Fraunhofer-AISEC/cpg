@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import com.github.javaparser.Range
 import com.github.javaparser.TokenRange
 import com.github.javaparser.ast.Node
+import com.github.javaparser.ast.body.VariableDeclarator
 import com.github.javaparser.ast.expr.*
 import com.github.javaparser.ast.expr.Expression
 import com.github.javaparser.resolution.UnsolvedSymbolException
@@ -42,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.function.Supplier
 import kotlin.collections.set
+import kotlin.jvm.optionals.getOrNull
 import org.slf4j.LoggerFactory
 
 class ExpressionHandler(lang: JavaLanguageFrontend) :
@@ -130,9 +132,18 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleArrayInitializerExpr(expr: Expression): Statement {
         val arrayInitializerExpr = expr as ArrayInitializerExpr
+
+        // We need to go back to the parent to get the array type
+        val arrayType =
+            when (val parent = expr.parentNode.getOrNull()) {
+                is ArrayCreationExpr -> frontend.typeOf(parent.elementType).array()
+                is VariableDeclarator -> frontend.typeOf(parent.type)
+                else -> unknownType()
+            }
+
         // ArrayInitializerExpressions are converted into InitializerListExpressions to reduce the
         // syntactic distance a CPP and JAVA CPG
-        val initList = this.newInitializerListExpression(expr.toString())
+        val initList = this.newInitializerListExpression(arrayType, expr.toString())
         val initializers =
             arrayInitializerExpr.values
                 .map { handle(it) }
