@@ -42,6 +42,7 @@ import org.eclipse.cdt.core.dom.ast.IASTLiteralExpression.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTLambdaExpression
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTDesignatedInitializer
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
+import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
 /**
  * Note: CDT expresses hierarchies in Interfaces to allow to have multi-inheritance in java. Because
@@ -476,47 +477,26 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleBinaryExpression(ctx: IASTBinaryExpression): Expression {
-        var operatorCode = ""
-        when (ctx.operator) {
-            op_multiply -> operatorCode = "*"
-            op_divide -> operatorCode = "/"
-            op_modulo -> operatorCode = "%"
-            op_plus -> operatorCode = "+"
-            op_minus -> operatorCode = "-"
-            op_shiftLeft -> operatorCode = "<<"
-            op_shiftRight -> operatorCode = ">>"
-            op_lessThan -> operatorCode = "<"
-            op_greaterThan -> operatorCode = ">"
-            op_lessEqual -> operatorCode = "<="
-            op_greaterEqual -> operatorCode = ">="
-            op_binaryAnd -> operatorCode = "&"
-            op_binaryXor -> operatorCode = "^"
-            op_binaryOr -> operatorCode = "|"
-            op_logicalAnd -> operatorCode = "&&"
-            op_logicalOr -> operatorCode = "||"
-            op_assign,
-            op_multiplyAssign,
-            op_divideAssign,
-            op_moduloAssign,
-            op_plusAssign,
-            op_minusAssign,
-            op_shiftLeftAssign,
-            op_shiftRightAssign,
-            op_binaryAndAssign,
-            op_binaryXorAssign,
-            op_binaryOrAssign -> {
-                return handleAssignment(ctx)
+        var operatorCode =
+            when (ctx.operator) {
+                op_assign,
+                op_multiplyAssign,
+                op_divideAssign,
+                op_moduloAssign,
+                op_plusAssign,
+                op_minusAssign,
+                op_shiftLeftAssign,
+                op_shiftRightAssign,
+                op_binaryAndAssign,
+                op_binaryXorAssign,
+                op_binaryOrAssign -> {
+                    return handleAssignment(ctx)
+                }
+                op_pmdot -> ".*"
+                op_pmarrow -> "->*"
+                else -> String(ASTStringUtil.getBinaryOperatorString(ctx))
             }
-            op_equals -> operatorCode = "=="
-            op_notequals -> operatorCode = "!="
-            op_pmdot -> operatorCode = ".*"
-            op_pmarrow -> operatorCode = "->*"
-            op_max -> operatorCode = ">?"
-            op_min -> operatorCode = "?<"
-            op_ellipses -> operatorCode = "..."
-            else ->
-                Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
-        }
+
         val binaryOperator = newBinaryOperator(operatorCode, ctx.rawSignature)
         val lhs = handle(ctx.operand1) ?: newProblemExpression("could not parse lhs")
         val rhs =
@@ -541,22 +521,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 handle(ctx.initOperand2)
             }
                 ?: newProblemExpression("missing RHS")
-        val operatorCode =
-            when (ctx.operator) {
-                op_assign -> "="
-                op_multiplyAssign -> "*="
-                op_divideAssign -> "/="
-                op_moduloAssign -> "%="
-                op_plusAssign -> "+="
-                op_minusAssign -> "-="
-                op_shiftLeftAssign -> "<<="
-                op_shiftRightAssign -> ">>="
-                op_binaryAndAssign -> "&="
-                op_binaryXorAssign -> "^="
-                op_binaryOrAssign -> "|="
-                else -> ""
-            }
 
+        val operatorCode = String(ASTStringUtil.getBinaryOperatorString(ctx))
         val assign = newAssignExpression(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
         if (rhs is UnaryOperator && rhs.input is DeclaredReferenceExpression) {
             (rhs.input as DeclaredReferenceExpression).resolutionHelper = lhs
