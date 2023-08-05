@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
 import java.util.*
 import org.slf4j.LoggerFactory
 
@@ -290,7 +291,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleFunctionDeclaration(node: FunctionDeclaration) {
+    protected open fun handleFunctionDeclaration(node: FunctionDeclaration) {
         // reset EOG
         currentPredecessors.clear()
         var needToLeaveRecord = false
@@ -525,25 +526,43 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     protected fun handleUnaryOperator(node: UnaryOperator) {
+        // TODO(oxisto): These operator codes are highly language specific and might be more suited
+        //  to be handled differently (see https://github.com/Fraunhofer-AISEC/cpg/issues/1161)
+        if (node.operatorCode == "throw") {
+            handleThrowOperator(node)
+        } else {
+            handleUnspecificUnaryOperator(node)
+        }
+    }
+
+    protected fun handleThrowOperator(node: UnaryOperator) {
         val input = node.input
         createEOG(input)
-        if (node.operatorCode == "throw") {
-            val catchingScope =
-                scopeManager.firstScopeOrNull { scope ->
-                    scope is TryScope || scope is FunctionScope
-                }
 
-            val throwType = input.type
-            pushToEOG(node)
-            if (catchingScope is TryScope) {
-                catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)
-            } else if (catchingScope is FunctionScope) {
-                catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)
-            }
-            currentPredecessors.clear()
-        } else {
-            pushToEOG(node)
+        val catchingScope =
+            scopeManager.firstScopeOrNull { scope -> scope is TryScope || scope is FunctionScope }
+
+        val throwType = input.type
+        pushToEOG(node)
+        if (catchingScope is TryScope) {
+            catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)
+        } else if (catchingScope is FunctionScope) {
+            catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)
         }
+        currentPredecessors.clear()
+    }
+
+    /**
+     * This function handles all regular unary operators that do not receive any special handling
+     * (such as [handleThrowOperator]). This gives language frontends a chance to override this
+     * function using [ReplacePass], handle specific operators on their own and delegate the rest to
+     * this function.
+     */
+    protected open fun handleUnspecificUnaryOperator(node: UnaryOperator) {
+        val input = node.input
+        createEOG(input)
+
+        pushToEOG(node)
     }
 
     protected fun handleCompoundStatementExpression(node: CompoundStatementExpression) {
