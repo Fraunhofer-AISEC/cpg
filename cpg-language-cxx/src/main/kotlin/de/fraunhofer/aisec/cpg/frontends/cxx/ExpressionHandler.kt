@@ -28,8 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -64,8 +62,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is IASTFieldReference -> handleFieldReference(node)
             is IASTFunctionCallExpression -> handleFunctionCallExpression(node)
             is IASTCastExpression -> handleCastExpression(node)
-            is IASTInitializerList -> handleInitializerList(node)
             is IASTExpressionList -> handleExpressionList(node)
+            is IASTInitializerList -> frontend.initializerHandler.handle(node)
+                    ?: ProblemExpression("could not parse initializer list")
             is IASTArraySubscriptExpression -> handleArraySubscriptExpression(node)
             is IASTTypeIdExpression -> handleTypeIdExpression(node)
             is CPPASTNewExpression -> handleNewExpression(node)
@@ -583,22 +582,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             lk_nullptr -> newLiteral(null, objectType("nullptr_t"), ctx.rawSignature)
             else -> newLiteral(String(ctx.value), unknownType(), ctx.rawSignature)
         }
-    }
-
-    private fun handleInitializerList(ctx: IASTInitializerList): InitializerListExpression {
-        val expression = newInitializerListExpression(ctx.rawSignature)
-
-        for (clause in ctx.clauses) {
-            handle(clause)?.let {
-                val edge = PropertyEdge(expression, it)
-                edge.addProperty(Properties.INDEX, expression.initializerEdges.size)
-
-                expression.initializerEdges.add(edge)
-                expression.addPrevDFG(it)
-            }
-        }
-
-        return expression
     }
 
     private fun handleCXXDesignatedInitializer(

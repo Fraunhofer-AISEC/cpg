@@ -531,11 +531,14 @@ fun MetadataProvider.newExpressionList(code: String? = null, rawNode: Any? = nul
  */
 @JvmOverloads
 fun MetadataProvider.newInitializerListExpression(
+    targetType: Type = unknownType(),
     code: String? = null,
     rawNode: Any? = null
 ): InitializerListExpression {
     val node = InitializerListExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    node.type = targetType
 
     log(node)
     return node

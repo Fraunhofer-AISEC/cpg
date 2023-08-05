@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -488,13 +487,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     declarator.initializer?.let {
                         val initializer = frontend.initializerHandler.handle(it)
                         when {
-                            // Make sure we set the type of our construct expression. This is needed
-                            // because of the way the C/C++ AST is built. We do not have the
-                            // necessary type information in the handler that creates the construct
-                            // expression.
-                            initializer is ConstructExpression -> {
-                                initializer.type = declaration.type
-                            }
                             // We need to set a resolution "helper" for function pointers, so that a
                             // reference to this declaration can resolve the function pointer (using
                             // the type of this declaration). The typical (and only) scenario we

@@ -102,7 +102,10 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-        // Nothing to do
+        // Propagate the assigned types from our initializer into the declaration
+        if (src == initializer) {
+            addAssignedTypes(assignedTypes)
+        }
     }
 
     override fun equals(other: Any?): Boolean {

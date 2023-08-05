@@ -58,6 +58,14 @@ abstract class Handler<ResultNode : Node, HandlerNode, L : LanguageFrontend<Hand
     private val typeOfT: Class<*>?
 
     /**
+     * This property contains the last node this handler has successfully processed. It is safe to
+     * call, even when parsing multiple TUs in parallel, since for each TU, a dedicated
+     * [LanguageFrontend] is spawned, and for each frontend, a dedicated set of [Handler]s is
+     * created. Within one TU, the processing is sequential in the AST order.
+     */
+    var lastNode: ResultNode? = null
+
+    /**
      * Searches for a handler matching the most specific superclass of [HandlerNode]. The created
      * map should thus contain a handler for every semantically different AST node and can reuse
      * handler code as long as the handled AST nodes have a common ancestor.
@@ -131,7 +139,10 @@ abstract class Handler<ResultNode : Node, HandlerNode, L : LanguageFrontend<Hand
             )
             ret = configConstructor.get()
         }
+
         frontend.process(ctx, ret)
+        lastNode = ret
+
         return ret
     }
 

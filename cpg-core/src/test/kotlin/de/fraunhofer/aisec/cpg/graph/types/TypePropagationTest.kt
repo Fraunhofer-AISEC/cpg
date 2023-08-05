@@ -260,7 +260,7 @@ class TypePropagationTest {
          *   void doSomething();
          * };
          *
-         * BaseClass **create(bool flip)
+         * BaseClass *create(bool flip)
          * {
          *   // Create memory for a pointer to the base class
          *   BaseClass *b;
@@ -268,16 +268,15 @@ class TypePropagationTest {
          *   b = (flip == true) ? (BaseClass *)new DerivedClassA() : (BaseClass *)new DerivedClassB();
          *
          *   // Create a new array of pointers and assign our base class pointer to it
-         *   BaseClass *bb[];
-         *   bb[0] = b;
+         *   auto bb = {b}
          *
-         *   // Combination of unary expression and array subscription expression
-         *   return &bb[0];
+         *   // Return the first element again with an array subscription expression
+         *   return bb[0];
          * }
          *
          * int main() {
          *   // Call the create function. We don't know which of the derived classes we return
-         *   BaseClass *b = *create(random);
+         *   BaseClass *b = create(random);
          *   b->doSomething();
          * }
          * ```
@@ -317,18 +316,25 @@ class TypePropagationTest {
                                             },
                                         )
                                     }
-                                declare { variable("bb", t("BaseClass").pointer().array()) }
-                                ase(ref("bb"), literal(1)) assign ref("b")
+                                declare {
+                                    variable("bb", autoType()) {
+                                        ile(t("BaseClass").pointer().array()) { ref("b") }
+                                    }
+                                }
+                                returnStmt {
+                                    ase {
+                                        ref("bb")
+                                        literal(1)
+                                    }
+                                }
                             }
                         }
                         function("main", t("int")) {
                             body {
+                                declare { variable("random", t("bool")) }
                                 declare {
                                     variable("b", t("BaseClass").pointer()) {
-                                        new {
-                                            construct("DerivedClass")
-                                            type = t("DerivedClass").pointer()
-                                        }
+                                        call("create") { ref("random") }
                                     }
                                 }
                                 call("b.doSomething")
@@ -358,29 +364,69 @@ class TypePropagationTest {
             assertEquals(objectType("BaseClass").pointer(), b.type)
 
             val bRefs = refs("b")
-            // The "type" of a reference must always be the same as its declaration
-            assertEquals(b.type, bRefs[0].type)
-            // The assigned types should now contain both classes and the base class
+            bRefs.forEach {
+                // The "type" of a reference must always be the same as its declaration
+                assertEquals(b.type, it.type)
+                // The assigned types should now contain both classes and the base class
+                assertEquals(
+                    setOf(
+                        objectType("BaseClass").pointer(),
+                        objectType("DerivedClassA").pointer(),
+                        objectType("DerivedClassB").pointer()
+                    ),
+                    it.assignedTypes
+                )
+            }
+
+            val assign = (body as CompoundStatement).statements<AssignExpression>(1)
+            assertNotNull(assign)
+
+            val bb = variables["bb"]
+            assertNotNull(bb)
+            // Auto type based on the initializer's type
+            assertEquals(objectType("BaseClass").pointer().array(), bb.type)
+            // Assigned types should additionally contain our two derived classes
+            assertEquals(
+                setOf(
+                    objectType("BaseClass").pointer().array(),
+                    objectType("DerivedClassA").pointer().array(),
+                    objectType("DerivedClassB").pointer().array()
+                ),
+                bb.assignedTypes
+            )
+
+            val returnStatement = (body as CompoundStatement).statements<ReturnStatement>(3)
+            assertNotNull(returnStatement)
+
+            val returnValue = returnStatement.returnValue
+            assertNotNull(returnValue)
+            assertEquals(objectType("BaseClass").pointer(), returnValue.type)
+            // The assigned types should now contain both classes and the base class in a non-array
+            // form, since we are using a single element of the array
             assertEquals(
                 setOf(
                     objectType("BaseClass").pointer(),
                     objectType("DerivedClassA").pointer(),
                     objectType("DerivedClassB").pointer()
                 ),
-                bRefs[0].assignedTypes
+                returnValue.assignedTypes
             )
 
-            var assign = (body as CompoundStatement).statements<AssignExpression>(1)
-            assertNotNull(assign)
-            assertContains(assign.lhs, bRefs[0])
+            // At this point we stop for now since we do not properly propagate the types across
+            // functions (yet)
+        }
 
-            val bb = variables["bb"]
-            assertNotNull(bb)
-            assertEquals(objectType("BaseClass").pointer().array(), bb.type)
+        val main = result.functions["main"]
+        assertNotNull(main)
 
-            assign = (body as CompoundStatement).statements<AssignExpression>(3)
-            assertNotNull(assign)
-            assertContains(assign.lhs, bRefs[1])
+        with(main) {
+            val createCall = main.calls["create"]
+            assertNotNull(createCall)
+            assertContains(createCall.invokes, create)
+
+            val b = main.variables["b"]
+            assertNotNull(b)
+            assertEquals(objectType("BaseClass").pointer(), b.type)
         }
     }
 }

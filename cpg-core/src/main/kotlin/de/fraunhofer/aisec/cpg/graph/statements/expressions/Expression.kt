@@ -58,7 +58,7 @@ abstract class Expression : Statement(), HasType {
             }
 
             // We also want to add the definitive type (if known) to our assigned types
-            if (value !is UnknownType) {
+            if (value !is UnknownType && value !is AutoType) {
                 addAssignedType(value)
             }
         }
