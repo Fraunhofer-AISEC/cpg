@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.Util
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -173,6 +174,42 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 }
             else -> unknownType() // We don't know what is this thing
         }
+    }
+
+    /**
+     * When propagating [HasType.assignedTypes] from one node to another, we might want to propagate
+     * only certain types. A common example is to truncate [NumericType]s, when they are not "big"
+     * enough.
+     */
+    open fun shouldPropagateType(hasType: HasType, srcType: Type): Boolean {
+        val node = hasType as Node
+        var nodeType = hasType.type
+
+        // We only want to add certain types, in case we have a numeric type
+        if (nodeType is NumericType) {
+            // We do not allow to propagate non-numeric types into numeric types
+            return if (srcType !is NumericType) {
+                false
+            } else {
+                val srcWidth = srcType.bitWidth
+                val lhsWidth = nodeType.bitWidth
+                // Do not propagate anything if the new type is too big for the current type.
+                if (lhsWidth != null && srcWidth != null && lhsWidth < srcWidth) {
+                    Util.warnWithFileLocation(
+                        node,
+                        log,
+                        "Possibly truncating numeric type when assigning {} into {}",
+                        srcType.name,
+                        node.name
+                    )
+                    return false
+                } else {
+                    return true
+                }
+            }
+        }
+
+        return true
     }
 }
 

@@ -27,13 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.util.*
 
-interface HasType : ContextProvider {
+interface HasType : ContextProvider, LanguageProvider {
 
     /**
      * This property refers to the *definite* [Type] that the [Node] has. If you are unsure about
@@ -62,6 +63,10 @@ interface HasType : ContextProvider {
     val assignedTypes: Set<Type>
 
     fun addAssignedType(type: Type) {
+        if (language?.shouldPropagateType(this, type) == false) {
+            return
+        }
+
         val changed = (this.assignedTypes as MutableSet).add(type)
         if (changed) {
             informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
@@ -69,7 +74,10 @@ interface HasType : ContextProvider {
     }
 
     fun addAssignedTypes(types: Set<Type>) {
-        val changed = (this.assignedTypes as MutableSet).addAll(types)
+        val changed =
+            (this.assignedTypes as MutableSet).addAll(
+                types.filter { language?.shouldPropagateType(this, it) == true }
+            )
         if (changed) {
             informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
