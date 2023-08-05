@@ -146,25 +146,16 @@ class TypePropagationTest {
 
             val shortVarRefLhs = assign.lhs.firstOrNull() as? DeclaredReferenceExpression
             assertNotNull(shortVarRefLhs)
-            // At this point, shortVar was target of an assignment of an int variable, therefore
-            // assigned type should contain short and int. the "type" is still "short", since it is
-            // only determined by the declaration
+            // At this point, shortVar was target of an assignment of an int variable, however, the
+            // int gets truncated into a short, so only short is part of the assigned types.
             assertEquals(primitiveType("short"), shortVarRefLhs.type)
-            assertEquals(
-                setOf(primitiveType("int"), primitiveType("short")),
-                shortVarRefLhs.assignedTypes
-            )
+            assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
 
             val shortVarRefReturnValue =
                 main.allChildren<ReturnStatement>().firstOrNull()?.returnValue
             assertNotNull(shortVarRefReturnValue)
-            // Finally, the assigned types should propagate along the DFG, meaning that the
-            // reference to shortVar in the return statement should also hold short and int as the
-            // assigned types
-            assertEquals(
-                setOf(primitiveType("int"), primitiveType("short")),
-                shortVarRefLhs.assignedTypes
-            )
+            // Finally, the assigned types should propagate along the DFG
+            assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
 
             val refersTo = shortVarRefLhs.refersTo as? VariableDeclaration
             assertNotNull(refersTo)

@@ -451,7 +451,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     companion object {
         @JvmField var TO_STRING_STYLE: ToStringStyle = ToStringStyle.SHORT_PREFIX_STYLE
 
-        protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
+        @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
 
         const val EMPTY_NAME = ""
     }

@@ -477,7 +477,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleBinaryExpression(ctx: IASTBinaryExpression): Expression {
-        var operatorCode =
+        val operatorCode =
             when (ctx.operator) {
                 op_assign,
                 op_multiplyAssign,
