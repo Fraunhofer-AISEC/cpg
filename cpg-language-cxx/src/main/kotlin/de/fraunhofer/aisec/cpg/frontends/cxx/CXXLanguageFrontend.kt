@@ -564,6 +564,11 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
             specifier.type == IASTSimpleDeclSpecifier.t_void -> {
                 IncompleteType()
             }
+            // __typeof__ type
+            specifier.type == IASTSimpleDeclSpecifier.t_typeof -> {
+                // TODO(oxisto): not exactly sure how to model this
+                objectType("__typeof__" + specifier.declTypeExpression.rawSignature)
+            }
             // The type of constructor declaration is always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
                 hint is ConstructorDeclaration -> {
@@ -776,6 +781,7 @@ private val IASTSimpleDeclSpecifier.canonicalName: CharSequence
         // Last part is the actual type (int, float, ...)
         when (type) {
             IASTSimpleDeclSpecifier.t_char -> parts += "char"
+            IASTSimpleDeclSpecifier.t_wchar_t -> parts += "wchar_t"
             IASTSimpleDeclSpecifier.t_char16_t -> parts += "char16_t"
             IASTSimpleDeclSpecifier.t_char32_t -> parts += "chat32_t"
             IASTSimpleDeclSpecifier.t_int -> parts += "int"
@@ -783,7 +789,9 @@ private val IASTSimpleDeclSpecifier.canonicalName: CharSequence
             IASTSimpleDeclSpecifier.t_double -> parts += "double"
             IASTSimpleDeclSpecifier.t_bool -> parts += "bool"
             IASTSimpleDeclSpecifier.t_unspecified -> {
-                // nothing to do
+                if (isSigned || isUnsigned) {
+                    parts += "int"
+                }
             }
             IASTSimpleDeclSpecifier.t_auto -> parts = mutableListOf("auto")
             else -> {

@@ -459,7 +459,9 @@ class ScopeManager : ScopeProvider {
         if (breakStatement.label == null) {
             val scope = firstScopeOrNull { scope: Scope? -> scope?.isBreakable() == true }
             if (scope == null) {
-                LOGGER.error(
+                Util.errorWithFileLocation(
+                    breakStatement,
+                    LOGGER,
                     "Break inside of unbreakable scope. The break will be ignored, but may lead " +
                         "to an incorrect graph. The source code is not valid or incomplete."
                 )
