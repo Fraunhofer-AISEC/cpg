@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -195,13 +196,17 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 val lhsWidth = nodeType.bitWidth
                 // Do not propagate anything if the new type is too big for the current type.
                 if (lhsWidth != null && srcWidth != null && lhsWidth < srcWidth) {
-                    Util.warnWithFileLocation(
-                        node,
-                        log,
-                        "Possibly truncating numeric type when assigning {} into {}",
-                        srcType.name,
-                        node.name
-                    )
+                    // Only warn, if this is not a cast expression. If it is a (explicit) cast, we
+                    // assume that the developer knows what he is doing
+                    if (node !is CastExpression && !node.isImplicit) {
+                        Util.warnWithFileLocation(
+                            node,
+                            log,
+                            "Possibly truncating numeric type when assigning {} into {}",
+                            srcType.name,
+                            node.name
+                        )
+                    }
                     return false
                 } else {
                     return true
