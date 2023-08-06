@@ -175,8 +175,7 @@ class CPPLanguage :
                     call,
                     recordDeclaration.methods.filter { m ->
                         namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/
-                    },
-                    ctx
+                    }
                 )
             )
         }

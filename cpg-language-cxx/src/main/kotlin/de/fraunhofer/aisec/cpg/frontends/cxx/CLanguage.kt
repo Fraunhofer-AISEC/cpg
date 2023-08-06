@@ -139,6 +139,6 @@ open class CLanguage :
             listOf(
                 *ctx.scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray()
             )
-        return resolveWithImplicitCast(call, initialInvocationCandidates, ctx)
+        return resolveWithImplicitCast(call, initialInvocationCandidates)
     }
 }
