@@ -609,7 +609,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
             constructorCandidate =
-                resolveConstructorWithImplicitCast(constructExpression, recordDeclaration, ctx)
+                resolveConstructorWithImplicitCast(constructExpression, recordDeclaration)
         }
 
         return constructorCandidate

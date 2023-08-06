@@ -30,10 +30,7 @@ import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.HashMap
 import java.util.regex.Pattern
 
@@ -44,19 +41,15 @@ import java.util.regex.Pattern
  *   signature by means of casting
  */
 fun compatibleSignatures(
+    call: CallExpression,
     callSignature: List<Type>,
-    functionSignature: List<Type>,
-    ctx: TranslationContext
+    functionSignature: List<Type>
 ): Boolean {
     return if (callSignature.size == functionSignature.size) {
         for (i in callSignature.indices) {
             if (
                 callSignature[i].isPrimitive != functionSignature[i].isPrimitive &&
-                    !ctx.typeManager.isSupertypeOf(
-                        functionSignature[i],
-                        callSignature[i],
-                        ctx.scopeManager
-                    )
+                    !call.isSupertypeOf(functionSignature[i], callSignature[i])
             ) {
                 return false
             }
@@ -97,8 +90,7 @@ fun getCallSignatureWithDefaults(
  */
 fun resolveWithImplicitCast(
     call: CallExpression,
-    initialInvocationCandidates: List<FunctionDeclaration>,
-    ctx: TranslationContext
+    initialInvocationCandidates: List<FunctionDeclaration>
 ): List<FunctionDeclaration> {
 
     // Output list for invocationTargets obtaining a valid signature by performing implicit
@@ -111,13 +103,13 @@ fun resolveWithImplicitCast(
     for (functionDeclaration in initialInvocationCandidates) {
         val callSignature = getCallSignatureWithDefaults(call, functionDeclaration)
         // Check if the signatures match by implicit casts
-        if (compatibleSignatures(callSignature, functionDeclaration.signatureTypes, ctx)) {
+        if (compatibleSignatures(call, callSignature, functionDeclaration.signatureTypes)) {
             val implicitCastTargets =
                 signatureWithImplicitCastTransformation(
+                    call,
                     getCallSignatureWithDefaults(call, functionDeclaration),
                     call.arguments,
                     functionDeclaration.signatureTypes,
-                    ctx
                 )
             if (implicitCasts == null) {
                 implicitCasts = implicitCastTargets
@@ -126,7 +118,7 @@ fun resolveWithImplicitCast(
                 // to the same target type
                 checkMostCommonImplicitCast(implicitCasts, implicitCastTargets)
             }
-            if (compatibleSignatures(call.signature, functionDeclaration.signatureTypes, ctx)) {
+            if (compatibleSignatures(call, call.signature, functionDeclaration.signatureTypes)) {
                 invocationTargetsWithImplicitCast.add(functionDeclaration)
             } else {
                 invocationTargetsWithImplicitCastAndDefaults.add(functionDeclaration)
@@ -262,8 +254,7 @@ fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: St
  */
 fun resolveConstructorWithImplicitCast(
     constructExpression: ConstructExpression,
-    recordDeclaration: RecordDeclaration,
-    ctx: TranslationContext
+    recordDeclaration: RecordDeclaration
 ): ConstructorDeclaration? {
     for (constructorDeclaration in recordDeclaration.constructors) {
         val workingSignature = mutableListOf(*constructExpression.signature.toTypedArray())
@@ -278,29 +269,33 @@ fun resolveConstructorWithImplicitCast(
         }
         if (
             compatibleSignatures(
+                constructExpression,
                 constructExpression.signature,
                 constructorDeclaration.signatureTypes,
-                ctx
             )
         ) {
             val implicitCasts =
                 signatureWithImplicitCastTransformation(
+                    constructExpression,
                     constructExpression.signature,
                     constructExpression.arguments,
                     constructorDeclaration.signatureTypes,
-                    ctx
                 )
             applyImplicitCastToArguments(constructExpression, implicitCasts)
             return constructorDeclaration
         } else if (
-            compatibleSignatures(workingSignature, constructorDeclaration.signatureTypes, ctx)
+            compatibleSignatures(
+                constructExpression,
+                workingSignature,
+                constructorDeclaration.signatureTypes,
+            )
         ) {
             val implicitCasts =
                 signatureWithImplicitCastTransformation(
+                    constructExpression,
                     getCallSignatureWithDefaults(constructExpression, constructorDeclaration),
                     constructExpression.arguments,
                     constructorDeclaration.signatureTypes,
-                    ctx
                 )
             applyImplicitCastToArguments(constructExpression, implicitCasts)
             return constructorDeclaration
@@ -362,10 +357,10 @@ fun applyTemplateInstantiation(
     val templateCallSignature = templateCall.signature
     val callSignatureImplicit =
         signatureWithImplicitCastTransformation(
+            templateCall,
             templateCallSignature,
             templateCall.arguments,
             templateFunctionSignature,
-            ctx
         )
     for (i in callSignatureImplicit.indices) {
         val cast = callSignatureImplicit[i]
@@ -399,10 +394,10 @@ fun applyTemplateInstantiation(
  *   FunctionDeclaration cannot be reached through implicit casts
  */
 fun signatureWithImplicitCastTransformation(
+    call: CallExpression,
     callSignature: List<Type?>,
     arguments: List<Expression>,
     functionSignature: List<Type>,
-    ctx: TranslationContext
 ): MutableList<CastExpression?> {
     val implicitCasts = mutableListOf<CastExpression?>()
     if (callSignature.size != functionSignature.size) return implicitCasts
@@ -412,7 +407,7 @@ fun signatureWithImplicitCastTransformation(
         val funcType = functionSignature[i]
         if (callType?.isPrimitive == true && funcType.isPrimitive && callType != funcType) {
             val implicitCast = CastExpression()
-            implicitCast.ctx = ctx
+            implicitCast.ctx = call.ctx
             implicitCast.isImplicit = true
             implicitCast.castType = funcType
             implicitCast.language = funcType.language
