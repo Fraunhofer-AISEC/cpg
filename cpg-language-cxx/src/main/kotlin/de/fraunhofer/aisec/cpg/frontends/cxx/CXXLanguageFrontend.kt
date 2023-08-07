@@ -206,6 +206,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
 
         val symbols: HashMap<String, String> = HashMap()
         symbols.putAll(config.symbols)
+
         includePaths.addAll(config.includePaths.map { it.toAbsolutePath().toString() })
 
         config.compilationDatabase?.getIncludePaths(file)?.let { includePaths.addAll(it) }
@@ -566,8 +567,11 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
             }
             // __typeof__ type
             specifier.type == IASTSimpleDeclSpecifier.t_typeof -> {
-                // TODO(oxisto): not exactly sure how to model this
-                objectType("__typeof__" + specifier.declTypeExpression.rawSignature)
+                objectType("typeof(${specifier.declTypeExpression.rawSignature})")
+            }
+            // A decl type
+            specifier.type == IASTSimpleDeclSpecifier.t_decltype -> {
+                objectType("decltype(${specifier.declTypeExpression.rawSignature})")
             }
             // The type of constructor declaration is always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&

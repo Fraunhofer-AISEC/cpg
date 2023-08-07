@@ -1580,4 +1580,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         assertLocalName("int", tu.functions["main"]?.returnTypes?.firstOrNull())
     }
+
+    @Test
+    @Throws(Exception::class)
+    fun testFancyTypes() {
+        val file = File("src/test/resources/cxx/fancy_types.cpp")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        assertNotNull(tu)
+
+        val ptr = tu.variables["ptr"]
+        assertNotNull(ptr)
+        assertLocalName("decltype(nullptr)", ptr.type)
+    }
 }
