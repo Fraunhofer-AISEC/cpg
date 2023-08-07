@@ -50,7 +50,7 @@ interface HasType : ContextProvider, LanguageProvider {
     var type: Type
 
     /**
-     * This property refers to a list of [Type] nodes that the [Node] is assigned to. This could be
+     * This property refers to a list of [Type] nodes which are assigned to that [Node]. This could be
      * different from the [HasType.type]. A common example is that a node could contain an interface
      * as a [HasType.type], but the actual implementation of the type as one of the [assignedTypes].
      * This could potentially also be empty, if we don't see any assignments to this expression.
