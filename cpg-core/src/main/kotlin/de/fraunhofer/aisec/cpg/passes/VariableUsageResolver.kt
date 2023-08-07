@@ -251,12 +251,11 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                             // Explicitly set the type of the call's base to the super type
                             base.type = superType
                             (base.refersTo as? HasType)?.type = superType
+                            // And set the assigned subtypes, to ensure, that really only our
+                            // super type is in there
                             base.assignedTypes = mutableSetOf(superType)
                             (base.refersTo as? ValueDeclaration)?.assignedTypes =
                                 mutableSetOf(superType)
-                            // And set the possible subtypes, to ensure, that really only our
-                            // super type is in there
-                            // base.addAssignedType(superType)
                         }
                     }
                 } else {

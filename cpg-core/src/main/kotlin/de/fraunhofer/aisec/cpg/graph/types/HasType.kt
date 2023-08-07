@@ -97,8 +97,6 @@ interface HasType : ContextProvider, LanguageProvider {
     }
 
     fun informObservers(changeType: TypeObserver.ChangeType) {
-        ctx?.typeObserverInvocations?.addAndGet(1)
-
         if (changeType == TypeObserver.ChangeType.ASSIGNED_TYPE) {
             val assignedTypes = this.assignedTypes
             if (assignedTypes.isEmpty()) {

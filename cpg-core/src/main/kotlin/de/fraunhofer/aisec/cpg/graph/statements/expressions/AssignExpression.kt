@@ -99,7 +99,7 @@ class AssignExpression :
 
     /**
      * We also support compound assignments in this class, but only if the appropriate compound
-     * operator is set and only if there is a single-value expression on both side.
+     * operator is set and only if there is a single-value expression on both sides.
      */
     val isCompoundAssignment: Boolean
         get() {

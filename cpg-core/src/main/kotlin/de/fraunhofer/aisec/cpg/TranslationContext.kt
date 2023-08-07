@@ -47,8 +47,5 @@ class TranslationContext(
      * The type manager is responsible for managing type information. Currently, we have one
      * instance of a [TypeManager] for the overall [TranslationResult].
      */
-    val typeManager: TypeManager,
-
-    // TODO(oxisto): merge to statistics holder
-    val typeObserverInvocations: AtomicInteger = AtomicInteger(0)
+    val typeManager: TypeManager
 )
