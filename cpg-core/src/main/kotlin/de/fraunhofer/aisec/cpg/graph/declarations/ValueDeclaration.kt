@@ -60,7 +60,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
             }
         }
 
-    override var assignedTypes: MutableSet<Type> = mutableSetOf()
+    override var assignedTypes: Set<Type> = mutableSetOf()
         set(value) {
             if (field == value) {
                 return

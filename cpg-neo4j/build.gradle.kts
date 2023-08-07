@@ -58,7 +58,5 @@ dependencies {
 
     // Command line interface support
     api(libs.picocli)
-    testImplementation(project(mapOf("path" to ":cpg-core")))
-    testImplementation(project(mapOf("path" to ":cpg-core")))
     annotationProcessor(libs.picocli.codegen)
 }

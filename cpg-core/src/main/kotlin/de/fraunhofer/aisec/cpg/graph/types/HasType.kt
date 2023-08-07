@@ -60,7 +60,7 @@ interface HasType : ContextProvider, LanguageProvider {
      * cannot watch for changes within the set. We therefore only expose this as a [Set], but an
      * implementing class MUST implement this as a [MutableSet] so that we can modify it internally.
      */
-    val assignedTypes: Set<Type>
+    var assignedTypes: Set<Type>
 
     fun addAssignedType(type: Type) {
         if (language?.shouldPropagateType(this, type) == false) {
