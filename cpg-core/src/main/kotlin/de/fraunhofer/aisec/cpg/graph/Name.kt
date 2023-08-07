@@ -135,10 +135,7 @@ internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimit
 
     var name: Name? = null
     for (part in parts) {
-        val localName = part.replace(")", "").replace("*", "")
-        if (localName.isNotEmpty()) {
-            name = Name(localName, name, delimiter)
-        }
+        name = Name(part, name, delimiter)
     }
 
     // Actually this should not occur, but otherwise the compiler won't let us return a
