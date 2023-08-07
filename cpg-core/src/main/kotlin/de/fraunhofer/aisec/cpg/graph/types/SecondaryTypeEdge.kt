@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,20 +23,17 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.declarations.TypeParamDeclaration
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 
-interface HasLegacyType : ContextProvider {
-
-    /**
-     * The Typeresolver needs to be aware of all outgoing edges to types in order to merge equal
-     * types to the same node. For the primary type edge, this is achieved through the hasType
-     * interface. If a node has additional type edges (e.g. default type in [ ]) the node must
-     * implement the updateType method, so that the current type is always replaced with the merged
-     * one
-     */
-    interface SecondaryTypeEdge {
-        fun updateType(typeState: Collection<Type>)
-    }
+/**
+ * The [TypeResolver] needs to be aware of all outgoing edges to types in order to merge equal types
+ * to the same node. For the primary type edge, this is achieved through the hasType interface. If a
+ * node has additional type edges (e.g. [TypeParamDeclaration.default]) the node must implement the
+ * [updateType] method, so that the current type is always replaced with the merged one
+ */
+interface SecondaryTypeEdge {
+    fun updateType(typeState: Collection<Type>)
 }
