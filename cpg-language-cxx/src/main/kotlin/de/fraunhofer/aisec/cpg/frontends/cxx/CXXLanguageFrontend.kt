@@ -32,10 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
@@ -578,6 +575,12 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
                 hint is ConstructorDeclaration -> {
                 hint.name.parent?.let { objectType(it) } ?: unknownType()
             }
+            // The type of conversion operator is also always the declaration itself
+            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
+                hint is MethodDeclaration &&
+                hint.name.localName == "operator#0" -> {
+                hint.name.parent?.let { objectType(it) } ?: unknownType()
+            }
             // C (not C++) allows unspecified types in function declarations, they
             // default to int and usually produce a warning
             name == "" && language !is CPPLanguage -> {
@@ -603,7 +606,18 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
                 // We need to remove qualifiers such as "const" from the name here, because
                 // we model them as part of the variable declaration and not the type, so use
                 // the "canonical" name
-                primitiveType(specifier.canonicalName)
+                val canonicalName = specifier.canonicalName
+                if (canonicalName == "") {
+                    Util.errorWithFileLocation(
+                        this,
+                        specifier,
+                        log,
+                        "Could not determine canonical name for potential primitive type $name"
+                    )
+                    newProblemType()
+                } else {
+                    primitiveType(canonicalName)
+                }
             }
         }
     }
@@ -787,7 +801,7 @@ private val IASTSimpleDeclSpecifier.canonicalName: CharSequence
             IASTSimpleDeclSpecifier.t_char -> parts += "char"
             IASTSimpleDeclSpecifier.t_wchar_t -> parts += "wchar_t"
             IASTSimpleDeclSpecifier.t_char16_t -> parts += "char16_t"
-            IASTSimpleDeclSpecifier.t_char32_t -> parts += "chat32_t"
+            IASTSimpleDeclSpecifier.t_char32_t -> parts += "char32_t"
             IASTSimpleDeclSpecifier.t_int -> parts += "int"
             IASTSimpleDeclSpecifier.t_float -> parts += "float"
             IASTSimpleDeclSpecifier.t_double -> parts += "double"
