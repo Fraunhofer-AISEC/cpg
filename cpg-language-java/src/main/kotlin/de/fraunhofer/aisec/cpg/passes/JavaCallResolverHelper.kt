@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -93,17 +92,17 @@ class JavaCallResolverHelper {
             if (target != null) {
                 val superType = target.toType()
                 // Explicitly set the type of the call's base to the super type, basically "casting"
-                // the
-                // "this" object to the super class
+                // the "this" object to the super class
                 callee.base.type = superType
-                ((callee.base as? DeclaredReferenceExpression)?.refersTo as? HasType)?.type =
-                    superType
+
+                val refersTo = (callee.base as? DeclaredReferenceExpression)?.refersTo
+                if (refersTo is HasType) {
+                    refersTo.type = superType
+                    refersTo.assignedTypes = mutableSetOf(superType)
+                }
+
+                // Make sure that really only our super class is in the list of assigned types
                 callee.base.assignedTypes = mutableSetOf(superType)
-                ((callee.base as? DeclaredReferenceExpression)?.refersTo as? ValueDeclaration)
-                    ?.assignedTypes = mutableSetOf(superType)
-                // And set the possible subtypes, to ensure, that really only our super type is in
-                // there
-                // callee.base.updatePossibleSubtypes(listOf(superType))
 
                 return true
             }

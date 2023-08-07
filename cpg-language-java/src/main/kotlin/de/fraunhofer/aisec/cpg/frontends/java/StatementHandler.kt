@@ -569,7 +569,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     ): de.fraunhofer.aisec.cpg.graph.statements.CatchClause {
         val cClause = this.newCatchClause(catchCls.toString())
         frontend.scopeManager.enterScope(cClause)
-        val possibleTypes: MutableList<Type> = ArrayList()
+        val possibleTypes = mutableSetOf<Type>()
         val concreteType: Type
         if (catchCls.parameter.type is UnionType) {
             for (t in (catchCls.parameter.type as UnionType).elements) {
@@ -590,7 +590,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 catchCls.parameter.toString(),
                 false
             )
-        // parameter.possibleSubTypes = possibleTypes
+        parameter.addAssignedTypes(possibleTypes)
         val body = handleBlockStatement(catchCls.body)
         cClause.body = body
         cClause.parameter = parameter

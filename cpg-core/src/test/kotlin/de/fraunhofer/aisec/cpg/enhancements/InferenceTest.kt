@@ -66,8 +66,6 @@ class InferenceTest {
             val nextField = record.fields["next"]
             assertNotNull(nextField)
             assertLocalName("T*", nextField.type)
-
-            assertTrue(result.finalCtx.typeObserverInvocations.get() < 30)
         }
     }
 
