@@ -50,10 +50,11 @@ interface HasType : ContextProvider, LanguageProvider {
     var type: Type
 
     /**
-     * This property refers to a list of [Type] nodes which are assigned to that [Node]. This could be
-     * different from the [HasType.type]. A common example is that a node could contain an interface
-     * as a [HasType.type], but the actual implementation of the type as one of the [assignedTypes].
-     * This could potentially also be empty, if we don't see any assignments to this expression.
+     * This property refers to a list of [Type] nodes which are assigned to that [Node]. This could
+     * be different from the [HasType.type]. A common example is that a node could contain an
+     * interface as a [HasType.type], but the actual implementation of the type as one of the
+     * [assignedTypes]. This could potentially also be empty, if we don't see any assignments to
+     * this expression.
      *
      * Note: in order to properly inform observers, one should NOT use the regular [MutableSet.add]
      * or [MutableSet.addAll] but rather use [addAssignedType] and [addAssignedTypes]. Otherwise, we
@@ -69,7 +70,7 @@ interface HasType : ContextProvider, LanguageProvider {
 
         val changed = (this.assignedTypes as MutableSet).add(type)
         if (changed) {
-            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
+            informObservers(TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
     }
 
@@ -79,7 +80,7 @@ interface HasType : ContextProvider, LanguageProvider {
                 types.filter { language?.shouldPropagateType(this, it) == true }
             )
         if (changed) {
-            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
+            informObservers(TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
     }
 

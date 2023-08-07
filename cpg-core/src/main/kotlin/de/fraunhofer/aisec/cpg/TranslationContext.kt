@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import java.util.concurrent.atomic.AtomicInteger
-
 /**
  * The translation context holds all necessary managers and configurations needed during the
  * translation process.
