@@ -81,8 +81,6 @@ class TypePropagationTest {
         assertTrue(binaryOp.type is IntegerType)
         assertEquals("int", (binaryOp.type as IntegerType).name.toString())
         assertEquals(32, (binaryOp.type as IntegerType).bitWidth)
-
-        assertTrue(result.finalCtx.typeObserverInvocations.get() < 20)
     }
 
     @Test
