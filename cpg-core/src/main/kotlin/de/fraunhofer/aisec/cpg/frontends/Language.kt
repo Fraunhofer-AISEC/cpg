@@ -195,22 +195,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 val srcWidth = srcType.bitWidth
                 val lhsWidth = nodeType.bitWidth
                 // Do not propagate anything if the new type is too big for the current type.
-                if (lhsWidth != null && srcWidth != null && lhsWidth < srcWidth) {
-                    // Only warn, if this is not a cast expression. If it is a (explicit) cast, we
-                    // assume that the developer knows what he is doing
-                    if (node !is CastExpression && !node.isImplicit) {
-                        Util.warnWithFileLocation(
-                            node,
-                            log,
-                            "Possibly truncating numeric type when assigning {} into {}",
-                            srcType.name,
-                            node.name
-                        )
-                    }
-                    return false
-                } else {
-                    return true
-                }
+                return !(lhsWidth != null && srcWidth != null && lhsWidth < srcWidth)
             }
         }
 
