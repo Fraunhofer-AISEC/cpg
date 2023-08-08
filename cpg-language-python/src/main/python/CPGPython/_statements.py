@@ -608,14 +608,12 @@ def handle_assign_impl(self, stmt):
                     "Could not resolve -> creating a new variable for: %s"
                     % (lhs.getName()))
                 if rhs is not None:
-                    self.log_with_loc("this")
                     v = DeclarationBuilderKt.newVariableDeclaration(
                         self.frontend, lhs.getName(),
                         TypeBuilderKt.autoType(self.frontend),
                         self.get_src_code(stmt),
                         False)
                 else:
-                    self.log_with_loc("or that")
                     v = DeclarationBuilderKt.newVariableDeclaration(
                         self.frontend, lhs.getName(),
                         TypeBuilderKt.autoType(self.frontend),
