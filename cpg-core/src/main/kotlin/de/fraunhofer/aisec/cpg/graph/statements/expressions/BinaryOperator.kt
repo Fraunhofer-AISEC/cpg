@@ -126,6 +126,10 @@ open class BinaryOperator :
             val type = language?.propagateTypeOfBinaryOperation(this)
             if (type != null) {
                 this.type = type
+            } else {
+                // If we don't know how to propagate the types of this particular binary operation,
+                // we just leave the type alone. We cannot take newType because it is just "half" of
+                // the operation (either from lhs or rhs) and would lead to very incorrect results.
             }
         }
     }
