@@ -31,9 +31,16 @@ import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import java.util.*
 
+/**
+ * This interfaces denotes that the given [Node] has a "type". Currently, we only have two known
+ * implementations of this class, an [Expression] and a [ValueDeclaration]. All other nodes with
+ * types should derive from these two base classes.
+ */
 interface HasType : ContextProvider, LanguageProvider {
 
     /**
@@ -63,6 +70,10 @@ interface HasType : ContextProvider, LanguageProvider {
      */
     var assignedTypes: Set<Type>
 
+    /**
+     * Adds [type] to the list of [HasType.assignedTypes] and informs all observers about the
+     * change.
+     */
     fun addAssignedType(type: Type) {
         if (language?.shouldPropagateType(this, type) == false) {
             return
@@ -74,6 +85,10 @@ interface HasType : ContextProvider, LanguageProvider {
         }
     }
 
+    /**
+     * Adds all [types] to the list of [HasType.assignedTypes] and informs all observers about the
+     * change.
+     */
     fun addAssignedTypes(types: Set<Type>) {
         val changed =
             (this.assignedTypes as MutableSet).addAll(
@@ -84,19 +99,43 @@ interface HasType : ContextProvider, LanguageProvider {
         }
     }
 
+    /**
+     * A list of [TypeObserver] objects that will be informed about type changes, usually by
+     * [informObservers].
+     */
     val typeObservers: MutableList<TypeObserver>
 
+    /**
+     * A [TypeObserver] can be used by its implementing class to observe changes to the
+     * [HasType.type] and/or [HasType.assignedTypes] of a [Node] (that implements [HasType]). The
+     * implementing node can then decide if and how to propagate this type information to itself
+     * (and possibly to others). Examples include modifying the incoming type depending on an
+     * operator, e.g., in a [UnaryOperator] expression. Changes to [HasType.type] will invoke
+     * [typeChanged], changes to [HasType.assignedTypes] will invoke [assignedTypes].
+     */
     interface TypeObserver {
         enum class ChangeType {
             TYPE,
             ASSIGNED_TYPE
         }
 
+        /**
+         * This callback function will be invoked, if the observed node changes its [HasType.type].
+         */
         fun typeChanged(newType: Type, src: HasType)
 
+        /**
+         * This callback function will be invoked, if the observed node changes its
+         * [HasType.assignedTypes].
+         */
         fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType)
     }
 
+    /**
+     * This function SHOULD be used be an implementing class to inform observers about type changes.
+     * While the implementing class can technically do this on its own, it is strongly recommended
+     * to use this function to harmonize the behaviour of propagating types.
+     */
     fun informObservers(changeType: TypeObserver.ChangeType) {
         if (changeType == TypeObserver.ChangeType.ASSIGNED_TYPE) {
             val assignedTypes = this.assignedTypes
@@ -119,6 +158,10 @@ interface HasType : ContextProvider, LanguageProvider {
         }
     }
 
+    /**
+     * Registers the given [typeObservers] to be informed about type updates. This also immediately
+     * invokes both [TypeObserver.typeChanged] and [TypeObserver.assignedTypeChanged].
+     */
     fun registerTypeObserver(typeObserver: TypeObserver) {
         typeObservers += typeObserver
 
@@ -137,6 +180,7 @@ interface HasType : ContextProvider, LanguageProvider {
         }
     }
 
+    /** Unregisters the given [typeObservers] from the list of observers. */
     fun unregisterTypeObserver(typeObserver: TypeObserver) {
         typeObservers -= typeObserver
     }
