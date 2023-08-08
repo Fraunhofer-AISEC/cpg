@@ -115,6 +115,8 @@ class MultiValueEvaluator : ValueEvaluator() {
 
         val result = mutableSetOf<Any?>()
         if (lhsValue is Collection<*>) {
+            // lhsValue is a collection. We compute the result for all lhsValues with all the
+            // rhsValue(s).
             for (lhs in lhsValue) {
                 if (rhsValue is Collection<*>) {
                     result.addAll(rhsValue.map { r -> computeBinaryOpEffect(lhs, r, node) })
@@ -123,6 +125,9 @@ class MultiValueEvaluator : ValueEvaluator() {
                 }
             }
         } else {
+            // lhsValue is not a collection (so rhsValues is because if both wouldn't be a
+            // collection, this would be covered by the if-statement some lines above). We compute
+            // the result for the lhsValue with all the rhsValues.
             result.addAll(
                 (rhsValue as Collection<*>).map { r -> computeBinaryOpEffect(lhsValue, r, node) }
             )
