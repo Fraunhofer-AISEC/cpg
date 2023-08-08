@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -180,12 +181,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * remove there outgoing edges.In contrast to truncateLooseEdges this also removes cycles.
      */
     protected fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
-        val eognodes =
-            SubgraphWalker.flattenAST(tu)
-                .filter { it.prevEOG.isNotEmpty() || it.nextEOG.isNotEmpty() }
-                .toMutableList()
+        val eogNodes = IdentitySet<Node>()
+        eogNodes.addAll(
+            SubgraphWalker.flattenAST(tu).filter {
+                it.prevEOG.isNotEmpty() || it.nextEOG.isNotEmpty()
+            }
+        )
         var validStarts =
-            eognodes
+            eogNodes
                 .filter { node ->
                     node is FunctionDeclaration ||
                         node is RecordDeclaration ||
@@ -194,11 +197,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 }
                 .toSet()
         while (validStarts.isNotEmpty()) {
-            eognodes.removeAll(validStarts)
-            validStarts = validStarts.flatMap { it.nextEOG }.filter { it in eognodes }.toSet()
+            eogNodes.removeAll(validStarts)
+            validStarts = validStarts.flatMap { it.nextEOG }.filter { it in eogNodes }.toSet()
         }
-        // remaining eognodes were not visited and have to be removed from the EOG
-        for (unvisitedNode in eognodes) {
+        // remaining eog nodes were not visited and have to be removed from the EOG
+        for (unvisitedNode in eogNodes) {
             unvisitedNode.nextEOGEdges.forEach { next ->
                 next.end.removePrevEOGEntry(unvisitedNode)
             }
