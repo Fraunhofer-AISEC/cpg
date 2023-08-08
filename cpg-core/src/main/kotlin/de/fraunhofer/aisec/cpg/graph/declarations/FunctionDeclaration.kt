@@ -233,12 +233,10 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
             body == other.body &&
             parameters == other.parameters &&
             propertyEqualsList(parameterEdges, other.parameterEdges) &&
-            throwsTypes == other.throwsTypes &&
-            overriddenBy == other.overriddenBy &&
-            overrides == other.overrides)
+            throwsTypes == other.throwsTypes)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), parameters, throwsTypes, overrides)
+    override fun hashCode() = Objects.hash(super.hashCode(), body, parameters, throwsTypes)
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is ParamVariableDeclaration) {

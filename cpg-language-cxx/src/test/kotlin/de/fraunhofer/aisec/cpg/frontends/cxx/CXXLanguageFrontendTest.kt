@@ -1592,4 +1592,22 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(ptr)
         assertLocalName("decltype(nullptr)", ptr.type)
     }
+
+    @Test
+    fun testRecursiveHeaderFunction() {
+        val file = File("src/test/resources/cxx/fix-1226")
+        val result =
+            analyze(
+                listOf(file.resolve("main1.cpp"), file.resolve("main2.cpp")),
+                file.toPath(),
+                true
+            )
+        assertNotNull(result)
+
+        // For now, we have duplicate functions because we include the header twice. This might
+        // change in the future. The important thing is that this gets parsed at all because we
+        // previously had a loop in our equals method
+        val functions = result.functions { it.name.localName == "foo" && it.isDefinition }
+        assertEquals(2, functions.size)
+    }
 }
