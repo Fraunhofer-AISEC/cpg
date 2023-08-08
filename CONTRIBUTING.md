@@ -116,6 +116,9 @@ override fun hashCode() = Objects.hash(super.hashCode(), constructor, arguments)
 
 Before we can accept a pull request from you, you'll need to sign a Contributor License Agreement (CLA). It is an automated process and you only need to do it once.
 
+[!WARNING]
+We are currently discussing the implementation of a Contributor License Agreement (CLA). Unfortunately, we cannot merge external pull requests until this issue is resolved.
+
 To enable us to quickly review and accept your pull requests, always create one pull request per issue and link the issue in the pull request.
 Never merge multiple requests in one unless they have the same root cause. Be sure your code is formatted correctly using the respective formatting task.
 Keep code changes as small as possible. 
