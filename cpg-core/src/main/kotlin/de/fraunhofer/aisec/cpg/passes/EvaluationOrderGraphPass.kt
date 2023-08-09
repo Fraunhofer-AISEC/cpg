@@ -178,15 +178,17 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * Removes EOG edges by first building the negative set of nodes that cannot be visited and then
-     * remove there outgoing edges.In contrast to truncateLooseEdges this also removes cycles.
+     * remove there outgoing edges. This also removes cycles.
      */
     protected fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
+        // All nodes which have an eog edge
         val eogNodes = IdentitySet<Node>()
         eogNodes.addAll(
             SubgraphWalker.flattenAST(tu).filter {
                 it.prevEOG.isNotEmpty() || it.nextEOG.isNotEmpty()
             }
         )
+        // only eog entry points
         var validStarts =
             eogNodes
                 .filter { node ->
@@ -196,11 +198,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                         node is TranslationUnitDeclaration
                 }
                 .toSet()
+        // Remove all nodes from eogNodes which are reachable from validStarts and transitively.
         while (validStarts.isNotEmpty()) {
             eogNodes.removeAll(validStarts)
             validStarts = validStarts.flatMap { it.nextEOG }.filter { it in eogNodes }.toSet()
         }
-        // remaining eog nodes were not visited and have to be removed from the EOG
+        // The remaining nodes are unreachable from the entry points. We delete their outgoing EOG
+        // edges.
         for (unvisitedNode in eogNodes) {
             unvisitedNode.nextEOGEdges.forEach { next ->
                 next.end.removePrevEOGEntry(unvisitedNode)
