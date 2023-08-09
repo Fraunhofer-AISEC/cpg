@@ -303,8 +303,6 @@ open class CallExpression : Expression(), HasType.TypeObserver, SecondaryTypeEdg
         return super.equals(other) &&
             arguments == other.arguments &&
             propertyEqualsList(argumentEdges, other.argumentEdges) &&
-            invokes == other.invokes &&
-            propertyEqualsList(invokeEdges, other.invokeEdges) &&
             templateParameters == other.templateParameters &&
             propertyEqualsList(templateParameterEdges, other.templateParameterEdges) &&
             templateInstantiation == other.templateInstantiation &&
@@ -312,8 +310,8 @@ open class CallExpression : Expression(), HasType.TypeObserver, SecondaryTypeEdg
     }
 
     // TODO: Not sure if we can add the template, templateParameters, templateInstantiation fields
-    // here
-    override fun hashCode() = Objects.hash(super.hashCode(), arguments, invokes)
+    //  here
+    override fun hashCode() = Objects.hash(super.hashCode(), arguments)
 
     override fun updateType(typeState: Collection<Type>) {
         for (t in typeTemplateParameters) {
