@@ -93,8 +93,22 @@ open class CLanguage :
             "long double" to
                 FloatingPointType("long double", 128, this, NumericType.Modifier.SIGNED),
 
-            // Convenience types, defined in <stddef.h>
+            // Convenience types, defined in headers such as <stddef.h> or <stdint.h>. They are not
+            // part of the language per se, but part of the standard library. We therefore also
+            // consider them to be "built-in" types, because we often don't parse all the headers
+            // which define them internally.
             "bool" to IntegerType("bool", 1, this, NumericType.Modifier.SIGNED),
+            "int8_t" to IntegerType("int8_t", 8, this, NumericType.Modifier.SIGNED),
+            "int16_t" to IntegerType("int16_t", 16, this, NumericType.Modifier.SIGNED),
+            "int32_t" to IntegerType("int32_t", 32, this, NumericType.Modifier.SIGNED),
+            "int64_t" to IntegerType("int64_t", 64, this, NumericType.Modifier.SIGNED),
+            "uint8_t" to IntegerType("uint8_t", 8, this, NumericType.Modifier.UNSIGNED),
+            "uint16_t" to IntegerType("uint16_t", 16, this, NumericType.Modifier.UNSIGNED),
+            "uint32_t" to IntegerType("uint32_t", 32, this, NumericType.Modifier.UNSIGNED),
+            "uint64_t" to IntegerType("uint64_t", 64, this, NumericType.Modifier.UNSIGNED),
+
+            // Other commonly used extension types
+            "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),
         )
 
     override fun refineNormalCallResolution(
@@ -139,6 +153,6 @@ open class CLanguage :
             listOf(
                 *ctx.scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray()
             )
-        return resolveWithImplicitCast(call, initialInvocationCandidates, ctx)
+        return resolveWithImplicitCast(call, initialInvocationCandidates)
     }
 }

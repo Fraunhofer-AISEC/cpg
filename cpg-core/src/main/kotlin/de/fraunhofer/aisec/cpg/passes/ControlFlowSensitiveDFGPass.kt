@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 /**
  * This pass determines the data flows of DeclaredReferenceExpressions which refer to a
@@ -41,6 +43,7 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
  * path, only such data flows are left which can occur when following the control flow (in terms of
  * the EOG) of the program.
  */
+@OptIn(ExperimentalContracts::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
 open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
@@ -86,7 +89,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * code [node].
      */
     protected fun clearFlowsOfVariableDeclarations(node: Node) {
-        for (varDecl in node.variables) {
+        for (varDecl in node.variables.filter { it !is FieldDeclaration }) {
             varDecl.clearPrevDFG()
             varDecl.clearNextDFG()
         }
@@ -107,7 +110,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
     ): State<Node, Set<Node>> {
         // We will set this if we write to a variable
-        val writtenDecl: Declaration?
+        var writtenDecl: Declaration?
         val currentNode = currentEdge.end
 
         val doubleState = state as DFGPassState
@@ -120,7 +123,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             state.push(currentNode, PowersetLattice(setOf(initializer)))
 
             doubleState.pushToDeclarationsState(currentNode, PowersetLattice(setOf(currentNode)))
-        } else if (currentNode is AssignExpression) {
+        } else if (isSimpleAssignment(currentNode)) {
             // It's an assignment which can have one or multiple things on the lhs and on the
             // rhs. The lhs could be a declaration or a reference (or multiple of these things).
             // The rhs can be anything. The rhs flows to the respective lhs. To identify the
@@ -145,33 +148,25 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 state.push(input, doubleState.declarationsState[writtenDecl])
                 doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(input))
             }
-        } else if (isSimpleAssignment(currentNode)) {
-            // Only the lhs is the last write statement here and the variable which is written
-            // to.
-            writtenDecl =
-                ((currentNode as BinaryOperator).lhs as DeclaredReferenceExpression).refersTo
-
-            if (writtenDecl != null) {
-                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(currentNode.lhs))
-            }
         } else if (isCompoundAssignment(currentNode)) {
             // We write to the lhs, but it also serves as an input => We first get all previous
             // writes to the lhs and then add the flow from lhs and rhs to the current node.
 
             // The write operation goes to the variable in the lhs
-            writtenDecl =
-                ((currentNode as BinaryOperator).lhs as? DeclaredReferenceExpression)?.refersTo
+            val lhs = currentNode.lhs.singleOrNull()
+            writtenDecl = (lhs as? DeclaredReferenceExpression)?.refersTo
 
-            if (writtenDecl != null) {
+            if (writtenDecl != null && lhs != null) {
                 // Data flows from the last writes to the lhs variable to this node
-                state.push(currentNode.lhs, doubleState.declarationsState[writtenDecl])
+                state.push(lhs, doubleState.declarationsState[writtenDecl])
 
                 // The whole current node is the place of the last update, not (only) the lhs!
-                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(currentNode.lhs))
+                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(lhs))
             }
         } else if (
             (currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ &&
-                currentNode.refersTo is VariableDeclaration
+                currentNode.refersTo is VariableDeclaration &&
+                currentNode.refersTo !is FieldDeclaration
         ) {
             // We can only find a change if there's a state for the variable
             doubleState.declarationsState[currentNode.refersTo]?.let {
@@ -245,17 +240,18 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * Checks if the node performs an operation and an assignment at the same time e.g. with the
      * operators +=, -=, *=, ...
      */
-    protected fun isCompoundAssignment(currentNode: Node) =
-        currentNode is BinaryOperator &&
+    protected fun isCompoundAssignment(currentNode: Node): Boolean {
+        contract { returns(true) implies (currentNode is AssignExpression) }
+        return currentNode is AssignExpression &&
             currentNode.operatorCode in
                 (currentNode.language?.compoundAssignmentOperators ?: setOf()) &&
-            (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
+            (currentNode.lhs.singleOrNull() as? DeclaredReferenceExpression)?.refersTo != null
+    }
 
-    /** Checks if the node is a simple assignment of the form `var = ...` */
-    protected fun isSimpleAssignment(currentNode: Node) =
-        currentNode is BinaryOperator &&
-            currentNode.operatorCode == "=" &&
-            (currentNode.lhs as? DeclaredReferenceExpression)?.refersTo != null
+    protected fun isSimpleAssignment(currentNode: Node): Boolean {
+        contract { returns(true) implies (currentNode is AssignExpression) }
+        return currentNode is AssignExpression && currentNode.operatorCode == "="
+    }
 
     /** Checks if the node is an increment or decrement operator (e.g. i++, i--, ++i, --i) */
     protected fun isIncOrDec(currentNode: Node) =

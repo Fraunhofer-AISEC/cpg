@@ -27,41 +27,46 @@ package de.fraunhofer.aisec.cpg.enhancements
 
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.assertLocalName
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.get
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.*
 
 class InferenceTest {
 
     @Test
     fun testRecordInference() {
-        val tu =
-            GraphExamples.getInferenceRecord()
-                .components
-                .firstOrNull()
-                ?.translationUnits
-                ?.firstOrNull()
+        val result = GraphExamples.getInferenceRecord()
+        val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
 
         assertNotNull(tu)
 
-        val record = tu.byNameOrNull<RecordDeclaration>("T")
-        assertNotNull(record)
-        assertLocalName("T", record)
-        assertEquals(true, record.isInferred)
-        assertEquals("struct", record.kind)
+        with(tu) {
+            val main = tu.functions["main"]
 
-        assertEquals(2, record.fields.size)
+            val valueRef = main.refs["value"]
+            assertNotNull(valueRef)
+            assertContains(valueRef.assignedTypes, primitiveType("int"))
 
-        val valueField = record.fields["value"]
-        assertNotNull(valueField)
-        assertLocalName("int", valueField.type)
+            val nextRef = main.refs["next"]
+            assertNotNull(nextRef)
+            assertContains(nextRef.assignedTypes, objectType("T").pointer())
 
-        val nextField = record.fields["next"]
-        assertNotNull(nextField)
-        assertLocalName("T*", nextField.type)
+            val record = tu.records["T"]
+            assertNotNull(record)
+            assertLocalName("T", record)
+            assertEquals(true, record.isInferred)
+            assertEquals("struct", record.kind)
+
+            assertEquals(2, record.fields.size)
+
+            val valueField = record.fields["value"]
+            assertNotNull(valueField)
+            assertLocalName("int", valueField.type)
+
+            val nextField = record.fields["next"]
+            assertNotNull(nextField)
+            assertLocalName("T*", nextField.type)
+        }
     }
 
     @Test

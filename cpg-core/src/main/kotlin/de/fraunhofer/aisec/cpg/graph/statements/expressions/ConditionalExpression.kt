@@ -26,8 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import java.util.ArrayList
+import de.fraunhofer.aisec.cpg.graph.types.getCommonType
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -35,54 +36,24 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represents an expression containing a ternary operator: `var x = condition ? valueIfTrue :
  * valueIfFalse`;
  */
-class ConditionalExpression : Expression(), HasType.TypeListener, ArgumentHolder, BranchingNode {
+class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasType.TypeObserver {
     @AST var condition: Expression = ProblemExpression("could not parse condition expression")
 
     @AST
     var thenExpr: Expression? = null
         set(value) {
-            field?.unregisterTypeListener(this)
+            field?.unregisterTypeObserver(this)
             field = value
-            value?.registerTypeListener(this)
+            value?.registerTypeObserver(this)
         }
 
     @AST
     var elseExpr: Expression? = null
         set(value) {
-            field?.unregisterTypeListener(this)
+            field?.unregisterTypeObserver(this)
             field = value
-            value?.registerTypeListener(this)
+            value?.registerTypeObserver(this)
         }
-
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val previous = type
-        val types: MutableList<Type> = ArrayList()
-
-        thenExpr?.propagationType?.let { types.add(it) }
-        elseExpr?.propagationType?.let { types.add(it) }
-
-        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-        subTypes.remove(oldType)
-        subTypes.addAll(types)
-        val alternative = if (types.isNotEmpty()) types[0] else unknownType()
-        setType(getCommonType(types).orElse(alternative), root)
-        setPossibleSubTypes(subTypes, root)
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-        subTypes.addAll(src.possibleSubTypes)
-        possibleSubTypes = subTypes
-    }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -103,6 +74,26 @@ class ConditionalExpression : Expression(), HasType.TypeListener, ArgumentHolder
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
         // Do nothing
         return false
+    }
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        val types = mutableListOf<Type>()
+
+        thenExpr?.type?.let { types.add(it) }
+        elseExpr?.type?.let { types.add(it) }
+
+        val alternative = if (types.isNotEmpty()) types[0] else unknownType()
+        this.type = getCommonType(types).orElse(alternative)
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Merge and propagate the assigned types of our branches
+        if (src == thenExpr || src == elseExpr) {
+            val types = mutableSetOf<Type>()
+            thenExpr?.assignedTypes?.let { types.addAll(it) }
+            elseExpr?.assignedTypes?.let { types.addAll(it) }
+            addAssignedTypes(types)
+        }
     }
 
     override fun equals(other: Any?): Boolean {

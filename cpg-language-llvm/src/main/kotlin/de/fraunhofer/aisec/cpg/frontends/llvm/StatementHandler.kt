@@ -1291,7 +1291,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleShufflevector(instr: LLVMValueRef): Statement {
         val instrStr = frontend.codeOf(instr)
 
-        val list = newInitializerListExpression(instrStr)
+        val list = newInitializerListExpression(frontend.typeOf(instr), instrStr)
         val elementType = frontend.typeOf(instr).dereference()
 
         val initializers = mutableListOf<Expression>()
@@ -1448,10 +1448,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     code
                 )
             (assignment.lhs.first() as DeclaredReferenceExpression).type = type
-            (assignment.lhs.first() as DeclaredReferenceExpression).unregisterTypeListener(
-                assignment
-            )
-            assignment.unregisterTypeListener(assignment.lhs.first() as DeclaredReferenceExpression)
             (assignment.lhs.first() as DeclaredReferenceExpression).refersTo = declaration
             flatAST.add(assignment)
 

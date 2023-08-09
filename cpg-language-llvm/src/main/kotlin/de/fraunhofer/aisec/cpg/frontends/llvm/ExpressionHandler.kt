@@ -312,8 +312,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             return newLiteral(string, frontend.typeOf(valueRef), frontend.codeOf(valueRef))
         }
 
-        val list = newInitializerListExpression(frontend.codeOf(valueRef))
         val arrayType = LLVMTypeOf(valueRef)
+        val list =
+            newInitializerListExpression(frontend.typeOf(valueRef), frontend.codeOf(valueRef))
         val length =
             if (LLVMIsAConstantDataArray(valueRef) != null) {
                 LLVMGetArrayLength(arrayType)

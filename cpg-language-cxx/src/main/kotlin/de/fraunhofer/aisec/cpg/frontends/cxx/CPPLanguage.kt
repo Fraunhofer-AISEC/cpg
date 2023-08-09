@@ -78,6 +78,7 @@ class CPPLanguage :
             "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
             "unsigned char" to IntegerType("unsigned char", 8, this, NumericType.Modifier.UNSIGNED),
             "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "wchar_t" to IntegerType("wchar_t", 32, this, NumericType.Modifier.NOT_APPLICABLE),
             "char8_t" to IntegerType("char8_t", 8, this, NumericType.Modifier.NOT_APPLICABLE),
             "char16_t" to IntegerType("char16_t", 16, this, NumericType.Modifier.NOT_APPLICABLE),
             "char32_t" to IntegerType("char32_t", 32, this, NumericType.Modifier.NOT_APPLICABLE),
@@ -88,8 +89,21 @@ class CPPLanguage :
             "long double" to
                 FloatingPointType("long double", 128, this, NumericType.Modifier.SIGNED),
 
-            // Some convenience types
+            // Convenience types, defined in headers. They are not part of the language per se, but
+            // part of the standard library. We therefore also consider them to be "built-in" types,
+            // because we often don't parse all the headers which define them internally.
             "std::string" to StringType("std::string", this),
+            "int8_t" to IntegerType("int8_t", 8, this, NumericType.Modifier.SIGNED),
+            "int16_t" to IntegerType("int16_t", 16, this, NumericType.Modifier.SIGNED),
+            "int32_t" to IntegerType("int32_t", 32, this, NumericType.Modifier.SIGNED),
+            "int64_t" to IntegerType("int64_t", 64, this, NumericType.Modifier.SIGNED),
+            "uint8_t" to IntegerType("uint8_t", 8, this, NumericType.Modifier.UNSIGNED),
+            "uint16_t" to IntegerType("uint16_t", 16, this, NumericType.Modifier.UNSIGNED),
+            "uint32_t" to IntegerType("uint32_t", 32, this, NumericType.Modifier.UNSIGNED),
+            "uint64_t" to IntegerType("uint64_t", 64, this, NumericType.Modifier.UNSIGNED),
+
+            // Other commonly used extension types
+            "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),
         )
 
     /**
@@ -174,8 +188,7 @@ class CPPLanguage :
                     call,
                     recordDeclaration.methods.filter { m ->
                         namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/
-                    },
-                    ctx
+                    }
                 )
             )
         }

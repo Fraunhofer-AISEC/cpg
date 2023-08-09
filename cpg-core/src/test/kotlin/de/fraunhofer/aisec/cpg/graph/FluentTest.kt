@@ -61,7 +61,8 @@ class FluentTest {
                                         elseStmt { call("printf") { literal("else") } }
                                     }
                                 }
-                                call("do") { call("some::func") }
+                                declare { variable("some", t("SomeClass")) }
+                                call("do") { call("some.func") }
 
                                 returnStmt { ref("a") + literal(2) }
                             }
@@ -69,7 +70,6 @@ class FluentTest {
                     }
                 }
             }
-        val tu = result.translationUnits.firstOrNull()
 
         // Let's assert that we did this correctly
         val main = result.functions["main"]
@@ -138,18 +138,17 @@ class FluentTest {
         assertNotNull(lit1)
         assertEquals(1, lit1.value)
 
-        // Third line is th
-        // e CallExpression (containing another MemberCallExpression as argument)
-        val call = main[2] as? CallExpression
+        // Fourth line is the CallExpression (containing another MemberCallExpression as argument)
+        val call = main[3] as? CallExpression
         assertNotNull(call)
         assertLocalName("do", call)
 
         val mce = call.arguments[0] as? MemberCallExpression
         assertNotNull(mce)
-        assertFullName("some::func", mce)
+        assertFullName("UNKNOWN.func", mce)
 
-        // Fourth line is the ReturnStatement
-        val returnStatement = main[3] as? ReturnStatement
+        // Fifth line is the ReturnStatement
+        val returnStatement = main[4] as? ReturnStatement
         assertNotNull(returnStatement)
         assertNotNull(returnStatement.scope)
 
@@ -171,7 +170,8 @@ class FluentTest {
 
         VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
-        // Now the reference should be resolved
+        // Now the reference should be resolved and the MCE name set
         assertRefersTo(ref, variable)
+        assertFullName("SomeClass::func", mce)
     }
 }

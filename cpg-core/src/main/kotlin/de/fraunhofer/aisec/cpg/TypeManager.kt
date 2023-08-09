@@ -45,9 +45,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.slf4j.LoggerFactory
 
 class TypeManager {
-    val typeCache: MutableMap<HasType, MutableList<Type>> =
-        Collections.synchronizedMap(IdentityHashMap())
-
     private val typeToRecord = Collections.synchronizedMap(HashMap<Type?, RecordDeclaration?>())
 
     /**
@@ -213,16 +210,6 @@ class TypeManager {
         return firstOrderTypes.stream().anyMatch { type: Type -> type.root.name.toString() == name }
     }
 
-    @Synchronized
-    fun cacheType(node: HasType, type: Type) {
-        if (!isUnknown(type)) {
-            val types = typeCache.computeIfAbsent(node) { mutableListOf() }
-            if (!types.contains(type)) {
-                types.add(type)
-            }
-        }
-    }
-
     fun isUnknown(type: Type?): Boolean {
         return type is UnknownType
     }
@@ -238,19 +225,6 @@ class TypeManager {
             }
         }
         return false
-    }
-
-    /**
-     * @param type oldType that we want to replace
-     * @param newType newType
-     * @return true if an objectType with instantiated generics is replaced by the same objectType
-     *   with parameterizedTypes as generics false otherwise
-     */
-    fun stopPropagation(type: Type, newType: Type): Boolean {
-        return if (type is ObjectType && newType is ObjectType && type.name == newType.name) {
-            (containsParameterizedType(newType.generics) &&
-                !containsParameterizedType(type.generics))
-        } else false
     }
 
     private fun rewrapType(
@@ -637,7 +611,5 @@ class TypeManager {
 
     companion object {
         private val log = LoggerFactory.getLogger(TypeManager::class.java)
-
-        var isTypeSystemActive = true
     }
 }

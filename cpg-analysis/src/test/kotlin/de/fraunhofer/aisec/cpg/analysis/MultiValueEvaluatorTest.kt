@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.evaluate
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import java.nio.file.Path
@@ -211,7 +211,10 @@ class MultiValueEvaluatorTest {
         assertNotNull(forLoop)
 
         val evaluator = MultiValueEvaluator()
-        val iVar = ((forLoop.statement as CompoundStatement).statements[0] as BinaryOperator).rhs
+        val iVarList =
+            ((forLoop.statement as CompoundStatement).statements[0] as AssignExpression).rhs
+        assertEquals(1, iVarList.size)
+        val iVar = iVarList.first()
         val value = evaluator.evaluate(iVar) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2, 3, 4, 5), value.values)
     }

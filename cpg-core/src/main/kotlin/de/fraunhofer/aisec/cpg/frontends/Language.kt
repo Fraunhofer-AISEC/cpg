@@ -151,38 +151,53 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 
         return when (operation.operatorCode) {
             "+" ->
-                if (operation.lhs.propagationType is StringType) {
+                if (operation.lhs.type is StringType) {
                     // string + anything => string
-                    operation.lhs.propagationType
-                } else if (operation.rhs.propagationType is StringType) {
+                    operation.lhs.type
+                } else if (operation.rhs.type is StringType) {
                     // anything + string => string
-                    operation.rhs.propagationType
+                    operation.rhs.type
                 } else {
-                    arithmeticOpTypePropagation(
-                        operation.lhs.propagationType,
-                        operation.rhs.propagationType
-                    )
+                    arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
                 }
             "-",
             "*",
-            "/" ->
-                arithmeticOpTypePropagation(
-                    operation.lhs.propagationType,
-                    operation.rhs.propagationType
-                )
+            "/" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
             "<<",
             ">>" ->
-                if (
-                    operation.lhs.propagationType.isPrimitive &&
-                        operation.rhs.propagationType.isPrimitive
-                ) {
+                if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
                     // primitive type 1 OP primitive type 2 => primitive type 1
-                    operation.lhs.propagationType
+                    operation.lhs.type
                 } else {
                     unknownType()
                 }
             else -> unknownType() // We don't know what is this thing
         }
+    }
+
+    /**
+     * When propagating [HasType.assignedTypes] from one node to another, we might want to propagate
+     * only certain types. A common example is to truncate [NumericType]s, when they are not "big"
+     * enough.
+     */
+    open fun shouldPropagateType(hasType: HasType, srcType: Type): Boolean {
+        val node = hasType as Node
+        var nodeType = hasType.type
+
+        // We only want to add certain types, in case we have a numeric type
+        if (nodeType is NumericType) {
+            // We do not allow to propagate non-numeric types into numeric types
+            return if (srcType !is NumericType) {
+                false
+            } else {
+                val srcWidth = srcType.bitWidth
+                val lhsWidth = nodeType.bitWidth
+                // Do not propagate anything if the new type is too big for the current type.
+                return !(lhsWidth != null && srcWidth != null && lhsWidth < srcWidth)
+            }
+        }
+
+        return true
     }
 }
 
