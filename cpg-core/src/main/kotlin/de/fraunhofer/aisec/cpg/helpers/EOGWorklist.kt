@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import java.util.IdentityHashMap
 
@@ -227,6 +228,15 @@ class Worklist<K : Any, N : Any, V>() {
     }
 }
 
+fun Node.isBasicBlockStartOrEnd(): Boolean {
+    return this.nextEOGEdges.size > 1 ||
+        this.prevEOGEdges.size > 1 ||
+        this.prevEOGEdges.any {
+            val branch = it.getProperty(Properties.BRANCH)
+            branch == true || branch == false
+        }
+}
+
 /**
  * Iterates through the worklist of the Evaluation Order Graph starting at [startNode] and with the
  * [State] [startState]. For each node, the [transformation] is applied which should update the
@@ -250,7 +260,15 @@ inline fun <reified K : Node, V> iterateEOG(
 
         val newState = transformation(nextNode, state.duplicate(), worklist)
         if (worklist.update(nextNode, newState)) {
-            nextNode.nextEOG.forEach { if (it is K) worklist.push(it, newState.duplicate()) }
+            nextNode.nextEOG.forEach {
+                if (it is K) {
+                    if (!nextNode.isBasicBlockStartOrEnd()) {
+                        worklist.push(it, newState)
+                    } else {
+                        worklist.push(it, newState.duplicate())
+                    }
+                }
+            }
         }
     }
     return worklist.mop()
@@ -274,7 +292,13 @@ inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
         val newState = transformation(nextEdge, state.duplicate(), worklist)
         if (worklist.update(nextEdge, newState)) {
             nextEdge.end.nextEOGEdges.forEach {
-                if (it is K) worklist.push(it, newState.duplicate())
+                if (it is K) {
+                    if (!nextEdge.end.isBasicBlockStartOrEnd()) {
+                        worklist.push(it, newState)
+                    } else {
+                        worklist.push(it, newState.duplicate())
+                    }
+                }
             }
         }
     }
