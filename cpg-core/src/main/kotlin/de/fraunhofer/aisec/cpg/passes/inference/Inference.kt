@@ -91,7 +91,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                     newFunctionDeclaration(name ?: "", code)
                 }
 
-            Companion.log.debug(
+            log.debug(
                 "Inferred a new {} declaration {} with parameter types {}",
                 if (inferred is MethodDeclaration) "method" else "function",
                 inferred.name,

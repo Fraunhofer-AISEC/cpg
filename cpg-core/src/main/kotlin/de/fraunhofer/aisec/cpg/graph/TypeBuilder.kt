@@ -91,6 +91,16 @@ fun Type.ref(): Type {
     return c.typeManager.registerType(type)
 }
 
+fun ContextProvider.resolvePossibleTypedef(type: Type): Type {
+    val c =
+        ctx
+            ?: throw TranslationException(
+                "Could not create type: translation context not available"
+            )
+
+    return c.typeManager.resolvePossibleTypedef(type, c.scopeManager)
+}
+
 /**
  * This function creates a new [Type] with the given [name]. In order to avoid unnecessary
  * allocation of simple types, we do a pre-check within this function, whether a built-in type exist

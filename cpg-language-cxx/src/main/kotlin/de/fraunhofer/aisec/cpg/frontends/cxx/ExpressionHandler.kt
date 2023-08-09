@@ -145,7 +145,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         when (ctx.operator) {
             IASTTypeIdExpression.op_sizeof -> {
                 operatorCode = "sizeof"
-                type = objectType("std::size_t")
+                type =
+                    if (language is CPPLanguage) {
+                        objectType("std::size_t")
+                    } else {
+                        objectType("size_t")
+                    }
             }
             IASTTypeIdExpression.op_typeid -> {
                 operatorCode = "typeid"
@@ -153,7 +158,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
             IASTTypeIdExpression.op_alignof -> {
                 operatorCode = "alignof"
-                type = objectType("std::size_t")
+                type =
+                    if (language is CPPLanguage) {
+                        objectType("std::size_t")
+                    } else {
+                        objectType("size_t")
+                    }
             }
             IASTTypeIdExpression
                 .op_typeof -> // typeof is not an official c++ keyword - not sure why eclipse
@@ -161,6 +171,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 operatorCode = "typeof"
             else -> log.debug("Unknown typeid operator code: {}", ctx.operator)
         }
+
+        // Make sure to check for possible typedefs, as these internal types are often defined as a
+        // typedef
+        type = resolvePossibleTypedef(type)
 
         val referencedType = frontend.typeOf(ctx.typeId)
         return newTypeIdExpression(operatorCode, type, referencedType, ctx.rawSignature)

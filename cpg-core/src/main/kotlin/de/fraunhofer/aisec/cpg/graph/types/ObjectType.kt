@@ -43,7 +43,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class ObjectType : Type, SecondaryTypeEdge {
     /**
-     * Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
+     * Reference from the ObjectType to its class (RecordDeclaration) only if the class is available. This will be set in the [TypeResolver]
      */
     var recordDeclaration: RecordDeclaration? = null
 

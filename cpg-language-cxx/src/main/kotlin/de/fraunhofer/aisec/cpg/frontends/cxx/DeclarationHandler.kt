@@ -635,6 +635,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 name = declSpecifier.name.toString(),
                 location = frontend.locationOf(ctx),
             )
+        enum.superTypes = listOf(primitiveType("int"))
 
         // Loop through its members
         for (enumerator in declSpecifier.enumerators) {
