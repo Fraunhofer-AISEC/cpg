@@ -36,10 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.processing.IVisitor
-import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
 
@@ -462,7 +459,9 @@ class ScopeManager : ScopeProvider {
         if (breakStatement.label == null) {
             val scope = firstScopeOrNull { scope: Scope? -> scope?.isBreakable() == true }
             if (scope == null) {
-                LOGGER.error(
+                Util.errorWithFileLocation(
+                    breakStatement,
+                    LOGGER,
                     "Break inside of unbreakable scope. The break will be ignored, but may lead " +
                         "to an incorrect graph. The source code is not valid or incomplete."
                 )
@@ -605,10 +604,11 @@ class ScopeManager : ScopeProvider {
                 if (
                     it.name.lastPartsMatch(ref.name)
                 ) { // TODO: This place is likely to make things fail
+                    var helper = ref.resolutionHelper
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
-                    if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
-                        val fptrType = (ref as HasType).type as FunctionPointerType
+                    if (helper?.type is FunctionPointerType && it is FunctionDeclaration) {
+                        val fptrType = helper.type as FunctionPointerType
                         // TODO(oxisto): This is the third place where function pointers are
                         //   resolved. WHY?
                         // TODO(oxisto): Support multiple return values
@@ -793,32 +793,4 @@ class ScopeManager : ScopeProvider {
     /** Returns the current scope for the [ScopeProvider] interface. */
     override val scope: Scope?
         get() = currentScope
-
-    fun activateTypes(node: Node, typeManager: TypeManager) {
-        val num = AtomicInteger()
-        val typeCache = typeManager.typeCache
-        node.accept(
-            Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
-                    if (t is HasType) {
-                        val typeNode = t as HasType
-                        typeCache.getOrDefault(typeNode, emptyList()).forEach {
-                            (t as HasType).type =
-                                typeManager.resolvePossibleTypedef(it, this@ScopeManager)
-                        }
-                        typeCache.remove(t as HasType)
-                        num.getAndIncrement()
-                    }
-                }
-            }
-        )
-        LOGGER.debug("Activated {} nodes for {}", num, node.name)
-
-        // For some nodes it may happen that they are not reachable via AST, but we still need to
-        // set their type to the requested value
-        typeCache.forEach { (n, types) ->
-            types.forEach { t -> n.type = typeManager.resolvePossibleTypedef(t, this) }
-        }
-    }
 }

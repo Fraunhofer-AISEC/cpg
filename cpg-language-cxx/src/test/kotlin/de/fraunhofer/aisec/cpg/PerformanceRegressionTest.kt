@@ -73,7 +73,6 @@ class PerformanceRegressionTest {
                     // enough for those special moments where for some reasons the GitHub runners
                     // are slowing down (maybe because of some hidden quota).
                     it.useParallelFrontends(false)
-                    it.typeSystemActiveInFrontend(true)
                 }
             assertNotNull(tu)
         }

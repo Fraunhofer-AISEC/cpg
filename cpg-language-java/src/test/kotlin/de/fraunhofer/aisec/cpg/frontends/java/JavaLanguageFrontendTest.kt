@@ -627,10 +627,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(record)
 
         val constructor = record.constructors[0]
-        val op = constructor.getBodyStatementAs(0, BinaryOperator::class.java)
+        val op = constructor.getBodyStatementAs(0, AssignExpression::class.java)
         assertNotNull(op)
 
-        val lhs = op.lhs as? MemberExpression
+        val lhs = op.lhs<MemberExpression>()
         val receiver =
             (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration?
         assertNotNull(receiver)
@@ -768,10 +768,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val doSomething = evenMoreInnerClass.methods["doSomething"]
         assertNotNull(doSomething)
 
-        val binOp = doSomething.bodyOrNull<BinaryOperator>()
-        assertNotNull(binOp)
+        val assign = doSomething.bodyOrNull<AssignExpression>()
+        assertNotNull(assign)
 
-        val ref = ((binOp.rhs as? MemberExpression)?.base as DeclaredReferenceExpression).refersTo
+        val ref = ((assign.rhs<MemberExpression>())?.base as DeclaredReferenceExpression).refersTo
         assertNotNull(ref)
         assertSame(ref, thisOuterClass)
     }

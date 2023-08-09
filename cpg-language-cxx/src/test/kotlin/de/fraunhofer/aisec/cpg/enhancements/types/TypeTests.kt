@@ -268,11 +268,11 @@ internal class TypeTests : BaseTest() {
         assertTrue(ptr.type is PointerType)
         assertEquals((ptr.type as PointerType).elementType, regularInt.type)
 
-        // Test type Propagation (auto) UnknownType
+        // Unresolved auto type propagation
         val unknown = findByUniqueName(variableDeclarations, "unknown")
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), unknown.type)
+        assertIs<AutoType>(unknown.type)
 
-        // Test type Propagation auto
+        // Resolved auto type propagation
         val propagated = findByUniqueName(variableDeclarations, "propagated")
         assertEquals(regularInt.type, propagated.type)
     }

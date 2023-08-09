@@ -25,9 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.GraphExamples
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -36,19 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 
@@ -159,15 +147,25 @@ class ShortcutsTest {
     fun testCallersOf() {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val print = classDecl.byNameOrNull<MethodDeclaration>("print")
+        val print = classDecl.methods["print"]
         assertNotNull(print)
+
+        val expected = mutableListOf<FunctionDeclaration>()
+        val main = classDecl.functions["main"]
+        assertNotNull(main)
+
+        val scRefs = main.refs("sc")
+        scRefs.forEach {
+            assertNotNull(it)
+            assertLocalName("ShortcutClass", it.type)
+        }
+
+        val printCall = main.calls["print"]
+        assertFullName("ShortcutClass.print", printCall)
+        expected.add(main)
 
         val actual = shortcutClassResult.callersOf(print)
 
-        val expected = mutableListOf<FunctionDeclaration>()
-        val main = classDecl.byNameOrNull<MethodDeclaration>("main")
-        assertNotNull(main)
-        expected.add(main)
         assertTrue(expected.containsAll(actual))
         assertTrue(actual.containsAll(expected))
     }
@@ -193,28 +191,37 @@ class ShortcutsTest {
         val nestedThen = thenStatement.thenStatement as CompoundStatement
         expected.add(nestedThen)
         expected.add(nestedThen.statements[0])
-        expected.add((nestedThen.statements[0] as BinaryOperator).lhs)
-        expected.add(((nestedThen.statements[0] as BinaryOperator).lhs as MemberExpression).base)
-        expected.add((nestedThen.statements[0] as BinaryOperator).rhs)
+        expected.add((nestedThen.statements[0] as AssignExpression).lhs.first())
+        expected.add(
+            ((nestedThen.statements[0] as AssignExpression).lhs.first() as MemberExpression).base
+        )
+        expected.add((nestedThen.statements[0] as AssignExpression).rhs.first())
         val nestedElse = thenStatement.elseStatement as CompoundStatement
         expected.add(nestedElse)
         expected.add(nestedElse.statements[0])
-        expected.add((nestedElse.statements[0] as BinaryOperator).lhs)
-        expected.add(((nestedElse.statements[0] as BinaryOperator).lhs as MemberExpression).base)
-        expected.add((nestedElse.statements[0] as BinaryOperator).rhs)
+        expected.add((nestedElse.statements[0] as AssignExpression).lhs.first())
+        expected.add(
+            ((nestedElse.statements[0] as AssignExpression).lhs.first() as MemberExpression).base
+        )
+        expected.add((nestedElse.statements[0] as AssignExpression).rhs.first())
 
         ifStatement.elseStatement?.let { expected.add(it) }
         expected.add((ifStatement.elseStatement as CompoundStatement).statements[0])
         expected.add(
-            ((ifStatement.elseStatement as CompoundStatement).statements[0] as BinaryOperator).lhs
+            ((ifStatement.elseStatement as CompoundStatement).statements[0] as AssignExpression)
+                .lhs
+                .first()
         )
         expected.add(
-            (((ifStatement.elseStatement as CompoundStatement).statements[0] as BinaryOperator).lhs
-                    as MemberExpression)
+            (((ifStatement.elseStatement as CompoundStatement).statements[0] as AssignExpression)
+                    .lhs
+                    .first() as MemberExpression)
                 .base
         )
         expected.add(
-            ((ifStatement.elseStatement as CompoundStatement).statements[0] as BinaryOperator).rhs
+            ((ifStatement.elseStatement as CompoundStatement).statements[0] as AssignExpression)
+                .rhs
+                .first()
         )
 
         assertTrue(expected.containsAll(actual))
@@ -264,8 +271,9 @@ class ShortcutsTest {
             ((((magic2.body as CompoundStatement).statements[1] as IfStatement).elseStatement
                         as CompoundStatement)
                     .statements[0]
-                    as BinaryOperator)
+                    as AssignExpression)
                 .lhs
+                .first()
 
         val paramPassed2 = aAssignment2.followPrevDFGEdgesUntilHit { it is Literal<*> }
         assertEquals(1, paramPassed2.fulfilled.size)
@@ -279,8 +287,9 @@ class ShortcutsTest {
             ((((magic.body as CompoundStatement).statements[0] as IfStatement).elseStatement
                         as CompoundStatement)
                     .statements[0]
-                    as BinaryOperator)
+                    as AssignExpression)
                 .lhs
+                .first()
 
         val paramPassed = attrAssignment.followPrevDFGEdgesUntilHit { it is Literal<*> }
         assertEquals(1, paramPassed.fulfilled.size)
@@ -299,8 +308,9 @@ class ShortcutsTest {
             ((((magic.body as CompoundStatement).statements[0] as IfStatement).elseStatement
                         as CompoundStatement)
                     .statements[0]
-                    as BinaryOperator)
+                    as AssignExpression)
                 .lhs
+                .first()
 
         val paramPassed = attrAssignment.followPrevEOGEdgesUntilHit { it is Literal<*> }
         assertEquals(1, paramPassed.fulfilled.size)
@@ -324,9 +334,9 @@ class ShortcutsTest {
 
         val paramPassed =
             ifCondition.followNextEOGEdgesUntilHit {
-                it is BinaryOperator &&
+                it is AssignExpression &&
                     it.operatorCode == "=" &&
-                    (it.rhs as? DeclaredReferenceExpression)?.refersTo ==
+                    (it.rhs.first() as? DeclaredReferenceExpression)?.refersTo ==
                         (ifCondition.lhs as DeclaredReferenceExpression).refersTo
             }
         assertEquals(1, paramPassed.fulfilled.size)
@@ -344,8 +354,9 @@ class ShortcutsTest {
             ((((magic.body as CompoundStatement).statements[0] as IfStatement).elseStatement
                         as CompoundStatement)
                     .statements[0]
-                    as BinaryOperator)
+                    as AssignExpression)
                 .lhs
+                .first()
 
         val paramPassed = attrAssignment.followPrevDFG { it is Literal<*> }
         assertNotNull(paramPassed)

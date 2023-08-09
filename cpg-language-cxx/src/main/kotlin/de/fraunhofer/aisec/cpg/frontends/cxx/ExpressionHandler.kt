@@ -28,8 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -44,6 +42,7 @@ import org.eclipse.cdt.core.dom.ast.IASTLiteralExpression.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTLambdaExpression
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTDesignatedInitializer
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
+import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
 /**
  * Note: CDT expresses hierarchies in Interfaces to allow to have multi-inheritance in java. Because
@@ -64,8 +63,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is IASTFieldReference -> handleFieldReference(node)
             is IASTFunctionCallExpression -> handleFunctionCallExpression(node)
             is IASTCastExpression -> handleCastExpression(node)
-            is IASTInitializerList -> handleInitializerList(node)
             is IASTExpressionList -> handleExpressionList(node)
+            is IASTInitializerList -> frontend.initializerHandler.handle(node)
+                    ?: ProblemExpression("could not parse initializer list")
             is IASTArraySubscriptExpression -> handleArraySubscriptExpression(node)
             is IASTTypeIdExpression -> handleTypeIdExpression(node)
             is CPPASTNewExpression -> handleNewExpression(node)
@@ -103,7 +103,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        // By default, the outer variables passed by value to the lambda are unmutable. But we can
+        // By default, the outer variables passed by value to the lambda are immutable. But we can
         // either make the function "mutable" or pass everything by reference.
         lambda.areVariablesMutable =
             (node.declarator as? CPPASTFunctionDeclarator)?.isMutable == true ||
@@ -112,6 +112,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val anonymousFunction =
             node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
                 ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
+        anonymousFunction.type = FunctionType.computeType(anonymousFunction)
 
         frontend.scopeManager.enterScope(anonymousFunction)
         anonymousFunction.body = frontend.statementHandler.handle(node.body)
@@ -211,6 +212,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // an implicit one
                 initializer = newConstructExpression(t.name.localName, "${t.name.localName}()")
                 initializer.isImplicit = true
+                initializer.type = t
             }
 
             // we also need to "forward" our template parameters (if we have any) to the construct
@@ -290,8 +292,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         if (isPrimitive(castExpression.castType) || ctx.operator == 4) {
             castExpression.type = castExpression.castType
-        } else {
-            castExpression.expression.registerTypeListener(castExpression)
         }
 
         return castExpression
@@ -437,8 +437,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             reference is CastExpression -> {
                 // this really is a cast expression in disguise
                 reference.expression =
-                    handle(ctx.arguments.first())
-                        ?: ProblemExpression("could not parse argument for cast")
+                    ctx.arguments.firstOrNull()?.let { handle(it) }
+                        ?: newProblemExpression("could not parse argument for cast")
                 return reference
             }
             else -> {
@@ -476,46 +476,27 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return expressionList
     }
 
-    private fun handleBinaryExpression(ctx: IASTBinaryExpression): BinaryOperator {
-        var operatorCode = ""
-        when (ctx.operator) {
-            op_multiply -> operatorCode = "*"
-            op_divide -> operatorCode = "/"
-            op_modulo -> operatorCode = "%"
-            op_plus -> operatorCode = "+"
-            op_minus -> operatorCode = "-"
-            op_shiftLeft -> operatorCode = "<<"
-            op_shiftRight -> operatorCode = ">>"
-            op_lessThan -> operatorCode = "<"
-            op_greaterThan -> operatorCode = ">"
-            op_lessEqual -> operatorCode = "<="
-            op_greaterEqual -> operatorCode = ">="
-            op_binaryAnd -> operatorCode = "&"
-            op_binaryXor -> operatorCode = "^"
-            op_binaryOr -> operatorCode = "|"
-            op_logicalAnd -> operatorCode = "&&"
-            op_logicalOr -> operatorCode = "||"
-            op_assign -> operatorCode = "="
-            op_multiplyAssign -> operatorCode = "*="
-            op_divideAssign -> operatorCode = "/="
-            op_moduloAssign -> operatorCode = "%="
-            op_plusAssign -> operatorCode = "+="
-            op_minusAssign -> operatorCode = "-="
-            op_shiftLeftAssign -> operatorCode = "<<="
-            op_shiftRightAssign -> operatorCode = ">>="
-            op_binaryAndAssign -> operatorCode = "&="
-            op_binaryXorAssign -> operatorCode = "^="
-            op_binaryOrAssign -> operatorCode = "|="
-            op_equals -> operatorCode = "=="
-            op_notequals -> operatorCode = "!="
-            op_pmdot -> operatorCode = ".*"
-            op_pmarrow -> operatorCode = "->*"
-            op_max -> operatorCode = ">?"
-            op_min -> operatorCode = "?<"
-            op_ellipses -> operatorCode = "..."
-            else ->
-                Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
-        }
+    private fun handleBinaryExpression(ctx: IASTBinaryExpression): Expression {
+        val operatorCode =
+            when (ctx.operator) {
+                op_assign,
+                op_multiplyAssign,
+                op_divideAssign,
+                op_moduloAssign,
+                op_plusAssign,
+                op_minusAssign,
+                op_shiftLeftAssign,
+                op_shiftRightAssign,
+                op_binaryAndAssign,
+                op_binaryXorAssign,
+                op_binaryOrAssign -> {
+                    return handleAssignment(ctx)
+                }
+                op_pmdot -> ".*"
+                op_pmarrow -> "->*"
+                else -> String(ASTStringUtil.getBinaryOperatorString(ctx))
+            }
+
         val binaryOperator = newBinaryOperator(operatorCode, ctx.rawSignature)
         val lhs = handle(ctx.operand1) ?: newProblemExpression("could not parse lhs")
         val rhs =
@@ -529,6 +510,25 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         binaryOperator.rhs = rhs
 
         return binaryOperator
+    }
+
+    private fun handleAssignment(ctx: IASTBinaryExpression): Expression {
+        val lhs = handle(ctx.operand1) ?: newProblemExpression("missing LHS")
+        val rhs =
+            if (ctx.operand2 != null) {
+                handle(ctx.operand2)
+            } else {
+                handle(ctx.initOperand2)
+            }
+                ?: newProblemExpression("missing RHS")
+
+        val operatorCode = String(ASTStringUtil.getBinaryOperatorString(ctx))
+        val assign = newAssignExpression(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
+        if (rhs is UnaryOperator && rhs.input is DeclaredReferenceExpression) {
+            (rhs.input as DeclaredReferenceExpression).resolutionHelper = lhs
+        }
+
+        return assign
     }
 
     private fun handleLiteralExpression(ctx: IASTLiteralExpression): Expression {
@@ -548,22 +548,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             lk_nullptr -> newLiteral(null, objectType("nullptr_t"), ctx.rawSignature)
             else -> newLiteral(String(ctx.value), unknownType(), ctx.rawSignature)
         }
-    }
-
-    private fun handleInitializerList(ctx: IASTInitializerList): InitializerListExpression {
-        val expression = newInitializerListExpression(ctx.rawSignature)
-
-        for (clause in ctx.clauses) {
-            handle(clause)?.let {
-                val edge = PropertyEdge(expression, it)
-                edge.addProperty(Properties.INDEX, expression.initializerEdges.size)
-
-                expression.initializerEdges.add(edge)
-                expression.addPrevDFG(it)
-            }
-        }
-
-        return expression
     }
 
     private fun handleCXXDesignatedInitializer(

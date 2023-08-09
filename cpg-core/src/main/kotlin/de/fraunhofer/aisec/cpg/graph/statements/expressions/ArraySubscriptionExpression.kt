@@ -26,16 +26,16 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
-import java.util.stream.Collectors
 
 /**
  * Represents the subscription or access of an array of the form `array[index]`, where both `array`
  * ([arrayExpression]) and `index` ([subscriptExpression]) are of type [Expression]. CPP can
  * overload operators thus changing semantics of array access.
  */
-class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase {
+class ArraySubscriptionExpression : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
     /**
      * The array on which the access is happening. This is most likely a
      * [DeclaredReferenceExpression].
@@ -43,9 +43,10 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
     @AST
     var arrayExpression: Expression = ProblemExpression("could not parse array expression")
         set(value) {
+            field.unregisterTypeObserver(this)
             field = value
             type = getSubscriptType(value.type)
-            value.registerTypeListener(this)
+            value.registerTypeObserver(this)
         }
 
     /**
@@ -75,29 +76,42 @@ class ArraySubscriptionExpression : Expression(), HasType.TypeListener, HasBase 
         }
     }
 
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!isTypeSystemActive) {
+    override fun typeChanged(newType: Type, src: HasType) {
+        // Make sure the source is really our array
+        if (src != arrayExpression) {
             return
         }
-        val previous = type
-        setType(getSubscriptType(src.propagationType), root)
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
+
+        this.type = getSubscriptType(newType)
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Make sure the source is really our array
+        if (src != arrayExpression) {
+            return
+        }
+
+        addAssignedTypes(assignedTypes.map { getSubscriptType(it) }.toSet())
+    }
+
+    override fun addArgument(expression: Expression) {
+        if (arrayExpression is ProblemExpression) {
+            arrayExpression = expression
+        } else if (subscriptExpression is ProblemExpression) {
+            subscriptExpression = expression
         }
     }
 
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!isTypeSystemActive) {
-            return
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        return if (arrayExpression == old) {
+            arrayExpression = new
+            true
+        } else if (subscriptExpression == old) {
+            subscriptExpression = new
+            true
+        } else {
+            false
         }
-        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-        subTypes.addAll(
-            src.possibleSubTypes
-                .stream()
-                .map { arrayType: Type -> getSubscriptType(arrayType) }
-                .collect(Collectors.toList())
-        )
-        setPossibleSubTypes(subTypes, root)
     }
 
     override fun equals(other: Any?): Boolean {

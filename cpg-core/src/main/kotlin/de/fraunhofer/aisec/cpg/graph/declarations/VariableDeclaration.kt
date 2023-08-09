@@ -26,19 +26,21 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.types.AutoType
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-/** Represents the declaration of a variable. */
-class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitializer {
+/** Represents the declaration of a local variable. */
+open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
 
     /**
-     * We need a way to store the templateParameters that a VariableDeclaration might have before
-     * the ConstructExpression is created.
+     * We need a way to store the templateParameters that a [VariableDeclaration] might have before
+     * the [ConstructExpression] is created.
      *
      * Because templates are only used by a small subset of languages and variable declarations are
      * used often, we intentionally make this a nullable list instead of an empty list.
@@ -62,63 +64,16 @@ class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitial
     @AST
     override var initializer: Expression? = null
         set(value) {
-            field?.unregisterTypeListener(this)
-            if (field is HasType.TypeListener) {
-                unregisterTypeListener(field as HasType.TypeListener)
-            }
+            field?.unregisterTypeObserver(this)
             field = value
-            value?.registerTypeListener(this)
-
-            // if the initializer implements a type listener, inform it about our type changes
-            // since the type is tied to the declaration, but it is convenient to have the type
-            // information in the initializer, i.e. in a ConstructExpression.
-            if (value is HasType.TypeListener) {
-                registerTypeListener(value as HasType.TypeListener)
+            if (value is DeclaredReferenceExpression) {
+                value.resolutionHelper = this
             }
+            value?.registerTypeObserver(this)
         }
 
     fun <T> getInitializerAs(clazz: Class<T>): T? {
         return clazz.cast(initializer)
-    }
-
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        if (type !is UnknownType && src.propagationType == oldType) {
-            return
-        }
-        val previous = type
-        val newType =
-            if (src === initializer && initializer is InitializerListExpression) {
-                // Init list is seen as having an array type, but can be used ambiguously. It can be
-                // either used to initialize an array, or to initialize some objects. If it is used
-                // as an
-                // array initializer, we need to remove the array/pointer layer from the type,
-                // otherwise it can be ignored once we have a type
-                if (isArray) {
-                    src.type
-                } else if (type !is UnknownType) {
-                    return
-                } else {
-                    src.type.dereference()
-                }
-            } else {
-                src.propagationType
-            }
-        setType(newType, root)
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-        subTypes.addAll(src.possibleSubTypes)
-        setPossibleSubTypes(subTypes, root)
     }
 
     override fun toString(): String {
@@ -129,10 +84,29 @@ class VariableDeclaration : ValueDeclaration(), HasType.TypeListener, HasInitial
             .toString()
     }
 
-    override val assignments: List<Assignment>
-        get() {
-            return initializer?.let { listOf(Assignment(it, this, this)) } ?: listOf()
+    override fun typeChanged(newType: Type, src: HasType) {
+        // Only accept type changes from our initializer, if any
+        if (src != initializer) {
+            return
         }
+
+        // In the auto-inference case, we want to set the type of our declaration to the
+        // declared type of the initializer
+        if (this.type is AutoType) {
+            type = newType
+        } else {
+            // Otherwise, we are at least interested in what the initializer's type is, to see
+            // whether we can fill our assigned types with that
+            addAssignedType(newType)
+        }
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Propagate the assigned types from our initializer into the declaration
+        if (src == initializer) {
+            addAssignedTypes(assignedTypes)
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

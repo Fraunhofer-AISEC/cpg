@@ -238,7 +238,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
                 // Pass the remaining arguments
                 for (expr in args.subList(1.coerceAtMost(args.size - 1), args.size - 1)) {
-                    handle(expr)?.let { construct += it }
+                    handle(expr).let { construct += it }
                 }
 
                 construct
@@ -347,7 +347,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         val construct = newConstructExpression(type.name, rawNode = compositeLit)
         construct.type = type
 
-        val list = newInitializerListExpression(rawNode = compositeLit)
+        val list = newInitializerListExpression(type, rawNode = compositeLit)
         construct += list
 
         // Normally, the construct expression would not have DFG edge, but in this case we are

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,26 +23,28 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.types
 
-import com.fasterxml.jackson.annotation.JsonIgnore
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.unknownType
 
-/** An assignment holder is a node that intentionally contains assignment edges. */
-interface AssignmentHolder {
-    val assignments: List<Assignment>
+/**
+ * This type represents a [Type] that uses auto-inference (usually from an initializer) to determine
+ * it's actual type. It is commonly used in dynamically typed languages or in languages that have a
+ * special keyword, such as `auto` in C++.
+ *
+ * Note: This is intentionally a distinct type and not the [UnknownType].
+ */
+class AutoType(override var language: Language<*>?) : Type("auto", language) {
+    override fun reference(pointer: PointerType.PointerOrigin?): Type {
+        return PointerType(this, pointer)
+    }
+
+    override fun dereference(): Type {
+        return unknownType()
+    }
+
+    override fun duplicate(): Type {
+        return AutoType(this.language)
+    }
 }
-
-/** An assignment assigns a certain value (usually an [Expression]) to a certain target. */
-class Assignment(
-    /** The value expression that is assigned to the target. */
-    val value: Expression,
-
-    /** The target(s) of this assignment. */
-    val target: HasType,
-
-    /** The holder of this assignment */
-    @JsonIgnore val holder: AssignmentHolder
-) : PropertyEdge<Node>(value, target as Node)

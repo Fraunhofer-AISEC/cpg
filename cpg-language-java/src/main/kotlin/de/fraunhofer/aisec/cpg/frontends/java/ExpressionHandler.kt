@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import com.github.javaparser.Range
 import com.github.javaparser.TokenRange
 import com.github.javaparser.ast.Node
+import com.github.javaparser.ast.body.VariableDeclarator
 import com.github.javaparser.ast.expr.*
 import com.github.javaparser.ast.expr.Expression
 import com.github.javaparser.resolution.UnsolvedSymbolException
@@ -42,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.function.Supplier
 import kotlin.collections.set
+import kotlin.jvm.optionals.getOrNull
 import org.slf4j.LoggerFactory
 
 class ExpressionHandler(lang: JavaLanguageFrontend) :
@@ -95,7 +97,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             castExpression.type = frontend.typeOf(castExpr.type.resolve().asPrimitive())
         } else {
             // Get Runtime type from cast expression for complex types;
-            castExpression.expression.registerTypeListener(castExpression)
+            // castExpression.expression.registerTypeListener(castExpression)
         }
         return castExpression
     }
@@ -130,9 +132,18 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleArrayInitializerExpr(expr: Expression): Statement {
         val arrayInitializerExpr = expr as ArrayInitializerExpr
+
+        // We need to go back to the parent to get the array type
+        val arrayType =
+            when (val parent = expr.parentNode.getOrNull()) {
+                is ArrayCreationExpr -> frontend.typeOf(parent.elementType).array()
+                is VariableDeclarator -> frontend.typeOf(parent.type)
+                else -> unknownType()
+            }
+
         // ArrayInitializerExpressions are converted into InitializerListExpressions to reduce the
         // syntactic distance a CPP and JAVA CPG
-        val initList = this.newInitializerListExpression(expr.toString())
+        val initList = this.newInitializerListExpression(arrayType, expr.toString())
         val initializers =
             arrayInitializerExpr.values
                 .map { handle(it) }
@@ -196,7 +207,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         return this.newConditionalExpression(condition, thenExpr, elseExpr, superType)
     }
 
-    private fun handleAssignmentExpression(expr: Expression): BinaryOperator {
+    private fun handleAssignmentExpression(expr: Expression): AssignExpression {
         val assignExpr = expr.asAssignExpr()
 
         // first, handle the target. this is the first argument of the operator call
@@ -210,11 +221,15 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             handle(assignExpr.value)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                 ?: newProblemExpression("could not parse lhs")
-        val binaryOperator =
-            this.newBinaryOperator(assignExpr.operator.asString(), assignExpr.toString())
-        binaryOperator.lhs = lhs
-        binaryOperator.rhs = rhs
-        return binaryOperator
+        val assign =
+            this.newAssignExpression(
+                assignExpr.operator.asString(),
+                listOf(lhs),
+                listOf(rhs),
+                rawNode = assignExpr
+            )
+
+        return assign
     }
 
     // Not sure how to handle this exactly yet

@@ -219,8 +219,6 @@ private constructor(
                 sourceLocations = list
             }
 
-            TypeManager.isTypeSystemActive = ctx.config.typeSystemActiveInFrontend
-
             usedFrontends.addAll(
                 if (useParallelFrontends) {
                     parseParallel(component, result, ctx, sourceLocations)
@@ -228,19 +226,6 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
-
-            if (!config.typeSystemActiveInFrontend) {
-                TypeManager.isTypeSystemActive = true
-
-                result.components.forEach { s ->
-                    s.translationUnits.forEach {
-                        val bench =
-                            Benchmark(this.javaClass, "Activating types for ${it.name}", true)
-                        ctx.scopeManager.activateTypes(it, ctx.typeManager)
-                        bench.stop()
-                    }
-                }
-            }
         }
 
         return usedFrontends

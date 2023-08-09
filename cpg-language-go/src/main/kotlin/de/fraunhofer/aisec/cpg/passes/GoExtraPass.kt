@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -126,14 +127,14 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     }
 
     /**
-     * handleForEachStatement adds a [HasType.TypeListener] to the [ForEachStatement.iterable] of an
+     * handleForEachStatement adds a [HasType.TypeObserver] to the [ForEachStatement.iterable] of an
      * [ForEachStatement] in order to determine the types used in [ForEachStatement.variable] (index
      * and iterated value).
      */
     private fun handleForEachStatement(forEach: ForEachStatement) {
-        (forEach.iterable as HasType).registerTypeListener(
-            object : HasType.TypeListener {
-                override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
+        (forEach.iterable as HasType).registerTypeObserver(
+            object : HasType.TypeObserver {
+                override fun typeChanged(newType: Type, src: HasType) {
                     if (src.type is UnknownType) {
                         return
                     }
@@ -154,7 +155,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                     }
                 }
 
-                override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
+                override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
                     // Nothing to do
                 }
             }
@@ -178,7 +179,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                 val ref = scopeManager.resolveReference(expr)
                 if (ref == null) {
                     // We need to implicitly declare it, if its not declared before.
-                    val decl = newVariableDeclaration(expr.name, expr.type)
+                    val decl = newVariableDeclaration(expr.name, expr.autoType())
                     decl.location = expr.location
                     decl.isImplicit = true
                     decl.initializer = assign.findValue(expr)

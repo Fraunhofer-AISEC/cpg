@@ -27,13 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import java.util.*
+import de.fraunhofer.aisec.cpg.graph.types.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /**
@@ -48,185 +43,35 @@ import org.neo4j.ogm.annotation.Transient
  * <p>This is not possible in Java, the aforementioned code example would prompt a compile error.
  */
 abstract class Expression : Statement(), HasType {
+    @Transient override val typeObservers = mutableListOf<HasType.TypeObserver>()
 
-    @Relationship("TYPE") private var _type: Type = unknownType()
-
-    /** The type of the value after evaluation. */
-    override var type: Type
-        get() {
-            val result: Type =
-                if (isTypeSystemActive) {
-                    _type
-                } else {
-                    ctx?.typeManager
-                        ?.typeCache
-                        ?.computeIfAbsent(this) { mutableListOf() }
-                        ?.firstOrNull()
-                        ?: unknownType()
-                }
-            return result
-        }
+    override var type: Type = unknownType()
         set(value) {
-            // Trigger the type listener foo
-            setType(value, null)
+            val old = field
+            field = value
+
+            // Only inform our observer if the type has changed. This should not trigger if we
+            // "squash" types into one, because they should still be regarded as "equal", but not
+            // the "same".
+            if (old != value) {
+                informObservers(HasType.TypeObserver.ChangeType.TYPE)
+            }
+
+            // We also want to add the definitive type (if known) to our assigned types
+            if (value !is UnknownType && value !is AutoType) {
+                addAssignedType(value)
+            }
         }
 
-    @Relationship("POSSIBLE_SUB_TYPES") protected var _possibleSubTypes = mutableListOf<Type>()
-
-    override var possibleSubTypes: List<Type>
-        get() {
-            return if (!isTypeSystemActive) {
-                ctx?.typeManager?.typeCache?.getOrDefault(this, emptyList()) ?: listOf()
-            } else _possibleSubTypes
-        }
+    override var assignedTypes: Set<Type> = mutableSetOf()
         set(value) {
-            setPossibleSubTypes(value, ArrayList())
-        }
-
-    @Transient override val typeListeners: MutableSet<HasType.TypeListener> = HashSet()
-
-    override val propagationType: Type
-        get() {
-            return if (type is ReferenceType) {
-                (type as ReferenceType?)?.elementType ?: unknownType()
-            } else type
-        }
-
-    @Override
-    override fun setType(type: Type, root: MutableList<HasType>?) {
-        var t: Type = type
-        var r: MutableList<HasType>? = root
-
-        // TODO Document this method. It is called very often (potentially for each AST node) and
-        //  performs less than optimal.
-        if (!isTypeSystemActive) {
-            this._type = t
-            cacheType(t)
-            return
-        }
-
-        if (r == null) {
-            r = mutableListOf()
-        }
-
-        // No (or only unknown) type given, loop detected? Stop early because there's nothing we can
-        // do.
-        if (
-            r.contains(this) ||
-                t is UnknownType ||
-                stopPropagation(this.type, t) ||
-                (this.type is FunctionPointerType && t !is FunctionPointerType)
-        ) {
-            return
-        }
-
-        val oldType = this.type
-        // Backup to check if something changed
-
-        t = t.duplicate()
-        val subTypes = mutableSetOf<Type>()
-
-        // Check all current subtypes and consider only those which are "different enough" to type.
-        for (s in possibleSubTypes) {
-            if (!s.isSimilar(s)) {
-                subTypes.add(s)
+            if (field == value) {
+                return
             }
+
+            field = value
+            informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
-
-        subTypes.add(t)
-
-        // Probably tries to get something like the best supertype of all possible subtypes.
-        this._type = registerType(getCommonType(subTypes).orElse(t))
-
-        // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
-        //  getting the common type??
-        val newSubtypes = mutableListOf<Type>()
-        for (s in subTypes) {
-            if (isSupertypeOf(this.type, s)) {
-                newSubtypes.add(registerType(s))
-            }
-        }
-
-        possibleSubTypes = newSubtypes
-
-        if (oldType == t) {
-            // Nothing changed, so we do not have to notify the listeners.
-            return
-        }
-
-        // Add current node to the set of "triggers" to detect potential loops.
-        r.add(this)
-
-        // Notify all listeners about the changed type
-        for (l in typeListeners) {
-            if (l != this) {
-                l.typeChanged(this, r, oldType)
-            }
-        }
-    }
-
-    override fun setPossibleSubTypes(possibleSubTypes: List<Type>, root: MutableList<HasType>) {
-        var list = possibleSubTypes
-        list = list.filterNot { type -> type is UnknownType }.distinct().toMutableList()
-        if (!isTypeSystemActive) {
-            list.forEach { t -> cacheType(t) }
-            return
-        }
-        if (root.contains(this)) {
-            return
-        }
-        val oldSubTypes = this.possibleSubTypes
-        this._possibleSubTypes = list
-
-        if (HashSet(oldSubTypes).containsAll(list)) {
-            // Nothing changed, so we do not have to notify the listeners.
-            return
-        }
-        // Add current node to the set of "triggers" to detect potential loops.
-        root.add(this)
-
-        // Notify all listeners about the changed type
-        for (listener in typeListeners) {
-            if (listener != this) {
-                listener.possibleSubTypesChanged(this, root)
-            }
-        }
-    }
-
-    override fun resetTypes(type: Type) {
-        val oldSubTypes = possibleSubTypes
-        val oldType = this._type
-        this._type = type
-        possibleSubTypes = listOf(type)
-        val root = mutableListOf<HasType>(this)
-        if (oldType != type) {
-            typeListeners
-                .stream()
-                .filter { l: HasType.TypeListener -> l != this }
-                .forEach { l: HasType.TypeListener -> l.typeChanged(this, root, oldType) }
-        }
-        if (oldSubTypes.size != 1 || !oldSubTypes.contains(type))
-            typeListeners
-                .stream()
-                .filter { l: HasType.TypeListener -> l != this }
-                .forEach { l: HasType.TypeListener -> l.possibleSubTypesChanged(this, root) }
-    }
-
-    override fun refreshType() {
-        val root = mutableListOf<HasType>(this)
-        for (l in typeListeners) {
-            l.typeChanged(this, root, type)
-            l.possibleSubTypesChanged(this, root)
-        }
-    }
-
-    override fun updateType(type: Type) {
-        this._type = type
-    }
-
-    override fun updatePossibleSubtypes(types: List<Type>) {
-        this._possibleSubTypes = types.toMutableList()
-    }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -242,9 +87,7 @@ abstract class Expression : Statement(), HasType {
         if (other !is Expression) {
             return false
         }
-        return (super.equals(other) &&
-            type == other.type &&
-            possibleSubTypes == other.possibleSubTypes)
+        return (super.equals(other) && type == other.type)
     }
 
     override fun hashCode(): Int {
