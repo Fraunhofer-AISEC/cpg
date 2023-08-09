@@ -30,11 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.types.SecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 
-@DependsOn(CallResolver::class)
+@ExecuteBefore(CallResolver::class)
 open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val firstOrderTypes = mutableSetOf<Type>()
     protected val typeState = mutableMapOf<Type, MutableList<Type>>()
@@ -197,13 +197,13 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * ensures that the if a nodes contains secondary type edges, those types are also merged and no
      * duplicate is left
      *
-     * @param node implementing [SecondaryTypeEdge]
+     * @param node implementing [HasSecondaryTypeEdge]
      */
     protected fun ensureUniqueSecondaryTypeEdge(node: Node) {
-        if (node is SecondaryTypeEdge) {
+        if (node is HasSecondaryTypeEdge) {
             node.updateType(typeState.keys)
-        } else if (node is HasType && node.type is SecondaryTypeEdge) {
-            (node.type as SecondaryTypeEdge).updateType(typeState.keys)
+        } else if (node is HasType && node.type is HasSecondaryTypeEdge) {
+            (node.type as HasSecondaryTypeEdge).updateType(typeState.keys)
         }
     }
 

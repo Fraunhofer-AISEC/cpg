@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.commonType
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
@@ -36,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsL
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.types.SecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
@@ -47,7 +48,8 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
-open class CallExpression : Expression(), HasType.TypeObserver, SecondaryTypeEdge, ArgumentHolder {
+open class CallExpression :
+    Expression(), HasType.TypeObserver, HasSecondaryTypeEdge, ArgumentHolder {
     /**
      * Connection to its [FunctionDeclaration]. This will be populated by the [CallResolver]. This
      * will have an effect on the [type]
@@ -275,16 +277,19 @@ open class CallExpression : Expression(), HasType.TypeObserver, SecondaryTypeEdg
 
         // TODO(oxisto): We could actually use the newType (which is a FunctionType now)
         val types =
-            invokeEdges.map(PropertyEdge<FunctionDeclaration>::end).mapNotNull {
-                if (it.returnTypes.size == 1) {
-                    return@mapNotNull it.returnTypes.firstOrNull()
-                } else if (it.returnTypes.size > 1) {
-                    return@mapNotNull TupleType(it.returnTypes)
+            invokeEdges
+                .map(PropertyEdge<FunctionDeclaration>::end)
+                .mapNotNull {
+                    if (it.returnTypes.size == 1) {
+                        return@mapNotNull it.returnTypes.firstOrNull()
+                    } else if (it.returnTypes.size > 1) {
+                        return@mapNotNull TupleType(it.returnTypes)
+                    }
+                    null
                 }
-                null
-            }
-        val alternative = if (types.isNotEmpty()) types[0] else unknownType()
-        val commonType = getCommonType(types).orElse(alternative)
+                .toSet()
+        val alternative = if (types.isNotEmpty()) types.first() else unknownType()
+        val commonType = types.commonType ?: alternative
 
         this.type = commonType
     }

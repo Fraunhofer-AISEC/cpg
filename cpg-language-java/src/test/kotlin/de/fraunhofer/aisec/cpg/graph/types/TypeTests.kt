@@ -134,12 +134,12 @@ internal class TypeTests : BaseTest() {
         ) {
             val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy")
             val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
-            val root = objectType("multistep.Root")
-            val level0 = objectType("multistep.Level0")
-            val level1 = objectType("multistep.Level1")
-            val level1b = objectType("multistep.Level1B")
-            val level2 = objectType("multistep.Level2")
-            val unrelated = objectType("multistep.Unrelated")
+            val root = assertNotNull(result.records["multistep.Root"]).toType()
+            val level0 = assertNotNull(result.records["multistep.Level0"]).toType()
+            val level1 = assertNotNull(result.records["multistep.Level1"]).toType()
+            val level1b = assertNotNull(result.records["multistep.Level1B"]).toType()
+            val level2 = assertNotNull(result.records["multistep.Level2"]).toType()
+            val unrelated = assertNotNull(result.records["multistep.Unrelated"]).toType()
             getCommonTypeTestGeneral(
                 root,
                 level0,
@@ -171,44 +171,33 @@ internal class TypeTests : BaseTest() {
                |
              Level2
          */
-        val provider = ctx.scopeManager
-
         // A single type is its own least common ancestor
         for (t in listOf(root, level0, level1, level1b, level2)) {
-            assertEquals(Optional.of(t), ctx.typeManager.getCommonType(listOf(t), ctx))
+            assertEquals(t, setOf(t).commonType)
         }
 
         // Root is the root of all types
         for (t in listOf(level0, level1, level1b, level2)) {
-            assertEquals(Optional.of(root), ctx.typeManager.getCommonType(listOf(t, root), ctx))
+            assertEquals(root, setOf(t, root).commonType)
         }
 
         // Level0 is above all types but Root
         for (t in listOf(level1, level1b, level2)) {
-            assertEquals(Optional.of(level0), ctx.typeManager.getCommonType(listOf(t, level0), ctx))
+            assertEquals(level0, setOf(t, level0).commonType)
         }
 
         // Level1 and Level1B have Level0 as common ancestor
-        assertEquals(
-            Optional.of(level0),
-            ctx.typeManager.getCommonType(listOf(level1, level1b), ctx)
-        )
+        assertEquals(level0, setOf(level1, level1b).commonType)
 
         // Level2 and Level1B have Level0 as common ancestor
-        assertEquals(
-            Optional.of(level0),
-            ctx.typeManager.getCommonType(listOf(level2, level1b), ctx)
-        )
+        assertEquals(level0, setOf(level2, level1b).commonType)
 
         // Level1 and Level2 have Level1 as common ancestor
-        assertEquals(
-            Optional.of(level1),
-            ctx.typeManager.getCommonType(listOf(level1, level2), ctx)
-        )
+        assertEquals(level1, setOf(level1, level2).commonType)
 
         // Check unrelated type behavior: No common root class
         for (t in listOf(root, level0, level1, level1b, level2)) {
-            assertEquals(Optional.empty(), ctx.typeManager.getCommonType(listOf(unrelated, t), ctx))
+            assertEquals(null, setOf(unrelated, t).commonType)
         }
     }
 }
