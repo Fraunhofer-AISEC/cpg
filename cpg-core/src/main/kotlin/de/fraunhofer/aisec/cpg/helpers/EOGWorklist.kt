@@ -275,8 +275,13 @@ inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     while (worklist.isNotEmpty()) {
         val (nextEdge, state) = worklist.pop()
 
-        val newState = transformation(nextEdge, state.duplicate(), worklist)
-        if (worklist.update(nextEdge, newState)) {
+        val insideBB =
+            (nextEdge.end.nextEOG.size == 1 &&
+                nextEdge.end.prevEOG.size == 1 &&
+                nextEdge.start.nextEOG.size == 1)
+        val newState =
+            transformation(nextEdge, if (insideBB) state else state.duplicate(), worklist)
+        if (insideBB || worklist.update(nextEdge, newState)) {
             nextEdge.end.nextEOGEdges.forEach {
                 if (it is K) {
                     worklist.push(it, newState)

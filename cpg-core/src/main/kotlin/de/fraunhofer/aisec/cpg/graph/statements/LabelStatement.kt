@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -33,7 +35,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * A label attached to a statement that is used to change control flow by labeled continue and
  * breaks (Java) or goto(C++).
  */
-class LabelStatement : Statement() {
+class LabelStatement : Statement(), StatementHolder {
     /** Statement that the label is attached to. Can be a simple or compound statement. */
     @AST var subStatement: Statement? = null
 
@@ -47,6 +49,14 @@ class LabelStatement : Statement() {
             .append("label", label)
             .toString()
     }
+
+    override var statementEdges: MutableList<PropertyEdge<Statement>>
+        get() =
+            subStatement?.let { mutableListOf(PropertyEdge(this, it, mutableMapOf())) }
+                ?: mutableListOf()
+        set(value) {
+            subStatement = value.firstOrNull()?.end
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
