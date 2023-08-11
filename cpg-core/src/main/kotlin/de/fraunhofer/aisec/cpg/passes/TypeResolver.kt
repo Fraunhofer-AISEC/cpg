@@ -32,9 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 
-@ExecuteBefore(CallResolver::class)
 open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val firstOrderTypes = mutableSetOf<Type>()
     protected val typeState = mutableMapOf<Type, MutableList<Type>>()
