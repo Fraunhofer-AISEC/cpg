@@ -33,7 +33,7 @@ import java.util.*
  * its element types(s). This can potentially be a chain of different pointer/array operations.
  */
 class WrapState {
-    /** The total depth of "wrapping". This is usually equals to [Type.referenceDepth] */
+    /** The total depth of "wrapping". This is usually equal to [Type.referenceDepth] */
     var depth = 0
 
     /**
