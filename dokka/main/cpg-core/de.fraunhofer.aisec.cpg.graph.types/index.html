@@ -135,6 +135,21 @@
               </div>
             </div>
           </div>
+<a data-name="596797582%2FClasslikes%2F1556141526" anchor-label="HasSecondaryTypeEdge" id="596797582%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-has-secondary-type-edge/index.html"><span>Has</span><wbr><span>Secondary</span><wbr><span>Type</span><wbr><span><span>Edge</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="596797582%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><span class="token keyword">interface </span><a href="-has-secondary-type-edge/index.html">HasSecondaryTypeEdge</a></div><div class="brief "><p class="paragraph">The <a href="../de.fraunhofer.aisec.cpg.passes/-type-resolver/index.html">TypeResolver</a> needs to be aware of all outgoing edges to types in order to merge equal types to the same node. For the primary type edge, this is achieved through the <a href="-has-type/index.html">HasType</a> interface. If a node has additional type edges (e.g. <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-type-param-declaration/default.html">TypeParamDeclaration.default</a>) the node must implement the <a href="-has-secondary-type-edge/update-type.html">updateType</a> method, so that the current type is always replaced with the merged one.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="695769487%2FClasslikes%2F1556141526" anchor-label="HasType" id="695769487%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
@@ -205,7 +220,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-object-type/index.html">ObjectType</a> : <a href="-type/index.html">Type</a>, <a href="-secondary-type-edge/index.html">SecondaryTypeEdge</a></div><div class="brief "><p class="paragraph">This is the main type in the Type system. ObjectTypes describe objects, as instances of a class. This also includes primitive data types.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-object-type/index.html">ObjectType</a> : <a href="-type/index.html">Type</a>, <a href="-has-secondary-type-edge/index.html">HasSecondaryTypeEdge</a></div><div class="brief "><p class="paragraph">This is the main type in the Type system. ObjectTypes describe objects, as instances of a class. This also includes primitive data types.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -266,21 +281,6 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-reference-type/index.html">ReferenceType</a> : <a href="-type/index.html">Type</a>, <a href="-second-order-type/index.html">SecondOrderType</a></div><div class="brief "><p class="paragraph">ReferenceTypes describe CPP References (int&amp;), which represent an alternative name for a variable. It is necessary to make this distinction, and not just rely on the original type as it is required for matching parameters in function arguments to discover which implementation is called.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="856373816%2FClasslikes%2F1556141526" anchor-label="SecondaryTypeEdge" id="856373816%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="-secondary-type-edge/index.html"><span>Secondary</span><wbr><span>Type</span><wbr><span><span>Edge</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="856373816%2FClasslikes%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-secondary-type-edge/index.html">SecondaryTypeEdge</a></div><div class="brief "><p class="paragraph">The <a href="../de.fraunhofer.aisec.cpg.passes/-type-resolver/index.html">TypeResolver</a> needs to be aware of all outgoing edges to types in order to merge equal types to the same node. For the primary type edge, this is achieved through the hasType interface. If a node has additional type edges (e.g. <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-type-param-declaration/default.html">TypeParamDeclaration.default</a>) the node must implement the <a href="-secondary-type-edge/update-type.html">updateType</a> method, so that the current type is always replaced with the merged one</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -370,7 +370,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-wrap-state/index.html">WrapState</a></div><div class="brief "><p class="paragraph">Stores State for rewrap when typeinformation has been unwrapped</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-wrap-state/index.html">WrapState</a></div><div class="brief "><p class="paragraph">A <a href="-wrap-state/index.html">WrapState</a> holds information how a "wrapped" type (for example a <a href="-pointer-type/index.html">PointerType</a>) is built from its element types(s). This can potentially be a chain of different pointer/array operations.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -379,37 +379,7 @@
       </div>
       <div data-togglable="EXTENSION_FUNCTION">
         <h2 class="">Functions</h2>
-        <div class="table"><a data-name="2077830314%2FFunctions%2F1556141526" anchor-label="getCommonType" id="2077830314%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="get-common-type.html"><span>get</span><wbr><span>Common</span><wbr><span><span>Type</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2077830314%2FFunctions%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">.</span><a href="get-common-type.html"><span class="token function">getCommonType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">types<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-collection/index.html">Collection</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-type/index.html">Type</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html">Optional</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-type/index.html">Type</a><span class="token operator">&gt;</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-1461473335%2FFunctions%2F1556141526" anchor-label="isSupertypeOf" id="-1461473335%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="is-supertype-of.html"><span>is</span><wbr><span>Supertype</span><wbr><span><span>Of</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1461473335%2FFunctions%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">.</span><a href="is-supertype-of.html"><span class="token function">isSupertypeOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">superType<span class="token operator">: </span><a href="-type/index.html">Type</a><span class="token punctuation">, </span></span><span class="parameter ">subType<span class="token operator">: </span><a href="-type/index.html">Type</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="13594754%2FFunctions%2F1556141526" anchor-label="registerType" id="13594754%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+        <div class="table"><a data-name="13594754%2FFunctions%2F1556141526" anchor-label="registerType" id="13594754%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">

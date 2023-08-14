@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
-    <title>SecondaryTypeEdge</title>
+    <title>HasSecondaryTypeEdge</title>
 <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
     if (storage == null) {
         const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -36,7 +36,7 @@
 <a href="../../../index.html">
 <span>cpg</span>            </a>    </div>
     <div>
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph.types/-secondary-type-edge/index.html&quot;}">main</dokka-template-command>    </div>
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph.types/-has-secondary-type-edge/index.html&quot;}">main</dokka-template-command>    </div>
     <div class="pull-right d-flex">
         <div class="filter-section" id="filter-section">
                 <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-core:dokkaHtmlPartial/main">jvm</button>
@@ -50,23 +50,23 @@
         <div id="sideMenu"></div>
     </div>
     <div id="main">
-<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.graph.types/SecondaryTypeEdge///PointingToDeclaration//1556141526">
-  <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.graph.types</a><span class="delimiter">/</span><span class="current">SecondaryTypeEdge</span></div>
+<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.graph.types/HasSecondaryTypeEdge///PointingToDeclaration//1556141526">
+  <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.graph.types</a><span class="delimiter">/</span><span class="current">HasSecondaryTypeEdge</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>Secondary</span><wbr><span>Type</span><wbr><span><span>Edge</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">SecondaryTypeEdge</a></div><p class="paragraph">The <a href="../../de.fraunhofer.aisec.cpg.passes/-type-resolver/index.html">TypeResolver</a> needs to be aware of all outgoing edges to types in order to merge equal types to the same node. For the primary type edge, this is achieved through the hasType interface. If a node has additional type edges (e.g. <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-type-param-declaration/default.html">TypeParamDeclaration.default</a>) the node must implement the <a href="update-type.html">updateType</a> method, so that the current type is always replaced with the merged one</p><h4 class="">Inheritors</h4><div class="table"><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-type-param-declaration/index.html">TypeParamDeclaration</a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-object-type/index.html">ObjectType</a></div></span></div><div></div></div></div></div></div></div>
+    <h1 class="cover"><span>Has</span><wbr><span>Secondary</span><wbr><span>Type</span><wbr><span><span>Edge</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><span class="token keyword">interface </span><a href="index.html">HasSecondaryTypeEdge</a></div><p class="paragraph">The <a href="../../de.fraunhofer.aisec.cpg.passes/-type-resolver/index.html">TypeResolver</a> needs to be aware of all outgoing edges to types in order to merge equal types to the same node. For the primary type edge, this is achieved through the <a href="../-has-type/index.html">HasType</a> interface. If a node has additional type edges (e.g. <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-type-param-declaration/default.html">TypeParamDeclaration.default</a>) the node must implement the <a href="update-type.html">updateType</a> method, so that the current type is always replaced with the merged one.</p><h4 class="">Inheritors</h4><div class="table"><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-type-param-declaration/index.html">TypeParamDeclaration</a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-object-type/index.html">ObjectType</a></div></span></div><div></div></div></div></div></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,FUNCTION,PROPERTY">Members</button></div>
     <div class="tabs-section-body">
       <div data-togglable="FUNCTION">
         <h2 class="">Functions</h2>
-        <div class="table"><a data-name="1609744227%2FFunctions%2F1556141526" anchor-label="updateType" id="1609744227%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+        <div class="table"><a data-name="-1451912135%2FFunctions%2F1556141526" anchor-label="updateType" id="-1451912135%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
                   <div><a href="update-type.html"><span>update</span><wbr><span><span>Type</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1609744227%2FFunctions%2F1556141526"></span>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1451912135%2FFunctions%2F1556141526"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
