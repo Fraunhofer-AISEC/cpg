@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.commonType
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.getCommonType
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -77,13 +77,13 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
     }
 
     override fun typeChanged(newType: Type, src: HasType) {
-        val types = mutableListOf<Type>()
+        val types = mutableSetOf<Type>()
 
         thenExpr?.type?.let { types.add(it) }
         elseExpr?.type?.let { types.add(it) }
 
-        val alternative = if (types.isNotEmpty()) types[0] else unknownType()
-        this.type = getCommonType(types).orElse(alternative)
+        val alternative = if (types.isNotEmpty()) types.first() else unknownType()
+        this.type = types.commonType ?: alternative
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {

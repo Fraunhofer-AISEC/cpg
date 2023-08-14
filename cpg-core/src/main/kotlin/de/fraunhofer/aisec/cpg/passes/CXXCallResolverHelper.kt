@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.util.HashMap
 import java.util.regex.Pattern
 
@@ -40,16 +40,12 @@ import java.util.regex.Pattern
  * @return true if the CallExpression signature can be transformed into the FunctionDeclaration
  *   signature by means of casting
  */
-fun compatibleSignatures(
-    call: CallExpression,
-    callSignature: List<Type>,
-    functionSignature: List<Type>
-): Boolean {
+fun compatibleSignatures(callSignature: List<Type>, functionSignature: List<Type>): Boolean {
     return if (callSignature.size == functionSignature.size) {
         for (i in callSignature.indices) {
             if (
                 callSignature[i].isPrimitive != functionSignature[i].isPrimitive &&
-                    !call.isSupertypeOf(functionSignature[i], callSignature[i])
+                    !callSignature[i].isDerivedFrom(functionSignature[i])
             ) {
                 return false
             }
@@ -103,7 +99,7 @@ fun resolveWithImplicitCast(
     for (functionDeclaration in initialInvocationCandidates) {
         val callSignature = getCallSignatureWithDefaults(call, functionDeclaration)
         // Check if the signatures match by implicit casts
-        if (compatibleSignatures(call, callSignature, functionDeclaration.signatureTypes)) {
+        if (compatibleSignatures(callSignature, functionDeclaration.signatureTypes)) {
             val implicitCastTargets =
                 signatureWithImplicitCastTransformation(
                     call,
@@ -118,7 +114,7 @@ fun resolveWithImplicitCast(
                 // to the same target type
                 checkMostCommonImplicitCast(implicitCasts, implicitCastTargets)
             }
-            if (compatibleSignatures(call, call.signature, functionDeclaration.signatureTypes)) {
+            if (compatibleSignatures(call.signature, functionDeclaration.signatureTypes)) {
                 invocationTargetsWithImplicitCast.add(functionDeclaration)
             } else {
                 invocationTargetsWithImplicitCastAndDefaults.add(functionDeclaration)
@@ -269,7 +265,6 @@ fun resolveConstructorWithImplicitCast(
         }
         if (
             compatibleSignatures(
-                constructExpression,
                 constructExpression.signature,
                 constructorDeclaration.signatureTypes,
             )
@@ -285,7 +280,6 @@ fun resolveConstructorWithImplicitCast(
             return constructorDeclaration
         } else if (
             compatibleSignatures(
-                constructExpression,
                 workingSignature,
                 constructorDeclaration.signatureTypes,
             )
@@ -468,8 +462,7 @@ fun getTemplateInitializationSignature(
     templateCall: CallExpression,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
-    explicitInstantiated: MutableList<ParameterizedType>,
-    ctx: TranslationContext
+    explicitInstantiated: MutableList<ParameterizedType>
 ): Map<Declaration?, Node?>? {
     // Construct Signature
     val signature =
@@ -478,8 +471,7 @@ fun getTemplateInitializationSignature(
             templateCall,
             instantiationType,
             orderedInitializationSignature,
-            explicitInstantiated,
-            ctx
+            explicitInstantiated
         )
             ?: return null
     val parameterizedTypeResolution = getParameterizedSignaturesFromInitialization(signature)
@@ -532,15 +524,14 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
     templateCall: CallExpression,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
-    explicitInstantiated: MutableList<ParameterizedType>,
-    ctx: TranslationContext
+    explicitInstantiated: MutableList<ParameterizedType>
 ): MutableMap<Declaration?, Node?>? {
     val instantiationSignature: MutableMap<Declaration?, Node?> = HashMap()
     for (i in functionTemplateDeclaration.parameters.indices) {
         if (i < templateCall.templateParameters.size) {
             val callParameter = templateCall.templateParameters[i]
             val templateParameter = functionTemplateDeclaration.parameters[i]
-            if (isInstantiated(callParameter, templateParameter, ctx.typeManager)) {
+            if (isInstantiated(callParameter, templateParameter)) {
                 instantiationSignature[templateParameter] = callParameter
                 instantiationType[callParameter] =
                     TemplateDeclaration.TemplateInitialization.EXPLICIT
@@ -575,11 +566,7 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
  *   callParameterArg must be an Expression and its type must match the type of the
  *   ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
  */
-fun isInstantiated(
-    callParameterArg: Node,
-    templateParameter: Declaration?,
-    typeManager: TypeManager
-): Boolean {
+fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boolean {
     var callParameter = callParameterArg
     if (callParameter is TypeExpression) {
         callParameter = callParameter.type
@@ -588,7 +575,7 @@ fun isInstantiated(
         callParameter is ObjectType
     } else if (callParameter is Expression && templateParameter is ParamVariableDeclaration) {
         callParameter.type == templateParameter.type ||
-            typeManager.isSupertypeOf(templateParameter.type, callParameter.type, callParameterArg)
+            callParameter.type.isDerivedFrom(templateParameter.type)
     } else {
         false
     }

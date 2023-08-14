@@ -195,4 +195,32 @@ abstract class Type : Node {
     companion object {
         const val UNKNOWN_TYPE_STRING = "UNKNOWN"
     }
+
+    /**
+     * An ancestor is an item in a tree of types spanning from one particular [Type] to all of its
+     * [Type.superTypes] (and their [Type.superTypes], and so on). Each item holds information about
+     * the current "depth" within the tree.
+     */
+    class Ancestor(val type: Type, var depth: Int) {
+        override fun hashCode(): Int {
+            return Objects.hash(type)
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) {
+                return true
+            }
+            if (other !is Ancestor) {
+                return false
+            }
+            return type == other.type
+        }
+
+        override fun toString(): String {
+            return ToStringBuilder(this, TO_STRING_STYLE)
+                .append("type", type.name)
+                .append("depth", depth)
+                .toString()
+        }
+    }
 }

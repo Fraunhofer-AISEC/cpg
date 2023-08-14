@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.isSupertypeOf
+import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.util.*
 import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -131,7 +131,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                     return true
                 }
                 val provided = targetSignature[i]
-                if (!isSupertypeOf(declared.type, provided)) {
+                if (!provided.isDerivedFrom(declared.type)) {
                     return false
                 }
             }

@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.isDerivedFrom
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
 import java.util.*
@@ -603,7 +604,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 val catchParam = catchClause.parameter
                 if (catchParam == null) { // e.g. catch (...)
                     currentPredecessors.addAll(eogEdges)
-                } else if (typeManager.isSupertypeOf(catchParam.type, throwType, node)) {
+                } else if (throwType.isDerivedFrom(catchParam.type)) {
                     currentPredecessors.addAll(eogEdges)
                     toRemove.add(throwType)
                 }
