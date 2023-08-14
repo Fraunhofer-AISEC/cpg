@@ -30,9 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
@@ -54,6 +56,7 @@ import java.util.*
  * at places where it is crucial to have parsed all [RecordDeclaration]s. Otherwise, type
  * information in the graph might not be fully correct
  */
+@DependsOn(TypeResolver::class)
 open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enums = mutableListOf<EnumDeclaration>()
@@ -69,7 +72,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         for (enumDecl in enums) {
             val directSupertypeRecords =
-                enumDecl.superTypes.mapNotNull { s: Type -> recordMap[s.name] }.toSet()
+                enumDecl.superTypes.mapNotNull { (it as? ObjectType)?.recordDeclaration }.toSet()
             val allSupertypes =
                 directSupertypeRecords.map { findSupertypeRecords(it) }.flatten().toSet()
             enumDecl.superTypeDeclarations = allSupertypes
@@ -99,7 +102,8 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun findSupertypeRecords(recordDecl: RecordDeclaration): Set<RecordDeclaration> {
-        val superTypeDeclarations = recordDecl.superTypes.mapNotNull { recordMap[it.name] }.toSet()
+        val superTypeDeclarations =
+            recordDecl.superTypes.mapNotNull { (it as ObjectType).recordDeclaration }.toSet()
         recordDecl.superTypeDeclarations = superTypeDeclarations
         return superTypeDeclarations
     }

@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
-import java.util.*
 
 /**
  * This interfaces denotes that the given [Node] has a "type". Currently, we only have two known
@@ -186,17 +185,7 @@ interface HasType : ContextProvider, LanguageProvider {
     }
 }
 
-fun Node.isSupertypeOf(superType: Type, subType: Type): Boolean {
-    val c = ctx ?: throw TranslationException("context not available")
-    return c.typeManager.isSupertypeOf(superType, subType, this)
-}
-
 fun <T : Type> Node.registerType(type: T): T {
     val c = ctx ?: throw TranslationException("context not available")
     return c.typeManager.registerType(type)
-}
-
-fun Node.getCommonType(types: Collection<Type>): Optional<Type> {
-    val c = ctx ?: throw TranslationException("context not available")
-    return c.typeManager.getCommonType(types, this.ctx)
 }

@@ -109,7 +109,6 @@ private constructor(
                 log.debug("Cleaning up {} Frontends", executedFrontends.size)
 
                 executedFrontends.forEach { it.cleanup() }
-                ctx.typeManager.cleanup()
             }
         }
 

@@ -32,21 +32,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
-import java.util.function.Consumer
-import java.util.stream.Collectors
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.slf4j.LoggerFactory
 
 class TypeManager {
-    private val typeToRecord = Collections.synchronizedMap(HashMap<Type?, RecordDeclaration?>())
-
     /**
      * Stores the relationship between parameterized RecordDeclarations (e.g. Classes using
      * Generics) to the ParameterizedType to be able to resolve the Type of the fields, since
@@ -59,8 +50,8 @@ class TypeManager {
             mutableMapOf<TemplateDeclaration, MutableList<ParameterizedType>>()
         )
 
-    val firstOrderTypes = Collections.synchronizedSet(HashSet<Type>())
-    val secondOrderTypes = Collections.synchronizedSet(HashSet<Type>())
+    val firstOrderTypes: MutableSet<Type> = Collections.synchronizedSet(HashSet())
+    val secondOrderTypes: MutableSet<Type> = Collections.synchronizedSet(HashSet())
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
@@ -101,7 +92,7 @@ class TypeManager {
      * @param name name of the ParameterizedType we are looking for
      * @return
      */
-    fun getTypeParameter(
+    private fun getTypeParameter(
         templateDeclaration: TemplateDeclaration,
         name: String
     ): ParameterizedType? {
@@ -196,8 +187,8 @@ class TypeManager {
         return parameterizedType
     }
 
-    fun <T : Type?> registerType(t: T): T {
-        if (t!!.isFirstOrderType) {
+    fun <T : Type> registerType(t: T): T {
+        if (t.isFirstOrderType) {
             firstOrderTypes.add(t)
         } else {
             secondOrderTypes.add(t)
@@ -208,300 +199,6 @@ class TypeManager {
 
     fun typeExists(name: String): Boolean {
         return firstOrderTypes.stream().anyMatch { type: Type -> type.root.name.toString() == name }
-    }
-
-    fun isUnknown(type: Type?): Boolean {
-        return type is UnknownType
-    }
-
-    /**
-     * @param generics the list of parameter types
-     * @return true if the generics contain parameterized Types
-     */
-    fun containsParameterizedType(generics: List<Type?>): Boolean {
-        for (t in generics) {
-            if (t is ParameterizedType) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun rewrapType(
-        type: Type,
-        depth: Int,
-        pointerOrigins: Array<PointerOrigin?>,
-        reference: Boolean,
-        referenceType: ReferenceType?
-    ): Optional<Type> {
-        var type = type
-        if (depth > 0) {
-            for (i in depth - 1 downTo 0) {
-                type = type.reference(pointerOrigins[i])
-            }
-        }
-        if (reference) {
-            referenceType!!.elementType = type
-            return Optional.of(referenceType)
-        }
-        return Optional.of(type)
-    }
-
-    private fun unwrapTypes(types: Collection<Type>, wrapState: WrapState): Set<Type> {
-        // TODO Performance: This method is called very often (for each setType()) and does four
-        // iterations over "types". Reduce number of iterations.
-        var types = types
-        val original: Set<Type> = HashSet(types)
-        val unwrappedTypes = mutableSetOf<Type>()
-        var pointerOrigins = arrayOfNulls<PointerOrigin>(0)
-        var depth = 0
-        var counter = 0
-        var reference = false
-        var referenceType: ReferenceType? = null
-        val t1 = types.stream().findAny().orElse(null)
-        if (t1 is ReferenceType) {
-            for (t in types) {
-                referenceType = t as ReferenceType?
-                if (!referenceType!!.isSimilar(t)) {
-                    return emptySet()
-                }
-                unwrappedTypes.add(t.elementType)
-                reference = true
-            }
-            types = unwrappedTypes
-        }
-        val t2 = types.stream().findAny().orElse(null)
-        if (t2 is PointerType) {
-            for (t in types) {
-                if (counter == 0) {
-                    depth = t.referenceDepth
-                    counter++
-                }
-                if (t.referenceDepth != depth) {
-                    return emptySet()
-                }
-                unwrappedTypes.add(t.root)
-                pointerOrigins = arrayOfNulls(depth)
-                var containedType: Type = t2
-                var i = 0
-                pointerOrigins[i] = (containedType as PointerType).pointerOrigin
-                while (containedType is PointerType) {
-                    containedType = containedType.elementType
-                    if (containedType is PointerType) {
-                        pointerOrigins[++i] = containedType.pointerOrigin
-                    }
-                }
-            }
-        }
-        wrapState.depth = depth
-        wrapState.setPointerOrigin(pointerOrigins)
-        wrapState.isReference = reference
-        wrapState.referenceType = referenceType
-        return if (unwrappedTypes.isEmpty() && original.isNotEmpty()) {
-            original
-        } else {
-            unwrappedTypes
-        }
-    }
-
-    /**
-     * This function is a relict from the old ages. It iterates through a collection of types and
-     * returns the type they have in *common*. For example, if two types `A` and `B` both derive
-     * from the interface `C`` then `C` would be returned. Because this contains some legacy code
-     * that does crazy stuff, we need access to scope information, so we can build a map between
-     * type information and their record declarations. We want to get rid of that in the future.
-     *
-     * @param types the types to compare
-     * @param ctx a [TranslationContext].
-     * @return the common type
-     */
-    fun getCommonType(types: Collection<Type>, ctx: TranslationContext?): Optional<Type> {
-        var types = types
-        val provider = ctx!!.scopeManager
-
-        // TODO: Documentation needed.
-        val sameType =
-            (types
-                .stream()
-                .map { t: Type -> t.javaClass.canonicalName }
-                .collect(Collectors.toSet())
-                .size == 1)
-        if (!sameType) {
-            // No commonType for different Types
-            return Optional.empty()
-        }
-        val wrapState = WrapState()
-        types = unwrapTypes(types, wrapState)
-        if (types.isEmpty()) {
-            return Optional.empty()
-        } else if (types.size == 1) {
-            return rewrapType(
-                types.iterator().next(),
-                wrapState.depth,
-                wrapState.pointerOrigins,
-                wrapState.isReference,
-                wrapState.referenceType
-            )
-        }
-        val scope = provider.scope ?: return Optional.empty()
-
-        // We need to find the global scope
-        val globalScope = scope.globalScope ?: return Optional.empty()
-        for (child in globalScope.children) {
-            if (child is RecordScope && child.astNode is RecordDeclaration) {
-                typeToRecord[(child.astNode as RecordDeclaration?)!!.toType()] =
-                    child.astNode as RecordDeclaration?
-            }
-
-            // HACKY HACK HACK
-            if (child is NameScope) {
-                for (child2 in child.children) {
-                    if (child2 is RecordScope && child2.astNode is RecordDeclaration) {
-                        typeToRecord[(child2.astNode as RecordDeclaration?)!!.toType()] =
-                            child2.astNode as RecordDeclaration?
-                    }
-                }
-            }
-        }
-        val allAncestors =
-            types
-                .map { t: Type? -> typeToRecord.getOrDefault(t, null) }
-                .filter { obj: RecordDeclaration? -> Objects.nonNull(obj) }
-                .map { r: RecordDeclaration? -> getAncestors(r, 0) }
-
-        // normalize/reverse depth: roots start at 0, increasing on each level
-        for (ancestors in allAncestors) {
-            val farthest = ancestors.stream().max(Comparator.comparingInt(Ancestor::depth))
-            if (farthest.isPresent) {
-                val maxDepth: Int = farthest.get().depth
-                ancestors.forEach(Consumer { a: Ancestor -> a.depth = (maxDepth - a.depth) })
-            }
-        }
-        var commonAncestors: MutableSet<Ancestor> = HashSet()
-        for (i in allAncestors.indices) {
-            if (i == 0) {
-                commonAncestors.addAll(allAncestors[i])
-            } else {
-                val others = allAncestors[i]
-                val newCommonAncestors = mutableSetOf<Ancestor>()
-                // like Collection#retainAll but swaps relevant items out if the other set's
-                // matching ancestor has a higher depth
-                for (curr in commonAncestors) {
-                    val toRetain =
-                        others
-                            .filter { a: Ancestor -> a == curr }
-                            .map { a: Ancestor -> if (curr.depth >= a.depth) curr else a }
-                            .firstOrNull()
-                    toRetain?.let { newCommonAncestors.add(it) }
-                }
-                commonAncestors = newCommonAncestors
-            }
-        }
-        val lca = commonAncestors.stream().max(Comparator.comparingInt(Ancestor::depth))
-        val commonType = lca.map { it.record?.toType() ?: it.record.unknownType() }
-        val finalType: Type
-        finalType =
-            if (commonType.isPresent) {
-                commonType.get()
-            } else {
-                return commonType
-            }
-        return rewrapType(
-            finalType,
-            wrapState.depth,
-            wrapState.pointerOrigins,
-            wrapState.isReference,
-            wrapState.referenceType
-        )
-    }
-
-    private fun getAncestors(recordDeclaration: RecordDeclaration?, depth: Int): Set<Ancestor> {
-        if (recordDeclaration!!.superTypes.isEmpty()) {
-            val ret = HashSet<Ancestor>()
-            ret.add(Ancestor(recordDeclaration, depth))
-            return ret
-        }
-        val ancestors =
-            recordDeclaration.superTypes
-                .stream()
-                .map { s: Type? -> typeToRecord.getOrDefault(s, null) }
-                .filter { obj: RecordDeclaration? -> Objects.nonNull(obj) }
-                .map { s: RecordDeclaration? -> getAncestors(s, depth + 1) }
-                .flatMap { obj: Set<Ancestor> -> obj.stream() }
-                .collect(Collectors.toSet())
-        ancestors.add(Ancestor(recordDeclaration, depth))
-        return ancestors
-    }
-
-    fun isSupertypeOf(superType: Type, subType: Type, provider: MetadataProvider): Boolean {
-        var language: Language<*>? = null
-        val ctx: TranslationContext?
-        if (superType is UnknownType && subType is UnknownType) return true
-        if (superType.referenceDepth != subType.referenceDepth) {
-            return false
-        }
-        if (provider is LanguageProvider) {
-            language = provider.language
-        }
-        ctx =
-            if (provider is ContextProvider) {
-                provider.ctx
-            } else {
-                log.error("Missing context provider")
-                return false
-            }
-
-        // arrays and pointers match in C/C++
-        // TODO: Make this independent from the specific language
-        if (isCXX(language) && checkArrayAndPointer(superType, subType)) {
-            return true
-        }
-
-        // ObjectTypes can be passed as ReferenceTypes
-        if (superType is ReferenceType) {
-            return isSupertypeOf(superType.elementType, subType, provider)
-        }
-
-        // We cannot proceed without a scope provider
-        if (provider !is ScopeProvider) {
-            return false
-        }
-        val commonType = getCommonType(HashSet(java.util.List.of(superType, subType)), ctx)
-        return if (commonType.isPresent) {
-            commonType.get() == superType
-        } else {
-            // If array depth matches: check whether these are types from the standard library
-            try {
-                val superCls = Class.forName(superType.typeName)
-                val subCls = Class.forName(subType.typeName)
-                superCls.isAssignableFrom(subCls)
-            } catch (e: ClassNotFoundException) {
-                // Not in the class path or other linkage exception, can't help here
-                false
-            } catch (e: NoClassDefFoundError) {
-                false
-            }
-        }
-    }
-
-    private fun isCXX(language: Language<*>?): Boolean {
-        return (language != null &&
-            (language.javaClass.simpleName == "CLanguage" ||
-                language.javaClass.simpleName == "CPPLanguage"))
-    }
-
-    fun checkArrayAndPointer(first: Type, second: Type): Boolean {
-        val firstDepth = first.referenceDepth
-        val secondDepth = second.referenceDepth
-        return if (firstDepth == secondDepth) {
-            (first.root.name == second.root.name && first.isSimilar(second))
-        } else {
-            false
-        }
-    }
-
-    fun cleanup() {
-        typeToRecord.clear()
     }
 
     /**
@@ -544,72 +241,203 @@ class TypeManager {
         return if (applicable == null) {
             alias
         } else {
-            reWrapType(alias, applicable)
+            alias.changeRoot(applicable)
+        }
+    }
+}
+
+val Type.ancestors: Set<Type.Ancestor>
+    get() {
+        return this.getAncestors(0)
+    }
+
+internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
+    val types = mutableSetOf<Type.Ancestor>()
+
+    // Recursively call ourselves on our super types. There is a little hack here that we need to do
+    // for object types created from RecordDeclaration::toType() because their supertypes might not
+    // be set correctly. This would be better, if we change a RecordDeclaration to a
+    // ValueDeclaration and set the corresponding object type to its type.
+    val superTypes =
+        if (this is ObjectType) {
+            this.recordDeclaration?.superTypes ?: setOf()
+        } else {
+            superTypes
+        }
+
+    types += superTypes.flatMap { it.getAncestors(depth + 1) }
+
+    // Since the chain starts with our type, we add ourselves to it
+    types += Type.Ancestor(this, depth)
+
+    return types
+}
+
+/** Checks, if this [Type] is either derived from or equals to [superType]. */
+fun Type.isDerivedFrom(superType: Type): Boolean {
+    // Retrieve all ancestor types of our type (more concretely of the root type)
+    val root = this.root
+    val superTypes = root.ancestors.map { it.type }
+
+    // Check, if super type (or its root) is in the list
+    return superType.root in superTypes
+}
+
+/**
+ * This computed property returns the common type in a [Collection] of [Type] objects. For example,
+ * if two types `A` and `B` both derive from the interface `C`` then `C` would be returned.
+ *
+ * More specifically, the lowest common ancestors (LCA) in a tree containing all ancestors of all
+ * types in the set is returned.
+ */
+val Collection<Type>.commonType: Type?
+    get() {
+        // If we only have one type, we can just directly return it
+        val single = this.singleOrNull()
+        if (single != null) {
+            return single
+        }
+
+        // Make sure, we only compare types of the same "kind" of type (e.g. ObjectType vs.
+        // NumericType)
+        val sameKind = this.map { it::class.simpleName }.toSet().size == 1
+        if (!sameKind) {
+            return null
+        }
+
+        // We also need to make sure that we compare the same reference depth and wrap state
+        // (which contains the pointer origins), because otherwise we need to re-create the
+        // equivalent wrap state at the end. Make sure we only have one wrap state before we
+        // proceed.
+        val wrapStates = this.map { it.wrapState }.toSet()
+        val wrapState = wrapStates.singleOrNull() ?: return null
+
+        // Build all ancestors out of the root types. This way we compare the most inner type,
+        // regardless of the wrap state.
+        val allAncestors = this.map { it.root.ancestors }
+
+        // Find the lowest common ancestor (LCA) by maintaining a list of common ancestors, filling
+        // them with the ancestors of the first type and then eliminate the list of common ancestors
+        // step-by-step by looping over the ancestor list of all other types.
+        var commonAncestors = allAncestors.first().toList()
+        for (others in allAncestors.subList(1, allAncestors.size)) {
+            // In the remaining loop, we are trying to eliminate potential candidates from the
+            // list, or more specifically, we are doing an intersect of both lists. If both have an
+            // ancestor in common, but on a different depth, the item which has a higher depth is
+            // chosen.
+            commonAncestors =
+                commonAncestors.mapNotNull { ancestor ->
+                    val other =
+                        others.find {
+                            // The equals/hashcode method of an Ancestor will ignore its depth, but
+                            // only look at its type. Therefore, ancestors with the same type but
+                            // different depths will match here.
+                            it == ancestor
+                        }
+                            ?: return@mapNotNull null
+
+                    // We then need to select one of both, depending on the depth
+                    if (ancestor.depth >= other.depth) {
+                        ancestor
+                    } else {
+                        other
+                    }
+                }
+        }
+
+        // Find the one with the largest depth (which is closest to the original type, since the
+        // root node is 0) and re-wrap the final common type back into the original wrap state
+        return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.wrap(wrapState)
+    }
+
+/**
+ * Calculates and returns the [WrapState] of the current type. A [WrapState] can be used to compute
+ * a "wrapped" type, for example a [PointerType] back from its [Type.root].
+ */
+val Type.wrapState: WrapState
+    get() {
+        val wrapState = WrapState()
+        var type = this
+
+        // A reference can only be the last item, so we check if the most outer type is a reference
+        // type
+        if (type is ReferenceType) {
+            wrapState.referenceType = this as ReferenceType?
+            wrapState.isReference = true
+            type = type.elementType
+        }
+
+        // We already know the depth, so we can just set this and allocate the pointer origins array
+        wrapState.depth = this.referenceDepth
+        wrapState.pointerOrigins = arrayOfNulls(wrapState.depth)
+
+        // If we have a pointer type, "unwrap" the type until we are back at the element type
+        if (type is PointerType) {
+            var i = 0
+            wrapState.pointerOrigins[i] = type.pointerOrigin
+            while (type is PointerType) {
+                type = type.elementType
+                if (type is PointerType) {
+                    wrapState.pointerOrigins[++i] = type.pointerOrigin
+                }
+            }
+        }
+
+        return wrapState
+    }
+
+/**
+ * Wraps the given [Type] into a chain of [PointerType]s and [ReferenceType]s, given the
+ * instructions in [WrapState].
+ */
+fun Type.wrap(wrapState: WrapState): Type {
+    var type = this
+    if (wrapState.depth > 0) {
+        for (i in wrapState.depth - 1 downTo 0) {
+            type = type.reference(wrapState.pointerOrigins[i])
         }
     }
 
-    /**
-     * Reconstructs the type chain when the root node is modified e.g. when swapping with alias
-     * (typedef)
-     *
-     * @param oldChain containing all types until the root
-     * @param newRoot root the chain is swapped with
-     * @return oldchain but root replaced with newRoot
-     */
-    private fun reWrapType(oldChain: Type, newRoot: Type): Type {
-        if (oldChain.isFirstOrderType) {
-            newRoot.typeOrigin = oldChain.typeOrigin
-        }
-        if (!newRoot.isFirstOrderType) {
-            return newRoot
-        }
-        return when {
-            oldChain is ObjectType && newRoot is ObjectType -> {
-                (newRoot.root as ObjectType).generics = oldChain.generics
-                newRoot
-            }
-            oldChain is ReferenceType -> {
-                val reference = reWrapType(oldChain.elementType, newRoot)
-                val newChain = oldChain.duplicate() as ReferenceType
-                newChain.elementType = reference
-                newChain.refreshName()
-                newChain
-            }
-            oldChain is PointerType -> {
-                val newChain = oldChain.duplicate() as PointerType
-                newChain.root = reWrapType(oldChain.root, newRoot)
-                newChain.refreshNames()
-                newChain
-            }
-            else -> newRoot
-        }
+    if (wrapState.isReference) {
+        wrapState.referenceType?.elementType = type
+        return wrapState.referenceType!!
     }
 
-    private class Ancestor(val record: RecordDeclaration?, var depth: Int) {
+    return type
+}
 
-        override fun hashCode(): Int {
-            return Objects.hash(record)
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) {
-                return true
-            }
-            if (other !is Ancestor) {
-                return false
-            }
-            return record == other.record
-        }
-
-        override fun toString(): String {
-            return ToStringBuilder(this, Node.TO_STRING_STYLE)
-                .append("record", record!!.name)
-                .append("depth", depth)
-                .toString()
-        }
+/**
+ * Reconstructs the type chain when the root node is modified e.g. when swapping with alias
+ * (typedef)
+ *
+ * @param newRoot root the chain is swapped with
+ * @return the type but root replaced with newRoot
+ */
+private fun Type.changeRoot(newRoot: Type): Type {
+    if (this.isFirstOrderType) {
+        newRoot.typeOrigin = this.typeOrigin
     }
-
-    companion object {
-        private val log = LoggerFactory.getLogger(TypeManager::class.java)
+    if (!newRoot.isFirstOrderType) {
+        return newRoot
+    }
+    return when {
+        this is ObjectType && newRoot is ObjectType -> {
+            newRoot.generics = this.generics
+            newRoot
+        }
+        this is ReferenceType -> {
+            val reference = this.elementType.changeRoot(newRoot)
+            val newChain = this.duplicate() as ReferenceType
+            newChain.elementType = reference
+            newChain.refreshName()
+            newChain
+        }
+        this is PointerType -> {
+            val newChain = this.duplicate() as PointerType
+            newChain.root = this.root.changeRoot(newRoot)
+            newChain.refreshNames()
+            newChain
+        }
+        else -> newRoot
     }
 }

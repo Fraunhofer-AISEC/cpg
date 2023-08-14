@@ -32,7 +32,15 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
+/**
+ * A common class for passes that resolve symbols. In order to do that, we need both:
+ * - our "resolved" (squashed) types and their associated records (see [TypeResolver])
+ * - and the type hierarchy (see [TypeHierarchyResolver]).
+ */
+@DependsOn(TypeResolver::class)
+@DependsOn(TypeHierarchyResolver::class)
 abstract class SymbolResolverPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected lateinit var walker: SubgraphWalker.ScopedWalker
     lateinit var currentTU: TranslationUnitDeclaration

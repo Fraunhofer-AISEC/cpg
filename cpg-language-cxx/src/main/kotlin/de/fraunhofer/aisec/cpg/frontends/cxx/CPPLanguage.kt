@@ -282,8 +282,7 @@ class CPPLanguage :
                         templateCall,
                         initializationType,
                         orderedInitializationSignature,
-                        explicitInstantiation,
-                        ctx
+                        explicitInstantiation
                     )
                 val function = functionTemplateDeclaration.realization[0]
                 if (

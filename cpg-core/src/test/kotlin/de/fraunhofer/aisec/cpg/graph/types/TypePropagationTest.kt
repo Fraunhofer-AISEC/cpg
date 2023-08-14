@@ -367,6 +367,19 @@ class TypePropagationTest {
                 )
             }
 
+            val baseClassType = (b.type as? PointerType)?.elementType
+            assertNotNull(baseClassType)
+
+            assertEquals(
+                baseClassType.array(),
+                setOf(
+                        baseClassType.array(),
+                        derivedClassA.toType().array(),
+                        derivedClassB.toType().array(),
+                    )
+                    .commonType
+            )
+
             val assign = (body as CompoundStatement).statements<AssignExpression>(1)
             assertNotNull(assign)
 
