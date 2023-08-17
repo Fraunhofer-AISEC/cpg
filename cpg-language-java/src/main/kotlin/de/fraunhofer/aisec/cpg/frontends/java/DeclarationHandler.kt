@@ -187,7 +187,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 .map { type -> frontend.getTypeAsGoodAsPossible(type) }
                 .toMutableList()
         recordDeclaration.implementedInterfaces =
-            classInterDecl.implementedTypes.map { type -> frontend.getTypeAsGoodAsPossible(type) }
+            classInterDecl.implementedTypes
+                .map { type -> frontend.getTypeAsGoodAsPossible(type) }
+                .toMutableList()
 
         frontend.typeManager.addTypeParameter(
             recordDeclaration,

@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import java.io.File
 import kotlin.test.*
 
@@ -40,7 +41,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -51,10 +52,12 @@ class CPPLambdaTest {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
+        assertIs<FunctionPointerType>(lambdaVar.type)
+
         val lambda = lambdaVar.initializer as? LambdaExpression
         assertNotNull(lambda)
-
         assertTrue(lambda in lambdaVar.prevEOG)
+
         val printFunctionCall = function.calls["print_function"]
         assertNotNull(printFunctionCall)
         assertTrue(printFunctionCall in lambda.prevEOG)
@@ -70,7 +73,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -104,7 +107,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -131,7 +134,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -167,7 +170,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -204,7 +207,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -240,7 +243,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -274,7 +277,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -310,7 +313,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -337,7 +340,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -358,7 +361,7 @@ class CPPLambdaTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()

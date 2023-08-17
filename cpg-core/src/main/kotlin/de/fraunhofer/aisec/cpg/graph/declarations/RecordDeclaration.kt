@@ -30,16 +30,15 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import java.util.stream.Collectors
-import java.util.stream.Stream
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
-class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
+class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder, HasSecondaryTypeEdge {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
@@ -87,7 +86,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
      *
      * @return the list of implemented interfaces
      */
-    @Transient var implementedInterfaces: List<Type> = ArrayList()
+    @Transient var implementedInterfaces = mutableListOf<Type>()
 
     @Relationship var superTypeDeclarations: Set<RecordDeclaration> = HashSet()
 
@@ -150,10 +149,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
          *
          * @return concatenation of [.getSuperClasses] and [.getImplementedInterfaces]
          */
-        get() =
-            Stream.of(superClasses, implementedInterfaces)
-                .flatMap { obj: List<Type> -> obj.stream() }
-                .collect(Collectors.toList())
+        get() = superClasses + implementedInterfaces
 
     /**
      * Adds a type to the list of super classes for this record declaration.
@@ -175,6 +171,22 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
             .append("constructors", constructors)
             .append("records", records)
             .toString()
+    }
+
+    override fun updateType(typeState: Collection<Type>) {
+        // Replace occurrences of the super classes and interfaces with the one combined type
+        replaceType(superClasses, typeState)
+        replaceType(implementedInterfaces, typeState)
+    }
+
+    private fun replaceType(list: MutableList<Type>, typeState: Collection<Type>) {
+        for ((idx, t) in list.withIndex()) {
+            for (newType in typeState) {
+                if (newType == t) {
+                    list[idx] = newType
+                }
+            }
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -220,6 +232,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
             // this here.
             type.recordDeclaration = this
         }
+        type.superTypes.addAll(this.superTypes)
         return type
     }
 }

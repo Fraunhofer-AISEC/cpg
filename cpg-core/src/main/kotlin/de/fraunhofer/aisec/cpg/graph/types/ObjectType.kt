@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -34,7 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsL
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType.Companion.getUnknownType
+import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
@@ -42,11 +43,12 @@ import org.neo4j.ogm.annotation.Relationship
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
  * This also includes primitive data types.
  */
-open class ObjectType : Type, SecondaryTypeEdge {
+open class ObjectType : Type, HasSecondaryTypeEdge {
     /**
-     * Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
+     * Reference from the [ObjectType] to its class ([RecordDeclaration]), only if the class is
+     * available. This is set by the [TypeResolver].
      */
-    var recordDeclaration: RecordDeclaration? = null
+    @PopulatedByPass(TypeResolver::class) var recordDeclaration: RecordDeclaration? = null
 
     @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
     var genericsPropertyEdges: MutableList<PropertyEdge<Type>> = mutableListOf()
@@ -110,11 +112,11 @@ open class ObjectType : Type, SecondaryTypeEdge {
     }
 
     /**
-     * @return UnknownType, as we cannot infer any type information when dereferencing an
+     * @return UnknownType, as we cannot infer any type information when de-referencing an
      *   ObjectType, as it is just some memory and its interpretation is unknown
      */
     override fun dereference(): Type {
-        return getUnknownType(language)
+        return unknownType()
     }
 
     override fun duplicate(): Type {

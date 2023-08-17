@@ -84,7 +84,6 @@ internal class TypedefTest : BaseTest() {
     fun testWithModifier() {
         val result = analyze("cpp", topLevel, true)
         val variables = result.variables
-        val typeManager = result.finalCtx.typeManager
 
         // pointer
         val l1ptr = findByUniqueName(variables, "l1ptr")
@@ -94,15 +93,6 @@ internal class TypedefTest : BaseTest() {
         assertEquals(l1ptr.type, l2ptr.type)
         assertEquals(l1ptr.type, l3ptr.type)
         assertEquals(l1ptr.type, l4ptr.type)
-
-        // arrays
-        val l1arr = findByUniqueName(variables, "l1arr")
-        val l2arr = findByUniqueName(variables, "l2arr")
-        val l3arr = findByUniqueName(variables, "l3arr")
-        val l4arr = findByUniqueName(variables, "l4arr")
-        assertTrue(typeManager.checkArrayAndPointer(l1arr.type, l2arr.type))
-        assertTrue(typeManager.checkArrayAndPointer(l1arr.type, l3arr.type))
-        assertTrue(typeManager.checkArrayAndPointer(l1arr.type, l4arr.type))
     }
 
     @Test

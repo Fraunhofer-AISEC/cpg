@@ -42,6 +42,10 @@ fun MetadataProvider?.unknownType(): Type {
     }
 }
 
+fun LanguageProvider.autoType(): Type {
+    return AutoType(this.language)
+}
+
 fun MetadataProvider?.incompleteType(): Type {
     return IncompleteType()
 }

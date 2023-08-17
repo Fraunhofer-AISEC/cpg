@@ -37,8 +37,10 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.isDerivedFrom
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
 import java.util.*
@@ -177,15 +179,19 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * Removes EOG edges by first building the negative set of nodes that cannot be visited and then
-     * remove there outgoing edges.In contrast to truncateLooseEdges this also removes cycles.
+     * remove there outgoing edges. This also removes cycles.
      */
     protected fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
-        val eognodes =
-            SubgraphWalker.flattenAST(tu)
-                .filter { it.prevEOG.isNotEmpty() || it.nextEOG.isNotEmpty() }
-                .toMutableList()
+        // All nodes which have an eog edge
+        val eogNodes = IdentitySet<Node>()
+        eogNodes.addAll(
+            SubgraphWalker.flattenAST(tu).filter {
+                it.prevEOG.isNotEmpty() || it.nextEOG.isNotEmpty()
+            }
+        )
+        // only eog entry points
         var validStarts =
-            eognodes
+            eogNodes
                 .filter { node ->
                     node is FunctionDeclaration ||
                         node is RecordDeclaration ||
@@ -193,12 +199,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                         node is TranslationUnitDeclaration
                 }
                 .toSet()
+        // Remove all nodes from eogNodes which are reachable from validStarts and transitively.
         while (validStarts.isNotEmpty()) {
-            eognodes.removeAll(validStarts)
-            validStarts = validStarts.flatMap { it.nextEOG }.filter { it in eognodes }.toSet()
+            eogNodes.removeAll(validStarts)
+            validStarts = validStarts.flatMap { it.nextEOG }.filter { it in eogNodes }.toSet()
         }
-        // remaining eognodes were not visited and have to be removed from the EOG
-        for (unvisitedNode in eognodes) {
+        // The remaining nodes are unreachable from the entry points. We delete their outgoing EOG
+        // edges.
+        for (unvisitedNode in eogNodes) {
             unvisitedNode.nextEOGEdges.forEach { next ->
                 next.end.removePrevEOGEntry(unvisitedNode)
             }
@@ -596,7 +604,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 val catchParam = catchClause.parameter
                 if (catchParam == null) { // e.g. catch (...)
                     currentPredecessors.addAll(eogEdges)
-                } else if (typeManager.isSupertypeOf(catchParam.type, throwType, node)) {
+                } else if (throwType.isDerivedFrom(catchParam.type)) {
                     currentPredecessors.addAll(eogEdges)
                     toRemove.add(throwType)
                 }

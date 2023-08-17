@@ -27,15 +27,12 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
-@DependsOn(CallResolver::class)
 open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val firstOrderTypes = mutableSetOf<Type>()
     protected val typeState = mutableMapOf<Type, MutableList<Type>>()
@@ -181,14 +178,16 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // globally unique
         if (node is HasType && node.type !is ParameterizedType) {
             val type = node.type
-            val types =
+            val newType =
                 if (type.isFirstOrderType) {
-                    typeState.keys
-                } else {
-                    typeState.computeIfAbsent(type.root, ::mutableListOf)
-                }
-            updateType(node, types)
-            node.updatePossibleSubtypes(ensureUniqueSubTypes(node.possibleSubTypes))
+                        typeState.keys
+                    } else {
+                        typeState.computeIfAbsent(type.root, ::mutableListOf)
+                    }
+                    .firstOrNull { it == type }
+            if (newType != null) {
+                node.type = newType
+            }
         }
     }
 
@@ -196,25 +195,14 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * ensures that the if a nodes contains secondary type edges, those types are also merged and no
      * duplicate is left
      *
-     * @param node implementing [HasType.SecondaryTypeEdge]
+     * @param node implementing [HasSecondaryTypeEdge]
      */
     protected fun ensureUniqueSecondaryTypeEdge(node: Node) {
-        if (node is SecondaryTypeEdge) {
+        if (node is HasSecondaryTypeEdge) {
             node.updateType(typeState.keys)
-        } else if (node is HasType && node.type is SecondaryTypeEdge) {
-            (node.type as SecondaryTypeEdge).updateType(typeState.keys)
-            for (possibleSubType in node.possibleSubTypes) {
-                if (possibleSubType is SecondaryTypeEdge) {
-                    possibleSubType.updateType(typeState.keys)
-                }
-            }
+        } else if (node is HasType && node.type is HasSecondaryTypeEdge) {
+            (node.type as HasSecondaryTypeEdge).updateType(typeState.keys)
         }
-    }
-
-    protected fun updateType(node: HasType, types: Collection<Type>) {
-        // TODO: Why do we perform the update only for the first type?
-        val typeToUpdate = types.firstOrNull { it == node.type } ?: return
-        node.updateType(typeToUpdate)
     }
 
     /**

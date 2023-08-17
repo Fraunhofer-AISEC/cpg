@@ -32,7 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.executePassSequential
 
 fun LanguageFrontend<*, *>.translationResult(
@@ -157,6 +159,9 @@ fun LanguageFrontend<*, *>.function(
         node.returnTypes = listOf(returnType)
     }
 
+    // Make sure that our function has the correct type
+    node.type = FunctionType.computeType(node)
+
     scopeManager.enterScope(node)
     init?.let { it(node) }
     scopeManager.leaveScope(node)
@@ -176,13 +181,16 @@ context(RecordDeclaration)
 fun LanguageFrontend<*, *>.method(
     name: CharSequence,
     returnType: Type = unknownType(),
-    init: MethodDeclaration.() -> Unit
+    init: (MethodDeclaration.() -> Unit)? = null
 ): MethodDeclaration {
     val node = newMethodDeclaration(name)
     node.returnTypes = listOf(returnType)
+    node.type = FunctionType.computeType(node)
 
     scopeManager.enterScope(node)
-    init(node)
+    if (init != null) {
+        init(node)
+    }
     scopeManager.leaveScope(node)
 
     scopeManager.addDeclaration(node)
@@ -273,6 +281,26 @@ fun LanguageFrontend<*, *>.returnStmt(init: ReturnStatement.() -> Unit): ReturnS
     return node
 }
 
+context(Holder<out Statement>)
+
+fun LanguageFrontend<*, *>.ase(
+    init: (ArraySubscriptionExpression.() -> Unit)? = null
+): ArraySubscriptionExpression {
+    val node = newArraySubscriptionExpression()
+
+    if (init != null) {
+        init(node)
+    }
+
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    val holder = this@Holder
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
+
+    return node
+}
+
 /**
  * Creates a new [DeclarationStatement] in the Fluent Node DSL and adds it to the
  * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
@@ -331,7 +359,7 @@ fun LanguageFrontend<*, *>.call(
     init: (CallExpression.() -> Unit)? = null
 ): CallExpression {
     // Try to parse the name
-    val parsedName = parseName(name)
+    val parsedName = parseName(name, ".")
     val node =
         if (parsedName.parent != null) {
             newMemberCallExpression(
@@ -422,6 +450,25 @@ fun LanguageFrontend<*, *>.construct(
 
 context(Holder<out Statement>)
 
+fun LanguageFrontend<*, *>.cast(
+    castType: Type,
+    init: (CastExpression.() -> Unit)? = null
+): CastExpression {
+    val node = newCastExpression()
+    node.castType = castType
+    if (init != null) init(node)
+
+    val holder = this@Holder
+    if (holder is StatementHolder) {
+        holder += node
+    } else if (holder is ArgumentHolder) {
+        holder += node
+    }
+    return node
+}
+
+context(Holder<out Statement>)
+
 fun LanguageFrontend<*, *>.new(init: (NewExpression.() -> Unit)? = null): NewExpression {
     val node = newNewExpression()
     if (init != null) init(node)
@@ -440,9 +487,11 @@ fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type = unknownType()): 
         if (name.parent != null) {
             newMemberExpression(name.localName, memberOrRef(name.parent))
         } else {
-            newDeclaredReferenceExpression(name.localName, objectType(name.localName))
+            newDeclaredReferenceExpression(name.localName)
         }
-    node.type = type
+    if (type !is UnknownType) {
+        node.type = type
+    }
 
     return node
 }
@@ -761,6 +810,32 @@ fun <N> LanguageFrontend<*, *>.literal(value: N, type: Type = unknownType()): Li
 }
 
 /**
+ * Creates a new [InitializerListExpression] in the Fluent Node DSL and invokes
+ * [ArgumentHolder.addArgument] of the nearest enclosing [Holder], but only if it is an
+ * [ArgumentHolder].
+ */
+context(Holder<out Statement>)
+
+fun LanguageFrontend<*, *>.ile(
+    targetType: Type = unknownType(),
+    init: (InitializerListExpression.() -> Unit)? = null
+): InitializerListExpression {
+    val node = newInitializerListExpression(targetType)
+
+    if (init != null) {
+        init(node)
+    }
+
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    val holder = this@Holder
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+/**
  * Creates a new [DeclaredReferenceExpression] in the Fluent Node DSL and invokes
  * [ArgumentHolder.addArgument] of the nearest enclosing [Holder], but only if it is an
  * [ArgumentHolder].
@@ -875,10 +950,8 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
  */
 context(LanguageFrontend<*, *>, StatementHolder)
 
-operator fun Expression.plusAssign(rhs: Expression): Unit {
-    val node = (this@LanguageFrontend).newBinaryOperator("+=")
-    node.lhs = this
-    node.rhs = rhs
+operator fun Expression.plusAssign(rhs: Expression) {
+    val node = (this@LanguageFrontend).newAssignExpression("+=", listOf(this), listOf(rhs))
 
     (this@StatementHolder) += node
 }
@@ -1022,7 +1095,7 @@ infix fun Expression.lt(rhs: Expression): BinaryOperator {
  * Creates a new [ConditionalExpression] with a `=` [BinaryOperator.operatorCode] in the Fluent Node
  * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
-context(LanguageFrontend<*, *>, StatementHolder)
+context(LanguageFrontend<*, *>, Holder<out Node>)
 
 fun Expression.conditional(
     condition: Expression,
@@ -1031,7 +1104,11 @@ fun Expression.conditional(
 ): ConditionalExpression {
     val node = (this@LanguageFrontend).newConditionalExpression(condition, thenExpr, elseExpr)
 
-    (this@StatementHolder) += node
+    if (this@Holder is StatementHolder) {
+        (this@Holder) += node
+    } else if (this@Holder is ArgumentHolder) {
+        this@Holder += node
+    }
 
     return node
 }
@@ -1042,10 +1119,11 @@ fun Expression.conditional(
  */
 context(LanguageFrontend<*, *>, StatementHolder)
 
-infix fun Expression.assign(init: BinaryOperator.() -> Expression): BinaryOperator {
-    val node = (this@LanguageFrontend).newBinaryOperator("=")
-    node.lhs = this
-    node.rhs = init(node)
+infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("=")
+    node.lhs = listOf(this)
+    init(node)
+    // node.rhs = listOf(init(node))
 
     (this@StatementHolder) += node
 
@@ -1053,19 +1131,45 @@ infix fun Expression.assign(init: BinaryOperator.() -> Expression): BinaryOperat
 }
 
 /**
- * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 
-infix fun Expression.assign(rhs: Expression): BinaryOperator {
-    val node = (this@LanguageFrontend).newBinaryOperator("=")
-    node.lhs = this
-    node.rhs = rhs
+infix fun Expression.assign(rhs: Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("=", listOf(this), listOf(rhs))
 
     if (this@Holder is StatementHolder) {
         this@Holder += node
     }
+
+    return node
+}
+
+/**
+ * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+
+infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("=", listOf(this), listOf(rhs))
+
+    node.usedAsExpression = true
+
+    return node
+}
+/**
+ * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+
+infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("=", listOf(this))
+    rhs(node)
+
+    node.usedAsExpression = true
 
     return node
 }

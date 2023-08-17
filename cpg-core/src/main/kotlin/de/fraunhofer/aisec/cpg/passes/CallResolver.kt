@@ -110,6 +110,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
                     val initializer = node.newConstructExpression(typeString, "$typeString()")
+                    initializer.type = node.type
                     initializer.isImplicit = true
                     node.initializer = initializer
                     node.templateParameters?.let {
@@ -125,6 +126,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
                     val signature = arguments.map(Node::code).joinToString(", ")
                     val initializer =
                         node.newConstructExpression(typeString, "$typeString($signature)")
+                    initializer.type = node.type
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
                     initializer.isImplicit = true
                     node.initializer = initializer
@@ -483,7 +485,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         if (node is MemberCallExpression) {
             node.base?.let { base ->
                 possibleTypes.add(base.type)
-                possibleTypes.addAll(base.possibleSubTypes)
+                possibleTypes.addAll(base.assignedTypes)
             }
         } else {
             // This could be a C++ member call with an implicit this (which we do not create), so
@@ -607,7 +609,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
             constructorCandidate =
-                resolveConstructorWithImplicitCast(constructExpression, recordDeclaration, ctx)
+                resolveConstructorWithImplicitCast(constructExpression, recordDeclaration)
         }
 
         return constructorCandidate

@@ -26,46 +26,25 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
-import kotlin.collections.ArrayList
 import org.slf4j.LoggerFactory
 
-class CastExpression : Expression(), HasType.TypeListener {
-    @AST var expression: Expression = ProblemExpression("could not parse inner expression")
+class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
+    @AST
+    var expression: Expression = ProblemExpression("could not parse inner expression")
+        set(value) {
+            field.unregisterTypeObserver(this)
+            field = value
+            value.registerTypeObserver(this)
+        }
 
     var castType: Type = unknownType()
         set(value) {
             field = value
             type = value
         }
-
-    override fun updateType(type: Type) {
-        super.updateType(type)
-        castType = type
-    }
-
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val previous = type
-        if (isSupertypeOf(castType, src.propagationType)) {
-            setType(src.propagationType, root)
-        } else {
-            resetTypes(castType)
-        }
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        setPossibleSubTypes(ArrayList(src.possibleSubTypes), root)
-    }
 
     fun setCastOperator(operatorCode: Int) {
         var localName: String? = null
@@ -79,6 +58,30 @@ class CastExpression : Expression(), HasType.TypeListener {
         }
         if (localName != null) {
             name = Name(localName, null, language)
+        }
+    }
+
+    override fun addArgument(expression: Expression) {
+        this.expression = expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (this.expression == old) {
+            this.expression = new
+            return true
+        }
+
+        return false
+    }
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        // Nothing to do, the cast type always stays the same
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // We want to propagate the assigned types, if they come from our expression
+        if (src == expression) {
+            addAssignedTypes(assignedTypes)
         }
     }
 

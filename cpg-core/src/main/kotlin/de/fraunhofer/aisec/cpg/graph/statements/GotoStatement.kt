@@ -38,9 +38,7 @@ class GotoStatement : Statement() {
         if (other !is GotoStatement) {
             return false
         }
-        return super.equals(other) &&
-            labelName == other.labelName &&
-            targetLabel == other.targetLabel
+        return super.equals(other) && labelName == other.labelName
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), labelName, targetLabel)

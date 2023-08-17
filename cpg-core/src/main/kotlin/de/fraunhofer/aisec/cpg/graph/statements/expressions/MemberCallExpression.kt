@@ -38,7 +38,7 @@ import java.util.*
  * While this node implements [HasBase], this is basically just a shortcut to access the base of the
  * underlying [callee] property, if appropriate.
  */
-class MemberCallExpression : CallExpression(), HasBase {
+class MemberCallExpression : CallExpression(), HasBase, HasOperatorCode {
     /**
      * The base object. This is basically a shortcut to accessing the base of the [callee], if it
      * has one (i.e., if it implements [HasBase]). This is the case for example, if it is a

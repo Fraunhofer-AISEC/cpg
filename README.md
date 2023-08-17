@@ -114,9 +114,10 @@ val translationConfig = TranslationConfiguration
 
 ### Experimental Languages
 
-Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included as gradle submodules by default.
-To include them as submodules simply toggle them on in your local `gradle.properties` file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
-We provide a sample file [here](./gradle.properties.example).
+Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included in the `cpg-core` module but have separate gradle submodules.
+C/CPP and Java are currently required by some of the modules (e.g. `cpg-analysis`) and thus, disabling them can lead to compile errors!
+To include the desired submodules simply toggle them on in your local `gradle.properties` file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
+We provide a sample file with all languages switched on [here](./gradle.properties.example).
 Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you.
 
 #### Golang

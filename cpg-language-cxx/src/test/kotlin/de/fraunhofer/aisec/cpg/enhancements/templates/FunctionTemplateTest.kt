@@ -38,10 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.nio.file.Path
 import java.util.function.Predicate
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 internal class FunctionTemplateTest : BaseTest() {
     private val topLevel = Path.of("src", "test", "resources", "templates", "functiontemplates")
@@ -55,18 +52,17 @@ internal class FunctionTemplateTest : BaseTest() {
                 topLevel,
                 true
             )
-        val variableDeclarations = result.variables
-        val x = findByUniqueName(variableDeclarations, "x")
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), x.type)
+        val x = result.variables["x"]
+        assertNotNull(x)
+        assertIs<AutoType>(x.type)
 
-        val declaredReferenceExpressions = result.refs
-        val xDeclaredReferenceExpression = findByUniqueName(declaredReferenceExpressions, "x")
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), xDeclaredReferenceExpression.type)
+        val xRef = result.refs["x"]
+        assertNotNull(xRef)
+        assertIs<AutoType>(xRef.type)
 
-        val binaryOperators = result.allChildren<BinaryOperator>()
-        val dependentOperation =
-            findByUniquePredicate(binaryOperators) { b: BinaryOperator -> b.code == "val * N" }
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), dependentOperation.type)
+        val binOp = result.allChildren<BinaryOperator>()[{ it.code == "val * N" }]
+        assertNotNull(binOp)
+        assertIs<UnknownType>(binOp.type)
     }
 
     private fun testFunctionTemplateArguments(

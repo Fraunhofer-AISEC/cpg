@@ -201,10 +201,10 @@ fun MetadataProvider.newConditionalExpression(
     val node = ConditionalExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
+    node.type = type
     node.condition = condition
     node.thenExpr = thenExpr
     node.elseExpr = elseExpr
-    node.type = type
 
     log(node)
     return node
@@ -531,11 +531,14 @@ fun MetadataProvider.newExpressionList(code: String? = null, rawNode: Any? = nul
  */
 @JvmOverloads
 fun MetadataProvider.newInitializerListExpression(
+    targetType: Type = unknownType(),
     code: String? = null,
     rawNode: Any? = null
 ): InitializerListExpression {
     val node = InitializerListExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    node.type = targetType
 
     log(node)
     return node
@@ -614,10 +617,10 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.language = this.language
     duplicate.value = this.value
     duplicate.type = this.type
+    duplicate.assignedTypes = this.assignedTypes
     duplicate.code = this.code
     duplicate.location = this.location
     duplicate.locals = this.locals
-    duplicate.possibleSubTypes = this.possibleSubTypes
     duplicate.argumentIndex = this.argumentIndex
     duplicate.annotations = this.annotations
     duplicate.comment = this.comment

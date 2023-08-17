@@ -143,7 +143,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
-        val ile = newInitializerListExpression(this.frontend.codeOf(node))
+        val ile = newInitializerListExpression(unknownType(), this.frontend.codeOf(node))
 
         ile.initializers = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
 

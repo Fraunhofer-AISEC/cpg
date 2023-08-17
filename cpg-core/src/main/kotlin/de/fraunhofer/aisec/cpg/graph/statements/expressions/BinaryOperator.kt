@@ -25,20 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
-import de.fraunhofer.aisec.cpg.graph.types.StringType
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
  * right hand expression (rhs) and an operatorCode.
+ *
+ * Note: For assignments, i.e., using an `=` or `+=`, etc. the [AssignExpression] MUST be used.
  */
 open class BinaryOperator :
-    Expression(), HasType.TypeListener, AssignmentHolder, HasBase, ArgumentHolder {
+    Expression(), HasBase, HasOperatorCode, ArgumentHolder, HasType.TypeObserver {
     /** The left-hand expression. */
     @AST
     var lhs: Expression = ProblemExpression("could not parse lhs")
@@ -56,6 +57,7 @@ open class BinaryOperator :
             field = value
             connectNewRhs(value)
         }
+
     /** The operator code. */
     override var operatorCode: String? = null
         set(value) {
@@ -64,8 +66,8 @@ open class BinaryOperator :
                 (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) ||
                     (operatorCode == "=")
             ) {
-                NodeBuilder.LOGGER.warn(
-                    "Creating a BinaryOperator with an assignment operator code is deprecated. The class AssignExpression should be used instead."
+                throw TranslationException(
+                    "Creating a BinaryOperator with an assignment operator code is not allowed. The class AssignExpression should be used instead."
                 )
             }
         }
@@ -75,35 +77,21 @@ open class BinaryOperator :
     }
 
     private fun connectNewLhs(lhs: Expression) {
-        lhs.registerTypeListener(this)
-        if ("=" == operatorCode) {
-            if (lhs is DeclaredReferenceExpression) {
-                // declared reference expr is the left-hand side of an assignment -> writing to the
-                // var
-                lhs.access = AccessValues.WRITE
-            }
-            if (lhs is HasType.TypeListener) {
-                registerTypeListener(lhs as HasType.TypeListener)
-                registerTypeListener(this.lhs as HasType.TypeListener)
-            }
-        } else if (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) {
-            if (lhs is DeclaredReferenceExpression) {
-                // declared reference expr is the left-hand side of an assignment -> writing to the
-                // var
-                lhs.access = AccessValues.READWRITE
-            }
-            if (lhs is HasType.TypeListener) {
-                registerTypeListener(lhs as HasType.TypeListener)
-                registerTypeListener(this.lhs as HasType.TypeListener)
-            }
+        lhs.registerTypeObserver(this)
+        if (lhs is DeclaredReferenceExpression && "=" == operatorCode) {
+            // declared reference expr is the left-hand side of an assignment -> writing to the var
+            lhs.access = AccessValues.WRITE
+        } else if (
+            lhs is DeclaredReferenceExpression &&
+                operatorCode in (language?.compoundAssignmentOperators ?: setOf())
+        ) {
+            // declared reference expr is the left-hand side of an assignment -> writing to the var
+            lhs.access = AccessValues.READWRITE
         }
     }
 
     private fun disconnectOldLhs() {
-        lhs.unregisterTypeListener(this)
-        if ("=" == operatorCode && lhs is HasType.TypeListener) {
-            unregisterTypeListener(lhs as HasType.TypeListener)
-        }
+        lhs.unregisterTypeObserver(this)
     }
 
     fun <T : Expression?> getRhsAs(clazz: Class<T>): T? {
@@ -111,65 +99,11 @@ open class BinaryOperator :
     }
 
     private fun connectNewRhs(rhs: Expression) {
-        rhs.registerTypeListener(this)
-        if ("=" == operatorCode && rhs is HasType.TypeListener) {
-            registerTypeListener(rhs as HasType.TypeListener)
-        }
+        rhs.registerTypeObserver(this)
     }
 
     private fun disconnectOldRhs() {
-        rhs.unregisterTypeListener(this)
-        if ("=" == operatorCode && rhs is HasType.TypeListener) {
-            unregisterTypeListener(rhs as HasType.TypeListener)
-        }
-    }
-
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val previous = type
-        if (operatorCode == "=") {
-            val srcWidth = (src.type as? NumericType)?.bitWidth
-            val lhsWidth = (lhs.type as? NumericType)?.bitWidth
-            if (src == rhs && lhsWidth != null && srcWidth != null && lhsWidth < srcWidth) {
-                // Do not propagate anything if the new type is too big for the current type.
-                return
-            }
-            setType(src.propagationType, root)
-        } else if (
-            operatorCode == "+" &&
-                (lhs.propagationType is StringType || rhs.propagationType is StringType)
-        ) {
-            // String + any other type results in a String
-            _possibleSubTypes.clear() // TODO: Why do we clear the list here?
-            val stringType =
-                if (lhs.propagationType is StringType) lhs.propagationType else rhs.propagationType
-            setType(stringType, root)
-        } else if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
-            // Propagate the function pointer type to the expression itself. This helps us later in
-            // the call resolver, when trying to determine, whether this is a regular call or a
-            // function pointer call.
-            setType(src.propagationType, root)
-        } else {
-            val resultingType = language?.propagateTypeOfBinaryOperation(this) ?: unknownType()
-            if (resultingType !is UnknownType) {
-                setType(resultingType, root)
-            }
-        }
-
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!isTypeSystemActive) {
-            return
-        }
-        val subTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-        subTypes.addAll(src.possibleSubTypes)
-        setPossibleSubTypes(subTypes, root)
+        rhs.unregisterTypeObserver(this)
     }
 
     override fun toString(): String {
@@ -180,15 +114,29 @@ open class BinaryOperator :
             .toString()
     }
 
-    @Deprecated("BinaryOperator should not be used for assignments anymore")
-    override val assignments: List<Assignment>
-        get() {
-            return if (isAssignment) {
-                listOf(Assignment(rhs, lhs, this))
+    override fun typeChanged(newType: Type, src: HasType) {
+        // We need to do some special dealings for function pointer calls
+        if (operatorCode == ".*" || operatorCode == "->*" && src === rhs) {
+            // Propagate the function pointer type to the expression itself. This helps us later in
+            // the call resolver, when trying to determine, whether this is a regular call or a
+            // function pointer call.
+            this.type = newType
+        } else {
+            // Otherwise, we have a special language-specific function to deal with type propagation
+            val type = language?.propagateTypeOfBinaryOperation(this)
+            if (type != null) {
+                this.type = type
             } else {
-                listOf()
+                // If we don't know how to propagate the types of this particular binary operation,
+                // we just leave the type alone. We cannot take newType because it is just "half" of
+                // the operation (either from lhs or rhs) and would lead to very incorrect results.
             }
         }
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // TODO: replicate something similar like propagateTypeOfBinaryOperation for assigned types
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
@@ -204,15 +152,6 @@ open class BinaryOperator :
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), lhs, rhs, operatorCode)
-
-    private val isAssignment: Boolean
-        get() {
-            // TODO(oxisto): We need to discuss, if the other operators are also assignments and if
-            // we really want them
-            return this.operatorCode.equals("=")
-            /*||this.operatorCode.equals("+=") ||this.operatorCode.equals("-=")
-            ||this.operatorCode.equals("/=")  ||this.operatorCode.equals("*=")*/
-        }
 
     override fun addArgument(expression: Expression) {
         if (lhs is ProblemExpression) {
