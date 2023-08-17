@@ -38,10 +38,9 @@ import kotlin.io.path.exists
  * Takes care of configuring Jep according to some well known paths on popular operating systems.
  */
 object JepSingleton {
-    private var config = JepConfig()
-
     init {
         // TODO logging
+        val config = JepConfig()
 
         config.redirectStdErr(System.err)
         config.redirectStdout(System.out)
@@ -118,11 +117,12 @@ object JepSingleton {
                 }
             }
         }
+
+        SharedInterpreter.setConfig(config)
     }
 
     /** Setup and configure (load the Python code and trigger the debug script) an interpreter. */
     fun getInterp(): SharedInterpreter {
-        SharedInterpreter.setConfig(config) // TODO: avoid setting the config for each interpreter
         return SharedInterpreter()
     }
 }
