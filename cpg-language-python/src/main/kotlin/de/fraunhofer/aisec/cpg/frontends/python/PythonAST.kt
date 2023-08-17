@@ -76,7 +76,7 @@ interface PythonAST {
      * - [Expr] -> the expression statement
      * - [expr] -> the expression class
      */
-    open class Expression(pyObject: PyObject) : AST(pyObject), WithPythonLocation {
+    class Expression(pyObject: PyObject) : mod(pyObject) {
         val body: Expression
             get() {
                 return fromPython(pyObject.getAttr("body")) as? Expression ?: TODO()
