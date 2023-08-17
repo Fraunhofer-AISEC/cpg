@@ -42,7 +42,7 @@ import kotlin.io.path.Path
 
 @SupportsParallelParsing(false)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<PythonAST.Node, Any>(language, ctx) {
+    LanguageFrontend<PythonAST.AST, Any>(language, ctx) {
     private val jep = JepSingleton // configure Jep
 
     // val declarationHandler = DeclarationHandler(this)
@@ -73,12 +73,12 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         return unknownType()
     }
 
-    override fun codeOf(astNode: PythonAST.Node): String? {
+    override fun codeOf(astNode: PythonAST.AST): String? {
         return null
         // TODO
     }
 
-    override fun locationOf(astNode: PythonAST.Node): PhysicalLocation? {
+    override fun locationOf(astNode: PythonAST.AST): PhysicalLocation? {
         return if (astNode is PythonAST.WithPythonLocation) {
             PhysicalLocation(
                 URI("file:///TODO"), // TODO
@@ -94,7 +94,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         }
     }
 
-    override fun setComment(node: Node, astNode: PythonAST.Node) {
+    override fun setComment(node: Node, astNode: PythonAST.AST) {
         // will be invoked by native function
     }
 
@@ -124,7 +124,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
  * @param pyObject the Python object
  * @return our Kotlin view of the Python `ast` object
  */
-fun fromPython(pyObject: Any): PythonAST.Node {
+fun fromPython(pyObject: Any): PythonAST.AST {
     if (pyObject !is PyObject) {
         TODO("Expected a PyObject")
     } else {
@@ -133,7 +133,7 @@ fun fromPython(pyObject: Any): PythonAST.Node {
             "<class 'ast.Module'>" -> PythonAST.Module(pyObject)
             "<class 'ast.ClassDef'>" -> PythonAST.ClassDef(pyObject)
             "<class 'ast.FunctionDef'>" -> PythonAST.FunctionDef(pyObject)
-            "<class 'ast.arguments'>" -> PythonAST.Arguments(pyObject)
+            "<class 'ast.arguments'>" -> PythonAST.arguments(pyObject)
             "<class 'ast.ImportFrom'>" -> PythonAST.ImportFrom(pyObject)
             "<class 'ast.Assign'>" -> PythonAST.Assign(pyObject)
             "<class 'ast.If'>" -> PythonAST.If(pyObject)

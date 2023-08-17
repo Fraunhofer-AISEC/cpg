@@ -27,7 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import jep.python.PyObject
 
+/**
+ * This interface makes Python's `ast` nodes accessible to Kotlin. It does not contain any complex
+ * logic but rather aims at making all Python `ast` properties accessible to Kotlin (under the same
+ * name as in Python).
+ */
 interface PythonAST {
+
+    /** `ast.stmt` and `ast.expr` nodes have extra location properties as implemented here. */
     interface WithPythonLocation {
         val pyObject: PyObject
 
@@ -58,32 +65,30 @@ interface PythonAST {
      *
      * @param pyObject The Python object returned by jep.
      */
-    abstract class Node(val pyObject: PyObject)
+    abstract class AST(val pyObject: PyObject)
 
-    abstract class Mod(pyObject: PyObject) : Node(pyObject)
+    abstract class mod(pyObject: PyObject) : AST(pyObject)
 
-    abstract class Statement(pyObject: PyObject) : Node(pyObject), WithPythonLocation
+    abstract class stmt(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
     /**
      * class ast.Expression(body) Represents `ast.Expression` expressions. Note: do not confuse with
      * - [Expr] -> the expression statement
      * - [expr] -> the expression class
      */
-    open class Expression(pyObject: PyObject) : Node(pyObject), WithPythonLocation {
+    open class Expression(pyObject: PyObject) : AST(pyObject), WithPythonLocation {
         val body: Expression
             get() {
                 return fromPython(pyObject.getAttr("body")) as? Expression ?: TODO()
             }
     }
 
-    /*
-    class ast.Module(body, type_ignores)
-     */
-    class Module(pyObject: PyObject) : Node(pyObject) {
-        val body: kotlin.collections.List<Statement>
+    /** ast.Module = class Module(mod) | Module(stmt* body, type_ignore* type_ignores) */
+    class Module(pyObject: PyObject) : AST(pyObject) {
+        val body: kotlin.collections.List<stmt>
             get() {
                 val listOfPyStmt = pyObject.getAttr("body") as? ArrayList<*> ?: TODO()
-                return listOfPyStmt.map { fromPython(it) as? Statement ?: TODO() }
+                return listOfPyStmt.map { fromPython(it) as? stmt ?: TODO() }
             }
 
         val type_ignores: kotlin.collections.List<*>
@@ -92,28 +97,8 @@ interface PythonAST {
             }
     }
 
-    /*
-    class ast.Interactive(body)
-     */
-    class Interactive(pyObject: PyObject) : Node(pyObject) {
-        val body: kotlin.collections.List<Statement>
-            get() {
-                val listOfPyStmt = pyObject.getAttr("body") as? ArrayList<*> ?: TODO()
-                return listOfPyStmt.map { fromPython(it) as? Statement ?: TODO() }
-            }
-    }
-
-    class ModExpression(pyObject: PyObject) : Mod(pyObject) {
-        val body: Expression
-            get() {
-                return fromPython(pyObject.getAttr("body")) as? Expression ?: TODO()
-            }
-    }
-
-    /*
-    class ast.FunctionType(argtypes, returns)
-     */
-    class FunctionType(pyObject: PyObject) : Mod(pyObject) {
+    /** ast.FunctionType = class FunctionType(mod) | FunctionType(expr* argtypes, expr returns) */
+    class FunctionType(pyObject: PyObject) : mod(pyObject) {
         val argtypes: kotlin.collections.List<Expression>
             get() {
                 val listOfPyStmt = pyObject.getAttr("argtypes") as? ArrayList<*> ?: TODO()
@@ -126,26 +111,25 @@ interface PythonAST {
             }
     }
 
-    /*
-    class ast.FunctionDef(name, args, body, decorator_list, returns, type_comment)
-    */
-    class FunctionDef(pyObject: PyObject) : Statement(pyObject) {
+    /**
+     * ast.FunctionDef = class FunctionDef(stmt) | FunctionDef(identifier name, arguments args,
+     * stmt* body, expr* decorator_list, expr? returns, string? type_comment)
+     */
+    class FunctionDef(pyObject: PyObject) : stmt(pyObject) {
         val name: String
             get() {
                 return pyObject.getAttr("name") as? String ?: TODO()
             }
 
-        val args: Arguments
+        val args: arguments
             get() {
-                return fromPython(pyObject.getAttr("args")) as? Arguments ?: TODO()
+                return fromPython(pyObject.getAttr("args")) as? arguments ?: TODO()
             }
 
-        val body: kotlin.collections.List<Statement>
+        val body: kotlin.collections.List<stmt>
             get() {
                 val listOfPyStmt = pyObject.getAttr("body") as? ArrayList<*> ?: TODO()
-                return listOfPyStmt.map {
-                    fromPython(it) as? Statement ?: TODO("Failed for ${it.toString()}")
-                }
+                return listOfPyStmt.map { fromPython(it) as? stmt ?: TODO() }
             }
 
         val decoratorList: kotlin.collections.List<Expression>
@@ -165,13 +149,11 @@ interface PythonAST {
             }
     }
 
-    /*
-    class ast.arguments(posonlyargs, args, vararg, kwonlyargs, kw_defaults, kwarg, defaults)
-
-    arguments = (arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs,
-                 expr* kw_defaults, arg? kwarg, expr* defaults)
+    /**
+     * ast.arguments = class arguments(AST) | arguments(arg* posonlyargs, arg* args, arg? vararg,
+     * arg* kwonlyargs, expr* kw_defaults, arg? kwarg, expr* defaults)
      */
-    class Arguments(pyObject: PyObject) : Node(pyObject) {
+    class arguments(pyObject: PyObject) : AST(pyObject) {
         val posonlyargs: kotlin.collections.List<arg>
             get() {
                 val listOfPyArgs = pyObject.getAttr("posonlyargs") as? ArrayList<*> ?: TODO()
@@ -213,10 +195,8 @@ interface PythonAST {
             }
     }
 
-    /*
-    class ast.arg(arg, annotation, type_comment)
-     */
-    class arg(pyObject: PyObject) : Node(pyObject) {
+    /** ast.arg = class arg(AST) | arg(identifier arg, expr? annotation, string? type_comment) */
+    class arg(pyObject: PyObject) : AST(pyObject) {
         val arg: String
             get() {
                 return pyObject.getAttr("arg") as? String ?: TODO()
@@ -233,24 +213,25 @@ interface PythonAST {
             }
     }
 
-    /*
-    class ast.AsyncFunctionDef(name, args, body, decorator_list, returns, type_comment)
-    */
-    class AsyncFunctionDef(pyObject: PyObject) : Statement(pyObject) {
+    /**
+     * ast.AsyncFunctionDef = class AsyncFunctionDef(stmt) | AsyncFunctionDef(identifier name,
+     * arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
+     */
+    class AsyncFunctionDef(pyObject: PyObject) : stmt(pyObject) {
         val name: String
             get() {
                 return pyObject.getAttr("name") as? String ?: TODO()
             }
 
-        val args: Arguments
+        val args: arguments
             get() {
-                return fromPython(pyObject.getAttr("args")) as? Arguments ?: TODO()
+                return fromPython(pyObject.getAttr("args")) as? arguments ?: TODO()
             }
 
-        val body: kotlin.collections.List<Statement>
+        val body: kotlin.collections.List<stmt>
             get() {
                 val listOfPyStmt = pyObject.getAttr("body") as? ArrayList<*> ?: TODO()
-                return listOfPyStmt.map { fromPython(it) as? Statement ?: TODO() }
+                return listOfPyStmt.map { fromPython(it) as? stmt ?: TODO() }
             }
 
         val decoratorList: kotlin.collections.List<Expression>
@@ -272,19 +253,20 @@ interface PythonAST {
             }
     }
 
-    /*
-    class ast.ClassDef(name, bases, keywords, body, decorator_list)
-    */
-    class ClassDef(pyObject: PyObject) : Statement(pyObject) {
+    /**
+     * ast.ClassDef = class ClassDef(stmt) | ClassDef(identifier name, expr* bases, keyword*
+     * keywords, stmt* body, expr* decorator_list)
+     */
+    class ClassDef(pyObject: PyObject) : stmt(pyObject) {
         val name: String
             get() {
                 return pyObject.getAttr("name") as? String ?: TODO()
             }
 
-        val bases: kotlin.collections.List<Node>
+        val bases: kotlin.collections.List<AST>
             get() {
                 val listOfBases = pyObject.getAttr("bases") as? ArrayList<*> ?: TODO()
-                return listOfBases.map { fromPython(it) as? Node ?: TODO() }
+                return listOfBases.map { fromPython(it) as? AST ?: TODO() }
             }
 
         val keywords: kotlin.collections.List<Keyword>
@@ -293,10 +275,10 @@ interface PythonAST {
                 return listOfKeywords.map { fromPython(it) as? Keyword ?: TODO() }
             }
 
-        val body: kotlin.collections.List<Statement>
+        val body: kotlin.collections.List<stmt>
             get() {
                 val listOfPyStmt = pyObject.getAttr("body") as? ArrayList<*> ?: TODO()
-                return listOfPyStmt.map { fromPython(it) as? Statement ?: TODO() }
+                return listOfPyStmt.map { fromPython(it) as? stmt ?: TODO() }
             }
 
         val decoratorList: kotlin.collections.List<Expression>
@@ -306,65 +288,79 @@ interface PythonAST {
             }
     }
 
-    class Return(pyObject: PyObject) : Statement(pyObject)
+    /** ast.Return = class Return(stmt) | Return(expr? value) */
+    class Return(pyObject: PyObject) : stmt(pyObject) {
+        val value: expr?
+            get() {
+                return pyObject.getAttr("value") as? expr
+            }
+    }
 
-    class Delete(pyObject: PyObject) : Statement(pyObject)
+    /*
+    ast.Delete = class Delete(stmt)
+    |  Delete(expr* targets)
+     */
+    class Delete(pyObject: PyObject) : stmt(pyObject)
 
-    class Assign(pyObject: PyObject) : Statement(pyObject)
+    class Assign(pyObject: PyObject) : stmt(pyObject)
 
-    class AugAssign(pyObject: PyObject) : Statement(pyObject)
+    class AugAssign(pyObject: PyObject) : stmt(pyObject)
 
-    class AnnAssign(pyObject: PyObject) : Statement(pyObject)
+    class AnnAssign(pyObject: PyObject) : stmt(pyObject)
 
-    class For(pyObject: PyObject) : Statement(pyObject)
+    class For(pyObject: PyObject) : stmt(pyObject)
 
-    class AsyncFor(pyObject: PyObject) : Statement(pyObject)
+    class AsyncFor(pyObject: PyObject) : stmt(pyObject)
 
-    class While(pyObject: PyObject) : Statement(pyObject)
+    class While(pyObject: PyObject) : stmt(pyObject)
 
-    class If(pyObject: PyObject) : Statement(pyObject)
+    class If(pyObject: PyObject) : stmt(pyObject)
 
-    class With(pyObject: PyObject) : Statement(pyObject)
+    class With(pyObject: PyObject) : stmt(pyObject)
 
-    class AsyncWith(pyObject: PyObject) : Statement(pyObject)
+    class AsyncWith(pyObject: PyObject) : stmt(pyObject)
 
-    class Match(pyObject: PyObject) : Statement(pyObject)
+    class Match(pyObject: PyObject) : stmt(pyObject)
 
-    class Raise(pyObject: PyObject) : Statement(pyObject)
+    class Raise(pyObject: PyObject) : stmt(pyObject)
 
-    class Try(pyObject: PyObject) : Statement(pyObject)
+    class Try(pyObject: PyObject) : stmt(pyObject)
 
-    class TryStar(pyObject: PyObject) : Statement(pyObject)
+    class TryStar(pyObject: PyObject) : stmt(pyObject)
 
-    class Assert(pyObject: PyObject) : Statement(pyObject)
+    class Assert(pyObject: PyObject) : stmt(pyObject)
 
-    class Import(pyObject: PyObject) : Statement(pyObject)
+    class Import(pyObject: PyObject) : stmt(pyObject)
 
-    class ImportFrom(pyObject: PyObject) : Statement(pyObject)
+    class ImportFrom(pyObject: PyObject) : stmt(pyObject)
 
-    class Global(pyObject: PyObject) : Statement(pyObject)
+    class Global(pyObject: PyObject) : stmt(pyObject)
 
-    class Nonlocal(pyObject: PyObject) : Statement(pyObject)
+    class Nonlocal(pyObject: PyObject) : stmt(pyObject)
 
     /**
      * Represents `ast.Expr` expressions. Note: do not confuse with
      * - [expr] -> the expression class
      * - [Expression] -> the expression as part of `mod`
+     *
+     * ast.Expr = class Expr(stmt) | Expr(expr value)
      */
-    class Expr(pyObject: PyObject) : Statement(pyObject)
+    class Expr(pyObject: PyObject) : stmt(pyObject)
 
-    class Pass(pyObject: PyObject) : Statement(pyObject)
+    class Pass(pyObject: PyObject) : stmt(pyObject)
 
-    class Break(pyObject: PyObject) : Statement(pyObject)
+    class Break(pyObject: PyObject) : stmt(pyObject)
 
-    class Continue(pyObject: PyObject) : Statement(pyObject)
+    class Continue(pyObject: PyObject) : stmt(pyObject)
 
     /**
      * Represents `ast.expr` expressions. Note: do not confuse with
      * - [Expr] -> the expression statement
      * - [Expression] -> the expression as part of `mod`
+     *
+     * ast.expr = class expr(AST)
      */
-    abstract class expr(pyObject: PyObject) : Node(pyObject)
+    abstract class expr(pyObject: PyObject) : AST(pyObject)
 
     class BoolOp(pyObject: PyObject) : expr(pyObject)
 
@@ -420,14 +416,7 @@ interface PythonAST {
 
     class Slice(pyObject: PyObject) : expr(pyObject)
 
-    class Keyword(pyObject: PyObject) : Node(pyObject) {
+    class Keyword(pyObject: PyObject) : AST(pyObject) {
         // TODO()
-    }
-
-    class AssignStmt(pyObject: PyObject) : Statement(pyObject) {
-        val lhs: Node
-            get() {
-                return fromPython(pyObject.getAttr("lhs") as PyObject)
-            }
     }
 }

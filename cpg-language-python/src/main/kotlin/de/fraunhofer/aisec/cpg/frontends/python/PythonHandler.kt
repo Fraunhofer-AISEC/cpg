@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 
-abstract class PythonHandler<ResultNode : Node, HandlerNode : PythonAST.Node>(
+abstract class PythonHandler<ResultNode : Node, HandlerNode : PythonAST.AST>(
     configConstructor: Supplier<ResultNode>,
     lang: PythonLanguageFrontend
 ) : Handler<ResultNode, HandlerNode, PythonLanguageFrontend>(configConstructor, lang) {

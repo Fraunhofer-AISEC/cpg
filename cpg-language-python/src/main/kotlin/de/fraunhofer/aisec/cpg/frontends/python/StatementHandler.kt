@@ -37,8 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Statement, PythonAST.Statement>(::ProblemExpression, frontend) {
-    override fun handleNode(node: PythonAST.Statement): Statement {
+    PythonHandler<Statement, PythonAST.stmt>(::ProblemExpression, frontend) {
+    override fun handleNode(node: PythonAST.stmt): Statement {
         return when (node) {
             is PythonAST.ClassDef -> handleClassDef(node)
             is PythonAST.FunctionDef -> handleFunctionDef(node)
@@ -271,9 +271,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun makeCompoundStmt(
-        stmts: List<PythonAST.Statement>,
+        stmts: List<PythonAST.stmt>,
         code: String? = null,
-        rawNode: PythonAST.Node? = null
+        rawNode: PythonAST.AST? = null
     ): CompoundStatement {
         val result = newCompoundStatement(code, rawNode)
         for (stmt in stmts) {
@@ -300,7 +300,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
-    private fun getTypeInCurrentNamespace(it: PythonAST.Node): Type {
+    private fun getTypeInCurrentNamespace(it: PythonAST.AST): Type {
         TODO()
     }
 }
