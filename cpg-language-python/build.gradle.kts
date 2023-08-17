@@ -39,14 +39,6 @@ publishing {
     }
 }
 
-// add python source code to resources
-tasks {
-    processResources {
-        from("src/main/python/")
-        include("CPGPython/*.py", "cpg.py")
-    }
-}
-
 dependencies {
     // jep for python support
     api(libs.jep)

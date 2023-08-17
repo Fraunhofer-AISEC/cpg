@@ -28,59 +28,47 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
-import java.nio.file.Paths
+import java.net.URI
 import jep.JepException
-import kotlin.io.path.absolutePathString
+import jep.python.PyObject
+import kotlin.io.path.Path
 
+@SupportsParallelParsing(false)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Any, Any>(language, ctx) {
+    LanguageFrontend<PythonAST.Node, Any>(language, ctx) {
     private val jep = JepSingleton // configure Jep
+
+    // val declarationHandler = DeclarationHandler(this)
+    // val specificationHandler = SpecificationHandler(this)
+    private var statementHandler = StatementHandler(this)
+    // var expressionHandler = ExpressionHandler(this)
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        return parseInternal(file.readText(Charsets.UTF_8), file.path)
-    }
-
-    override fun typeOf(type: Any): Type {
-        // will be invoked by native function
-        return unknownType()
-    }
-
-    override fun codeOf(astNode: Any): String? {
-        // will be invoked by native function
-        return null
-    }
-
-    override fun locationOf(astNode: Any): PhysicalLocation? {
-        // will be invoked by native function
-        return null
-    }
-
-    override fun setComment(node: Node, astNode: Any) {
-        // will be invoked by native function
-    }
-
-    private fun parseInternal(code: String, path: String): TranslationUnitDeclaration {
+        val fileContent = file.readText(Charsets.UTF_8)
         val pythonInterpreter = jep.getInterp()
-        val tu: TranslationUnitDeclaration
-        val absolutePath = Paths.get(path).absolutePathString()
+        val absolutePath = file.absolutePath
         try {
+            // TODO: PYTHON VERSION CHECK!
             // run python function parse_code()
-            tu =
-                pythonInterpreter.invoke("parse_code", this, code, absolutePath)
-                    as TranslationUnitDeclaration
 
-            if (config.matchCommentsToNodes) {
-                // Parse comments and attach to nodes
-                pythonInterpreter.invoke("parse_comments", this, code, absolutePath, tu)
-            }
+            pythonInterpreter.eval("import ast")
+            pythonInterpreter.eval("import os")
+            pythonInterpreter.eval("fh = open(\"$absolutePath\", \"r\")")
+            pythonInterpreter.eval(
+                "parsed = ast.parse(fh.read(), filename=\"$absolutePath\", type_comments=True)"
+            )
+
+            val pyAST = pythonInterpreter.getValue("parsed") as PyObject
+            return pythonASTtoCPG(pyAST, fileContent)
         } catch (e: JepException) {
             e.printStackTrace()
             throw TranslationException("Python failed with message: $e")
@@ -89,7 +77,89 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         } finally {
             pythonInterpreter.close()
         }
+    }
 
-        return tu
+    override fun typeOf(type: Any): Type {
+        // TODO
+        return unknownType()
+    }
+
+    override fun codeOf(astNode: PythonAST.Node): String? {
+        return null
+        // TODO
+    }
+
+    override fun locationOf(astNode: PythonAST.Node): PhysicalLocation? {
+        return if (astNode is PythonAST.WithPythonLocation) {
+            PhysicalLocation(
+                URI("file:///TODO"), // TODO
+                Region(
+                    startLine = astNode.lineno,
+                    endLine = astNode.end_lineno,
+                    startColumn = astNode.col_offset,
+                    endColumn = astNode.end_col_offset,
+                )
+            )
+        } else {
+            null
+        }
+    }
+
+    override fun setComment(node: Node, astNode: PythonAST.Node) {
+        // will be invoked by native function
+    }
+
+    private fun pythonASTtoCPG(pyAST: PyObject, path: String): TranslationUnitDeclaration {
+        val pythonASTModule =
+            fromPython(pyAST) as? PythonAST.Module
+                ?: TODO() // could be one of ast.{Module,Interactive,Expression,FunctionType}
+        val tud = newTranslationUnitDeclaration(path, null, pythonASTModule) // TODO
+        scopeManager.resetToGlobal(tud)
+        val nsdName = Path(path).fileName.toString()
+        val nsd = newNamespaceDeclaration(nsdName, null, pythonASTModule) // TODO
+        tud.addDeclaration(nsd)
+        scopeManager.enterScope(nsd)
+        for (stmt in pythonASTModule.body) {
+            val handledStmt = statementHandler.handle(stmt)
+            nsd.addStatement(handledStmt)
+        }
+        scopeManager.leaveScope(nsd)
+        scopeManager.addDeclaration(nsd)
+        return tud
+    }
+}
+
+/**
+ * This function maps Python's `ast` objects to out internal [PythonAST] representation.
+ *
+ * @param pyObject the Python object
+ * @return our Kotlin view of the Python `ast` object
+ */
+fun fromPython(pyObject: Any): PythonAST.Node {
+    if (pyObject !is PyObject) {
+        TODO("Expected a PyObject")
+    } else {
+
+        return when (pyObject.getAttr("__class__").toString()) {
+            "<class 'ast.Module'>" -> PythonAST.Module(pyObject)
+            "<class 'ast.ClassDef'>" -> PythonAST.ClassDef(pyObject)
+            "<class 'ast.FunctionDef'>" -> PythonAST.FunctionDef(pyObject)
+            "<class 'ast.arguments'>" -> PythonAST.Arguments(pyObject)
+            "<class 'ast.ImportFrom'>" -> PythonAST.ImportFrom(pyObject)
+            "<class 'ast.Assign'>" -> PythonAST.Assign(pyObject)
+            "<class 'ast.If'>" -> PythonAST.If(pyObject)
+            "<class 'ast.AnnAssign'>" -> PythonAST.AnnAssign(pyObject)
+            "<class 'ast.arg'>" -> PythonAST.arg(pyObject)
+            "<class 'ast.Expr'>" -> PythonAST.Expr(pyObject)
+            "<class 'ast.Expression'>" -> PythonAST.Expression(pyObject)
+            "<class 'ast.Pass'>" -> PythonAST.Pass(pyObject)
+            "<class 'ast.For'>" -> PythonAST.For(pyObject)
+            "<class 'ast.Return'>" -> PythonAST.Return(pyObject)
+            "<class 'ast.Name'>" -> PythonAST.Name(pyObject)
+            "<class 'ast.While'>" -> PythonAST.While(pyObject)
+            else -> {
+                TODO("Implement for ${pyObject.getAttr("__class__")}")
+            }
+        }
     }
 }
