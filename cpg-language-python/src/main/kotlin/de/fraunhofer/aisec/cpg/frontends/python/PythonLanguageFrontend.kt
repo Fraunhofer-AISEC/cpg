@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
-import jep.JepException
 import jep.python.PyObject
 import kotlin.io.path.Path
 
@@ -54,28 +53,18 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         val fileContent = file.readText(Charsets.UTF_8)
-        val pythonInterpreter = jep.getInterp()
         val absolutePath = file.absolutePath
-        try {
+        jep.getInterp().use {
             // TODO: PYTHON VERSION CHECK!
-            // run python function parse_code()
+            // TODO: add sanity check to [absolutePath] to avoid code injection
 
-            pythonInterpreter.eval("import ast")
-            pythonInterpreter.eval("import os")
-            pythonInterpreter.eval("fh = open(\"$absolutePath\", \"r\")")
-            pythonInterpreter.eval(
-                "parsed = ast.parse(fh.read(), filename=\"$absolutePath\", type_comments=True)"
-            )
+            it.eval("import ast")
+            it.eval("import os")
+            it.eval("fh = open(\"$absolutePath\", \"r\")")
+            it.eval("parsed = ast.parse(fh.read(), filename=\"$absolutePath\", type_comments=True)")
 
-            val pyAST = pythonInterpreter.getValue("parsed") as PyObject
+            val pyAST = it.getValue("parsed") as PyObject
             return pythonASTtoCPG(pyAST, fileContent)
-        } catch (e: JepException) {
-            e.printStackTrace()
-            throw TranslationException("Python failed with message: $e")
-        } catch (e: Exception) {
-            throw e
-        } finally {
-            pythonInterpreter.close()
         }
     }
 

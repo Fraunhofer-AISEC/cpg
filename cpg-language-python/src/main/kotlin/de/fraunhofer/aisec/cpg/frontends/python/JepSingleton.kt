@@ -31,7 +31,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import jep.JepConfig
 import jep.MainInterpreter
-import jep.SubInterpreter
+import jep.SharedInterpreter
 import kotlin.io.path.exists
 
 /**
@@ -121,7 +121,8 @@ object JepSingleton {
     }
 
     /** Setup and configure (load the Python code and trigger the debug script) an interpreter. */
-    fun getInterp(): SubInterpreter {
-        return SubInterpreter(config)
+    fun getInterp(): SharedInterpreter {
+        SharedInterpreter.setConfig(config) // TODO: avoid setting the config for each interpreter
+        return SharedInterpreter()
     }
 }
