@@ -81,6 +81,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleAssign(node: PythonAST.Assign): Statement {
+        val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
+        val rhs = frontend.expressionHandler.handle(node.value)
         return newEmptyStatement() // TODO
     }
 

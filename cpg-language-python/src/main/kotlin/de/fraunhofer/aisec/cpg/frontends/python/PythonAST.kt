@@ -44,16 +44,19 @@ interface PythonAST {
                 return (pyObject.getAttr("lineno") as? Long)?.toInt() ?: TODO()
             }
 
+        /** Maps to the `col_offset` filed from Pyhon's ast. */
         val col_offset: Int
             get() {
                 return (pyObject.getAttr("col_offset") as? Long)?.toInt() ?: TODO()
             }
 
+        /** Maps to the `end_lineno` filed from Pyhon's ast. */
         val end_lineno: Int
             get() {
                 return (pyObject.getAttr("end_lineno") as? Long)?.toInt() ?: TODO()
             }
 
+        /** Maps to the `end_col_offset` filed from Pyhon's ast. */
         val end_col_offset: Int
             get() {
                 return (pyObject.getAttr("end_col_offset") as? Long)?.toInt() ?: TODO()
@@ -75,11 +78,13 @@ interface PythonAST {
      * class ast.Expression(body) Represents `ast.Expression` expressions. Note: do not confuse with
      * - [Expr] -> the expression statement
      * - [expr] -> the expression class
+     *
+     * ast.Expression = class Expression(mod) | Expression(expr body)
      */
     class Expression(pyObject: PyObject) : mod(pyObject) {
-        val body: Expression
+        val body: expr
             get() {
-                return fromPython(pyObject.getAttr("body")) as? Expression ?: TODO()
+                return fromPython(pyObject.getAttr("body")) as? expr ?: TODO()
             }
     }
 
@@ -99,15 +104,15 @@ interface PythonAST {
 
     /** ast.FunctionType = class FunctionType(mod) | FunctionType(expr* argtypes, expr returns) */
     class FunctionType(pyObject: PyObject) : mod(pyObject) {
-        val argtypes: kotlin.collections.List<Expression>
+        val argtypes: kotlin.collections.List<expr>
             get() {
                 val listOfPyStmt = pyObject.getAttr("argtypes") as? ArrayList<*> ?: TODO()
-                return listOfPyStmt.map { fromPython(it) as? Expression ?: TODO() }
+                return listOfPyStmt.map { fromPython(it) as? expr ?: TODO() }
             }
 
-        val returns: Expression
+        val returns: expr
             get() {
-                return fromPython(pyObject.getAttr("argtypes")) as? Expression ?: TODO()
+                return fromPython(pyObject.getAttr("argtypes")) as? expr ?: TODO()
             }
     }
 
@@ -132,15 +137,15 @@ interface PythonAST {
                 return listOfPyStmt.map { fromPython(it) as? stmt ?: TODO() }
             }
 
-        val decoratorList: kotlin.collections.List<Expression>
+        val decoratorList: kotlin.collections.List<expr>
             get() {
                 val listOfDecorators = pyObject.getAttr("decorator_list") as? ArrayList<*> ?: TODO()
-                return listOfDecorators.map { fromPython(it) as? Expression ?: TODO() }
+                return listOfDecorators.map { fromPython(it) as? expr ?: TODO() }
             }
 
-        val returns: Expression?
+        val returns: expr?
             get() {
-                return fromPython(pyObject.getAttr("returns")) as? Expression
+                return fromPython(pyObject.getAttr("returns")) as? expr
             }
 
         val type_comment: String?
@@ -168,7 +173,7 @@ interface PythonAST {
 
         val vararg: arg?
             get() {
-                return pyObject.getAttr("vararg") as? arg
+                return fromPython(pyObject.getAttr("vararg")) as? arg
             }
 
         val kwonlyargs: kotlin.collections.List<arg>
@@ -177,21 +182,21 @@ interface PythonAST {
                 return listOfPyArgs.map { fromPython(it) as? arg ?: TODO() }
             }
 
-        val kw_defaults: kotlin.collections.List<Expression>
+        val kw_defaults: kotlin.collections.List<expr>
             get() {
                 val listOfPyExpr = pyObject.getAttr("kw_defaults") as? ArrayList<*> ?: TODO()
-                return listOfPyExpr.map { fromPython(it) as? Expression ?: TODO() }
+                return listOfPyExpr.map { fromPython(it) as? expr ?: TODO() }
             }
 
         val kwarg: arg?
             get() {
-                return pyObject.getAttr("kwarg") as? arg
+                return fromPython(pyObject.getAttr("kwarg")) as? arg
             }
 
-        val defaults: kotlin.collections.List<Expression>
+        val defaults: kotlin.collections.List<expr>
             get() {
                 val listOfPyExpr = pyObject.getAttr("defaults") as? ArrayList<*> ?: TODO()
-                return listOfPyExpr.map { fromPython(it) as? Expression ?: TODO() }
+                return listOfPyExpr.map { fromPython(it) as? expr ?: TODO() }
             }
     }
 
@@ -234,17 +239,16 @@ interface PythonAST {
                 return listOfPyStmt.map { fromPython(it) as? stmt ?: TODO() }
             }
 
-        val decoratorList: kotlin.collections.List<Expression>
+        val decoratorList: kotlin.collections.List<expr>
             get() {
                 val listOfDecorators = pyObject.getAttr("decorator_list") as? ArrayList<*> ?: TODO()
-                return listOfDecorators.map { fromPython(it) as? Expression ?: TODO() }
+                return listOfDecorators.map { fromPython(it) as? expr ?: TODO() }
             }
 
-        val returns: Expression?
+        val returns: expr?
             get() {
-                val ret = pyObject.getAttr("returns")
-                return if (ret != null) (fromPython(ret as PyObject) as? Expression ?: TODO())
-                else null
+
+                return fromPython(pyObject.getAttr("returns")) as? expr
             }
 
         val type_comment: String?
@@ -281,10 +285,10 @@ interface PythonAST {
                 return listOfPyStmt.map { fromPython(it) as? stmt ?: TODO() }
             }
 
-        val decoratorList: kotlin.collections.List<Expression>
+        val decoratorList: kotlin.collections.List<expr>
             get() {
                 val listOfDecorators = pyObject.getAttr("decorator_list") as? ArrayList<*> ?: TODO()
-                return listOfDecorators.map { fromPython(it) as? Expression ?: TODO() }
+                return listOfDecorators.map { fromPython(it) as? expr ?: TODO() }
             }
     }
 
@@ -292,7 +296,7 @@ interface PythonAST {
     class Return(pyObject: PyObject) : stmt(pyObject) {
         val value: expr?
             get() {
-                return pyObject.getAttr("value") as? expr
+                return fromPython(pyObject.getAttr("value")) as? expr
             }
     }
 
@@ -302,7 +306,24 @@ interface PythonAST {
      */
     class Delete(pyObject: PyObject) : stmt(pyObject)
 
-    class Assign(pyObject: PyObject) : stmt(pyObject)
+    /** ast.Assign = class Assign(stmt) | Assign(expr* targets, expr value, string? type_comment) */
+    class Assign(pyObject: PyObject) : stmt(pyObject) {
+        val targets: kotlin.collections.List<expr>
+            get() {
+                val listOfDecorators = pyObject.getAttr("targets") as? ArrayList<*> ?: TODO()
+                return listOfDecorators.map { fromPython(it) as? expr ?: TODO() }
+            }
+
+        val value: expr
+            get() {
+                return fromPython(pyObject.getAttr("value")) as? expr ?: TODO()
+            }
+
+        val type_comment: String?
+            get() {
+                return pyObject.getAttr("type_comment") as? String
+            }
+    }
 
     class AugAssign(pyObject: PyObject) : stmt(pyObject)
 

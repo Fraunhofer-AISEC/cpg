@@ -48,7 +48,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     // val declarationHandler = DeclarationHandler(this)
     // val specificationHandler = SpecificationHandler(this)
     private var statementHandler = StatementHandler(this)
-    // var expressionHandler = ExpressionHandler(this)
+    internal var expressionHandler = ExpressionHandler(this)
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
