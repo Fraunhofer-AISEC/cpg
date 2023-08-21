@@ -248,7 +248,12 @@ inline fun <reified K : Node, V> iterateEOG(
     while (worklist.isNotEmpty()) {
         val (nextNode, state) = worklist.pop()
 
-        val newState = transformation(nextNode, state.duplicate(), worklist)
+        val insideBB =
+            (nextNode.nextEOG.size == 1 &&
+                nextNode.prevEOG.size == 1 &&
+                nextNode.prevEOG.first().nextEOG.size == 1)
+        val newState =
+            transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
         if (worklist.update(nextNode, newState)) {
             nextNode.nextEOG.forEach {
                 if (it is K) {
