@@ -181,7 +181,7 @@ fun LanguageProvider.newTupleDeclaration(
     elements: List<VariableDeclaration>,
     initializer: Expression?,
     rawNode: Any? = null
-): VariableDeclaration {
+): TupleDeclaration {
     val node = TupleDeclaration()
     node.applyMetadata(this, null, rawNode, null, true)
 

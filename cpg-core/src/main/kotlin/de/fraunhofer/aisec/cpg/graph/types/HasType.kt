@@ -102,7 +102,7 @@ interface HasType : ContextProvider, LanguageProvider {
      * A list of [TypeObserver] objects that will be informed about type changes, usually by
      * [informObservers].
      */
-    val typeObservers: MutableList<TypeObserver>
+    val typeObservers: MutableSet<TypeObserver>
 
     /**
      * A [TypeObserver] can be used by its implementing class to observe changes to the

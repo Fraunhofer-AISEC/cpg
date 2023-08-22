@@ -27,11 +27,13 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
+import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -67,6 +69,9 @@ class TupleDeclarationTest {
                                 newCallExpression(newDeclaredReferenceExpression("func"))
                             )
                         scopeManager.addDeclaration(tuple)
+                        tuple.elements.forEach { scopeManager.addDeclaration(it) }
+
+                        function("main") { body { call("print") { ref("a") } } }
                     }
                 }
             }
@@ -75,15 +80,25 @@ class TupleDeclarationTest {
             assertNotNull(tuple)
             assertIs<TupleType>(tuple.type)
             assertInvokes(tuple.initializer as? CallExpression, result.functions["func"])
-            assertContains(tuple.prevDFG, tuple.initializer!!)
 
             val a = tuple.elements["a"]
             assertNotNull(a)
             assertLocalName("MyClass", a.type)
+            assertContains(a.prevDFG, tuple.initializer!!)
 
             val b = tuple.elements["b"]
             assertNotNull(b)
             assertLocalName("error", b.type)
+            assertContains(b.prevDFG, tuple.initializer!!)
+
+            val call = result.functions["main"].calls["print"]
+            assertNotNull(call)
+            assertIs<CallExpression>(call)
+
+            val arg = call.arguments<DeclaredReferenceExpression>(0)
+            assertNotNull(arg)
+            assertRefersTo(arg, a)
+            assertContains(arg.prevDFG, a)
         }
     }
 }
