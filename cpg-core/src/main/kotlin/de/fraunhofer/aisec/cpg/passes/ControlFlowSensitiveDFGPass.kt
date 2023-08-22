@@ -82,7 +82,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                     // outer part (i.e., the tuple) here but we generate the DFG edges to the
                     // elements. We have the indices here, so it's amazing.
                     key.elements.forEachIndexed { i, element ->
-                        element.addPrevDFG(element, mutableMapOf(Properties.INDEX to i))
+                        element.addAllPrevDFG(
+                            value.elements.filterNot { it is VariableDeclaration && key == it },
+                            mutableMapOf(Properties.INDEX to i)
+                        )
                     }
                 } else {
                     key.addAllPrevDFG(
@@ -134,7 +137,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 // For a tuple declaration, we write the elements in this statement. We do not
                 // really care about the tuple when using the elements subsequently.
                 currentNode.elements.forEach {
-                    doubleState.pushToDeclarationsState(it, PowersetLattice(setOf(currentNode)))
+                    doubleState.pushToDeclarationsState(it, PowersetLattice(setOf(it)))
                 }
             } else {
                 // We also wrote something to this variable declaration here.
