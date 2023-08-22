@@ -42,7 +42,7 @@ import kotlin.test.assertNotNull
 
 class TupleDeclarationTest {
     @Test
-    fun testTupleDeclaration() {
+    fun testTopLevelTuple() {
         with(
             TestLanguageFrontend(
                 ctx =
@@ -76,26 +76,111 @@ class TupleDeclarationTest {
                 }
             }
 
+            val main = result.functions["main"]
+            assertNotNull(main)
+
             val tuple = result.tuples["(a,b)"]
             assertNotNull(tuple)
             assertIs<TupleType>(tuple.type)
-            assertInvokes(tuple.initializer as? CallExpression, result.functions["func"])
+
+            val call = tuple.initializer as? CallExpression
+            assertNotNull(call)
+            assertInvokes(call, result.functions["func"])
 
             val a = tuple.elements["a"]
             assertNotNull(a)
             assertLocalName("MyClass", a.type)
-            assertContains(a.prevDFG, tuple.initializer!!)
+            assertContains(a.prevDFG, call)
 
             val b = tuple.elements["b"]
             assertNotNull(b)
             assertLocalName("error", b.type)
-            assertContains(b.prevDFG, tuple.initializer!!)
+            assertContains(b.prevDFG, call)
 
-            val call = result.functions["main"].calls["print"]
+            val callPrint = main.calls["print"]
+            assertNotNull(callPrint)
+            assertIs<CallExpression>(callPrint)
+
+            val arg = callPrint.arguments<DeclaredReferenceExpression>(0)
+            assertNotNull(arg)
+            assertRefersTo(arg, a)
+            assertContains(arg.prevDFG, a)
+        }
+    }
+
+    @Test
+    fun testFunctionLevelTuple() {
+        with(
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(
+                        TranslationConfiguration.builder().defaultPasses().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
+            )
+        ) {
+            val result = build {
+                translationResult {
+                    translationUnit {
+                        function(
+                            "func",
+                            returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                        )
+
+                        function("main") {
+                            body {
+                                declare {
+                                    // I fear this is too complex for the fluent DSL; so we just use
+                                    // the node
+                                    // builder here
+                                    val tuple =
+                                        newTupleDeclaration(
+                                            listOf(
+                                                newVariableDeclaration("a"),
+                                                newVariableDeclaration("b")
+                                            ),
+                                            newCallExpression(
+                                                newDeclaredReferenceExpression("func")
+                                            )
+                                        )
+                                    this.addToPropertyEdgeDeclaration(tuple)
+                                    scopeManager.addDeclaration(tuple)
+                                    tuple.elements.forEach { scopeManager.addDeclaration(it) }
+                                }
+                                call("print") { ref("a") }
+                            }
+                        }
+                    }
+                }
+            }
+
+            val main = result.functions["main"]
+            assertNotNull(main)
+
+            val tuple = main.tuples["(a,b)"]
+            assertNotNull(tuple)
+            assertIs<TupleType>(tuple.type)
+
+            val call = tuple.initializer as? CallExpression
             assertNotNull(call)
-            assertIs<CallExpression>(call)
+            assertInvokes(call, result.functions["func"])
 
-            val arg = call.arguments<DeclaredReferenceExpression>(0)
+            val a = tuple.elements["a"]
+            assertNotNull(a)
+            assertLocalName("MyClass", a.type)
+            assertContains(a.prevDFG, call)
+
+            val b = tuple.elements["b"]
+            assertNotNull(b)
+            assertLocalName("error", b.type)
+            assertContains(b.prevDFG, call)
+
+            val callPrint = main.calls["print"]
+            assertNotNull(callPrint)
+            assertIs<CallExpression>(callPrint)
+
+            val arg = callPrint.arguments<DeclaredReferenceExpression>(0)
             assertNotNull(arg)
             assertRefersTo(arg, a)
             assertContains(arg.prevDFG, a)
