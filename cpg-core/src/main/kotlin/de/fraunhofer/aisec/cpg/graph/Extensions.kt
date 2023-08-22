@@ -535,6 +535,10 @@ val Node?.namespaces: List<NamespaceDeclaration>
 val Node?.variables: List<VariableDeclaration>
     get() = this.allChildren()
 
+/** Returns all [TupleDeclaration] children in this graph, starting with this [Node]. */
+val Node?.tuples: List<TupleDeclaration>
+    get() = this.allChildren()
+
 /** Returns all [Literal] children in this graph, starting with this [Node]. */
 val Node?.literals: List<Literal<*>>
     get() = this.allChildren()
