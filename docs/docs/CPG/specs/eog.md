@@ -89,6 +89,27 @@ flowchart LR
   nblock1--EOG-->nblock2
 ```
 
+## TupleDeclaration
+Represents the declaration of a tuple of variables.
+
+Interesting fields:
+
+* `initializer: Expression`: The result of evaluation will initialize the variable.
+* `elements: List<VariableDeclaration>`: The result of evaluation will initialize the variable.
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child
+  parent(["TupleDeclaration"]) --EOG--> next:::outer
+  parent -.-> child["initializer"]
+  child --EOG--> e0["elements[0]"]
+  e0 --"..."--> ei["elements[i]"]
+  ei --EOG--> parent
+
+```
+
 ## VariableDeclaration
 Represents the declaration of a local variable.
 
