@@ -6,3 +6,4 @@ enableGoFrontend=true
 enablePythonFrontend=true
 enableLLVMFrontend=true
 enableTypeScriptFrontend=true
+kotlin.experimental.tryK2=true

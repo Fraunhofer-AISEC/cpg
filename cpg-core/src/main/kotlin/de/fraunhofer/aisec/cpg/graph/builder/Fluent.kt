@@ -630,33 +630,22 @@ fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
     return node
 }
 
-// TODO: Merge the bodies together
-
 /**
  * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
  * [WhileStatement.statement] of the nearest enclosing [WhileStatement]. The [init] block can be
  * used to create further sub-nodes as well as configuring the created node itself.
  */
-context(WhileStatement)
+context(BranchingNode)
 
 fun LanguageFrontend<*, *>.loopBody(init: CompoundStatement.() -> Unit): CompoundStatement {
     val node = newCompoundStatement()
     init(node)
-    statement = node
 
-    return node
-}
-/**
- * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
- * [WhileStatement.statement] of the nearest enclosing [WhileStatement]. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
- */
-context(ForEachStatement)
-
-fun LanguageFrontend<*, *>.loopBody(init: CompoundStatement.() -> Unit): CompoundStatement {
-    val node = newCompoundStatement()
-    init(node)
-    statement = node
+    if ((this@BranchingNode) is ForEachStatement) {
+        (this@BranchingNode).statement = node
+    } else if ((this@BranchingNode) is WhileStatement) {
+        (this@BranchingNode).statement = node
+    }
 
     return node
 }
