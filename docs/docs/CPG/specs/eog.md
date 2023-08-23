@@ -105,7 +105,8 @@ flowchart LR
   parent(["TupleDeclaration"]) --EOG--> next:::outer
   parent -.-> child["initializer"]
   child --EOG--> e0["elements[0]"]
-  e0 --"..."--> ei["elements[i]"]
+  e0 --EOG--> e.["..."]
+  e. --EOG--> ei["elements[i]"]
   ei --EOG--> parent
 
 ```
@@ -292,6 +293,30 @@ flowchart LR
   node -.-> rhs
   lhs --EOG--> rhs
   rhs --EOG--> node
+```
+
+## AssignExpression
+
+Interesting fields:
+
+* `lhs: List<Expression>`: All expressions on the left-hand side of the assignment (i.e., the target)
+* `rhs: List<Expression>`: All expressions on the right-hand side of the assignment (i.e., the value to be assigned)
+* `declarations: List<Declaration>`: All expressions on the left-hand side of the assignment (i.e., the target)
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> decl0["declarations[0]"]
+  decl0 --EOG--> decl.["..."]
+  decl. --EOG--> decli["declarations[i]"]
+  decli --EOG--> lhs0["lhs[0]"]
+  lhs0 --EOG--> lhs.["..."]
+  lhs. --EOG--> lhsi["lhs[i]"]
+  lhsi--EOG--> rhs0["rhs[0]"]
+  rhs0 --EOG--> rhs.["..."]
+  rhs. --EOG--> rhsi["rhs[i]"]
+  rhsi --EOG--> node
 ```
 
 
