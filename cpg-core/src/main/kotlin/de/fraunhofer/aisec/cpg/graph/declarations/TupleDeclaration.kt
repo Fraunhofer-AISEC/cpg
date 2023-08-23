@@ -34,10 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.types.TupleType
 
 /**
  * This declaration models a tuple of different [VariableDeclaration] nodes. This is primarily used
- * in languages that support multiple assignments, such as Go as part of a top-level declaration.
- * The tuple is needed because the initializer of this declaration is flowing into the tuple (and
- * then split among its elements) rather than flowing into the declarations individually. For
- * example the following code
+ * in languages that support multiple assignments in a declaration, such as Go. The tuple is needed
+ * because the initializer of this declaration is flowing into the tuple (and then split among its
+ * elements) rather than flowing into the declarations individually. For example the following code
  *
  * ```go
  * var a,b = call()
@@ -49,8 +48,12 @@ import de.fraunhofer.aisec.cpg.graph.types.TupleType
  *   and `b`
  * - an [TupleDeclaration.initializer] that holds a [CallExpression] to `call`.
  *
- * Note: Currently, we only support [TupleDeclaration] with an initial [AutoType] (set in
- * [newTupleDeclaration]); its actual [TupleType] will be inferred by the
+ * Implementation Note #1: The [VariableDeclaration.initializer] of the element variables MUST be
+ * empty; only the [TupleDeclaration.initializer] must be set. Otherwise we are potentially parsing
+ * the initializer twice.
+ *
+ * Implementation Note #2: Currently, we only support [TupleDeclaration] with an initial [AutoType]
+ * (set in [newTupleDeclaration]); its actual [TupleType] will be inferred by the
  * [TupleDeclaration.initializer] (see [VariableDeclaration.typeChanged] for the implementation).
  *
  * The same applies to the elements in the tuple. They also need to have an [AutoType], and their

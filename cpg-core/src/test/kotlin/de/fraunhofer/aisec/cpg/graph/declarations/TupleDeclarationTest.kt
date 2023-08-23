@@ -79,8 +79,9 @@ class TupleDeclarationTest {
             val main = result.functions["main"]
             assertNotNull(main)
 
-            val tuple = result.tuples["(a,b)"]
+            val tuple = result.variables["(a,b)"]
             assertNotNull(tuple)
+            assertIs<TupleDeclaration>(tuple)
             assertIs<TupleType>(tuple.type)
 
             val call = tuple.initializer as? CallExpression
@@ -158,8 +159,9 @@ class TupleDeclarationTest {
             val main = result.functions["main"]
             assertNotNull(main)
 
-            val tuple = main.tuples["(a,b)"]
+            val tuple = main.variables["(a,b)"]
             assertNotNull(tuple)
+            assertIs<TupleDeclaration>(tuple)
             assertIs<TupleType>(tuple.type)
 
             val call = tuple.initializer as? CallExpression
