@@ -34,8 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateIn
 import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.passes.CallResolver
@@ -74,7 +74,7 @@ open class CallExpression :
         }
         set(value) {
             unwrap(invokeEdges).forEach { it.unregisterTypeObserver(this) }
-            invokeEdges = transformIntoOutgoingPropertyEdgeList(value, this)
+            invokeEdges = wrap(value, this)
             value.forEach { it.registerTypeObserver(this) }
         }
 

@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -61,7 +61,7 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
         primitive: Boolean,
         language: Language<*>?
     ) : super(typeName, language) {
-        this.genericsPropertyEdges = transformIntoOutgoingPropertyEdgeList(generics, this)
+        this.genericsPropertyEdges = wrap(generics, this)
         isPrimitive = primitive
         this.language = language
     }
@@ -73,7 +73,7 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
         language: Language<*>?
     ) : super(type) {
         this.language = language
-        this.genericsPropertyEdges = transformIntoOutgoingPropertyEdgeList(generics, this)
+        this.genericsPropertyEdges = wrap(generics, this)
         isPrimitive = primitive
     }
 
