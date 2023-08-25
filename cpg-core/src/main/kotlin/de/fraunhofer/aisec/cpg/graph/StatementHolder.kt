@@ -27,8 +27,9 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 
 /**
@@ -44,13 +45,17 @@ interface StatementHolder : Holder<Statement> {
     /** List of statements as property edges. */
     var statementEdges: MutableList<PropertyEdge<Statement>>
 
-    /** Virtual property to access [statementEdges] without property edges. */
+    /**
+     * Virtual property to access [statementEdges] without property edges.
+     *
+     * Note: We cannot use [PropertyEdgeDelegate] because delegates are not allowed in interfaces.
+     */
     var statements: List<Statement>
         get() {
             return unwrap(statementEdges)
         }
         set(value) {
-            statementEdges = transformIntoOutgoingPropertyEdgeList(value, this as Node)
+            statementEdges = wrap(value, this as Node)
         }
 
     /**
