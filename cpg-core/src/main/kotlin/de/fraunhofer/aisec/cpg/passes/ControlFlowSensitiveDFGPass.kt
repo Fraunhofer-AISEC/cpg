@@ -77,9 +77,21 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             )
 
             for ((key, value) in finalState.generalState) {
-                key.addAllPrevDFG(
-                    value.elements.filterNot { it is VariableDeclaration && key == it }
-                )
+                if (key is TupleDeclaration) {
+                    // We need a little hack for tuple statements to set the index. We have the
+                    // outer part (i.e., the tuple) here but we generate the DFG edges to the
+                    // elements. We have the indices here, so it's amazing.
+                    key.elements.forEachIndexed { i, element ->
+                        element.addAllPrevDFG(
+                            value.elements.filterNot { it is VariableDeclaration && key == it },
+                            mutableMapOf(Properties.INDEX to i)
+                        )
+                    }
+                } else {
+                    key.addAllPrevDFG(
+                        value.elements.filterNot { it is VariableDeclaration && key == it }
+                    )
+                }
             }
         }
     }
@@ -118,11 +130,22 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         val initializer = (currentNode as? VariableDeclaration)?.initializer
         if (initializer != null) {
             // A variable declaration with an initializer => The initializer flows to the
-            // declaration.
-            // We also wrote something to this variable declaration
+            // declaration. This also affects tuples. We split it up later.
             state.push(currentNode, PowersetLattice(setOf(initializer)))
 
-            doubleState.pushToDeclarationsState(currentNode, PowersetLattice(setOf(currentNode)))
+            if (currentNode is TupleDeclaration) {
+                // For a tuple declaration, we write the elements in this statement. We do not
+                // really care about the tuple when using the elements subsequently.
+                currentNode.elements.forEach {
+                    doubleState.pushToDeclarationsState(it, PowersetLattice(setOf(it)))
+                }
+            } else {
+                // We also wrote something to this variable declaration here.
+                doubleState.pushToDeclarationsState(
+                    currentNode,
+                    PowersetLattice(setOf(currentNode))
+                )
+            }
         } else if (isSimpleAssignment(currentNode)) {
             // It's an assignment which can have one or multiple things on the lhs and on the
             // rhs. The lhs could be a declaration or a reference (or multiple of these things).

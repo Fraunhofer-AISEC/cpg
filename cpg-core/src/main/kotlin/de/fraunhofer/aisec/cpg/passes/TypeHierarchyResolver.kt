@@ -103,7 +103,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun findSupertypeRecords(recordDecl: RecordDeclaration): Set<RecordDeclaration> {
         val superTypeDeclarations =
-            recordDecl.superTypes.mapNotNull { (it as ObjectType).recordDeclaration }.toSet()
+            recordDecl.superTypes.mapNotNull { (it as? ObjectType)?.recordDeclaration }.toSet()
         recordDecl.superTypeDeclarations = superTypeDeclarations
         return superTypeDeclarations
     }
