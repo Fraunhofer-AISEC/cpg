@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
+import de.fraunhofer.aisec.cpg.graph.statements.EmptyStmt
 import kotlin.test.*
 
 /**
@@ -230,7 +230,7 @@ class DFAEqualityTest {
         val dfa = getDfa()
         val oldDfa = getDfa()
 
-        val emptyNode = EmptyStatement()
+        val emptyNode = EmptyStmt()
         dfa.initializeOrderEvaluation(emptyNode)
         dfa.makeTransitionWithOp(setOf("create()"), emptyNode)
 

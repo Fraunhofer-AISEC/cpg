@@ -91,76 +91,60 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected val intermediateNodes = mutableListOf<Node>()
 
     init {
-        map[IncludeDeclaration::class.java] = { doNothing() }
-        map[TranslationUnitDeclaration::class.java] = {
-            handleTranslationUnitDeclaration(it as TranslationUnitDeclaration)
+        map[IncludeDecl::class.java] = { doNothing() }
+        map[TranslationUnitDecl::class.java] = {
+            handleTranslationUnitDeclaration(it as TranslationUnitDecl)
         }
-        map[NamespaceDeclaration::class.java] = {
-            handleNamespaceDeclaration(it as NamespaceDeclaration)
+        map[NamespaceDecl::class.java] = { handleNamespaceDeclaration(it as NamespaceDecl) }
+        map[RecordDecl::class.java] = { handleRecordDeclaration(it as RecordDecl) }
+        map[FunctionDecl::class.java] = { handleFunctionDeclaration(it as FunctionDecl) }
+        map[VariableDecl::class.java] = { handleVariableDeclaration(it as VariableDecl) }
+        map[CallExpr::class.java] = { handleCallExpression(it as CallExpr) }
+        map[MemberExpr::class.java] = { handleMemberExpression(it as MemberExpr) }
+        map[SubscriptionExpr::class.java] = {
+            handleArraySubscriptionExpression(it as SubscriptionExpr)
         }
-        map[RecordDeclaration::class.java] = { handleRecordDeclaration(it as RecordDeclaration) }
-        map[FunctionDeclaration::class.java] = {
-            handleFunctionDeclaration(it as FunctionDeclaration)
+        map[ArrayExpr::class.java] = { handleArrayCreationExpression(it as ArrayExpr) }
+        map[RangeExpr::class.java] = { handleRangeExpression(it as RangeExpr) }
+        map[DeclarationStmt::class.java] = { handleDeclarationStatement(it as DeclarationStmt) }
+        map[ReturnStmt::class.java] = { handleReturnStatement(it as ReturnStmt) }
+        map[BinaryOp::class.java] = { handleBinaryOperator(it as BinaryOp) }
+        map[AssignExpr::class.java] = { handleAssignExpression(it as AssignExpr) }
+        map[UnaryOp::class.java] = { handleUnaryOperator(it as UnaryOp) }
+        map[CompoundStmt::class.java] = { handleCompoundStatement(it as CompoundStmt) }
+        map[CompoundStmtExpr::class.java] = {
+            handleCompoundStatementExpression(it as CompoundStmtExpr)
         }
-        map[VariableDeclaration::class.java] = {
-            handleVariableDeclaration(it as VariableDeclaration)
+        map[IfStmt::class.java] = { handleIfStatement(it as IfStmt) }
+        map[AssertStmt::class.java] = { handleAssertStatement(it as AssertStmt) }
+        map[WhileStmt::class.java] = { handleWhileStatement(it as WhileStmt) }
+        map[DoStmt::class.java] = { handleDoStatement(it as DoStmt) }
+        map[ForStmt::class.java] = { handleForStatement(it as ForStmt) }
+        map[ForEachStmt::class.java] = { handleForEachStatement(it as ForEachStmt) }
+        map[TryStmt::class.java] = { handleTryStatement(it as TryStmt) }
+        map[ContinueStmt::class.java] = { handleContinueStatement(it as ContinueStmt) }
+        map[DeleteExpr::class.java] = { handleDeleteExpression(it as DeleteExpr) }
+        map[BreakStmt::class.java] = { handleBreakStatement(it as BreakStmt) }
+        map[SwitchStmt::class.java] = { handleSwitchStatement(it as SwitchStmt) }
+        map[LabelStmt::class.java] = { handleLabelStatement(it as LabelStmt) }
+        map[GotoStmt::class.java] = { handleGotoStatement(it as GotoStmt) }
+        map[CaseStmt::class.java] = { handleCaseStatement(it as CaseStmt) }
+        map[SynchronizedStmt::class.java] = { handleSynchronizedStatement(it as SynchronizedStmt) }
+        map[NewExpr::class.java] = { handleNewExpression(it as NewExpr) }
+        map[KeyValueExpr::class.java] = { handleKeyValueExpression(it as KeyValueExpr) }
+        map[CastExpr::class.java] = { handleCastExpression(it as CastExpr) }
+        map[ExprList::class.java] = { handleExpressionList(it as ExprList) }
+        map[ConditionalExpr::class.java] = { handleConditionalExpression(it as ConditionalExpr) }
+        map[InitializerListExpr::class.java] = {
+            handleInitializerListExpression(it as InitializerListExpr)
         }
-        map[CallExpression::class.java] = { handleCallExpression(it as CallExpression) }
-        map[MemberExpression::class.java] = { handleMemberExpression(it as MemberExpression) }
-        map[ArraySubscriptionExpression::class.java] = {
-            handleArraySubscriptionExpression(it as ArraySubscriptionExpression)
-        }
-        map[ArrayCreationExpression::class.java] = {
-            handleArrayCreationExpression(it as ArrayCreationExpression)
-        }
-        map[RangeExpression::class.java] = { handleRangeExpression(it as RangeExpression) }
-        map[DeclarationStatement::class.java] = {
-            handleDeclarationStatement(it as DeclarationStatement)
-        }
-        map[ReturnStatement::class.java] = { handleReturnStatement(it as ReturnStatement) }
-        map[BinaryOperator::class.java] = { handleBinaryOperator(it as BinaryOperator) }
-        map[AssignExpression::class.java] = { handleAssignExpression(it as AssignExpression) }
-        map[UnaryOperator::class.java] = { handleUnaryOperator(it as UnaryOperator) }
-        map[CompoundStatement::class.java] = { handleCompoundStatement(it as CompoundStatement) }
-        map[CompoundStatementExpression::class.java] = {
-            handleCompoundStatementExpression(it as CompoundStatementExpression)
-        }
-        map[IfStatement::class.java] = { handleIfStatement(it as IfStatement) }
-        map[AssertStatement::class.java] = { handleAssertStatement(it as AssertStatement) }
-        map[WhileStatement::class.java] = { handleWhileStatement(it as WhileStatement) }
-        map[DoStatement::class.java] = { handleDoStatement(it as DoStatement) }
-        map[ForStatement::class.java] = { handleForStatement(it as ForStatement) }
-        map[ForEachStatement::class.java] = { handleForEachStatement(it as ForEachStatement) }
-        map[TryStatement::class.java] = { handleTryStatement(it as TryStatement) }
-        map[ContinueStatement::class.java] = { handleContinueStatement(it as ContinueStatement) }
-        map[DeleteExpression::class.java] = { handleDeleteExpression(it as DeleteExpression) }
-        map[BreakStatement::class.java] = { handleBreakStatement(it as BreakStatement) }
-        map[SwitchStatement::class.java] = { handleSwitchStatement(it as SwitchStatement) }
-        map[LabelStatement::class.java] = { handleLabelStatement(it as LabelStatement) }
-        map[GotoStatement::class.java] = { handleGotoStatement(it as GotoStatement) }
-        map[CaseStatement::class.java] = { handleCaseStatement(it as CaseStatement) }
-        map[SynchronizedStatement::class.java] = {
-            handleSynchronizedStatement(it as SynchronizedStatement)
-        }
-        map[NewExpression::class.java] = { handleNewExpression(it as NewExpression) }
-        map[KeyValueExpression::class.java] = { handleKeyValueExpression(it as KeyValueExpression) }
-        map[CastExpression::class.java] = { handleCastExpression(it as CastExpression) }
-        map[ExpressionList::class.java] = { handleExpressionList(it as ExpressionList) }
-        map[ConditionalExpression::class.java] = {
-            handleConditionalExpression(it as ConditionalExpression)
-        }
-        map[InitializerListExpression::class.java] = {
-            handleInitializerListExpression(it as InitializerListExpression)
-        }
-        map[ConstructExpression::class.java] = {
-            handleConstructExpression(it as ConstructExpression)
-        }
-        map[EmptyStatement::class.java] = { handleDefault(it as EmptyStatement) }
+        map[ConstructExpr::class.java] = { handleConstructExpression(it as ConstructExpr) }
+        map[EmptyStmt::class.java] = { handleDefault(it as EmptyStmt) }
         map[Literal::class.java] = { handleDefault(it) }
-        map[DefaultStatement::class.java] = { handleDefault(it) }
-        map[TypeIdExpression::class.java] = { handleDefault(it) }
-        map[DeclaredReferenceExpression::class.java] = { handleDefault(it) }
-        map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
+        map[DefaultStmt::class.java] = { handleDefault(it) }
+        map[TypeIdExpr::class.java] = { handleDefault(it) }
+        map[Reference::class.java] = { handleDefault(it) }
+        map[LambdaExpr::class.java] = { handleLambdaExpression(it as LambdaExpr) }
     }
 
     protected fun doNothing() {
@@ -172,7 +156,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
     }
 
-    override fun accept(tu: TranslationUnitDeclaration) {
+    override fun accept(tu: TranslationUnitDecl) {
         createEOG(tu)
         removeUnreachableEOGEdges(tu)
     }
@@ -181,7 +165,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Removes EOG edges by first building the negative set of nodes that cannot be visited and then
      * remove there outgoing edges. This also removes cycles.
      */
-    protected fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
+    protected fun removeUnreachableEOGEdges(tu: TranslationUnitDecl) {
         // All nodes which have an eog edge
         val eogNodes = IdentitySet<Node>()
         eogNodes.addAll(
@@ -193,10 +177,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         var validStarts =
             eogNodes
                 .filter { node ->
-                    node is FunctionDeclaration ||
-                        node is RecordDeclaration ||
-                        node is NamespaceDeclaration ||
-                        node is TranslationUnitDeclaration
+                    node is FunctionDecl ||
+                        node is RecordDecl ||
+                        node is NamespaceDecl ||
+                        node is TranslationUnitDecl
                 }
                 .toSet()
         // Remove all nodes from eogNodes which are reachable from validStarts and transitively.
@@ -215,7 +199,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
-    protected fun handleTranslationUnitDeclaration(node: TranslationUnitDeclaration) {
+    protected fun handleTranslationUnitDeclaration(node: TranslationUnitDecl) {
         handleStatementHolder(node as StatementHolder)
 
         // loop through functions
@@ -225,7 +209,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         processedListener.clearProcessed()
     }
 
-    protected fun handleNamespaceDeclaration(node: NamespaceDeclaration) {
+    protected fun handleNamespaceDeclaration(node: NamespaceDecl) {
         handleStatementHolder(node)
 
         // loop through functions
@@ -235,13 +219,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         processedListener.clearProcessed()
     }
 
-    protected fun handleVariableDeclaration(node: VariableDeclaration) {
+    protected fun handleVariableDeclaration(node: VariableDecl) {
         // analyze the initializer
         createEOG(node.initializer)
         pushToEOG(node)
     }
 
-    protected fun handleRecordDeclaration(node: RecordDeclaration) {
+    protected fun handleRecordDeclaration(node: RecordDecl) {
         scopeManager.enterScope(node)
         handleStatementHolder(node)
         currentPredecessors.clear()
@@ -262,7 +246,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // although they can be placed in the same enclosing declaration.
         val code = statementHolder.statements
 
-        val nonStaticCode = code.filter { (it as? CompoundStatement)?.isStaticBlock == false }
+        val nonStaticCode = code.filter { (it as? CompoundStmt)?.isStaticBlock == false }
         val staticCode = code.filter { it !in nonStaticCode }
 
         pushToEOG(statementHolder as Node)
@@ -277,7 +261,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
     }
 
-    protected fun handleLambdaExpression(node: LambdaExpression) {
+    protected fun handleLambdaExpression(node: LambdaExpr) {
         val tmpCurrentEOG = currentPredecessors.toMutableList()
         val tmpCurrentProperties = nextEdgeProperties.toMutableMap()
         val tmpIntermediateNodes = intermediateNodes.toMutableList()
@@ -299,18 +283,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected open fun handleFunctionDeclaration(node: FunctionDeclaration) {
+    protected open fun handleFunctionDeclaration(node: FunctionDecl) {
         // reset EOG
         currentPredecessors.clear()
         var needToLeaveRecord = false
         if (
-            node is MethodDeclaration &&
-                node.recordDeclaration != null &&
-                (node.recordDeclaration !== scopeManager.currentRecord)
+            node is MethodDecl &&
+                node.recordDecl != null &&
+                (node.recordDecl !== scopeManager.currentRecord)
         ) {
             // This is a method declaration outside the AST of the record, as its possible in
             // languages, such as C++. Therefore, we need to enter the record scope as well
-            scopeManager.enterScope(node.recordDeclaration!!)
+            scopeManager.enterScope(node.recordDecl!!)
             needToLeaveRecord = true
         }
         scopeManager.enterScope(node)
@@ -336,8 +320,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // Connect uncaught throws to block node
         node.body?.let { addMultipleIncomingEOGEdges(uncaughtEOGThrows, it) }
         scopeManager.leaveScope(node)
-        if (node is MethodDeclaration && node.recordDeclaration != null && needToLeaveRecord) {
-            scopeManager.leaveScope(node.recordDeclaration!!)
+        if (node is MethodDecl && node.recordDecl != null && needToLeaveRecord) {
+            scopeManager.leaveScope(node.recordDecl!!)
         }
 
         // Set default argument evaluation nodes
@@ -393,7 +377,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleCallExpression(node: CallExpression) {
+    protected fun handleCallExpression(node: CallExpr) {
         // Todo add call as throwexpression to outer scope of call can throw (which is trivial to
         // find out for java, but impossible for c++)
 
@@ -408,12 +392,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleMemberExpression(node: MemberExpression) {
+    protected fun handleMemberExpression(node: MemberExpr) {
         createEOG(node.base)
         pushToEOG(node)
     }
 
-    protected fun handleArraySubscriptionExpression(node: ArraySubscriptionExpression) {
+    protected fun handleArraySubscriptionExpression(node: SubscriptionExpr) {
         // Connect according to evaluation order, first the array reference, then the contained
         // index.
         createEOG(node.arrayExpression)
@@ -421,7 +405,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleArrayCreationExpression(node: ArrayCreationExpression) {
+    protected fun handleArrayCreationExpression(node: ArrayExpr) {
         for (dimension in node.dimensions) {
             createEOG(dimension)
         }
@@ -429,20 +413,20 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleRangeExpression(node: RangeExpression) {
+    protected fun handleRangeExpression(node: RangeExpr) {
         createEOG(node.floor)
         createEOG(node.ceiling)
         createEOG(node.third)
         pushToEOG(node)
     }
 
-    protected fun handleDeclarationStatement(node: DeclarationStatement) {
+    protected fun handleDeclarationStatement(node: DeclarationStmt) {
         // loop through declarations
         for (declaration in node.declarations) {
-            if (declaration is VariableDeclaration) {
+            if (declaration is VariableDecl) {
                 // analyze the initializers if there is one
                 createEOG(declaration)
-            } else if (declaration is FunctionDeclaration) {
+            } else if (declaration is FunctionDecl) {
                 // save the current EOG stack, because we can have a function declaration within an
                 // existing function and the EOG handler for handling function declarations will
                 // reset the
@@ -461,7 +445,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleReturnStatement(node: ReturnStatement) {
+    protected fun handleReturnStatement(node: ReturnStmt) {
         // analyze the return value
         createEOG(node.returnValue)
 
@@ -472,7 +456,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
     }
 
-    protected fun handleBinaryOperator(node: BinaryOperator) {
+    protected fun handleBinaryOperator(node: BinaryOp) {
         createEOG(node.lhs)
         val lang = node.language
         // Two operators that don't evaluate the second operator if the first evaluates to a certain
@@ -504,7 +488,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleAssignExpression(node: AssignExpression) {
+    protected fun handleAssignExpression(node: AssignExpr) {
         for (declaration in node.declarations) {
             createEOG(declaration)
         }
@@ -518,7 +502,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleCompoundStatement(node: CompoundStatement) {
+    protected fun handleCompoundStatement(node: CompoundStmt) {
         // not all language handle compound statements as scoping blocks, so we need to avoid
         // creating new scopes here
         scopeManager.enterScopeIfExists(node)
@@ -533,7 +517,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleUnaryOperator(node: UnaryOperator) {
+    protected fun handleUnaryOperator(node: UnaryOp) {
         // TODO(oxisto): These operator codes are highly language specific and might be more suited
         //  to be handled differently (see https://github.com/Fraunhofer-AISEC/cpg/issues/1161)
         if (node.operatorCode == "throw") {
@@ -543,7 +527,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
-    protected fun handleThrowOperator(node: UnaryOperator) {
+    protected fun handleThrowOperator(node: UnaryOp) {
         val input = node.input
         createEOG(input)
 
@@ -566,19 +550,19 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * function using [ReplacePass], handle specific operators on their own and delegate the rest to
      * this function.
      */
-    protected open fun handleUnspecificUnaryOperator(node: UnaryOperator) {
+    protected open fun handleUnspecificUnaryOperator(node: UnaryOp) {
         val input = node.input
         createEOG(input)
 
         pushToEOG(node)
     }
 
-    protected fun handleCompoundStatementExpression(node: CompoundStatementExpression) {
+    protected fun handleCompoundStatementExpression(node: CompoundStmtExpr) {
         createEOG(node.statement)
         pushToEOG(node)
     }
 
-    protected fun handleAssertStatement(node: AssertStatement) {
+    protected fun handleAssertStatement(node: AssertStmt) {
         createEOG(node.condition)
         val openConditionEOGs = ArrayList(currentPredecessors)
         createEOG(node.message)
@@ -586,7 +570,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleTryStatement(node: TryStatement) {
+    protected fun handleTryStatement(node: TryStmt) {
         scopeManager.enterScope(node)
         val tryScope = scopeManager.currentScope as TryScope?
 
@@ -656,29 +640,29 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleContinueStatement(node: ContinueStatement) {
+    protected fun handleContinueStatement(node: ContinueStmt) {
         pushToEOG(node)
         scopeManager.addContinueStatement(node)
         currentPredecessors.clear()
     }
 
-    protected fun handleDeleteExpression(node: DeleteExpression) {
+    protected fun handleDeleteExpression(node: DeleteExpr) {
         createEOG(node.operand)
         pushToEOG(node)
     }
 
-    protected fun handleBreakStatement(node: BreakStatement) {
+    protected fun handleBreakStatement(node: BreakStmt) {
         pushToEOG(node)
         scopeManager.addBreakStatement(node)
         currentPredecessors.clear()
     }
 
-    protected fun handleLabelStatement(node: LabelStatement) {
+    protected fun handleLabelStatement(node: LabelStmt) {
         scopeManager.addLabelStatement(node)
         createEOG(node.subStatement)
     }
 
-    protected fun handleGotoStatement(node: GotoStatement) {
+    protected fun handleGotoStatement(node: GotoStmt) {
         pushToEOG(node)
         node.targetLabel?.let {
             processedListener.registerObjectListener(it) { _: Any?, to: Any? ->
@@ -688,35 +672,35 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
     }
 
-    protected fun handleCaseStatement(node: CaseStatement) {
+    protected fun handleCaseStatement(node: CaseStmt) {
         createEOG(node.caseExpression)
         pushToEOG(node)
     }
 
-    protected fun handleNewExpression(node: NewExpression) {
+    protected fun handleNewExpression(node: NewExpr) {
         createEOG(node.initializer)
         pushToEOG(node)
     }
 
-    protected fun handleKeyValueExpression(node: KeyValueExpression) {
+    protected fun handleKeyValueExpression(node: KeyValueExpr) {
         createEOG(node.key)
         createEOG(node.value)
         pushToEOG(node)
     }
 
-    protected fun handleCastExpression(node: CastExpression) {
+    protected fun handleCastExpression(node: CastExpr) {
         createEOG(node.expression)
         pushToEOG(node)
     }
 
-    protected fun handleExpressionList(node: ExpressionList) {
+    protected fun handleExpressionList(node: ExprList) {
         for (expr in node.expressions) {
             createEOG(expr)
         }
         pushToEOG(node)
     }
 
-    protected fun handleInitializerListExpression(node: InitializerListExpression) {
+    protected fun handleInitializerListExpression(node: InitializerListExpr) {
         // first the arguments
         for (inits in node.initializers) {
             createEOG(inits)
@@ -724,7 +708,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleConstructExpression(node: ConstructExpression) {
+    protected fun handleConstructExpression(node: ConstructExpr) {
         // first the arguments
         for (arg in node.arguments) {
             createEOG(arg)
@@ -764,8 +748,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun exitLoop(loopStatement: Statement, loopScope: LoopScope) {
         // Breaks are connected to the NEXT EOG node and therefore temporarily stored after the loop
         // context is destroyed
-        currentPredecessors.addAll(loopScope.breakStatements)
-        val continues = ArrayList(loopScope.continueStatements)
+        currentPredecessors.addAll(loopScope.breakStmts)
+        val continues = ArrayList(loopScope.continueStmts)
         if (continues.isNotEmpty()) {
             val conditions =
                 loopScope.conditions.map { SubgraphWalker.getEOGPathEdges(it).entries }.flatten()
@@ -808,13 +792,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         prevs.forEach { prev -> addEOGEdge(prev, next) }
     }
 
-    protected fun handleSynchronizedStatement(node: SynchronizedStatement) {
+    protected fun handleSynchronizedStatement(node: SynchronizedStmt) {
         createEOG(node.expression)
         pushToEOG(node)
         createEOG(node.blockStatement)
     }
 
-    protected fun handleConditionalExpression(node: ConditionalExpression) {
+    protected fun handleConditionalExpression(node: ConditionalExpr) {
         val openBranchNodes = mutableListOf<Node>()
         createEOG(node.condition)
         // To have semantic information after the condition evaluation
@@ -830,7 +814,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         setCurrentEOGs(openBranchNodes)
     }
 
-    protected fun handleDoStatement(node: DoStatement) {
+    protected fun handleDoStatement(node: DoStmt) {
         scopeManager.enterScope(node)
         createEOG(node.statement)
         createEOG(node.condition)
@@ -847,7 +831,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
-    protected fun handleForEachStatement(node: ForEachStatement) {
+    protected fun handleForEachStatement(node: ForEachStmt) {
         scopeManager.enterScope(node)
         createEOG(node.iterable)
         createEOG(node.variable)
@@ -868,7 +852,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeProperties[Properties.BRANCH] = false
     }
 
-    protected fun handleForStatement(node: ForStatement) {
+    protected fun handleForStatement(node: ForStmt) {
         scopeManager.enterScope(node)
         createEOG(node.initializerStatement)
         createEOG(node.conditionDeclaration)
@@ -894,7 +878,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeProperties[Properties.BRANCH] = false
     }
 
-    protected fun handleIfStatement(node: IfStatement) {
+    protected fun handleIfStatement(node: IfStmt) {
         val openBranchNodes = mutableListOf<Node>()
         scopeManager.enterScopeIfExists(node)
         createEOG(node.initializerStatement)
@@ -917,7 +901,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         setCurrentEOGs(openBranchNodes)
     }
 
-    protected fun handleSwitchStatement(node: SwitchStatement) {
+    protected fun handleSwitchStatement(node: SwitchStmt) {
         scopeManager.enterScopeIfExists(node)
         createEOG(node.initializerStatement)
         createEOG(node.selectorDeclaration)
@@ -925,15 +909,15 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node) // To have semantic information after the condition evaluation
         val tmp = ArrayList(currentPredecessors)
         val compound =
-            if (node.statement is DoStatement) {
+            if (node.statement is DoStmt) {
                 createEOG(node.statement)
-                (node.statement as DoStatement).statement as CompoundStatement
+                (node.statement as DoStmt).statement as CompoundStmt
             } else {
-                node.statement as CompoundStatement
+                node.statement as CompoundStmt
             }
         currentPredecessors = ArrayList()
         for (subStatement in compound.statements) {
-            if (subStatement is CaseStatement || subStatement is DefaultStatement) {
+            if (subStatement is CaseStmt || subStatement is DefaultStmt) {
                 currentPredecessors.addAll(tmp)
             }
             createEOG(subStatement)
@@ -941,13 +925,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(compound)
         val switchScope = scopeManager.leaveScope(node) as SwitchScope?
         if (switchScope != null) {
-            currentPredecessors.addAll(switchScope.breakStatements)
+            currentPredecessors.addAll(switchScope.breakStmts)
         } else {
             LOGGER.error("Handling switch statement, but not in switch scope: $node")
         }
     }
 
-    protected fun handleWhileStatement(node: WhileStatement) {
+    protected fun handleWhileStatement(node: WhileStmt) {
         scopeManager.enterScope(node)
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
@@ -989,7 +973,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 val toProcess = workList[0]
                 workList.remove(toProcess)
                 passedBy.add(toProcess)
-                if (toProcess is FunctionDeclaration) {
+                if (toProcess is FunctionDecl) {
                     return true
                 }
                 for (pred in toProcess.prevEOG) {

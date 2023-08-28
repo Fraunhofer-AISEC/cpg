@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
@@ -63,12 +63,10 @@ constructor(
     }
 
     companion object {
-        /**
-         * This helper function computes a [FunctionType] out of an existing [FunctionDeclaration].
-         */
+        /** This helper function computes a [FunctionType] out of an existing [FunctionDecl]. */
         @JvmStatic
         fun computeType(
-            func: FunctionDeclaration,
+            func: FunctionDecl,
         ): FunctionType {
             val type =
                 FunctionType(

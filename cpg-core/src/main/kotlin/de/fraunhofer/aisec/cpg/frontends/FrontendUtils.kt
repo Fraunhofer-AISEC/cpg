@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.Region
 import kotlin.math.min
@@ -115,7 +115,7 @@ class FrontendUtils {
          * if they don't have a successor starting in the same line but they have a predecessor in
          * the same line, the comment is matched to that closest predecessor.
          */
-        fun matchCommentToNode(comment: String, location: Region, tu: TranslationUnitDeclaration) {
+        fun matchCommentToNode(comment: String, location: Region, tu: TranslationUnitDecl) {
             val nodes: List<Node> = SubgraphWalker.flattenAST(tu)
 
             // Get a List of all Nodes that enclose the comment
@@ -142,7 +142,7 @@ class FrontendUtils {
             // Because in GO we wrap all elements into a NamespaceDeclaration we have to extract the
             // natural children
             children.addAll(
-                children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
+                children.filterIsInstance<NamespaceDecl>().flatMap { namespace ->
                     SubgraphWalker.getAstChildren(namespace).filter { it !in children }
                 }
             )

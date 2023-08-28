@@ -29,15 +29,15 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ForStmt
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptionExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -58,19 +58,19 @@ class SizeEvaluatorTest {
 
         assertNotNull(tu)
 
-        val mainClass = tu.byNameOrNull<RecordDeclaration>("MainClass")
+        val mainClass = tu.byNameOrNull<RecordDecl>("MainClass")
         assertNotNull(mainClass)
-        val main = mainClass.byNameOrNull<MethodDeclaration>("main")
+        val main = mainClass.byNameOrNull<MethodDecl>("main")
         assertNotNull(main)
 
-        val array = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val array = main.bodyOrNull<DeclarationStmt>()?.singleDeclaration
         assertNotNull(array)
 
         val evaluator = SizeEvaluator()
         var value = evaluator.evaluate(array)
         assertEquals(3, value)
 
-        val printCall = main.bodyOrNull<CallExpression>(0)
+        val printCall = main.bodyOrNull<CallExpr>(0)
         assertNotNull(printCall)
 
         value = evaluator.evaluate(printCall.arguments.firstOrNull()) as Int
@@ -91,24 +91,24 @@ class SizeEvaluatorTest {
 
         assertNotNull(tu)
 
-        val mainClass = tu.byNameOrNull<RecordDeclaration>("MainClass")
+        val mainClass = tu.byNameOrNull<RecordDecl>("MainClass")
         assertNotNull(mainClass)
-        val main = mainClass.byNameOrNull<MethodDeclaration>("main")
+        val main = mainClass.byNameOrNull<MethodDecl>("main")
         assertNotNull(main)
 
-        val array = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val array = main.bodyOrNull<DeclarationStmt>()?.singleDeclaration
         assertNotNull(array)
 
         val evaluator = SizeEvaluator()
         var value = evaluator.evaluate(array)
         assertEquals(3, value)
 
-        val forLoop = main.bodyOrNull<ForStatement>(0)
+        val forLoop = main.bodyOrNull<ForStmt>(0)
         assertNotNull(forLoop)
 
         val subscriptExpr =
-            ((forLoop.statement as CompoundStatement).statements[0] as AssignExpression).lhs<
-                ArraySubscriptionExpression
+            ((forLoop.statement as CompoundStmt).statements[0] as AssignExpr).lhs<
+                SubscriptionExpr
             >()
 
         value = evaluator.evaluate(subscriptExpr) as Int
@@ -129,11 +129,11 @@ class SizeEvaluatorTest {
 
         assertNotNull(tu)
 
-        val mainClass = tu.byNameOrNull<RecordDeclaration>("MainClass")
+        val mainClass = tu.byNameOrNull<RecordDecl>("MainClass")
         assertNotNull(mainClass)
-        val main = mainClass.byNameOrNull<MethodDeclaration>("main")
+        val main = mainClass.byNameOrNull<MethodDecl>("main")
         assertNotNull(main)
-        val printCall = main.bodyOrNull<CallExpression>(1)
+        val printCall = main.bodyOrNull<CallExpr>(1)
         assertNotNull(printCall)
 
         val evaluator = SizeEvaluator()

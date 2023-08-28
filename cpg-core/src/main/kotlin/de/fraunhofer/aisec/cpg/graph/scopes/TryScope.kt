@@ -26,18 +26,18 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStmt
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class TryScope(astNode: Node?) : ValueDeclarationScope(astNode), Breakable {
     @Transient val catchesOrRelays = mutableMapOf<Type, MutableList<Node>>()
 
-    private val breaks = mutableListOf<BreakStatement>()
+    private val breaks = mutableListOf<BreakStmt>()
 
-    override fun addBreakStatement(breakStatement: BreakStatement) {
-        breaks.add(breakStatement)
+    override fun addBreakStatement(breakStmt: BreakStmt) {
+        breaks.add(breakStmt)
     }
 
-    override val breakStatements: List<BreakStatement>
+    override val breakStmts: List<BreakStmt>
         get() = breaks
 }

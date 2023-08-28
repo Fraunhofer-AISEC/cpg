@@ -27,13 +27,13 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Ast.BasicLit.Kind.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class ExpressionHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Expression, GoStandardLibrary.Ast.Expr>(::ProblemExpression, frontend) {
+    GoHandler<Expression, GoStandardLibrary.Ast.Expr>(::ProblemExpr, frontend) {
 
     override fun handleNode(expr: GoStandardLibrary.Ast.Expr): Expression {
         return when (expr) {
@@ -92,10 +92,10 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return lit
     }
 
-    private fun handleBinaryExpr(binaryExpr: GoStandardLibrary.Ast.BinaryExpr): BinaryOperator {
-        val binOp = newBinaryOperator(binaryExpr.opString, rawNode = binaryExpr)
-        binOp.lhs = handle(binaryExpr.x) ?: newProblemExpression("missing LHS")
-        binOp.rhs = handle(binaryExpr.y) ?: newProblemExpression("missing RHS")
+    private fun handleBinaryExpr(binaryExpr: GoStandardLibrary.Ast.BinaryExpr): BinaryOp {
+        val binOp = newBinaryOp(binaryExpr.opString, rawNode = binaryExpr)
+        binOp.lhs = handle(binaryExpr.x) ?: newProblemExpr("missing LHS")
+        binOp.rhs = handle(binaryExpr.y) ?: newProblemExpr("missing RHS")
 
         return binOp
     }
@@ -109,7 +109,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             return literal
         }
 
-        val ref = newDeclaredReferenceExpression(ident.name, rawNode = ident)
+        val ref = newReference(ident.name, rawNode = ident)
 
         // Check, if this refers to a package import
         val import = frontend.currentTU?.getIncludeByName(ident.name)
@@ -121,10 +121,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return ref
     }
 
-    private fun handleIndexExpr(
-        indexExpr: GoStandardLibrary.Ast.IndexExpr
-    ): ArraySubscriptionExpression {
-        val ase = newArraySubscriptionExpression(rawNode = indexExpr)
+    private fun handleIndexExpr(indexExpr: GoStandardLibrary.Ast.IndexExpr): SubscriptionExpr {
+        val ase = newSubscriptionExpr(rawNode = indexExpr)
         ase.arrayExpression = frontend.expressionHandler.handle(indexExpr.x)
         ase.subscriptExpression = frontend.expressionHandler.handle(indexExpr.index)
 
@@ -141,7 +139,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.InterfaceType,
             is GoStandardLibrary.Ast.StructType,
             is GoStandardLibrary.Ast.MapType, -> {
-                val cast = newCastExpression(rawNode = callExpr)
+                val cast = newCastExpr(rawNode = callExpr)
                 cast.castType = frontend.typeOf(callExpr.`fun`)
 
                 if (callExpr.args.isNotEmpty()) {
@@ -157,7 +155,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         // Parse the Fun field, to see which kind of expression it is
         val callee =
             this.handle(callExpr.`fun`)
-                ?: return ProblemExpression("Could not parse call expr without fun")
+                ?: return ProblemExpr("Could not parse call expr without fun")
 
         // Handle special functions, such as make and new in a special way
         val name = callee.name.localName
@@ -169,10 +167,10 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
         // Differentiate between calls and member calls based on the callee
         val call =
-            if (callee is MemberExpression) {
-                newMemberCallExpression(callee, rawNode = callExpr)
+            if (callee is MemberExpr) {
+                newMemberCallExpr(callee, rawNode = callExpr)
             } else {
-                newCallExpression(callee, name, rawNode = callExpr)
+                newCallExpr(callee, name, rawNode = callExpr)
             }
 
         // Parse and add call arguments
@@ -183,21 +181,19 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return call
     }
 
-    private fun handleKeyValueExpr(
-        keyValueExpr: GoStandardLibrary.Ast.KeyValueExpr
-    ): KeyValueExpression {
-        val key = handle(keyValueExpr.key) ?: newProblemExpression("could not parse key")
-        val value = handle(keyValueExpr.value) ?: newProblemExpression("could not parse value")
+    private fun handleKeyValueExpr(keyValueExpr: GoStandardLibrary.Ast.KeyValueExpr): KeyValueExpr {
+        val key = handle(keyValueExpr.key) ?: newProblemExpr("could not parse key")
+        val value = handle(keyValueExpr.value) ?: newProblemExpr("could not parse value")
 
-        return newKeyValueExpression(key, value, rawNode = keyValueExpr)
+        return newKeyValueExpr(key, value, rawNode = keyValueExpr)
     }
 
     private fun handleNewExpr(callExpr: GoStandardLibrary.Ast.CallExpr): Expression {
         if (callExpr.args.isEmpty()) {
-            return newProblemExpression("could not create NewExpression with empty arguments")
+            return newProblemExpr("could not create NewExpression with empty arguments")
         }
 
-        val n = newNewExpression(rawNode = callExpr)
+        val n = newNewExpr(rawNode = callExpr)
 
         // First argument is type
         val type = frontend.typeOf(callExpr.args[0])
@@ -206,7 +202,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         n.type = type.reference(PointerType.PointerOrigin.POINTER)
 
         // a new expression also needs an initializer, which is usually a ConstructExpression
-        val construct = newConstructExpression(rawNode = callExpr)
+        val construct = newConstructExpr(rawNode = callExpr)
         construct.type = type
 
         n.initializer = construct
@@ -218,13 +214,13 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         val args = callExpr.args
 
         if (args.isEmpty()) {
-            return newProblemExpression("too few arguments for make expression")
+            return newProblemExpr("too few arguments for make expression")
         }
 
         val expression =
             // Actually make() can make more than just arrays, i.e. channels and maps
             if (args[0] is GoStandardLibrary.Ast.ArrayType) {
-                val array = newArrayCreationExpression(rawNode = callExpr)
+                val array = newArrayExpr(rawNode = callExpr)
 
                 // second argument is a dimension (if this is an array), usually a literal
                 if (args.size > 1) {
@@ -234,7 +230,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             } else {
                 // Create at least a generic construct expression for the given map or channel type
                 // and provide the remaining arguments
-                val construct = newConstructExpression(rawNode = callExpr)
+                val construct = newConstructExpr(rawNode = callExpr)
 
                 // Pass the remaining arguments
                 for (expr in args.subList(1.coerceAtMost(args.size - 1), args.size - 1)) {
@@ -250,10 +246,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return expression
     }
 
-    private fun handleSelectorExpr(
-        selectorExpr: GoStandardLibrary.Ast.SelectorExpr
-    ): DeclaredReferenceExpression {
-        val base = handle(selectorExpr.x) ?: newProblemExpression("missing base")
+    private fun handleSelectorExpr(selectorExpr: GoStandardLibrary.Ast.SelectorExpr): Reference {
+        val base = handle(selectorExpr.x) ?: newProblemExpr("missing base")
 
         // Check, if this just a regular reference to a variable with a package scope and not a
         // member expression
@@ -267,13 +261,13 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
         val ref =
             if (isMemberExpression) {
-                newMemberExpression(selectorExpr.sel.name, base, rawNode = selectorExpr)
+                newMemberExpr(selectorExpr.sel.name, base, rawNode = selectorExpr)
             } else {
                 // we need to set the name to a FQN-style, including the package scope. the call
                 // resolver will then resolve this
                 val fqn = "${base.name}.${selectorExpr.sel.name}"
 
-                newDeclaredReferenceExpression(fqn, rawNode = selectorExpr)
+                newReference(fqn, rawNode = selectorExpr)
             }
 
         return ref
@@ -281,20 +275,17 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     /**
      * This function handles a ast.SliceExpr, which is an extended version of ast.IndexExpr. We are
-     * modelling this as a combination of a [ArraySubscriptionExpression] that contains a
-     * [RangeExpression] as its subscriptExpression to share some code between this and an index
-     * expression.
+     * modelling this as a combination of a [SubscriptionExpr] that contains a [RangeExpr] as its
+     * subscriptExpression to share some code between this and an index expression.
      */
-    private fun handleSliceExpr(
-        sliceExpr: GoStandardLibrary.Ast.SliceExpr
-    ): ArraySubscriptionExpression {
-        val ase = newArraySubscriptionExpression(rawNode = sliceExpr)
+    private fun handleSliceExpr(sliceExpr: GoStandardLibrary.Ast.SliceExpr): SubscriptionExpr {
+        val ase = newSubscriptionExpr(rawNode = sliceExpr)
         ase.arrayExpression =
             frontend.expressionHandler.handle(sliceExpr.x)
-                ?: newProblemExpression("missing array expression")
+                ?: newProblemExpr("missing array expression")
 
         // Build the slice expression
-        val range = newRangeExpression(rawNode = sliceExpr)
+        val range = newRangeExpr(rawNode = sliceExpr)
         sliceExpr.low?.let { range.floor = frontend.expressionHandler.handle(it) }
         sliceExpr.high?.let { range.ceiling = frontend.expressionHandler.handle(it) }
         sliceExpr.max?.let { range.third = frontend.expressionHandler.handle(it) }
@@ -306,12 +297,11 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     private fun handleTypeAssertExpr(
         typeAssertExpr: GoStandardLibrary.Ast.TypeAssertExpr
-    ): CastExpression {
-        val cast = newCastExpression(rawNode = typeAssertExpr)
+    ): CastExpr {
+        val cast = newCastExpr(rawNode = typeAssertExpr)
 
         // Parse the inner expression
-        cast.expression =
-            handle(typeAssertExpr.x) ?: newProblemExpression("missing inner expression")
+        cast.expression = handle(typeAssertExpr.x) ?: newProblemExpr("missing inner expression")
 
         // The type can be null, but only in certain circumstances, i.e, a type switch (which we do
         // not support yet)
@@ -320,14 +310,9 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return cast
     }
 
-    private fun handleUnaryExpr(unaryExpr: GoStandardLibrary.Ast.UnaryExpr): UnaryOperator {
+    private fun handleUnaryExpr(unaryExpr: GoStandardLibrary.Ast.UnaryExpr): UnaryOp {
         val op =
-            newUnaryOperator(
-                unaryExpr.opString,
-                postfix = false,
-                prefix = false,
-                rawNode = unaryExpr
-            )
+            newUnaryOp(unaryExpr.opString, postfix = false, prefix = false, rawNode = unaryExpr)
         handle(unaryExpr.x)?.let { op.input = it }
 
         return op
@@ -340,14 +325,14 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
      */
     private fun handleCompositeLit(
         compositeLit: GoStandardLibrary.Ast.CompositeLit
-    ): ConstructExpression {
+    ): ConstructExpr {
         // Parse the type field, to see which kind of expression it is
         val type = frontend.typeOf(compositeLit.type)
 
-        val construct = newConstructExpression(type.name, rawNode = compositeLit)
+        val construct = newConstructExpr(type.name, rawNode = compositeLit)
         construct.type = type
 
-        val list = newInitializerListExpression(type, rawNode = compositeLit)
+        val list = newInitializerListExpr(type, rawNode = compositeLit)
         construct += list
 
         // Normally, the construct expression would not have DFG edge, but in this case we are
@@ -369,11 +354,10 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         // handleFuncLit handles a function literal, which we need to translate into a combination of a
     // LambdaExpression and a function declaration.
          */
-    fun handleFuncLit(funcLit: GoStandardLibrary.Ast.FuncLit): LambdaExpression {
-        val lambda = newLambdaExpression(rawNode = funcLit)
+    fun handleFuncLit(funcLit: GoStandardLibrary.Ast.FuncLit): LambdaExpr {
+        val lambda = newLambdaExpr(rawNode = funcLit)
         // Parse the expression as a function declaration with a little trick
-        lambda.function =
-            frontend.declarationHandler.handle(funcLit.toDecl()) as? FunctionDeclaration
+        lambda.function = frontend.declarationHandler.handle(funcLit.toDecl()) as? FunctionDecl
 
         return lambda
     }

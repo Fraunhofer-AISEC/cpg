@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDecl
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -44,24 +44,22 @@ class TypeManager {
      * ParameterizedTypes are unique to the RecordDeclaration and are not merged.
      */
     private val recordToTypeParameters =
-        Collections.synchronizedMap(mutableMapOf<RecordDeclaration, List<ParameterizedType>>())
+        Collections.synchronizedMap(mutableMapOf<RecordDecl, List<ParameterizedType>>())
     private val templateToTypeParameters =
-        Collections.synchronizedMap(
-            mutableMapOf<TemplateDeclaration, MutableList<ParameterizedType>>()
-        )
+        Collections.synchronizedMap(mutableMapOf<TemplateDecl, MutableList<ParameterizedType>>())
 
     val firstOrderTypes: MutableSet<Type> = Collections.synchronizedSet(HashSet())
     val secondOrderTypes: MutableSet<Type> = Collections.synchronizedSet(HashSet())
 
     /**
-     * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
+     * @param recordDecl that is instantiated by a template containing parameterizedtypes
      * @param name of the ParameterizedType we want to get
      * @return ParameterizedType if there is a parameterized type defined in the recordDeclaration
      *   with matching name, null instead
      */
-    fun getTypeParameter(recordDeclaration: RecordDeclaration?, name: String): ParameterizedType? {
-        if (recordToTypeParameters.containsKey(recordDeclaration)) {
-            for (parameterizedType in recordToTypeParameters[recordDeclaration] ?: listOf()) {
+    fun getTypeParameter(recordDecl: RecordDecl?, name: String): ParameterizedType? {
+        if (recordToTypeParameters.containsKey(recordDecl)) {
+            for (parameterizedType in recordToTypeParameters[recordDecl] ?: listOf()) {
                 if (parameterizedType.name.toString() == name) {
                     return parameterizedType
                 }
@@ -73,31 +71,25 @@ class TypeManager {
     /**
      * Adds a List of ParameterizedType to [TypeManager.recordToTypeParameters]
      *
-     * @param recordDeclaration will be stored as key for the map
+     * @param recordDecl will be stored as key for the map
      * @param typeParameters List containing all ParameterizedTypes used by the recordDeclaration
      *   and will be stored as value in the map
      */
-    fun addTypeParameter(
-        recordDeclaration: RecordDeclaration,
-        typeParameters: List<ParameterizedType>
-    ) {
-        recordToTypeParameters[recordDeclaration] = typeParameters
+    fun addTypeParameter(recordDecl: RecordDecl, typeParameters: List<ParameterizedType>) {
+        recordToTypeParameters[recordDecl] = typeParameters
     }
 
     /**
      * Searches [TypeManager.templateToTypeParameters] for ParameterizedTypes that were defined in a
      * template matching the provided name
      *
-     * @param templateDeclaration that includes the ParameterizedType we are looking for
+     * @param templateDecl that includes the ParameterizedType we are looking for
      * @param name name of the ParameterizedType we are looking for
      * @return
      */
-    private fun getTypeParameter(
-        templateDeclaration: TemplateDeclaration,
-        name: String
-    ): ParameterizedType? {
-        if (templateToTypeParameters.containsKey(templateDeclaration)) {
-            for (parameterizedType in templateToTypeParameters[templateDeclaration] ?: listOf()) {
+    private fun getTypeParameter(templateDecl: TemplateDecl, name: String): ParameterizedType? {
+        if (templateToTypeParameters.containsKey(templateDecl)) {
+            for (parameterizedType in templateToTypeParameters[templateDecl] ?: listOf()) {
                 if (parameterizedType.name.toString() == name) {
                     return parameterizedType
                 }
@@ -107,13 +99,13 @@ class TypeManager {
     }
 
     /**
-     * @param templateDeclaration
+     * @param templateDecl
      * @return List containing all ParameterizedTypes the templateDeclaration defines. If the
      *   templateDeclaration is not registered, an empty list is returned.
      */
-    fun getAllParameterizedType(templateDeclaration: TemplateDeclaration): List<ParameterizedType> {
-        return if (templateToTypeParameters.containsKey(templateDeclaration)) {
-            templateToTypeParameters[templateDeclaration] ?: listOf()
+    fun getAllParameterizedType(templateDecl: TemplateDecl): List<ParameterizedType> {
+        return if (templateToTypeParameters.containsKey(templateDecl)) {
+            templateToTypeParameters[templateDecl] ?: listOf()
         } else ArrayList()
     }
 
@@ -137,7 +129,7 @@ class TypeManager {
             // We need an additional check here, because of parsing or other errors, the AST node
             // might
             // not necessarily be a template declaration.
-            if (node is TemplateDeclaration) {
+            if (node is TemplateDecl) {
                 val parameterizedType = getTypeParameter(node, name)
                 if (parameterizedType != null) {
                     return parameterizedType
@@ -153,15 +145,11 @@ class TypeManager {
      * Adds ParameterizedType to the [TypeManager.templateToTypeParameters] to be able to resolve
      * this type when it is used
      *
-     * @param templateDeclaration key for [TypeManager.templateToTypeParameters]
+     * @param templateDecl key for [TypeManager.templateToTypeParameters]
      * @param typeParameter ParameterizedType we want to register
      */
-    fun addTypeParameter(
-        templateDeclaration: TemplateDeclaration,
-        typeParameter: ParameterizedType
-    ) {
-        val parameters =
-            templateToTypeParameters.computeIfAbsent(templateDeclaration) { mutableListOf() }
+    fun addTypeParameter(templateDecl: TemplateDecl, typeParameter: ParameterizedType) {
+        val parameters = templateToTypeParameters.computeIfAbsent(templateDecl) { mutableListOf() }
 
         parameters += typeParameter
     }
@@ -170,19 +158,19 @@ class TypeManager {
      * Check if a ParameterizedType with name typeName is already registered. If so we return the
      * already created ParameterizedType. If not, we create and return a new ParameterizedType
      *
-     * @param templateDeclaration in which the ParameterizedType is defined
+     * @param templateDecl in which the ParameterizedType is defined
      * @param typeName name of the ParameterizedType
      * @return
      */
     fun createOrGetTypeParameter(
-        templateDeclaration: TemplateDeclaration,
+        templateDecl: TemplateDecl,
         typeName: String,
         language: Language<*>?
     ): ParameterizedType {
-        var parameterizedType = getTypeParameter(templateDeclaration, typeName)
+        var parameterizedType = getTypeParameter(templateDecl, typeName)
         if (parameterizedType == null) {
             parameterizedType = ParameterizedType(typeName, language)
-            addTypeParameter(templateDeclaration, parameterizedType)
+            addTypeParameter(templateDecl, parameterizedType)
         }
         return parameterizedType
     }
@@ -202,7 +190,7 @@ class TypeManager {
     }
 
     /**
-     * Creates a typedef / type alias in the form of a [TypedefDeclaration] to the scope manager and
+     * Creates a typedef / type alias in the form of a [TypedefDecl] to the scope manager and
      * returns it.
      *
      * @param frontend the language frontend
@@ -227,7 +215,7 @@ class TypeManager {
             currTarget.refreshNames()
             currAlias = alias.root
         }
-        val typedef = frontend.newTypedefDeclaration(currTarget, currAlias, rawCode)
+        val typedef = frontend.newTypedefDecl(currTarget, currAlias, rawCode)
         frontend.scopeManager.addTypedef(typedef)
         return typedef
     }
@@ -236,7 +224,7 @@ class TypeManager {
         val finalToCheck = alias.root
         val applicable =
             scopeManager.currentTypedefs
-                .firstOrNull { t: TypedefDeclaration -> t.alias.root == finalToCheck }
+                .firstOrNull { t: TypedefDecl -> t.alias.root == finalToCheck }
                 ?.type
         return if (applicable == null) {
             alias
@@ -260,7 +248,7 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     // ValueDeclaration and set the corresponding object type to its type.
     val superTypes =
         if (this is ObjectType) {
-            this.recordDeclaration?.superTypes ?: setOf()
+            this.recordDecl?.superTypes ?: setOf()
         } else {
             superTypes
         }

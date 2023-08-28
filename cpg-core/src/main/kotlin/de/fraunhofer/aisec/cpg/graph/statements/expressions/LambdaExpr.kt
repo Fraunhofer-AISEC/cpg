@@ -1,0 +1,75 @@
+/*
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
+
+import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDecl
+import de.fraunhofer.aisec.cpg.graph.pointer
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
+
+/**
+ * This expression denotes the usage of an anonymous / lambda function. It connects the inner
+ * anonymous function to the user of a lambda function with an expression.
+ */
+class LambdaExpr : Expression(), HasType.TypeObserver {
+
+    /**
+     * If [areVariablesMutable] is false, only the (outer) variables in this list can be modified
+     * inside the lambda.
+     */
+    val mutableVariables: MutableList<ValueDecl> = mutableListOf()
+
+    /** Determines if we can modify variables declared outside the lambda from inside the lambda */
+    var areVariablesMutable: Boolean = true
+
+    @AST
+    var function: FunctionDecl? = null
+        set(value) {
+            value?.unregisterTypeObserver(this)
+            field = value
+            value?.registerTypeObserver(this)
+        }
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        // Make sure our src is the function
+        if (src != function) {
+            return
+        }
+
+        // We should only propagate a function type, coming from our declared function
+        if (newType is FunctionType) {
+            // Propagate a pointer reference to the function
+            this.type = newType.pointer()
+        }
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Nothing to do
+    }
+}

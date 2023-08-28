@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOp
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.io.File
 import java.math.BigInteger
@@ -48,7 +48,7 @@ internal class CXXLiteralTest : BaseTest() {
     fun testZeroIntegerLiterals() {
         val file = File("src/test/resources/integer_literals.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val zero = tu.getDeclarationsByName("zero", FunctionDeclaration::class.java)
+        val zero = tu.getDeclarationsByName("zero", FunctionDecl::class.java)
         assertFalse(zero.isEmpty())
 
         val funcDecl = zero.iterator().next()
@@ -69,7 +69,7 @@ internal class CXXLiteralTest : BaseTest() {
     fun testDecimalIntegerLiterals() {
         val file = File("src/test/resources/integer_literals.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val decimal = tu.getDeclarationsByName("decimal", FunctionDeclaration::class.java)
+        val decimal = tu.getDeclarationsByName("decimal", FunctionDecl::class.java)
         assertFalse(decimal.isEmpty())
         val funcDecl = decimal.iterator().next()
         assertLocalName("decimal", funcDecl)
@@ -108,7 +108,7 @@ internal class CXXLiteralTest : BaseTest() {
     fun testOctalIntegerLiterals() {
         val file = File("src/test/resources/integer_literals.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val octal = tu.getDeclarationsByName("octal", FunctionDeclaration::class.java)
+        val octal = tu.getDeclarationsByName("octal", FunctionDecl::class.java)
         assertFalse(octal.isEmpty())
         val funcDecl = octal.iterator().next()
         assertLocalName("octal", funcDecl)
@@ -128,7 +128,7 @@ internal class CXXLiteralTest : BaseTest() {
     fun testNonDecimalIntegerLiterals() {
         val file = File("src/test/resources/integer_literals.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val hex = tu.getDeclarationsByName("hex", FunctionDeclaration::class.java)
+        val hex = tu.getDeclarationsByName("hex", FunctionDecl::class.java)
         assertFalse(hex.isEmpty())
         val funcDecl = hex.iterator().next()
         assertLocalName("hex", funcDecl)
@@ -147,13 +147,13 @@ internal class CXXLiteralTest : BaseTest() {
     fun testLargeNegativeNumber() {
         val file = File("src/test/resources/largenegativenumber.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
+        val main = tu.getDeclarationsByName("main", FunctionDecl::class.java)
         assertFalse(main.isEmpty())
 
         val funcDecl = main.iterator().next()
         val a = funcDecl.variables["a"]
         assertNotNull(a)
-        assertEquals(1, (a.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value)
+        assertEquals(1, (a.getInitializerAs(UnaryOp::class.java)?.input as Literal<*>).value)
 
         // there are no negative literals, so the construct "-2147483648" is
         // a unary expression and the literal "2147483648". Since "2147483648" is too large to fit
@@ -164,31 +164,31 @@ internal class CXXLiteralTest : BaseTest() {
         assertNotNull(b)
         assertEquals(
             2147483648L,
-            (b.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
+            (b.getInitializerAs(UnaryOp::class.java)?.input as Literal<*>).value
         )
 
         val c = funcDecl.variables["c"]
         assertNotNull(c)
         assertEquals(
             2147483649L,
-            (c.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
+            (c.getInitializerAs(UnaryOp::class.java)?.input as Literal<*>).value
         )
 
         val d = funcDecl.variables["d"]
         assertNotNull(d)
         assertEquals(
             BigInteger("9223372036854775808"),
-            (d.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
+            (d.getInitializerAs(UnaryOp::class.java)?.input as Literal<*>).value
         )
     }
 
     private fun assertLiteral(
         expectedValue: Number,
         expectedType: Type,
-        functionDeclaration: FunctionDeclaration,
+        functionDecl: FunctionDecl,
         name: String
     ) {
-        val variableDeclaration = functionDeclaration.variables[name]
+        val variableDeclaration = functionDecl.variables[name]
         assertNotNull(variableDeclaration)
 
         val literal = variableDeclaration.getInitializerAs(Literal::class.java)!!

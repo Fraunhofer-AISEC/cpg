@@ -25,16 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
 
 /**
  * This interface denotes that a [Node] "holds" a list of other nodes. See also [ArgumentHolder] and
  * [StatementHolder], in which [Holder] is used as a common interface.
  *
  * A primary use-case for the usage of this interface is the Node Fluent DSL in order to create node
- * objects which can either be used as a statement (e.g. in a [CompoundStatement]) or as an argument
- * (e.g. of a [CallExpression]).
+ * objects which can either be used as a statement (e.g. in a [CompoundStmt]) or as an argument
+ * (e.g. of a [CallExpr]).
  */
 interface Holder<NodeTypeToHold : Node> {
     /** Adds a [Node] to the list of "held" nodes. */

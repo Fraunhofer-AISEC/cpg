@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -46,8 +46,8 @@ import org.slf4j.LoggerFactory
  * identify outer scopes that should be the target of a jump (continue, break, throw).
  *
  * Language frontends MUST call [enterScope] and [leaveScope] when they encounter nodes that modify
- * the scope and [resetToGlobal] when they first handle a new [TranslationUnitDeclaration].
- * Afterwards the currently valid "stack" of scopes within the tree can be accessed.
+ * the scope and [resetToGlobal] when they first handle a new [TranslationUnitDecl]. Afterwards the
+ * currently valid "stack" of scopes within the tree can be accessed.
  *
  * If a language frontend encounters a [Declaration] node, it MUST call [addDeclaration], rather
  * than adding the declaration to the node itself. This ensures that all declarations are properly
@@ -88,16 +88,16 @@ class ScopeManager : ScopeProvider {
         get() = scopeMap[null] as? GlobalScope
 
     /** The current block, according to the scope that is currently active. */
-    val currentBlock: CompoundStatement?
-        get() = this.firstScopeIsInstanceOrNull<BlockScope>()?.astNode as? CompoundStatement
+    val currentBlock: CompoundStmt?
+        get() = this.firstScopeIsInstanceOrNull<BlockScope>()?.astNode as? CompoundStmt
     /** The current function, according to the scope that is currently active. */
-    val currentFunction: FunctionDeclaration?
-        get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
+    val currentFunction: FunctionDecl?
+        get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDecl
     /** The current record, according to the scope that is currently active. */
-    val currentRecord: RecordDeclaration?
-        get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDeclaration
+    val currentRecord: RecordDecl?
+        get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDecl
 
-    val currentTypedefs: Collection<TypedefDeclaration>
+    val currentTypedefs: Collection<TypedefDecl>
         get() = this.getCurrentTypedefs(currentScope)
 
     val currentNamespace: Name?
@@ -140,7 +140,7 @@ class ScopeManager : ScopeProvider {
                     // will add it to the underlying AST node as well. This was already done by the
                     // respective sub-scope manager. We add it directly to the declarations array
                     // instead.
-                    existing.valueDeclarations.addAll(entry.value.valueDeclarations)
+                    existing.valueDecls.addAll(entry.value.valueDecls)
                     existing.structureDeclarations.addAll(entry.value.structureDeclarations)
 
                     // copy over the typedefs as well just to be sure
@@ -213,7 +213,7 @@ class ScopeManager : ScopeProvider {
      * on-the-fly, if they do not exist.
      *
      * The scope manager has an internal association between the type of scope, e.g. a [BlockScope]
-     * and the CPG node it represents, e.g. a [CompoundStatement].
+     * and the CPG node it represents, e.g. a [CompoundStmt].
      *
      * Afterwards, all calls to [addDeclaration] will be distributed to the
      * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] that is currently in-scope.
@@ -225,20 +225,20 @@ class ScopeManager : ScopeProvider {
         if (!scopeMap.containsKey(nodeToScope)) {
             newScope =
                 when (nodeToScope) {
-                    is CompoundStatement -> BlockScope(nodeToScope)
-                    is WhileStatement,
-                    is DoStatement,
-                    is AssertStatement -> LoopScope(nodeToScope as Statement)
-                    is ForStatement,
-                    is ForEachStatement -> LoopScope(nodeToScope as Statement)
-                    is SwitchStatement -> SwitchScope(nodeToScope)
-                    is FunctionDeclaration -> FunctionScope(nodeToScope)
-                    is IfStatement -> ValueDeclarationScope(nodeToScope)
+                    is CompoundStmt -> BlockScope(nodeToScope)
+                    is WhileStmt,
+                    is DoStmt,
+                    is AssertStmt -> LoopScope(nodeToScope as Statement)
+                    is ForStmt,
+                    is ForEachStmt -> LoopScope(nodeToScope as Statement)
+                    is SwitchStmt -> SwitchScope(nodeToScope)
+                    is FunctionDecl -> FunctionScope(nodeToScope)
+                    is IfStmt -> ValueDeclarationScope(nodeToScope)
                     is CatchClause -> ValueDeclarationScope(nodeToScope)
-                    is RecordDeclaration -> RecordScope(nodeToScope)
-                    is TemplateDeclaration -> TemplateScope(nodeToScope)
-                    is TryStatement -> TryScope(nodeToScope)
-                    is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
+                    is RecordDecl -> RecordScope(nodeToScope)
+                    is TemplateDecl -> TemplateScope(nodeToScope)
+                    is TryStmt -> TryScope(nodeToScope)
+                    is NamespaceDecl -> newNameScopeIfNecessary(nodeToScope)
                     else -> {
                         LOGGER.error(
                             "No known scope for AST node of type {}",
@@ -262,18 +262,18 @@ class ScopeManager : ScopeProvider {
      * A small internal helper function used by [enterScope] to create a [NameScope].
      *
      * The issue with name scopes, such as a namespace, is that it can exist across several files,
-     * i.e. translation units, represented by different [NamespaceDeclaration] nodes. But, in order
-     * to make namespace resolution work across files, only one [NameScope] must exist that holds
-     * all declarations, such as classes, independently of the translation units. Therefore, we need
-     * to check, whether such as node already exists. If it does already exist:
-     * - we update the scope map so that the current [NamespaceDeclaration] points to the existing
+     * i.e. translation units, represented by different [NamespaceDecl] nodes. But, in order to make
+     * namespace resolution work across files, only one [NameScope] must exist that holds all
+     * declarations, such as classes, independently of the translation units. Therefore, we need to
+     * check, whether such as node already exists. If it does already exist:
+     * - we update the scope map so that the current [NamespaceDecl] points to the existing
      *   [NameScope]
      * - we return null, indicating to [enterScope], that no new scope needs to be pushed by
      *   [enterScope].
      *
      * Otherwise, we return a new name scope.
      */
-    private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
+    private fun newNameScopeIfNecessary(nodeToScope: NamespaceDecl): NameScope? {
         val existingScope =
             currentScope?.children?.firstOrNull { it is NameScope && it.name == nodeToScope.name }
 
@@ -372,19 +372,19 @@ class ScopeManager : ScopeProvider {
     @JvmOverloads
     fun addDeclaration(declaration: Declaration?, addToAST: Boolean = true) {
         when (declaration) {
-            is ProblemDeclaration,
-            is IncludeDeclaration -> {
+            is ProblemDecl,
+            is IncludeDecl -> {
                 // directly add problems and includes to the global scope
                 this.globalScope?.addDeclaration(declaration, addToAST)
             }
-            is ValueDeclaration -> {
+            is ValueDecl -> {
                 val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
                 scope?.addValueDeclaration(declaration, addToAST)
             }
-            is RecordDeclaration,
-            is NamespaceDeclaration,
-            is EnumDeclaration,
-            is TemplateDeclaration -> {
+            is RecordDecl,
+            is NamespaceDecl,
+            is EnumDecl,
+            is TemplateDecl -> {
                 val scope = this.firstScopeIsInstanceOrNull<StructureDeclarationScope>()
                 scope?.addDeclaration(declaration, addToAST)
             }
@@ -440,7 +440,7 @@ class ScopeManager : ScopeProvider {
 
     /** This function returns the [Scope] associated with a node. */
     fun lookupScope(node: Node): Scope? {
-        return if (node is TranslationUnitDeclaration) {
+        return if (node is TranslationUnitDecl) {
             globalScope
         } else scopeMap[node]
     }
@@ -453,26 +453,26 @@ class ScopeManager : ScopeProvider {
     /**
      * This function SHOULD only be used by the
      * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
-     * a [BreakStatement] to the list of break statements of the current "breakable" scope.
+     * a [BreakStmt] to the list of break statements of the current "breakable" scope.
      */
-    fun addBreakStatement(breakStatement: BreakStatement) {
-        if (breakStatement.label == null) {
+    fun addBreakStatement(breakStmt: BreakStmt) {
+        if (breakStmt.label == null) {
             val scope = firstScopeOrNull { scope: Scope? -> scope?.isBreakable() == true }
             if (scope == null) {
                 Util.errorWithFileLocation(
-                    breakStatement,
+                    breakStmt,
                     LOGGER,
                     "Break inside of unbreakable scope. The break will be ignored, but may lead " +
                         "to an incorrect graph. The source code is not valid or incomplete."
                 )
                 return
             }
-            (scope as Breakable).addBreakStatement(breakStatement)
+            (scope as Breakable).addBreakStatement(breakStmt)
         } else {
-            val labelStatement = getLabelStatement(breakStatement.label)
+            val labelStatement = getLabelStatement(breakStmt.label)
             labelStatement?.subStatement?.let {
                 val scope = lookupScope(it)
-                (scope as Breakable?)?.addBreakStatement(breakStatement)
+                (scope as Breakable?)?.addBreakStatement(breakStmt)
             }
         }
     }
@@ -480,10 +480,10 @@ class ScopeManager : ScopeProvider {
     /**
      * This function SHOULD only be used by the
      * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
-     * a [ContinueStatement] to the list of continue statements of the current "continuable" scope.
+     * a [ContinueStmt] to the list of continue statements of the current "continuable" scope.
      */
-    fun addContinueStatement(continueStatement: ContinueStatement) {
-        if (continueStatement.label == null) {
+    fun addContinueStatement(continueStmt: ContinueStmt) {
+        if (continueStmt.label == null) {
             val scope = firstScopeOrNull { scope: Scope? -> scope?.isContinuable() == true }
             if (scope == null) {
                 LOGGER.error(
@@ -492,12 +492,12 @@ class ScopeManager : ScopeProvider {
                 )
                 return
             }
-            (scope as Continuable).addContinueStatement(continueStatement)
+            (scope as Continuable).addContinueStatement(continueStmt)
         } else {
-            val labelStatement = getLabelStatement(continueStatement.label)
+            val labelStatement = getLabelStatement(continueStmt.label)
             labelStatement?.subStatement?.let {
                 val scope = lookupScope(it)
-                (scope as Continuable?)?.addContinueStatement(continueStatement)
+                (scope as Continuable?)?.addContinueStatement(continueStmt)
             }
         }
     }
@@ -505,24 +505,24 @@ class ScopeManager : ScopeProvider {
     /**
      * This function SHOULD only be used by the
      * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
-     * a [LabelStatement] to the list of label statements of the current scope.
+     * a [LabelStmt] to the list of label statements of the current scope.
      */
-    fun addLabelStatement(labelStatement: LabelStatement) {
-        currentScope?.addLabelStatement(labelStatement)
+    fun addLabelStatement(labelStmt: LabelStmt) {
+        currentScope?.addLabelStatement(labelStmt)
     }
 
     /**
      * This function is internal to the scope manager and primarily used by [addBreakStatement] and
-     * [addContinueStatement]. It retrieves the [LabelStatement] associated with the [labelString].
+     * [addContinueStatement]. It retrieves the [LabelStmt] associated with the [labelString].
      */
-    private fun getLabelStatement(labelString: String?): LabelStatement? {
+    private fun getLabelStatement(labelString: String?): LabelStmt? {
         if (labelString == null) return null
-        var labelStatement: LabelStatement?
+        var labelStmt: LabelStmt?
         var searchScope = currentScope
         while (searchScope != null) {
-            labelStatement = searchScope.labelStatements[labelString]
-            if (labelStatement != null) {
-                return labelStatement
+            labelStmt = searchScope.labelStatements[labelString]
+            if (labelStmt != null) {
+                return labelStmt
             }
             searchScope = searchScope.parent
         }
@@ -533,7 +533,7 @@ class ScopeManager : ScopeProvider {
      * This function MUST be called when a language frontend first enters a translation unit. It
      * sets the [GlobalScope] to the current translation unit specified in [declaration].
      */
-    fun resetToGlobal(declaration: TranslationUnitDeclaration?) {
+    fun resetToGlobal(declaration: TranslationUnitDecl?) {
         val global = this.globalScope
         if (global != null) {
             // update the AST node to this translation unit declaration
@@ -546,7 +546,7 @@ class ScopeManager : ScopeProvider {
      * Only used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
      * [ValueDeclarationScope].
      */
-    fun addTypedef(typedef: TypedefDeclaration) {
+    fun addTypedef(typedef: TypedefDecl) {
         val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
         if (scope == null) {
             LOGGER.error("Cannot add typedef. Not in declaration scope.")
@@ -562,8 +562,8 @@ class ScopeManager : ScopeProvider {
         }
     }
 
-    private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
-        val typedefs = mutableMapOf<Type, TypedefDeclaration>()
+    private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDecl> {
+        val typedefs = mutableMapOf<Type, TypedefDecl>()
 
         val path = mutableListOf<ValueDeclarationScope>()
         var current = searchScope
@@ -596,18 +596,15 @@ class ScopeManager : ScopeProvider {
      * TODO: We should merge this function with [.resolveFunction]
      */
     @JvmOverloads
-    fun resolveReference(
-        ref: DeclaredReferenceExpression,
-        scope: Scope? = currentScope
-    ): ValueDeclaration? {
-        return resolve<ValueDeclaration>(scope) {
+    fun resolveReference(ref: Reference, scope: Scope? = currentScope): ValueDecl? {
+        return resolve<ValueDecl>(scope) {
                 if (
                     it.name.lastPartsMatch(ref.name)
                 ) { // TODO: This place is likely to make things fail
                     var helper = ref.resolutionHelper
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
-                    if (helper?.type is FunctionPointerType && it is FunctionDeclaration) {
+                    if (helper?.type is FunctionPointerType && it is FunctionDecl) {
                         val fptrType = helper.type as FunctionPointerType
                         // TODO(oxisto): This is the third place where function pointers are
                         //   resolved. WHY?
@@ -620,7 +617,7 @@ class ScopeManager : ScopeProvider {
                             return@resolve true
                         }
                     } else {
-                        return@resolve it !is FunctionDeclaration
+                        return@resolve it !is FunctionDecl
                     }
                 }
 
@@ -636,10 +633,7 @@ class ScopeManager : ScopeProvider {
      * @return a list of possible functions
      */
     @JvmOverloads
-    fun resolveFunction(
-        call: CallExpression,
-        scope: Scope? = currentScope
-    ): List<FunctionDeclaration> {
+    fun resolveFunction(call: CallExpr, scope: Scope? = currentScope): List<FunctionDecl> {
         val s = extractScope(call, scope)
 
         return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
@@ -701,9 +695,7 @@ class ScopeManager : ScopeProvider {
         return ret
     }
 
-    fun resolveFunctionStopScopeTraversalOnDefinition(
-        call: CallExpression
-    ): List<FunctionDeclaration> {
+    fun resolveFunctionStopScopeTraversalOnDefinition(call: CallExpr): List<FunctionDecl> {
         return resolve(currentScope, true) { f -> f.name.lastPartsMatch(call.name) }
     }
 
@@ -729,7 +721,7 @@ class ScopeManager : ScopeProvider {
 
         while (scope != null) {
             if (scope is ValueDeclarationScope) {
-                declarations.addAll(scope.valueDeclarations.filterIsInstance<T>().filter(predicate))
+                declarations.addAll(scope.valueDecls.filterIsInstance<T>().filter(predicate))
             }
 
             if (scope is StructureDeclarationScope) {
@@ -739,7 +731,7 @@ class ScopeManager : ScopeProvider {
                 // TODO(oxisto): why is this only when the list is empty?
                 if (list.isEmpty()) {
                     for (declaration in scope.structureDeclarations) {
-                        if (declaration is RecordDeclaration) {
+                        if (declaration is RecordDecl) {
                             list = declaration.templates.filterIsInstance<T>().filter(predicate)
                         }
                     }
@@ -763,7 +755,7 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Resolves function templates of the given [CallExpression].
+     * Resolves function templates of the given [CallExpr].
      *
      * @param scope where we are searching for the FunctionTemplateDeclarations
      * @param call CallExpression we want to resolve an invocation target for
@@ -772,22 +764,21 @@ class ScopeManager : ScopeProvider {
      */
     @JvmOverloads
     fun resolveFunctionTemplateDeclaration(
-        call: CallExpression,
+        call: CallExpr,
         scope: Scope? = currentScope
-    ): List<FunctionTemplateDeclaration> {
+    ): List<FunctionTemplateDecl> {
         return resolve(scope, true) { c -> c.name.lastPartsMatch(call.name) }
     }
 
     /**
-     * Retrieves the [RecordDeclaration] for the given name in the given scope.
+     * Retrieves the [RecordDecl] for the given name in the given scope.
      *
      * @param scope the scope
      * @param name the name
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(scope: Scope, name: Name): RecordDeclaration? {
-        return resolve<RecordDeclaration>(scope, true) { it.name.lastPartsMatch(name) }
-            .firstOrNull()
+    fun getRecordForName(scope: Scope, name: Name): RecordDecl? {
+        return resolve<RecordDecl>(scope, true) { it.name.lastPartsMatch(name) }.firstOrNull()
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */

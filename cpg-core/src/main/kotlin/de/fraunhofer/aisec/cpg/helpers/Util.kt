@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -324,12 +324,12 @@ object Util {
     }
 
     /**
-     * Establish dataflow from call arguments to the target [FunctionDeclaration] parameters
+     * Establish dataflow from call arguments to the target [FunctionDecl] parameters
      *
-     * @param target The call's target [FunctionDeclaration]
+     * @param target The call's target [FunctionDecl]
      * @param arguments The call's arguments to be connected to the target's parameters
      */
-    fun attachCallParameters(target: FunctionDeclaration, arguments: List<Expression>) {
+    fun attachCallParameters(target: FunctionDecl, arguments: List<Expression>) {
         target.parameterEdges.sortWith(Comparator.comparing { it.end.argumentIndex })
         var j = 0
         while (j < arguments.size) {
@@ -358,7 +358,7 @@ object Util {
      * @param target
      * @param arguments
      */
-    fun detachCallParameters(target: FunctionDeclaration, arguments: List<Expression?>) {
+    fun detachCallParameters(target: FunctionDecl, arguments: List<Expression?>) {
         for (param in target.parameters) {
             // A param could be variadic, so multiple arguments could be set as incoming DFG
             param.prevDFG.filter { o: Node? -> o in arguments }.forEach { param.removeNextDFG(it) }

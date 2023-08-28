@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -68,16 +68,16 @@ class LLVMIRLanguageFrontendTest {
 
         assertEquals(1, tu.declarations.size)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
         assertLocalName("i32", main.type)
 
         val xVector =
-            (main.bodyOrNull<CompoundStatement>(0)?.statements?.get(0) as? DeclarationStatement)
-                ?.singleDeclaration as? VariableDeclaration
-        val xInit = xVector?.initializer as? InitializerListExpression
+            (main.bodyOrNull<CompoundStmt>(0)?.statements?.get(0) as? DeclarationStmt)
+                ?.singleDeclaration as? VariableDecl
+        val xInit = xVector?.initializer as? InitializerListExpr
         assertNotNull(xInit)
-        assertLocalName("poison", xInit.initializers[0] as? DeclaredReferenceExpression)
+        assertLocalName("poison", xInit.initializers[0] as? Reference)
         assertEquals(0L, (xInit.initializers[1] as? Literal<*>)?.value)
         assertEquals(0L, (xInit.initializers[2] as? Literal<*>)?.value)
         assertEquals(0L, (xInit.initializers[3] as? Literal<*>)?.value)
@@ -97,36 +97,36 @@ class LLVMIRLanguageFrontendTest {
 
         assertEquals(2, tu.declarations.size)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
         assertLocalName("i32", main.type)
 
-        val rand = tu.byNameOrNull<FunctionDeclaration>("rand")
+        val rand = tu.byNameOrNull<FunctionDecl>("rand")
         assertNotNull(rand)
         assertNull(rand.body)
 
-        val stmt = main.bodyOrNull<DeclarationStatement>(0)
+        val stmt = main.bodyOrNull<DeclarationStmt>(0)
         assertNotNull(stmt)
 
-        val decl = stmt.singleDeclaration as? VariableDeclaration
+        val decl = stmt.singleDeclaration as? VariableDecl
         assertNotNull(decl)
         assertLocalName("x", decl)
 
-        val call = decl.initializer as? CallExpression
+        val call = decl.initializer as? CallExpr
         assertNotNull(call)
         assertLocalName("rand", call)
         assertTrue(call.invokes.contains(rand))
         assertEquals(0, call.arguments.size)
 
-        val xorStatement = main.bodyOrNull<DeclarationStatement>(3)
+        val xorStatement = main.bodyOrNull<DeclarationStmt>(3)
         assertNotNull(xorStatement)
 
-        val xorDecl = xorStatement.singleDeclaration as? VariableDeclaration
+        val xorDecl = xorStatement.singleDeclaration as? VariableDecl
         assertNotNull(xorDecl)
         assertLocalName("a", xorDecl)
         assertEquals("i32", xorDecl.type.typeName)
 
-        val xor = xorDecl.initializer as? BinaryOperator
+        val xor = xorDecl.initializer as? BinaryOp
         assertNotNull(xor)
         assertEquals("^", xor.operatorCode)
     }
@@ -145,10 +145,10 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val rt = tu.byNameOrNull<RecordDeclaration>("struct.RT")
+        val rt = tu.byNameOrNull<RecordDecl>("struct.RT")
         assertNotNull(rt)
 
-        val st = tu.byNameOrNull<RecordDeclaration>("struct.ST")
+        val st = tu.byNameOrNull<RecordDecl>("struct.ST")
         assertNotNull(st)
 
         assertEquals(3, st.fields.size)
@@ -164,27 +164,26 @@ class LLVMIRLanguageFrontendTest {
         field = st.fields[2]
         assertNotNull(field)
         assertLocalName("struct.RT", field.type)
-        assertSame(rt, (field.type as? ObjectType)?.recordDeclaration)
+        assertSame(rt, (field.type as? ObjectType)?.recordDecl)
 
-        val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
+        val foo = tu.byNameOrNull<FunctionDecl>("foo")
         assertNotNull(foo)
 
         val s = foo.parameters.firstOrNull { it.name.localName == "s" }
         assertNotNull(s)
 
-        val arrayidx =
-            foo.bodyOrNull<DeclarationStatement>(0)?.singleDeclaration as? VariableDeclaration
+        val arrayidx = foo.bodyOrNull<DeclarationStmt>(0)?.singleDeclaration as? VariableDecl
         assertNotNull(arrayidx)
 
         // arrayidx will be assigned to a chain of the following expressions:
         // &s[1].field2.field1[5][13]
         // we will check them in the reverse order (after the unary operator)
 
-        val unary = arrayidx.initializer as? UnaryOperator
+        val unary = arrayidx.initializer as? UnaryOp
         assertNotNull(unary)
         assertEquals("&", unary.operatorCode)
 
-        var arrayExpr = unary.input as? ArraySubscriptionExpression
+        var arrayExpr = unary.input as? SubscriptionExpr
         assertNotNull(arrayExpr)
         assertLocalName("13", arrayExpr)
         assertEquals(
@@ -192,7 +191,7 @@ class LLVMIRLanguageFrontendTest {
             (arrayExpr.subscriptExpression as? Literal<*>)?.value
         ) // should this be integer instead of long?
 
-        arrayExpr = arrayExpr.arrayExpression as? ArraySubscriptionExpression
+        arrayExpr = arrayExpr.arrayExpression as? SubscriptionExpr
         assertNotNull(arrayExpr)
         assertLocalName("5", arrayExpr)
         assertEquals(
@@ -200,15 +199,15 @@ class LLVMIRLanguageFrontendTest {
             (arrayExpr.subscriptExpression as? Literal<*>)?.value
         ) // should this be integer instead of long?
 
-        var memberExpr = arrayExpr.arrayExpression as? MemberExpression
+        var memberExpr = arrayExpr.arrayExpression as? MemberExpr
         assertNotNull(memberExpr)
         assertLocalName("field_1", memberExpr)
 
-        memberExpr = memberExpr.base as? MemberExpression
+        memberExpr = memberExpr.base as? MemberExpr
         assertNotNull(memberExpr)
         assertLocalName("field_2", memberExpr)
 
-        arrayExpr = memberExpr.base as? ArraySubscriptionExpression
+        arrayExpr = memberExpr.base as? SubscriptionExpr
         assertNotNull(arrayExpr)
         assertLocalName("1", arrayExpr)
         assertEquals(
@@ -216,7 +215,7 @@ class LLVMIRLanguageFrontendTest {
             (arrayExpr.subscriptExpression as? Literal<*>)?.value
         ) // should this be integer instead of long?
 
-        val ref = arrayExpr.arrayExpression as? DeclaredReferenceExpression
+        val ref = arrayExpr.arrayExpression as? Reference
         assertNotNull(ref)
         assertLocalName("s", ref)
         assertSame(s, ref.refersTo)
@@ -234,52 +233,52 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
-        val onzeroLabel = main.bodyOrNull<LabelStatement>(0)
+        val onzeroLabel = main.bodyOrNull<LabelStmt>(0)
         assertNotNull(onzeroLabel)
         assertLocalName("onzero", onzeroLabel)
-        assertTrue(onzeroLabel.subStatement is CompoundStatement)
+        assertTrue(onzeroLabel.subStatement is CompoundStmt)
 
-        val ononeLabel = main.bodyOrNull<LabelStatement>(1)
+        val ononeLabel = main.bodyOrNull<LabelStmt>(1)
         assertNotNull(ononeLabel)
         assertLocalName("onone", ononeLabel)
-        assertTrue(ononeLabel.subStatement is CompoundStatement)
+        assertTrue(ononeLabel.subStatement is CompoundStmt)
 
-        val defaultLabel = main.bodyOrNull<LabelStatement>(2)
+        val defaultLabel = main.bodyOrNull<LabelStmt>(2)
         assertNotNull(defaultLabel)
         assertLocalName("otherwise", defaultLabel)
-        assertTrue(defaultLabel.subStatement is CompoundStatement)
+        assertTrue(defaultLabel.subStatement is CompoundStmt)
 
         // Check that the type of %a is i32
-        val xorStatement = main.bodyOrNull<DeclarationStatement>(3)
+        val xorStatement = main.bodyOrNull<DeclarationStmt>(3)
         assertNotNull(xorStatement)
-        val a = xorStatement.singleDeclaration as? VariableDeclaration
+        val a = xorStatement.singleDeclaration as? VariableDecl
         assertNotNull(a)
         assertLocalName("a", a)
         assertEquals("i32", a.type.typeName)
 
         // Check that the jump targets are set correctly
-        val switchStatement = main.bodyOrNull<SwitchStatement>()
-        assertNotNull(switchStatement)
+        val switchStmt = main.bodyOrNull<SwitchStmt>()
+        assertNotNull(switchStmt)
 
         // Check that we have switch(a)
-        assertSame(a, (switchStatement.selector as DeclaredReferenceExpression).refersTo)
+        assertSame(a, (switchStmt.selector as Reference).refersTo)
 
-        val cases = switchStatement.statement as CompoundStatement
+        val cases = switchStmt.statement as CompoundStmt
         // Check that the first case is case 0 -> goto onzero and that the BB is inlined
-        val case1 = cases.statements[0] as CaseStatement
+        val case1 = cases.statements[0] as CaseStmt
         assertEquals(0L, (case1.caseExpression as Literal<*>).value as Long)
         assertSame(onzeroLabel.subStatement, cases.statements[1])
         // Check that the second case is case 1 -> goto onone and that the BB is inlined
-        val case2 = cases.statements[2] as CaseStatement
+        val case2 = cases.statements[2] as CaseStmt
         assertEquals(1L, (case2.caseExpression as Literal<*>).value as Long)
         assertSame(ononeLabel.subStatement, cases.statements[3])
 
         // Check that the default location is inlined
-        val defaultStatement = cases.statements[4] as? DefaultStatement
-        assertNotNull(defaultStatement)
+        val defaultStmt = cases.statements[4] as? DefaultStmt
+        assertNotNull(defaultStmt)
         assertSame(defaultLabel.subStatement, cases.statements[5])
     }
 
@@ -297,36 +296,35 @@ class LLVMIRLanguageFrontendTest {
 
         assertEquals(2, tu.declarations.size)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
         // Test that the types and values of the comparison expression are correct
-        val icmpStatement = main.bodyOrNull<DeclarationStatement>(1)
+        val icmpStatement = main.bodyOrNull<DeclarationStmt>(1)
         assertNotNull(icmpStatement)
-        val variableDecl = icmpStatement.declarations[0] as VariableDeclaration
-        val comparison = variableDecl.initializer as BinaryOperator
+        val variableDecl = icmpStatement.declarations[0] as VariableDecl
+        val comparison = variableDecl.initializer as BinaryOp
         assertEquals("==", comparison.operatorCode)
         val rhs = (comparison.rhs as Literal<*>)
-        val lhs = (comparison.lhs as DeclaredReferenceExpression).refersTo as VariableDeclaration
+        val lhs = (comparison.lhs as Reference).refersTo as VariableDecl
         assertEquals(10L, (rhs.value as Long))
         assertEquals(tu.primitiveType("i32"), rhs.type)
-        assertLocalName("x", comparison.lhs as DeclaredReferenceExpression)
+        assertLocalName("x", comparison.lhs as Reference)
         assertLocalName("x", lhs)
         assertEquals(tu.primitiveType("i32"), lhs.type)
 
         // Check that the jump targets are set correctly
-        val ifStatement = main.bodyOrNull<IfStatement>(0)
-        assertNotNull(ifStatement)
-        assertEquals("IfUnequal", (ifStatement.elseStatement!! as GotoStatement).labelName)
-        val ifBranch = (ifStatement.thenStatement as CompoundStatement)
+        val ifStmt = main.bodyOrNull<IfStmt>(0)
+        assertNotNull(ifStmt)
+        assertEquals("IfUnequal", (ifStmt.elseStatement!! as GotoStmt).labelName)
+        val ifBranch = (ifStmt.thenStatement as CompoundStmt)
 
         // Check that the condition is set correctly
-        val ifCondition = ifStatement.condition
-        assertSame(variableDecl, (ifCondition as DeclaredReferenceExpression).refersTo)
+        val ifCondition = ifStmt.condition
+        assertSame(variableDecl, (ifCondition as Reference).refersTo)
 
         val elseBranch =
-            (ifStatement.elseStatement!! as GotoStatement).targetLabel?.subStatement
-                as CompoundStatement
+            (ifStmt.elseStatement!! as GotoStmt).targetLabel?.subStatement as CompoundStmt
         assertEquals(2, elseBranch.statements.size)
         assertEquals("  %y = mul i32 %x, 32768", elseBranch.statements[0].code)
         assertEquals("  ret i32 %y", elseBranch.statements[1].code)
@@ -336,27 +334,27 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("  %condUnsigned = icmp ugt i32 %x, -3", ifBranch.statements[0].code)
 
         val ifBranchVariableDecl =
-            (ifBranch.statements[0] as DeclarationStatement).declarations[0] as VariableDeclaration
-        val ifBranchComp = ifBranchVariableDecl.initializer as BinaryOperator
+            (ifBranch.statements[0] as DeclarationStmt).declarations[0] as VariableDecl
+        val ifBranchComp = ifBranchVariableDecl.initializer as BinaryOp
         assertEquals(">", ifBranchComp.operatorCode)
-        assertTrue(ifBranchComp.rhs is CastExpression)
-        assertTrue(ifBranchComp.lhs is CastExpression)
+        assertTrue(ifBranchComp.rhs is CastExpr)
+        assertTrue(ifBranchComp.lhs is CastExpr)
 
-        val ifBranchCompRhs = ifBranchComp.rhs as CastExpression
+        val ifBranchCompRhs = ifBranchComp.rhs as CastExpr
         assertEquals(tu.objectType("ui32"), ifBranchCompRhs.castType)
         assertEquals(tu.objectType("ui32"), ifBranchCompRhs.type)
-        val ifBranchCompLhs = ifBranchComp.lhs as CastExpression
+        val ifBranchCompLhs = ifBranchComp.lhs as CastExpr
         assertEquals(tu.objectType("ui32"), ifBranchCompLhs.castType)
         assertEquals(tu.objectType("ui32"), ifBranchCompLhs.type)
 
-        val declRefExpr = ifBranchCompLhs.expression as DeclaredReferenceExpression
+        val declRefExpr = ifBranchCompLhs.expression as Reference
         assertEquals(-3, ((ifBranchCompRhs.expression as Literal<*>).value as Long))
         assertLocalName("x", declRefExpr)
         // TODO: declRefExpr.refersTo is null. Is that expected/intended?
 
-        val ifBranchSecondStatement = ifBranch.statements[1] as? IfStatement
+        val ifBranchSecondStatement = ifBranch.statements[1] as? IfStmt
         assertNotNull(ifBranchSecondStatement)
-        val ifRet = ifBranchSecondStatement.thenStatement as? CompoundStatement
+        val ifRet = ifBranchSecondStatement.thenStatement as? CompoundStmt
         assertNotNull(ifRet)
         assertEquals(1, ifRet.statements.size)
         assertEquals("  ret i32 1", ifRet.statements[0].code)
@@ -374,31 +372,31 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
+        val foo = tu.byNameOrNull<FunctionDecl>("foo")
         assertNotNull(foo)
 
-        val atomicrmwStatement = foo.bodyOrNull<CompoundStatement>()
+        val atomicrmwStatement = foo.bodyOrNull<CompoundStmt>()
         assertNotNull(atomicrmwStatement)
 
         // Check that the value is assigned to
-        val decl = (atomicrmwStatement.statements[0].declarations[0] as VariableDeclaration)
+        val decl = (atomicrmwStatement.statements[0].declarations[0] as VariableDecl)
         assertLocalName("old", decl)
         assertLocalName("i32", decl.type)
-        assertEquals("*", (decl.initializer as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (decl.initializer as UnaryOperator).input)
+        assertEquals("*", (decl.initializer as UnaryOp).operatorCode)
+        assertLocalName("ptr", (decl.initializer as UnaryOp).input)
 
         // Check that the replacement equals *ptr = *ptr + 1
-        val replacement = (atomicrmwStatement.statements[1] as AssignExpression)
+        val replacement = (atomicrmwStatement.statements[1] as AssignExpr)
         assertEquals(1, replacement.lhs.size)
         assertEquals(1, replacement.rhs.size)
         assertEquals("=", replacement.operatorCode)
-        assertEquals("*", (replacement.lhs.first() as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (replacement.lhs.first() as UnaryOperator).input)
+        assertEquals("*", (replacement.lhs.first() as UnaryOp).operatorCode)
+        assertLocalName("ptr", (replacement.lhs.first() as UnaryOp).input)
         // Check that the rhs is equal to *ptr + 1
-        val add = replacement.rhs.first() as BinaryOperator
+        val add = replacement.rhs.first() as BinaryOp
         assertEquals("+", add.operatorCode)
-        assertEquals("*", (add.lhs as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (add.lhs as UnaryOperator).input)
+        assertEquals("*", (add.lhs as UnaryOp).operatorCode)
+        assertLocalName("ptr", (add.lhs as UnaryOp).input)
         assertEquals(1L, (add.rhs as Literal<*>).value as Long)
     }
 
@@ -414,47 +412,47 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
+        val foo = tu.byNameOrNull<FunctionDecl>("foo")
         assertNotNull(foo)
 
-        val cmpxchgStatement = foo.bodyOrNull<CompoundStatement>(1)
+        val cmpxchgStatement = foo.bodyOrNull<CompoundStmt>(1)
         assertNotNull(cmpxchgStatement)
         assertEquals(2, cmpxchgStatement.statements.size)
 
         // Check that the first statement is "literal_i32_i1 val_success = literal_i32_i1(*ptr, *ptr
         // == 5)"
-        val decl = (cmpxchgStatement.statements[0].declarations[0] as VariableDeclaration)
+        val decl = (cmpxchgStatement.statements[0].declarations[0] as VariableDecl)
         assertLocalName("val_success", decl)
         assertLocalName("literal_i32_i1", decl.type)
 
         // Check that the first value is *ptr
-        val value1 = (decl.initializer as ConstructExpression).arguments[0] as UnaryOperator
+        val value1 = (decl.initializer as ConstructExpr).arguments[0] as UnaryOp
         assertEquals("*", value1.operatorCode)
         assertLocalName("ptr", value1.input)
 
         // Check that the first value is *ptr == 5
-        val value2 = (decl.initializer as ConstructExpression).arguments[1] as BinaryOperator
+        val value2 = (decl.initializer as ConstructExpr).arguments[1] as BinaryOp
         assertEquals("==", value2.operatorCode)
-        assertEquals("*", (value2.lhs as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (value2.lhs as UnaryOperator).input)
+        assertEquals("*", (value2.lhs as UnaryOp).operatorCode)
+        assertLocalName("ptr", (value2.lhs as UnaryOp).input)
         assertEquals(5L, (value2.rhs as Literal<*>).value as Long)
 
-        val ifStatement = cmpxchgStatement.statements[1] as IfStatement
+        val ifStmt = cmpxchgStatement.statements[1] as IfStmt
         // The condition is the same as the second value above
-        val ifExpr = ifStatement.condition as BinaryOperator
+        val ifExpr = ifStmt.condition as BinaryOp
         assertEquals("==", ifExpr.operatorCode)
-        assertEquals("*", (ifExpr.lhs as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (ifExpr.lhs as UnaryOperator).input)
+        assertEquals("*", (ifExpr.lhs as UnaryOp).operatorCode)
+        assertLocalName("ptr", (ifExpr.lhs as UnaryOp).input)
         assertEquals(5L, (ifExpr.rhs as Literal<*>).value as Long)
 
-        val thenExpr = ifStatement.thenStatement as AssignExpression
+        val thenExpr = ifStmt.thenStatement as AssignExpr
         assertEquals(1, thenExpr.lhs.size)
         assertEquals(1, thenExpr.rhs.size)
         assertEquals("=", thenExpr.operatorCode)
-        assertEquals("*", (thenExpr.lhs.first() as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (thenExpr.lhs.first() as UnaryOperator).input)
-        assertLocalName("old", thenExpr.rhs.first() as DeclaredReferenceExpression)
-        assertLocalName("old", (thenExpr.rhs.first() as DeclaredReferenceExpression).refersTo)
+        assertEquals("*", (thenExpr.lhs.first() as UnaryOp).operatorCode)
+        assertLocalName("ptr", (thenExpr.lhs.first() as UnaryOp).input)
+        assertLocalName("old", thenExpr.rhs.first() as Reference)
+        assertLocalName("old", (thenExpr.rhs.first() as Reference).refersTo)
     }
 
     @Test
@@ -469,18 +467,18 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
+        val foo = tu.byNameOrNull<FunctionDecl>("foo")
         assertNotNull(foo)
 
-        val extractvalueStatement = foo.bodyOrNull<DeclarationStatement>()
+        val extractvalueStatement = foo.bodyOrNull<DeclarationStmt>()
         assertNotNull(extractvalueStatement)
-        val decl = (extractvalueStatement.declarations[0] as VariableDeclaration)
+        val decl = (extractvalueStatement.declarations[0] as VariableDecl)
         assertLocalName("value_loaded", decl)
         assertLocalName("i1", decl.type)
 
-        assertLocalName("val_success", (decl.initializer as MemberExpression).base)
-        assertEquals(".", (decl.initializer as MemberExpression).operatorCode)
-        assertLocalName("field_1", decl.initializer as MemberExpression)
+        assertLocalName("val_success", (decl.initializer as MemberExpr).base)
+        assertEquals(".", (decl.initializer as MemberExpr).operatorCode)
+        assertLocalName("field_1", decl.initializer as MemberExpr)
     }
 
     @Test
@@ -497,18 +495,18 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
+        val foo = tu.byNameOrNull<FunctionDecl>("foo")
         assertNotNull(foo)
         assertEquals("literal_i32_i8", foo.type.typeName)
 
-        val record = (foo.type as? ObjectType)?.recordDeclaration
+        val record = (foo.type as? ObjectType)?.recordDecl
         assertNotNull(record)
         assertEquals(2, record.fields.size)
 
-        val returnStatement = foo.bodyOrNull<ReturnStatement>(0)
-        assertNotNull(returnStatement)
+        val returnStmt = foo.bodyOrNull<ReturnStmt>(0)
+        assertNotNull(returnStmt)
 
-        val construct = returnStatement.returnValue as? ConstructExpression
+        val construct = returnStmt.returnValue as? ConstructExpr
         assertNotNull(construct)
         assertEquals(2, construct.arguments.size)
 
@@ -537,38 +535,36 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
-        val globalX = tu.byNameOrNull<VariableDeclaration>("x")
+        val globalX = tu.byNameOrNull<VariableDecl>("x")
         assertNotNull(globalX)
         assertEquals("i32*", globalX.type.typeName)
 
-        val globalA = tu.byNameOrNull<VariableDeclaration>("a")
+        val globalA = tu.byNameOrNull<VariableDecl>("a")
         assertNotNull(globalA)
         assertEquals("i32*", globalA.type.typeName)
 
-        val loadXStatement = main.bodyOrNull<DeclarationStatement>(1)
+        val loadXStatement = main.bodyOrNull<DeclarationStmt>(1)
         assertNotNull(loadXStatement)
         assertLocalName("locX", loadXStatement.singleDeclaration)
 
-        val initXOp =
-            (loadXStatement.singleDeclaration as VariableDeclaration).initializer as UnaryOperator
+        val initXOp = (loadXStatement.singleDeclaration as VariableDecl).initializer as UnaryOp
         assertEquals("*", initXOp.operatorCode)
 
-        var ref = initXOp.input as? DeclaredReferenceExpression
+        var ref = initXOp.input as? Reference
         assertNotNull(ref)
         assertLocalName("x", ref)
         assertSame(globalX, ref.refersTo)
 
-        val loadAStatement = main.bodyOrNull<DeclarationStatement>(2)
+        val loadAStatement = main.bodyOrNull<DeclarationStmt>(2)
         assertNotNull(loadAStatement)
         assertLocalName("locA", loadAStatement.singleDeclaration)
-        val initAOp =
-            (loadAStatement.singleDeclaration as VariableDeclaration).initializer as UnaryOperator
+        val initAOp = (loadAStatement.singleDeclaration as VariableDecl).initializer as UnaryOp
         assertEquals("*", initAOp.operatorCode)
 
-        ref = initAOp.input as? DeclaredReferenceExpression
+        ref = initAOp.input as? Reference
         assertNotNull(ref)
         assertLocalName("a", ref)
         assertSame(globalA, ref.refersTo)
@@ -588,28 +584,28 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
         // %ptr = alloca i32
-        val ptr = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration as? VariableDeclaration
+        val ptr = main.bodyOrNull<DeclarationStmt>()?.singleDeclaration as? VariableDecl
         assertNotNull(ptr)
 
-        val alloca = ptr.initializer as? ArrayCreationExpression
+        val alloca = ptr.initializer as? ArrayExpr
         assertNotNull(alloca)
         assertEquals("i32*", alloca.type.typeName)
 
         // store i32 3, i32* %ptr
-        val store = main.bodyOrNull<AssignExpression>()
+        val store = main.bodyOrNull<AssignExpr>()
         assertNotNull(store)
         assertEquals("=", store.operatorCode)
 
         assertEquals(1, store.lhs.size)
-        val dereferencePtr = store.lhs.first() as? UnaryOperator
+        val dereferencePtr = store.lhs.first() as? UnaryOp
         assertNotNull(dereferencePtr)
         assertEquals("*", dereferencePtr.operatorCode)
         assertEquals("i32", dereferencePtr.type.typeName)
-        assertSame(ptr, (dereferencePtr.input as? DeclaredReferenceExpression)?.refersTo)
+        assertSame(ptr, (dereferencePtr.input as? Reference)?.refersTo)
 
         assertEquals(1, store.rhs.size)
         val value = store.rhs.first() as? Literal<*>
@@ -632,42 +628,41 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
+        val foo = tu.byNameOrNull<FunctionDecl>("foo")
         assertNotNull(foo)
         assertEquals("literal_i32_i8", foo.type.typeName)
 
-        val record = (foo.type as? ObjectType)?.recordDeclaration
+        val record = (foo.type as? ObjectType)?.recordDecl
         assertNotNull(record)
         assertEquals(2, record.fields.size)
 
-        val declStatement = foo.bodyOrNull<DeclarationStatement>()
+        val declStatement = foo.bodyOrNull<DeclarationStmt>()
         assertNotNull(declStatement)
 
-        val varDecl = declStatement.singleDeclaration as VariableDeclaration
+        val varDecl = declStatement.singleDeclaration as VariableDecl
         assertLocalName("a", varDecl)
         assertEquals("literal_i32_i8", varDecl.type.typeName)
-        val args = (varDecl.initializer as ConstructExpression).arguments
+        val args = (varDecl.initializer as ConstructExpr).arguments
         assertEquals(2, args.size)
         assertEquals(100L, (args[0] as Literal<*>).value as Long)
         assertNull((args[1] as Literal<*>).value)
 
-        val compoundStatement = foo.bodyOrNull<CompoundStatement>()
+        val compoundStatement = foo.bodyOrNull<CompoundStmt>()
         assertNotNull(compoundStatement)
         // First copy a to b
         val copyStatement =
-            (compoundStatement.statements[0] as DeclarationStatement).singleDeclaration
-                as VariableDeclaration
+            (compoundStatement.statements[0] as DeclarationStmt).singleDeclaration as VariableDecl
         assertLocalName("b", copyStatement)
         assertEquals("literal_i32_i8", copyStatement.type.typeName)
 
         // Now, we set b.field_1 to 7
-        val assignment = (compoundStatement.statements[1] as AssignExpression)
+        val assignment = (compoundStatement.statements[1] as AssignExpr)
         assertEquals("=", assignment.operatorCode)
         assertEquals(1, assignment.lhs.size)
         assertEquals(1, assignment.rhs.size)
-        assertLocalName("b", (assignment.lhs.first() as MemberExpression).base)
-        assertEquals(".", (assignment.lhs.first() as MemberExpression).operatorCode)
-        assertLocalName("field_1", assignment.lhs.first() as MemberExpression)
+        assertLocalName("b", (assignment.lhs.first() as MemberExpr).base)
+        assertEquals(".", (assignment.lhs.first() as MemberExpr).operatorCode)
+        assertLocalName("field_1", assignment.lhs.first() as MemberExpr)
         assertEquals(7L, (assignment.rhs.first() as Literal<*>).value as Long)
     }
 
@@ -683,22 +678,22 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val throwingFoo = tu.byNameOrNull<FunctionDeclaration>("throwingFoo")
+        val throwingFoo = tu.byNameOrNull<FunctionDecl>("throwingFoo")
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
-        val mainBody = main.body as CompoundStatement
-        val tryStatement = mainBody.statements[0] as? TryStatement
-        assertNotNull(tryStatement)
+        val mainBody = main.body as CompoundStmt
+        val tryStmt = mainBody.statements[0] as? TryStmt
+        assertNotNull(tryStmt)
 
         // Check the assignment of the function call
         val resDecl =
-            (tryStatement.tryBlock?.statements?.get(0) as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration
+            (tryStmt.tryBlock?.statements?.get(0) as? DeclarationStmt)?.singleDeclaration
+                as? VariableDecl
         assertNotNull(resDecl)
         assertLocalName("res", resDecl)
-        val call = resDecl.initializer as? CallExpression
+        val call = resDecl.initializer as? CallExpr
         assertNotNull(call)
         assertLocalName("throwingFoo", call)
         assertTrue(call.invokes.contains(throwingFoo))
@@ -706,23 +701,23 @@ class LLVMIRLanguageFrontendTest {
 
         // Check that the second part of the try-block is inlined by the pass
         val aDecl =
-            (tryStatement.tryBlock?.statements?.get(1) as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration
+            (tryStmt.tryBlock?.statements?.get(1) as? DeclarationStmt)?.singleDeclaration
+                as? VariableDecl
         assertNotNull(aDecl)
         assertLocalName("a", aDecl)
-        val resStatement = tryStatement.tryBlock?.statements?.get(2) as? ReturnStatement
+        val resStatement = tryStmt.tryBlock?.statements?.get(2) as? ReturnStmt
         assertNotNull(resStatement)
 
         // Check that the catch block is inlined by the pass
-        assertEquals(1, tryStatement.catchClauses.size)
-        assertEquals(5, tryStatement.catchClauses[0].body?.statements?.size)
-        assertLocalName("_ZTIi | ...", tryStatement.catchClauses[0])
-        val ifStatement = tryStatement.catchClauses[0].body?.statements?.get(4) as? IfStatement
-        assertNotNull(ifStatement)
-        assertTrue(ifStatement.thenStatement is CompoundStatement)
-        assertEquals(4, (ifStatement.thenStatement as CompoundStatement).statements.size)
-        assertTrue(ifStatement.elseStatement is CompoundStatement)
-        assertEquals(1, (ifStatement.elseStatement as CompoundStatement).statements.size)
+        assertEquals(1, tryStmt.catchClauses.size)
+        assertEquals(5, tryStmt.catchClauses[0].body?.statements?.size)
+        assertLocalName("_ZTIi | ...", tryStmt.catchClauses[0])
+        val ifStmt = tryStmt.catchClauses[0].body?.statements?.get(4) as? IfStmt
+        assertNotNull(ifStmt)
+        assertTrue(ifStmt.thenStatement is CompoundStmt)
+        assertEquals(4, (ifStmt.thenStatement as CompoundStmt).statements.size)
+        assertTrue(ifStmt.elseStatement is CompoundStmt)
+        assertEquals(1, (ifStmt.elseStatement as CompoundStmt).statements.size)
     }
 
     @Test
@@ -736,7 +731,7 @@ class LLVMIRLanguageFrontendTest {
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
-        val main = tu.byNameOrNull<FunctionDeclaration>("loopPhi")
+        val main = tu.byNameOrNull<FunctionDecl>("loopPhi")
         assertNotNull(main)
     }
 
@@ -751,53 +746,44 @@ class LLVMIRLanguageFrontendTest {
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
-        val mainBody = main.body as CompoundStatement
-        val yDecl =
-            (mainBody.statements[0] as DeclarationStatement).singleDeclaration
-                as VariableDeclaration
+        val mainBody = main.body as CompoundStmt
+        val yDecl = (mainBody.statements[0] as DeclarationStmt).singleDeclaration as VariableDecl
         assertNotNull(yDecl)
 
-        val ifStatement = mainBody.statements[3] as? IfStatement
-        assertNotNull(ifStatement)
+        val ifStmt = mainBody.statements[3] as? IfStmt
+        assertNotNull(ifStmt)
 
-        val thenStmt = ifStatement.thenStatement as? CompoundStatement
+        val thenStmt = ifStmt.thenStatement as? CompoundStmt
         assertNotNull(thenStmt)
         assertEquals(3, thenStmt.statements.size)
-        assertNotNull(thenStmt.statements[1] as? AssignExpression)
-        val aDecl =
-            (thenStmt.statements[0] as DeclarationStatement).singleDeclaration
-                as VariableDeclaration
-        val thenY = thenStmt.statements[1] as AssignExpression
+        assertNotNull(thenStmt.statements[1] as? AssignExpr)
+        val aDecl = (thenStmt.statements[0] as DeclarationStmt).singleDeclaration as VariableDecl
+        val thenY = thenStmt.statements[1] as AssignExpr
         assertEquals(1, thenY.lhs.size)
         assertEquals(1, thenY.rhs.size)
-        assertSame(aDecl, (thenY.rhs.first() as DeclaredReferenceExpression).refersTo)
-        assertSame(yDecl, (thenY.lhs.first() as DeclaredReferenceExpression).refersTo)
+        assertSame(aDecl, (thenY.rhs.first() as Reference).refersTo)
+        assertSame(yDecl, (thenY.lhs.first() as Reference).refersTo)
 
-        val elseStmt = ifStatement.elseStatement as? CompoundStatement
+        val elseStmt = ifStmt.elseStatement as? CompoundStmt
         assertNotNull(elseStmt)
         assertEquals(3, elseStmt.statements.size)
-        val bDecl =
-            (elseStmt.statements[0] as DeclarationStatement).singleDeclaration
-                as VariableDeclaration
-        assertNotNull(elseStmt.statements[1] as? AssignExpression)
-        val elseY = elseStmt.statements[1] as AssignExpression
+        val bDecl = (elseStmt.statements[0] as DeclarationStmt).singleDeclaration as VariableDecl
+        assertNotNull(elseStmt.statements[1] as? AssignExpr)
+        val elseY = elseStmt.statements[1] as AssignExpr
         assertEquals(1, elseY.lhs.size)
         assertEquals(1, elseY.lhs.size)
-        assertSame(bDecl, (elseY.rhs.first() as DeclaredReferenceExpression).refersTo)
-        assertSame(yDecl, (elseY.lhs.first() as DeclaredReferenceExpression).refersTo)
+        assertSame(bDecl, (elseY.rhs.first() as Reference).refersTo)
+        assertSame(yDecl, (elseY.lhs.first() as Reference).refersTo)
 
         val continueBlock =
-            (thenStmt.statements[2] as? GotoStatement)?.targetLabel?.subStatement
-                as? CompoundStatement
+            (thenStmt.statements[2] as? GotoStmt)?.targetLabel?.subStatement as? CompoundStmt
         assertNotNull(continueBlock)
         assertEquals(
             yDecl,
-            ((continueBlock.statements[1] as ReturnStatement).returnValue
-                    as DeclaredReferenceExpression)
-                .refersTo
+            ((continueBlock.statements[1] as ReturnStmt).returnValue as Reference).refersTo
         )
     }
 
@@ -812,15 +798,14 @@ class LLVMIRLanguageFrontendTest {
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
         // Test that x is initialized correctly
-        val mainBody = main.body as CompoundStatement
+        val mainBody = main.body as CompoundStmt
         val origX =
-            ((mainBody.statements[0] as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration)
-        val xInit = origX?.initializer as? InitializerListExpression
+            ((mainBody.statements[0] as? DeclarationStmt)?.singleDeclaration as? VariableDecl)
+        val xInit = origX?.initializer as? InitializerListExpr
         assertNotNull(xInit)
         assertEquals(10L, (xInit.initializers[0] as? Literal<*>)?.value)
         assertEquals(9L, (xInit.initializers[1] as? Literal<*>)?.value)
@@ -829,9 +814,8 @@ class LLVMIRLanguageFrontendTest {
 
         // Test that y is initialized correctly
         val origY =
-            ((mainBody.statements[1] as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration)
-        val yInit = origY?.initializer as? InitializerListExpression
+            ((mainBody.statements[1] as? DeclarationStmt)?.singleDeclaration as? VariableDecl)
+        val yInit = origY?.initializer as? InitializerListExpr
         assertNotNull(yInit)
         assertEquals(15L, (yInit.initializers[0] as? Literal<*>)?.value)
         assertEquals(34L, (yInit.initializers[1] as? Literal<*>)?.value)
@@ -840,79 +824,70 @@ class LLVMIRLanguageFrontendTest {
 
         // Test that extractelement works
         val zInit =
-            ((mainBody.statements[2] as? DeclarationStatement)?.singleDeclaration
-                    as? VariableDeclaration)
-                ?.initializer as? ArraySubscriptionExpression
+            ((mainBody.statements[2] as? DeclarationStmt)?.singleDeclaration as? VariableDecl)
+                ?.initializer as? SubscriptionExpr
         assertNotNull(zInit)
         assertEquals(0L, (zInit.subscriptExpression as? Literal<*>)?.value)
-        assertEquals("x", (zInit.arrayExpression as? DeclaredReferenceExpression)?.name?.localName)
-        assertSame(origX, (zInit.arrayExpression as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals("x", (zInit.arrayExpression as? Reference)?.name?.localName)
+        assertSame(origX, (zInit.arrayExpression as? Reference)?.refersTo)
 
         // Test the assignment of y to yMod
         val yModInit =
-            ((mainBody.statements[3] as CompoundStatement).statements[0] as? DeclarationStatement)
-                ?.singleDeclaration as? VariableDeclaration
+            ((mainBody.statements[3] as CompoundStmt).statements[0] as? DeclarationStmt)
+                ?.singleDeclaration as? VariableDecl
         assertNotNull(yModInit)
-        assertEquals("y", (yModInit.initializer as? DeclaredReferenceExpression)?.name?.localName)
-        assertSame(origY, (yModInit.initializer as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals("y", (yModInit.initializer as? Reference)?.name?.localName)
+        assertSame(origY, (yModInit.initializer as? Reference)?.refersTo)
         // Now, test the modification of yMod[3] = 8
-        val yMod =
-            ((mainBody.statements[3] as CompoundStatement).statements[1] as? AssignExpression)
+        val yMod = ((mainBody.statements[3] as CompoundStmt).statements[1] as? AssignExpr)
         assertNotNull(yMod)
         assertEquals(1, yMod.lhs.size)
         assertEquals(1, yMod.rhs.size)
         assertEquals(
             3L,
-            ((yMod.lhs.first() as? ArraySubscriptionExpression)?.subscriptExpression as? Literal<*>)
-                ?.value
+            ((yMod.lhs.first() as? SubscriptionExpr)?.subscriptExpression as? Literal<*>)?.value
         )
         assertSame(
             yModInit,
-            ((yMod.lhs.first() as? ArraySubscriptionExpression)?.arrayExpression
-                    as? DeclaredReferenceExpression)
-                ?.refersTo
+            ((yMod.lhs.first() as? SubscriptionExpr)?.arrayExpression as? Reference)?.refersTo
         )
         assertEquals(8L, (yMod.rhs.first() as? Literal<*>)?.value)
 
         // Test the last shufflevector instruction which does not contain constant as initializers.
         val shuffledInit =
-            ((mainBody.statements[4] as? DeclarationStatement)?.singleDeclaration
-                    as? VariableDeclaration)
-                ?.initializer as? InitializerListExpression
+            ((mainBody.statements[4] as? DeclarationStmt)?.singleDeclaration as? VariableDecl)
+                ?.initializer as? InitializerListExpr
         assertNotNull(shuffledInit)
         assertSame(
             origX,
-            ((shuffledInit.initializers[0] as? ArraySubscriptionExpression)?.arrayExpression
-                    as? DeclaredReferenceExpression)
+            ((shuffledInit.initializers[0] as? SubscriptionExpr)?.arrayExpression as? Reference)
                 ?.refersTo
         )
         assertSame(
             yModInit,
-            ((shuffledInit.initializers[1] as? ArraySubscriptionExpression)?.arrayExpression
-                    as? DeclaredReferenceExpression)
+            ((shuffledInit.initializers[1] as? SubscriptionExpr)?.arrayExpression as? Reference)
                 ?.refersTo
         )
         assertSame(
             yModInit,
-            ((shuffledInit.initializers[2] as? ArraySubscriptionExpression)?.arrayExpression
-                    as? DeclaredReferenceExpression)
+            ((shuffledInit.initializers[2] as? SubscriptionExpr)?.arrayExpression as? Reference)
                 ?.refersTo
         )
         assertSame(
             1,
-            ((shuffledInit.initializers[0] as? ArraySubscriptionExpression)?.subscriptExpression
+            ((shuffledInit.initializers[0] as? SubscriptionExpr)?.subscriptExpression
                     as? Literal<*>)
                 ?.value
         )
         assertSame(
             2,
-            ((shuffledInit.initializers[1] as? ArraySubscriptionExpression)?.subscriptExpression
+            ((shuffledInit.initializers[1] as? SubscriptionExpr)?.subscriptExpression
                     as? Literal<*>)
                 ?.value
         )
         assertSame(
             3,
-            ((shuffledInit.initializers[2] as? ArraySubscriptionExpression)?.subscriptExpression
+            ((shuffledInit.initializers[2] as? SubscriptionExpr)?.subscriptExpression
                     as? Literal<*>)
                 ?.value
         )
@@ -929,18 +904,18 @@ class LLVMIRLanguageFrontendTest {
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
         // Test that x is initialized correctly
-        val mainBody = main.body as CompoundStatement
+        val mainBody = main.body as CompoundStmt
 
-        val fenceCall = mainBody.statements[0] as? CallExpression
+        val fenceCall = mainBody.statements[0] as? CallExpr
         assertNotNull(fenceCall)
         assertEquals(1, fenceCall.arguments.size)
         assertEquals(2, (fenceCall.arguments[0] as Literal<*>).value)
 
-        val fenceCallScope = mainBody.statements[2] as? CallExpression
+        val fenceCallScope = mainBody.statements[2] as? CallExpr
         assertNotNull(fenceCallScope)
         assertEquals(2, fenceCallScope.arguments.size)
         // TODO: This doesn't match but it doesn't seem to be our mistake
@@ -960,89 +935,76 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val funcF = tu.byNameOrNull<FunctionDeclaration>("f")
+        val funcF = tu.byNameOrNull<FunctionDecl>("f")
         assertNotNull(funcF)
 
-        val tryStatement =
-            (funcF.bodyOrNull<LabelStatement>(0)?.subStatement as? CompoundStatement)
+        val tryStmt =
+            (funcF.bodyOrNull<LabelStmt>(0)?.subStatement as? CompoundStmt)
                 ?.statements
-                ?.firstOrNull { s -> s is TryStatement } as? TryStatement
-        assertNotNull(tryStatement)
-        assertEquals(2, tryStatement.tryBlock?.statements?.size)
-        assertFullName(
-            "_CxxThrowException",
-            tryStatement.tryBlock?.statements?.get(0) as? CallExpression
-        )
+                ?.firstOrNull { s -> s is TryStmt } as? TryStmt
+        assertNotNull(tryStmt)
+        assertEquals(2, tryStmt.tryBlock?.statements?.size)
+        assertFullName("_CxxThrowException", tryStmt.tryBlock?.statements?.get(0) as? CallExpr)
         assertEquals(
             "end",
-            (tryStatement.tryBlock?.statements?.get(1) as? GotoStatement)
-                ?.targetLabel
-                ?.name
-                ?.localName
+            (tryStmt.tryBlock?.statements?.get(1) as? GotoStmt)?.targetLabel?.name?.localName
         )
 
-        assertEquals(1, tryStatement.catchClauses.size)
-        val catchSwitchExpr =
-            tryStatement.catchClauses[0].body?.statements?.get(0) as? DeclarationStatement
+        assertEquals(1, tryStmt.catchClauses.size)
+        val catchSwitchExpr = tryStmt.catchClauses[0].body?.statements?.get(0) as? DeclarationStmt
         assertNotNull(catchSwitchExpr)
         val catchswitchCall =
-            (catchSwitchExpr.singleDeclaration as? VariableDeclaration)?.initializer
-                as? CallExpression
+            (catchSwitchExpr.singleDeclaration as? VariableDecl)?.initializer as? CallExpr
         assertNotNull(catchswitchCall)
         assertFullName("llvm.catchswitch", catchswitchCall)
-        val ifExceptionMatches =
-            tryStatement.catchClauses[0].body?.statements?.get(1) as? IfStatement
-        val matchesExceptionCall = ifExceptionMatches?.condition as? CallExpression
+        val ifExceptionMatches = tryStmt.catchClauses[0].body?.statements?.get(1) as? IfStmt
+        val matchesExceptionCall = ifExceptionMatches?.condition as? CallExpr
         assertNotNull(matchesExceptionCall)
         assertFullName("llvm.matchesCatchpad", matchesExceptionCall)
         assertEquals(
             catchSwitchExpr.singleDeclaration,
-            (matchesExceptionCall.arguments[0] as DeclaredReferenceExpression).refersTo
+            (matchesExceptionCall.arguments[0] as Reference).refersTo
         )
         assertEquals(null, (matchesExceptionCall.arguments[1] as Literal<*>).value)
         assertEquals(64L, (matchesExceptionCall.arguments[2] as Literal<*>).value as Long)
         assertEquals(null, (matchesExceptionCall.arguments[3] as Literal<*>).value)
 
-        val catchBlock = ifExceptionMatches.thenStatement as? CompoundStatement
+        val catchBlock = ifExceptionMatches.thenStatement as? CompoundStmt
         assertNotNull(catchBlock)
         assertFullName(
             "llvm.catchpad",
-            ((catchBlock.statements[0] as? DeclarationStatement)?.singleDeclaration
-                    as? VariableDeclaration)
-                ?.initializer as? CallExpression
+            ((catchBlock.statements[0] as? DeclarationStmt)?.singleDeclaration as? VariableDecl)
+                ?.initializer as? CallExpr
         )
 
-        val innerTry = catchBlock.statements[1] as? TryStatement
+        val innerTry = catchBlock.statements[1] as? TryStmt
         assertNotNull(innerTry)
-        assertFullName(
-            "_CxxThrowException",
-            innerTry.tryBlock?.statements?.get(0) as? CallExpression
-        )
+        assertFullName("_CxxThrowException", innerTry.tryBlock?.statements?.get(0) as? CallExpr)
         assertLocalName(
             "try.cont",
-            (innerTry.tryBlock?.statements?.get(1) as? GotoStatement)?.targetLabel
+            (innerTry.tryBlock?.statements?.get(1) as? GotoStmt)?.targetLabel
         )
 
         val innerCatchClause =
-            (innerTry.catchClauses[0].body?.statements?.get(1) as? IfStatement)?.thenStatement
-                as? CompoundStatement
+            (innerTry.catchClauses[0].body?.statements?.get(1) as? IfStmt)?.thenStatement
+                as? CompoundStmt
         assertNotNull(innerCatchClause)
         assertFullName(
             "llvm.catchpad",
-            ((innerCatchClause.statements[0] as? DeclarationStatement)?.singleDeclaration
-                    as? VariableDeclaration)
-                ?.initializer as? CallExpression
+            ((innerCatchClause.statements[0] as? DeclarationStmt)?.singleDeclaration
+                    as? VariableDecl)
+                ?.initializer as? CallExpr
         )
-        assertLocalName("try.cont", (innerCatchClause.statements[1] as? GotoStatement)?.targetLabel)
+        assertLocalName("try.cont", (innerCatchClause.statements[1] as? GotoStmt)?.targetLabel)
 
         val innerCatchThrows =
-            (innerTry.catchClauses[0].body?.statements?.get(1) as? IfStatement)?.elseStatement
-                as? UnaryOperator
+            (innerTry.catchClauses[0].body?.statements?.get(1) as? IfStmt)?.elseStatement
+                as? UnaryOp
         assertNotNull(innerCatchThrows)
         assertNotNull(innerCatchThrows.input)
         assertSame(
             innerTry.catchClauses[0].parameter,
-            (innerCatchThrows.input as? DeclaredReferenceExpression)?.refersTo
+            (innerCatchThrows.input as? Reference)?.refersTo
         )
     }
 

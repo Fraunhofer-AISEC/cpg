@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.assertLiteralValue
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import java.nio.file.Path
 import kotlin.test.*
@@ -57,23 +57,19 @@ class ExpressionTest {
         val mainFunc = main.functions["main"]
         assertNotNull(mainFunc)
 
-        val f =
-            (mainFunc.bodyOrNull<DeclarationStatement>(0))?.singleDeclaration
-                as? VariableDeclaration
+        val f = (mainFunc.bodyOrNull<DeclarationStmt>(0))?.singleDeclaration as? VariableDecl
         assertNotNull(f)
 
-        val s =
-            (mainFunc.bodyOrNull<DeclarationStatement>(1))?.singleDeclaration
-                as? VariableDeclaration
+        val s = (mainFunc.bodyOrNull<DeclarationStmt>(1))?.singleDeclaration as? VariableDecl
         assertNotNull(s)
 
-        val cast = s.initializer as? CastExpression
+        val cast = s.initializer as? CastExpr
         assertNotNull(cast)
         assertFullName("main.MyStruct", cast.castType)
-        assertSame(f, (cast.expression as? DeclaredReferenceExpression)?.refersTo)
+        assertSame(f, (cast.expression as? Reference)?.refersTo)
 
         val ignored = main.variables("_")
-        ignored.forEach { assertIs<CastExpression>(it.initializer) }
+        ignored.forEach { assertIs<CastExpr>(it.initializer) }
     }
 
     @Test
@@ -99,9 +95,7 @@ class ExpressionTest {
 
         // [:1]
         var slice =
-            assertIs<RangeExpression>(
-                assertIs<ArraySubscriptionExpression>(b.initializer).subscriptExpression
-            )
+            assertIs<RangeExpr>(assertIs<SubscriptionExpr>(b.initializer).subscriptExpression)
         assertNull(slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -111,7 +105,7 @@ class ExpressionTest {
         assertLocalName("int[]", c.type)
 
         // [1:]
-        slice = assertIs(assertIs<ArraySubscriptionExpression>(c.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptionExpr>(c.initializer).subscriptExpression)
         assertLiteralValue(1, slice.floor)
         assertNull(slice.ceiling)
         assertNull(slice.third)
@@ -121,7 +115,7 @@ class ExpressionTest {
         assertLocalName("int[]", d.type)
 
         // [0:1]
-        slice = assertIs(assertIs<ArraySubscriptionExpression>(d.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptionExpr>(d.initializer).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -131,7 +125,7 @@ class ExpressionTest {
         assertLocalName("int[]", e.type)
 
         // [0:1:1]
-        slice = assertIs(assertIs<ArraySubscriptionExpression>(e.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptionExpr>(e.initializer).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)

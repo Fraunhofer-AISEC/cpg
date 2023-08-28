@@ -31,10 +31,10 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -70,13 +70,12 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
     /**
      * This contains a cache binding between an LLVMValueRef (representing a variable) and its
      * [Declaration] in the graph. We need this, because this way we can look up and connect a
-     * [DeclaredReferenceExpression] to its [Declaration] already in the language frontend. This in
-     * turn is needed because of the local/global system we cannot rely on the
-     * [VariableUsageResolver].
+     * [Reference] to its [Declaration] already in the language frontend. This in turn is needed
+     * because of the local/global system we cannot rely on the [VariableUsageResolver].
      */
     var bindingsCache = mutableMapOf<String, Declaration>()
 
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnitDecl {
         var bench = Benchmark(this.javaClass, "Parsing sourcefile")
         // clear the bindings cache, because it is just valid within one module
         bindingsCache.clear()
@@ -119,7 +118,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         bench.addMeasurement()
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
-        val tu = newTranslationUnitDeclaration(file.name)
+        val tu = newTranslationUnitDecl(file.name)
 
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)
@@ -244,9 +243,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
         return this.scopeManager
-            .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) {
-                it.name.toString() == name
-            }
+            .resolve<RecordDecl>(this.scopeManager.globalScope, true) { it.name.toString() == name }
             .isNotEmpty()
     }
 

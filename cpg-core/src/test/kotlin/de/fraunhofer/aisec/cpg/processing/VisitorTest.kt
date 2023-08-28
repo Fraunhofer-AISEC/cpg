@@ -30,11 +30,10 @@ import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.records
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.concurrent.ExecutionException
@@ -48,9 +47,9 @@ class VisitorTest : BaseTest() {
     @Test
     fun testLoopDetection() {
         // Let's create an intentional loop
-        val tu = TranslationUnitDeclaration()
-        val name = NamespaceDeclaration()
-        val func = FunctionDeclaration()
+        val tu = TranslationUnitDecl()
+        val name = NamespaceDecl()
+        val func = FunctionDecl()
         name.addDeclaration(tu)
         name.addDeclaration(func)
         tu.addDeclaration(name)
@@ -76,7 +75,7 @@ class VisitorTest : BaseTest() {
         // val recordDeclaration = namespace?.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(recordDecl)
 
-        val method = recordDecl!!.byNameOrNull<MethodDeclaration>("method")
+        val method = recordDecl!!.byNameOrNull<MethodDecl>("method")
         assertNotNull(method)
 
         val firstStmt = method.bodyOrNull<Statement>()
@@ -118,13 +117,13 @@ class VisitorTest : BaseTest() {
     /** Visits only ReturnStatement nodes. */
     @Test
     fun testReturnStmtVisitor() {
-        val returnStmts: MutableList<ReturnStatement> = ArrayList()
+        val returnStmts: MutableList<ReturnStmt> = ArrayList()
         assertNotNull(recordDecl)
 
         recordDecl!!.accept(
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
-                fun visit(r: ReturnStatement) {
+                fun visit(r: ReturnStmt) {
                     returnStmts.add(r)
                 }
             }
@@ -133,7 +132,7 @@ class VisitorTest : BaseTest() {
     }
 
     companion object {
-        private var recordDecl: RecordDeclaration? = null
+        private var recordDecl: RecordDecl? = null
 
         @BeforeAll
         @JvmStatic

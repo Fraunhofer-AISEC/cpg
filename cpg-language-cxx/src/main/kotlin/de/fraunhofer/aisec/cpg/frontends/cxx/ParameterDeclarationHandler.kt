@@ -26,16 +26,16 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.newParamVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDecl
+import de.fraunhofer.aisec.cpg.graph.newParameterDecl
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
 
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTParameterDeclaration>(Supplier(::ProblemDeclaration), lang) {
+    CXXHandler<Declaration, IASTParameterDeclaration>(Supplier(::ProblemDecl), lang) {
 
     override fun handleNode(node: IASTParameterDeclaration): Declaration {
         return when (node) {
@@ -47,19 +47,12 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleParameterDeclaration(
-        ctx: IASTParameterDeclaration
-    ): ParamVariableDeclaration {
+    private fun handleParameterDeclaration(ctx: IASTParameterDeclaration): ParameterDecl {
         // Parse the type
         val type = frontend.typeOf(ctx.declarator, ctx.declSpecifier)
 
         val paramVariableDeclaration =
-            newParamVariableDeclaration(
-                ctx.declarator.name.toString(),
-                type,
-                false,
-                ctx.rawSignature
-            )
+            newParameterDecl(ctx.declarator.name.toString(), type, false, ctx.rawSignature)
 
         // Add default values
         if (ctx.declarator.initializer != null) {

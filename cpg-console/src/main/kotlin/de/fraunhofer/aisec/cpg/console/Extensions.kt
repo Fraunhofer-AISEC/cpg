@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.console
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
+import de.fraunhofer.aisec.cpg.graph.statements.IfStmt
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -185,13 +185,13 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
     val list = mutableListOf<Pair<AttributedStyle, Region>>()
 
     when (node) {
-        is MemberExpression -> {
+        is MemberExpr -> {
             // color the member
             node.location?.let { styles.identifier?.let { id -> list += Pair(id, it.region) } }
 
             return list
         }
-        is DeclaredReferenceExpression -> {
+        is Reference -> {
             // also color it, if it's on its own
             if (original == node) {
                 node.location?.let { styles.identifier?.let { id -> list += Pair(id, it.region) } }
@@ -199,7 +199,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 
             return list
         }
-        is DeclarationStatement -> {
+        is DeclarationStmt -> {
             if (node.singleDeclaration is HasType)
                 fancyType(node, (node.singleDeclaration as HasType), list)
 
@@ -209,13 +209,13 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 
             return list
         }
-        is VariableDeclaration -> {
+        is VariableDecl -> {
             // only color initializer, if any
             node.initializer?.let { list.addAll(getFanciesFor(original, it)) }
 
             return list
         }
-        is CompoundStatement -> {
+        is CompoundStmt -> {
             // loop through statements
             for (statement in node.statements) {
                 list.addAll(getFanciesFor(original, statement))
@@ -223,7 +223,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 
             return list
         }
-        is IfStatement -> {
+        is IfStmt -> {
             // look for the if keyword
             fancyWord("if", node, list, styles.keyword)
 
@@ -231,7 +231,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 
             return list
         }
-        is BinaryOperator -> {
+        is BinaryOp -> {
             list.addAll(getFanciesFor(original, node.lhs))
             list.addAll(getFanciesFor(original, node.rhs))
         }
@@ -245,7 +245,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 
             return list
         }
-        is ArrayCreationExpression -> {
+        is ArrayExpr -> {
             fancyWord("new", node, list, styles.keyword)
 
             // check for primitive types
@@ -263,7 +263,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 
             return list
         }
-        is FunctionDeclaration -> {
+        is FunctionDecl -> {
             // color some keywords
             val keywords = listOf("public", "private", "static")
             for (keyword in keywords) {

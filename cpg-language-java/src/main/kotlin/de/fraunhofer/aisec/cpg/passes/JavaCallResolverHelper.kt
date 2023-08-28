@@ -28,12 +28,12 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
 import de.fraunhofer.aisec.cpg.graph.objectType
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
@@ -45,29 +45,29 @@ class JavaCallResolverHelper {
          * Handle calls in the form of `super.call()` or `ClassName.super.call()`, conforming to
          * JLS13 §15.12.1.
          *
-         * This function basically sets the correct type of the [DeclaredReferenceExpression]
-         * containing the "super" keyword. Afterwards, we can use the regular
-         * [CallResolver.resolveMemberCallee] to resolve the [MemberCallExpression].
+         * This function basically sets the correct type of the [Reference] containing the "super"
+         * keyword. Afterwards, we can use the regular [CallResolver.resolveMemberCallee] to resolve
+         * the [MemberCallExpr].
          *
          * @param callee The callee of the call expression that needs to be adjusted
          * @param curClass The class containing the call
          */
         fun handleSuperCall(
-            callee: MemberExpression,
-            curClass: RecordDeclaration,
+            callee: MemberExpr,
+            curClass: RecordDecl,
             scopeManager: ScopeManager,
-            recordMap: Map<Name, RecordDeclaration>
+            recordMap: Map<Name, RecordDecl>
         ): Boolean {
             // Because the "super" keyword still refers to "this" (but casted to another class), we
             // still
             // need to connect the super reference to the receiver of this method.
             val func = scopeManager.currentFunction
-            if (func is MethodDeclaration) {
-                (callee.base as DeclaredReferenceExpression?)?.refersTo = func.receiver
+            if (func is MethodDecl) {
+                (callee.base as Reference?)?.refersTo = func.receiver
             }
 
             // In the next step we can "cast" the base to the correct type, by setting the base
-            var target: RecordDeclaration? = null
+            var target: RecordDecl? = null
 
             // In case the reference is just called "super", this is a direct superclass, either
             // defined
@@ -95,7 +95,7 @@ class JavaCallResolverHelper {
                 // the "this" object to the super class
                 callee.base.type = superType
 
-                val refersTo = (callee.base as? DeclaredReferenceExpression)?.refersTo
+                val refersTo = (callee.base as? Reference)?.refersTo
                 if (refersTo is HasType) {
                     refersTo.type = superType
                     refersTo.assignedTypes = mutableSetOf(superType)
@@ -111,10 +111,10 @@ class JavaCallResolverHelper {
         }
 
         fun handleSpecificSupertype(
-            callee: MemberExpression,
-            curClass: RecordDeclaration,
-            recordMap: Map<Name, RecordDeclaration>
-        ): RecordDeclaration? {
+            callee: MemberExpr,
+            curClass: RecordDecl,
+            recordMap: Map<Name, RecordDecl>
+        ): RecordDecl? {
             val baseName = callee.base.name.parent ?: return null
 
             if (curClass.objectType(baseName) in curClass.implementedInterfaces) {

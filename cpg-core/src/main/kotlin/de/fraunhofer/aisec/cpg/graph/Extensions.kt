@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
+import de.fraunhofer.aisec.cpg.graph.statements.IfStmt
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStmt
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.astParent
@@ -167,9 +167,9 @@ inline fun <reified T : Declaration> DeclarationHolder.byName(
  *
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
-inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T? {
-    return if (this.body is CompoundStatement) {
-        return (body as? CompoundStatement)?.statements?.filterIsInstance<T>()?.getOrNull(n)
+inline fun <reified T : Statement> FunctionDecl.bodyOrNull(n: Int = 0): T? {
+    return if (this.body is CompoundStmt) {
+        return (body as? CompoundStmt)?.statements?.filterIsInstance<T>()?.getOrNull(n)
     } else {
         if (n == 0 && this.body is T) {
             this.body as T
@@ -186,7 +186,7 @@ inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 @Throws(StatementNotFound::class)
-inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {
+inline fun <reified T : Statement> FunctionDecl.body(n: Int = 0): T {
     return bodyOrNull(n) ?: throw StatementNotFound()
 }
 
@@ -499,48 +499,48 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
     return null
 }
 
-/** Returns all [CallExpression] children in this graph, starting with this [Node]. */
-val Node?.calls: List<CallExpression>
+/** Returns all [CallExpr] children in this graph, starting with this [Node]. */
+val Node?.calls: List<CallExpr>
     get() = this.allChildren()
 
-/** Returns all [MemberCallExpression] children in this graph, starting with this [Node]. */
-val Node?.mcalls: List<MemberCallExpression>
+/** Returns all [MemberCallExpr] children in this graph, starting with this [Node]. */
+val Node?.mcalls: List<MemberCallExpr>
     get() = this.allChildren()
 
-/** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
-val Node?.methods: List<MethodDeclaration>
+/** Returns all [MethodDecl] children in this graph, starting with this [Node]. */
+val Node?.methods: List<MethodDecl>
     get() = this.allChildren()
 
-/** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
-val Node?.fields: List<FieldDeclaration>
+/** Returns all [FieldDecl] children in this graph, starting with this [Node]. */
+val Node?.fields: List<FieldDecl>
     get() = this.allChildren()
 
-/** Returns all [ParamVariableDeclaration] children in this graph, starting with this [Node]. */
-val Node?.parameters: List<ParamVariableDeclaration>
+/** Returns all [ParameterDecl] children in this graph, starting with this [Node]. */
+val Node?.parameters: List<ParameterDecl>
     get() = this.allChildren()
 
-/** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
-val Node?.functions: List<FunctionDeclaration>
+/** Returns all [FunctionDecl] children in this graph, starting with this [Node]. */
+val Node?.functions: List<FunctionDecl>
     get() = this.allChildren()
 
-/** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
-val Node?.records: List<RecordDeclaration>
+/** Returns all [RecordDecl] children in this graph, starting with this [Node]. */
+val Node?.records: List<RecordDecl>
     get() = this.allChildren()
 
-/** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
-val Node?.namespaces: List<NamespaceDeclaration>
+/** Returns all [RecordDecl] children in this graph, starting with this [Node]. */
+val Node?.namespaces: List<NamespaceDecl>
     get() = this.allChildren()
 
-/** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
-val Node?.variables: List<VariableDeclaration>
+/** Returns all [VariableDecl] children in this graph, starting with this [Node]. */
+val Node?.variables: List<VariableDecl>
     get() = this.allChildren()
 
 /** Returns all [Literal] children in this graph, starting with this [Node]. */
 val Node?.literals: List<Literal<*>>
     get() = this.allChildren()
 
-/** Returns all [DeclaredReferenceExpression] children in this graph, starting with this [Node]. */
-val Node?.refs: List<DeclaredReferenceExpression>
+/** Returns all [Reference] children in this graph, starting with this [Node]. */
+val Node?.refs: List<Reference>
     get() = this.allChildren()
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
@@ -556,13 +556,10 @@ val Node?.assignments: List<Assignment>
  * Returns the [Assignment.value] of the first (by EOG order beginning from) [Assignment] that this
  * variable has as its [Assignment.target] in the scope of the variable.
  */
-val VariableDeclaration.firstAssignment: Expression?
+val VariableDecl.firstAssignment: Expression?
     get() {
         val start = this.scope?.astNode ?: return null
-        val assignments =
-            start.assignments.filter {
-                (it.target as? DeclaredReferenceExpression)?.refersTo == this
-            }
+        val assignments = start.assignments.filter { (it.target as? Reference)?.refersTo == this }
 
         // We need to measure the distance between the start and each assignment value
         return assignments
@@ -581,19 +578,19 @@ operator fun <N : Expression> Expression.invoke(): N? {
     return this as? N
 }
 
-/** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
-fun TranslationResult.callsByName(name: String): List<CallExpression> {
+/** Returns all [CallExpr]s in this graph which call a method with the given [name]. */
+fun TranslationResult.callsByName(name: String): List<CallExpr> {
     return SubgraphWalker.flattenAST(this).filter { node ->
-        node is CallExpression && node.invokes.any { it.name.lastPartsMatch(name) }
-    } as List<CallExpression>
+        node is CallExpr && node.invokes.any { it.name.lastPartsMatch(name) }
+    } as List<CallExpr>
 }
 
 /** Set of all functions which are called from this function */
-val FunctionDeclaration.callees: Set<FunctionDeclaration>
+val FunctionDecl.callees: Set<FunctionDecl>
     get() {
         return this.calls
             .map { it.invokes }
-            .foldRight(mutableListOf<FunctionDeclaration>()) { l, res ->
+            .foldRight(mutableListOf<FunctionDecl>()) { l, res ->
                 res.addAll(l)
                 res
             }
@@ -601,10 +598,10 @@ val FunctionDeclaration.callees: Set<FunctionDeclaration>
     }
 
 /** Retrieves the n-th statement of the body of this function declaration. */
-operator fun FunctionDeclaration.get(n: Int): Statement? {
+operator fun FunctionDecl.get(n: Int): Statement? {
     val body = this.body
 
-    if (body is CompoundStatement) {
+    if (body is CompoundStmt) {
         return body[n]
     } else if (n == 0) {
         return body
@@ -614,12 +611,12 @@ operator fun FunctionDeclaration.get(n: Int): Statement? {
 }
 
 /** Set of all functions calling [function] */
-fun TranslationResult.callersOf(function: FunctionDeclaration): Set<FunctionDeclaration> {
+fun TranslationResult.callersOf(function: FunctionDecl): Set<FunctionDecl> {
     return this.functions.filter { function in it.callees }.toSet()
 }
 
 /** All nodes which depend on this if statement */
-fun IfStatement.controls(): List<Node> {
+fun IfStmt.controls(): List<Node> {
     val result = mutableListOf<Node>()
     result.addAll(SubgraphWalker.flattenAST(this.thenStatement))
     result.addAll(SubgraphWalker.flattenAST(this.elseStatement))
@@ -630,12 +627,12 @@ fun IfStatement.controls(): List<Node> {
 fun Node.controlledBy(): List<Node> {
     val result = mutableListOf<Node>()
     var checkedNode: Node? = this
-    while (checkedNode !is FunctionDeclaration) {
+    while (checkedNode !is FunctionDecl) {
         checkedNode = checkedNode?.astParent
         if (checkedNode == null) {
             break
         }
-        if (checkedNode is IfStatement || checkedNode is SwitchStatement) {
+        if (checkedNode is IfStmt || checkedNode is SwitchStmt) {
             result.add(checkedNode)
         }
     }
@@ -646,10 +643,9 @@ fun Node.controlledBy(): List<Node> {
  * Returns the expression specifying the dimension (i.e., size) of the array during its
  * initialization.
  */
-val ArraySubscriptionExpression.arraySize: Expression
+val SubscriptionExpr.arraySize: Expression
     get() =
-        (((this.arrayExpression as DeclaredReferenceExpression).refersTo as VariableDeclaration)
-                .initializer as ArrayCreationExpression)
+        (((this.arrayExpression as Reference).refersTo as VariableDecl).initializer as ArrayExpr)
             .dimensions[0]
 
 /**

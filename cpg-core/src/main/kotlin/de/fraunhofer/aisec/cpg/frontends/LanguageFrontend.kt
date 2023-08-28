@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -70,11 +70,11 @@ abstract class LanguageFrontend<in AstNode, TypeNode>(
         this.scopeManager.lang = this
     }
 
-    var currentTU: TranslationUnitDeclaration? = null
+    var currentTU: TranslationUnitDecl? = null
 
     @Throws(TranslationException::class)
-    fun parseAll(): List<TranslationUnitDeclaration> {
-        val units = ArrayList<TranslationUnitDeclaration>()
+    fun parseAll(): List<TranslationUnitDecl> {
+        val units = ArrayList<TranslationUnitDecl>()
         for (componentFiles in config.softwareComponents.values) {
             for (sourceFile in componentFiles) {
                 units.add(parse(sourceFile))
@@ -83,7 +83,7 @@ abstract class LanguageFrontend<in AstNode, TypeNode>(
         return units
     }
 
-    @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnitDeclaration
+    @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnitDecl
 
     /**
      * This function returns a [TranslationResult], but rather than parsing source code, the

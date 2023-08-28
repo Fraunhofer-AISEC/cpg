@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOp
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -54,25 +54,25 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                     )
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
+        val main = tu.getDeclarationsByName("main", FunctionDecl::class.java)
         assertFalse(main.isEmpty())
 
         val funcDecl = main.iterator().next()
-        var binaryOperator = funcDecl.getBodyStatementAs(0, BinaryOperator::class.java)
-        assertNotNull(binaryOperator)
+        var binaryOp = funcDecl.getBodyStatementAs(0, BinaryOp::class.java)
+        assertNotNull(binaryOp)
 
         // without additional symbols, the first line will look like a reference (to something we do
         // not know)
-        val dre = binaryOperator.getRhsAs(DeclaredReferenceExpression::class.java)
+        val dre = binaryOp.getRhsAs(Reference::class.java)
         assertNotNull(dre)
         assertLocalName("HELLO_WORLD", dre)
 
-        binaryOperator = funcDecl.getBodyStatementAs(1, BinaryOperator::class.java)
-        assertNotNull(binaryOperator)
+        binaryOp = funcDecl.getBodyStatementAs(1, BinaryOp::class.java)
+        assertNotNull(binaryOp)
 
         // without additional symbols, the second line will look like a function call (to something
         // we do not know)
-        val call = binaryOperator.getRhsAs(CallExpression::class.java)
+        val call = binaryOp.getRhsAs(CallExpr::class.java)
         assertNotNull(call)
         assertLocalName("INCREASE", call)
     }
@@ -93,23 +93,23 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                     TranslationContext(config, ScopeManager(), TypeManager())
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
+        val main = tu.getDeclarationsByName("main", FunctionDecl::class.java)
         assertFalse(main.isEmpty())
 
         val funcDecl = main.iterator().next()
-        var binaryOperator = funcDecl.getBodyStatementAs(0, BinaryOperator::class.java)
-        assertNotNull(binaryOperator)
+        var binaryOp = funcDecl.getBodyStatementAs(0, BinaryOp::class.java)
+        assertNotNull(binaryOp)
 
         // should be a literal now
-        val literal = binaryOperator.getRhsAs(Literal::class.java)
+        val literal = binaryOp.getRhsAs(Literal::class.java)
         assertNotNull(literal)
         assertEquals("Hello World", literal.value)
 
-        binaryOperator = funcDecl.getBodyStatementAs(1, BinaryOperator::class.java)
-        assertNotNull(binaryOperator)
+        binaryOp = funcDecl.getBodyStatementAs(1, BinaryOp::class.java)
+        assertNotNull(binaryOp)
 
         // should be expanded to another binary operation 1+1
-        val add = binaryOperator.getRhsAs(BinaryOperator::class.java)
+        val add = binaryOp.getRhsAs(BinaryOp::class.java)
         assertNotNull(add)
         assertEquals("+", add.operatorCode)
 

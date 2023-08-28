@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,20 +49,14 @@ class UnresolvedDFGPassTest {
         val firstCall = result.calls { it.name.localName == "get" }[0]
         val osDecl = result.variables["os"]
         assertEquals(1, firstCall.prevDFG.size)
-        assertEquals(
-            osDecl,
-            (firstCall.prevDFG.firstOrNull() as? DeclaredReferenceExpression)?.refersTo
-        )
+        assertEquals(osDecl, (firstCall.prevDFG.firstOrNull() as? Reference)?.refersTo)
 
         // Flow from base and argument to return value
         val callWithParam = result.calls { it.name.localName == "get" }[1]
         assertEquals(2, callWithParam.prevDFG.size)
         assertEquals(
             osDecl,
-            callWithParam.prevDFG
-                .filterIsInstance<DeclaredReferenceExpression>()
-                .firstOrNull()
-                ?.refersTo
+            callWithParam.prevDFG.filterIsInstance<Reference>().firstOrNull()?.refersTo
         )
         assertEquals(4, callWithParam.prevDFG.filterIsInstance<Literal<*>>().firstOrNull()?.value)
 
@@ -71,7 +65,7 @@ class UnresolvedDFGPassTest {
         // implementation
         val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
-        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
+        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDecl)
     }
 
     @Test
@@ -92,7 +86,7 @@ class UnresolvedDFGPassTest {
         // implementation
         val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
-        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
+        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDecl)
     }
 
     companion object {
@@ -114,7 +108,7 @@ class UnresolvedDFGPassTest {
                         record("DfgUnresolvedCalls") {
                             field("i", t("int")) { modifiers = listOf("private") }
                             constructor {
-                                receiver = newVariableDeclaration("this", t("DfgUnresolvedCalls"))
+                                receiver = newVariableDecl("this", t("DfgUnresolvedCalls"))
                                 param("i", t("int"))
                                 body {
                                     member("i", ref("this")) assign { ref("i") }
@@ -122,7 +116,7 @@ class UnresolvedDFGPassTest {
                                 }
                             }
                             method("knownFunction", t("int")) {
-                                receiver = newVariableDeclaration("this", t("DfgUnresolvedCalls"))
+                                receiver = newVariableDecl("this", t("DfgUnresolvedCalls"))
                                 param("arg", t("int"))
                                 body { returnStmt { member("i", ref("this")) + ref("arg") } }
                             }

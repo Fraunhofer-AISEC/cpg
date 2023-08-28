@@ -28,13 +28,13 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
 import de.fraunhofer.aisec.cpg.graph.evaluate
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ForStmt
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import java.nio.file.Path
 import kotlin.test.Test
@@ -56,16 +56,16 @@ class MultiValueEvaluatorTest {
 
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
-        val b = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val b = main.bodyOrNull<DeclarationStmt>()?.singleDeclaration
         assertNotNull(b)
 
         var value = b.evaluate()
         assertEquals(2L, value)
 
-        val printB = main.bodyOrNull<CallExpression>()
+        val printB = main.bodyOrNull<CallExpr>()
         assertNotNull(printB)
 
         val evaluator = MultiValueEvaluator()
@@ -76,62 +76,62 @@ class MultiValueEvaluatorTest {
         val path = evaluator.path
         assertEquals(5, path.size)
 
-        val printA = main.bodyOrNull<CallExpression>(1)
+        val printA = main.bodyOrNull<CallExpr>(1)
         assertNotNull(printA)
 
         value = evaluator.evaluate(printA.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(value.min(), value.max())
         assertEquals(2, value.min())
 
-        val c = main.bodyOrNull<DeclarationStatement>(2)?.singleDeclaration
+        val c = main.bodyOrNull<DeclarationStmt>(2)?.singleDeclaration
         assertNotNull(c)
 
         value = evaluator.evaluate(c)
         assertEquals(3L, value)
 
-        val d = main.bodyOrNull<DeclarationStatement>(3)?.singleDeclaration
+        val d = main.bodyOrNull<DeclarationStmt>(3)?.singleDeclaration
         assertNotNull(d)
 
         value = evaluator.evaluate(d)
         assertEquals(2L, value)
 
-        val e = main.bodyOrNull<DeclarationStatement>(4)?.singleDeclaration
+        val e = main.bodyOrNull<DeclarationStmt>(4)?.singleDeclaration
         assertNotNull(e)
         value = evaluator.evaluate(e)
         assertEquals(3.5, value)
 
-        val f = main.bodyOrNull<DeclarationStatement>(5)?.singleDeclaration
+        val f = main.bodyOrNull<DeclarationStmt>(5)?.singleDeclaration
         assertNotNull(f)
         value = evaluator.evaluate(f)
         assertEquals(10L, value)
 
-        val g = main.bodyOrNull<DeclarationStatement>(6)?.singleDeclaration
+        val g = main.bodyOrNull<DeclarationStmt>(6)?.singleDeclaration
         assertNotNull(g)
         value = evaluator.evaluate(g) as ConcreteNumberSet
         assertEquals(value.min(), value.max())
         assertEquals(-3L, value.min())
 
-        val i = main.bodyOrNull<DeclarationStatement>(8)?.singleDeclaration
+        val i = main.bodyOrNull<DeclarationStmt>(8)?.singleDeclaration
         assertNotNull(i)
         value = evaluator.evaluate(i)
         assertFalse(value as Boolean)
 
-        val j = main.bodyOrNull<DeclarationStatement>(9)?.singleDeclaration
+        val j = main.bodyOrNull<DeclarationStmt>(9)?.singleDeclaration
         assertNotNull(j)
         value = evaluator.evaluate(j)
         assertFalse(value as Boolean)
 
-        val k = main.bodyOrNull<DeclarationStatement>(10)?.singleDeclaration
+        val k = main.bodyOrNull<DeclarationStmt>(10)?.singleDeclaration
         assertNotNull(k)
         value = evaluator.evaluate(k)
         assertFalse(value as Boolean)
 
-        val l = main.bodyOrNull<DeclarationStatement>(11)?.singleDeclaration
+        val l = main.bodyOrNull<DeclarationStmt>(11)?.singleDeclaration
         assertNotNull(l)
         value = evaluator.evaluate(l)
         assertFalse(value as Boolean)
 
-        val m = main.bodyOrNull<DeclarationStatement>(12)?.singleDeclaration
+        val m = main.bodyOrNull<DeclarationStmt>(12)?.singleDeclaration
         assertNotNull(m)
         value = evaluator.evaluate(m)
         assertFalse(value as Boolean)
@@ -149,13 +149,13 @@ class MultiValueEvaluatorTest {
 
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
-        val b = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val b = main.bodyOrNull<DeclarationStmt>()?.singleDeclaration
         assertNotNull(b)
 
-        var printB = main.bodyOrNull<CallExpression>()
+        var printB = main.bodyOrNull<CallExpr>()
         assertNotNull(printB)
 
         val evaluator = MultiValueEvaluator()
@@ -165,25 +165,25 @@ class MultiValueEvaluatorTest {
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(1, 2), value.values)
 
-        printB = main.bodyOrNull<CallExpression>(1)
+        printB = main.bodyOrNull<CallExpr>(1)
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2), value.values)
 
-        printB = main.bodyOrNull<CallExpression>(2)
+        printB = main.bodyOrNull<CallExpr>(2)
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2, 4), value.values)
 
-        printB = main.bodyOrNull<CallExpression>(3)
+        printB = main.bodyOrNull<CallExpr>(3)
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(-4, -2, -1, 0, 1, 2, 4), value.values)
 
-        printB = main.bodyOrNull<CallExpression>(4)
+        printB = main.bodyOrNull<CallExpr>(4)
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
@@ -204,15 +204,15 @@ class MultiValueEvaluatorTest {
 
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("loop")
+        val main = tu.byNameOrNull<FunctionDecl>("loop")
         assertNotNull(main)
 
-        val forLoop = main.bodyOrNull<ForStatement>()
+        val forLoop = main.bodyOrNull<ForStmt>()
         assertNotNull(forLoop)
 
         val evaluator = MultiValueEvaluator()
         val iVarList =
-            ((forLoop.statement as CompoundStatement).statements[0] as AssignExpression).rhs
+            ((forLoop.statement as CompoundStmt).statements[0] as AssignExpr).rhs
         assertEquals(1, iVarList.size)
         val iVar = iVarList.first()
         val value = evaluator.evaluate(iVar) as ConcreteNumberSet

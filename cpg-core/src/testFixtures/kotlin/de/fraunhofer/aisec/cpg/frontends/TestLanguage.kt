@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpr
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -83,7 +83,7 @@ open class TestLanguageFrontend(
             TypeManager()
         ),
 ) : LanguageFrontend<Any, Any>(language, ctx) {
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnitDecl {
         TODO("Not yet implemented")
     }
 
@@ -106,4 +106,4 @@ open class TestLanguageFrontend(
 }
 
 class TestHandler(frontend: TestLanguageFrontend) :
-    Handler<Node, Any, TestLanguageFrontend>(Supplier { ProblemExpression() }, frontend)
+    Handler<Node, Any, TestLanguageFrontend>(Supplier { ProblemExpr() }, frontend)

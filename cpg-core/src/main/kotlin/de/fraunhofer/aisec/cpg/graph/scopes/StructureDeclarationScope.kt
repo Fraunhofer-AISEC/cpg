@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDecl
 
 open class StructureDeclarationScope(final override var astNode: Node?) :
     ValueDeclarationScope(astNode) {
@@ -47,7 +47,7 @@ open class StructureDeclarationScope(final override var astNode: Node?) :
     }
 
     override fun addDeclaration(declaration: Declaration, addToAST: Boolean) {
-        if (declaration is ValueDeclaration) {
+        if (declaration is ValueDecl) {
             addValueDeclaration(declaration, addToAST)
         } else {
             addStructureDeclaration(declaration)

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.statements.LabelStmt
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
@@ -68,10 +68,10 @@ abstract class Scope(
     @Relationship(value = "PARENT", direction = Relationship.Direction.INCOMING)
     var children = mutableListOf<Scope>()
 
-    @Transient var labelStatements = mutableMapOf<String, LabelStatement>()
+    @Transient var labelStatements = mutableMapOf<String, LabelStmt>()
 
-    fun addLabelStatement(labelStatement: LabelStatement) {
-        labelStatement.label?.let { labelStatements[it] = labelStatement }
+    fun addLabelStatement(labelStmt: LabelStmt) {
+        labelStmt.label?.let { labelStatements[it] = labelStmt }
     }
 
     fun isBreakable(): Boolean {

@@ -36,11 +36,24 @@ import com.github.javaparser.utils.Pair
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ExplicitConstructorInvocation
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStmt
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ContinueStmt
+import de.fraunhofer.aisec.cpg.graph.statements.DoStmt
+import de.fraunhofer.aisec.cpg.graph.statements.EmptyStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ForStmt
+import de.fraunhofer.aisec.cpg.graph.statements.IfStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStmt
+import de.fraunhofer.aisec.cpg.graph.statements.SynchronizedStmt
+import de.fraunhofer.aisec.cpg.graph.statements.TryStmt
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStmt
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructorCallExpr
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpr
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -51,7 +64,7 @@ import org.slf4j.LoggerFactory
 
 class StatementHandler(lang: JavaLanguageFrontend?) :
     Handler<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement, JavaLanguageFrontend>(
-        Supplier { ProblemExpression() },
+        Supplier { ProblemExpr() },
         lang!!
     ) {
     fun handleExpressionStatement(
@@ -72,19 +85,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
         val throwStmt = stmt as ThrowStmt
         val throwOperation =
-            this.newUnaryOperator(
-                "throw",
-                postfix = false,
-                prefix = true,
-                code = throwStmt.toString()
-            )
+            this.newUnaryOp("throw", postfix = false, prefix = true, code = throwStmt.toString())
         throwOperation.input =
             frontend.expressionHandler.handle(throwStmt.expression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         return throwOperation
     }
 
-    private fun handleReturnStatement(stmt: Statement): ReturnStatement {
+    private fun handleReturnStatement(stmt: Statement): ReturnStmt {
         val returnStmt = stmt.asReturnStmt()
         val optionalExpression = returnStmt.expression
         var expression: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression? = null
@@ -96,7 +104,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 frontend.expressionHandler.handle(expr)
                     as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         }
-        val returnStatement = this.newReturnStatement(returnStmt.toString())
+        val returnStatement = this.newReturnStmt(returnStmt.toString())
         // JavaParser seems to add implicit return statements, that are not part of the original
         // source code. We mark it as such
         returnStatement.isImplicit = !returnStmt.tokenRange.isPresent
@@ -108,12 +116,12 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return returnStatement
     }
 
-    private fun handleIfStatement(stmt: Statement): IfStatement {
+    private fun handleIfStatement(stmt: Statement): IfStmt {
         val ifStmt = stmt.asIfStmt()
         val conditionExpression = ifStmt.condition
         val thenStatement = ifStmt.thenStmt
         val optionalElseStatement = ifStmt.elseStmt
-        val ifStatement = this.newIfStatement(ifStmt.toString())
+        val ifStatement = this.newIfStmt(ifStmt.toString())
         frontend.scopeManager.enterScope(ifStatement)
         ifStatement.thenStatement = handle(thenStatement)
         ifStatement.condition =
@@ -124,11 +132,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return ifStatement
     }
 
-    private fun handleAssertStatement(stmt: Statement): AssertStatement {
+    private fun handleAssertStatement(stmt: Statement): AssertStmt {
         val assertStmt = stmt.asAssertStmt()
         val conditionExpression = assertStmt.check
         val thenStatement = assertStmt.message
-        val assertStatement = this.newAssertStatement(stmt.toString())
+        val assertStatement = this.newAssertStmt(stmt.toString())
         assertStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -138,11 +146,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return assertStatement
     }
 
-    private fun handleWhileStatement(stmt: Statement): WhileStatement {
+    private fun handleWhileStatement(stmt: Statement): WhileStmt {
         val whileStmt = stmt.asWhileStmt()
         val conditionExpression = whileStmt.condition
         val statement = whileStmt.body
-        val whileStatement = this.newWhileStatement(whileStmt.toString())
+        val whileStatement = this.newWhileStmt(whileStmt.toString())
         frontend.scopeManager.enterScope(whileStatement)
         whileStatement.statement = handle(statement)
         whileStatement.condition =
@@ -152,13 +160,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return whileStatement
     }
 
-    private fun handleForEachStatement(stmt: Statement): ForEachStatement {
-        val statement = this.newForEachStatement(stmt.toString())
+    private fun handleForEachStatement(stmt: Statement): ForEachStmt {
+        val statement = this.newForEachStmt(stmt.toString())
         frontend.scopeManager.enterScope(statement)
         val forEachStmt = stmt.asForEachStmt()
         val variable = frontend.expressionHandler.handle(forEachStmt.variable)
         val iterable = frontend.expressionHandler.handle(forEachStmt.iterable)
-        if (variable !is DeclarationStatement) {
+        if (variable !is DeclarationStmt) {
             log.error("Expected a DeclarationStatement but received: {}", variable?.name)
         } else {
             statement.variable = variable
@@ -169,7 +177,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return statement
     }
 
-    private fun handleForStatement(stmt: Statement): ForStatement {
+    private fun handleForStatement(stmt: Statement): ForStmt {
         val forStmt = stmt.asForStmt()
         val code: String
         val tokenRange = forStmt.tokenRange
@@ -179,14 +187,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             } else {
                 stmt.toString()
             }
-        val statement = this.newForStatement(code)
+        val statement = this.newForStmt(code)
         frontend.setCodeAndLocation(statement, stmt)
         frontend.scopeManager.enterScope(statement)
         if (forStmt.initialization.size > 1) {
             var ofExprList: PhysicalLocation? = null
 
             // code will be set later
-            val initExprList = this.newExpressionList()
+            val initExprList = this.newExprList()
             for (initExpr in forStmt.initialization) {
                 val s = frontend.expressionHandler.handle(initExpr)
                 s?.let {
@@ -240,7 +248,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             var ofExprList = statement.location
 
             // code will be set later
-            val iterationExprList = this.newExpressionList()
+            val iterationExprList = this.newExprList()
             for (updateExpr in forStmt.update) {
                 val s = frontend.expressionHandler.handle(updateExpr)
                 s?.let {
@@ -281,11 +289,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return statement
     }
 
-    private fun handleDoStatement(stmt: Statement): DoStatement {
+    private fun handleDoStatement(stmt: Statement): DoStmt {
         val doStmt = stmt.asDoStmt()
         val conditionExpression = doStmt.condition
         val statement = doStmt.body
-        val doStatement = this.newDoStatement(doStmt.toString())
+        val doStatement = this.newDoStmt(doStmt.toString())
         frontend.scopeManager.enterScope(doStatement)
         doStatement.statement = handle(statement)
         doStatement.condition =
@@ -295,52 +303,52 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return doStatement
     }
 
-    private fun handleEmptyStatement(stmt: Statement): EmptyStatement {
+    private fun handleEmptyStatement(stmt: Statement): EmptyStmt {
         val emptyStmt = stmt.asEmptyStmt()
-        return this.newEmptyStatement(emptyStmt.toString())
+        return this.newEmptyStmt(emptyStmt.toString())
     }
 
-    private fun handleSynchronizedStatement(stmt: Statement): SynchronizedStatement {
+    private fun handleSynchronizedStatement(stmt: Statement): SynchronizedStmt {
         val synchronizedJava = stmt.asSynchronizedStmt()
-        val synchronizedCPG = this.newSynchronizedStatement(stmt.toString())
+        val synchronizedCPG = this.newSynchronizedStmt(stmt.toString())
         synchronizedCPG.expression =
             frontend.expressionHandler.handle(synchronizedJava.expression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        synchronizedCPG.blockStatement = handle(synchronizedJava.body) as CompoundStatement?
+        synchronizedCPG.blockStatement = handle(synchronizedJava.body) as CompoundStmt?
         return synchronizedCPG
     }
 
-    private fun handleLabelStatement(stmt: Statement): LabelStatement {
+    private fun handleLabelStatement(stmt: Statement): LabelStmt {
         val labelStmt = stmt.asLabeledStmt()
         val label = labelStmt.label.identifier
         val statement = labelStmt.statement
-        val labelStatement = this.newLabelStatement(labelStmt.toString())
+        val labelStatement = this.newLabelStmt(labelStmt.toString())
         labelStatement.subStatement = handle(statement)
         labelStatement.label = label
         return labelStatement
     }
 
-    private fun handleBreakStatement(stmt: Statement): BreakStatement {
+    private fun handleBreakStatement(stmt: Statement): BreakStmt {
         val breakStmt = stmt.asBreakStmt()
-        val breakStatement = this.newBreakStatement()
+        val breakStatement = this.newBreakStmt()
         breakStmt.label.ifPresent { label: SimpleName -> breakStatement.label = label.toString() }
         return breakStatement
     }
 
-    private fun handleContinueStatement(stmt: Statement): ContinueStatement {
+    private fun handleContinueStatement(stmt: Statement): ContinueStmt {
         val continueStmt = stmt.asContinueStmt()
-        val continueStatement = this.newContinueStatement()
+        val continueStatement = this.newContinueStmt()
         continueStmt.label.ifPresent { label: SimpleName ->
             continueStatement.label = label.toString()
         }
         return continueStatement
     }
 
-    fun handleBlockStatement(stmt: Statement): CompoundStatement {
+    fun handleBlockStatement(stmt: Statement): CompoundStmt {
         val blockStmt = stmt.asBlockStmt()
 
         // first of, all we need a compound statement
-        val compoundStatement = this.newCompoundStatement(stmt.toString())
+        val compoundStatement = this.newCompoundStmt(stmt.toString())
         frontend.scopeManager.enterScope(compoundStatement)
         for (child in blockStmt.statements) {
             val statement = handle(child)
@@ -377,7 +385,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                     )
             }
             val defaultStatement =
-                this.newDefaultStatement(getCodeBetweenTokens(caseTokens.a, caseTokens.b))
+                this.newDefaultStmt(getCodeBetweenTokens(caseTokens.a, caseTokens.b))
             defaultStatement.location =
                 getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b)
             return defaultStatement
@@ -391,7 +399,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                     getNextTokenWith(":", caseExprTokenRange.get().end)
                 )
         }
-        val caseStatement = this.newCaseStatement(getCodeBetweenTokens(caseTokens.a, caseTokens.b))
+        val caseStatement = this.newCaseStmt(getCodeBetweenTokens(caseTokens.a, caseTokens.b))
         caseStatement.caseExpression =
             frontend.expressionHandler.handle(caseExpression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -463,9 +471,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return newCode.toString()
     }
 
-    fun handleSwitchStatement(stmt: Statement): SwitchStatement {
+    fun handleSwitchStatement(stmt: Statement): SwitchStmt {
         val switchStmt = stmt.asSwitchStmt()
-        val switchStatement = this.newSwitchStatement(stmt.toString())
+        val switchStatement = this.newSwitchStmt(stmt.toString())
 
         // make sure location is set
         frontend.setCodeAndLocation(switchStatement, switchStmt)
@@ -483,7 +491,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             start = getNextTokenWith("{", tokenRangeSelector.get().end)
             end = getPreviousTokenWith("}", tokenRange.get().end)
         }
-        val compoundStatement = this.newCompoundStatement(getCodeBetweenTokens(start, end))
+        val compoundStatement = this.newCompoundStmt(getCodeBetweenTokens(start, end))
         compoundStatement.location = getLocationsFromTokens(switchStatement.location, start, end)
         for (sentry in switchStmt.entries) {
             if (sentry.labels.isEmpty()) {
@@ -494,7 +502,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             }
             for (subStmt in sentry.statements) {
                 compoundStatement.addStatement(
-                    handle(subStmt) ?: ProblemExpression("Could not parse statement")
+                    handle(subStmt) ?: ProblemExpr("Could not parse statement")
                 )
             }
         }
@@ -503,9 +511,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return switchStatement
     }
 
-    private fun handleExplicitConstructorInvocation(
-        stmt: Statement
-    ): ExplicitConstructorInvocation {
+    private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructorCallExpr {
         val eciStatement = stmt.asExplicitConstructorInvocationStmt()
         var containingClass = ""
         val currentRecord = frontend.scopeManager.currentRecord
@@ -516,7 +522,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         } else {
             containingClass = currentRecord.name.toString()
         }
-        val node = this.newExplicitConstructorInvocation(containingClass, eciStatement.toString())
+        val node = this.newConstructorCallExpr(containingClass, eciStatement.toString())
         val arguments =
             eciStatement.arguments
                 .stream()
@@ -531,9 +537,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return node
     }
 
-    private fun handleTryStatement(stmt: Statement): TryStatement {
+    private fun handleTryStatement(stmt: Statement): TryStmt {
         val tryStmt = stmt.asTryStmt()
-        val tryStatement = this.newTryStatement(stmt.toString())
+        val tryStatement = this.newTryStmt(stmt.toString())
         frontend.scopeManager.enterScope(tryStatement)
         val resources =
             tryStmt.resources.mapNotNull { ctx: Expression ->
@@ -553,9 +559,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         tryStatement.finallyBlock = finallyBlock
         tryStatement.catchClauses = catchClauses
         for (r in resources) {
-            if (r is DeclarationStatement) {
+            if (r is DeclarationStmt) {
                 for (d in r.declarations) {
-                    if (d is VariableDeclaration) {
+                    if (d is VariableDecl) {
                         frontend.scopeManager.addDeclaration(d)
                     }
                 }
@@ -584,7 +590,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             possibleTypes.add(concreteType)
         }
         val parameter =
-            this.newVariableDeclaration(
+            this.newVariableDecl(
                 catchCls.parameter.name.toString(),
                 concreteType,
                 catchCls.parameter.toString(),
@@ -604,27 +610,42 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     init {
-        map[IfStmt::class.java] = HandlerInterface { stmt: Statement -> handleIfStatement(stmt) }
-        map[AssertStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleAssertStatement(stmt)
-        }
-        map[WhileStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleWhileStatement(stmt)
-        }
-        map[DoStmt::class.java] = HandlerInterface { stmt: Statement -> handleDoStatement(stmt) }
-        map[ForEachStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleForEachStatement(stmt)
-        }
-        map[ForStmt::class.java] = HandlerInterface { stmt: Statement -> handleForStatement(stmt) }
-        map[BreakStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleBreakStatement(stmt)
-        }
-        map[ContinueStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleContinueStatement(stmt)
-        }
-        map[ReturnStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleReturnStatement(stmt)
-        }
+        map[com.github.javaparser.ast.stmt.IfStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleIfStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.AssertStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleAssertStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.WhileStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleWhileStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.DoStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleDoStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.ForEachStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleForEachStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.ForStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleForStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.BreakStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleBreakStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.ContinueStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleContinueStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.ReturnStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleReturnStatement(stmt)
+            }
         map[BlockStmt::class.java] = HandlerInterface { stmt: Statement ->
             handleBlockStatement(stmt)
         }
@@ -637,16 +658,22 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         map[ExpressionStmt::class.java] = HandlerInterface { stmt: Statement ->
             handleExpressionStatement(stmt)
         }
-        map[SwitchStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleSwitchStatement(stmt)
-        }
-        map[EmptyStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleEmptyStatement(stmt)
-        }
-        map[SynchronizedStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleSynchronizedStatement(stmt)
-        }
-        map[TryStmt::class.java] = HandlerInterface { stmt: Statement -> handleTryStatement(stmt) }
+        map[com.github.javaparser.ast.stmt.SwitchStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleSwitchStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.EmptyStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleEmptyStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.SynchronizedStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleSynchronizedStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.TryStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleTryStatement(stmt)
+            }
         map[ThrowStmt::class.java] = HandlerInterface { stmt: Statement -> handleThrowStmt(stmt) }
     }
 }

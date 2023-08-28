@@ -30,11 +30,11 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpr
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
@@ -81,9 +81,9 @@ class PerformanceRegressionTest {
     @Test
     fun testTraversal() {
         with(TestLanguageFrontend()) {
-            val tu = TranslationUnitDeclaration()
-            val decl = VariableDeclaration()
-            val list = InitializerListExpression()
+            val tu = TranslationUnitDecl()
+            val decl = VariableDecl()
+            val list = InitializerListExpr()
 
             for (i in 0 until 50000) {
                 list.initializerEdges.add(

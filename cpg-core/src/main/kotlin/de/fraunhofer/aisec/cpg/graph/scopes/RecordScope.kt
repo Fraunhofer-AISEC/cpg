@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
 
-/** Represents the scope of a record or class, most likely created by a [RecordDeclaration]. */
+/** Represents the scope of a record or class, most likely created by a [RecordDecl]. */
 class RecordScope(node: Node) : NameScope(node)

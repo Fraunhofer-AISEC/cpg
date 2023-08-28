@@ -30,10 +30,10 @@ import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpr
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
@@ -333,7 +333,7 @@ val Expression.intValue: QueryTree<Int>?
  */
 fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): QueryTree<Boolean> {
     return when (from) {
-        is CallExpression -> {
+        is CallExpr -> {
             val prevEdges =
                 from.prevDFG
                     .fold(mutableListOf<Node>()) { l, e ->
@@ -359,12 +359,12 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
                     it.any { it2 ->
                         if (it2 is AssignmentHolder) {
                             it2.assignments.any { assign ->
-                                val prevMemberFrom = (from as? MemberExpression)?.prevDFG
-                                val nextMemberTo = (assign.target as? MemberExpression)?.nextDFG
+                                val prevMemberFromExpr = (from as? MemberExpr)?.prevDFG
+                                val nextMemberToExpr = (assign.target as? MemberExpr)?.nextDFG
                                 assign.target == from ||
-                                    prevMemberFrom != null &&
-                                        nextMemberTo != null &&
-                                        prevMemberFrom.any { it3 -> nextMemberTo.contains(it3) }
+                                    prevMemberFromExpr != null &&
+                                        nextMemberToExpr != null &&
+                                        prevMemberFromExpr.any { it3 -> nextMemberToExpr.contains(it3) }
                             }
                         } else {
                             false

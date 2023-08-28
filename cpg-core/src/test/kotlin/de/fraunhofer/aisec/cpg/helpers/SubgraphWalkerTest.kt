@@ -31,19 +31,19 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
 import kotlin.test.*
 
 internal class SubgraphWalkerTest : BaseTest() {
     @Test
     fun testLoopDetection() {
         // Let's create an intentional loop
-        val tu = TranslationUnitDeclaration()
-        val name = NamespaceDeclaration()
-        val func = FunctionDeclaration()
+        val tu = TranslationUnitDecl()
+        val name = NamespaceDecl()
+        val func = FunctionDecl()
         name.addDeclaration(tu)
         name.addDeclaration(func)
         tu.addDeclaration(name)
@@ -73,14 +73,14 @@ internal class SubgraphWalkerTest : BaseTest() {
                 .first()
                 .translationUnits
                 .first()
-        val namespace = tu.byNameOrNull<NamespaceDeclaration>("compiling")
+        val namespace = tu.byNameOrNull<NamespaceDecl>("compiling")
         assertNotNull(namespace)
 
-        val recordDeclaration = namespace.byNameOrNull<RecordDeclaration>("compiling.SimpleClass")
-        assertNotNull(recordDeclaration)
+        val recordDecl = namespace.byNameOrNull<RecordDecl>("compiling.SimpleClass")
+        assertNotNull(recordDecl)
 
         // This calls SubgraphWalker.getAstChildren()
-        val ast = recordDeclaration.astChildren
+        val ast = recordDecl.astChildren
         assertFalse(ast.isEmpty())
 
         // should contain 3 AST nodes, 1 field, 1 method, 1 constructor

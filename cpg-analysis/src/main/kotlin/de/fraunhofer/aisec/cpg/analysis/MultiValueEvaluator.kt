@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ForStmt
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.astParent
@@ -70,23 +70,23 @@ class MultiValueEvaluator : ValueEvaluator() {
         this.path += node
 
         when (node) {
-            is FieldDeclaration -> {
+            is FieldDecl -> {
                 return evaluateInternal(node.initializer, depth + 1)
             }
-            is ArrayCreationExpression -> return evaluateInternal(node.initializer, depth + 1)
-            is VariableDeclaration -> return evaluateInternal(node.initializer, depth + 1)
+            is ArrayExpr -> return evaluateInternal(node.initializer, depth + 1)
+            is VariableDecl -> return evaluateInternal(node.initializer, depth + 1)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is DeclaredReferenceExpression -> return handleDeclaredReferenceExpression(node, depth)
-            is UnaryOperator -> return handleUnaryOp(node, depth)
-            is AssignExpression -> return handleAssignExpression(node, depth)
-            is BinaryOperator -> return handleBinaryOperator(node, depth)
+            is Reference -> return handleDeclaredReferenceExpression(node, depth)
+            is UnaryOp -> return handleUnaryOp(node, depth)
+            is AssignExpr -> return handleAssignExpression(node, depth)
+            is BinaryOp -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
-            is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
-            is ArraySubscriptionExpression -> return handleArraySubscriptionExpression(node, depth)
+            is CastExpr -> return this.evaluateInternal(node.expression, depth + 1)
+            is SubscriptionExpr -> return handleArraySubscriptionExpression(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> return handleConditionalExpression(node, depth)
+            is ConditionalExpr -> return handleConditionalExpression(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
@@ -98,7 +98,7 @@ class MultiValueEvaluator : ValueEvaluator() {
      * We are handling some basic arithmetic compound assignment operations and string operations
      * that are more or less language-independent.
      */
-    override fun handleAssignExpression(node: AssignExpression, depth: Int): Any? {
+    override fun handleAssignExpression(node: AssignExpr, depth: Int): Any? {
         // This only works for compound assignments
         if (!node.isCompoundAssignment) {
             return super.handleAssignExpression(node, depth)
@@ -140,7 +140,7 @@ class MultiValueEvaluator : ValueEvaluator() {
      * We are handling some basic arithmetic binary operations and string operations that are more
      * or less language-independent.
      */
-    override fun handleBinaryOperator(expr: BinaryOperator, depth: Int): Any? {
+    override fun handleBinaryOperator(expr: BinaryOp, depth: Int): Any? {
         // Resolve lhs
         val lhsValue = evaluateInternal(expr.lhs, depth + 1)
         // Resolve rhs
@@ -168,7 +168,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         return result
     }
 
-    override fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any {
+    override fun handleConditionalExpression(expr: ConditionalExpr, depth: Int): Any {
         val result = mutableSetOf<Any?>()
         val elseResult = evaluateInternal(expr.elseExpr, depth + 1)
         val thenResult = evaluateInternal(expr.thenExpr, depth + 1)
@@ -177,7 +177,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         return result
     }
 
-    override fun handleUnaryOp(expr: UnaryOperator, depth: Int): Any? {
+    override fun handleUnaryOp(expr: UnaryOp, depth: Int): Any? {
         return when (expr.operatorCode) {
             "-" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
@@ -187,7 +187,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 }
             }
             "--" -> {
-                if (expr.astParent is ForStatement) {
+                if (expr.astParent is ForStmt) {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
@@ -198,7 +198,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 }
             }
             "++" -> {
-                if (expr.astParent is ForStatement) {
+                if (expr.astParent is ForStmt) {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
@@ -221,7 +221,7 @@ class MultiValueEvaluator : ValueEvaluator() {
      * value.
      */
     override fun handleDeclaredReferenceExpression(
-        expr: DeclaredReferenceExpression,
+        expr: Reference,
         depth: Int
     ): Collection<Any?> {
         // For a reference, we are interested in its last assignment into the reference
@@ -242,7 +242,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         val result = mutableSetOf<Any?>()
         if (prevDFG.isEmpty()) {
             // No previous expression?? Let's try with a variable declaration and its initialization
-            val decl = prevDFG.filterIsInstance<VariableDeclaration>()
+            val decl = prevDFG.filterIsInstance<VariableDecl>()
             for (declaration in decl) {
                 val res = evaluateInternal(declaration, depth + 1)
                 if (res is Collection<*>) {
@@ -266,48 +266,48 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     private fun isSimpleForLoop(node: Node): Boolean {
         // Are we in the for statement somehow?
-        var forStatement = node.astParent as? ForStatement
-        if (forStatement == null) forStatement = node.astParent?.astParent as? ForStatement
+        var forStmt = node.astParent as? ForStmt
+        if (forStmt == null) forStmt = node.astParent?.astParent as? ForStmt
 
-        if (forStatement == null) return false // ...no, we're not.
+        if (forStmt == null) return false // ...no, we're not.
 
         val initializerDecl =
-            (forStatement.initializerStatement as? DeclarationStatement)?.singleDeclaration
+            (forStmt.initializerStatement as? DeclarationStmt)?.singleDeclaration
 
         return initializerDecl == node || // The node is the declaration of the loop variable
-        forStatement.initializerStatement == node || // The node is the initialization
+        forStmt.initializerStatement == node || // The node is the initialization
             (initializerDecl != null &&
                 initializerDecl ==
                     node.astParent) || // The parent of the node is the initializer of the loop
             // variable
-            forStatement.iterationStatement ==
+            forStmt.iterationStatement ==
                 node || // The node or its parent are the iteration statement of the loop
-            forStatement.iterationStatement == node.astParent
+            forStmt.iterationStatement == node.astParent
     }
 
     private fun handleSimpleLoopVariable(
-        expr: DeclaredReferenceExpression,
+        expr: Reference,
         depth: Int
     ): Collection<Any?> {
         val loop =
-            expr.prevDFG.firstOrNull { e -> e.astParent is ForStatement }?.astParent
-                as? ForStatement
-        if (loop == null || loop.condition !is BinaryOperator) return setOf()
+            expr.prevDFG.firstOrNull { e -> e.astParent is ForStmt }?.astParent
+                as? ForStmt
+        if (loop == null || loop.condition !is BinaryOp) return setOf()
 
         var loopVar: Any? =
             evaluateInternal(loop.initializerStatement?.declarations?.first(), depth) as? Number
                 ?: return setOf()
 
-        val cond = loop.condition as BinaryOperator
+        val cond = loop.condition as BinaryOp
         val result = mutableSetOf<Any?>()
         var lhs =
-            if ((cond.lhs as? DeclaredReferenceExpression)?.refersTo == expr.refersTo) {
+            if ((cond.lhs as? Reference)?.refersTo == expr.refersTo) {
                 loopVar
             } else {
                 evaluateInternal(cond.lhs, depth + 1)
             }
         var rhs =
-            if ((cond.rhs as? DeclaredReferenceExpression)?.refersTo == expr.refersTo) {
+            if ((cond.rhs as? Reference)?.refersTo == expr.refersTo) {
                 loopVar
             } else {
                 evaluateInternal(cond.rhs, depth + 1)
@@ -323,47 +323,47 @@ class MultiValueEvaluator : ValueEvaluator() {
             val loopOp = loop.iterationStatement
             loopVar =
                 when (loopOp) {
-                    is AssignExpression -> {
+                    is AssignExpr -> {
                         if (
                             loopOp.operatorCode == "=" &&
-                                (loopOp.lhs.singleOrNull() as? DeclaredReferenceExpression)
+                                (loopOp.lhs.singleOrNull() as? Reference)
                                     ?.refersTo == expr.refersTo &&
-                                loopOp.rhs.singleOrNull() is BinaryOperator
+                                loopOp.rhs.singleOrNull() is BinaryOp
                         ) {
                             // Assignment to the variable, take the rhs and see if it's also a
                             // binary operator
                             val opLhs =
                                 if (
-                                    ((loopOp.rhs<BinaryOperator>())?.lhs
-                                            as? DeclaredReferenceExpression)
+                                    ((loopOp.rhs<BinaryOp>())?.lhs
+                                            as? Reference)
                                         ?.refersTo == expr.refersTo
                                 ) {
                                     loopVar
                                 } else {
-                                    (loopOp.rhs<BinaryOperator>())?.lhs
+                                    (loopOp.rhs<BinaryOp>())?.lhs
                                 }
                             val opRhs =
                                 if (
-                                    ((loopOp.rhs<BinaryOperator>())?.rhs
-                                            as? DeclaredReferenceExpression)
+                                    ((loopOp.rhs<BinaryOp>())?.rhs
+                                            as? Reference)
                                         ?.refersTo == expr.refersTo
                                 ) {
                                     loopVar
                                 } else {
-                                    evaluateInternal((loopOp.rhs<BinaryOperator>())?.rhs, depth + 1)
+                                    evaluateInternal((loopOp.rhs<BinaryOp>())?.rhs, depth + 1)
                                 }
-                            computeBinaryOpEffect(opLhs, opRhs, (loopOp.rhs<BinaryOperator>()))
+                            computeBinaryOpEffect(opLhs, opRhs, (loopOp.rhs<BinaryOp>()))
                                 as? Number
                         } else {
                             cannotEvaluate(loopOp, this)
                         }
                     }
-                    is BinaryOperator -> {
+                    is BinaryOp -> {
 
                         // No idea what this is but it's a binary op...
                         val opLhs =
                             if (
-                                (loopOp.lhs as? DeclaredReferenceExpression)?.refersTo ==
+                                (loopOp.lhs as? Reference)?.refersTo ==
                                     expr.refersTo
                             ) {
                                 loopVar
@@ -372,7 +372,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                             }
                         val opRhs =
                             if (
-                                (loopOp.rhs as? DeclaredReferenceExpression)?.refersTo ==
+                                (loopOp.rhs as? Reference)?.refersTo ==
                                     expr.refersTo
                             ) {
                                 loopVar
@@ -381,10 +381,10 @@ class MultiValueEvaluator : ValueEvaluator() {
                             }
                         computeBinaryOpEffect(opLhs, opRhs, loopOp) as? Number
                     }
-                    is UnaryOperator -> {
+                    is UnaryOp -> {
                         computeUnaryOpEffect(
                             if (
-                                (loopOp.input as? DeclaredReferenceExpression)?.refersTo ==
+                                (loopOp.input as? Reference)?.refersTo ==
                                     expr.refersTo
                             ) {
                                 loopVar
@@ -403,10 +403,10 @@ class MultiValueEvaluator : ValueEvaluator() {
                 return result
             }
 
-            if ((cond.lhs as? DeclaredReferenceExpression)?.refersTo == expr.refersTo) {
+            if ((cond.lhs as? Reference)?.refersTo == expr.refersTo) {
                 lhs = loopVar
             }
-            if ((cond.rhs as? DeclaredReferenceExpression)?.refersTo == expr.refersTo) {
+            if ((cond.rhs as? Reference)?.refersTo == expr.refersTo) {
                 rhs = loopVar
             }
             comparisonResult = computeBinaryOpEffect(lhs, rhs, cond)
@@ -414,7 +414,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         return result
     }
 
-    private fun computeUnaryOpEffect(input: Any?, expr: UnaryOperator): Any? {
+    private fun computeUnaryOpEffect(input: Any?, expr: UnaryOp): Any? {
         return when (expr.operatorCode) {
             "-" -> {
                 when (input) {

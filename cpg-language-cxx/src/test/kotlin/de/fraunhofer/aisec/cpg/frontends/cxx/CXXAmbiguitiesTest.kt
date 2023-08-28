@@ -28,14 +28,14 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpr
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -47,8 +47,8 @@ class CXXAmbiguitiesTest {
      * This test is somewhat tricky. CDT thinks that certain call expressions are function
      * declarations in function declarations (which is not possible, with the exception of lambdas).
      * The issue is that we cannot currently solve this ambiguity, but rather we can recognize it as
-     * a [ProblemDeclaration] and make sure that it is contained to the local function and the rest
-     * of the AST and its scope are not affected by it (too much).
+     * a [ProblemDecl] and make sure that it is contained to the local function and the rest of the
+     * AST and its scope are not affected by it (too much).
      *
      * If we ever fix the ambiguity, this test will probably FAIL and needs to be adjusted.
      */
@@ -61,28 +61,28 @@ class CXXAmbiguitiesTest {
         // make sure we still have only one declaration in the file (the record)
         assertEquals(1, tu.declarations.size)
 
-        val myClass = tu.byNameOrNull<RecordDeclaration>("MyClass")
+        val myClass = tu.byNameOrNull<RecordDecl>("MyClass")
 
         assertNotNull(myClass)
 
-        val someFunction = myClass.byNameOrNull<MethodDeclaration>("someFunction")
+        val someFunction = myClass.byNameOrNull<MethodDecl>("someFunction")
 
         assertNotNull(someFunction)
 
         // CDT now (incorrectly) thinks the first line is a declaration statement, when in reality
         // it should be a CallExpression. But we cannot fix that at the moment
-        val crazy = someFunction.bodyOrNull<DeclarationStatement>(0)
+        val crazy = someFunction.bodyOrNull<DeclarationStmt>(0)
 
         assertNotNull(crazy) // if we ever fix it, this will FAIL
 
-        val problem = crazy.singleDeclaration as? ProblemDeclaration
+        val problem = crazy.singleDeclaration as? ProblemDecl
         assertNotNull(problem)
         assertContains(problem.problem, "CDT")
     }
 
     /**
      * In CXX there is an ambiguity with the statement: "(A)(B);" 1) If A is a function pointer,
-     * this is a [CallExpression] 2) If A is a type, this is a [CastExpression]
+     * this is a [CallExpr] 2) If A is a type, this is a [CastExpr]
      */
     @Test
     fun testFunctionCallOrTypeCast() {
@@ -90,32 +90,32 @@ class CXXAmbiguitiesTest {
         val tu = TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         assertNotNull(tu)
 
-        val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
+        val mainFunc = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(mainFunc)
 
-        val fooFunc = tu.byNameOrNull<FunctionDeclaration>("foo")
+        val fooFunc = tu.byNameOrNull<FunctionDecl>("foo")
         assertNotNull(fooFunc)
 
         // First two Statements are CallExpressions
-        val s1 = mainFunc.getBodyStatementAs(1, CallExpression::class.java)
+        val s1 = mainFunc.getBodyStatementAs(1, CallExpr::class.java)
         assertNotNull(s1)
         assertEquals(fooFunc, s1.invokes.iterator().next())
 
-        val s2 = mainFunc.getBodyStatementAs(2, CallExpression::class.java)
+        val s2 = mainFunc.getBodyStatementAs(2, CallExpr::class.java)
         assertNotNull(s2)
         assertEquals(fooFunc, s2.invokes.iterator().next())
 
         // Last two Statements are CastExpressions
-        val s3 = mainFunc.getBodyStatementAs(3, CastExpression::class.java)
+        val s3 = mainFunc.getBodyStatementAs(3, CastExpr::class.java)
         assertNotNull(s3)
 
-        val s4 = mainFunc.getBodyStatementAs(4, CastExpression::class.java)
+        val s4 = mainFunc.getBodyStatementAs(4, CastExpr::class.java)
         assertNotNull(s4)
     }
 
     /**
      * In CXX there is an ambiguity with the statement: "(A.B)(C);" 1) If B is a method, this is a
-     * [MemberCallExpression] 2) if B is a function pointer, this is a [CallExpression].
+     * [MemberCallExpr] 2) if B is a function pointer, this is a [CallExpr].
      *
      * Function pointer as a struct member are currently not supported in the cpg. This test case
      * will just ensure that there will be no crash when parsing such a statement. When adding this
@@ -127,13 +127,13 @@ class CXXAmbiguitiesTest {
         val tu = TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         assertNotNull(tu)
 
-        val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
+        val mainFunc = tu.byNameOrNull<FunctionDecl>("main")
         assertNotNull(mainFunc)
 
-        val classA = tu.byNameOrNull<RecordDeclaration>("A")
+        val classA = tu.byNameOrNull<RecordDecl>("A")
         assertNotNull(classA)
 
-        val structB = tu.byNameOrNull<RecordDeclaration>("B")
+        val structB = tu.byNameOrNull<RecordDecl>("B")
         assertNotNull(structB)
     }
 }

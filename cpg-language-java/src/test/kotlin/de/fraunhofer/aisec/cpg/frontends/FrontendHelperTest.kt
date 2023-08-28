@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.frontends
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ForStmt
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import kotlin.test.*
@@ -61,7 +61,7 @@ class FrontendHelperTest {
         assertNotNull(result)
         // The class should have 2 comments: The javadoc and "Class comment"
         val tu = result.translationUnits.first()
-        val classDeclaration = tu.declarations.first() as RecordDeclaration
+        val classDeclaration = tu.declarations.first() as RecordDecl
         classDeclaration.comment = "" // Reset the comment of the ClassDerclaration
 
         val comment = "This comment clearly belongs to the class."
@@ -73,7 +73,7 @@ class FrontendHelperTest {
         assertTrue(classDeclaration.comment?.contains(comment2) == true)
 
         // "javadoc of arg" belongs to the arg and not the class
-        val fieldDecl = classDeclaration.declarations.first() as FieldDeclaration
+        val fieldDecl = classDeclaration.declarations.first() as FieldDecl
         fieldDecl.comment = ""
         val comment3 = "javadoc of arg"
         FrontendUtils.matchCommentToNode(comment3, Region(5, 9, 5, 23), tu)
@@ -82,7 +82,7 @@ class FrontendHelperTest {
 
         // 2 line comment in the constructor
         val constructor = classDeclaration.constructors.first()
-        val constructorAssignment = (constructor.body as CompoundStatement).statements[0]
+        val constructorAssignment = (constructor.body as CompoundStmt).statements[0]
         assertNull(constructor.comment)
         constructorAssignment.comment = ""
 
@@ -94,9 +94,9 @@ class FrontendHelperTest {
         assertTrue(constructorAssignment.comment?.contains(comment5) == true)
         assertNull(constructor.comment)
 
-        val mainMethod = classDeclaration.declarations[1] as MethodDeclaration
+        val mainMethod = classDeclaration.declarations[1] as MethodDecl
         assertNull(mainMethod.comment)
-        val forLoop = (mainMethod.body as CompoundStatement).statements[0] as ForStatement
+        val forLoop = (mainMethod.body as CompoundStmt).statements[0] as ForStmt
         forLoop.comment = null
 
         val comment6 = "for loop"
@@ -112,7 +112,7 @@ class FrontendHelperTest {
         FrontendUtils.matchCommentToNode(comment7, Region(16, 26, 16, 32), tu)
         // assertEquals(comment7, forLoop.initializerStatement.comment)
 
-        val printStatement = (forLoop.statement as CompoundStatement).statements.first()
+        val printStatement = (forLoop.statement as CompoundStmt).statements.first()
         printStatement.comment = null
         val comment8 = "Crazy print"
         val comment9 = "Comment which belongs to nothing"
@@ -120,7 +120,7 @@ class FrontendHelperTest {
         FrontendUtils.matchCommentToNode(comment9, Region(18, 16, 18, 48), tu)
         assertTrue(printStatement.comment?.contains(comment8) == true)
         // TODO The second comment doesn't belong to the print but to the loop body
-        assertTrue((forLoop.statement as? CompoundStatement)?.comment?.contains(comment9) == true)
+        assertTrue((forLoop.statement as? CompoundStmt)?.comment?.contains(comment9) == true)
 
         assertNull(mainMethod.comment)
     }
@@ -146,10 +146,10 @@ class FrontendHelperTest {
         assertNotNull(result)
 
         val tu = result.translationUnits.first()
-        val classDeclaration = tu.declarations.first() as RecordDeclaration
-        val mainMethod = classDeclaration.declarations[1] as MethodDeclaration
-        val forLoop = (mainMethod.body as CompoundStatement).statements[0] as ForStatement
-        val printStatement = (forLoop.statement as CompoundStatement).statements.first()
+        val classDeclaration = tu.declarations.first() as RecordDecl
+        val mainMethod = classDeclaration.declarations[1] as MethodDecl
+        val forLoop = (mainMethod.body as CompoundStmt).statements[0] as ForStmt
+        val printStatement = (forLoop.statement as CompoundStmt).statements.first()
 
         val regionSysout = FrontendUtils.parseColumnPositionsFromFile(tu.code!!, 20, 13, 17, 17)
 

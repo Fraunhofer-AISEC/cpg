@@ -31,10 +31,10 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDecl
 import de.fraunhofer.aisec.cpg.graph.edge.DependenceType
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -93,10 +93,10 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * The scope this node "lives" in / in which it is defined. This property is set in
      * [Node.applyMetadata] by a [ScopeProvider] at the time when the node is created.
      *
-     * For example, if a [RecordDeclaration] is defined in a [TranslationUnitDeclaration] (without
-     * any namespaces), the scope of the [RecordDeclaration] is most likely a [GlobalScope]. Since
-     * the declaration itself creates a [RecordScope], the scope of a [MethodDeclaration] within the
-     * class would be a [RecordScope] pointing to the [RecordDeclaration].
+     * For example, if a [RecordDecl] is defined in a [TranslationUnitDecl] (without any
+     * namespaces), the scope of the [RecordDecl] is most likely a [GlobalScope]. Since the
+     * declaration itself creates a [RecordScope], the scope of a [MethodDecl] within the class
+     * would be a [RecordScope] pointing to the [RecordDecl].
      */
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
@@ -224,7 +224,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Virtual property for accessing the parents of the Program Dependence Graph (PDG). */
     var prevPDG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::prevPDGEdges, false)
 
-    var typedefs: MutableSet<TypedefDeclaration> = HashSet()
+    var typedefs: MutableSet<TypedefDecl> = HashSet()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -354,7 +354,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         }
     }
 
-    fun addTypedef(typedef: TypedefDeclaration) {
+    fun addTypedef(typedef: TypedefDecl) {
         typedefs.add(typedef)
     }
 

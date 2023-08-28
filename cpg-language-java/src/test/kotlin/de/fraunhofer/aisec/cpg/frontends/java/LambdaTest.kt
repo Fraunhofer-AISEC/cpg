@@ -28,12 +28,12 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.calls
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
 import java.io.File
@@ -58,40 +58,37 @@ class JavaLambdaTest {
         assertNotNull(result)
 
         val foreachArg = result.calls["forEach"]?.arguments?.first()
-        assertTrue(foreachArg is LambdaExpression)
+        assertTrue(foreachArg is LambdaExpr)
         assertNotNull(foreachArg.function)
 
         val replaceAllArg = result.calls["replaceAll"]?.arguments?.first()
-        assertTrue(replaceAllArg is LambdaExpression)
+        assertTrue(replaceAllArg is LambdaExpr)
         assertNotNull(replaceAllArg.function)
 
         val mapArg = result.calls["map"]?.arguments?.first()
-        assertTrue(mapArg is LambdaExpression)
+        assertTrue(mapArg is LambdaExpr)
         assertNotNull(mapArg.function)
 
-        val mapBody = mapArg.function?.body as? BinaryOperator
+        val mapBody = mapArg.function?.body as? BinaryOp
         assertNotNull(mapBody)
         val outerVar = result.variables["outerVar"]
         assertNotNull(outerVar)
-        assertEquals(outerVar, (mapBody.lhs as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals(outerVar, (mapBody.lhs as? Reference)?.refersTo)
 
         val testfunctionArg =
             result.calls { it.name.localName == "testFunction" }[0].arguments.first()
-        assertTrue(testfunctionArg is DeclaredReferenceExpression)
-        assertTrue(
-            (testfunctionArg.refersTo as? VariableDeclaration)?.initializer is LambdaExpression
-        )
+        assertTrue(testfunctionArg is Reference)
+        assertTrue((testfunctionArg.refersTo as? VariableDecl)?.initializer is LambdaExpr)
 
-        val testfunctionBody = mapArg.function?.body as? BinaryOperator
+        val testfunctionBody = mapArg.function?.body as? BinaryOp
         assertNotNull(testfunctionBody)
-        assertEquals(outerVar, (testfunctionBody.lhs as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals(outerVar, (testfunctionBody.lhs as? Reference)?.refersTo)
 
         val lambdaVar = result.variables["lambdaVar"]
         assertNotNull(lambdaVar)
-        val constructExpression =
-            (lambdaVar.initializer as? NewExpression)?.initializer as? ConstructExpression
-        assertNotNull(constructExpression)
-        val anonymousRecord = constructExpression.instantiates as? RecordDeclaration
+        val constructExpr = (lambdaVar.initializer as? NewExpr)?.initializer as? ConstructExpr
+        assertNotNull(constructExpr)
+        val anonymousRecord = constructExpr.instantiates as? RecordDecl
         assertNotNull(anonymousRecord)
         assertTrue(anonymousRecord.isImplicit)
         assertEquals(1, anonymousRecord.superClasses.size)
@@ -102,13 +99,11 @@ class JavaLambdaTest {
         val applyMethod = anonymousRecord.methods["apply"]
         assertNotNull(applyMethod)
         val returnStmt =
-            (applyMethod.body as? CompoundStatement)?.statements?.firstOrNull() as? ReturnStatement
+            (applyMethod.body as? CompoundStmt)?.statements?.firstOrNull() as? ReturnStmt
         assertNotNull(returnStmt)
         assertEquals(
             outerVar,
-            (((returnStmt.returnValue as? BinaryOperator)?.lhs as? BinaryOperator)?.lhs
-                    as? DeclaredReferenceExpression)
-                ?.refersTo
+            (((returnStmt.returnValue as? BinaryOp)?.lhs as? BinaryOp)?.lhs as? Reference)?.refersTo
         )
     }
 }

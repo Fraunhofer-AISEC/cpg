@@ -31,10 +31,10 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -62,15 +62,15 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(message)
 
         val map =
-            assertIs<InitializerListExpression>(
-                assertIs<ConstructExpression>(message.firstAssignment).arguments.firstOrNull()
+            assertIs<InitializerListExpr>(
+                assertIs<ConstructExpr>(message.firstAssignment).arguments.firstOrNull()
             )
         assertNotNull(map)
 
-        val nameEntry = map.initializers.firstOrNull() as? KeyValueExpression
+        val nameEntry = map.initializers.firstOrNull() as? KeyValueExpr
         assertNotNull(nameEntry)
 
-        assertLocalName("string[]", (nameEntry.value as? ConstructExpression)?.type)
+        assertLocalName("string[]", (nameEntry.value as? ConstructExpr)?.type)
     }
 
     @Test
@@ -93,7 +93,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         // We should be able to follow the DFG backwards from the declaration to the individual
         // key/value expressions
-        val path = data.firstAssignment?.followPrevDFG { it is KeyValueExpression }
+        val path = data.firstAssignment?.followPrevDFG { it is KeyValueExpr }
 
         assertNotNull(path)
         assertEquals(3, path.size)
@@ -121,16 +121,16 @@ class GoLanguageFrontendTest : BaseTest() {
         val main = p.functions["main"]
         assertNotNull(main)
 
-        val body = main.body as? CompoundStatement
+        val body = main.body as? CompoundStmt
         assertNotNull(body)
 
         var decl = main.variables["o"]
         assertNotNull(decl)
 
-        val new = assertIs<NewExpression>(decl.firstAssignment)
+        val new = assertIs<NewExpr>(decl.firstAssignment)
         with(tu) { assertEquals(objectType("p.MyStruct").pointer(), new.type) }
 
-        val construct = new.initializer as? ConstructExpression
+        val construct = new.initializer as? ConstructExpr
         assertNotNull(construct)
         assertEquals(myStruct, construct.instantiates)
 
@@ -143,7 +143,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(make)
         with(tu) { assertEquals(tu.primitiveType("int").array(), make.type) }
 
-        assertTrue(make is ArrayCreationExpression)
+        assertTrue(make is ArrayExpr)
 
         val dimension = make.dimensions.first() as? Literal<*>
         assertNotNull(dimension)
@@ -156,7 +156,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         make = assertIs(decl.firstAssignment)
         assertNotNull(make)
-        assertTrue(make is ConstructExpression)
+        assertTrue(make is ConstructExpr)
         // TODO: Maps can have dedicated types and parsing them as a generic here is only a
         //  temporary solution. This should be fixed in the future.
         assertEquals(
@@ -171,7 +171,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         make = assertIs(decl.firstAssignment)
         assertNotNull(make)
-        assertTrue(make is ConstructExpression)
+        assertTrue(make is ConstructExpr)
         assertEquals(tu.objectType("chan", listOf(tu.primitiveType("int"))), make.type)
     }
 
@@ -222,7 +222,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val fn = p.variables["fn"]
         assertNotNull(fn)
 
-        val lambda = assertIs<LambdaExpression>(fn.initializer)
+        val lambda = assertIs<LambdaExpr>(fn.initializer)
         assertNotNull(lambda)
 
         val func = lambda.function
@@ -266,7 +266,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals(myTest.returnTypes.size, type.returnTypes.size)
         assertEquals(listOf("int", "error"), type.returnTypes.map { it.name.localName })
 
-        var body = main.body as? CompoundStatement
+        var body = main.body as? CompoundStmt
         assertNotNull(body)
 
         var callExpression = body.calls.firstOrNull()
@@ -282,10 +282,10 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertLocalName("myTest", myTest)
 
-        body = myTest.body as? CompoundStatement
+        body = myTest.body as? CompoundStmt
         assertNotNull(body)
 
-        callExpression = body.statements.first() as? CallExpression
+        callExpression = body.statements.first() as? CallExpr
         assertNotNull(callExpression)
 
         assertFullName("fmt.Printf", callExpression)
@@ -297,21 +297,21 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals("%s", literal.value)
         assertEquals(tu.primitiveType("string"), literal.type)
 
-        val ref = callExpression.arguments[1] as? DeclaredReferenceExpression
+        val ref = callExpression.arguments[1] as? Reference
         assertNotNull(ref)
 
         assertLocalName("s", ref)
         assertEquals(s, ref.refersTo)
 
-        val stmt = body.statements[1] as? AssignExpression
+        val stmt = body.statements[1] as? AssignExpr
         assertNotNull(stmt)
 
-        val a = stmt.lhs.firstOrNull() as? DeclaredReferenceExpression
+        val a = stmt.lhs.firstOrNull() as? Reference
         assertNotNull(a)
 
         assertLocalName("a", a)
 
-        val op = assertIs<BinaryOperator>(stmt.rhs.firstOrNull())
+        val op = assertIs<BinaryOp>(stmt.rhs.firstOrNull())
         assertEquals("+", op.operatorCode)
 
         val lhs = op.lhs as? Literal<*>
@@ -324,7 +324,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertEquals(2, rhs.value)
 
-        val binOp = assertIs<AssignExpression>(body.statements[2])
+        val binOp = assertIs<AssignExpr>(body.statements[2])
         val err = binOp.lhs.firstOrNull()
 
         assertNotNull(err)
@@ -341,10 +341,10 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.getDeclarationsByName("p", NamespaceDecl::class.java).iterator().next()
 
         val myStruct =
-            p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
+            p.getDeclarationsByName("p.MyStruct", RecordDecl::class.java).iterator().next()
 
         assertNotNull(myStruct)
         assertEquals("struct", myStruct.kind)
@@ -382,15 +382,15 @@ class GoLanguageFrontendTest : BaseTest() {
         val newMyStruct = p.functions["NewMyStruct"]
         assertNotNull(newMyStruct)
 
-        val body = newMyStruct.body as? CompoundStatement
+        val body = newMyStruct.body as? CompoundStmt
 
         assertNotNull(body)
 
-        val `return` = body.statements.first() as? ReturnStatement
+        val `return` = body.statements.first() as? ReturnStmt
 
         assertNotNull(`return`)
 
-        val returnValue = `return`.returnValue as? UnaryOperator
+        val returnValue = `return`.returnValue as? UnaryOp
 
         assertNotNull(returnValue)
     }
@@ -416,23 +416,23 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(myFunc)
         assertLocalName("MyFunc", myFunc)
 
-        val body = myFunc.body as? CompoundStatement
+        val body = myFunc.body as? CompoundStmt
 
         assertNotNull(body)
 
-        val printf = body.statements.first() as? CallExpression
+        val printf = body.statements.first() as? CallExpr
 
         assertNotNull(printf)
         assertLocalName("Printf", printf)
         assertFullName("fmt.Printf", printf)
 
-        val arg1 = printf.arguments[0] as? MemberCallExpression
+        val arg1 = printf.arguments[0] as? MemberCallExpr
 
         assertNotNull(arg1)
         assertLocalName("myOtherFunc", arg1)
         assertFullName("p.MyStruct.myOtherFunc", arg1)
 
-        assertEquals(myFunc.receiver, (arg1.base as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals(myFunc.receiver, (arg1.base as? Reference)?.refersTo)
     }
 
     @Test
@@ -451,19 +451,19 @@ class GoLanguageFrontendTest : BaseTest() {
         val myFunc = p.methods["myFunc"]
         assertNotNull(myFunc)
 
-        val body = myFunc.body as? CompoundStatement
+        val body = myFunc.body as? CompoundStmt
         assertNotNull(body)
 
-        val assign = body.statements.first() as? AssignExpression
+        val assign = body.statements.first() as? AssignExpr
         assertNotNull(assign)
 
-        val lhs = assign.lhs.firstOrNull() as? MemberExpression
+        val lhs = assign.lhs.firstOrNull() as? MemberExpr
         assertNotNull(lhs)
-        assertEquals(myFunc.receiver, (lhs.base as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals(myFunc.receiver, (lhs.base as? Reference)?.refersTo)
         assertLocalName("Field", lhs)
         assertEquals(tu.primitiveType("int"), lhs.type)
 
-        val rhs = assign.rhs.firstOrNull() as? DeclaredReferenceExpression
+        val rhs = assign.rhs.firstOrNull() as? Reference
         assertNotNull(rhs)
         assertFullName("otherPackage.OtherField", rhs)
     }
@@ -480,12 +480,10 @@ class GoLanguageFrontendTest : BaseTest() {
         val main = tu.functions["p.main"]
         assertNotNull(main)
 
-        val body = main.body as? CompoundStatement
+        val body = main.body as? CompoundStmt
         assertNotNull(body)
 
-        val b =
-            (body.statements.first() as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration
+        val b = (body.statements.first() as? DeclarationStmt)?.singleDeclaration as? VariableDecl
 
         assertNotNull(b)
         assertLocalName("b", b)
@@ -493,12 +491,12 @@ class GoLanguageFrontendTest : BaseTest() {
 
         // true, false are builtin variables, NOT literals in Golang
         // we might need to parse this special case differently
-        val initializer = b.initializer as? DeclaredReferenceExpression
+        val initializer = b.initializer as? Reference
 
         assertNotNull(initializer)
         assertLocalName("true", initializer)
 
-        val `if` = body.statements[1] as? IfStatement
+        val `if` = body.statements[1] as? IfStmt
 
         assertNotNull(`if`)
     }
@@ -516,41 +514,41 @@ class GoLanguageFrontendTest : BaseTest() {
         val myFunc = tu.functions["p.myFunc"]
         assertNotNull(myFunc)
 
-        val body = myFunc.body as? CompoundStatement
+        val body = myFunc.body as? CompoundStmt
         assertNotNull(body)
 
-        val switch = body.statements.first() as? SwitchStatement
+        val switch = body.statements.first() as? SwitchStmt
         assertNotNull(switch)
 
-        val list = switch.statement as? CompoundStatement
+        val list = switch.statement as? CompoundStmt
         assertNotNull(list)
 
-        val case1 = list.statements[0] as? CaseStatement
+        val case1 = list.statements[0] as? CaseStmt
 
         assertNotNull(case1)
         assertEquals(1, (case1.caseExpression as? Literal<*>)?.value)
 
-        val first = list.statements[1] as? CallExpression
+        val first = list.statements[1] as? CallExpr
 
         assertNotNull(first)
         assertLocalName("first", first)
 
-        val case2 = list.statements[2] as? CaseStatement
+        val case2 = list.statements[2] as? CaseStmt
 
         assertNotNull(case2)
         assertEquals(2, (case2.caseExpression as? Literal<*>)?.value)
 
-        val second = list.statements[3] as? CallExpression
+        val second = list.statements[3] as? CallExpr
 
         assertNotNull(second)
         assertLocalName("second", second)
 
-        val case3 = list.statements[4] as? CaseStatement
+        val case3 = list.statements[4] as? CaseStmt
 
         assertNotNull(case3)
         assertEquals(3, (case3.caseExpression as? Literal<*>)?.value)
 
-        val third = list.statements[5] as? CallExpression
+        val third = list.statements[5] as? CallExpr
 
         assertNotNull(third)
         assertLocalName("third", third)
@@ -581,7 +579,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val main = p.functions["main"]
         assertNotNull(main)
 
-        val body = main.body as? CompoundStatement
+        val body = main.body as? CompoundStmt
         assertNotNull(body)
 
         val c = body.variables["c"]
@@ -592,7 +590,7 @@ class GoLanguageFrontendTest : BaseTest() {
             assertEquals(objectType("p.MyStruct").pointer(), c.type)
         }
 
-        val newMyStruct = assertIs<CallExpression>(c.firstAssignment)
+        val newMyStruct = assertIs<CallExpr>(c.firstAssignment)
 
         // fetch the function declaration from the other TU
         val tu2 = tus[1]
@@ -603,10 +601,10 @@ class GoLanguageFrontendTest : BaseTest() {
         val newMyStructDef = p2.functions["NewMyStruct"]
         assertTrue(newMyStruct.invokes.contains(newMyStructDef))
 
-        val call = body.statements[1] as? MemberCallExpression
+        val call = body.statements[1] as? MemberCallExpr
         assertNotNull(call)
 
-        val base = call.base as? DeclaredReferenceExpression
+        val base = call.base as? Reference
         assertNotNull(base)
         assertEquals(c, base.refersTo)
 
@@ -631,25 +629,25 @@ class GoLanguageFrontendTest : BaseTest() {
         val main = tu.functions["main.main"]
         assertNotNull(main)
 
-        val f = main.bodyOrNull<ForStatement>()
+        val f = main.bodyOrNull<ForStmt>()
         assertNotNull(f)
-        assertTrue(f.condition is BinaryOperator)
-        assertTrue(f.statement is CompoundStatement)
-        assertTrue(f.initializerStatement is AssignExpression)
-        assertTrue(f.iterationStatement is UnaryOperator)
+        assertTrue(f.condition is BinaryOp)
+        assertTrue(f.statement is CompoundStmt)
+        assertTrue(f.initializerStatement is AssignExpr)
+        assertTrue(f.iterationStatement is UnaryOp)
 
-        val each = main.bodyOrNull<ForEachStatement>()
+        val each = main.bodyOrNull<ForEachStmt>()
         assertNotNull(each)
 
-        val bytes = assertIs<DeclaredReferenceExpression>(each.iterable)
+        val bytes = assertIs<Reference>(each.iterable)
         assertLocalName("bytes", bytes)
         assertNotNull(bytes.refersTo)
 
-        val idx = assertIs<DeclarationStatement>(each.variable).variables["idx"]
+        val idx = assertIs<DeclarationStmt>(each.variable).variables["idx"]
         assertNotNull(idx)
         assertLocalName("int", idx.type)
 
-        val b = assertIs<DeclarationStatement>(each.variable).variables["b"]
+        val b = assertIs<DeclarationStmt>(each.variable).variables["b"]
         assertNotNull(b)
         assertLocalName("uint8", b.type)
     }
@@ -692,7 +690,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val a = main.variables["a"]
         assertNotNull(a)
 
-        val call = a.firstAssignment as? CallExpression
+        val call = a.firstAssignment as? CallExpr
         assertNotNull(call)
         assertTrue(call.invokes.contains(newAwesome))
 
@@ -731,15 +729,15 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(j)
         assertEquals("comment before parameter2", j.comment)
 
-        val assign = main.bodyOrNull<AssignExpression>()
+        val assign = main.bodyOrNull<AssignExpr>()
         assertNotNull(assign)
         assertEquals("comment before assignment", assign.comment)
 
-        val declStmt = main.bodyOrNull<DeclarationStatement>()
+        val declStmt = main.bodyOrNull<DeclarationStmt>()
         assertNotNull(declStmt)
         assertEquals("comment before declaration", declStmt.comment)
 
-        val s = mainNamespace.byNameOrNull<RecordDeclaration>("main.s")
+        val s = mainNamespace.byNameOrNull<RecordDecl>("main.s")
         assertNotNull(s)
         assertEquals("comment before struct", s.comment)
 
@@ -756,13 +754,13 @@ class GoLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<GoLanguage>()
             }
 
-        val mainPackage = tu.byNameOrNull<NamespaceDeclaration>("main")
+        val mainPackage = tu.byNameOrNull<NamespaceDecl>("main")
         assertNotNull(mainPackage)
 
-        val main = mainPackage.byNameOrNull<FunctionDeclaration>("main")
+        val main = mainPackage.byNameOrNull<FunctionDecl>("main")
         assertNotNull(main)
 
-        val assign = main.bodyOrNull<AssignExpression>()
+        val assign = main.bodyOrNull<AssignExpr>()
         assertNotNull(assign)
         assertEquals(1, assign.rhs.size)
 
@@ -782,11 +780,11 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val assign =
             tu.functions["main"].assignments.firstOrNull {
-                (it.target as? DeclaredReferenceExpression)?.refersTo == i
+                (it.target as? Reference)?.refersTo == i
             }
         assertNotNull(assign)
 
-        val call = assertIs<CallExpression>(assign.value)
+        val call = assertIs<CallExpr>(assign.value)
         assertLocalName("myTest", call)
     }
 }

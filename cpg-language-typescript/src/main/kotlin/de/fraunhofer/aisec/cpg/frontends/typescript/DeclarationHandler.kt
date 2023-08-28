@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 
 class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemDeclaration, lang) {
+    Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemDecl, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -51,15 +51,15 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             "ClassDeclaration" -> return handleClassDeclaration(node)
         }
 
-        return ProblemDeclaration("No handler was implemented for node of type " + node.type)
+        return ProblemDecl("No handler was implemented for node of type " + node.type)
     }
 
-    private fun handlePropertySignature(node: TypeScriptNode): FieldDeclaration {
+    private fun handlePropertySignature(node: TypeScriptNode): FieldDecl {
         val name = this.frontend.getIdentifierName(node)
         val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
         val field =
-            newFieldDeclaration(
+            newFieldDecl(
                 name,
                 type,
                 listOf(),
@@ -74,11 +74,11 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         return field
     }
 
-    private fun handleClassDeclaration(node: TypeScriptNode): RecordDeclaration {
+    private fun handleClassDeclaration(node: TypeScriptNode): RecordDecl {
         val name = this.frontend.getIdentifierName(node)
 
         val record =
-            newRecordDeclaration(
+            newRecordDecl(
                 name,
                 if (node.type == "InterfaceDeclaration") {
                     "interface"
@@ -111,11 +111,11 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.frontend.getIdentifierName(node)
         val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
-        return newParamVariableDeclaration(name, type, false, this.frontend.codeOf(node))
+        return newParameterDecl(name, type, false, this.frontend.codeOf(node))
     }
 
-    fun handleSourceFile(node: TypeScriptNode): TranslationUnitDeclaration {
-        val tu = newTranslationUnitDeclaration(node.location.file, this.frontend.codeOf(node))
+    fun handleSourceFile(node: TypeScriptNode): TranslationUnitDecl {
+        val tu = newTranslationUnitDecl(node.location.file, this.frontend.codeOf(node))
 
         this.frontend.scopeManager.resetToGlobal(tu)
 
@@ -136,26 +136,26 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         return tu
     }
 
-    private fun handleFunctionDeclaration(node: TypeScriptNode): FunctionDeclaration {
+    private fun handleFunctionDeclaration(node: TypeScriptNode): FunctionDecl {
         val name = this.frontend.getIdentifierName(node)
 
-        val func: FunctionDeclaration =
+        val func: FunctionDecl =
             when (node.type) {
                 "MethodDeclaration" -> {
                     val record = this.frontend.scopeManager.currentRecord
 
-                    newMethodDeclaration(name, this.frontend.codeOf(node), false, record)
+                    newMethodDecl(name, this.frontend.codeOf(node), false, record)
                 }
                 "Constructor" -> {
                     val record = this.frontend.scopeManager.currentRecord
 
-                    newConstructorDeclaration(
+                    newConstructorDecl(
                         record?.name?.toString() ?: "",
                         this.frontend.codeOf(node),
                         record
                     )
                 }
-                else -> newFunctionDeclaration(name, this.frontend.codeOf(node))
+                else -> newFunctionDecl(name, this.frontend.codeOf(node))
             }
 
         node.typeChildNode?.let { func.type = this.frontend.typeOf(it) }
@@ -168,7 +168,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             ?.forEach {
                 val param = this.frontend.declarationHandler.handleNode(it)
 
-                if (func is MethodDeclaration) {
+                if (func is MethodDecl) {
                     this.frontend.processAnnotations(param, it)
                 }
 
@@ -185,20 +185,19 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
         this.frontend.scopeManager.leaveScope(func)
 
-        if (func is MethodDeclaration) {
+        if (func is MethodDecl) {
             this.frontend.processAnnotations(func, node)
         }
 
         return func
     }
 
-    private fun handleVariableDeclaration(node: TypeScriptNode): VariableDeclaration {
+    private fun handleVariableDeclaration(node: TypeScriptNode): VariableDecl {
         val name = this.frontend.getIdentifierName(node)
 
         // TODO: support ObjectBindingPattern (whatever it is). seems to be multiple assignment
 
-        val declaration =
-            newVariableDeclaration(name, unknownType(), this.frontend.codeOf(node), false)
+        val declaration = newVariableDecl(name, unknownType(), this.frontend.codeOf(node), false)
         declaration.location = this.frontend.locationOf(node)
 
         // the last node that is not an identifier or an object binding pattern is an initializer

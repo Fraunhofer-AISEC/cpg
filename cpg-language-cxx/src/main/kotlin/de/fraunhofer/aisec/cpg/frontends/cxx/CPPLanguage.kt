@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpr
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
@@ -112,14 +112,14 @@ class CPPLanguage :
      *   resolution techniques
      */
     override fun refineMethodCallResolution(
-        curClass: RecordDeclaration?,
+        curClass: RecordDecl?,
         possibleContainingTypes: Set<Type>,
-        call: CallExpression,
+        call: CallExpr,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration,
+        currentTU: TranslationUnitDecl,
         callResolver: CallResolver
-    ): List<FunctionDeclaration> {
-        var invocationCandidates = mutableListOf<FunctionDeclaration>()
+    ): List<FunctionDecl> {
+        var invocationCandidates = mutableListOf<FunctionDecl>()
         val records =
             possibleContainingTypes.mapNotNull { callResolver.recordMap[it.root.name] }.toSet()
         for (record in records) {
@@ -148,22 +148,22 @@ class CPPLanguage :
         // Make sure, that our invocation candidates for member call expressions are really METHODS,
         // otherwise this will lead to false positives. This is a hotfix until we rework the call
         // resolver completely.
-        if (call is MemberCallExpression) {
+        if (call is MemberCallExpr) {
             invocationCandidates =
-                invocationCandidates.filterIsInstance<MethodDeclaration>().toMutableList()
+                invocationCandidates.filterIsInstance<MethodDecl>().toMutableList()
         }
         return invocationCandidates
     }
 
     override fun refineInvocationCandidatesFromRecord(
-        recordDeclaration: RecordDeclaration,
-        call: CallExpression,
+        recordDecl: RecordDecl,
+        call: CallExpr,
         namePattern: Pattern,
         ctx: TranslationContext
-    ): List<FunctionDeclaration> {
+    ): List<FunctionDecl> {
         val invocationCandidate =
-            mutableListOf<FunctionDeclaration>(
-                *recordDeclaration.methods
+            mutableListOf<FunctionDecl>(
+                *recordDecl.methods
                     .filter { m ->
                         namePattern.matcher(m.name).matches() && m.hasSignature(call.signature)
                     }
@@ -174,7 +174,7 @@ class CPPLanguage :
             invocationCandidate.addAll(
                 resolveWithDefaultArgs(
                     call,
-                    recordDeclaration.methods.filter { m ->
+                    recordDecl.methods.filter { m ->
                         (namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/ &&
                             call.signature.size < m.signatureTypes.size)
                     }
@@ -186,7 +186,7 @@ class CPPLanguage :
             invocationCandidate.addAll(
                 resolveWithImplicitCast(
                     call,
-                    recordDeclaration.methods.filter { m ->
+                    recordDecl.methods.filter { m ->
                         namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/
                     }
                 )
@@ -196,10 +196,10 @@ class CPPLanguage :
     }
 
     override fun refineNormalCallResolution(
-        call: CallExpression,
+        call: CallExpr,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
-    ): List<FunctionDeclaration> {
+        currentTU: TranslationUnitDecl
+    ): List<FunctionDecl> {
         val invocationCandidates = ctx.scopeManager.resolveFunction(call).toMutableList()
         if (invocationCandidates.isEmpty()) {
             // Check for usage of default args
@@ -234,9 +234,9 @@ class CPPLanguage :
      *   arguments
      */
     private fun resolveWithDefaultArgsFunc(
-        call: CallExpression,
+        call: CallExpr,
         ctx: TranslationContext
-    ): List<FunctionDeclaration> {
+    ): List<FunctionDecl> {
         val invocationCandidates =
             ctx.scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).filter {
                 call.signature.size < it.signatureTypes.size
@@ -257,17 +257,16 @@ class CPPLanguage :
      * @return true if resolution was successful, false if not
      */
     override fun handleTemplateFunctionCalls(
-        curClass: RecordDeclaration?,
-        templateCall: CallExpression,
+        curClass: RecordDecl?,
+        templateCall: CallExpr,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
-    ): Pair<Boolean, List<FunctionDeclaration>> {
+        currentTU: TranslationUnitDecl
+    ): Pair<Boolean, List<FunctionDecl>> {
         val instantiationCandidates =
             ctx.scopeManager.resolveFunctionTemplateDeclaration(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
-            val initializationType =
-                mutableMapOf<Node?, TemplateDeclaration.TemplateInitialization?>()
+            val initializationType = mutableMapOf<Node?, TemplateDecl.TemplateInitialization?>()
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
             val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (
@@ -328,7 +327,7 @@ class CPPLanguage :
             for (instantiationParameter in edges ?: listOf()) {
                 instantiationParameter.addProperty(
                     Properties.INSTANTIATION,
-                    TemplateDeclaration.TemplateInitialization.EXPLICIT
+                    TemplateDecl.TemplateInitialization.EXPLICIT
                 )
             }
 

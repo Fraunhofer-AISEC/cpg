@@ -194,7 +194,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
     private val comments = HashMap<Pair<String, Int>, String>()
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnitDecl {
         val content = FileContent.createForExternalFileLocation(file.absolutePath)
 
         // include paths
@@ -386,7 +386,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                newDeclaredReferenceExpression(code, unknownType(), code)
+                newReference(code, unknownType(), code)
                 2 -> // an integer
                 newLiteral(code.toInt(), primitiveType("int"), code)
                 130 -> // a string
@@ -460,7 +460,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
      * behind this, is that in some scenarios we create the [Declaration] before the type and in
      * some, we derive the declaration from the type. In the first one, we might get some necessary
      * information from the declaration, that influences the type parsing. One such example is that
-     * we check, whether a declaration is a [ConstructorDeclaration] and return an [ObjectType] that
+     * we check, whether a declaration is a [ConstructorDecl] and return an [ObjectType] that
      * corresponds with the record name it instantiates.
      *
      * @param hint an optional [Declaration], which serves as a parsing hint.
@@ -571,13 +571,12 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
                 objectType("decltype(${specifier.declTypeExpression.rawSignature})")
             }
             // The type of constructor declaration is always the declaration itself
-            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is ConstructorDeclaration -> {
+            specifier.type == IASTSimpleDeclSpecifier.t_unspecified && hint is ConstructorDecl -> {
                 hint.name.parent?.let { objectType(it) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is MethodDeclaration &&
+                hint is MethodDecl &&
                 hint.name.localName == "operator#0" -> {
                 hint.name.parent?.let { objectType(it) } ?: unknownType()
             }
@@ -705,9 +704,9 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
             // so far is the return value. We then add the parameters and give it a name.
             val name =
                 paramTypes.joinToString(
-                    FunctionDeclaration.COMMA + FunctionDeclaration.WHITESPACE,
-                    FunctionDeclaration.BRACKET_LEFT,
-                    FunctionDeclaration.BRACKET_RIGHT
+                    FunctionDecl.COMMA + FunctionDecl.WHITESPACE,
+                    FunctionDecl.BRACKET_LEFT,
+                    FunctionDecl.BRACKET_RIGHT
                 ) {
                     it.typeName
                 } + type.typeName

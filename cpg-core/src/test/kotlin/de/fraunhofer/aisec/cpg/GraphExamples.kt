@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.newInitializerListExpr
+import de.fraunhofer.aisec.cpg.graph.newVariableDecl
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -53,7 +53,7 @@ class GraphExamples {
                             body {
                                 declare {
                                     variable("i", t("int")) {
-                                        val initList = newInitializerListExpression()
+                                        val initList = newInitializerListExpr()
                                         initList.initializers = listOf(call("foo"))
                                         initializer = initList
                                     }
@@ -142,7 +142,7 @@ class GraphExamples {
                             body {
                                 declare {
                                     variable("i", t("int")) {
-                                        val initList = newInitializerListExpression()
+                                        val initList = newInitializerListExpr()
                                         initList.initializers = listOf(call("foo"))
                                         initializer = initList
                                     }
@@ -156,13 +156,11 @@ class GraphExamples {
                                             modifiers = listOf("private")
                                         }
                                         method("getField", t("int")) {
-                                            receiver =
-                                                newVariableDeclaration("this", t("Variables"))
+                                            receiver = newVariableDecl("this", t("Variables"))
                                             body { returnStmt { member("field") } }
                                         }
                                         method("getLocal", t("int")) {
-                                            receiver =
-                                                newVariableDeclaration("this", t("Variables"))
+                                            receiver = newVariableDecl("this", t("Variables"))
                                             body {
                                                 declare {
                                                     variable("local", t("int")) {
@@ -173,8 +171,7 @@ class GraphExamples {
                                             }
                                         }
                                         method("getShadow", t("int")) {
-                                            receiver =
-                                                newVariableDeclaration("this", t("Variables"))
+                                            receiver = newVariableDecl("this", t("Variables"))
                                             body {
                                                 declare {
                                                     variable("field", t("int")) {
@@ -185,8 +182,7 @@ class GraphExamples {
                                             }
                                         }
                                         method("getNoShadow", t("int")) {
-                                            receiver =
-                                                newVariableDeclaration("this", t("Variables"))
+                                            receiver = newVariableDecl("this", t("Variables"))
                                             body {
                                                 declare {
                                                     variable("field", t("int")) {
@@ -425,18 +421,12 @@ class GraphExamples {
                             constructor {
                                 isImplicit = true
                                 receiver =
-                                    newVariableDeclaration(
-                                        "this",
-                                        t("ControlFlowSensitiveDFGIfMerge")
-                                    )
+                                    newVariableDecl("this", t("ControlFlowSensitiveDFGIfMerge"))
                                 body { returnStmt { isImplicit = true } }
                             }
                             method("func") {
                                 receiver =
-                                    newVariableDeclaration(
-                                        "this",
-                                        t("ControlFlowSensitiveDFGIfMerge")
-                                    )
+                                    newVariableDecl("this", t("ControlFlowSensitiveDFGIfMerge"))
                                 param("args", t("int[]"))
                                 body {
                                     declare { variable("a", t("int")) { literal(1, t("int")) } }
@@ -496,10 +486,7 @@ class GraphExamples {
                             // The main method
                             method("func3") {
                                 receiver =
-                                    newVariableDeclaration(
-                                        "this",
-                                        t("ControlFlowSesitiveDFGSwitch")
-                                    )
+                                    newVariableDecl("this", t("ControlFlowSesitiveDFGSwitch"))
                                 body {
                                     declare {
                                         variable("switchVal", t("int")) { literal(3, t("int")) }
@@ -570,10 +557,7 @@ class GraphExamples {
                             // The main method
                             method("func2") {
                                 receiver =
-                                    newVariableDeclaration(
-                                        "this",
-                                        t("ControlFlowSensitiveDFGIfNoMerge")
-                                    )
+                                    newVariableDecl("this", t("ControlFlowSensitiveDFGIfNoMerge"))
                                 body {
                                     declare { variable("a", t("int")) { literal(1, t("int")) } }
                                     ifStmt {
@@ -607,7 +591,7 @@ class GraphExamples {
                         record("LoopDFGs") {
                             // The main method
                             method("labeledBreakContinue") {
-                                receiver = newVariableDeclaration("this", t("LoopDFGs"))
+                                receiver = newVariableDecl("this", t("LoopDFGs"))
                                 param("param", t("int"))
                                 body {
                                     declare { variable("a", t("int")) { literal(0, t("int")) } }
@@ -688,7 +672,7 @@ class GraphExamples {
                         record("LoopDFGs") {
                             // The main method
                             method("looping") {
-                                receiver = newVariableDeclaration("this", t("LoopDFGs"))
+                                receiver = newVariableDecl("this", t("LoopDFGs"))
                                 param("param", t("int"))
                                 body {
                                     declare { variable("a", t("int")) { literal(0, t("int")) } }
@@ -764,7 +748,7 @@ class GraphExamples {
                     translationUnit("ReturnTest.java") {
                         record("ReturnTest", "class") {
                             method("testReturn", t("int")) {
-                                receiver = newVariableDeclaration("this", t("ReturnTest"))
+                                receiver = newVariableDecl("this", t("ReturnTest"))
                                 body {
                                     declare { variable("a", t("int")) { literal(1, t("int")) } }
                                     ifStmt {
@@ -812,11 +796,11 @@ class GraphExamples {
                             record("SimpleClass", "class") {
                                 field("field", t("int")) {}
                                 constructor {
-                                    receiver = newVariableDeclaration("this", t("SimpleClass"))
+                                    receiver = newVariableDecl("this", t("SimpleClass"))
                                     body { returnStmt { isImplicit = true } }
                                 }
                                 method("method", t("Integer")) {
-                                    receiver = newVariableDeclaration("this", t("SimpleClass"))
+                                    receiver = newVariableDecl("this", t("SimpleClass"))
                                     body {
                                         memberCall(
                                             "println",
@@ -858,23 +842,23 @@ class GraphExamples {
                             field("attr", t("String")) { literal("", t("String")) }
                             constructor {
                                 isImplicit = true
-                                receiver = newVariableDeclaration("this", t("Dataflow"))
+                                receiver = newVariableDecl("this", t("Dataflow"))
                                 body { returnStmt { isImplicit = true } }
                             }
                             method("toString", t("String")) {
-                                receiver = newVariableDeclaration("this", t("Dataflow"))
+                                receiver = newVariableDecl("this", t("Dataflow"))
                                 body {
                                     returnStmt { literal("ShortcutClass: attr=") + member("attr") }
                                 }
                             }
 
                             method("test", t("String")) {
-                                receiver = newVariableDeclaration("this", t("Dataflow"))
+                                receiver = newVariableDecl("this", t("Dataflow"))
                                 body { returnStmt { literal("abcd") } }
                             }
 
                             method("print", t("int")) {
-                                receiver = newVariableDeclaration("this", t("Dataflow"))
+                                receiver = newVariableDecl("this", t("Dataflow"))
                                 param("s", t("String"))
                                 body {
                                     memberCall(
@@ -920,19 +904,19 @@ class GraphExamples {
                         record("ShortcutClass") {
                             field("attr", t("int")) { literal(0, t("int")) }
                             constructor {
-                                receiver = newVariableDeclaration("this", t("ShortcutClass"))
+                                receiver = newVariableDecl("this", t("ShortcutClass"))
                                 isImplicit = true
                                 body { returnStmt { isImplicit = true } }
                             }
                             method("toString", t("String")) {
-                                receiver = newVariableDeclaration("this", t("ShortcutClass"))
+                                receiver = newVariableDecl("this", t("ShortcutClass"))
                                 body {
                                     returnStmt { literal("ShortcutClass: attr=") + member("attr") }
                                 }
                             }
 
                             method("print", t("int")) {
-                                receiver = newVariableDeclaration("this", t("ShortcutClass"))
+                                receiver = newVariableDecl("this", t("ShortcutClass"))
                                 body {
                                     memberCall(
                                         "println",
@@ -944,7 +928,7 @@ class GraphExamples {
                             }
 
                             method("magic") {
-                                receiver = newVariableDeclaration("this", t("ShortcutClass"))
+                                receiver = newVariableDecl("this", t("ShortcutClass"))
                                 param("b", t("int"))
                                 body {
                                     ifStmt {

@@ -31,17 +31,14 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.statements.*
 
 /**
- * Creates a new [ReturnStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [ReturnStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newReturnStatement(
-    code: String? = null,
-    rawNode: Any? = null
-): ReturnStatement {
-    val node = ReturnStatement()
+fun MetadataProvider.newReturnStmt(code: String? = null, rawNode: Any? = null): ReturnStmt {
+    val node = ReturnStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -64,14 +61,13 @@ fun MetadataProvider.newCatchClause(code: String? = null, rawNode: Any? = null):
 }
 
 /**
- * Creates a new [TryStatement]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [TryStmt]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newTryStatement(code: String? = null, rawNode: Any? = null): TryStatement {
-    val node = TryStatement()
+fun MetadataProvider.newTryStmt(code: String? = null, rawNode: Any? = null): TryStmt {
+    val node = TryStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -79,17 +75,47 @@ fun MetadataProvider.newTryStatement(code: String? = null, rawNode: Any? = null)
 }
 
 /**
- * Creates a new [AssertStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [AssertStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newAssertStatement(
+fun MetadataProvider.newAssertStmt(code: String? = null, rawNode: Any? = null): AssertStmt {
+    val node = AssertStmt()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ASMDeclStmt]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newASMDeclStmt(code: String? = null, rawNode: Any? = null): ASMDeclStmt {
+    val node = ASMDeclStmt()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [SynchronizedStmt]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newSynchronizedStmt(
     code: String? = null,
     rawNode: Any? = null
-): AssertStatement {
-    val node = AssertStatement()
+): SynchronizedStmt {
+    val node = SynchronizedStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -97,17 +123,47 @@ fun MetadataProvider.newAssertStatement(
 }
 
 /**
- * Creates a new [ASMDeclarationStatement]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [EmptyStmt]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newASMDeclarationStatement(
+fun MetadataProvider.newEmptyStmt(code: String? = null, rawNode: Any? = null): EmptyStmt {
+    val node = EmptyStmt()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [CompoundStmt]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newCompoundStmt(code: String? = null, rawNode: Any? = null): CompoundStmt {
+    val node = CompoundStmt()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [DeclarationStmt]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newDeclarationStmt(
     code: String? = null,
     rawNode: Any? = null
-): ASMDeclarationStatement {
-    val node = ASMDeclarationStatement()
+): DeclarationStmt {
+    val node = DeclarationStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -115,17 +171,13 @@ fun MetadataProvider.newASMDeclarationStatement(
 }
 
 /**
- * Creates a new [SynchronizedStatement]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [IfStmt]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newSynchronizedStatement(
-    code: String? = null,
-    rawNode: Any? = null
-): SynchronizedStatement {
-    val node = SynchronizedStatement()
+fun MetadataProvider.newIfStmt(code: String? = null, rawNode: Any? = null): IfStmt {
+    val node = IfStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -133,14 +185,14 @@ fun MetadataProvider.newSynchronizedStatement(
 }
 
 /**
- * Creates a new [EmptyStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [LabelStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newEmptyStatement(code: String? = null, rawNode: Any? = null): EmptyStatement {
-    val node = EmptyStatement()
+fun MetadataProvider.newLabelStmt(code: String? = null, rawNode: Any? = null): LabelStmt {
+    val node = LabelStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -148,17 +200,14 @@ fun MetadataProvider.newEmptyStatement(code: String? = null, rawNode: Any? = nul
 }
 
 /**
- * Creates a new [CompoundStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [GotoStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newCompoundStatement(
-    code: String? = null,
-    rawNode: Any? = null
-): CompoundStatement {
-    val node = CompoundStatement()
+fun MetadataProvider.newGotoStmt(code: String? = null, rawNode: Any? = null): GotoStmt {
+    val node = GotoStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -166,32 +215,14 @@ fun MetadataProvider.newCompoundStatement(
 }
 
 /**
- * Creates a new [DeclarationStatement]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newDeclarationStatement(
-    code: String? = null,
-    rawNode: Any? = null
-): DeclarationStatement {
-    val node = DeclarationStatement()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [IfStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [WhileStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newIfStatement(code: String? = null, rawNode: Any? = null): IfStatement {
-    val node = IfStatement()
+fun MetadataProvider.newWhileStmt(code: String? = null, rawNode: Any? = null): WhileStmt {
+    val node = WhileStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -199,14 +230,13 @@ fun MetadataProvider.newIfStatement(code: String? = null, rawNode: Any? = null):
 }
 
 /**
- * Creates a new [LabelStatement]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [DoStmt]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newLabelStatement(code: String? = null, rawNode: Any? = null): LabelStatement {
-    val node = LabelStatement()
+fun MetadataProvider.newDoStmt(code: String? = null, rawNode: Any? = null): DoStmt {
+    val node = DoStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -214,14 +244,14 @@ fun MetadataProvider.newLabelStatement(code: String? = null, rawNode: Any? = nul
 }
 
 /**
- * Creates a new [GotoStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [ForEachStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newGotoStatement(code: String? = null, rawNode: Any? = null): GotoStatement {
-    val node = GotoStatement()
+fun MetadataProvider.newForEachStmt(code: String? = null, rawNode: Any? = null): ForEachStmt {
+    val node = ForEachStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -229,14 +259,13 @@ fun MetadataProvider.newGotoStatement(code: String? = null, rawNode: Any? = null
 }
 
 /**
- * Creates a new [WhileStatement]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [ForStmt]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newWhileStatement(code: String? = null, rawNode: Any? = null): WhileStatement {
-    val node = WhileStatement()
+fun MetadataProvider.newForStmt(code: String? = null, rawNode: Any? = null): ForStmt {
+    val node = ForStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -244,14 +273,14 @@ fun MetadataProvider.newWhileStatement(code: String? = null, rawNode: Any? = nul
 }
 
 /**
- * Creates a new [DoStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [ContinueStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDoStatement(code: String? = null, rawNode: Any? = null): DoStatement {
-    val node = DoStatement()
+fun MetadataProvider.newContinueStmt(code: String? = null, rawNode: Any? = null): ContinueStmt {
+    val node = ContinueStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -259,17 +288,14 @@ fun MetadataProvider.newDoStatement(code: String? = null, rawNode: Any? = null):
 }
 
 /**
- * Creates a new [ForEachStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [BreakStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newForEachStatement(
-    code: String? = null,
-    rawNode: Any? = null
-): ForEachStatement {
-    val node = ForEachStatement()
+fun MetadataProvider.newBreakStmt(code: String? = null, rawNode: Any? = null): BreakStmt {
+    val node = BreakStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -277,14 +303,14 @@ fun MetadataProvider.newForEachStatement(
 }
 
 /**
- * Creates a new [ForStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [SwitchStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newForStatement(code: String? = null, rawNode: Any? = null): ForStatement {
-    val node = ForStatement()
+fun MetadataProvider.newSwitchStmt(code: String? = null, rawNode: Any? = null): SwitchStmt {
+    val node = SwitchStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -292,17 +318,14 @@ fun MetadataProvider.newForStatement(code: String? = null, rawNode: Any? = null)
 }
 
 /**
- * Creates a new [ContinueStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [CaseStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newContinueStatement(
-    code: String? = null,
-    rawNode: Any? = null
-): ContinueStatement {
-    val node = ContinueStatement()
+fun MetadataProvider.newCaseStmt(code: String? = null, rawNode: Any? = null): CaseStmt {
+    val node = CaseStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -310,65 +333,14 @@ fun MetadataProvider.newContinueStatement(
 }
 
 /**
- * Creates a new [BreakStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [DefaultStmt]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newBreakStatement(code: String? = null, rawNode: Any? = null): BreakStatement {
-    val node = BreakStatement()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [SwitchStatement]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
- */
-@JvmOverloads
-fun MetadataProvider.newSwitchStatement(
-    code: String? = null,
-    rawNode: Any? = null
-): SwitchStatement {
-    val node = SwitchStatement()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [CaseStatement]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
- */
-@JvmOverloads
-fun MetadataProvider.newCaseStatement(code: String? = null, rawNode: Any? = null): CaseStatement {
-    val node = CaseStatement()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [DefaultStatement]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
- */
-@JvmOverloads
-fun MetadataProvider.newDefaultStatement(
-    code: String? = null,
-    rawNode: Any? = null
-): DefaultStatement {
-    val node = DefaultStatement()
+fun MetadataProvider.newDefaultStmt(code: String? = null, rawNode: Any? = null): DefaultStmt {
+    val node = DefaultStmt()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)

@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOp
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,29 +56,29 @@ class StatementTest {
         val main = p.functions["main"]
         assertNotNull(main)
 
-        val start = main.allChildren<LabelStatement>().firstOrNull { it.label == "start" }
+        val start = main.allChildren<LabelStmt>().firstOrNull { it.label == "start" }
         assertNotNull(start)
 
-        val cases = start.allChildren<CaseStatement>()
+        val cases = start.allChildren<CaseStmt>()
         assertEquals(4, cases.size)
 
         val case0 = cases.firstOrNull { (it.caseExpression as? Literal<*>)?.value == 0 }
         assertNotNull(case0)
 
         var stmt = case0.nextEOG.firstOrNull()
-        assertIs<ContinueStatement>(stmt)
+        assertIs<ContinueStmt>(stmt)
 
         val case1 = cases.firstOrNull { (it.caseExpression as? Literal<*>)?.value == 1 }
         assertNotNull(case1)
 
         stmt = case1.nextEOG.firstOrNull()
-        val breakStatement = assertIs<BreakStatement>(stmt)
-        assertEquals("start", breakStatement.label)
+        val breakStmt = assertIs<BreakStmt>(stmt)
+        assertEquals("start", breakStmt.label)
 
-        val default = start.allChildren<DefaultStatement>().firstOrNull()
+        val default = start.allChildren<DefaultStmt>().firstOrNull()
         assertNotNull(default)
 
-        val end = main.allChildren<LabelStatement>().firstOrNull { it.label == "end" }
+        val end = main.allChildren<LabelStmt>().firstOrNull { it.label == "end" }
         assertNotNull(end)
     }
 
@@ -97,17 +97,17 @@ class StatementTest {
         val main = p.functions["main"]
         assertNotNull(main)
 
-        val op = main.allChildren<UnaryOperator> { it.name.localName == "defer" }.firstOrNull()
+        val op = main.allChildren<UnaryOp> { it.name.localName == "defer" }.firstOrNull()
         assertNotNull(op)
 
         // The EOG for the defer statement itself should be in the regular EOG path
-        op.prevEOG.any { it is CallExpression && it.name.localName == "do" }
-        op.nextEOG.any { it is DeclaredReferenceExpression && it.name.localName == "that" }
+        op.prevEOG.any { it is CallExpr && it.name.localName == "do" }
+        op.nextEOG.any { it is Reference && it.name.localName == "that" }
 
         // It should NOT connect to the call expression
-        op.nextEOG.none { it is CallExpression }
+        op.nextEOG.none { it is CallExpr }
 
         // Its call expression should connect to the return statement
-        op.input.prevEOG.all { it is ReturnStatement }
+        op.input.prevEOG.all { it is ReturnStmt }
     }
 }

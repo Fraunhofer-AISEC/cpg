@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -43,23 +43,23 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 @DependsOn(TypeHierarchyResolver::class)
 abstract class SymbolResolverPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected lateinit var walker: SubgraphWalker.ScopedWalker
-    lateinit var currentTU: TranslationUnitDeclaration
+    lateinit var currentTU: TranslationUnitDecl
 
-    val recordMap = mutableMapOf<Name, RecordDeclaration>()
-    protected val enumMap = mutableMapOf<Type, EnumDeclaration>()
-    protected val templateList = mutableListOf<TemplateDeclaration>()
+    val recordMap = mutableMapOf<Name, RecordDecl>()
+    protected val enumMap = mutableMapOf<Type, EnumDecl>()
+    protected val templateList = mutableListOf<TemplateDecl>()
     protected val superTypesMap = mutableMapOf<Name, List<Type>>()
 
     /** Maps the name of the type of record declarations to its declaration. */
     protected fun findRecords(node: Node?) {
-        if (node is RecordDeclaration) {
+        if (node is RecordDecl) {
             recordMap.putIfAbsent(node.name, node)
         }
     }
 
     /** Maps the type of enums to its declaration. */
     protected fun findEnums(node: Node?) {
-        if (node is EnumDeclaration) {
+        if (node is EnumDecl) {
             // TODO: Use the name instead of the type.
             val type = node.objectType(node.name)
             enumMap.putIfAbsent(type, node)
@@ -68,13 +68,13 @@ abstract class SymbolResolverPass(ctx: TranslationContext) : ComponentPass(ctx) 
 
     /** Caches all TemplateDeclarations in [templateList] */
     protected fun findTemplates(node: Node?) {
-        if (node is TemplateDeclaration) {
+        if (node is TemplateDecl) {
             templateList.add(node)
         }
     }
 
     /** Checks if the function has the given [name], [returnType] and [signature] */
-    protected fun FunctionDeclaration.matches(
+    protected fun FunctionDecl.matches(
         name: Name,
         returnType: Type,
         signature: List<Type>
@@ -99,7 +99,7 @@ abstract class SymbolResolverPass(ctx: TranslationContext) : ComponentPass(ctx) 
     /**
      * Determines if the [reference] refers to the super class and we have to start searching there.
      */
-    protected fun isSuperclassReference(reference: DeclaredReferenceExpression): Boolean {
+    protected fun isSuperclassReference(reference: Reference): Boolean {
         val language = reference.language
         return language is HasSuperClasses && reference.name.endsWith(language.superClassKeyword)
     }

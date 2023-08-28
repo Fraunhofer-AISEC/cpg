@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
 import de.fraunhofer.aisec.cpg.passes.PassTarget
 
 /**
@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.passes.PassTarget
  */
 open class Component() : Node(), PassTarget {
     /** All translation units belonging to this application. */
-    @AST val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()
+    @AST val translationUnits: MutableList<TranslationUnitDecl> = mutableListOf()
 
     /**
      * All points where unknown data may enter this application, e.g., the main method, or other

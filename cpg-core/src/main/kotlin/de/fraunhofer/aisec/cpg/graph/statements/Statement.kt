@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
@@ -49,7 +49,7 @@ abstract class Statement : Node(), DeclarationHolder {
      */
     @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var localEdges = mutableListOf<PropertyEdge<VariableDeclaration>>()
+    var localEdges = mutableListOf<PropertyEdge<VariableDecl>>()
 
     /** Virtual property to access [localEdges] without property edges. */
     var locals by PropertyEdgeDelegate(Statement::localEdges)
@@ -65,7 +65,7 @@ abstract class Statement : Node(), DeclarationHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), locals)
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is VariableDeclaration) {
+        if (declaration is VariableDecl) {
             addIfNotContains(localEdges, declaration)
         }
     }

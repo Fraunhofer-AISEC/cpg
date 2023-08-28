@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
 import kotlin.test.*
 
 class InferenceTest {
@@ -80,7 +80,7 @@ class InferenceTest {
 
         assertNotNull(tu)
 
-        val record = tu.byNameOrNull<RecordDeclaration>("T")
+        val record = tu.byNameOrNull<RecordDecl>("T")
         assertNotNull(record)
         assertLocalName("T", record)
         assertEquals(true, record.isInferred)

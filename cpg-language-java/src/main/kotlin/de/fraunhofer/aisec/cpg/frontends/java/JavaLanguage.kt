@@ -29,9 +29,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOp
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpr
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.JavaCallResolverHelper
 import kotlin.reflect.KClass
@@ -98,7 +98,7 @@ open class JavaLanguage :
             "java.lang.String" to StringType("java.lang.String", this)
         )
 
-    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
+    override fun propagateTypeOfBinaryOperation(operation: BinaryOp): Type {
         return if (
             operation.operatorCode == "+" &&
                 (operation.lhs.type as? IntegerType)?.name?.localName?.equals("char") == true &&
@@ -109,10 +109,10 @@ open class JavaLanguage :
     }
 
     override fun handleSuperCall(
-        callee: MemberExpression,
-        curClass: RecordDeclaration,
+        callee: MemberExpr,
+        curClass: RecordDecl,
         scopeManager: ScopeManager,
-        recordMap: Map<Name, RecordDeclaration>
+        recordMap: Map<Name, RecordDecl>
     ) = JavaCallResolverHelper.handleSuperCall(callee, curClass, scopeManager, recordMap)
 
     override val startCharacter = '<'

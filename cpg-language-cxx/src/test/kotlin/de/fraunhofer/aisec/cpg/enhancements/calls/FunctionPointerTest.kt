@@ -30,11 +30,11 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOp
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpr
 import java.nio.file.Path
 import java.util.*
 import java.util.function.Consumer
@@ -75,7 +75,7 @@ internal class FunctionPointerTest : BaseTest() {
             }
         val pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+(\\.|::))?(?<func>.+)\\)")
         for (call in calls) {
-            if (call is ConstructExpression) {
+            if (call is ConstructExpr) {
                 continue
             }
 
@@ -83,7 +83,7 @@ internal class FunctionPointerTest : BaseTest() {
 
             // check for class function pointers
             val callName =
-                if (callee is BinaryOperator) {
+                if (callee is BinaryOp) {
                     callee.rhs.name.localName
                 } else {
                     call.name.localName
@@ -143,8 +143,8 @@ internal class FunctionPointerTest : BaseTest() {
         }
     }
 
-    private fun getSourceFunction(variable: VariableDeclaration): FunctionDeclaration {
-        val functions: MutableList<FunctionDeclaration> = ArrayList()
+    private fun getSourceFunction(variable: VariableDecl): FunctionDecl {
+        val functions: MutableList<FunctionDecl> = ArrayList()
         val worklist: Deque<Node> = ArrayDeque()
         val seen = Collections.newSetFromMap(IdentityHashMap<Node, Boolean>())
         worklist.push(variable)
@@ -153,7 +153,7 @@ internal class FunctionPointerTest : BaseTest() {
             if (!seen.add(curr)) {
                 continue
             }
-            if (curr is FunctionDeclaration) {
+            if (curr is FunctionDecl) {
                 functions.add(curr)
             } else {
                 curr.prevDFG.forEach(Consumer { e: Node -> worklist.push(e) })
@@ -168,7 +168,7 @@ internal class FunctionPointerTest : BaseTest() {
                 if (!seen.add(curr)) {
                     continue
                 }
-                if (curr is FunctionDeclaration) {
+                if (curr is FunctionDecl) {
                     functions.add(curr)
                 } else {
                     curr.prevDFG.forEach(Consumer { e: Node -> worklist.push(e) })

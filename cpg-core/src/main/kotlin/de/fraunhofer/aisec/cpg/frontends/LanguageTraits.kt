@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.frontends
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpr
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import java.util.regex.Pattern
@@ -62,19 +62,19 @@ interface HasTemplates : HasGenerics {
     /**
      * This function can be used to fine-tune the resolution of template function calls.
      *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
+     * Note: The function itself should NOT set the [CallExpr.invokes] but rather return a list of
+     * possible candidates.
      *
      * @return a pair in which the first member denotes whether resolution was successful and the
-     *   second parameter is a list of [FunctionDeclaration] candidates.
+     *   second parameter is a list of [FunctionDecl] candidates.
      */
     fun handleTemplateFunctionCalls(
-        curClass: RecordDeclaration?,
-        templateCall: CallExpression,
+        curClass: RecordDecl?,
+        templateCall: CallExpr,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
-    ): Pair<Boolean, List<FunctionDeclaration>>
+        currentTU: TranslationUnitDecl
+    ): Pair<Boolean, List<FunctionDecl>>
 }
 
 /**
@@ -91,49 +91,49 @@ interface HasComplexCallResolution : LanguageTrait {
     /**
      * A function that can be used to fine-tune resolution of a normal (non-method) [call].
      *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
+     * Note: The function itself should NOT set the [CallExpr.invokes] but rather return a list of
+     * possible candidates.
      *
-     * @return a list of [FunctionDeclaration] candidates.
+     * @return a list of [FunctionDecl] candidates.
      */
     fun refineNormalCallResolution(
-        call: CallExpression,
+        call: CallExpr,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
-    ): List<FunctionDeclaration>
+        currentTU: TranslationUnitDecl
+    ): List<FunctionDecl>
 
     /**
      * A function that can be used to fine-tune resolution of a method [call].
      *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
+     * Note: The function itself should NOT set the [CallExpr.invokes] but rather return a list of
+     * possible candidates.
      *
-     * @return a list of [FunctionDeclaration] candidates.
+     * @return a list of [FunctionDecl] candidates.
      */
     fun refineMethodCallResolution(
-        curClass: RecordDeclaration?,
+        curClass: RecordDecl?,
         possibleContainingTypes: Set<Type>,
-        call: CallExpression,
+        call: CallExpr,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration,
+        currentTU: TranslationUnitDecl,
         callResolver: CallResolver
-    ): List<FunctionDeclaration>
+    ): List<FunctionDecl>
 
     /**
      * A function to fine-tune the results of [CallResolver.getInvocationCandidatesFromRecord],
-     * which retrieves a list of [FunctionDeclaration] candidates from a [RecordDeclaration].
+     * which retrieves a list of [FunctionDecl] candidates from a [RecordDecl].
      *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
+     * Note: The function itself should NOT set the [CallExpr.invokes] but rather return a list of
+     * possible candidates.
      *
-     * @return a list of [FunctionDeclaration] candidates.
+     * @return a list of [FunctionDecl] candidates.
      */
     fun refineInvocationCandidatesFromRecord(
-        recordDeclaration: RecordDeclaration,
-        call: CallExpression,
+        recordDecl: RecordDecl,
+        call: CallExpr,
         namePattern: Pattern,
         ctx: TranslationContext
-    ): List<FunctionDeclaration>
+    ): List<FunctionDecl>
 }
 
 /** A language trait that specifies if the language supports function pointers. */
@@ -167,10 +167,10 @@ interface HasSuperClasses : LanguageTrait {
     val superClassKeyword: String
 
     fun handleSuperCall(
-        callee: MemberExpression,
-        curClass: RecordDeclaration,
+        callee: MemberExpr,
+        curClass: RecordDecl,
         scopeManager: ScopeManager,
-        recordMap: Map<Name, RecordDeclaration>
+        recordMap: Map<Name, RecordDecl>
     ): Boolean
 }
 

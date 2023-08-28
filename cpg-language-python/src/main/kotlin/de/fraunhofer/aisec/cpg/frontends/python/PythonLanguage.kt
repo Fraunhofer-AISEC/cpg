@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOp
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
@@ -77,7 +77,7 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
             "str" to StringType("str", this, listOf())
         )
 
-    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
+    override fun propagateTypeOfBinaryOperation(operation: BinaryOp): Type {
         val unknownType = UnknownType.getUnknownType(this)
         if (
             operation.operatorCode == "/" &&

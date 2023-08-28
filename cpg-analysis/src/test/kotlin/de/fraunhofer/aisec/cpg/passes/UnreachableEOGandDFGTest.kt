@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.statements.IfStmt
 import java.nio.file.Path
 import kotlin.test.Ignore
 import kotlin.test.assertEquals
@@ -42,7 +42,7 @@ import org.junit.jupiter.api.TestInstance
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UnreachableEOGandDFGTest {
 
-    private lateinit var tu: TranslationUnitDeclaration
+    private lateinit var tu: TranslationUnitDecl
 
     @BeforeAll
     fun beforeAll() {
@@ -64,9 +64,9 @@ class UnreachableEOGandDFGTest {
         val method = tu.functions["ifTrue"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
-        assertNotNull(ifStatement)
-        val thenY = ifStatement.thenStatement.refs["y"]
+        val ifStmt = method.bodyOrNull<IfStmt>()
+        assertNotNull(ifStmt)
+        val thenY = ifStmt.thenStatement.refs["y"]
         assertNotNull(thenY)
 
         val argY = method.calls["println"]?.arguments?.firstOrNull()
@@ -81,9 +81,9 @@ class UnreachableEOGandDFGTest {
         val method = tu.functions["ifFalse"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
-        assertNotNull(ifStatement)
-        val elseY = ifStatement.elseStatement.refs["y"]
+        val ifStmt = method.bodyOrNull<IfStmt>()
+        assertNotNull(ifStmt)
+        val elseY = ifStmt.elseStatement.refs["y"]
         assertNotNull(elseY)
 
         val argY = method.calls["println"]?.arguments?.firstOrNull()
@@ -98,9 +98,9 @@ class UnreachableEOGandDFGTest {
         val method = tu.functions["ifTrueComputed"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
-        assertNotNull(ifStatement)
-        val thenY = ifStatement.thenStatement.refs["y"]
+        val ifStmt = method.bodyOrNull<IfStmt>()
+        assertNotNull(ifStmt)
+        val thenY = ifStmt.thenStatement.refs["y"]
         assertNotNull(thenY)
         val argY = method.calls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
@@ -115,9 +115,9 @@ class UnreachableEOGandDFGTest {
         val method = tu.functions["ifFalseComputed"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
-        assertNotNull(ifStatement)
-        val elseY = ifStatement.elseStatement.refs["y"]
+        val ifStmt = method.bodyOrNull<IfStmt>()
+        assertNotNull(ifStmt)
+        val elseY = ifStmt.elseStatement.refs["y"]
         assertNotNull(elseY)
         val argY = method.calls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
@@ -132,9 +132,9 @@ class UnreachableEOGandDFGTest {
         val method = tu.functions["ifTrueComputedHard"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
-        assertNotNull(ifStatement)
-        val thenY = ifStatement.thenStatement.refs["y"]
+        val ifStmt = method.bodyOrNull<IfStmt>()
+        assertNotNull(ifStmt)
+        val thenY = ifStmt.thenStatement.refs["y"]
         assertNotNull(thenY)
         val argY = method.calls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
@@ -149,9 +149,9 @@ class UnreachableEOGandDFGTest {
         val method = tu.functions["ifFalseComputedHard"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
-        assertNotNull(ifStatement)
-        val elseY = ifStatement.elseStatement.refs["y"]
+        val ifStmt = method.bodyOrNull<IfStmt>()
+        assertNotNull(ifStmt)
+        val elseY = ifStmt.elseStatement.refs["y"]
         assertNotNull(elseY)
         val argY = method.calls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
@@ -166,11 +166,11 @@ class UnreachableEOGandDFGTest {
         val method = tu.functions["ifBothPossible"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
-        assertNotNull(ifStatement)
-        val thenY = ifStatement.thenStatement.refs["y"]
+        val ifStmt = method.bodyOrNull<IfStmt>()
+        assertNotNull(ifStmt)
+        val thenY = ifStmt.thenStatement.refs["y"]
         assertNotNull(thenY)
-        val elseY = ifStatement.elseStatement.refs["y"]
+        val elseY = ifStmt.elseStatement.refs["y"]
         assertNotNull(elseY)
         val argY = method.calls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)

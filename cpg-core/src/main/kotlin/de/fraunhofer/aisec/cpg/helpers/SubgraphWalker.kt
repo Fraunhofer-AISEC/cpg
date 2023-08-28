@@ -29,14 +29,14 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDecl
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.checkForPropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
@@ -362,17 +362,15 @@ object SubgraphWalker {
      * Handles declaration scope monitoring for iterative traversals. If this is not required, use
      * [IterativeGraphWalker] for less overhead.
      *
-     * Declaration scopes are similar to [de.fraunhofer.aisec.cpg.ScopeManager] scopes:
-     * [ValueDeclaration]s located inside a scope (i.e. are children of the scope root) are visible
-     * to any children of the scope root. Scopes can be layered, where declarations from parent
-     * scopes are visible to the children but not the other way around.
+     * Declaration scopes are similar to [de.fraunhofer.aisec.cpg.ScopeManager] scopes: [ValueDecl]s
+     * located inside a scope (i.e. are children of the scope root) are visible to any children of
+     * the scope root. Scopes can be layered, where declarations from parent scopes are visible to
+     * the children but not the other way around.
      */
     class ScopedWalker {
         // declarationScope -> (parentScope, declarations)
         private val nodeToParentBlockAndContainedValueDeclarations:
-            MutableMap<
-                Node, org.apache.commons.lang3.tuple.Pair<Node, MutableList<ValueDeclaration>>
-            > =
+            MutableMap<Node, org.apache.commons.lang3.tuple.Pair<Node, MutableList<ValueDecl>>> =
             IdentityHashMap()
         private var walker: IterativeGraphWalker? = null
         private val scopeManager: ScopeManager
@@ -389,19 +387,19 @@ object SubgraphWalker {
          * Callback function(s) getting three arguments: the type of the class we're currently in,
          * the root node of the current declaration scope, the currently visited node.
          */
-        private val handlers = mutableListOf<TriConsumer<RecordDeclaration?, Node?, Node?>>()
+        private val handlers = mutableListOf<TriConsumer<RecordDecl?, Node?, Node?>>()
 
         fun clearCallbacks() {
             handlers.clear()
         }
 
-        fun registerHandler(handler: TriConsumer<RecordDeclaration?, Node?, Node?>) {
+        fun registerHandler(handler: TriConsumer<RecordDecl?, Node?, Node?>) {
             handlers.add(handler)
         }
 
-        fun registerHandler(handler: BiConsumer<Node?, RecordDeclaration?>) {
+        fun registerHandler(handler: BiConsumer<Node?, RecordDecl?>) {
             handlers.add(
-                TriConsumer { currClass: RecordDeclaration?, _: Node?, currNode: Node? ->
+                TriConsumer { currClass: RecordDecl?, _: Node?, currNode: Node? ->
                     handler.accept(currNode, currClass)
                 }
             )
@@ -419,10 +417,7 @@ object SubgraphWalker {
             walker?.iterate(root)
         }
 
-        private fun handleNode(
-            current: Node,
-            handler: TriConsumer<RecordDeclaration?, Node?, Node?>
-        ) {
+        private fun handleNode(current: Node, handler: TriConsumer<RecordDecl?, Node?, Node?>) {
             scopeManager.enterScopeIfExists(current)
             val parent = walker?.backlog?.peek()
 
@@ -443,11 +438,10 @@ object SubgraphWalker {
             // get containing Record or Compound
             for (node in walker?.backlog ?: listOf()) {
                 if (
-                    node is RecordDeclaration ||
-                        node is CompoundStatement ||
-                        node is FunctionDeclaration ||
-                        node is
-                            TranslationUnitDeclaration // can also be a translation unit for global
+                    node is RecordDecl ||
+                        node is CompoundStmt ||
+                        node is FunctionDecl ||
+                        node is TranslationUnitDecl // can also be a translation unit for global
                 // (C) functions
                 ) {
                     parentBlock = node
@@ -456,7 +450,7 @@ object SubgraphWalker {
             }
             nodeToParentBlockAndContainedValueDeclarations[current] =
                 MutablePair(parentBlock, ArrayList())
-            if (current is ValueDeclaration) {
+            if (current is ValueDecl) {
                 LOGGER.trace("Adding variable {}", current.code)
                 if (parentBlock == null) {
                     LOGGER.warn("Parent block is empty during subgraph run")
@@ -475,8 +469,8 @@ object SubgraphWalker {
       """)
         fun getDeclarationForScope(
             scope: Node,
-            predicate: Predicate<ValueDeclaration?>
-        ): Optional<out ValueDeclaration?> {
+            predicate: Predicate<ValueDecl?>
+        ): Optional<out ValueDecl?> {
             var currentScope = scope
 
             // iterate all declarations from the current scope and all its parent scopes

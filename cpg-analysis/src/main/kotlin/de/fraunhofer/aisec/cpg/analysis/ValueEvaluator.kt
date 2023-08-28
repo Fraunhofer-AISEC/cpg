@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpr
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -87,20 +87,20 @@ open class ValueEvaluator(
         node?.let { this.path += it }
 
         when (node) {
-            is ArrayCreationExpression -> return evaluateInternal(node.initializer, depth + 1)
-            is VariableDeclaration -> return evaluateInternal(node.initializer, depth + 1)
+            is ArrayExpr -> return evaluateInternal(node.initializer, depth + 1)
+            is VariableDecl -> return evaluateInternal(node.initializer, depth + 1)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is DeclaredReferenceExpression -> return handleDeclaredReferenceExpression(node, depth)
-            is UnaryOperator -> return handleUnaryOp(node, depth)
-            is BinaryOperator -> return handleBinaryOperator(node, depth)
+            is Reference -> return handleDeclaredReferenceExpression(node, depth)
+            is UnaryOp -> return handleUnaryOp(node, depth)
+            is BinaryOp -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
-            is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
-            is ArraySubscriptionExpression -> return handleArraySubscriptionExpression(node, depth)
+            is CastExpr -> return this.evaluateInternal(node.expression, depth + 1)
+            is SubscriptionExpr -> return handleArraySubscriptionExpression(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> return handleConditionalExpression(node, depth)
-            is AssignExpression -> return handleAssignExpression(node, depth)
+            is ConditionalExpr -> return handleConditionalExpression(node, depth)
+            is AssignExpr -> return handleAssignExpression(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
@@ -109,7 +109,7 @@ open class ValueEvaluator(
     }
 
     /** Under certain circumstances, an assignment can also be used as an expression. */
-    protected open fun handleAssignExpression(node: AssignExpression, depth: Int): Any? {
+    protected open fun handleAssignExpression(node: AssignExpr, depth: Int): Any? {
         // Handle compound assignments. Only possible with single values
         val lhs = node.lhs.singleOrNull()
         val rhs = node.rhs.singleOrNull()
@@ -132,7 +132,7 @@ open class ValueEvaluator(
      * We are handling some basic arithmetic binary operations and string operations that are more
      * or less language-independent.
      */
-    protected open fun handleBinaryOperator(expr: BinaryOperator, depth: Int): Any? {
+    protected open fun handleBinaryOperator(expr: BinaryOp, depth: Int): Any? {
         // Resolve rhs
         val rhsValue = evaluateInternal(expr.rhs, depth + 1)
 
@@ -145,8 +145,8 @@ open class ValueEvaluator(
     /**
      * Computes the effect of basic "binary" operators.
      *
-     * Note: this is both used by a [BinaryOperator] with basic arithmetic operations as well as
-     * [AssignExpression], if [AssignExpression.isCompoundAssignment] is true.
+     * Note: this is both used by a [BinaryOp] with basic arithmetic operations as well as
+     * [AssignExpr], if [AssignExpr.isCompoundAssignment] is true.
      */
     protected fun computeBinaryOpEffect(
         lhsValue: Any?,
@@ -298,7 +298,7 @@ open class ValueEvaluator(
      * We handle some basic unary operators. These also affect pointers and dereferences for
      * languages that support them.
      */
-    protected open fun handleUnaryOp(expr: UnaryOperator, depth: Int): Any? {
+    protected open fun handleUnaryOp(expr: UnaryOp, depth: Int): Any? {
         return when (expr.operatorCode) {
             "-" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
@@ -326,21 +326,21 @@ open class ValueEvaluator(
 
     /**
      * For arrays, we check whether we can actually access the contents of the array. This is
-     * basically the case if the base of the subscript expression is a list of [KeyValueExpression]
+     * basically the case if the base of the subscript expression is a list of [KeyValueExpr]
      * s.
      */
     protected fun handleArraySubscriptionExpression(
-        expr: ArraySubscriptionExpression,
+        expr: SubscriptionExpr,
         depth: Int
     ): Any? {
         val array =
-            (expr.arrayExpression as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration
-        val ile = array?.initializer as? InitializerListExpression
+            (expr.arrayExpression as? Reference)?.refersTo as? VariableDecl
+        val ile = array?.initializer as? InitializerListExpr
 
         ile?.let {
             return evaluateInternal(
                 it.initializers
-                    .filterIsInstance(KeyValueExpression::class.java)
+                    .filterIsInstance(KeyValueExpr::class.java)
                     .firstOrNull { kve ->
                         (kve.key as? Literal<*>)?.value ==
                             (expr.subscriptExpression as? Literal<*>)?.value
@@ -353,18 +353,18 @@ open class ValueEvaluator(
             return (array.initializer as Literal<*>).value
         }
 
-        if (expr.arrayExpression is ArraySubscriptionExpression) {
+        if (expr.arrayExpression is SubscriptionExpr) {
             return evaluateInternal(expr.arrayExpression, depth + 1)
         }
 
         return cannotEvaluate(expr, this)
     }
 
-    protected open fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any? {
+    protected open fun handleConditionalExpression(expr: ConditionalExpr, depth: Int): Any? {
         // Assume that condition is a binary operator
-        if (expr.condition is BinaryOperator) {
-            val lhs = evaluateInternal((expr.condition as? BinaryOperator)?.lhs, depth)
-            val rhs = evaluateInternal((expr.condition as? BinaryOperator)?.rhs, depth)
+        if (expr.condition is BinaryOp) {
+            val lhs = evaluateInternal((expr.condition as? BinaryOp)?.lhs, depth)
+            val rhs = evaluateInternal((expr.condition as? BinaryOp)?.rhs, depth)
 
             return if (lhs == rhs) {
                 evaluateInternal(expr.thenExpr, depth + 1)
@@ -381,7 +381,7 @@ open class ValueEvaluator(
      * flow edges.
      */
     protected open fun handleDeclaredReferenceExpression(
-        expr: DeclaredReferenceExpression,
+        expr: Reference,
         depth: Int
     ): Any? {
         // For a reference, we are interested into its last assignment into the reference
@@ -411,7 +411,7 @@ open class ValueEvaluator(
      * plus/minus/div/times-assign or a plusplus/minusminus, etc.
      */
     protected fun filterSelfReferences(
-        ref: DeclaredReferenceExpression,
+        ref: Reference,
         inDFG: List<Node>
     ): List<Node> {
         var list = inDFG
@@ -433,15 +433,15 @@ open class ValueEvaluator(
             // Remove the self reference
             list =
                 list.filter {
-                    !((it is AssignExpression && it.lhs.singleOrNull() == ref) ||
-                        (it is UnaryOperator && it.input == ref))
+                    !((it is AssignExpr && it.lhs.singleOrNull() == ref) ||
+                        (it is UnaryOp && it.input == ref))
                 }
         } else if (ref.access == AccessValues.READWRITE && !isCase2) {
             // Consider only the self reference
             list =
                 list.filter {
-                    ((it is AssignExpression && it.lhs.singleOrNull() == ref) ||
-                        (it is UnaryOperator && it.input == ref))
+                    ((it is AssignExpr && it.lhs.singleOrNull() == ref) ||
+                        (it is UnaryOp && it.input == ref))
                 }
         }
 

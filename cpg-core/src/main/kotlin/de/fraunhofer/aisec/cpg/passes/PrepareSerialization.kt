@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 import kotlin.reflect.full.memberProperties
@@ -49,13 +49,13 @@ class PrepareSerialization(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         // nothing to do
     }
 
-    override fun accept(tr: TranslationUnitDeclaration) {
+    override fun accept(tr: TranslationUnitDecl) {
         tr.allChildren<Node>().map { node ->
             // Add explicit AST edge
             node.astChildren = SubgraphWalker.getAstChildren(node)
             // CallExpression overwrites name property and must be copied to JvmField
             // to be visible by Neo4jOGM
-            if (node is CallExpression) nodeNameField?.set(node, node.name)
+            if (node is CallExpr) nodeNameField?.set(node, node.name)
         }
     }
 }

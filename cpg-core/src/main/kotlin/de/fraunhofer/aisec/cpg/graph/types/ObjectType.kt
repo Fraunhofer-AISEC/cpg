@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
@@ -45,10 +45,10 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class ObjectType : Type, HasSecondaryTypeEdge {
     /**
-     * Reference from the [ObjectType] to its class ([RecordDeclaration]), only if the class is
-     * available. This is set by the [TypeResolver].
+     * Reference from the [ObjectType] to its class ([RecordDecl]), only if the class is available.
+     * This is set by the [TypeResolver].
      */
-    @PopulatedByPass(TypeResolver::class) var recordDeclaration: RecordDeclaration? = null
+    @PopulatedByPass(TypeResolver::class) var recordDecl: RecordDecl? = null
 
     @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
     var genericsPropertyEdges: MutableList<PropertyEdge<Type>> = mutableListOf()

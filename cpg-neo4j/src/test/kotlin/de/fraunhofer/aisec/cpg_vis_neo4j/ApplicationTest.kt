@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.nio.file.Paths
@@ -61,7 +61,7 @@ class ApplicationTest {
 
         val session = sessionAndSessionFactoryPair.first
         session.beginTransaction().use { transaction ->
-            val functions = session.loadAll(FunctionDeclaration::class.java)
+            val functions = session.loadAll(FunctionDecl::class.java)
             assertNotNull(functions)
 
             assertEquals(31, functions.size)

@@ -25,17 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStmt
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
 
-class BlockScope(blockStatement: CompoundStatement) :
-    ValueDeclarationScope(blockStatement), Breakable {
-    private val breaks: MutableList<BreakStatement> = ArrayList()
+class BlockScope(blockStatement: CompoundStmt) : ValueDeclarationScope(blockStatement), Breakable {
+    private val breaks: MutableList<BreakStmt> = ArrayList()
 
-    override fun addBreakStatement(breakStatement: BreakStatement) {
-        breaks.add(breakStatement)
+    override fun addBreakStatement(breakStmt: BreakStmt) {
+        breaks.add(breakStmt)
     }
 
-    override val breakStatements: List<BreakStatement>
+    override val breakStmts: List<BreakStmt>
         get() = breaks
 }
