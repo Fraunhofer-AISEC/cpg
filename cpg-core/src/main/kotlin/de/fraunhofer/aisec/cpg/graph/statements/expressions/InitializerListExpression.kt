@@ -78,7 +78,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
         // entries in generated code), we skip it here.
         //
         // So we just have to look what kind of object we are initializing (its type is stored in
-        // our "type), to see whether we need to propagate something at all. If it has an array
+        // our "type"), to see whether we need to propagate something at all. If it has an array
         // type, we need to propagate an array version of the incoming type. If our "target" is a
         // regular object type, we do NOT propagate anything at all, because in this case we get the
         // types of individual fields, and we are not interested in those (yet).

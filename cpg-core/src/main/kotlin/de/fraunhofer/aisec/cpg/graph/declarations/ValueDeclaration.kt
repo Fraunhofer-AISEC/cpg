@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -39,7 +40,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration who has a type. */
 abstract class ValueDeclaration : Declaration(), HasType {
-    override val typeObservers = mutableListOf<HasType.TypeObserver>()
+    override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     /** The type of this declaration. */
     override var type: Type = unknownType()

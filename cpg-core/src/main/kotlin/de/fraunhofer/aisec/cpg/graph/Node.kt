@@ -35,12 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.DependenceType
+import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeSetDelegate
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -51,7 +47,6 @@ import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
-import kotlin.collections.ArrayList
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.*
@@ -164,33 +159,17 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var prevEOG: List<Node>
-        get() = unwrap(prevEOGEdges, false)
-        set(value) {
-            val propertyEdgesEOG: MutableList<PropertyEdge<Node>> = ArrayList()
-
-            for ((idx, prev) in value.withIndex()) {
-                val propertyEdge = PropertyEdge(prev, this)
-                propertyEdge.addProperty(Properties.INDEX, idx)
-                propertyEdgesEOG.add(propertyEdge)
-            }
-
-            this.prevEOGEdges = propertyEdgesEOG
-        }
+    var prevEOG: List<Node> by PropertyEdgeDelegate(Node::prevEOGEdges, false)
 
     /** Virtual property for accessing [nextEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var nextEOG: List<Node>
-        get() = unwrap(nextEOGEdges)
-        set(value) {
-            this.nextEOGEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
-        }
+    var nextEOG: List<Node> by PropertyEdgeDelegate(Node::nextEOGEdges)
 
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     var prevDFGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
-        internal set
+        protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
@@ -200,7 +179,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
     var nextDFGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
-        internal set
+        protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
