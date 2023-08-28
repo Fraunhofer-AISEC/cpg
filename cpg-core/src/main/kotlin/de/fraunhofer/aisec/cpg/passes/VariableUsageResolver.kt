@@ -308,6 +308,14 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
     }
 
     protected fun resolveBase(reference: Reference): Declaration? {
+        // We need to check, whether we first need to resolve our own base
+        if (reference is MemberExpression) {
+            val base = reference.base
+            if (base is Reference && base.refersTo == null) {
+                base.refersTo = resolveBase(base)
+            }
+        }
+
         val declaration = scopeManager.resolveReference(reference)
         if (declaration != null) {
             return declaration

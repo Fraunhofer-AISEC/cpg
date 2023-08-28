@@ -28,8 +28,6 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.followNextEOGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
@@ -90,13 +88,14 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
         // We need to follow the path from the defer statement to all return statements that are
         // reachable from this point.
         for (defer in defers ?: listOf()) {
-            val paths = defer.followNextEOGEdgesUntilHit { it is ReturnStatement }
+            // TODO(oxisto): This is broken! this returns 8192 paths instead of 4
+            /*val paths = defer.followNextEOGEdgesUntilHit { it is ReturnStatement }
             for (path in paths.fulfilled) {
                 // It is a bit philosophical whether the deferred call happens before or after the
                 // return statement in the EOG. For now, it is easier to have it as the last node
                 // AFTER the return statement
                 addEOGEdge(path.last(), defer.input)
-            }
+            }*/
         }
     }
 }

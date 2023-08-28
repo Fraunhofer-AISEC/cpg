@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
+import de.fraunhofer.aisec.cpg.frontends.golang.isOverlay
+import de.fraunhofer.aisec.cpg.frontends.golang.underlyingType
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -34,14 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.types.HasType
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
@@ -101,6 +97,13 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
  * they are compatible. Because types in the same package can be defined in multiple files, we
  * cannot decide during the frontend run. Therefore, we need to execute this pass before the
  * [CallResolver] and convert certain [CallExpression] nodes into a [CastExpression].
+ *
+ * ## Adjust Names of Keys in Key Value Expressions to FQN
+ *
+ * This pass also adjusts the names of keys in a [KeyValueExpression], which is part of an
+ * [InitializerListExpression] to a fully-qualified name that contains the name of the [ObjectType]
+ * that the expression is creating. This way we can resolve the static references to the field to
+ * the actual field.
  */
 @ExecuteBefore(VariableUsageResolver::class)
 @ExecuteBefore(CallResolver::class)
@@ -118,11 +121,66 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                 is IncludeDeclaration -> handleInclude(node)
                 is AssignExpression -> handleAssign(node)
                 is ForEachStatement -> handleForEachStatement(node)
+                is InitializerListExpression -> handleInitializerListExpression(node)
             }
         }
 
         for (tu in component.translationUnits) {
             walker.iterate(tu)
+        }
+    }
+
+    /**
+     * handleInitializerListExpression changes the references of keys in a [KeyValueExpression] to
+     * include the object it is creating as a parent name.
+     */
+    private fun handleInitializerListExpression(node: InitializerListExpression) {
+        var type: Type? = node.type
+
+        // If our type is an "overlay", we need to look for the underlying type
+        type =
+            if (type.isOverlay) {
+                type.underlyingType
+            } else {
+                type
+            }
+
+        // The type of a "inner" composite literal can be omitted if the outer one is creating
+        // an array type. In this case, we need to set the type manually because the type for
+        // the "inner" one is empty.
+        // Example code:
+        // ```go
+        // var a = []*MyObject{
+        //   {
+        //      Name: "a",
+        //   },
+        //   {
+        //      Name: "b",
+        //   }
+        // }
+        if (type is PointerType && type.isArray) {
+            for (init in node.initializers) {
+                if (init is InitializerListExpression) {
+                    init.type = type.elementType
+                }
+            }
+        }
+
+        // We are not interested in arrays and maps, but only the "inner" single-object expressions
+        if (
+            type is UnknownType ||
+                (type is PointerType && type.isArray) ||
+                node.type.name.localName == "map"
+        ) {
+            return
+        }
+
+        for (keyValue in node.initializers.filterIsInstance<KeyValueExpression>()) {
+            val key = keyValue.key
+            if (key is Reference) {
+                key.name = Name(key.name.localName, node.type.root.name)
+                key.isStaticAccess = true
+            }
         }
     }
 
@@ -173,16 +231,23 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         }
 
         // Loop through the target variables (left-hand side)
-        for (expr in assign.lhs) {
+        for ((idx, expr) in assign.lhs.withIndex()) {
             if (expr is Reference) {
                 // And try to resolve it
                 val ref = scopeManager.resolveReference(expr)
                 if (ref == null) {
-                    // We need to implicitly declare it, if its not declared before.
+                    // We need to implicitly declare it, if it's not declared before.
                     val decl = newVariableDeclaration(expr.name, expr.autoType())
                     decl.location = expr.location
                     decl.isImplicit = true
-                    decl.initializer = assign.findValue(expr)
+
+                    // We cannot assign an initializer here because this will lead to duplicate
+                    // DFG edges, but we need to propagate the type information
+                    if (assign.rhs.size < assign.lhs.size && assign.rhs.size == 1) {
+                        assign.rhs[0].registerTypeObserver(InitializerTypePropagation(decl, idx))
+                    } else {
+                        assign.rhs[idx].registerTypeObserver(InitializerTypePropagation(decl))
+                    }
 
                     assign.declarations += decl
 
@@ -230,13 +295,20 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         // We need to check, whether the "callee" refers to a type and if yes, convert it into a
         // cast expression. And this is only really necessary, if the function call has a single
         // argument.
-        val callee = call.callee
-        if (parent != null && callee is Reference && call.arguments.size == 1) {
+        var callee = call.callee
+        if (parent != null && callee != null && call.arguments.size == 1) {
             val language = parent.language ?: GoLanguage()
+
+            var pointer = false
+            // If the argument is a UnaryOperator, unwrap them
+            if (callee is UnaryOperator && callee.operatorCode == "*") {
+                pointer = true
+                callee = callee.input
+            }
 
             // First, check if this is a built-in type
             if (language.builtInTypes.contains(callee.name.toString())) {
-                replaceCallWithCast(callee.name.toString(), parent, call)
+                replaceCallWithCast(callee.name.toString(), parent, call, false)
             } else {
                 // If not, then this could still refer to an existing type. We need to make sure
                 // that we take the current namespace into account
@@ -248,7 +320,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                     }
 
                 if (typeManager.typeExists(fqn.toString())) {
-                    replaceCallWithCast(fqn, parent, call)
+                    replaceCallWithCast(fqn, parent, call, pointer)
                 }
             }
         }
@@ -258,10 +330,16 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         typeName: CharSequence,
         parent: Node,
         call: CallExpression,
+        pointer: Boolean,
     ) {
         val cast = parent.newCastExpression(call.code)
         cast.location = call.location
-        cast.castType = call.objectType(typeName)
+        cast.castType =
+            if (pointer) {
+                call.objectType(typeName).pointer()
+            } else {
+                call.objectType(typeName)
+            }
         cast.expression = call.arguments.single()
 
         if (parent !is ArgumentHolder) {
@@ -283,5 +361,20 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
 
     override fun cleanup() {
         // Nothing to do
+    }
+
+    class InitializerTypePropagation(private var decl: HasType, private var tupleIdx: Int = -1) :
+        HasType.TypeObserver {
+        override fun typeChanged(newType: Type, src: HasType) {
+            if (newType is TupleType && tupleIdx != -1) {
+                decl.type = newType.types.getOrElse(tupleIdx) { decl.unknownType() }
+            } else {
+                decl.type = newType
+            }
+        }
+
+        override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+            // TODO
+        }
     }
 }

@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -198,6 +199,15 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         }
 
         return true
+    }
+
+    open fun isDerivedFrom(type: Type, superType: Type): Boolean {
+        // Retrieve all ancestor types of our type (more concretely of the root type)
+        val root = type.root
+        val superTypes = root.ancestors.map { it.type }
+
+        // Check, if super type (or its root) is in the list
+        return superType.root in superTypes
     }
 }
 

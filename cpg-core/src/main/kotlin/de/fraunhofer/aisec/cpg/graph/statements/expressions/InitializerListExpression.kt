@@ -69,7 +69,14 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        // Not supported, too complex
+        val idx = initializerEdges.indexOfFirst { it.end == old }
+        if (idx != -1) {
+            old.unregisterTypeObserver(this)
+            initializerEdges[idx].end = new
+            new.registerTypeObserver(this)
+            return true
+        }
+
         return false
     }
 

@@ -136,7 +136,11 @@ open class Reference : Expression(), HasType.TypeObserver {
         if (other !is Reference) {
             return false
         }
-        return super.equals(other) && refersTo == other.refersTo
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
     }
 
     override fun addPrevDFG(prev: Node, properties: MutableMap<Properties, Any?>) {
@@ -149,6 +153,4 @@ open class Reference : Expression(), HasType.TypeObserver {
             prev.registerTypeObserver(this)
         }
     }
-
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), refersTo)
 }
