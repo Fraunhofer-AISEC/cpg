@@ -1175,13 +1175,8 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
 }
 
 /** Creates a new [Type] with the given [name] in the Fluent Node DSL. */
-fun LanguageFrontend<*, *>.t(name: CharSequence, init: (Type.() -> Unit)? = null): Type {
-    val type = objectType(name)
-    if (init != null) {
-        init(type)
-    }
-    return type
-}
+fun LanguageFrontend<*, *>.t(name: CharSequence, generics: List<Type> = listOf()) =
+    objectType(name, generics)
 
 /**
  * Internally used to enter a new scope if [needsScope] is true before invoking [init] and leaving

@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsL
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import java.util.*
@@ -48,8 +47,7 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
-open class CallExpression :
-    Expression(), HasType.TypeObserver, HasSecondaryTypeEdge, ArgumentHolder {
+open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
     /**
      * Connection to its [FunctionDeclaration]. This will be populated by the [CallResolver]. This
      * will have an effect on the [type]
@@ -189,26 +187,6 @@ open class CallExpression :
             template = value != null
         }
 
-    private val typeTemplateParameters: List<Type>
-        get() {
-            val types: MutableList<Type> = ArrayList()
-            for (n in templateParameters) {
-                if (n is Type) {
-                    types.add(n)
-                }
-            }
-            return types
-        }
-
-    private fun replaceTypeTemplateParameter(oldType: Type?, newType: Type) {
-        for (i in templateParameterEdges?.indices ?: listOf()) {
-            val propertyEdge = templateParameterEdges?.get(i)
-            if (propertyEdge?.end == oldType) {
-                propertyEdge?.end = newType
-            }
-        }
-    }
-
     /**
      * Adds a template parameter to this call expression. A parameter can either be an [Expression]
      * (usually a [Literal]) or a [Type].
@@ -317,14 +295,4 @@ open class CallExpression :
     // TODO: Not sure if we can add the template, templateParameters, templateInstantiation fields
     //  here
     override fun hashCode() = Objects.hash(super.hashCode(), arguments)
-
-    override fun updateType(typeState: Collection<Type>) {
-        for (t in typeTemplateParameters) {
-            for (t2 in typeState) {
-                if (t2 == t) {
-                    replaceTypeTemplateParameter(t, t2)
-                }
-            }
-        }
-    }
 }

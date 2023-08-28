@@ -50,8 +50,4 @@ class TupleType(types: List<Type>) : Type() {
     override fun dereference(): Type {
         return unknownType()
     }
-
-    override fun duplicate(): Type {
-        return TupleType(types.map { it.duplicate() })
-    }
 }
