@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.HasAnonymousIdentifier
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.*
@@ -113,6 +114,14 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         val language = current?.language
 
         if (current !is Reference || current is MemberExpression) return
+
+        // We can safely ignore references to the anonymous identifier, e.g. _ in Go.
+        if (
+            language is HasAnonymousIdentifier &&
+                current.name.localName == language.anonymousIdentifier
+        ) {
+            return
+        }
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
