@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -183,9 +182,4 @@ interface HasType : ContextProvider, LanguageProvider {
     fun unregisterTypeObserver(typeObserver: TypeObserver) {
         typeObservers -= typeObserver
     }
-}
-
-fun <T : Type> Node.registerType(type: T): T {
-    val c = ctx ?: throw TranslationException("context not available")
-    return c.typeManager.registerType(type)
 }

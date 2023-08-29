@@ -36,8 +36,15 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class TypeManager {
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(TypeManager::class.java)
+    }
+
     /**
      * Stores the relationship between parameterized RecordDeclarations (e.g. Classes using
      * Generics) to the ParameterizedType to be able to resolve the Type of the fields, since
@@ -50,8 +57,8 @@ class TypeManager {
             mutableMapOf<TemplateDeclaration, MutableList<ParameterizedType>>()
         )
 
-    val firstOrderTypes: MutableSet<Type> = Collections.synchronizedSet(HashSet())
-    val secondOrderTypes: MutableSet<Type> = Collections.synchronizedSet(HashSet())
+    val firstOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
+    val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
@@ -187,13 +194,35 @@ class TypeManager {
         return parameterizedType
     }
 
-    fun <T : Type> registerType(t: T): T {
-        if (t.isFirstOrderType) {
-            firstOrderTypes.add(t)
-        } else {
-            secondOrderTypes.add(t)
-            registerType((t as SecondOrderType).elementType)
+    inline fun <reified T : Type> registerType(t: T): T {
+        // Skip as they should be unique to each class and not globally unique
+        if (t is ParameterizedType) {
+            return t
         }
+
+        if (t.isFirstOrderType) {
+            // Make sure we only ever return one unique object per type
+            if (!firstOrderTypes.add(t)) {
+                return firstOrderTypes.first { it == t && it is T } as T
+            } else {
+                log.trace(
+                    "Registering unique first order type {}{}",
+                    t.name,
+                    if (t is ObjectType && t.generics.isNotEmpty()) {
+                        " with generics [${t.generics.joinToString(",") { it.name.toString() }}]"
+                    } else {
+                        ""
+                    }
+                )
+            }
+        } else if (t is SecondOrderType) {
+            if (!secondOrderTypes.add(t)) {
+                return secondOrderTypes.first { it == t && it is T } as T
+            } else {
+                log.trace("Registering unique second order type {}", t.name)
+            }
+        }
+
         return t
     }
 
@@ -217,17 +246,7 @@ class TypeManager {
         target: Type,
         alias: Type,
     ): Declaration {
-        var currTarget = target
-        var currAlias = alias
-        if (alias is SecondOrderType) {
-            // TODO: I have NO clue what the following lines do and why they are necessary
-            val chain = alias.duplicate()
-            chain.root = currTarget
-            currTarget = chain
-            currTarget.refreshNames()
-            currAlias = alias.root
-        }
-        val typedef = frontend.newTypedefDeclaration(currTarget, currAlias, rawCode)
+        val typedef = frontend.newTypedefDeclaration(target, alias, rawCode)
         frontend.scopeManager.addTypedef(typedef)
         return typedef
     }
@@ -238,11 +257,7 @@ class TypeManager {
             scopeManager.currentTypedefs
                 .firstOrNull { t: TypedefDeclaration -> t.alias.root == finalToCheck }
                 ?.type
-        return if (applicable == null) {
-            alias
-        } else {
-            alias.changeRoot(applicable)
-        }
+        return applicable ?: alias
     }
 }
 
@@ -404,40 +419,4 @@ fun Type.wrap(wrapState: WrapState): Type {
     }
 
     return type
-}
-
-/**
- * Reconstructs the type chain when the root node is modified e.g. when swapping with alias
- * (typedef)
- *
- * @param newRoot root the chain is swapped with
- * @return the type but root replaced with newRoot
- */
-private fun Type.changeRoot(newRoot: Type): Type {
-    if (this.isFirstOrderType) {
-        newRoot.typeOrigin = this.typeOrigin
-    }
-    if (!newRoot.isFirstOrderType) {
-        return newRoot
-    }
-    return when {
-        this is ObjectType && newRoot is ObjectType -> {
-            newRoot.generics = this.generics
-            newRoot
-        }
-        this is ReferenceType -> {
-            val reference = this.elementType.changeRoot(newRoot)
-            val newChain = this.duplicate() as ReferenceType
-            newChain.elementType = reference
-            newChain.refreshName()
-            newChain
-        }
-        this is PointerType -> {
-            val newChain = this.duplicate() as PointerType
-            newChain.root = this.root.changeRoot(newRoot)
-            newChain.refreshNames()
-            newChain
-        }
-        else -> newRoot
-    }
 }

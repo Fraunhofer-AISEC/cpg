@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.types
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
@@ -43,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
  * This also includes primitive data types.
  */
-open class ObjectType : Type, HasSecondaryTypeEdge {
+open class ObjectType : Type {
     /**
      * Reference from the [ObjectType] to its class ([RecordDeclaration]), only if the class is
      * available. This is set by the [TypeResolver].
@@ -52,8 +51,10 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
 
     @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
     var genericsPropertyEdges: MutableList<PropertyEdge<Type>> = mutableListOf()
+        private set
 
     var generics by PropertyEdgeDelegate(ObjectType::genericsPropertyEdges)
+        private set
 
     constructor(
         typeName: CharSequence,
@@ -83,25 +84,6 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
         isPrimitive = false
     }
 
-    override fun updateType(typeState: Collection<Type>) {
-        for (t in generics) {
-            for (t2 in typeState) {
-                if (t2 == t) {
-                    replaceGenerics(t, t2)
-                }
-            }
-        }
-    }
-
-    fun replaceGenerics(oldType: Type?, newType: Type) {
-        for (i in genericsPropertyEdges.indices) {
-            val propertyEdge = genericsPropertyEdges[i]
-            if (propertyEdge.end == oldType) {
-                propertyEdge.end = newType
-            }
-        }
-    }
-
     /** @return PointerType to a ObjectType, e.g. int* */
     override fun reference(pointer: PointerOrigin?): PointerType {
         return PointerType(this, pointer)
@@ -117,22 +99,6 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
      */
     override fun dereference(): Type {
         return unknownType()
-    }
-
-    override fun duplicate(): Type {
-        return ObjectType(this, generics, isPrimitive, language)
-    }
-
-    fun addGeneric(generic: Type) {
-        val propertyEdge = PropertyEdge(this, generic)
-        propertyEdge.addProperty(Properties.INDEX, genericsPropertyEdges.size)
-        genericsPropertyEdges.add(propertyEdge)
-    }
-
-    fun addGenerics(generics: List<Type>) {
-        for (generic in generics) {
-            addGeneric(generic)
-        }
     }
 
     override fun isSimilar(t: Type?): Boolean {
