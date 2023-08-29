@@ -201,7 +201,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
                     // the TU. It is also a little bit redundant, since ScopeManager.resolveFunction
                     // (which gets called before) already extracts the scope, but this information
                     // gets lost.
-                    val scope = scopeManager.extractScope(call, scopeManager.globalScope)
+                    val (scope, _) = scopeManager.extractScope(call, scopeManager.globalScope)
 
                     // We have two possible start points, a namespace declaration or a translation
                     // unit. Nothing else is allowed (fow now)
