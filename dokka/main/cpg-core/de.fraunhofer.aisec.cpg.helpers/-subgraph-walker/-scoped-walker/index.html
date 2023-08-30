@@ -54,7 +54,7 @@
   <div class="breadcrumbs"><a href="../../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../../index.html">de.fraunhofer.aisec.cpg.helpers</a><span class="delimiter">/</span><a href="../index.html">SubgraphWalker</a><span class="delimiter">/</span><span class="current">ScopedWalker</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Scoped</span><wbr><span><span>Walker</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">ScopedWalker</a></div><p class="paragraph">Handles declaration scope monitoring for iterative traversals. If this is not required, use <a href="../-iterative-graph-walker/index.html">IterativeGraphWalker</a> for less overhead.</p><p class="paragraph">Declaration scopes are similar to <a href="../../../de.fraunhofer.aisec.cpg/-scope-manager/index.html">de.fraunhofer.aisec.cpg.ScopeManager</a> scopes: <a href="../../../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/index.html">ValueDeclaration</a>s located inside a scope (i.e. are children of the scope root) are visible to any children of the scope root. Scopes can be layered, where declarations from parent scopes are visible to the children but not the other way around.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">ScopedWalker</a></div><p class="paragraph">This class traverses the graph in a similar way as the <a href="../-iterative-graph-walker/index.html">IterativeGraphWalker</a>, but with the added feature, that a <a href="../../../de.fraunhofer.aisec.cpg/-scope-manager/index.html">ScopeManager</a> is populated with the scope information of the current node. This way, we can call functions on the supplied <a href="../../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-subgraph-walker/-scoped-walker/scope-manager.html">scopeManager</a> and emulate that we are currently in the scope of the "consumed" node in the callback. This can be useful for resolving declarations or other scope-related tasks.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,FUNCTION,PROPERTY">Members</button></div>
@@ -91,36 +91,6 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="clear-callbacks.html"><span class="token function">clearCallbacks</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-1247245022%2FFunctions%2F1556141526" anchor-label="collectDeclarations" id="-1247245022%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="collect-declarations.html"><span>collect</span><wbr><span><span>Declarations</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1247245022%2FFunctions%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="collect-declarations.html"><span class="token function">collectDeclarations</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">current<span class="token operator">: </span><a href="../../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-812447090%2FFunctions%2F1556141526" anchor-label="getDeclarationForScope" id="-812447090%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="get-declaration-for-scope.html"><span>get</span><wbr><span>Declaration</span><wbr><span>For</span><wbr><span><span>Scope</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-812447090%2FFunctions%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="get-declaration-for-scope.html"><span class="token function"><strike>getDeclarationForScope</strike></span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">scope<span class="token operator">: </span><a href="../../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">predicate<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Predicate.html">Predicate</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/index.html">ValueDeclaration</a><span class="token operator">?</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html">Optional</a><span class="token operator">&lt;</span><span class="token keyword">out </span><a href="../../../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/index.html">ValueDeclaration</a><span class="token operator">?</span><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
